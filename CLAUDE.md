@@ -43,7 +43,7 @@ Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine �
 
 **`src/core/proxy.py`** - `ProxyComputer` converts observable signals (task_progress, rework_count, verifier_rejections, engagement) into `v_hat ∈ [-1, +1]` using weighted combination, then applies calibrated sigmoid to get `p = P(v = +1)`.
 
-**`src/core/payoff.py`** - `SoftPayoffEngine` implements reformulated A3b payoffs using soft labels:
+**`src/core/payoff.py`** - `SoftPayoffEngine` implements payoffs using soft labels:
 - `S_soft = p * s_plus - (1-p) * s_minus` (expected surplus)
 - `E_soft = (1-p) * h` (expected harm externality)
 - Payoffs include surplus share, transfers, governance costs, externality costs, and reputation

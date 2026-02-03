@@ -1,4 +1,4 @@
-"""Soft payoff engine implementing reformulated A3b with probabilistic labels."""
+"""Soft payoff engine implementing payoffs with probabilistic labels."""
 
 from dataclasses import dataclass
 from typing import Optional
@@ -81,7 +81,7 @@ class SoftPayoffEngine:
     """
     Computes payoffs using soft (probabilistic) labels.
 
-    Reformulated A3b equation:
+    Payoff equations:
         π_a = θ * S_soft - τ - c_a - ρ_a * E_soft + w_rep * r_a
         π_b = (1-θ) * S_soft + τ - c_b - ρ_b * E_soft + w_rep * r_b
 

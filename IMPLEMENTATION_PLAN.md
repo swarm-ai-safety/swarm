@@ -14,7 +14,7 @@ Build and evaluate a **multi-agent sandbox economy** to study *system-level safe
 |-----------|--------|-------|
 | Data Models | ✅ Complete | `src/models/interaction.py`, `agent.py`, `events.py` |
 | Proxy Computation | ✅ Complete | `src/core/proxy.py`, `sigmoid.py` |
-| Payoff Engine (A3b) | ✅ Complete | `src/core/payoff.py` |
+| Payoff Engine | ✅ Complete | `src/core/payoff.py` |
 | Metrics System | ✅ Complete | `src/metrics/soft_metrics.py`, `reporters.py` |
 | Event Logging | ✅ Complete | `src/logging/event_log.py` |
 | Test Suite | ✅ 91 tests | `tests/` |
@@ -86,7 +86,7 @@ class BaseAgent(ABC):
         """Update internal state after interaction resolves."""
 ```
 
-**Agent Type Behaviors (from Appendix A3b):**
+**Agent Type Behaviors:**
 
 | Type | Strategy | Acceptance Rule |
 |------|----------|-----------------|
