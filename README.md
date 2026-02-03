@@ -158,6 +158,8 @@ distributional-agi-safety/
 │   ├── metrics/
 │   │   ├── soft_metrics.py     # SoftMetrics (40+ metrics)
 │   │   └── reporters.py        # Dual reporting (soft + hard)
+│   ├── scenarios/
+│   │   └── loader.py           # YAML scenario loader
 │   └── logging/
 │       └── event_log.py        # Append-only JSONL logger
 ├── tests/
@@ -168,13 +170,16 @@ distributional-agi-safety/
 │   ├── test_env.py
 │   ├── test_orchestrator.py
 │   ├── test_governance.py
+│   ├── test_scenarios.py
 │   └── fixtures/
 │       └── interactions.py     # Test data generators
 ├── examples/
-│   └── mvp_demo.py             # End-to-end demo
+│   ├── mvp_demo.py             # End-to-end demo
+│   └── run_scenario.py         # Run simulation from YAML
 ├── scenarios/
 │   ├── baseline.yaml           # 5-agent baseline scenario
-│   └── status_game.yaml        # Reputation competition
+│   ├── status_game.yaml        # Reputation competition
+│   └── strict_governance.yaml  # All governance levers enabled
 └── pyproject.toml
 ```
 
@@ -336,7 +341,7 @@ interactions = orchestrator.event_log.to_interactions()
 ## Running Tests
 
 ```bash
-# Run all tests (190 tests)
+# Run all tests (212 tests)
 pytest tests/ -v
 
 # Run with coverage
@@ -348,29 +353,59 @@ pytest tests/test_orchestrator.py -v
 
 ## Scenarios
 
-Define simulations in YAML:
+Define simulations in YAML with full governance configuration:
 
 ```yaml
-# scenarios/baseline.yaml
-scenario_id: baseline
+# scenarios/status_game.yaml
+scenario_id: status_game
+description: "Reputation competition with governance"
+
 agents:
   - type: honest
-    count: 3
+    count: 2
   - type: opportunistic
+    count: 2
+  - type: adversarial
     count: 1
-  - type: deceptive
-    count: 1
+
+governance:
+  transaction_tax_rate: 0.05
+  reputation_decay_rate: 0.95
+  staking_enabled: true
+  min_stake_to_participate: 10.0
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  audit_enabled: true
+  audit_probability: 0.15
 
 simulation:
-  n_epochs: 10
-  steps_per_epoch: 10
-  seed: 42
+  n_epochs: 20
+  steps_per_epoch: 15
+  seed: 123
 
 payoff:
-  s_plus: 2.0
-  s_minus: 1.0
-  h: 2.0
+  s_plus: 3.0
+  s_minus: 1.5
+  h: 2.5
   theta: 0.5
+  w_rep: 2.0
+```
+
+Run scenarios from the command line:
+
+```bash
+python examples/run_scenario.py scenarios/baseline.yaml
+python examples/run_scenario.py scenarios/status_game.yaml
+python examples/run_scenario.py scenarios/strict_governance.yaml
+```
+
+Or load programmatically:
+
+```python
+from src.scenarios import load_and_build
+
+orchestrator = load_and_build(Path("scenarios/status_game.yaml"))
+metrics = orchestrator.run()
 ```
 
 ## Future Extensions (MVP v1)
@@ -378,7 +413,6 @@ payoff:
 - **Marketplace**: Bounties, bids, escrow for task completion
 - **Scenario runner**: Parameter sweeps, batch simulations
 - **Dashboard**: Streamlit visualization of metrics over time
-- **YAML governance**: Parse governance config from scenario files
 
 ## Inspired By
 

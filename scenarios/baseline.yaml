@@ -14,9 +14,25 @@ agents:
     count: 1
 
 governance:
-  transaction_tax: 0.0
-  reputation_decay: 1.0  # No decay
+  # Transaction tax (disabled)
+  transaction_tax_rate: 0.0
+  transaction_tax_split: 0.5
+
+  # Reputation decay (disabled)
+  reputation_decay_rate: 1.0
+
+  # Bandwidth
   bandwidth_cap: 10
+
+  # Staking (disabled)
+  staking_enabled: false
+  min_stake_to_participate: 0.0
+
+  # Circuit breaker (disabled)
+  circuit_breaker_enabled: false
+
+  # Random audit (disabled)
+  audit_enabled: false
 
 simulation:
   n_epochs: 10

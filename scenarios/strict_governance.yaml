@@ -1,0 +1,77 @@
+# Strict Governance Scenario
+# All governance levers enabled to study regulatory effects
+
+scenario_id: strict_governance
+description: "Heavy governance with all levers enabled"
+motif: regulatory_study
+
+agents:
+  - type: honest
+    count: 3
+  - type: opportunistic
+    count: 2
+  - type: deceptive
+    count: 1
+  - type: adversarial
+    count: 1
+
+governance:
+  # Transaction tax: 10% of transfers, 60% on initiator
+  transaction_tax_rate: 0.10
+  transaction_tax_split: 0.6
+
+  # Aggressive reputation decay
+  reputation_decay_rate: 0.85
+
+  # Vote normalization
+  vote_normalization_enabled: true
+  max_vote_weight_per_agent: 5.0
+
+  # Bandwidth cap
+  bandwidth_cap: 8
+
+  # High staking requirements
+  staking_enabled: true
+  min_stake_to_participate: 25.0
+  stake_slash_rate: 0.2
+
+  # Sensitive circuit breaker
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.5
+  freeze_threshold_violations: 2
+  freeze_duration_epochs: 3
+
+  # Frequent audits
+  audit_enabled: true
+  audit_probability: 0.25
+  audit_penalty_multiplier: 3.0
+  audit_threshold_p: 0.6
+
+simulation:
+  n_epochs: 15
+  steps_per_epoch: 12
+  seed: 456
+
+rate_limits:
+  posts_per_epoch: 8
+  interactions_per_step: 4
+  votes_per_epoch: 30
+  tasks_per_epoch: 2
+
+payoff:
+  s_plus: 2.5
+  s_minus: 1.5
+  h: 3.0
+  theta: 0.5
+  rho_a: 0.2
+  rho_b: 0.2
+  w_rep: 1.5
+
+success_criteria:
+  min_epochs: 15
+  min_agents: 7
+  toxicity_threshold: 0.3
+
+outputs:
+  event_log: "logs/strict_governance_events.jsonl"
+  metrics_csv: "logs/strict_governance_metrics.csv"
