@@ -1,13 +1,17 @@
 """Orchestrator for running the multi-agent simulation."""
 
+import asyncio
 import random
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
 
 from src.agents.base import Action, ActionType, BaseAgent, Observation
+
+if TYPE_CHECKING:
+    from src.agents.llm_agent import LLMAgent
 from src.core.payoff import PayoffConfig, SoftPayoffEngine
 from src.core.proxy import ProxyComputer, ProxyObservables
 from src.env.feed import Feed, VoteType
@@ -788,3 +792,202 @@ class Orchestrator:
     ) -> None:
         """Register a callback for interaction completion."""
         self._on_interaction_complete.append(callback)
+
+    # =========================================================================
+    # Async Support for LLM Agents
+    # =========================================================================
+
+    def _is_llm_agent(self, agent: BaseAgent) -> bool:
+        """Check if an agent is an LLM agent with async support."""
+        return hasattr(agent, 'act_async') and hasattr(agent, 'accept_interaction_async')
+
+    async def run_async(self) -> List[EpochMetrics]:
+        """
+        Run the full simulation asynchronously.
+
+        This method enables concurrent LLM API calls for better performance
+        when using LLM-backed agents.
+
+        Returns:
+            List of metrics for each epoch
+        """
+        # Log simulation start
+        self._emit_event(Event(
+            event_type=EventType.SIMULATION_STARTED,
+            payload={
+                "n_epochs": self.config.n_epochs,
+                "steps_per_epoch": self.config.steps_per_epoch,
+                "n_agents": len(self._agents),
+                "seed": self.config.seed,
+                "async": True,
+            },
+        ))
+
+        # Main loop
+        for epoch in range(self.config.n_epochs):
+            epoch_metrics = await self._run_epoch_async()
+            self._epoch_metrics.append(epoch_metrics)
+
+            # Callbacks
+            for callback in self._on_epoch_end:
+                callback(epoch_metrics)
+
+        # Log simulation end
+        self._emit_event(Event(
+            event_type=EventType.SIMULATION_ENDED,
+            payload={
+                "total_epochs": self.config.n_epochs,
+                "final_metrics": self._epoch_metrics[-1].__dict__ if self._epoch_metrics else {},
+            },
+        ))
+
+        return self._epoch_metrics
+
+    async def _run_epoch_async(self) -> EpochMetrics:
+        """Run a single epoch asynchronously."""
+        epoch_start = self.state.current_epoch
+
+        # Apply epoch-start governance (reputation decay, unfreezes)
+        if self.governance_engine:
+            gov_effect = self.governance_engine.apply_epoch_start(
+                self.state, self.state.current_epoch
+            )
+            self._apply_governance_effect(gov_effect)
+
+        for step in range(self.config.steps_per_epoch):
+            if self.state.is_paused:
+                break
+
+            await self._run_step_async()
+            self.state.advance_step()
+
+        # Compute epoch metrics
+        metrics = self._compute_epoch_metrics()
+
+        # Log epoch completion
+        self._emit_event(Event(
+            event_type=EventType.EPOCH_COMPLETED,
+            payload=metrics.__dict__,
+            epoch=epoch_start,
+        ))
+
+        # Advance to next epoch
+        self.state.advance_epoch()
+
+        return metrics
+
+    async def _run_step_async(self) -> None:
+        """Run a single step asynchronously with concurrent LLM calls."""
+        # Get agent schedule for this step
+        agent_order = self._get_agent_schedule()
+
+        actions_this_step = 0
+
+        # Collect agents that can act this step
+        agents_to_act = []
+        for agent_id in agent_order:
+            if actions_this_step >= self.config.max_actions_per_step:
+                break
+
+            if not self.state.can_agent_act(agent_id):
+                continue
+
+            # Check governance admission control (staking)
+            if self.governance_engine and not self.governance_engine.can_agent_act(agent_id, self.state):
+                continue
+
+            agents_to_act.append(agent_id)
+            actions_this_step += 1
+
+        # Get actions concurrently for LLM agents
+        async def get_agent_action(agent_id: str) -> Tuple[str, Action]:
+            agent = self._agents[agent_id]
+            observation = self._build_observation(agent_id)
+
+            if self._is_llm_agent(agent):
+                action = await agent.act_async(observation)
+            else:
+                action = agent.act(observation)
+
+            return agent_id, action
+
+        # Execute all agent actions concurrently
+        tasks = [get_agent_action(agent_id) for agent_id in agents_to_act]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results
+        for result in results:
+            if isinstance(result, Exception):
+                # Log error but continue
+                continue
+
+            agent_id, action = result
+            self._execute_action(action)
+
+        # Resolve pending interactions asynchronously
+        await self._resolve_pending_interactions_async()
+
+    async def _resolve_pending_interactions_async(self) -> None:
+        """Resolve pending interactions with async support for LLM agents."""
+        # Get all pending proposals
+        proposals = list(self.state.pending_proposals.values())
+
+        async def resolve_proposal(proposal: InteractionProposal) -> Optional[bool]:
+            counterparty_id = proposal.counterparty_id
+
+            # Check if counterparty agent exists and can act
+            if counterparty_id not in self._agents:
+                return None
+
+            if not self.state.can_agent_act(counterparty_id):
+                return None
+
+            counterparty = self._agents[counterparty_id]
+            observation = self._build_observation(counterparty_id)
+
+            # Create agent proposal object
+            from src.agents.base import InteractionProposal as AgentProposal
+
+            agent_proposal = AgentProposal(
+                proposal_id=proposal.proposal_id,
+                initiator_id=proposal.initiator_id,
+                counterparty_id=proposal.counterparty_id,
+                interaction_type=InteractionType(proposal.interaction_type),
+                content=proposal.content,
+                offered_transfer=proposal.metadata.get("offered_transfer", 0),
+            )
+
+            # Get decision (async for LLM agents)
+            if self._is_llm_agent(counterparty):
+                accept = await counterparty.accept_interaction_async(agent_proposal, observation)
+            else:
+                accept = counterparty.accept_interaction(agent_proposal, observation)
+
+            return accept
+
+        # Resolve all proposals concurrently
+        tasks = [resolve_proposal(p) for p in proposals]
+        results = await asyncio.gather(*tasks, return_exceptions=True)
+
+        # Process results
+        for proposal, result in zip(proposals, results):
+            if isinstance(result, Exception) or result is None:
+                continue
+
+            accept = result
+            # Remove and complete
+            self.state.remove_proposal(proposal.proposal_id)
+            self._complete_interaction(proposal, accepted=accept)
+
+    def get_llm_usage_stats(self) -> Dict[str, Dict[str, Any]]:
+        """
+        Get LLM usage statistics for all LLM agents.
+
+        Returns:
+            Dictionary mapping agent_id to usage stats
+        """
+        stats = {}
+        for agent_id, agent in self._agents.items():
+            if hasattr(agent, 'get_usage_stats'):
+                stats[agent_id] = agent.get_usage_stats()
+        return stats

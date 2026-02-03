@@ -16,13 +16,32 @@ from src.core.payoff import PayoffConfig
 from src.env.state import RateLimits
 from src.governance.config import GovernanceConfig
 
-# Agent type registry
+# Agent type registry for scripted agents
 AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "honest": HonestAgent,
     "opportunistic": OpportunisticAgent,
     "deceptive": DeceptiveAgent,
     "adversarial": AdversarialAgent,
 }
+
+# LLM agent support (lazy import to avoid requiring LLM dependencies)
+_LLM_AGENT_CLASS = None
+_LLM_CONFIG_CLASSES = None
+
+
+def _get_llm_classes():
+    """Lazy import LLM agent classes."""
+    global _LLM_AGENT_CLASS, _LLM_CONFIG_CLASSES
+    if _LLM_AGENT_CLASS is None:
+        from src.agents.llm_agent import LLMAgent
+        from src.agents.llm_config import LLMConfig, LLMProvider, PersonaType
+        _LLM_AGENT_CLASS = LLMAgent
+        _LLM_CONFIG_CLASSES = {
+            "LLMConfig": LLMConfig,
+            "LLMProvider": LLMProvider,
+            "PersonaType": PersonaType,
+        }
+    return _LLM_AGENT_CLASS, _LLM_CONFIG_CLASSES
 
 
 @dataclass
@@ -199,9 +218,56 @@ def load_scenario(path: Path) -> ScenarioConfig:
     )
 
 
+def parse_llm_config(data: Dict[str, Any]) -> "LLMConfig":
+    """
+    Parse LLM configuration from YAML.
+
+    Args:
+        data: The llm section from YAML agent spec
+
+    Returns:
+        LLMConfig instance
+    """
+    LLMAgent, llm_classes = _get_llm_classes()
+    LLMConfig = llm_classes["LLMConfig"]
+    LLMProvider = llm_classes["LLMProvider"]
+    PersonaType = llm_classes["PersonaType"]
+
+    # Parse provider
+    provider_str = data.get("provider", "anthropic").lower()
+    try:
+        provider = LLMProvider(provider_str)
+    except ValueError:
+        raise ValueError(f"Unknown LLM provider: {provider_str}")
+
+    # Parse persona
+    persona_str = data.get("persona", "open").lower()
+    try:
+        persona = PersonaType(persona_str)
+    except ValueError:
+        raise ValueError(f"Unknown persona type: {persona_str}")
+
+    return LLMConfig(
+        provider=provider,
+        model=data.get("model", "claude-sonnet-4-20250514"),
+        api_key=data.get("api_key"),  # Usually from env var
+        base_url=data.get("base_url"),
+        temperature=data.get("temperature", 0.7),
+        max_tokens=data.get("max_tokens", 512),
+        timeout=data.get("timeout", 30.0),
+        max_retries=data.get("max_retries", 3),
+        persona=persona,
+        system_prompt=data.get("system_prompt"),
+        cost_tracking=data.get("cost_tracking", True),
+    )
+
+
 def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
     """
     Create agent instances from specifications.
+
+    Supports both scripted agents (honest, opportunistic, etc.)
+    and LLM-backed agents.
 
     Args:
         agent_specs: List of agent specifications from YAML
@@ -216,19 +282,37 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
         agent_type = spec.get("type", "honest")
         count = spec.get("count", 1)
 
-        if agent_type not in AGENT_TYPES:
+        # Handle LLM agents
+        if agent_type == "llm":
+            LLMAgent, _ = _get_llm_classes()
+            llm_config = parse_llm_config(spec.get("llm", {}))
+
+            for _ in range(count):
+                # Generate unique ID
+                counters["llm"] = counters.get("llm", 0) + 1
+                agent_id = f"llm_{counters['llm']}"
+
+                agent = LLMAgent(
+                    agent_id=agent_id,
+                    llm_config=llm_config,
+                )
+                agents.append(agent)
+
+        # Handle scripted agents
+        elif agent_type in AGENT_TYPES:
+            agent_class = AGENT_TYPES[agent_type]
+
+            for _ in range(count):
+                # Generate unique ID
+                counters[agent_type] = counters.get(agent_type, 0) + 1
+                agent_id = f"{agent_type}_{counters[agent_type]}"
+
+                # Create agent with optional config
+                agent = agent_class(agent_id=agent_id)
+                agents.append(agent)
+
+        else:
             raise ValueError(f"Unknown agent type: {agent_type}")
-
-        agent_class = AGENT_TYPES[agent_type]
-
-        for _ in range(count):
-            # Generate unique ID
-            counters[agent_type] = counters.get(agent_type, 0) + 1
-            agent_id = f"{agent_type}_{counters[agent_type]}"
-
-            # Create agent with optional config
-            agent = agent_class(agent_id=agent_id)
-            agents.append(agent)
 
     return agents
 
