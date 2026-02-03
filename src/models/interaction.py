@@ -1,10 +1,10 @@
 """Soft interaction data model with probabilistic labels."""
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-import uuid
 
 
 class InteractionType(Enum):

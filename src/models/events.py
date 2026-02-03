@@ -1,10 +1,10 @@
 """Event schema for append-only logging."""
 
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Optional
-import uuid
+from typing import Optional
 
 
 class EventType(Enum):

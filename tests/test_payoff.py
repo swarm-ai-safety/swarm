@@ -1,8 +1,9 @@
 """Tests for the soft payoff engine."""
 
 import pytest
-from src.core.payoff import SoftPayoffEngine, PayoffConfig, PayoffBreakdown
-from src.models.interaction import SoftInteraction, InteractionType
+
+from src.core.payoff import PayoffConfig, SoftPayoffEngine
+from src.models.interaction import SoftInteraction
 
 
 class TestPayoffConfig:

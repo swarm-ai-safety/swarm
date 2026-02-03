@@ -3,9 +3,9 @@
 from dataclasses import dataclass
 from typing import List, Optional
 
-from src.models.interaction import SoftInteraction
-from src.core.payoff import SoftPayoffEngine, PayoffConfig
+from src.core.payoff import PayoffConfig, SoftPayoffEngine
 from src.metrics.soft_metrics import SoftMetrics
+from src.models.interaction import SoftInteraction
 
 
 @dataclass
@@ -40,6 +40,17 @@ class MetricsSummary:
     avg_initiator_payoff: float
     avg_counterparty_payoff: float
 
+    # Calibration metrics (None if no ground truth)
+    brier_score: Optional[float] = None
+    log_loss: Optional[float] = None
+    calibration_error: Optional[float] = None
+    expected_calibration_error: Optional[float] = None
+
+    # Variance metrics
+    quality_variance: float = 0.0
+    payoff_variance_initiator: float = 0.0
+    payoff_variance_counterparty: float = 0.0
+
     def to_dict(self) -> dict:
         """Convert to dictionary."""
         return {
@@ -70,6 +81,17 @@ class MetricsSummary:
                 "total_social_surplus": self.total_social_surplus,
                 "avg_initiator_payoff": self.avg_initiator_payoff,
                 "avg_counterparty_payoff": self.avg_counterparty_payoff,
+            },
+            "calibration": {
+                "brier_score": self.brier_score,
+                "log_loss": self.log_loss,
+                "calibration_error": self.calibration_error,
+                "expected_calibration_error": self.expected_calibration_error,
+            },
+            "variance": {
+                "quality_variance": self.quality_variance,
+                "payoff_variance_initiator": self.payoff_variance_initiator,
+                "payoff_variance_counterparty": self.payoff_variance_counterparty,
             },
         }
 
@@ -151,6 +173,13 @@ class MetricsReporter:
                 total_social_surplus=0.0,
                 avg_initiator_payoff=0.0,
                 avg_counterparty_payoff=0.0,
+                brier_score=None,
+                log_loss=None,
+                calibration_error=None,
+                expected_calibration_error=None,
+                quality_variance=0.0,
+                payoff_variance_initiator=0.0,
+                payoff_variance_counterparty=0.0,
             )
 
         # Compute soft metrics
@@ -178,6 +207,17 @@ class MetricsReporter:
         # Welfare
         welfare = self.soft_metrics.welfare_metrics(interactions)
 
+        # Calibration metrics (may be None if no ground truth)
+        brier = self.soft_metrics.brier_score(interactions)
+        logloss = self.soft_metrics.log_loss(interactions)
+        cal_error = self.soft_metrics.calibration_error(interactions)
+        ece = self.soft_metrics.expected_calibration_error(interactions)
+
+        # Variance metrics
+        quality_var = self.soft_metrics.quality_variance(interactions)
+        payoff_var_init = self.soft_metrics.payoff_variance_initiator(interactions)
+        payoff_var_counter = self.soft_metrics.payoff_variance_counterparty(interactions)
+
         return MetricsSummary(
             toxicity_soft=toxicity_soft,
             conditional_loss_initiator=cl_init,
@@ -199,6 +239,13 @@ class MetricsReporter:
             total_social_surplus=welfare["total_social_surplus"],
             avg_initiator_payoff=welfare["avg_initiator_payoff"],
             avg_counterparty_payoff=welfare["avg_counterparty_payoff"],
+            brier_score=brier,
+            log_loss=logloss,
+            calibration_error=cal_error,
+            expected_calibration_error=ece,
+            quality_variance=quality_var,
+            payoff_variance_initiator=payoff_var_init,
+            payoff_variance_counterparty=payoff_var_counter,
         )
 
     def compare_soft_hard(

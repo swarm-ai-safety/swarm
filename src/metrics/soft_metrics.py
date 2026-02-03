@@ -1,9 +1,10 @@
 """Soft metrics for interaction quality analysis."""
 
+import math
 from typing import List, Optional, Tuple
 
+from src.core.payoff import SoftPayoffEngine
 from src.models.interaction import SoftInteraction
-from src.core.payoff import SoftPayoffEngine, PayoffConfig
 
 
 class SoftMetrics:
@@ -351,4 +352,358 @@ class SoftMetrics:
             "total_social_surplus": total_social,
             "avg_initiator_payoff": avg_init,
             "avg_counterparty_payoff": avg_counter,
+        }
+
+    # =========================================================================
+    # Calibration Metrics
+    # =========================================================================
+
+    def calibration_error(
+        self, interactions: List[SoftInteraction]
+    ) -> Optional[float]:
+        """
+        Compute calibration error: E[p] - empirical_positive_rate.
+
+        Requires ground_truth to be set on interactions.
+        A well-calibrated model has calibration error near 0.
+
+        Args:
+            interactions: List of interactions with ground_truth set
+
+        Returns:
+            Calibration error, or None if no ground truth available
+        """
+        with_truth = [i for i in interactions if i.ground_truth is not None]
+        if not with_truth:
+            return None
+
+        # E[p]
+        avg_p = sum(i.p for i in with_truth) / len(with_truth)
+
+        # Empirical positive rate: fraction where ground_truth = +1
+        # ground_truth is +1 or -1, so we convert to 0/1
+        positive_count = sum(1 for i in with_truth if i.ground_truth == 1)
+        empirical_rate = positive_count / len(with_truth)
+
+        return avg_p - empirical_rate
+
+    def brier_score(
+        self, interactions: List[SoftInteraction]
+    ) -> Optional[float]:
+        """
+        Compute Brier score: E[(p - v)^2] where v = (ground_truth + 1) / 2.
+
+        The Brier score is a proper scoring rule for probabilistic predictions.
+        - 0 is perfect prediction
+        - 0.25 is equivalent to always predicting p=0.5
+
+        Args:
+            interactions: List of interactions with ground_truth set
+
+        Returns:
+            Brier score in [0, 1], or None if no ground truth available
+        """
+        with_truth = [i for i in interactions if i.ground_truth is not None]
+        if not with_truth:
+            return None
+
+        total = 0.0
+        for i in with_truth:
+            # Convert ground_truth from {-1, +1} to {0, 1}
+            v = (i.ground_truth + 1) / 2
+            total += (i.p - v) ** 2
+
+        return total / len(with_truth)
+
+    def expected_calibration_error(
+        self,
+        interactions: List[SoftInteraction],
+        bins: int = 10,
+    ) -> Optional[float]:
+        """
+        Compute Expected Calibration Error (ECE).
+
+        ECE is the weighted average of |E[p|bin] - accuracy(bin)| across bins.
+        A perfectly calibrated model has ECE = 0.
+
+        Args:
+            interactions: List of interactions with ground_truth set
+            bins: Number of probability bins
+
+        Returns:
+            ECE value, or None if no ground truth available
+        """
+        curve = self.calibration_curve(interactions, bins)
+        if not curve:
+            return None
+
+        total_count = sum(count for _, _, count in curve)
+        if total_count == 0:
+            return None
+
+        ece = 0.0
+        for mean_predicted, fraction_positive, count in curve:
+            if count > 0:
+                ece += (count / total_count) * abs(mean_predicted - fraction_positive)
+
+        return ece
+
+    def calibration_curve(
+        self,
+        interactions: List[SoftInteraction],
+        bins: int = 10,
+    ) -> List[Tuple[float, float, int]]:
+        """
+        Compute calibration curve data.
+
+        For each bin of predicted probabilities, compute the fraction of
+        actually positive outcomes.
+
+        Args:
+            interactions: List of interactions with ground_truth set
+            bins: Number of probability bins
+
+        Returns:
+            List of (mean_predicted, fraction_positive, count) per bin.
+            Returns empty list if no ground truth available.
+        """
+        with_truth = [i for i in interactions if i.ground_truth is not None]
+        if not with_truth:
+            return []
+
+        bin_width = 1.0 / bins
+        result = []
+
+        for b in range(bins):
+            bin_start = b * bin_width
+            bin_end = (b + 1) * bin_width
+
+            # Get interactions in this bin
+            in_bin = [
+                i for i in with_truth
+                if bin_start <= i.p < bin_end
+                or (b == bins - 1 and i.p == 1.0)
+            ]
+
+            if not in_bin:
+                # Empty bin - use midpoint as predicted, 0.0 as accuracy
+                result.append((bin_start + bin_width / 2, 0.0, 0))
+            else:
+                mean_predicted = sum(i.p for i in in_bin) / len(in_bin)
+                positive_count = sum(1 for i in in_bin if i.ground_truth == 1)
+                fraction_positive = positive_count / len(in_bin)
+                result.append((mean_predicted, fraction_positive, len(in_bin)))
+
+        return result
+
+    # =========================================================================
+    # Information-Theoretic Metrics
+    # =========================================================================
+
+    def log_loss(
+        self,
+        interactions: List[SoftInteraction],
+        eps: float = 1e-15,
+    ) -> Optional[float]:
+        """
+        Compute log loss (cross-entropy): -E[v*log(p) + (1-v)*log(1-p)].
+
+        Args:
+            interactions: List of interactions with ground_truth set
+            eps: Small value to avoid log(0)
+
+        Returns:
+            Log loss (lower is better), or None if no ground truth available
+        """
+        with_truth = [i for i in interactions if i.ground_truth is not None]
+        if not with_truth:
+            return None
+
+        total = 0.0
+        for i in with_truth:
+            # Convert ground_truth from {-1, +1} to {0, 1}
+            v = (i.ground_truth + 1) / 2
+            # Clamp p to avoid log(0)
+            p_clamped = max(eps, min(1 - eps, i.p))
+
+            total -= v * math.log(p_clamped) + (1 - v) * math.log(1 - p_clamped)
+
+        return total / len(with_truth)
+
+    def discrimination_auc(
+        self, interactions: List[SoftInteraction]
+    ) -> Optional[float]:
+        """
+        Compute Area Under ROC Curve (AUC) for discrimination.
+
+        AUC measures the model's ability to rank positive cases higher
+        than negative cases.
+        - AUC = 0.5: random guessing
+        - AUC = 1.0: perfect discrimination
+
+        Args:
+            interactions: List of interactions with ground_truth set
+
+        Returns:
+            AUC value in [0, 1], or None if insufficient data
+        """
+        with_truth = [i for i in interactions if i.ground_truth is not None]
+        if not with_truth:
+            return None
+
+        positives = [i for i in with_truth if i.ground_truth == 1]
+        negatives = [i for i in with_truth if i.ground_truth == -1]
+
+        if not positives or not negatives:
+            return None
+
+        # Wilcoxon-Mann-Whitney statistic
+        concordant = 0
+        total_pairs = len(positives) * len(negatives)
+
+        for pos in positives:
+            for neg in negatives:
+                if pos.p > neg.p:
+                    concordant += 1
+                elif pos.p == neg.p:
+                    concordant += 0.5
+
+        return concordant / total_pairs
+
+    # =========================================================================
+    # Variance / Uncertainty Metrics
+    # =========================================================================
+
+    def quality_variance(
+        self,
+        interactions: List[SoftInteraction],
+        accepted_only: bool = False,
+    ) -> float:
+        """
+        Compute variance of quality: Var[p].
+
+        Args:
+            interactions: List of interactions
+            accepted_only: If True, only consider accepted interactions
+
+        Returns:
+            Variance of p
+        """
+        if accepted_only:
+            interactions = [i for i in interactions if i.accepted]
+
+        if len(interactions) < 2:
+            return 0.0
+
+        mean_p = sum(i.p for i in interactions) / len(interactions)
+        variance = sum((i.p - mean_p) ** 2 for i in interactions) / len(interactions)
+
+        return variance
+
+    def quality_std(
+        self,
+        interactions: List[SoftInteraction],
+        accepted_only: bool = False,
+    ) -> float:
+        """
+        Compute standard deviation of quality: Std[p].
+
+        Args:
+            interactions: List of interactions
+            accepted_only: If True, only consider accepted interactions
+
+        Returns:
+            Standard deviation of p
+        """
+        return math.sqrt(self.quality_variance(interactions, accepted_only))
+
+    def payoff_variance_initiator(
+        self, interactions: List[SoftInteraction]
+    ) -> float:
+        """
+        Compute variance of initiator payoffs: Var[π_a].
+
+        Measures risk/dispersion in initiator outcomes.
+
+        Args:
+            interactions: List of interactions
+
+        Returns:
+            Variance of initiator payoffs
+        """
+        if len(interactions) < 2:
+            return 0.0
+
+        payoffs = [self.payoff_engine.payoff_initiator(i) for i in interactions]
+        mean_payoff = sum(payoffs) / len(payoffs)
+        variance = sum((p - mean_payoff) ** 2 for p in payoffs) / len(payoffs)
+
+        return variance
+
+    def payoff_variance_counterparty(
+        self, interactions: List[SoftInteraction]
+    ) -> float:
+        """
+        Compute variance of counterparty payoffs: Var[π_b].
+
+        Measures risk/dispersion in counterparty outcomes.
+
+        Args:
+            interactions: List of interactions
+
+        Returns:
+            Variance of counterparty payoffs
+        """
+        if len(interactions) < 2:
+            return 0.0
+
+        payoffs = [self.payoff_engine.payoff_counterparty(i) for i in interactions]
+        mean_payoff = sum(payoffs) / len(payoffs)
+        variance = sum((p - mean_payoff) ** 2 for p in payoffs) / len(payoffs)
+
+        return variance
+
+    def coefficient_of_variation(
+        self, interactions: List[SoftInteraction]
+    ) -> dict:
+        """
+        Compute coefficient of variation (CV = std/mean) for key metrics.
+
+        CV is a standardized measure of dispersion. Higher CV indicates
+        more variability relative to the mean.
+
+        Args:
+            interactions: List of interactions
+
+        Returns:
+            Dictionary with CV for p, π_a, and π_b
+        """
+        if not interactions:
+            return {
+                "cv_p": 0.0,
+                "cv_payoff_initiator": 0.0,
+                "cv_payoff_counterparty": 0.0,
+            }
+
+        # CV for p
+        mean_p = self.average_quality(interactions)
+        std_p = self.quality_std(interactions)
+        cv_p = std_p / mean_p if mean_p != 0 else 0.0
+
+        # CV for initiator payoffs
+        payoffs_a = [self.payoff_engine.payoff_initiator(i) for i in interactions]
+        mean_a = sum(payoffs_a) / len(payoffs_a)
+        std_a = math.sqrt(self.payoff_variance_initiator(interactions))
+        cv_a = abs(std_a / mean_a) if mean_a != 0 else 0.0
+
+        # CV for counterparty payoffs
+        payoffs_b = [self.payoff_engine.payoff_counterparty(i) for i in interactions]
+        mean_b = sum(payoffs_b) / len(payoffs_b)
+        std_b = math.sqrt(self.payoff_variance_counterparty(interactions))
+        cv_b = abs(std_b / mean_b) if mean_b != 0 else 0.0
+
+        return {
+            "cv_p": cv_p,
+            "cv_payoff_initiator": cv_a,
+            "cv_payoff_counterparty": cv_b,
         }

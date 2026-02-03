@@ -1,14 +1,14 @@
 """Tests for soft metrics."""
 
 import pytest
-from src.metrics.soft_metrics import SoftMetrics
+
 from src.metrics.reporters import MetricsReporter
-from src.core.payoff import SoftPayoffEngine, PayoffConfig
+from src.metrics.soft_metrics import SoftMetrics
 from src.models.interaction import SoftInteraction
 from tests.fixtures.interactions import (
     generate_benign_batch,
-    generate_toxic_batch,
     generate_mixed_batch,
+    generate_toxic_batch,
     generate_uncertain_batch,
 )
 
@@ -358,3 +358,319 @@ class TestWelfareMetrics:
         welfare_toxic = metrics.welfare_metrics(toxic)
 
         assert welfare_benign["avg_initiator_payoff"] > welfare_toxic["avg_initiator_payoff"]
+
+
+class TestCalibrationMetrics:
+    """Tests for calibration metrics."""
+
+    def test_brier_score_perfect(self):
+        """p matches ground_truth exactly -> Brier = 0."""
+        metrics = SoftMetrics()
+
+        interactions = [
+            SoftInteraction(p=1.0, ground_truth=1),
+            SoftInteraction(p=0.0, ground_truth=-1),
+            SoftInteraction(p=1.0, ground_truth=1),
+        ]
+
+        brier = metrics.brier_score(interactions)
+        assert brier == pytest.approx(0.0)
+
+    def test_brier_score_random(self):
+        """p = 0.5 always -> Brier = 0.25."""
+        metrics = SoftMetrics()
+
+        interactions = [
+            SoftInteraction(p=0.5, ground_truth=1),
+            SoftInteraction(p=0.5, ground_truth=-1),
+            SoftInteraction(p=0.5, ground_truth=1),
+            SoftInteraction(p=0.5, ground_truth=-1),
+        ]
+
+        brier = metrics.brier_score(interactions)
+        assert brier == pytest.approx(0.25)
+
+    def test_brier_score_no_ground_truth(self):
+        """Returns None if no ground truth."""
+        metrics = SoftMetrics()
+
+        interactions = [
+            SoftInteraction(p=0.7, ground_truth=None),
+            SoftInteraction(p=0.3, ground_truth=None),
+        ]
+
+        assert metrics.brier_score(interactions) is None
+
+    def test_calibration_error_wellcalibrated(self):
+        """E[p] = empirical rate -> error = 0."""
+        metrics = SoftMetrics()
+
+        # 50% positive rate, average p = 0.5
+        interactions = [
+            SoftInteraction(p=0.6, ground_truth=1),
+            SoftInteraction(p=0.4, ground_truth=-1),
+            SoftInteraction(p=0.7, ground_truth=1),
+            SoftInteraction(p=0.3, ground_truth=-1),
+        ]
+
+        error = metrics.calibration_error(interactions)
+        # E[p] = 0.5, empirical rate = 0.5
+        assert error == pytest.approx(0.0)
+
+    def test_calibration_error_overconfident(self):
+        """High p but low positive rate -> positive error."""
+        metrics = SoftMetrics()
+
+        interactions = [
+            SoftInteraction(p=0.9, ground_truth=-1),
+            SoftInteraction(p=0.8, ground_truth=-1),
+            SoftInteraction(p=0.85, ground_truth=1),
+        ]
+
+        error = metrics.calibration_error(interactions)
+        # E[p] = 0.85, empirical rate = 1/3 ≈ 0.33
+        assert error > 0.4
+
+    def test_ece_perfect(self):
+        """Perfectly calibrated predictions -> ECE = 0."""
+        metrics = SoftMetrics()
+
+        # In each bin, p matches empirical rate
+        interactions = []
+        # Low bin: p around 0.2, 20% positive
+        for _ in range(4):
+            interactions.append(SoftInteraction(p=0.2, ground_truth=-1))
+        interactions.append(SoftInteraction(p=0.2, ground_truth=1))
+
+        # High bin: p around 0.8, 80% positive
+        for _ in range(4):
+            interactions.append(SoftInteraction(p=0.8, ground_truth=1))
+        interactions.append(SoftInteraction(p=0.8, ground_truth=-1))
+
+        ece = metrics.expected_calibration_error(interactions, bins=5)
+        assert ece is not None
+        assert ece < 0.05  # Should be very small
+
+    def test_calibration_curve_structure(self):
+        """Calibration curve should have correct structure."""
+        metrics = SoftMetrics()
+
+        interactions = generate_benign_batch(count=50, seed=42)
+        curve = metrics.calibration_curve(interactions, bins=5)
+
+        assert len(curve) == 5
+        for mean_pred, frac_pos, count in curve:
+            assert 0.0 <= mean_pred <= 1.0
+            assert 0.0 <= frac_pos <= 1.0
+            assert count >= 0
+
+
+class TestInformationMetrics:
+    """Tests for information-theoretic metrics."""
+
+    def test_log_loss_bounds(self):
+        """Log loss >= 0."""
+        metrics = SoftMetrics()
+
+        interactions = generate_benign_batch(count=50, seed=42)
+        logloss = metrics.log_loss(interactions)
+
+        assert logloss is not None
+        assert logloss >= 0
+
+    def test_log_loss_perfect(self):
+        """Perfect predictions -> log_loss -> 0."""
+        metrics = SoftMetrics()
+
+        interactions = [
+            SoftInteraction(p=0.999, ground_truth=1),
+            SoftInteraction(p=0.001, ground_truth=-1),
+        ]
+
+        logloss = metrics.log_loss(interactions)
+        assert logloss is not None
+        assert logloss < 0.01
+
+    def test_log_loss_random(self):
+        """p = 0.5 always -> log_loss = ln(2) ≈ 0.693."""
+        metrics = SoftMetrics()
+
+        import math
+        interactions = [
+            SoftInteraction(p=0.5, ground_truth=1),
+            SoftInteraction(p=0.5, ground_truth=-1),
+        ]
+
+        logloss = metrics.log_loss(interactions)
+        assert logloss is not None
+        assert logloss == pytest.approx(math.log(2), rel=0.01)
+
+    def test_discrimination_auc_perfect(self):
+        """Perfect discrimination -> AUC = 1."""
+        metrics = SoftMetrics()
+
+        interactions = [
+            SoftInteraction(p=0.9, ground_truth=1),
+            SoftInteraction(p=0.8, ground_truth=1),
+            SoftInteraction(p=0.2, ground_truth=-1),
+            SoftInteraction(p=0.1, ground_truth=-1),
+        ]
+
+        auc = metrics.discrimination_auc(interactions)
+        assert auc is not None
+        assert auc == 1.0
+
+    def test_discrimination_auc_random(self):
+        """Random predictions -> AUC ≈ 0.5."""
+        metrics = SoftMetrics()
+
+        # Interleaved positive and negative with similar p values
+        interactions = [
+            SoftInteraction(p=0.5, ground_truth=1),
+            SoftInteraction(p=0.5, ground_truth=-1),
+            SoftInteraction(p=0.5, ground_truth=1),
+            SoftInteraction(p=0.5, ground_truth=-1),
+        ]
+
+        auc = metrics.discrimination_auc(interactions)
+        assert auc is not None
+        assert auc == pytest.approx(0.5)
+
+    def test_discrimination_auc_missing_class(self):
+        """Returns None if only one class present."""
+        metrics = SoftMetrics()
+
+        interactions = [
+            SoftInteraction(p=0.9, ground_truth=1),
+            SoftInteraction(p=0.8, ground_truth=1),
+        ]
+
+        assert metrics.discrimination_auc(interactions) is None
+
+
+class TestVarianceMetrics:
+    """Tests for variance/uncertainty metrics."""
+
+    def test_variance_uniform(self):
+        """Uniform p distribution -> known variance."""
+        metrics = SoftMetrics()
+
+        # p = 0.2, 0.4, 0.6, 0.8 -> mean = 0.5, var = 0.05
+        interactions = [
+            SoftInteraction(p=0.2),
+            SoftInteraction(p=0.4),
+            SoftInteraction(p=0.6),
+            SoftInteraction(p=0.8),
+        ]
+
+        variance = metrics.quality_variance(interactions)
+        # Var = E[(p - 0.5)^2] = (0.09 + 0.01 + 0.01 + 0.09) / 4 = 0.05
+        assert variance == pytest.approx(0.05)
+
+    def test_variance_concentrated(self):
+        """All same p -> variance = 0."""
+        metrics = SoftMetrics()
+
+        interactions = [
+            SoftInteraction(p=0.7),
+            SoftInteraction(p=0.7),
+            SoftInteraction(p=0.7),
+        ]
+
+        variance = metrics.quality_variance(interactions)
+        assert variance == pytest.approx(0.0, abs=1e-10)
+
+    def test_std_is_sqrt_variance(self):
+        """Standard deviation = sqrt(variance)."""
+        metrics = SoftMetrics()
+
+        interactions = generate_mixed_batch(count=50, seed=42)
+
+        variance = metrics.quality_variance(interactions)
+        std = metrics.quality_std(interactions)
+
+        import math
+        assert std == pytest.approx(math.sqrt(variance))
+
+    def test_payoff_variance_increases_with_spread(self):
+        """More spread in p -> more variance in payoffs."""
+        metrics = SoftMetrics()
+
+        # Narrow spread
+        narrow = [SoftInteraction(p=0.49 + i*0.02) for i in range(5)]
+        # Wide spread
+        wide = [SoftInteraction(p=0.1 + i*0.2) for i in range(5)]
+
+        var_narrow = metrics.payoff_variance_initiator(narrow)
+        var_wide = metrics.payoff_variance_initiator(wide)
+
+        assert var_wide > var_narrow
+
+    def test_coefficient_of_variation(self):
+        """CV should be computed correctly."""
+        metrics = SoftMetrics()
+
+        interactions = generate_mixed_batch(count=50, seed=42)
+        cv = metrics.coefficient_of_variation(interactions)
+
+        assert "cv_p" in cv
+        assert "cv_payoff_initiator" in cv
+        assert "cv_payoff_counterparty" in cv
+        assert cv["cv_p"] >= 0
+
+    def test_accepted_only_variance(self):
+        """Should compute variance only for accepted interactions."""
+        metrics = SoftMetrics()
+
+        interactions = [
+            SoftInteraction(p=0.8, accepted=True),
+            SoftInteraction(p=0.9, accepted=True),
+            SoftInteraction(p=0.2, accepted=False),  # Should be excluded
+        ]
+
+        var_all = metrics.quality_variance(interactions, accepted_only=False)
+        var_accepted = metrics.quality_variance(interactions, accepted_only=True)
+
+        # Accepted only has less spread
+        assert var_accepted < var_all
+
+
+class TestMetricsSummaryWithNewMetrics:
+    """Tests for MetricsSummary with new calibration and variance fields."""
+
+    def test_summary_includes_calibration(self):
+        """Summary should include calibration metrics."""
+        reporter = MetricsReporter()
+        interactions = generate_benign_batch(count=50, seed=42)
+
+        summary = reporter.summary(interactions)
+
+        # Benign batch has ground_truth set
+        assert summary.brier_score is not None
+        assert summary.log_loss is not None
+        assert summary.calibration_error is not None
+
+    def test_summary_includes_variance(self):
+        """Summary should include variance metrics."""
+        reporter = MetricsReporter()
+        interactions = generate_mixed_batch(count=50, seed=42)
+
+        summary = reporter.summary(interactions)
+
+        assert hasattr(summary, "quality_variance")
+        assert hasattr(summary, "payoff_variance_initiator")
+        assert hasattr(summary, "payoff_variance_counterparty")
+        assert summary.quality_variance > 0  # Mixed batch has variance
+
+    def test_to_dict_includes_new_sections(self):
+        """to_dict should include calibration and variance sections."""
+        reporter = MetricsReporter()
+        interactions = generate_mixed_batch(count=50, seed=42)
+
+        summary = reporter.summary(interactions)
+        d = summary.to_dict()
+
+        assert "calibration" in d
+        assert "variance" in d
+        assert "brier_score" in d["calibration"]
+        assert "quality_variance" in d["variance"]

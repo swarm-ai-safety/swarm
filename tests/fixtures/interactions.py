@@ -1,12 +1,12 @@
 """Test data generators for interaction fixtures."""
 
 import random
+import uuid
 from datetime import datetime, timedelta
 from typing import List, Optional
-import uuid
 
-from src.models.interaction import SoftInteraction, InteractionType
 from src.core.proxy import ProxyComputer, ProxyObservables
+from src.models.interaction import InteractionType, SoftInteraction
 
 
 def generate_benign_batch(
@@ -195,7 +195,7 @@ def generate_adversarial_scenario(
     time_idx = 0
 
     # Honest agents interacting normally
-    for i in range(honest_count):
+    for _ in range(honest_count):
         p = random.gauss(0.75, 0.1)
         p = max(0.1, min(0.95, p))  # Clamp
 
@@ -329,7 +329,8 @@ def generate_from_observables(
         proxy_computer = ProxyComputer()
 
     if acceptance_rule is None:
-        acceptance_rule = lambda p: p > 0.5
+        def acceptance_rule(p: float) -> bool:
+            return p > 0.5
 
     interactions = []
     base_time = datetime.now()

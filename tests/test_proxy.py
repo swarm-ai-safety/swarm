@@ -1,14 +1,15 @@
 """Tests for proxy computation."""
 
+
 import pytest
-import math
-from src.core.proxy import ProxyComputer, ProxyWeights, ProxyObservables
+
+from src.core.proxy import ProxyComputer, ProxyObservables, ProxyWeights
 from src.core.sigmoid import (
     calibrated_sigmoid,
-    inverse_sigmoid,
-    sigmoid_derivative,
-    sigmoid_bounds,
     effective_uncertainty_band,
+    inverse_sigmoid,
+    sigmoid_bounds,
+    sigmoid_derivative,
 )
 
 

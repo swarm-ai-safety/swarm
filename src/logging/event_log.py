@@ -1,12 +1,12 @@
 """Append-only JSONL event logger."""
 
 import json
-from pathlib import Path
-from typing import Iterator, List, Optional, Dict, Any
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, Iterator, List, Optional
 
 from src.models.events import Event, EventType
-from src.models.interaction import SoftInteraction, InteractionType
+from src.models.interaction import InteractionType, SoftInteraction
 
 
 class EventLog:

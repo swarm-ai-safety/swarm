@@ -1,11 +1,11 @@
 """Distributional AGI Safety Sandbox - Soft Label Payoff & Metrics System."""
 
-from src.models.interaction import SoftInteraction, InteractionType
-from src.models.agent import AgentType, AgentState
-from src.core.payoff import SoftPayoffEngine, PayoffConfig
-from src.core.proxy import ProxyComputer, ProxyWeights, ProxyObservables
-from src.metrics.soft_metrics import SoftMetrics
+from src.core.payoff import PayoffConfig, SoftPayoffEngine
+from src.core.proxy import ProxyComputer, ProxyObservables, ProxyWeights
 from src.metrics.reporters import MetricsReporter
+from src.metrics.soft_metrics import SoftMetrics
+from src.models.agent import AgentState, AgentType
+from src.models.interaction import InteractionType, SoftInteraction
 
 __all__ = [
     "SoftInteraction",
