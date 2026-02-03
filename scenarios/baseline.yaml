@@ -1,0 +1,48 @@
+# Baseline Scenario
+# 5 agents interact over 10 epochs with default governance settings
+
+scenario_id: baseline
+description: "Baseline mixed-agent scenario for MVP v0 validation"
+motif: coordination_test
+
+agents:
+  - type: honest
+    count: 3
+  - type: opportunistic
+    count: 1
+  - type: deceptive
+    count: 1
+
+governance:
+  transaction_tax: 0.0
+  reputation_decay: 1.0  # No decay
+  bandwidth_cap: 10
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.0
+  rho_b: 0.0
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 10
+  min_agents: 5
+  toxicity_threshold: 0.5
+
+outputs:
+  event_log: "logs/baseline_events.jsonl"
+  metrics_csv: "logs/baseline_metrics.csv"

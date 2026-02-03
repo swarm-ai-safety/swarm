@@ -1,0 +1,710 @@
+"""Orchestrator for running the multi-agent simulation."""
+
+import random
+import uuid
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Callable, Dict, List, Optional, Tuple
+
+from src.agents.base import Action, ActionType, BaseAgent, Observation
+from src.core.payoff import PayoffConfig, SoftPayoffEngine
+from src.core.proxy import ProxyComputer, ProxyObservables
+from src.env.feed import Feed, VoteType
+from src.env.state import EnvState, InteractionProposal
+from src.env.tasks import TaskPool, TaskStatus
+from src.logging.event_log import EventLog
+from src.metrics.soft_metrics import SoftMetrics
+from src.models.agent import AgentState, AgentType
+from src.models.events import (
+    Event,
+    EventType,
+    interaction_completed_event,
+    interaction_proposed_event,
+    payoff_computed_event,
+    reputation_updated_event,
+)
+from src.models.interaction import InteractionType, SoftInteraction
+
+
+@dataclass
+class OrchestratorConfig:
+    """Configuration for the orchestrator."""
+
+    # Timing
+    n_epochs: int = 10
+    steps_per_epoch: int = 10
+
+    # Agent scheduling
+    schedule_mode: str = "round_robin"  # "round_robin", "random", "priority"
+    max_actions_per_step: int = 20
+
+    # Safety rails
+    max_content_length: int = 10000
+    enable_rate_limits: bool = True
+    enable_kill_switch: bool = True
+
+    # Payoff configuration
+    payoff_config: PayoffConfig = field(default_factory=PayoffConfig)
+
+    # Logging
+    log_path: Optional[Path] = None
+    log_events: bool = True
+
+    # Random seed
+    seed: Optional[int] = None
+
+
+@dataclass
+class EpochMetrics:
+    """Metrics collected at the end of each epoch."""
+
+    epoch: int = 0
+    total_interactions: int = 0
+    accepted_interactions: int = 0
+    total_posts: int = 0
+    total_votes: int = 0
+    toxicity_rate: float = 0.0
+    quality_gap: float = 0.0
+    avg_payoff: float = 0.0
+    total_welfare: float = 0.0
+
+
+class Orchestrator:
+    """
+    Orchestrates the multi-agent simulation.
+
+    Responsibilities:
+    - Schedule agent turns
+    - Inject observations
+    - Execute actions
+    - Enforce rate limits
+    - Compute payoffs
+    - Emit events
+    """
+
+    def __init__(
+        self,
+        config: Optional[OrchestratorConfig] = None,
+        state: Optional[EnvState] = None,
+    ):
+        """
+        Initialize orchestrator.
+
+        Args:
+            config: Orchestrator configuration
+            state: Initial environment state (optional)
+        """
+        self.config = config or OrchestratorConfig()
+
+        # Set random seed
+        if self.config.seed is not None:
+            random.seed(self.config.seed)
+
+        # Environment components
+        self.state = state or EnvState(steps_per_epoch=self.config.steps_per_epoch)
+        self.feed = Feed()
+        self.task_pool = TaskPool()
+
+        # Agents
+        self._agents: Dict[str, BaseAgent] = {}
+
+        # Computation engines
+        self.payoff_engine = SoftPayoffEngine(self.config.payoff_config)
+        self.proxy_computer = ProxyComputer()
+        self.metrics_calculator = SoftMetrics(self.payoff_engine)
+
+        # Event logging
+        if self.config.log_path:
+            self.event_log = EventLog(self.config.log_path)
+        else:
+            self.event_log = None
+
+        # Epoch metrics history
+        self._epoch_metrics: List[EpochMetrics] = []
+
+        # Callbacks
+        self._on_epoch_end: List[Callable[[EpochMetrics], None]] = []
+        self._on_interaction_complete: List[Callable[[SoftInteraction, float, float], None]] = []
+
+    def register_agent(self, agent: BaseAgent) -> AgentState:
+        """
+        Register an agent with the simulation.
+
+        Args:
+            agent: Agent to register
+
+        Returns:
+            The agent's state
+        """
+        if agent.agent_id in self._agents:
+            raise ValueError(f"Agent {agent.agent_id} already registered")
+
+        self._agents[agent.agent_id] = agent
+
+        # Create agent state in environment
+        state = self.state.add_agent(
+            agent_id=agent.agent_id,
+            agent_type=agent.agent_type,
+        )
+
+        # Log event
+        self._emit_event(Event(
+            event_type=EventType.AGENT_CREATED,
+            agent_id=agent.agent_id,
+            payload={
+                "agent_type": agent.agent_type.value,
+                "roles": [r.value for r in agent.roles],
+            },
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+        ))
+
+        return state
+
+    def run(self) -> List[EpochMetrics]:
+        """
+        Run the full simulation.
+
+        Returns:
+            List of metrics for each epoch
+        """
+        # Log simulation start
+        self._emit_event(Event(
+            event_type=EventType.SIMULATION_STARTED,
+            payload={
+                "n_epochs": self.config.n_epochs,
+                "steps_per_epoch": self.config.steps_per_epoch,
+                "n_agents": len(self._agents),
+                "seed": self.config.seed,
+            },
+        ))
+
+        # Main loop
+        for epoch in range(self.config.n_epochs):
+            epoch_metrics = self._run_epoch()
+            self._epoch_metrics.append(epoch_metrics)
+
+            # Callbacks
+            for callback in self._on_epoch_end:
+                callback(epoch_metrics)
+
+        # Log simulation end
+        self._emit_event(Event(
+            event_type=EventType.SIMULATION_ENDED,
+            payload={
+                "total_epochs": self.config.n_epochs,
+                "final_metrics": self._epoch_metrics[-1].__dict__ if self._epoch_metrics else {},
+            },
+        ))
+
+        return self._epoch_metrics
+
+    def _run_epoch(self) -> EpochMetrics:
+        """Run a single epoch."""
+        epoch_start = self.state.current_epoch
+
+        for step in range(self.config.steps_per_epoch):
+            if self.state.is_paused:
+                break
+
+            self._run_step()
+            self.state.advance_step()
+
+        # Compute epoch metrics
+        metrics = self._compute_epoch_metrics()
+
+        # Log epoch completion
+        self._emit_event(Event(
+            event_type=EventType.EPOCH_COMPLETED,
+            payload=metrics.__dict__,
+            epoch=epoch_start,
+        ))
+
+        # Advance to next epoch
+        self.state.advance_epoch()
+
+        return metrics
+
+    def _run_step(self) -> None:
+        """Run a single step within an epoch."""
+        # Get agent schedule for this step
+        agent_order = self._get_agent_schedule()
+
+        actions_this_step = 0
+
+        for agent_id in agent_order:
+            if actions_this_step >= self.config.max_actions_per_step:
+                break
+
+            if not self.state.can_agent_act(agent_id):
+                continue
+
+            agent = self._agents[agent_id]
+
+            # Build observation for agent
+            observation = self._build_observation(agent_id)
+
+            # Get agent action
+            action = agent.act(observation)
+
+            # Execute action
+            success = self._execute_action(action)
+
+            if success:
+                actions_this_step += 1
+
+        # Resolve pending interactions
+        self._resolve_pending_interactions()
+
+    def _get_agent_schedule(self) -> List[str]:
+        """Get the order of agents for this step."""
+        agent_ids = list(self._agents.keys())
+
+        if self.config.schedule_mode == "random":
+            random.shuffle(agent_ids)
+        elif self.config.schedule_mode == "priority":
+            # Sort by reputation (higher reputation goes first)
+            agent_ids.sort(
+                key=lambda aid: self.state.get_agent(aid).reputation if self.state.get_agent(aid) else 0,
+                reverse=True,
+            )
+        # else: round_robin (default order)
+
+        return agent_ids
+
+    def _build_observation(self, agent_id: str) -> Observation:
+        """Build observation for an agent."""
+        agent_state = self.state.get_agent(agent_id)
+        rate_limit = self.state.get_rate_limit_state(agent_id)
+
+        # Get visible posts
+        visible_posts = [
+            p.to_dict() for p in self.feed.get_ranked_posts(limit=20)
+        ]
+
+        # Get pending proposals for this agent
+        pending_proposals = [
+            {
+                "proposal_id": p.proposal_id,
+                "initiator_id": p.initiator_id,
+                "interaction_type": p.interaction_type,
+                "content": p.content,
+                "offered_transfer": p.metadata.get("offered_transfer", 0),
+            }
+            for p in self.state.get_proposals_for_agent(agent_id)
+        ]
+
+        # Get available tasks
+        available_tasks = [
+            t.to_dict() for t in self.task_pool.get_claimable_tasks(
+                agent_reputation=agent_state.reputation if agent_state else 0,
+                current_epoch=self.state.current_epoch,
+            )
+        ]
+
+        # Get agent's active tasks
+        active_tasks = [
+            t.to_dict() for t in self.task_pool.get_tasks_for_agent(agent_id)
+            if t.status in (TaskStatus.CLAIMED, TaskStatus.IN_PROGRESS)
+        ]
+
+        # Get visible agents
+        visible_agents = [
+            {
+                "agent_id": s.agent_id,
+                "agent_type": s.agent_type.value,
+                "reputation": s.reputation,
+                "resources": s.resources,
+            }
+            for s in self.state.get_active_agents()
+            if s.agent_id != agent_id
+        ]
+
+        return Observation(
+            agent_state=agent_state or AgentState(),
+            current_epoch=self.state.current_epoch,
+            current_step=self.state.current_step,
+            can_post=rate_limit.can_post(self.state.rate_limits) if self.config.enable_rate_limits else True,
+            can_interact=rate_limit.can_interact(self.state.rate_limits) if self.config.enable_rate_limits else True,
+            can_vote=rate_limit.can_vote(self.state.rate_limits) if self.config.enable_rate_limits else True,
+            can_claim_task=rate_limit.can_claim_task(self.state.rate_limits) if self.config.enable_rate_limits else True,
+            visible_posts=visible_posts,
+            pending_proposals=pending_proposals,
+            available_tasks=available_tasks,
+            active_tasks=active_tasks,
+            visible_agents=visible_agents,
+            ecosystem_metrics=self.state.get_epoch_metrics_snapshot(),
+        )
+
+    def _execute_action(self, action: Action) -> bool:
+        """
+        Execute an agent action.
+
+        Returns:
+            True if action was successful
+        """
+        agent_id = action.agent_id
+        rate_limit = self.state.get_rate_limit_state(agent_id)
+
+        if action.action_type == ActionType.NOOP:
+            return True
+
+        elif action.action_type == ActionType.POST:
+            if not rate_limit.can_post(self.state.rate_limits):
+                return False
+
+            try:
+                post = self.feed.create_post(
+                    author_id=agent_id,
+                    content=action.content[:self.config.max_content_length],
+                )
+                rate_limit.record_post()
+                return True
+            except ValueError:
+                return False
+
+        elif action.action_type == ActionType.REPLY:
+            if not rate_limit.can_post(self.state.rate_limits):
+                return False
+
+            try:
+                post = self.feed.create_post(
+                    author_id=agent_id,
+                    content=action.content[:self.config.max_content_length],
+                    parent_id=action.target_id,
+                )
+                rate_limit.record_post()
+                return True
+            except ValueError:
+                return False
+
+        elif action.action_type == ActionType.VOTE:
+            if not rate_limit.can_vote(self.state.rate_limits):
+                return False
+
+            vote_type = VoteType.UPVOTE if action.vote_direction > 0 else VoteType.DOWNVOTE
+            vote = self.feed.vote(action.target_id, agent_id, vote_type)
+            if vote:
+                rate_limit.record_vote()
+                return True
+            return False
+
+        elif action.action_type == ActionType.PROPOSE_INTERACTION:
+            if not rate_limit.can_interact(self.state.rate_limits):
+                return False
+
+            proposal = InteractionProposal(
+                initiator_id=agent_id,
+                counterparty_id=action.counterparty_id,
+                interaction_type=action.interaction_type.value,
+                content=action.content,
+                metadata=action.metadata,
+            )
+            self.state.add_proposal(proposal)
+            rate_limit.record_interaction()
+
+            # Log proposal event
+            self._emit_event(interaction_proposed_event(
+                interaction_id=proposal.proposal_id,
+                initiator_id=agent_id,
+                counterparty_id=action.counterparty_id,
+                interaction_type=action.interaction_type.value,
+                v_hat=0.0,  # Computed later
+                p=0.5,
+                epoch=self.state.current_epoch,
+                step=self.state.current_step,
+            ))
+
+            return True
+
+        elif action.action_type == ActionType.ACCEPT_INTERACTION:
+            proposal = self.state.remove_proposal(action.target_id)
+            if proposal:
+                self._complete_interaction(proposal, accepted=True)
+                return True
+            return False
+
+        elif action.action_type == ActionType.REJECT_INTERACTION:
+            proposal = self.state.remove_proposal(action.target_id)
+            if proposal:
+                self._complete_interaction(proposal, accepted=False)
+                return True
+            return False
+
+        elif action.action_type == ActionType.CLAIM_TASK:
+            agent_state = self.state.get_agent(agent_id)
+            if not agent_state:
+                return False
+
+            success = self.task_pool.claim_task(
+                task_id=action.target_id,
+                agent_id=agent_id,
+                agent_reputation=agent_state.reputation,
+            )
+            if success:
+                rate_limit.record_task_claim()
+            return success
+
+        elif action.action_type == ActionType.SUBMIT_OUTPUT:
+            task = self.task_pool.get_task(action.target_id)
+            if task and task.claimed_by == agent_id:
+                task.submit_output(agent_id, action.content)
+                return True
+            return False
+
+        return False
+
+    def _resolve_pending_interactions(self) -> None:
+        """Resolve any remaining pending interactions."""
+        # Get all pending proposals
+        proposals = list(self.state.pending_proposals.values())
+
+        for proposal in proposals:
+            counterparty_id = proposal.counterparty_id
+
+            # Check if counterparty agent exists and can act
+            if counterparty_id not in self._agents:
+                continue
+
+            if not self.state.can_agent_act(counterparty_id):
+                continue
+
+            counterparty = self._agents[counterparty_id]
+            observation = self._build_observation(counterparty_id)
+
+            # Ask counterparty agent to decide
+            from src.agents.base import InteractionProposal as AgentProposal
+
+            agent_proposal = AgentProposal(
+                proposal_id=proposal.proposal_id,
+                initiator_id=proposal.initiator_id,
+                counterparty_id=proposal.counterparty_id,
+                interaction_type=InteractionType(proposal.interaction_type),
+                content=proposal.content,
+                offered_transfer=proposal.metadata.get("offered_transfer", 0),
+            )
+
+            accept = counterparty.accept_interaction(agent_proposal, observation)
+
+            # Remove and complete
+            self.state.remove_proposal(proposal.proposal_id)
+            self._complete_interaction(proposal, accepted=accept)
+
+    def _complete_interaction(
+        self,
+        proposal: InteractionProposal,
+        accepted: bool,
+    ) -> None:
+        """Complete an interaction and compute payoffs."""
+        # Create observables (simulated based on acceptance and agent types)
+        observables = self._generate_observables(proposal, accepted)
+
+        # Compute v_hat and p
+        v_hat, p = self.proxy_computer.compute_labels(observables)
+
+        # Create SoftInteraction
+        interaction = SoftInteraction(
+            interaction_id=proposal.proposal_id,
+            initiator=proposal.initiator_id,
+            counterparty=proposal.counterparty_id,
+            interaction_type=InteractionType(proposal.interaction_type),
+            accepted=accepted,
+            task_progress_delta=observables.task_progress_delta,
+            rework_count=observables.rework_count,
+            verifier_rejections=observables.verifier_rejections,
+            tool_misuse_flags=observables.tool_misuse_flags,
+            counterparty_engagement_delta=observables.counterparty_engagement_delta,
+            v_hat=v_hat,
+            p=p,
+            tau=proposal.metadata.get("offered_transfer", 0),
+        )
+
+        # Compute payoffs
+        payoff_init = self.payoff_engine.payoff_initiator(interaction)
+        payoff_counter = self.payoff_engine.payoff_counterparty(interaction)
+
+        # Update agent states
+        if accepted:
+            initiator_state = self.state.get_agent(proposal.initiator_id)
+            counterparty_state = self.state.get_agent(proposal.counterparty_id)
+
+            if initiator_state:
+                initiator_state.record_initiated(accepted=True, p=p)
+                initiator_state.total_payoff += payoff_init
+                self._update_reputation(proposal.initiator_id, p - 0.5)
+
+            if counterparty_state:
+                counterparty_state.record_received(accepted=True, p=p)
+                counterparty_state.total_payoff += payoff_counter
+
+        # Update agent memory
+        if proposal.initiator_id in self._agents:
+            self._agents[proposal.initiator_id].update_from_outcome(interaction, payoff_init)
+        if proposal.counterparty_id in self._agents:
+            self._agents[proposal.counterparty_id].update_from_outcome(interaction, payoff_counter)
+
+        # Record interaction
+        self.state.record_interaction(interaction)
+
+        # Log events
+        self._emit_event(interaction_completed_event(
+            interaction_id=proposal.proposal_id,
+            accepted=accepted,
+            payoff_initiator=payoff_init,
+            payoff_counterparty=payoff_counter,
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+        ))
+
+        self._emit_event(payoff_computed_event(
+            interaction_id=proposal.proposal_id,
+            initiator_id=proposal.initiator_id,
+            counterparty_id=proposal.counterparty_id,
+            payoff_initiator=payoff_init,
+            payoff_counterparty=payoff_counter,
+            components={
+                "p": p,
+                "v_hat": v_hat,
+                "tau": interaction.tau,
+                "accepted": accepted,
+            },
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+        ))
+
+        # Callbacks
+        for callback in self._on_interaction_complete:
+            callback(interaction, payoff_init, payoff_counter)
+
+    def _generate_observables(
+        self,
+        proposal: InteractionProposal,
+        accepted: bool,
+    ) -> ProxyObservables:
+        """Generate observable signals for an interaction."""
+        # Base observables depend on agent types
+        initiator_state = self.state.get_agent(proposal.initiator_id)
+        counterparty_state = self.state.get_agent(proposal.counterparty_id)
+
+        initiator_type = initiator_state.agent_type if initiator_state else AgentType.HONEST
+        counterparty_type = counterparty_state.agent_type if counterparty_state else AgentType.HONEST
+
+        # Generate observables based on agent type combination
+        if initiator_type == AgentType.HONEST:
+            task_progress = random.uniform(0.3, 0.8)
+            rework = random.randint(0, 1)
+            rejections = 0
+            misuse = 0
+            engagement = random.uniform(0.2, 0.6)
+        elif initiator_type == AgentType.OPPORTUNISTIC:
+            task_progress = random.uniform(0.1, 0.5)
+            rework = random.randint(0, 2)
+            rejections = random.randint(0, 1)
+            misuse = 0
+            engagement = random.uniform(-0.2, 0.3)
+        elif initiator_type == AgentType.DECEPTIVE:
+            task_progress = random.uniform(0.2, 0.6)  # Appears moderate
+            rework = random.randint(0, 2)
+            rejections = random.randint(0, 1)
+            misuse = 0
+            engagement = random.uniform(0.0, 0.4)
+        else:  # Adversarial
+            task_progress = random.uniform(-0.3, 0.2)
+            rework = random.randint(1, 3)
+            rejections = random.randint(1, 2)
+            misuse = random.randint(0, 1)
+            engagement = random.uniform(-0.5, -0.1)
+
+        # Modify if not accepted
+        if not accepted:
+            engagement = min(engagement, 0.0)
+
+        return ProxyObservables(
+            task_progress_delta=task_progress,
+            rework_count=rework,
+            verifier_rejections=rejections,
+            tool_misuse_flags=misuse,
+            counterparty_engagement_delta=engagement,
+        )
+
+    def _update_reputation(self, agent_id: str, delta: float) -> None:
+        """Update agent reputation."""
+        agent_state = self.state.get_agent(agent_id)
+        if not agent_state:
+            return
+
+        old_rep = agent_state.reputation
+        agent_state.update_reputation(delta)
+
+        self._emit_event(reputation_updated_event(
+            agent_id=agent_id,
+            old_reputation=old_rep,
+            new_reputation=agent_state.reputation,
+            delta=delta,
+            reason="interaction_outcome",
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+        ))
+
+    def _compute_epoch_metrics(self) -> EpochMetrics:
+        """Compute metrics for the current epoch."""
+        interactions = self.state.completed_interactions
+
+        if not interactions:
+            return EpochMetrics(epoch=self.state.current_epoch)
+
+        accepted = [i for i in interactions if i.accepted]
+
+        # Use soft metrics calculator
+        toxicity = self.metrics_calculator.toxicity_rate(interactions)
+        quality_gap = self.metrics_calculator.quality_gap(interactions)
+        welfare = self.metrics_calculator.welfare_metrics(interactions)
+
+        return EpochMetrics(
+            epoch=self.state.current_epoch,
+            total_interactions=len(interactions),
+            accepted_interactions=len(accepted),
+            total_posts=len(self.feed._posts),
+            total_votes=len(self.feed._votes),
+            toxicity_rate=toxicity,
+            quality_gap=quality_gap,
+            avg_payoff=welfare.get("avg_initiator_payoff", 0),
+            total_welfare=welfare.get("total_welfare", 0),
+        )
+
+    def _emit_event(self, event: Event) -> None:
+        """Emit an event to the log."""
+        if self.event_log is not None and self.config.log_events:
+            self.event_log.append(event)
+
+    def pause(self) -> None:
+        """Pause the simulation."""
+        self.state.pause()
+
+    def resume(self) -> None:
+        """Resume the simulation."""
+        self.state.resume()
+
+    def get_agent(self, agent_id: str) -> Optional[BaseAgent]:
+        """Get an agent by ID."""
+        return self._agents.get(agent_id)
+
+    def get_all_agents(self) -> List[BaseAgent]:
+        """Get all registered agents."""
+        return list(self._agents.values())
+
+    def get_metrics_history(self) -> List[EpochMetrics]:
+        """Get all epoch metrics."""
+        return self._epoch_metrics
+
+    def on_epoch_end(self, callback: Callable[[EpochMetrics], None]) -> None:
+        """Register a callback for epoch end."""
+        self._on_epoch_end.append(callback)
+
+    def on_interaction_complete(
+        self,
+        callback: Callable[[SoftInteraction, float, float], None],
+    ) -> None:
+        """Register a callback for interaction completion."""
+        self._on_interaction_complete.append(callback)

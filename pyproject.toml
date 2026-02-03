@@ -41,8 +41,15 @@ analysis = [
     "matplotlib>=3.7",
     "seaborn>=0.12",
 ]
+runtime = [
+    "pyyaml>=6.0",
+]
+dashboard = [
+    "streamlit>=1.30",
+    "plotly>=5.0",
+]
 all = [
-    "distributional-agi-safety[dev,analysis]",
+    "distributional-agi-safety[dev,analysis,runtime,dashboard]",
 ]
 
 [project.urls]
