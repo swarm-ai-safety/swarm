@@ -33,6 +33,7 @@ dependencies = [
 dev = [
     "pytest>=7.0",
     "pytest-cov",
+    "pytest-asyncio>=0.23.0",
     "mypy",
     "ruff",
 ]
@@ -44,12 +45,17 @@ analysis = [
 runtime = [
     "pyyaml>=6.0",
 ]
+llm = [
+    "anthropic>=0.40.0",
+    "openai>=1.50.0",
+    "httpx>=0.27.0",
+]
 dashboard = [
     "streamlit>=1.30",
     "plotly>=5.0",
 ]
 all = [
-    "distributional-agi-safety[dev,analysis,runtime,dashboard]",
+    "distributional-agi-safety[dev,analysis,runtime,llm,dashboard]",
 ]
 
 [project.urls]
