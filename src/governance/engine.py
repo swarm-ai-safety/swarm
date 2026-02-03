@@ -11,6 +11,7 @@ from src.governance.collusion import CollusionPenaltyLever
 from src.governance.config import GovernanceConfig
 from src.governance.levers import GovernanceLever, LeverEffect
 from src.governance.reputation import ReputationDecayLever, VoteNormalizationLever
+from src.governance.security import SecurityLever
 from src.governance.taxes import TransactionTaxLever
 from src.models.interaction import SoftInteraction
 
@@ -92,12 +93,14 @@ class GovernanceEngine:
             CircuitBreakerLever(self.config),
             RandomAuditLever(self.config, seed=seed),
             CollusionPenaltyLever(self.config),
+            SecurityLever(self.config, seed=seed),
         ]
 
         # Keep references to specific levers for direct access
         self._staking_lever: Optional[StakingLever] = None
         self._circuit_breaker_lever: Optional[CircuitBreakerLever] = None
         self._collusion_lever: Optional[CollusionPenaltyLever] = None
+        self._security_lever: Optional[SecurityLever] = None
         self._vote_normalization_lever = VoteNormalizationLever(self.config)
 
         for lever in self._levers:
@@ -107,6 +110,8 @@ class GovernanceEngine:
                 self._circuit_breaker_lever = lever
             elif isinstance(lever, CollusionPenaltyLever):
                 self._collusion_lever = lever
+            elif isinstance(lever, SecurityLever):
+                self._security_lever = lever
 
     def apply_epoch_start(
         self,
@@ -237,3 +242,42 @@ class GovernanceEngine:
         """Clear collusion detection interaction history."""
         if self._collusion_lever is not None:
             self._collusion_lever.clear_history()
+
+    def set_security_agent_ids(self, agent_ids: List[str]) -> None:
+        """Set agent IDs for security analysis."""
+        if self._security_lever is not None:
+            self._security_lever.set_agent_ids(agent_ids)
+
+    def set_security_trust_scores(self, trust_scores: Dict[str, float]) -> None:
+        """Set trust scores for security analysis (laundering detection)."""
+        if self._security_lever is not None:
+            self._security_lever.set_agent_trust_scores(trust_scores)
+
+    def get_security_report(self):
+        """Get the latest security analysis report."""
+        if self._security_lever is None:
+            return None
+        return self._security_lever.get_report()
+
+    def get_quarantined_agents(self) -> Set[str]:
+        """Get set of quarantined agents."""
+        if self._security_lever is None:
+            return set()
+        return self._security_lever.get_quarantined_agents()
+
+    def release_from_quarantine(self, agent_id: str) -> bool:
+        """Release an agent from security quarantine."""
+        if self._security_lever is None:
+            return False
+        return self._security_lever.release_from_quarantine(agent_id)
+
+    def get_security_containment_actions(self) -> List[Dict]:
+        """Get history of security containment actions."""
+        if self._security_lever is None:
+            return []
+        return self._security_lever.get_containment_actions()
+
+    def clear_security_history(self) -> None:
+        """Clear security analysis history and state."""
+        if self._security_lever is not None:
+            self._security_lever.clear_history()

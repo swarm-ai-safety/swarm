@@ -1,0 +1,56 @@
+# Security Evaluation Scenario
+# Tests security threat detection and containment in a mixed population
+
+scenario_id: security_evaluation
+description: "Evaluate security detection with malicious and benign agents"
+
+agents:
+  - type: honest
+    count: 3
+  - type: opportunistic
+    count: 2
+  - type: adversarial
+    count: 2  # Potential attackers
+
+governance:
+  # Standard governance
+  transaction_tax_rate: 0.05
+  reputation_decay_rate: 0.95
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_threshold_violations: 3
+
+  # Collusion detection
+  collusion_detection_enabled: true
+  collusion_score_threshold: 0.5
+
+  # Security detection (Phase 5)
+  security_enabled: true
+  security_injection_threshold: 0.3
+  security_manipulation_threshold: 0.4
+  security_laundering_trust_gap: 0.25
+  security_contagion_velocity: 2.0
+  security_min_chain_length: 3
+  security_quarantine_threshold: 0.7
+  security_penalty_multiplier: 1.5
+  security_realtime_penalty: true
+  security_realtime_threshold: 0.4
+  security_realtime_rate: 0.2
+
+simulation:
+  n_epochs: 30
+  steps_per_epoch: 15
+  seed: 42
+
+payoff:
+  s_plus: 3.0
+  s_minus: 1.5
+  h: 2.5
+  theta: 0.5
+  w_rep: 2.0
+
+success_criteria:
+  # Security metrics
+  max_ecosystem_threat_level: 0.5
+  max_contagion_depth: 4
+  min_containment_effectiveness: 0.5
