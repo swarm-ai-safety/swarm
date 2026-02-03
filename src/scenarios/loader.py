@@ -13,6 +13,7 @@ from src.agents.honest import HonestAgent
 from src.agents.opportunistic import OpportunisticAgent
 from src.core.orchestrator import Orchestrator, OrchestratorConfig
 from src.core.payoff import PayoffConfig
+from src.env.network import NetworkConfig, NetworkTopology
 from src.env.state import RateLimits
 from src.governance.config import GovernanceConfig
 
@@ -167,6 +168,56 @@ def parse_rate_limits(data: Dict[str, Any]) -> RateLimits:
     )
 
 
+def parse_network_config(data: Dict[str, Any]) -> Optional[NetworkConfig]:
+    """
+    Parse network section from YAML into NetworkConfig.
+
+    Args:
+        data: The network section from YAML
+
+    Returns:
+        NetworkConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    # Check if network is explicitly disabled
+    if data.get("enabled") is False:
+        return None
+
+    # Parse topology
+    topology_str = data.get("topology", "complete").lower()
+    try:
+        topology = NetworkTopology(topology_str)
+    except ValueError:
+        raise ValueError(f"Unknown network topology: {topology_str}")
+
+    # Parse params (may be nested under 'params' key or flat)
+    params = data.get("params", {})
+
+    config = NetworkConfig(
+        topology=topology,
+        # Erdős-Rényi
+        edge_probability=params.get("edge_probability", data.get("edge_probability", 0.5)),
+        # Small-world
+        k_neighbors=params.get("k", params.get("k_neighbors", data.get("k_neighbors", 4))),
+        rewire_probability=params.get("p", params.get("rewire_probability", data.get("rewire_probability", 0.1))),
+        # Scale-free
+        m_edges=params.get("m", params.get("m_edges", data.get("m_edges", 2))),
+        # Dynamic network
+        dynamic=data.get("dynamic", False),
+        edge_strengthen_rate=data.get("edge_strengthen_rate", 0.1),
+        edge_decay_rate=data.get("edge_decay_rate", 0.05),
+        min_edge_weight=data.get("min_edge_weight", 0.1),
+        max_edge_weight=data.get("max_edge_weight", 1.0),
+        # Reputation-based
+        reputation_disconnect_threshold=data.get("reputation_disconnect_threshold"),
+    )
+
+    config.validate()
+    return config
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -189,6 +240,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
     governance_config = parse_governance_config(data.get("governance", {}))
     payoff_config = parse_payoff_config(data.get("payoff", {}))
     rate_limits = parse_rate_limits(data.get("rate_limits", {}))
+    network_config = parse_network_config(data.get("network", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -201,6 +253,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         seed=sim_data.get("seed"),
         payoff_config=payoff_config,
         governance_config=governance_config,
+        network_config=network_config,
         log_path=Path(outputs_data["event_log"]) if outputs_data.get("event_log") else None,
         log_events=bool(outputs_data.get("event_log")),
     )

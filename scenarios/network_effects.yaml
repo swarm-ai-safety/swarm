@@ -1,0 +1,83 @@
+# Network Effects Scenario
+# Studies information cascades and coalition formation in a small-world network.
+
+scenario_id: network_effects_v1
+description: "Small-world network with dynamic edges to study information cascades"
+motif: network_effects
+
+# Agent configuration
+agents:
+  - type: honest
+    count: 4
+  - type: opportunistic
+    count: 3
+  - type: deceptive
+    count: 2
+  - type: adversarial
+    count: 1
+
+# Network topology configuration
+network:
+  topology: small_world
+  params:
+    k: 4                      # Each node connected to 4 nearest neighbors
+    p: 0.1                    # 10% rewiring probability
+
+  # Dynamic network evolution
+  dynamic: true
+  edge_strengthen_rate: 0.1   # Strengthen edge by 0.1 on interaction
+  edge_decay_rate: 0.05       # 5% decay per epoch
+  min_edge_weight: 0.2        # Prune edges below 0.2
+  max_edge_weight: 1.0        # Cap at 1.0
+
+  # Reputation-based disconnection (optional)
+  # reputation_disconnect_threshold: -2.0
+
+# Simulation parameters
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 10
+  seed: 42
+
+# Payoff configuration
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+# Governance configuration
+governance:
+  transaction_tax_rate: 0.05
+  reputation_decay_rate: 0.95
+
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_duration_epochs: 3
+
+  audit_enabled: true
+  audit_probability: 0.1
+
+# Rate limits
+rate_limits:
+  posts_per_epoch: 5
+  interactions_per_step: 3
+  votes_per_epoch: 20
+  tasks_per_epoch: 2
+
+# Output paths
+outputs:
+  event_log: "logs/network_effects.jsonl"
+  metrics_csv: "results/network_effects_metrics.csv"
+
+# Success criteria
+success_criteria:
+  # Network should remain connected
+  min_connected_components: 1
+  # Average path length should stay reasonable
+  max_avg_path_length: 4.0
+  # Toxicity should be contained
+  max_toxicity: 0.35
