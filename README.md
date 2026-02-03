@@ -15,10 +15,11 @@ The system provides:
 
 **Runtime Layer (MVP v0):**
 - Agent behavioral policies (honest, opportunistic, deceptive, adversarial)
+- **LLM-backed agents** with Anthropic, OpenAI, and Ollama support
 - Environment state management with rate limits
 - Feed engine (posts, replies, voting, visibility ranking)
 - Task system (claiming, collaboration, verification)
-- Orchestrator for multi-agent simulation
+- Orchestrator for multi-agent simulation (sync and async)
 
 **Governance Layer:**
 - Configurable levers (taxes, reputation decay, staking, circuit breakers, audits)
@@ -73,6 +74,9 @@ pip install -e ".[dev]"
 
 # Install with analysis tools (pandas, matplotlib)
 pip install -e ".[analysis]"
+
+# Install with LLM support (Anthropic, OpenAI, Ollama)
+pip install -e ".[llm]"
 
 # Install everything
 pip install -e ".[all]"
@@ -178,6 +182,9 @@ distributional-agi-safety/
 │   │   ├── opportunistic.py    # Payoff-maximizing policy
 │   │   ├── deceptive.py        # Trust-then-exploit policy
 │   │   ├── adversarial.py      # Targeting/coordination policy
+│   │   ├── llm_agent.py        # LLM-backed agent
+│   │   ├── llm_config.py       # LLM configuration and cost tracking
+│   │   ├── llm_prompts.py      # Persona prompts and formatting
 │   │   └── roles/              # Role mixins (planner, worker, verifier, etc.)
 │   ├── env/
 │   │   ├── state.py            # EnvState, RateLimits
@@ -211,16 +218,19 @@ distributional-agi-safety/
 │   ├── test_governance.py
 │   ├── test_scenarios.py
 │   ├── test_sweep.py
+│   ├── test_llm_agent.py       # LLM agent tests (43 tests)
 │   └── fixtures/
 │       └── interactions.py     # Test data generators
 ├── examples/
 │   ├── mvp_demo.py             # End-to-end demo
 │   ├── run_scenario.py         # Run simulation from YAML
-│   └── parameter_sweep.py      # Batch parameter sweep
+│   ├── parameter_sweep.py      # Batch parameter sweep
+│   └── llm_demo.py             # LLM agent demo
 ├── scenarios/
 │   ├── baseline.yaml           # 5-agent baseline scenario
 │   ├── status_game.yaml        # Reputation competition
-│   └── strict_governance.yaml  # All governance levers enabled
+│   ├── strict_governance.yaml  # All governance levers enabled
+│   └── llm_agents.yaml         # Mixed LLM and scripted agents
 └── pyproject.toml
 ```
 
@@ -232,6 +242,97 @@ distributional-agi-safety/
 | **Opportunistic** | Maximizes short-term payoff, cherry-picks tasks, strategic voting |
 | **Deceptive** | Builds trust through honest behavior, then exploits trusted relationships |
 | **Adversarial** | Targets honest agents, coordinates with allies, disrupts ecosystem |
+| **LLM** | Behavior determined by LLM with configurable persona |
+
+## LLM Agents
+
+LLM-backed agents use real language models to make decisions, enabling study of emergent behavior rather than scripted policies.
+
+### Quick Start
+
+```python
+import asyncio
+from src.agents.llm_agent import LLMAgent
+from src.agents.llm_config import LLMConfig, LLMProvider, PersonaType
+from src.core.orchestrator import Orchestrator, OrchestratorConfig
+
+# Configure LLM agent
+llm_config = LLMConfig(
+    provider=LLMProvider.ANTHROPIC,
+    model="claude-sonnet-4-20250514",
+    persona=PersonaType.OPEN,  # Let the LLM develop its own strategy
+    temperature=0.7,
+)
+
+# Create orchestrator and agents
+config = OrchestratorConfig(n_epochs=5, steps_per_epoch=3)
+orchestrator = Orchestrator(config=config)
+orchestrator.register_agent(LLMAgent("llm_1", llm_config))
+
+# Run asynchronously for better performance with LLM agents
+metrics = asyncio.run(orchestrator.run_async())
+```
+
+### Providers
+
+| Provider | Model Examples | API Key Env Var |
+|----------|---------------|-----------------|
+| **Anthropic** | claude-sonnet-4-20250514, claude-3-haiku-20240307 | `ANTHROPIC_API_KEY` |
+| **OpenAI** | gpt-4o, gpt-4o-mini | `OPENAI_API_KEY` |
+| **Ollama** | llama3, mistral (local) | None required |
+
+### Personas
+
+| Persona | Behavior |
+|---------|----------|
+| **Honest** | Cooperative, maximizes collective welfare |
+| **Strategic** | Self-interested, cooperates when beneficial |
+| **Adversarial** | Probes system weaknesses, tests governance robustness |
+| **Open** | No prescribed strategy - LLM develops its own approach |
+
+### YAML Configuration
+
+```yaml
+agents:
+  - type: llm
+    count: 2
+    llm:
+      provider: anthropic
+      model: claude-sonnet-4-20250514
+      persona: open
+      temperature: 0.7
+      max_tokens: 512
+      cost_tracking: true
+
+  - type: honest  # Mix with scripted agents
+    count: 2
+```
+
+### Cost Tracking
+
+LLM agents track token usage and estimated costs:
+
+```python
+# After simulation
+stats = orchestrator.get_llm_usage_stats()
+for agent_id, usage in stats.items():
+    print(f"{agent_id}: {usage['total_requests']} requests, ${usage['estimated_cost_usd']:.4f}")
+```
+
+### Demo
+
+```bash
+# Dry run (no API calls)
+python examples/llm_demo.py --dry-run
+
+# With real API calls
+export ANTHROPIC_API_KEY="your-key"
+python examples/llm_demo.py
+
+# Use OpenAI instead
+export OPENAI_API_KEY="your-key"
+python examples/llm_demo.py --provider openai --model gpt-4o
+```
 
 ## Orchestrator
 
@@ -382,7 +483,7 @@ interactions = orchestrator.event_log.to_interactions()
 ## Running Tests
 
 ```bash
-# Run all tests (230 tests)
+# Run all tests (273 tests)
 pytest tests/ -v
 
 # Run with coverage
@@ -517,9 +618,13 @@ Supported parameter paths:
 - `payoff.*` - Any PayoffConfig field
 - `n_epochs`, `steps_per_epoch` - Simulation settings
 
-## Future Extensions (MVP v1)
+## Future Extensions
 
-- **Marketplace**: Bounties, bids, escrow for task completion
+- **Network Topology**: Configurable interaction graphs (small-world, scale-free) for studying information cascades
+- **Collusion Detection**: Metrics and governance responses for coordinated manipulation
+- **Emergent Capability Measurement**: Composite tasks requiring multi-agent collaboration
+- **Adversarial Red-Teaming**: Adaptive adversaries that learn to evade governance
+- **Semi-Permeable Boundaries**: Model sandbox-external world interactions
 - **Dashboard**: Streamlit visualization of metrics over time
 
 ## References
@@ -540,10 +645,12 @@ Supported parameter paths:
 
 **Core:** numpy, pydantic
 
-**Development:** pytest, pytest-cov, mypy, ruff
+**Development:** pytest, pytest-cov, pytest-asyncio, mypy, ruff
 
 **Analysis:** pandas, matplotlib, seaborn
 
 **Runtime:** pyyaml
+
+**LLM:** anthropic, openai, httpx
 
 **Dashboard:** streamlit, plotly
