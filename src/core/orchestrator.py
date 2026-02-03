@@ -15,6 +15,7 @@ if TYPE_CHECKING:
 from src.core.payoff import PayoffConfig, SoftPayoffEngine
 from src.core.proxy import ProxyComputer, ProxyObservables
 from src.env.feed import Feed, VoteType
+from src.env.network import AgentNetwork, NetworkConfig
 from src.env.state import EnvState, InteractionProposal
 from src.env.tasks import TaskPool, TaskStatus
 from src.logging.event_log import EventLog
@@ -56,6 +57,9 @@ class OrchestratorConfig:
     # Governance configuration
     governance_config: Optional[GovernanceConfig] = None
 
+    # Network configuration
+    network_config: Optional[NetworkConfig] = None
+
     # Logging
     log_path: Optional[Path] = None
     log_events: bool = True
@@ -77,6 +81,7 @@ class EpochMetrics:
     quality_gap: float = 0.0
     avg_payoff: float = 0.0
     total_welfare: float = 0.0
+    network_metrics: Optional[Dict[str, float]] = None
 
 
 class Orchestrator:
@@ -114,6 +119,15 @@ class Orchestrator:
         self.state = state or EnvState(steps_per_epoch=self.config.steps_per_epoch)
         self.feed = Feed()
         self.task_pool = TaskPool()
+
+        # Network topology (initialized when agents are registered)
+        if self.config.network_config is not None:
+            self.network: Optional[AgentNetwork] = AgentNetwork(
+                config=self.config.network_config,
+                seed=self.config.seed,
+            )
+        else:
+            self.network = None
 
         # Agents
         self._agents: Dict[str, BaseAgent] = {}
@@ -180,6 +194,11 @@ class Orchestrator:
 
         return state
 
+    def _initialize_network(self) -> None:
+        """Initialize network topology with registered agents."""
+        if self.network is not None:
+            self.network.initialize(list(self._agents.keys()))
+
     def run(self) -> List[EpochMetrics]:
         """
         Run the full simulation.
@@ -187,6 +206,9 @@ class Orchestrator:
         Returns:
             List of metrics for each epoch
         """
+        # Initialize network with registered agents
+        self._initialize_network()
+
         # Log simulation start
         self._emit_event(Event(
             event_type=EventType.SIMULATION_STARTED,
@@ -235,6 +257,16 @@ class Orchestrator:
 
             self._run_step()
             self.state.advance_step()
+
+        # Apply network edge decay
+        if self.network is not None:
+            pruned = self.network.decay_edges()
+            if pruned > 0:
+                self._emit_event(Event(
+                    event_type=EventType.EPOCH_COMPLETED,
+                    payload={"network_edges_pruned": pruned},
+                    epoch=epoch_start,
+                ))
 
         # Compute epoch metrics
         metrics = self._compute_epoch_metrics()
@@ -338,15 +370,23 @@ class Orchestrator:
             if t.status in (TaskStatus.CLAIMED, TaskStatus.IN_PROGRESS)
         ]
 
-        # Get visible agents
+        # Get visible agents (filtered by network if enabled)
+        active_agents = self.state.get_active_agents()
+
+        if self.network is not None:
+            # Only show network neighbors
+            neighbor_ids = set(self.network.neighbors(agent_id))
+            active_agents = [s for s in active_agents if s.agent_id in neighbor_ids]
+
         visible_agents = [
             {
                 "agent_id": s.agent_id,
                 "agent_type": s.agent_type.value,
                 "reputation": s.reputation,
                 "resources": s.resources,
+                "edge_weight": self.network.edge_weight(agent_id, s.agent_id) if self.network else 1.0,
             }
-            for s in self.state.get_active_agents()
+            for s in active_agents
             if s.agent_id != agent_id
         ]
 
@@ -422,6 +462,12 @@ class Orchestrator:
         elif action.action_type == ActionType.PROPOSE_INTERACTION:
             if not rate_limit.can_interact(self.state.rate_limits):
                 return False
+
+            # Validate network constraint
+            if self.network is not None:
+                if not self.network.has_edge(agent_id, action.counterparty_id):
+                    # Cannot interact with non-neighbors
+                    return False
 
             proposal = InteractionProposal(
                 initiator_id=agent_id,
@@ -625,6 +671,10 @@ class Orchestrator:
             step=self.state.current_step,
         ))
 
+        # Strengthen network edge after interaction
+        if self.network is not None and accepted:
+            self.network.strengthen_edge(proposal.initiator_id, proposal.counterparty_id)
+
         # Callbacks
         for callback in self._on_interaction_complete:
             callback(interaction, payoff_init, payoff_counter)
@@ -735,8 +785,16 @@ class Orchestrator:
         """Compute metrics for the current epoch."""
         interactions = self.state.completed_interactions
 
+        # Get network metrics if available (even with no interactions)
+        network_metrics = None
+        if self.network is not None:
+            network_metrics = self.network.get_metrics()
+
         if not interactions:
-            return EpochMetrics(epoch=self.state.current_epoch)
+            return EpochMetrics(
+                epoch=self.state.current_epoch,
+                network_metrics=network_metrics,
+            )
 
         accepted = [i for i in interactions if i.accepted]
 
@@ -755,6 +813,7 @@ class Orchestrator:
             quality_gap=quality_gap,
             avg_payoff=welfare.get("avg_initiator_payoff", 0),
             total_welfare=welfare.get("total_welfare", 0),
+            network_metrics=network_metrics,
         )
 
     def _emit_event(self, event: Event) -> None:
@@ -811,6 +870,9 @@ class Orchestrator:
         Returns:
             List of metrics for each epoch
         """
+        # Initialize network with registered agents
+        self._initialize_network()
+
         # Log simulation start
         self._emit_event(Event(
             event_type=EventType.SIMULATION_STARTED,
@@ -860,6 +922,16 @@ class Orchestrator:
 
             await self._run_step_async()
             self.state.advance_step()
+
+        # Apply network edge decay
+        if self.network is not None:
+            pruned = self.network.decay_edges()
+            if pruned > 0:
+                self._emit_event(Event(
+                    event_type=EventType.EPOCH_COMPLETED,
+                    payload={"network_edges_pruned": pruned},
+                    epoch=epoch_start,
+                ))
 
         # Compute epoch metrics
         metrics = self._compute_epoch_metrics()
@@ -991,3 +1063,18 @@ class Orchestrator:
             if hasattr(agent, 'get_usage_stats'):
                 stats[agent_id] = agent.get_usage_stats()
         return stats
+
+    def get_network_metrics(self) -> Optional[Dict[str, float]]:
+        """
+        Get current network topology metrics.
+
+        Returns:
+            Dictionary of network metrics, or None if no network
+        """
+        if self.network is None:
+            return None
+        return self.network.get_metrics()
+
+    def get_network(self) -> Optional[AgentNetwork]:
+        """Get the network object for direct manipulation."""
+        return self.network
