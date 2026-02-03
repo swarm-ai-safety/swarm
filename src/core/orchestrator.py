@@ -14,10 +14,17 @@ if TYPE_CHECKING:
     from src.agents.llm_agent import LLMAgent
 from src.core.payoff import PayoffConfig, SoftPayoffEngine
 from src.core.proxy import ProxyComputer, ProxyObservables
+from src.env.composite_tasks import (
+    CapabilityType,
+    CompositeTask,
+    CompositeTaskPool,
+    CompositeTaskStatus,
+)
 from src.env.feed import Feed, VoteType
 from src.env.network import AgentNetwork, NetworkConfig
 from src.env.state import EnvState, InteractionProposal
 from src.env.tasks import TaskPool, TaskStatus
+from src.metrics.capabilities import CapabilityAnalyzer, EmergentCapabilityMetrics
 from src.logging.event_log import EventLog
 from src.metrics.soft_metrics import SoftMetrics
 from src.models.agent import AgentState, AgentType
@@ -60,6 +67,9 @@ class OrchestratorConfig:
     # Network configuration
     network_config: Optional[NetworkConfig] = None
 
+    # Composite task configuration
+    enable_composite_tasks: bool = False
+
     # Logging
     log_path: Optional[Path] = None
     log_events: bool = True
@@ -82,6 +92,7 @@ class EpochMetrics:
     avg_payoff: float = 0.0
     total_welfare: float = 0.0
     network_metrics: Optional[Dict[str, float]] = None
+    capability_metrics: Optional[EmergentCapabilityMetrics] = None
 
 
 class Orchestrator:
@@ -119,6 +130,16 @@ class Orchestrator:
         self.state = state or EnvState(steps_per_epoch=self.config.steps_per_epoch)
         self.feed = Feed()
         self.task_pool = TaskPool()
+
+        # Composite task support
+        if self.config.enable_composite_tasks:
+            self.composite_task_pool: Optional[CompositeTaskPool] = CompositeTaskPool()
+            self.capability_analyzer: Optional[CapabilityAnalyzer] = CapabilityAnalyzer(
+                seed=self.config.seed
+            )
+        else:
+            self.composite_task_pool = None
+            self.capability_analyzer = None
 
         # Network topology (initialized when agents are registered)
         if self.config.network_config is not None:
@@ -794,10 +815,16 @@ class Orchestrator:
         if self.network is not None:
             network_metrics = self.network.get_metrics()
 
+        # Get capability metrics if available
+        capability_metrics = None
+        if self.capability_analyzer is not None:
+            capability_metrics = self.capability_analyzer.compute_metrics()
+
         if not interactions:
             return EpochMetrics(
                 epoch=self.state.current_epoch,
                 network_metrics=network_metrics,
+                capability_metrics=capability_metrics,
             )
 
         accepted = [i for i in interactions if i.accepted]
@@ -818,6 +845,7 @@ class Orchestrator:
             avg_payoff=welfare.get("avg_initiator_payoff", 0),
             total_welfare=welfare.get("total_welfare", 0),
             network_metrics=network_metrics,
+            capability_metrics=capability_metrics,
         )
 
     def _emit_event(self, event: Event) -> None:
@@ -850,6 +878,69 @@ class Orchestrator:
         if self.governance_engine is None:
             return None
         return self.governance_engine.get_collusion_report()
+
+    # =========================================================================
+    # Composite Task Support
+    # =========================================================================
+
+    def add_composite_task(self, task: CompositeTask) -> bool:
+        """
+        Add a composite task to the pool.
+
+        Args:
+            task: The composite task to add
+
+        Returns:
+            True if added successfully
+        """
+        if self.composite_task_pool is None:
+            return False
+        self.composite_task_pool.add_task(task)
+        return True
+
+    def get_composite_task(self, task_id: str) -> Optional[CompositeTask]:
+        """Get a composite task by ID."""
+        if self.composite_task_pool is None:
+            return None
+        return self.composite_task_pool.get_task(task_id)
+
+    def get_open_composite_tasks(self) -> List[CompositeTask]:
+        """Get all open composite tasks."""
+        if self.composite_task_pool is None:
+            return []
+        return self.composite_task_pool.get_open_tasks()
+
+    def register_agent_capabilities(
+        self,
+        agent_id: str,
+        capabilities: set,
+    ) -> bool:
+        """
+        Register an agent's capabilities for composite task matching.
+
+        Args:
+            agent_id: The agent's ID
+            capabilities: Set of CapabilityType values
+
+        Returns:
+            True if registered successfully
+        """
+        if self.capability_analyzer is None:
+            return False
+        self.capability_analyzer.register_agent(agent_id, capabilities)
+        return True
+
+    def get_capability_metrics(self) -> Optional[EmergentCapabilityMetrics]:
+        """Get current emergent capability metrics."""
+        if self.capability_analyzer is None:
+            return None
+        return self.capability_analyzer.compute_metrics()
+
+    def get_composite_task_stats(self) -> Dict:
+        """Get statistics about composite tasks."""
+        if self.composite_task_pool is None:
+            return {}
+        return self.composite_task_pool.get_stats()
 
     def on_epoch_end(self, callback: Callable[[EpochMetrics], None]) -> None:
         """Register a callback for epoch end."""

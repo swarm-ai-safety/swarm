@@ -1,0 +1,125 @@
+# Emergent Capabilities Scenario
+#
+# This scenario demonstrates multi-agent collaboration on composite tasks
+# that require different capability types. It enables measurement of
+# emergent behaviors like coordination, synergy, and information flow.
+
+scenario_id: emergent_capabilities
+description: "Measure emergent capabilities in multi-agent collaboration"
+motif: "Collective intelligence and capability complementarity"
+
+agents:
+  # Specialized agents with different capability profiles
+  - type: honest
+    count: 2
+    capabilities:
+      - research
+      - analysis
+
+  - type: honest
+    count: 2
+    capabilities:
+      - planning
+      - execution
+
+  - type: honest
+    count: 2
+    capabilities:
+      - verification
+      - communication
+
+  # Generalist agents
+  - type: opportunistic
+    count: 2
+    capabilities:
+      - coordination
+      - creativity
+      - communication
+
+governance:
+  # Standard governance levers
+  transaction_tax_rate: 0.03
+  reputation_decay_rate: 0.97
+
+  # Staking to ensure commitment
+  staking_enabled: true
+  min_stake_to_participate: 5.0
+  stake_slash_rate: 0.1
+
+  # Circuit breaker for individual bad actors
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_threshold_violations: 5
+  freeze_duration_epochs: 2
+
+  # Enable composite tasks
+  composite_tasks_enabled: true
+
+network:
+  # Fully connected to enable any agent collaboration
+  topology: complete
+  params: {}
+
+  # Dynamic edges strengthen with collaboration
+  dynamic: true
+  edge_strengthen_rate: 0.15
+  edge_decay_rate: 0.02
+  min_edge_weight: 0.2
+
+simulation:
+  n_epochs: 30
+  steps_per_epoch: 20
+  seed: 42
+
+payoff:
+  s_plus: 3.5       # Benefit from good outcome
+  s_minus: 1.0      # Cost from bad outcome
+  h: 2.0            # Externality from harm
+  theta: 0.5        # Surplus split
+  w_rep: 2.5        # Reputation weight
+
+rate_limits:
+  posts_per_epoch: 12
+  interactions_per_step: 10
+  votes_per_epoch: 60
+
+# Composite task configuration
+composite_tasks:
+  # Initial tasks to seed the pool
+  initial_tasks:
+    - type: research_synthesis
+      topic: "Multi-agent safety protocols"
+      deadline_offset: 10  # epochs from start
+      bounty: 30.0
+
+    - type: planning_coordination
+      goal: "Resource allocation optimization"
+      deadline_offset: 15
+      bounty: 35.0
+
+    - type: problem_solving
+      problem: "Coordination failure mitigation"
+      deadline_offset: 20
+      bounty: 40.0
+
+  # Task generation settings
+  task_spawn_rate: 0.3        # Probability of spawning new task each epoch
+  max_concurrent_tasks: 5     # Maximum tasks in pool
+  task_types:
+    - research_synthesis
+    - planning_coordination
+    - problem_solving
+
+success_criteria:
+  # Coordination metrics
+  min_avg_coordination_score: 0.4
+  min_avg_synergy_score: 0.5
+
+  # Task completion
+  min_tasks_completed: 2
+  min_completion_rate: 0.5
+
+  # Capability development
+  min_specialization_index: 0.3
+  max_capability_concentration: 0.8  # Avoid one agent dominating
+
