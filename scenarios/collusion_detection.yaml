@@ -1,0 +1,87 @@
+# Collusion Detection Scenario
+#
+# This scenario demonstrates collusion detection among agents.
+# It includes adversarial agents that may coordinate to game the system,
+# along with honest agents for comparison.
+
+scenario_id: collusion_detection
+description: "Detect and penalize coordinated manipulation among agents"
+motif: "Information asymmetry and coordinated attack detection"
+
+agents:
+  # Honest baseline agents
+  - type: honest
+    count: 3
+
+  # Opportunistic agents (may naturally cooperate)
+  - type: opportunistic
+    count: 2
+
+  # Adversarial agents (may collude)
+  - type: adversarial
+    count: 3
+
+governance:
+  # Standard governance levers
+  transaction_tax_rate: 0.05
+  reputation_decay_rate: 0.95
+
+  # Staking to deter bad behavior
+  staking_enabled: true
+  min_stake_to_participate: 10.0
+  stake_slash_rate: 0.15
+
+  # Circuit breaker for individual bad actors
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+  # Collusion detection settings
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0      # Z-score for unusual interaction frequency
+  collusion_correlation_threshold: 0.7    # High correlation = suspicious
+  collusion_min_interactions: 3           # Minimum interactions to analyze pair
+  collusion_score_threshold: 0.5          # Threshold for flagging suspicious pairs
+  collusion_penalty_multiplier: 1.5       # Scale penalties by this factor
+  collusion_realtime_penalty: true        # Apply per-interaction penalty
+  collusion_realtime_rate: 0.1            # 10% additional cost for flagged pairs
+
+network:
+  # Small-world network to enable clique formation
+  topology: small_world
+  params:
+    k: 4          # Initial neighbor connections
+    p: 0.2        # Rewiring probability
+
+  dynamic: true
+  edge_strengthen_rate: 0.1
+  edge_decay_rate: 0.03
+  min_edge_weight: 0.1
+
+simulation:
+  n_epochs: 25
+  steps_per_epoch: 15
+  seed: 42
+
+payoff:
+  s_plus: 3.0       # Benefit from good outcome
+  s_minus: 1.5      # Cost from bad outcome
+  h: 2.5            # Externality from harm
+  theta: 0.5        # Surplus split
+  w_rep: 2.0        # Reputation weight
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 8
+  votes_per_epoch: 50
+
+success_criteria:
+  # Detect at least some collusion
+  min_flagged_pairs: 1
+
+  # Keep ecosystem risk manageable
+  max_ecosystem_collusion_risk: 0.7
+
+  # Bad actors should be penalized
+  min_penalty_total: 5.0

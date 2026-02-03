@@ -196,8 +196,12 @@ class Orchestrator:
 
     def _initialize_network(self) -> None:
         """Initialize network topology with registered agents."""
+        agent_ids = list(self._agents.keys())
         if self.network is not None:
-            self.network.initialize(list(self._agents.keys()))
+            self.network.initialize(agent_ids)
+        # Set agent IDs for collusion detection
+        if self.governance_engine is not None:
+            self.governance_engine.set_collusion_agent_ids(agent_ids)
 
     def run(self) -> List[EpochMetrics]:
         """
@@ -840,6 +844,12 @@ class Orchestrator:
     def get_metrics_history(self) -> List[EpochMetrics]:
         """Get all epoch metrics."""
         return self._epoch_metrics
+
+    def get_collusion_report(self):
+        """Get the latest collusion detection report."""
+        if self.governance_engine is None:
+            return None
+        return self.governance_engine.get_collusion_report()
 
     def on_epoch_end(self, callback: Callable[[EpochMetrics], None]) -> None:
         """Register a callback for epoch end."""

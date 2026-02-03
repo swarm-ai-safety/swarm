@@ -42,6 +42,17 @@ class GovernanceConfig:
     audit_penalty_multiplier: float = 2.0
     audit_threshold_p: float = 0.5
 
+    # Collusion detection
+    collusion_detection_enabled: bool = False
+    collusion_frequency_threshold: float = 2.0  # Z-score for unusual frequency
+    collusion_correlation_threshold: float = 0.7  # Benefit correlation threshold
+    collusion_min_interactions: int = 3  # Min interactions to analyze pair
+    collusion_score_threshold: float = 0.5  # Threshold for flagging
+    collusion_penalty_multiplier: float = 1.0  # Penalty scaling factor
+    collusion_realtime_penalty: bool = False  # Apply per-interaction penalty
+    collusion_realtime_rate: float = 0.1  # Rate for realtime penalty
+    collusion_clear_history_on_epoch: bool = False  # Clear history each epoch
+
     def validate(self) -> None:
         """Validate configuration values."""
         if not 0.0 <= self.transaction_tax_rate <= 1.0:
@@ -70,3 +81,15 @@ class GovernanceConfig:
             raise ValueError("audit_penalty_multiplier must be non-negative")
         if not 0.0 <= self.audit_threshold_p <= 1.0:
             raise ValueError("audit_threshold_p must be in [0, 1]")
+        if self.collusion_frequency_threshold <= 0:
+            raise ValueError("collusion_frequency_threshold must be positive")
+        if not 0.0 <= self.collusion_correlation_threshold <= 1.0:
+            raise ValueError("collusion_correlation_threshold must be in [0, 1]")
+        if self.collusion_min_interactions < 1:
+            raise ValueError("collusion_min_interactions must be >= 1")
+        if not 0.0 <= self.collusion_score_threshold <= 1.0:
+            raise ValueError("collusion_score_threshold must be in [0, 1]")
+        if self.collusion_penalty_multiplier < 0:
+            raise ValueError("collusion_penalty_multiplier must be non-negative")
+        if self.collusion_realtime_rate < 0:
+            raise ValueError("collusion_realtime_rate must be non-negative")

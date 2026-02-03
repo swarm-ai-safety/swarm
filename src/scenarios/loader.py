@@ -114,6 +114,17 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         audit_probability=data.get("audit_probability", 0.1),
         audit_penalty_multiplier=data.get("audit_penalty_multiplier", 2.0),
         audit_threshold_p=data.get("audit_threshold_p", 0.5),
+
+        # Collusion detection
+        collusion_detection_enabled=data.get("collusion_detection_enabled", False),
+        collusion_frequency_threshold=data.get("collusion_frequency_threshold", 2.0),
+        collusion_correlation_threshold=data.get("collusion_correlation_threshold", 0.7),
+        collusion_min_interactions=data.get("collusion_min_interactions", 3),
+        collusion_score_threshold=data.get("collusion_score_threshold", 0.5),
+        collusion_penalty_multiplier=data.get("collusion_penalty_multiplier", 1.0),
+        collusion_realtime_penalty=data.get("collusion_realtime_penalty", False),
+        collusion_realtime_rate=data.get("collusion_realtime_rate", 0.1),
+        collusion_clear_history_on_epoch=data.get("collusion_clear_history_on_epoch", False),
     )
 
     config.validate()

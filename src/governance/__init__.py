@@ -3,6 +3,7 @@
 from src.governance.admission import StakingLever
 from src.governance.audits import RandomAuditLever
 from src.governance.circuit_breaker import CircuitBreakerLever
+from src.governance.collusion import CollusionPenaltyLever
 from src.governance.config import GovernanceConfig
 from src.governance.engine import GovernanceEffect, GovernanceEngine
 from src.governance.levers import GovernanceLever, LeverEffect
@@ -21,4 +22,5 @@ __all__ = [
     "StakingLever",
     "CircuitBreakerLever",
     "RandomAuditLever",
+    "CollusionPenaltyLever",
 ]

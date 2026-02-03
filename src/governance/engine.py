@@ -7,6 +7,7 @@ from src.env.state import EnvState
 from src.governance.admission import StakingLever
 from src.governance.audits import RandomAuditLever
 from src.governance.circuit_breaker import CircuitBreakerLever
+from src.governance.collusion import CollusionPenaltyLever
 from src.governance.config import GovernanceConfig
 from src.governance.levers import GovernanceLever, LeverEffect
 from src.governance.reputation import ReputationDecayLever, VoteNormalizationLever
@@ -90,11 +91,13 @@ class GovernanceEngine:
             StakingLever(self.config),
             CircuitBreakerLever(self.config),
             RandomAuditLever(self.config, seed=seed),
+            CollusionPenaltyLever(self.config),
         ]
 
         # Keep references to specific levers for direct access
         self._staking_lever: Optional[StakingLever] = None
         self._circuit_breaker_lever: Optional[CircuitBreakerLever] = None
+        self._collusion_lever: Optional[CollusionPenaltyLever] = None
         self._vote_normalization_lever = VoteNormalizationLever(self.config)
 
         for lever in self._levers:
@@ -102,6 +105,8 @@ class GovernanceEngine:
                 self._staking_lever = lever
             elif isinstance(lever, CircuitBreakerLever):
                 self._circuit_breaker_lever = lever
+            elif isinstance(lever, CollusionPenaltyLever):
+                self._collusion_lever = lever
 
     def apply_epoch_start(
         self,
@@ -216,3 +221,19 @@ class GovernanceEngine:
         """Reset circuit breaker tracking for an agent."""
         if self._circuit_breaker_lever is not None:
             self._circuit_breaker_lever.reset_tracker(agent_id)
+
+    def set_collusion_agent_ids(self, agent_ids: List[str]) -> None:
+        """Set agent IDs for collusion detection."""
+        if self._collusion_lever is not None:
+            self._collusion_lever.set_agent_ids(agent_ids)
+
+    def get_collusion_report(self):
+        """Get the latest collusion detection report."""
+        if self._collusion_lever is None:
+            return None
+        return self._collusion_lever.get_report()
+
+    def clear_collusion_history(self) -> None:
+        """Clear collusion detection interaction history."""
+        if self._collusion_lever is not None:
+            self._collusion_lever.clear_history()

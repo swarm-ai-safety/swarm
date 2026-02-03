@@ -24,6 +24,7 @@ The system provides:
 
 **Governance Layer:**
 - Configurable levers (taxes, reputation decay, staking, circuit breakers, audits)
+- **Collusion detection** with pair-level and group-level analysis
 - Integration with orchestrator via epoch and interaction hooks
 - Populates `c_a` and `c_b` governance costs on interactions
 
@@ -200,10 +201,12 @@ distributional-agi-safety/
 │   │   ├── reputation.py       # ReputationDecayLever, VoteNormalizationLever
 │   │   ├── admission.py        # StakingLever
 │   │   ├── circuit_breaker.py  # CircuitBreakerLever
-│   │   └── audits.py           # RandomAuditLever
+│   │   ├── audits.py           # RandomAuditLever
+│   │   └── collusion.py        # CollusionPenaltyLever
 │   ├── metrics/
 │   │   ├── soft_metrics.py     # SoftMetrics (40+ metrics)
-│   │   └── reporters.py        # Dual reporting (soft + hard)
+│   │   ├── reporters.py        # Dual reporting (soft + hard)
+│   │   └── collusion.py        # Collusion detection algorithms
 │   ├── scenarios/
 │   │   └── loader.py           # YAML scenario loader
 │   ├── analysis/
@@ -222,6 +225,7 @@ distributional-agi-safety/
 │   ├── test_sweep.py
 │   ├── test_llm_agent.py       # LLM agent tests (43 tests)
 │   ├── test_network.py         # Network topology tests (48 tests)
+│   ├── test_collusion.py       # Collusion detection tests (26 tests)
 │   └── fixtures/
 │       └── interactions.py     # Test data generators
 ├── examples/
@@ -234,7 +238,8 @@ distributional-agi-safety/
 │   ├── status_game.yaml        # Reputation competition
 │   ├── strict_governance.yaml  # All governance levers enabled
 │   ├── llm_agents.yaml         # Mixed LLM and scripted agents
-│   └── network_effects.yaml    # Small-world network with dynamic edges
+│   ├── network_effects.yaml    # Small-world network with dynamic edges
+│   └── collusion_detection.yaml # Collusion detection scenario
 └── pyproject.toml
 ```
 
@@ -514,6 +519,7 @@ orchestrator = Orchestrator(config=config)
 | **Staking** | Block actions if `resources < min_stake` | can_agent_act |
 | **Circuit Breaker** | Freeze agent if `avg_toxicity > threshold` for N violations | on_interaction |
 | **Random Audit** | Penalty `(threshold - p) * multiplier` if audited and `p < threshold` | on_interaction |
+| **Collusion Detection** | Penalty based on collusion risk score from coordinated behavior | on_epoch_start, on_interaction |
 
 ### Integration Points
 
@@ -523,6 +529,73 @@ Governance hooks into the orchestrator at:
 3. **Interaction completion**: Taxes, circuit breaker tracking, random audits
 
 Costs are added to `interaction.c_a` and `interaction.c_b` before payoff computation.
+
+## Collusion Detection
+
+The collusion detection system identifies coordinated manipulation patterns among agents.
+
+### Detection Signals
+
+| Signal | Description | Threshold |
+|--------|-------------|-----------|
+| **Interaction Frequency** | Z-score of pair interaction count vs. population | > 2.0 |
+| **Benefit Correlation** | Correlation between pair benefits across interactions | > 0.7 |
+| **Acceptance Rate** | Fraction of mutually accepted interactions | > 0.8 |
+| **Quality Asymmetry** | Difference in avg p (internal vs external) | > 0.2 |
+
+### Quick Start
+
+```python
+from src.governance import GovernanceConfig, GovernanceEngine
+
+# Enable collusion detection
+config = GovernanceConfig(
+    collusion_detection_enabled=True,
+    collusion_frequency_threshold=2.0,      # Z-score threshold
+    collusion_score_threshold=0.5,          # Flag pairs above this
+    collusion_penalty_multiplier=1.5,       # Scale penalties
+    collusion_realtime_penalty=True,        # Per-interaction penalty
+)
+
+# After simulation
+report = orchestrator.get_collusion_report()
+print(f"Ecosystem risk: {report.ecosystem_collusion_risk:.2f}")
+print(f"Flagged pairs: {report.n_flagged_pairs}")
+for pair in report.suspicious_pairs:
+    print(f"  {pair.agent_a} <-> {pair.agent_b}: score={pair.collusion_score:.2f}")
+```
+
+### Detection Levels
+
+**Pair-Level**: Analyzes interaction patterns between each agent pair:
+- Frequency compared to population baseline
+- Mutual benefit correlation
+- Quality of interactions (avg p)
+- Temporal clustering
+
+**Group-Level**: Identifies clusters of suspicious pairs:
+- Connected components of flagged pairs
+- Internal vs external interaction rates
+- Coordinated behavior patterns
+
+### YAML Configuration
+
+```yaml
+governance:
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0      # Z-score for unusual frequency
+  collusion_correlation_threshold: 0.7    # Benefit correlation threshold
+  collusion_min_interactions: 3           # Min interactions to analyze pair
+  collusion_score_threshold: 0.5          # Threshold for flagging
+  collusion_penalty_multiplier: 1.5       # Penalty scaling factor
+  collusion_realtime_penalty: true        # Apply per-interaction penalty
+  collusion_realtime_rate: 0.1            # Rate for realtime penalty
+```
+
+Run the collusion detection scenario:
+```bash
+python examples/run_scenario.py scenarios/collusion_detection.yaml
+```
 
 ## Core Concepts
 
@@ -591,7 +664,7 @@ interactions = orchestrator.event_log.to_interactions()
 ## Running Tests
 
 ```bash
-# Run all tests (321 tests)
+# Run all tests (347 tests)
 pytest tests/ -v
 
 # Run with coverage
@@ -728,7 +801,6 @@ Supported parameter paths:
 
 ## Future Extensions
 
-- **Collusion Detection**: Metrics and governance responses for coordinated manipulation
 - **Emergent Capability Measurement**: Composite tasks requiring multi-agent collaboration
 - **Adversarial Red-Teaming**: Adaptive adversaries that learn to evade governance
 - **Semi-Permeable Boundaries**: Model sandbox-external world interactions
