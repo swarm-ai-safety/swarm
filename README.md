@@ -247,6 +247,13 @@ interactions = generate_mixed_batch(count=100, toxic_fraction=0.3, seed=42)
 - Dashboard visualization
 - Multi-agent coordination protocols
 
+## Inspired By
+
+This project is inspired by research on multi-agent safety and market dynamics:
+
+- [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
+- [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.141)
+
 ## Dependencies
 
 **Core:**
