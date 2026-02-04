@@ -10,6 +10,10 @@ from src.agents.honest import HonestAgent
 from src.agents.opportunistic import OpportunisticAgent
 from src.agents.deceptive import DeceptiveAgent
 from src.agents.adversarial import AdversarialAgent
+from src.agents.adaptive_adversary import (
+    AdaptiveAdversary,
+    AttackStrategy,
+)
 
 __all__ = [
     # Base classes
@@ -22,4 +26,7 @@ __all__ = [
     "OpportunisticAgent",
     "DeceptiveAgent",
     "AdversarialAgent",
+    "AdaptiveAdversary",
+    # Attack strategies
+    "AttackStrategy",
 ]

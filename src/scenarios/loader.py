@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Type
 
 import yaml
 
+from src.agents.adaptive_adversary import AdaptiveAdversary
 from src.agents.adversarial import AdversarialAgent
 from src.agents.base import BaseAgent
 from src.agents.deceptive import DeceptiveAgent
@@ -23,6 +24,7 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "opportunistic": OpportunisticAgent,
     "deceptive": DeceptiveAgent,
     "adversarial": AdversarialAgent,
+    "adaptive_adversary": AdaptiveAdversary,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)

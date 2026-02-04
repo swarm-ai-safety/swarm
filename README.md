@@ -184,6 +184,7 @@ distributional-agi-safety/
 │   │   ├── opportunistic.py    # Payoff-maximizing policy
 │   │   ├── deceptive.py        # Trust-then-exploit policy
 │   │   ├── adversarial.py      # Targeting/coordination policy
+│   │   ├── adaptive_adversary.py # Learning adversary for red-teaming
 │   │   ├── llm_agent.py        # LLM-backed agent
 │   │   ├── llm_config.py       # LLM configuration and cost tracking
 │   │   ├── llm_prompts.py      # Persona prompts and formatting
@@ -219,6 +220,10 @@ distributional-agi-safety/
 │   │   ├── dashboard.py        # Streamlit dashboard
 │   │   ├── export.py           # CSV/JSON/Parquet export
 │   │   └── sweep.py            # Parameter sweep runner
+│   ├── redteam/                 # Red-teaming framework
+│   │   ├── attacks.py          # Attack scenarios library
+│   │   ├── evaluator.py        # Red-team evaluator
+│   │   └── metrics.py          # Evasion and effectiveness metrics
 │   └── logging/
 │       └── event_log.py        # Append-only JSONL logger
 ├── tests/
@@ -236,6 +241,7 @@ distributional-agi-safety/
 │   ├── test_collusion.py       # Collusion detection tests (26 tests)
 │   ├── test_capabilities.py    # Emergent capability tests (32 tests)
 │   ├── test_security.py        # Security evaluation tests (45 tests)
+│   ├── test_redteam.py         # Red-teaming tests (45 tests)
 │   ├── test_dashboard.py       # Dashboard and visualization tests (43 tests)
 │   └── fixtures/
 │       └── interactions.py     # Test data generators
@@ -252,7 +258,8 @@ distributional-agi-safety/
 │   ├── network_effects.yaml    # Small-world network with dynamic edges
 │   ├── collusion_detection.yaml # Collusion detection scenario
 │   ├── emergent_capabilities.yaml # Multi-agent collaboration scenario
-│   └── security_evaluation.yaml # Security threat detection scenario
+│   ├── security_evaluation.yaml # Security threat detection scenario
+│   └── adversarial_redteam.yaml # Red-teaming governance scenario
 └── pyproject.toml
 ```
 
@@ -836,6 +843,126 @@ Run the emergent capabilities scenario:
 python examples/run_scenario.py scenarios/emergent_capabilities.yaml
 ```
 
+## Adversarial Red-Teaming
+
+The red-teaming framework tests governance robustness against adaptive adversaries that learn to evade detection.
+
+### Adaptive Adversaries
+
+Adaptive adversaries use reinforcement learning-style updates to evolve attack strategies:
+
+```python
+from src.agents.adaptive_adversary import AdaptiveAdversary, AttackStrategy
+
+# Create adaptive adversary
+adversary = AdaptiveAdversary(
+    agent_id="adaptive_1",
+    learning_rate=0.1,      # How fast it adapts
+    exploration_rate=0.2,   # Exploration vs exploitation
+    heat_threshold=0.6,     # When to lay low
+)
+
+# Adversary learns from outcomes
+adversary.update_from_outcome(
+    payoff=10.0,
+    penalty=5.0,
+    detected=True,
+    strategy_used=AttackStrategy.COLLUSION,
+)
+
+# Get strategy effectiveness report
+report = adversary.get_strategy_report()
+print(f"Heat level: {report['heat_level']:.2f}")
+print(f"Best strategies: {report['strategy_stats']}")
+```
+
+### Attack Strategies
+
+| Strategy | Description | Evasion Technique |
+|----------|-------------|-------------------|
+| **Reputation Farming** | Build trust, then exploit | Act honestly initially |
+| **Collusion** | Coordinate with allies | Internal boost, external exploit |
+| **Low Profile** | Minimal activity | Stay under radar |
+| **Mimicry** | Imitate honest agents | Copy behavior patterns |
+| **Threshold Dancing** | Stay below detection limits | Learn governance thresholds |
+| **Timing Attack** | Attack at optimal moments | Learn monitoring patterns |
+| **Governance Gaming** | Exploit rule loopholes | Find edge cases |
+
+### Red-Team Evaluator
+
+Systematically test governance configurations:
+
+```python
+from src.redteam import RedTeamEvaluator, AttackLibrary
+
+# Define governance config to test
+governance_config = {
+    "circuit_breaker_enabled": True,
+    "collusion_detection_enabled": True,
+    "audit_enabled": True,
+}
+
+# Create evaluator
+evaluator = RedTeamEvaluator(
+    governance_config=governance_config,
+    attack_scenarios=AttackLibrary.get_all_attacks(),
+)
+
+# Quick evaluation
+result = evaluator.quick_evaluate()
+print(f"Attacks tested: {result['attacks_tested']}")
+print(f"Success rate: {result['attacks_successful'] / result['attacks_tested']:.0%}")
+print(f"Avg evasion: {result['avg_evasion_rate']:.0%}")
+```
+
+### Evasion Metrics
+
+Track adversary evasion effectiveness:
+
+| Metric | Description | Range |
+|--------|-------------|-------|
+| **Evasion Rate** | Actions that went undetected | 0-1 |
+| **Detection Latency** | Epochs until detection | 0+ |
+| **Damage Before Detection** | Harm before caught | 0+ |
+| **Heat Level** | Current detection risk | 0-1 |
+
+### Governance Effectiveness
+
+Measure governance detection capabilities:
+
+| Metric | Formula | Interpretation |
+|--------|---------|----------------|
+| **Precision** | TP / (TP + FP) | Accuracy of detections |
+| **Recall** | TP / (TP + FN) | Coverage of bad actors |
+| **F1 Score** | Harmonic mean | Overall effectiveness |
+| **Prevention Rate** | Prevented / Total | Attack blocking success |
+
+### YAML Configuration
+
+```yaml
+agents:
+  - type: honest
+    count: 4
+  - type: adaptive_adversary
+    count: 2
+
+governance:
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  collusion_detection_enabled: true
+  audit_enabled: true
+  audit_probability: 0.15
+
+success_criteria:
+  max_adversary_payoff: 20.0
+  min_detection_rate: 0.5
+```
+
+Run the red-team scenario:
+```bash
+python examples/run_scenario.py scenarios/adversarial_redteam.yaml
+```
+
 ## Core Concepts
 
 ### Soft Labels
@@ -903,7 +1030,7 @@ interactions = orchestrator.event_log.to_interactions()
 ## Running Tests
 
 ```bash
-# Run all tests (461 tests)
+# Run all tests (506 tests)
 pytest tests/ -v
 
 # Run with coverage
@@ -1133,7 +1260,6 @@ fig = plotly_bar_chart(comp_data, "Agent Payoffs")
 
 ## Future Extensions
 
-- **Adversarial Red-Teaming**: Adaptive adversaries that learn to evade governance
 - **Semi-Permeable Boundaries**: Model sandbox-external world interactions
 
 ## References
