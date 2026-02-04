@@ -1,0 +1,101 @@
+# Adversarial Red-Team Scenario
+#
+# This scenario tests governance robustness against adaptive adversaries
+# that learn to evade detection and exploit system weaknesses.
+
+scenario_id: adversarial_redteam
+description: "Test governance mechanisms against adaptive adversaries"
+motif: "Red-team evaluation of governance robustness"
+
+agents:
+  # Honest agents (baseline behavior)
+  - type: honest
+    count: 4
+
+  # Standard adversarial agents
+  - type: adversarial
+    count: 2
+
+  # Adaptive adversaries that learn to evade governance
+  - type: adaptive_adversary
+    count: 2
+
+governance:
+  # Transaction tax to discourage exploitation
+  transaction_tax_rate: 0.05
+  transaction_tax_split: 0.5
+
+  # Reputation decay to require ongoing good behavior
+  reputation_decay_rate: 0.95
+
+  # Staking to ensure commitment
+  staking_enabled: true
+  min_stake_to_participate: 10.0
+  stake_slash_rate: 0.15
+
+  # Circuit breaker for bad actors
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 3
+
+  # Random audits to catch evasive behavior
+  audit_enabled: true
+  audit_probability: 0.15
+  audit_penalty_multiplier: 2.5
+  audit_threshold_p: 0.4
+
+  # Collusion detection for coordinated attacks
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.6
+  collusion_min_interactions: 3
+  collusion_score_threshold: 0.4
+  collusion_penalty_multiplier: 2.0
+  collusion_realtime_penalty: true
+  collusion_realtime_rate: 0.15
+
+network:
+  # Small-world topology to test information flow
+  topology: small_world
+  params:
+    k: 4
+    p: 0.15
+
+  # Dynamic edges to observe coalition formation
+  dynamic: true
+  edge_strengthen_rate: 0.12
+  edge_decay_rate: 0.04
+  min_edge_weight: 0.2
+
+simulation:
+  n_epochs: 30
+  steps_per_epoch: 15
+  seed: 42
+
+payoff:
+  s_plus: 3.0       # Benefit from good outcome
+  s_minus: 1.5      # Cost from bad outcome
+  h: 3.0            # Higher externality for harm
+  theta: 0.5        # Surplus split
+  w_rep: 2.5        # Reputation weight
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 8
+  votes_per_epoch: 50
+
+success_criteria:
+  # Governance should contain adversaries
+  max_avg_toxicity: 0.35
+  max_adversary_payoff: 20.0
+
+  # Adaptive adversaries should be detected eventually
+  min_detection_rate: 0.5
+
+  # System should remain functional
+  min_total_welfare: 50.0
+  min_honest_agent_payoff: 5.0
+
+  # Collusion should be detected
+  max_undetected_collusion_pairs: 1
