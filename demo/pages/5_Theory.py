@@ -25,17 +25,20 @@ Observable signals from each interaction are combined into a raw proxy score:
 """)
 st.latex(r"\hat{v} = \sum_i w_i \cdot x_i \quad \in [-1, +1]")
 st.markdown(r"""
-where $x_i$ are normalised observables (task progress, rework count, verifier rejections,
-engagement) and $w_i$ are calibrated weights.
+where $x_i$ are normalised signals (task progress, rework count, verifier rejections,
+tool misuse flags, engagement) and $w_i$ are calibrated weights normalised to sum to one.
+Note that verifier rejections and tool misuse are averaged into a single verifier signal
+before weighting.
 
 The raw score is then mapped to a probability through a calibrated sigmoid:
 """)
-st.latex(r"p = P(v = +1 \mid \hat{v}) = \frac{1}{1 + e^{-k(\hat{v} - b)}}")
+st.latex(r"p = P(v = +1 \mid \hat{v}) = \frac{1}{1 + e^{-k\,\hat{v}}}")
 st.markdown(r"""
-where $k$ controls steepness and $b$ is the bias. This gives us a **soft label** ---
-a probability that the interaction is beneficial, rather than a binary decision.
-Using probabilistic labels avoids the brittleness of hard binary classifications and
-better captures uncertainty [4, 5].
+where $k > 0$ controls steepness (default $k = 2$; higher values yield sharper labels).
+The sigmoid is centered at $\hat{v} = 0$, so interactions with a positive proxy score
+map to $p > 0.5$. This gives us a **soft label** --- a probability that the interaction
+is beneficial, rather than a binary decision. Using probabilistic labels avoids the
+brittleness of hard binary classifications and better captures uncertainty [4, 5].
 """)
 
 # ── Payoff Structure ──────────────────────────────────────────────────────────
@@ -62,21 +65,26 @@ st.latex(
     r" + \underbrace{w_{\text{rep}} \cdot \Delta R_i}_{\text{reputation}}"
 )
 st.markdown(r"""
-The externality internalisation parameters $\rho_a, \rho_b \in [0, 1]$ control how much
-each party bears the cost of ecosystem harm. This payoff decomposition draws on
-mechanism design principles [3] and the distributional safety framework [4].
+Each interaction involves two parties --- an initiator ($a$) and a counterparty ($b$).
+Their surplus shares satisfy $\alpha_a + \alpha_b = 1$, parameterised by
+$\alpha_a = \theta,\; \alpha_b = 1 - \theta$ with $\theta \in [0,1]$ (default $0.5$).
+Transfers are zero-sum: $T_a = -\tau,\; T_b = +\tau$. The externality internalisation
+parameters $\rho_a, \rho_b \in [0, 1]$ control how much each party bears the cost of
+ecosystem harm. This payoff decomposition draws on mechanism design principles [3]
+and the distributional safety framework [4].
 """)
 
 # ── Acceptance Threshold ──────────────────────────────────────────────────────
 
 st.header("3. Acceptance Threshold")
 st.markdown(r"""
-An interaction is **accepted** into the ecosystem when $p \geq \theta$, where $\theta$
-is the acceptance threshold (default 0.5). Rejected interactions still generate payoffs
-for the participants but are excluded from the "official" ecosystem metrics.
+An interaction is **accepted** into the ecosystem when $p \geq \bar{p}$, where $\bar{p}$
+is the acceptance threshold (default 0.5; distinct from the surplus-split parameter
+$\theta$ in Section 2). Rejected interactions still generate payoffs for the participants
+but are excluded from the "official" ecosystem metrics.
 
 This creates a natural tension: agents may exploit borderline interactions that
-are accepted with $p$ slightly above $\theta$. This is analogous to the adverse
+are accepted with $p$ slightly above $\bar{p}$. This is analogous to the adverse
 selection problem described by Glosten & Milgrom [2], where willingness to
 trade at a given price reveals private information.
 """)
@@ -100,9 +108,13 @@ A **negative** quality gap signals **adverse selection** --- the ecosystem is pr
 accepting lower-quality interactions. This is the multi-agent analogue of Akerlof's
 "lemons" problem, where markets attract the worst risks [2].
 
-**Total welfare** sums all agent payoffs:
+**Total welfare** sums agent payoffs across accepted interactions:
 """)
-st.latex(r"W = \sum_{i} \pi_i")
+st.latex(r"W = \sum_{j \,\in\, \text{accepted}} \!\bigl(\pi_{a}^{(j)} + \pi_{b}^{(j)}\bigr)")
+st.markdown(r"""
+Since transfers cancel in aggregate ($T_a + T_b = 0$), total welfare reduces to the
+sum of expected surpluses minus governance costs and internalized externalities.
+""")
 
 # ── Governance Levers ─────────────────────────────────────────────────────────
 
