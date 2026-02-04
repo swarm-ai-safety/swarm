@@ -53,6 +53,22 @@ class GovernanceConfig:
     collusion_realtime_rate: float = 0.1  # Rate for realtime penalty
     collusion_clear_history_on_epoch: bool = False  # Clear history each epoch
 
+    # Security detection
+    security_enabled: bool = False
+    security_injection_threshold: float = 0.3  # Threshold for injection detection
+    security_manipulation_threshold: float = 0.5  # Threshold for manipulation detection
+    security_laundering_trust_gap: float = 0.3  # Trust increase for laundering flag
+    security_contagion_velocity: float = 2.0  # Interactions/min for contagion flag
+    security_min_chain_length: int = 3  # Minimum chain length to track
+    security_min_interactions: int = 5  # Min interactions before analysis
+    security_penalty_threshold: float = 0.3  # Threat score for penalty
+    security_quarantine_threshold: float = 0.7  # Threat score for quarantine
+    security_penalty_multiplier: float = 1.0  # Penalty scaling factor
+    security_realtime_penalty: bool = False  # Apply per-interaction penalty
+    security_realtime_threshold: float = 0.5  # Threshold for realtime penalty
+    security_realtime_rate: float = 0.2  # Rate for realtime penalty
+    security_clear_history_on_epoch: bool = False  # Clear history each epoch
+
     def validate(self) -> None:
         """Validate configuration values."""
         if not 0.0 <= self.transaction_tax_rate <= 1.0:
@@ -93,3 +109,26 @@ class GovernanceConfig:
             raise ValueError("collusion_penalty_multiplier must be non-negative")
         if self.collusion_realtime_rate < 0:
             raise ValueError("collusion_realtime_rate must be non-negative")
+        # Security detection validation
+        if not 0.0 <= self.security_injection_threshold <= 1.0:
+            raise ValueError("security_injection_threshold must be in [0, 1]")
+        if not 0.0 <= self.security_manipulation_threshold <= 1.0:
+            raise ValueError("security_manipulation_threshold must be in [0, 1]")
+        if self.security_laundering_trust_gap < 0:
+            raise ValueError("security_laundering_trust_gap must be non-negative")
+        if self.security_contagion_velocity <= 0:
+            raise ValueError("security_contagion_velocity must be positive")
+        if self.security_min_chain_length < 2:
+            raise ValueError("security_min_chain_length must be >= 2")
+        if self.security_min_interactions < 1:
+            raise ValueError("security_min_interactions must be >= 1")
+        if not 0.0 <= self.security_penalty_threshold <= 1.0:
+            raise ValueError("security_penalty_threshold must be in [0, 1]")
+        if not 0.0 <= self.security_quarantine_threshold <= 1.0:
+            raise ValueError("security_quarantine_threshold must be in [0, 1]")
+        if self.security_penalty_multiplier < 0:
+            raise ValueError("security_penalty_multiplier must be non-negative")
+        if not 0.0 <= self.security_realtime_threshold <= 1.0:
+            raise ValueError("security_realtime_threshold must be in [0, 1]")
+        if self.security_realtime_rate < 0:
+            raise ValueError("security_realtime_rate must be non-negative")

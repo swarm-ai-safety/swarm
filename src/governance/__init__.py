@@ -8,6 +8,7 @@ from src.governance.config import GovernanceConfig
 from src.governance.engine import GovernanceEffect, GovernanceEngine
 from src.governance.levers import GovernanceLever, LeverEffect
 from src.governance.reputation import ReputationDecayLever, VoteNormalizationLever
+from src.governance.security import SecurityLever
 from src.governance.taxes import TransactionTaxLever
 
 __all__ = [
@@ -23,4 +24,5 @@ __all__ = [
     "CircuitBreakerLever",
     "RandomAuditLever",
     "CollusionPenaltyLever",
+    "SecurityLever",
 ]

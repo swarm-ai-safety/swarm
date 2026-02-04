@@ -203,12 +203,14 @@ distributional-agi-safety/
 │   │   ├── admission.py        # StakingLever
 │   │   ├── circuit_breaker.py  # CircuitBreakerLever
 │   │   ├── audits.py           # RandomAuditLever
-│   │   └── collusion.py        # CollusionPenaltyLever
+│   │   ├── collusion.py        # CollusionPenaltyLever
+│   │   └── security.py         # SecurityLever
 │   ├── metrics/
 │   │   ├── soft_metrics.py     # SoftMetrics (40+ metrics)
 │   │   ├── reporters.py        # Dual reporting (soft + hard)
 │   │   ├── collusion.py        # Collusion detection algorithms
-│   │   └── capabilities.py     # Emergent capability metrics
+│   │   ├── capabilities.py     # Emergent capability metrics
+│   │   └── security.py         # Security threat detection
 │   ├── scenarios/
 │   │   └── loader.py           # YAML scenario loader
 │   ├── analysis/
@@ -229,6 +231,7 @@ distributional-agi-safety/
 │   ├── test_network.py         # Network topology tests (48 tests)
 │   ├── test_collusion.py       # Collusion detection tests (26 tests)
 │   ├── test_capabilities.py    # Emergent capability tests (32 tests)
+│   ├── test_security.py        # Security evaluation tests (45 tests)
 │   └── fixtures/
 │       └── interactions.py     # Test data generators
 ├── examples/
@@ -243,7 +246,8 @@ distributional-agi-safety/
 │   ├── llm_agents.yaml         # Mixed LLM and scripted agents
 │   ├── network_effects.yaml    # Small-world network with dynamic edges
 │   ├── collusion_detection.yaml # Collusion detection scenario
-│   └── emergent_capabilities.yaml # Multi-agent collaboration scenario
+│   ├── emergent_capabilities.yaml # Multi-agent collaboration scenario
+│   └── security_evaluation.yaml # Security threat detection scenario
 └── pyproject.toml
 ```
 
@@ -601,6 +605,100 @@ Run the collusion detection scenario:
 python examples/run_scenario.py scenarios/collusion_detection.yaml
 ```
 
+## Security Evaluation
+
+The security module detects and responds to security threats in multi-agent systems, including prompt injection, cross-agent manipulation, information laundering, and contagion propagation.
+
+### Threat Types
+
+| Threat | Description | Detection Method |
+|--------|-------------|------------------|
+| **Prompt Injection** | Attempts to inject malicious instructions | Tool misuse flags, verifier rejections, low-p accepted interactions |
+| **Cross-Agent Manipulation** | Exploiting other agents' trust | Repeated targeting, reputation extraction, resource draining |
+| **Information Laundering** | Washing low-quality info through trusted agents | Trust increase along interaction paths |
+| **Contagion/Worm** | Self-replicating malicious patterns | Rapid spread velocity, chain propagation depth |
+| **Exfiltration** | Extracting sensitive information | Multiple tool misuse flags |
+
+### Quick Start
+
+```python
+from src.governance import GovernanceConfig, GovernanceEngine
+
+# Enable security detection
+config = GovernanceConfig(
+    security_enabled=True,
+    security_injection_threshold=0.3,      # Threshold for injection detection
+    security_manipulation_threshold=0.5,    # Threshold for manipulation
+    security_quarantine_threshold=0.7,      # Threat score for quarantine
+    security_realtime_penalty=True,         # Per-interaction penalty
+)
+
+# After simulation
+report = orchestrator.get_security_report()
+print(f"Ecosystem threat level: {report.ecosystem_threat_level:.2f}")
+print(f"Active threats: {report.active_threat_count}")
+print(f"Quarantined agents: {orchestrator.get_quarantined_agents()}")
+
+# Check specific threats
+for indicator in report.threat_indicators:
+    print(f"  {indicator.threat_type.value}: {indicator.source_agent} -> {indicator.target_agents}")
+```
+
+### Security Metrics
+
+| Metric | Description | Interpretation |
+|--------|-------------|----------------|
+| `ecosystem_threat_level` | Overall system threat level | 0-1 (>0.5 = concerning) |
+| `prompt_injection_rate` | Fraction of interactions flagged for injection | Lower is better |
+| `manipulation_rate` | Agents showing manipulation patterns | Lower is better |
+| `contagion_depth` | Maximum propagation chain depth | >3 = concerning |
+| `agents_flagged` | Set of agents with elevated threat scores | Candidates for review |
+
+### Containment Actions
+
+The security lever can automatically:
+- **Quarantine** agents with threat scores above threshold (blocks all actions)
+- **Apply penalties** proportional to threat score (reputation and resource)
+- **Track contagion chains** and mark them contained when origin is quarantined
+- **Real-time penalties** on suspicious interactions
+
+### YAML Configuration
+
+```yaml
+governance:
+  security_enabled: true
+  security_injection_threshold: 0.3       # Injection detection threshold
+  security_manipulation_threshold: 0.5    # Manipulation detection threshold
+  security_laundering_trust_gap: 0.3      # Trust increase for laundering flag
+  security_contagion_velocity: 2.0        # Interactions/min for contagion
+  security_min_chain_length: 3            # Minimum chain to track
+  security_quarantine_threshold: 0.7      # Threshold for quarantine
+  security_penalty_multiplier: 1.0        # Penalty scaling
+  security_realtime_penalty: true         # Per-interaction penalty
+  security_realtime_threshold: 0.5        # Realtime penalty threshold
+  security_realtime_rate: 0.2             # Realtime penalty rate
+```
+
+### Integration with Orchestrator
+
+Security hooks into the orchestrator at:
+1. **Epoch start**: Analyze accumulated interactions, apply quarantine and penalties
+2. **Per-interaction**: Real-time threat scoring and optional penalty
+3. **Agent action check**: Quarantined agents cannot act
+
+```python
+# Check if agent can act (not quarantined)
+if orchestrator.governance_engine.can_agent_act(agent_id, state):
+    # Agent is allowed to proceed
+    pass
+
+# Release agent from quarantine manually
+orchestrator.governance_engine.release_from_quarantine(agent_id)
+
+# Get containment action history
+actions = orchestrator.governance_engine.get_security_containment_actions()
+```
+
 ## Emergent Capability Measurement
 
 The emergent capabilities module measures collective intelligence and coordination that emerges from multi-agent collaboration on composite tasks.
@@ -800,7 +898,7 @@ interactions = orchestrator.event_log.to_interactions()
 ## Running Tests
 
 ```bash
-# Run all tests (379 tests)
+# Run all tests (424 tests)
 pytest tests/ -v
 
 # Run with coverage
