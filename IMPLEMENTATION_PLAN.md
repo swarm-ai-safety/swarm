@@ -8,27 +8,34 @@ Build and evaluate a **multi-agent sandbox economy** to study *system-level safe
 
 ## Current State
 
-### Implemented (Foundation Layer) ✅
+### Foundation Layer ✅
 
 | Component | Status | Files |
 |-----------|--------|-------|
 | Data Models | ✅ Complete | `src/models/interaction.py`, `agent.py`, `events.py` |
 | Proxy Computation | ✅ Complete | `src/core/proxy.py`, `sigmoid.py` |
 | Payoff Engine | ✅ Complete | `src/core/payoff.py` |
-| Metrics System | ✅ Complete | `src/metrics/soft_metrics.py`, `reporters.py` |
+| Metrics System | ✅ Complete | `src/metrics/soft_metrics.py`, `reporters.py`, `capabilities.py`, `collusion.py`, `security.py` |
 | Event Logging | ✅ Complete | `src/logging/event_log.py` |
-| Test Suite | ✅ 91 tests | `tests/` |
 
-### Not Implemented (Runtime Layer) ❌
+### Runtime Layer ✅
 
-| Component | Status | Priority |
-|-----------|--------|----------|
-| Agent Orchestration | ❌ Missing | MVP v0 |
-| Feed/Interaction Engine | ❌ Missing | MVP v0 |
-| Governance Module | ❌ Missing | MVP v1 |
-| Marketplace Primitives | ❌ Missing | MVP v1 |
-| Scenario Runner | ❌ Missing | MVP v1 |
-| Dashboard/Visualization | ❌ Missing | MVP v1 |
+| Component | Status | Files |
+|-----------|--------|-------|
+| Agent Orchestration | ✅ Complete | `src/core/orchestrator.py` |
+| Agent Policies | ✅ Complete | `src/agents/` (6 agent types + 5 roles) |
+| Feed/Interaction Engine | ✅ Complete | `src/env/feed.py` |
+| Governance Module | ✅ Complete | `src/governance/` (7 levers + engine) |
+| Marketplace Primitives | ✅ Complete | `src/env/marketplace.py` |
+| Scenario Runner | ✅ Complete | `src/scenarios/loader.py`, `examples/run_scenario.py` |
+| Parameter Sweep | ✅ Complete | `src/analysis/sweep.py` |
+| Dashboard/Visualization | ✅ Complete | `src/analysis/dashboard.py`, `plots.py` |
+| Red-Team Framework | ✅ Complete | `src/redteam/` |
+| Security Evaluation | ✅ Complete | `src/governance/security.py`, `src/metrics/security.py` |
+| Boundary Enforcement | ✅ Complete | `src/boundaries/` |
+| Composite Tasks | ✅ Complete | `src/env/composite_tasks.py` |
+| Network Topology | ✅ Complete | `src/env/network.py` |
+| Test Suite | ✅ 725 tests | `tests/` |
 
 ---
 
@@ -548,131 +555,183 @@ class LocalAdapter(LLMAdapter): ...
 distributional-agi-safety/
 ├── src/
 │   ├── __init__.py
-│   ├── models/              # ✅ Implemented
+│   ├── models/              # ✅ Complete
 │   │   ├── interaction.py
 │   │   ├── agent.py
 │   │   └── events.py
-│   ├── core/
-│   │   ├── payoff.py        # ✅ Implemented
-│   │   ├── proxy.py         # ✅ Implemented
-│   │   ├── sigmoid.py       # ✅ Implemented
-│   │   └── orchestrator.py  # 🆕 NEW
-│   ├── metrics/             # ✅ Implemented
+│   ├── core/                # ✅ Complete
+│   │   ├── payoff.py
+│   │   ├── proxy.py
+│   │   ├── sigmoid.py
+│   │   └── orchestrator.py
+│   ├── metrics/             # ✅ Complete
 │   │   ├── soft_metrics.py
-│   │   └── reporters.py
-│   ├── logging/             # ✅ Implemented
+│   │   ├── reporters.py
+│   │   ├── capabilities.py
+│   │   ├── collusion.py
+│   │   └── security.py
+│   ├── logging/             # ✅ Complete
 │   │   └── event_log.py
-│   ├── agents/              # 🆕 NEW
+│   ├── agents/              # ✅ Complete
 │   │   ├── __init__.py
 │   │   ├── base.py
-│   │   ├── policies/
-│   │   │   ├── honest.py
-│   │   │   ├── opportunistic.py
-│   │   │   ├── deceptive.py
-│   │   │   └── adversarial.py
+│   │   ├── honest.py
+│   │   ├── opportunistic.py
+│   │   ├── deceptive.py
+│   │   ├── adversarial.py
+│   │   ├── adaptive_adversary.py
+│   │   ├── llm_agent.py
+│   │   ├── llm_config.py
+│   │   ├── llm_prompts.py
 │   │   └── roles/
 │   │       ├── planner.py
 │   │       ├── worker.py
 │   │       ├── verifier.py
 │   │       ├── poster.py
 │   │       └── moderator.py
-│   ├── env/                 # 🆕 NEW
+│   ├── env/                 # ✅ Complete
 │   │   ├── __init__.py
 │   │   ├── state.py
 │   │   ├── feed.py
-│   │   ├── interaction.py
 │   │   ├── tasks.py
-│   │   └── market.py
-│   ├── governance/          # 🆕 NEW
+│   │   ├── marketplace.py
+│   │   ├── composite_tasks.py
+│   │   └── network.py
+│   ├── governance/          # ✅ Complete
 │   │   ├── __init__.py
-│   │   ├── base.py
+│   │   ├── config.py
+│   │   ├── engine.py
+│   │   ├── levers.py
 │   │   ├── taxes.py
 │   │   ├── reputation.py
 │   │   ├── admission.py
-│   │   ├── bandwidth.py
 │   │   ├── circuit_breaker.py
-│   │   └── audits.py
-│   ├── runner/              # 🆕 NEW
+│   │   ├── audits.py
+│   │   ├── collusion.py
+│   │   └── security.py
+│   ├── scenarios/           # ✅ Complete
 │   │   ├── __init__.py
-│   │   ├── scenario.py
-│   │   ├── runner.py
+│   │   └── loader.py
+│   ├── analysis/            # ✅ Complete
+│   │   ├── __init__.py
+│   │   ├── aggregation.py
+│   │   ├── plots.py
+│   │   ├── dashboard.py
+│   │   ├── streamlit_app.py
 │   │   ├── sweep.py
-│   │   ├── replay.py
-│   │   └── analysis.py
-│   └── analysis/            # 🆕 NEW
+│   │   └── export.py
+│   ├── boundaries/          # ✅ Complete
+│   │   ├── __init__.py
+│   │   ├── external_world.py
+│   │   ├── information_flow.py
+│   │   ├── leakage.py
+│   │   └── policies.py
+│   └── redteam/             # ✅ Complete
 │       ├── __init__.py
-│       ├── aggregation.py
-│       ├── plots.py
-│       ├── dashboard.py
-│       └── export.py
-├── scenarios/               # 🆕 NEW
+│       ├── attacks.py
+│       ├── evaluator.py
+│       └── metrics.py
+├── scenarios/               # ✅ Complete
 │   ├── baseline.yaml
 │   ├── status_game.yaml
-│   ├── norm_drafting.yaml
-│   └── adversarial_attack.yaml
-├── tests/
-│   ├── test_payoff.py       # ✅ Implemented
-│   ├── test_proxy.py        # ✅ Implemented
-│   ├── test_metrics.py      # ✅ Implemented
-│   ├── test_orchestrator.py # 🆕 NEW
-│   ├── test_agents.py       # 🆕 NEW
-│   ├── test_governance.py   # 🆕 NEW
-│   ├── test_feed.py         # 🆕 NEW
-│   └── fixtures/            # ✅ Implemented
-├── pyproject.toml           # ✅ Implemented
-├── CLAUDE.md                # ✅ Implemented
-└── README.md                # ✅ Implemented
+│   ├── collusion_detection.yaml
+│   ├── strict_governance.yaml
+│   ├── boundary_test.yaml
+│   ├── marketplace_economy.yaml
+│   ├── network_effects.yaml
+│   ├── security_evaluation.yaml
+│   ├── emergent_capabilities.yaml
+│   ├── adversarial_redteam.yaml
+│   └── llm_agents.yaml
+├── tests/                   # ✅ Complete (725 tests)
+│   ├── test_payoff.py
+│   ├── test_proxy.py
+│   ├── test_metrics.py
+│   ├── test_orchestrator.py
+│   ├── test_agents.py
+│   ├── test_governance.py
+│   ├── test_env.py
+│   ├── test_event_log.py
+│   ├── test_sweep.py
+│   ├── test_scenarios.py
+│   ├── test_dashboard.py
+│   ├── test_marketplace.py
+│   ├── test_network.py
+│   ├── test_boundaries.py
+│   ├── test_capabilities.py
+│   ├── test_collusion.py
+│   ├── test_security.py
+│   ├── test_redteam.py
+│   ├── test_llm_agent.py
+│   ├── test_success_criteria.py
+│   └── fixtures/
+├── pyproject.toml           # ✅ Complete
+├── CLAUDE.md                # ✅ Complete
+└── README.md                # ✅ Complete
 ```
 
 ---
 
 ## Implementation Order
 
-### MVP v0 (Core Simulation)
+### MVP v0 (Core Simulation) — ✅ Complete
 
-| Order | Component | Files | Est. Lines |
-|-------|-----------|-------|------------|
-| 1 | Environment State | `src/env/state.py` | ~100 |
-| 2 | Feed Engine | `src/env/feed.py` | ~150 |
-| 3 | Base Agent | `src/agents/base.py` | ~100 |
-| 4 | Agent Policies | `src/agents/policies/*.py` | ~300 |
-| 5 | Orchestrator | `src/core/orchestrator.py` | ~300 |
-| 6 | Task System | `src/env/tasks.py` | ~80 |
-| 7 | Tests | `tests/test_*.py` | ~400 |
-| | **Total MVP v0** | | **~1430** |
+| Order | Component | Files | Status |
+|-------|-----------|-------|--------|
+| 1 | Environment State | `src/env/state.py` | ✅ Complete |
+| 2 | Feed Engine | `src/env/feed.py` | ✅ Complete |
+| 3 | Base Agent | `src/agents/base.py` | ✅ Complete |
+| 4 | Agent Policies | `src/agents/*.py` | ✅ Complete |
+| 5 | Orchestrator | `src/core/orchestrator.py` | ✅ Complete |
+| 6 | Task System | `src/env/tasks.py` | ✅ Complete |
+| 7 | Tests | `tests/test_*.py` | ✅ Complete |
 
-### MVP v1 (Economics & Governance)
+### MVP v1 (Economics & Governance) — ✅ Complete
 
-| Order | Component | Files | Est. Lines |
-|-------|-----------|-------|------------|
-| 8 | Marketplace | `src/env/market.py` | ~150 |
-| 9 | Governance Base | `src/governance/base.py` | ~50 |
-| 10 | Governance Levers | `src/governance/*.py` | ~400 |
-| 11 | Scenario Spec | `src/runner/scenario.py` | ~100 |
-| 12 | Scenario Runner | `src/runner/runner.py` | ~200 |
-| 13 | Parameter Sweep | `src/runner/sweep.py` | ~150 |
-| 14 | Aggregation | `src/analysis/aggregation.py` | ~100 |
-| 15 | Plots | `src/analysis/plots.py` | ~200 |
-| 16 | Dashboard | `src/analysis/dashboard.py` | ~300 |
-| 17 | Tests | `tests/test_*.py` | ~300 |
-| | **Total MVP v1** | | **~1950** |
+| Order | Component | Files | Status |
+|-------|-----------|-------|--------|
+| 8 | Marketplace | `src/env/marketplace.py` | ✅ Complete |
+| 9 | Governance Config | `src/governance/config.py` | ✅ Complete |
+| 10 | Governance Engine + Levers | `src/governance/engine.py`, `levers.py`, etc. | ✅ Complete |
+| 11 | Scenario Loader | `src/scenarios/loader.py` | ✅ Complete |
+| 12 | Scenario Runner | `examples/run_scenario.py` | ✅ Complete |
+| 13 | Parameter Sweep | `src/analysis/sweep.py` | ✅ Complete |
+| 14 | Aggregation | `src/analysis/aggregation.py` | ✅ Complete |
+| 15 | Plots | `src/analysis/plots.py` | ✅ Complete |
+| 16 | Dashboard | `src/analysis/dashboard.py` | ✅ Complete |
+| 17 | Tests | `tests/test_*.py` | ✅ Complete |
+
+### Advanced Features — ✅ Complete
+
+| Order | Component | Files | Status |
+|-------|-----------|-------|--------|
+| 18 | Red-Team Framework | `src/redteam/` | ✅ Complete |
+| 19 | Security Evaluation | `src/governance/security.py`, `src/metrics/security.py` | ✅ Complete |
+| 20 | Boundary Enforcement | `src/boundaries/` | ✅ Complete |
+| 21 | Composite Tasks | `src/env/composite_tasks.py` | ✅ Complete |
+| 22 | Network Topology | `src/env/network.py` | ✅ Complete |
+| 23 | Collusion Detection | `src/governance/collusion.py`, `src/metrics/collusion.py` | ✅ Complete |
+| 24 | Adaptive Adversary | `src/agents/adaptive_adversary.py` | ✅ Complete |
+| 25 | LLM Agent Integration | `src/agents/llm_agent.py`, `llm_config.py`, `llm_prompts.py` | ✅ Complete |
 
 ---
 
 ## Success Criteria
 
 ### MVP v0
-- [ ] 5 agents interact over 10+ epochs
-- [ ] Toxicity and conditional loss metrics computed per epoch
-- [ ] Full event log enables deterministic replay
-- [ ] Observable failure modes: miscoordination, conflict, collusion
+- [x] 5 agents interact over 10+ epochs
+- [x] Toxicity and conditional loss metrics computed per epoch
+- [x] Full event log enables deterministic replay
+- [x] Observable failure modes: miscoordination, conflict, collusion
 
 ### MVP v1
-- [ ] ≥3 Moltbook-like motifs reproducible
-- [ ] ≥2 governance levers measurably reduce toxicity/collusion
-- [ ] Parameter sweep across 12 governance configurations
-- [ ] Dashboard shows real-time metrics
-- [ ] Toxic interactions show negative conditional surplus but positive reputation payoff
+- [x] ≥3 Moltbook-like motifs reproducible
+- [x] ≥2 governance levers measurably reduce toxicity/collusion
+- [x] Parameter sweep across 12 governance configurations
+- [x] Dashboard shows real-time metrics
+- [x] Toxic interactions show negative conditional surplus but positive reputation payoff
+
+All criteria verified by `tests/test_success_criteria.py` (9 tests).
 
 ---
 
