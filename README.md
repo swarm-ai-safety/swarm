@@ -1233,7 +1233,7 @@ run_dashboard(port=8501)
 
 **AGI Safety & Multi-Agent Systems:**
 - [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
-- [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.141)
+- [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143) 
 
 **Inspiration:**
 - [Moltbook](https://moltbook.com)
