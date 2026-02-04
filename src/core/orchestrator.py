@@ -39,6 +39,10 @@ from src.models.events import (
 from src.models.interaction import InteractionType, SoftInteraction
 from src.governance.config import GovernanceConfig
 from src.governance.engine import GovernanceEffect, GovernanceEngine
+from src.boundaries.external_world import ExternalWorld, ExternalEntity
+from src.boundaries.information_flow import FlowTracker, FlowDirection, FlowType, InformationFlow
+from src.boundaries.policies import PolicyEngine, CrossingDecision
+from src.boundaries.leakage import LeakageDetector, LeakageReport
 
 
 @dataclass
@@ -69,6 +73,10 @@ class OrchestratorConfig:
 
     # Composite task configuration
     enable_composite_tasks: bool = False
+
+    # Boundary configuration
+    enable_boundaries: bool = False
+    boundary_sensitivity_threshold: float = 0.5
 
     # Logging
     log_path: Optional[Path] = None
@@ -166,6 +174,20 @@ class Orchestrator:
             )
         else:
             self.governance_engine = None
+
+        # Boundary components
+        if self.config.enable_boundaries:
+            self.external_world: Optional[ExternalWorld] = ExternalWorld().create_default_world()
+            self.flow_tracker: Optional[FlowTracker] = FlowTracker(
+                sensitivity_threshold=self.config.boundary_sensitivity_threshold
+            )
+            self.policy_engine: Optional[PolicyEngine] = PolicyEngine().create_default_policies()
+            self.leakage_detector: Optional[LeakageDetector] = LeakageDetector()
+        else:
+            self.external_world = None
+            self.flow_tracker = None
+            self.policy_engine = None
+            self.leakage_detector = None
 
         # Event logging
         if self.config.log_path:
@@ -1297,3 +1319,251 @@ class Orchestrator:
             metrics["avg_heat_level"] = sum(heat_levels) / len(heat_levels)
 
         return metrics
+
+    # =========================================================================
+    # Boundary Support
+    # =========================================================================
+
+    def request_external_interaction(
+        self,
+        agent_id: str,
+        entity_id: str,
+        action: str,
+        payload: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Request an interaction with an external entity.
+
+        This is the main interface for agents to interact with the external world.
+        The request goes through policy evaluation and leakage detection.
+
+        Args:
+            agent_id: The agent making the request
+            entity_id: The external entity to interact with
+            action: The type of action (call, query, send, etc.)
+            payload: Optional data to send
+
+        Returns:
+            Result of the interaction (or denial information)
+        """
+        if self.external_world is None:
+            return {"success": False, "error": "Boundaries not enabled"}
+
+        payload = payload or {}
+        metadata = {
+            "sensitivity": payload.get("sensitivity", 0.0),
+            "action": action,
+        }
+
+        # Check policy
+        if self.policy_engine is not None:
+            decision = self.policy_engine.evaluate(
+                agent_id=agent_id,
+                direction="outbound",
+                flow_type=action,
+                content=payload,
+                metadata=metadata,
+            )
+
+            if not decision.allowed:
+                if self.external_world:
+                    self.external_world.blocked_attempts += 1
+                return {
+                    "success": False,
+                    "blocked": True,
+                    "reason": decision.reason,
+                    "policy": decision.policy_name,
+                }
+
+        # Check for leakage
+        if self.leakage_detector is not None:
+            leakage_events = self.leakage_detector.scan(
+                content=payload,
+                agent_id=agent_id,
+                destination_id=entity_id,
+            )
+            if leakage_events:
+                # Log but don't necessarily block
+                for event in leakage_events:
+                    if event.severity >= 0.9:
+                        return {
+                            "success": False,
+                            "blocked": True,
+                            "reason": f"Critical leakage detected: {event.description}",
+                            "leakage_type": event.leakage_type.value,
+                        }
+
+        # Record outbound flow
+        if self.flow_tracker is not None:
+            flow = InformationFlow.create(
+                direction=FlowDirection.OUTBOUND,
+                flow_type=FlowType.QUERY,
+                source_id=agent_id,
+                destination_id=entity_id,
+                content=payload,
+                sensitivity_score=metadata.get("sensitivity", 0.0),
+            )
+            self.flow_tracker.record_flow(flow)
+
+        # Execute the interaction
+        result = self.external_world.interact(
+            agent_id=agent_id,
+            entity_id=entity_id,
+            action=action,
+            payload=payload,
+            rng=random.Random(self.config.seed) if self.config.seed else None,
+        )
+
+        # Record inbound flow if successful
+        if result.get("success") and self.flow_tracker is not None:
+            flow = InformationFlow.create(
+                direction=FlowDirection.INBOUND,
+                flow_type=FlowType.RESPONSE,
+                source_id=entity_id,
+                destination_id=agent_id,
+                content=result.get("data", {}),
+                sensitivity_score=result.get("sensitivity", 0.0) if isinstance(result.get("sensitivity"), (int, float)) else 0.0,
+            )
+            self.flow_tracker.record_flow(flow)
+
+        return result
+
+    def get_external_entities(
+        self,
+        entity_type: Optional[str] = None,
+        min_trust: float = 0.0,
+    ) -> List[Dict[str, Any]]:
+        """
+        Get available external entities.
+
+        Args:
+            entity_type: Filter by entity type
+            min_trust: Minimum trust level
+
+        Returns:
+            List of entity information dictionaries
+        """
+        if self.external_world is None:
+            return []
+
+        from src.boundaries.external_world import ExternalEntityType
+
+        type_filter = None
+        if entity_type:
+            try:
+                type_filter = ExternalEntityType(entity_type)
+            except ValueError:
+                pass
+
+        entities = self.external_world.list_entities(
+            entity_type=type_filter,
+            min_trust=min_trust,
+        )
+
+        return [
+            {
+                "entity_id": e.entity_id,
+                "name": e.name,
+                "type": e.entity_type.value,
+                "trust_level": e.trust_level,
+            }
+            for e in entities
+        ]
+
+    def add_external_entity(self, entity: ExternalEntity) -> None:
+        """
+        Add an external entity to the world.
+
+        Args:
+            entity: The entity to add
+        """
+        if self.external_world is not None:
+            self.external_world.add_entity(entity)
+
+    def get_boundary_metrics(self) -> Dict[str, Any]:
+        """
+        Get comprehensive boundary metrics.
+
+        Returns:
+            Dictionary with boundary statistics
+        """
+        metrics: Dict[str, Any] = {
+            "boundaries_enabled": self.external_world is not None,
+        }
+
+        if self.external_world is None:
+            return metrics
+
+        # External world stats
+        metrics["external_world"] = self.external_world.get_interaction_stats()
+
+        # Flow tracker stats
+        if self.flow_tracker is not None:
+            summary = self.flow_tracker.get_summary()
+            metrics["flows"] = {
+                "total": summary.total_flows,
+                "inbound": summary.inbound_flows,
+                "outbound": summary.outbound_flows,
+                "bytes_in": summary.total_bytes_in,
+                "bytes_out": summary.total_bytes_out,
+                "blocked": summary.blocked_flows,
+                "sensitive": summary.sensitive_flows,
+                "avg_sensitivity": summary.avg_sensitivity,
+            }
+
+            # Anomalies
+            anomalies = self.flow_tracker.detect_anomalies()
+            metrics["anomalies"] = anomalies
+
+        # Policy stats
+        if self.policy_engine is not None:
+            metrics["policies"] = self.policy_engine.get_statistics()
+
+        # Leakage stats
+        if self.leakage_detector is not None:
+            report = self.leakage_detector.generate_report()
+            metrics["leakage"] = {
+                "total_events": report.total_events,
+                "blocked": report.blocked_count,
+                "by_type": report.events_by_type,
+                "avg_severity": report.avg_severity,
+                "max_severity": report.max_severity,
+                "recommendations": report.recommendations,
+            }
+
+        return metrics
+
+    def get_agent_boundary_activity(self, agent_id: str) -> Dict[str, Any]:
+        """
+        Get boundary activity for a specific agent.
+
+        Args:
+            agent_id: The agent to query
+
+        Returns:
+            Dictionary with agent's boundary activity
+        """
+        activity: Dict[str, Any] = {"agent_id": agent_id}
+
+        if self.flow_tracker is not None:
+            activity["flows"] = self.flow_tracker.get_agent_flows(agent_id)
+
+        if self.leakage_detector is not None:
+            events = self.leakage_detector.get_events(agent_id=agent_id)
+            activity["leakage_events"] = len(events)
+            activity["leakage_severity"] = (
+                max(e.severity for e in events) if events else 0.0
+            )
+
+        return activity
+
+    def get_leakage_report(self) -> Optional[LeakageReport]:
+        """
+        Get the full leakage detection report.
+
+        Returns:
+            LeakageReport if boundaries enabled, None otherwise
+        """
+        if self.leakage_detector is None:
+            return None
+        return self.leakage_detector.generate_report()

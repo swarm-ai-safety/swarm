@@ -1,661 +1,671 @@
-"""Streamlit dashboard for real-time simulation visualization.
+"""Streamlit dashboard for simulation visualization.
 
-Run with: streamlit run src/analysis/dashboard.py
+This module provides a real-time dashboard for visualizing simulation metrics,
+agent states, and ecosystem dynamics.
 
-Provides:
-- Real-time metrics display during simulation
-- Post-simulation analysis and exploration
-- Agent state comparison
-- Network visualization
-- Security and collusion threat monitoring
+Usage:
+    streamlit run src/analysis/dashboard.py
+
+Or programmatically:
+    from src.analysis.dashboard import create_dashboard
+    create_dashboard(orchestrator)
 """
 
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple
 import json
 
-# Dashboard state management
+
 @dataclass
-class DashboardState:
-    """State container for the dashboard."""
+class DashboardConfig:
+    """Configuration for the dashboard."""
 
-    # Simulation config
-    n_epochs: int = 10
-    steps_per_epoch: int = 10
-    n_honest: int = 2
-    n_opportunistic: int = 1
-    n_adversarial: int = 1
-    seed: int = 42
-
-    # Governance config
-    transaction_tax_rate: float = 0.05
-    reputation_decay_rate: float = 0.95
-    circuit_breaker_enabled: bool = True
-    security_enabled: bool = True
-    collusion_detection_enabled: bool = True
-
-    # Network config
-    network_topology: str = "complete"
-    network_dynamic: bool = False
-
-    # Display options
-    selected_metrics: List[str] = field(default_factory=lambda: [
-        "toxicity_rate",
-        "total_welfare",
-        "avg_reputation",
-    ])
-    rolling_window: int = 5
+    title: str = "Distributional AGI Safety Sandbox"
+    refresh_rate_ms: int = 1000
     show_agent_details: bool = True
-
-    # State
-    is_running: bool = False
-    current_epoch: int = 0
-
-
-def create_sidebar_config() -> Dict[str, Any]:
-    """Create sidebar configuration controls."""
-    try:
-        import streamlit as st
-    except ImportError:
-        return {}
-
-    st.sidebar.header("Simulation Settings")
-
-    config = {}
-
-    # Timing
-    config["n_epochs"] = st.sidebar.slider(
-        "Number of Epochs",
-        min_value=5,
-        max_value=100,
-        value=20,
-    )
-    config["steps_per_epoch"] = st.sidebar.slider(
-        "Steps per Epoch",
-        min_value=5,
-        max_value=50,
-        value=10,
-    )
-    config["seed"] = st.sidebar.number_input(
-        "Random Seed",
-        min_value=0,
-        max_value=9999,
-        value=42,
-    )
-
-    # Agents
-    st.sidebar.subheader("Agent Configuration")
-    config["n_honest"] = st.sidebar.slider("Honest Agents", 0, 5, 2)
-    config["n_opportunistic"] = st.sidebar.slider("Opportunistic Agents", 0, 5, 1)
-    config["n_adversarial"] = st.sidebar.slider("Adversarial Agents", 0, 5, 1)
-
-    # Governance
-    st.sidebar.subheader("Governance")
-    config["transaction_tax_rate"] = st.sidebar.slider(
-        "Transaction Tax Rate",
-        0.0, 0.2, 0.05, 0.01,
-    )
-    config["reputation_decay_rate"] = st.sidebar.slider(
-        "Reputation Decay Rate",
-        0.8, 1.0, 0.95, 0.01,
-    )
-    config["circuit_breaker_enabled"] = st.sidebar.checkbox(
-        "Circuit Breaker",
-        value=True,
-    )
-    config["security_enabled"] = st.sidebar.checkbox(
-        "Security Detection",
-        value=True,
-    )
-    config["collusion_detection_enabled"] = st.sidebar.checkbox(
-        "Collusion Detection",
-        value=True,
-    )
-
-    # Network
-    st.sidebar.subheader("Network")
-    config["network_topology"] = st.sidebar.selectbox(
-        "Topology",
-        ["complete", "ring", "star", "small_world", "scale_free"],
-    )
-    config["network_dynamic"] = st.sidebar.checkbox(
-        "Dynamic Network",
-        value=False,
-    )
-
-    return config
+    show_network_graph: bool = True
+    show_governance_metrics: bool = True
+    show_boundary_metrics: bool = True
+    max_history_points: int = 100
+    theme: str = "default"
 
 
-def render_metrics_overview(
-    epoch_snapshot: Any,
-) -> None:
-    """Render the metrics overview section."""
-    try:
-        import streamlit as st
-    except ImportError:
-        return
+@dataclass
+class MetricSnapshot:
+    """Snapshot of metrics at a point in time."""
 
-    col1, col2, col3, col4 = st.columns(4)
+    epoch: int
+    step: int
+    toxicity_rate: float = 0.0
+    quality_gap: float = 0.0
+    avg_payoff: float = 0.0
+    total_welfare: float = 0.0
+    acceptance_rate: float = 0.0
+    governance_costs: float = 0.0
+    boundary_crossings: int = 0
+    leakage_events: int = 0
 
-    with col1:
-        st.metric(
-            "Toxicity Rate",
-            f"{epoch_snapshot.toxicity_rate:.3f}",
-            delta=None,
-        )
-    with col2:
-        st.metric(
-            "Total Welfare",
-            f"{epoch_snapshot.total_welfare:.2f}",
-        )
-    with col3:
-        st.metric(
-            "Avg Reputation",
-            f"{epoch_snapshot.avg_reputation:.2f}",
-        )
-    with col4:
-        st.metric(
-            "Interactions",
-            f"{epoch_snapshot.total_interactions}",
-        )
-
-    # Second row
-    col1, col2, col3, col4 = st.columns(4)
-
-    with col1:
-        st.metric(
-            "Quality Gap",
-            f"{epoch_snapshot.quality_gap:.3f}",
-        )
-    with col2:
-        st.metric(
-            "Agents Frozen",
-            f"{epoch_snapshot.n_frozen}",
-        )
-    with col3:
-        st.metric(
-            "Threat Level",
-            f"{epoch_snapshot.ecosystem_threat_level:.2f}",
-        )
-    with col4:
-        st.metric(
-            "Collusion Risk",
-            f"{epoch_snapshot.ecosystem_collusion_risk:.2f}",
-        )
-
-
-def render_time_series_charts(
-    history: Any,
-    selected_metrics: List[str],
-    rolling_window: int = 5,
-) -> None:
-    """Render time series charts for selected metrics."""
-    try:
-        import streamlit as st
-        from src.analysis.plots import (
-            create_time_series_data,
-            plotly_time_series,
-        )
-    except ImportError:
-        return
-
-    if not history.epoch_snapshots:
-        st.info("No data yet. Run a simulation to see metrics.")
-        return
-
-    # Create tabs for different metric categories
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Quality Metrics",
-        "Economic Metrics",
-        "Security Metrics",
-        "Network Metrics",
-    ])
-
-    with tab1:
-        quality_metrics = ["toxicity_rate", "quality_gap", "avg_p"]
-        data = create_time_series_data(history, quality_metrics, rolling_window)
-        fig = plotly_time_series(data, "Quality Metrics Over Time")
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-
-    with tab2:
-        econ_metrics = ["total_welfare", "avg_payoff", "gini_coefficient"]
-        data = create_time_series_data(history, econ_metrics, rolling_window)
-        fig = plotly_time_series(data, "Economic Metrics Over Time")
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-
-    with tab3:
-        sec_metrics = ["ecosystem_threat_level", "ecosystem_collusion_risk"]
-        data = create_time_series_data(history, sec_metrics, rolling_window)
-        fig = plotly_time_series(data, "Security Metrics Over Time")
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-
-    with tab4:
-        net_metrics = ["n_edges", "avg_degree", "avg_clustering"]
-        data = create_time_series_data(history, net_metrics, rolling_window)
-        fig = plotly_time_series(data, "Network Metrics Over Time")
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-
-
-def render_agent_table(
-    history: Any,
-) -> None:
-    """Render agent state table."""
-    try:
-        import streamlit as st
-        import pandas as pd
-    except ImportError:
-        return
-
-    final_states = history.get_final_agent_states()
-    if not final_states:
-        st.info("No agent data available.")
-        return
-
-    # Convert to dataframe
-    rows = []
-    for agent_id, snapshot in sorted(final_states.items()):
-        rows.append({
-            "Agent": agent_id,
-            "Reputation": f"{snapshot.reputation:.2f}",
-            "Resources": f"{snapshot.resources:.2f}",
-            "Interactions": snapshot.interactions_initiated + snapshot.interactions_received,
-            "Total Payoff": f"{snapshot.total_payoff:.2f}",
-            "Avg P (Init)": f"{snapshot.avg_p_initiated:.2f}",
-            "Status": "Frozen" if snapshot.is_frozen else ("Quarantined" if snapshot.is_quarantined else "Active"),
-        })
-
-    df = pd.DataFrame(rows)
-    st.dataframe(df, use_container_width=True)
-
-
-def render_agent_comparison(
-    history: Any,
-) -> None:
-    """Render agent comparison charts."""
-    try:
-        import streamlit as st
-        from src.analysis.plots import (
-            create_agent_comparison_data,
-            create_agent_trajectory_data,
-            plotly_bar_chart,
-            plotly_multi_line,
-        )
-    except ImportError:
-        return
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        # Bar chart of total payoffs
-        data = create_agent_comparison_data(history, "total_payoff")
-        fig = plotly_bar_chart(data, "Total Payoff by Agent")
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-
-    with col2:
-        # Bar chart of reputations
-        data = create_agent_comparison_data(history, "reputation")
-        fig = plotly_bar_chart(data, "Final Reputation by Agent")
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-
-    # Reputation trajectories
-    agent_ids = list(history.agent_snapshots.keys())
-    if agent_ids:
-        data = create_agent_trajectory_data(history, agent_ids, "reputation")
-        fig = plotly_multi_line(data, "Reputation Over Time")
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-
-
-def render_security_panel(
-    security_report: Any,
-) -> None:
-    """Render security analysis panel."""
-    try:
-        import streamlit as st
-        from src.analysis.plots import plotly_gauge
-    except ImportError:
-        return
-
-    if security_report is None:
-        st.info("Security detection not enabled or no data available.")
-        return
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        fig = plotly_gauge(
-            security_report.ecosystem_threat_level,
-            "Ecosystem Threat Level",
-            thresholds=[(0.3, "green"), (0.6, "yellow"), (1.0, "red")],
-        )
-        if fig:
-            st.plotly_chart(fig, use_container_width=True)
-
-    with col2:
-        st.metric("Active Threats", security_report.active_threat_count)
-        st.metric("Contagion Depth", security_report.contagion_depth)
-        st.metric("Flagged Agents", len(security_report.agents_flagged))
-
-    with col3:
-        st.subheader("Threat Indicators")
-        for indicator in security_report.threat_indicators[:5]:
-            st.write(
-                f"**{indicator.threat_type.value}**: "
-                f"{indicator.source_agent} (severity: {indicator.severity:.2f})"
-            )
-
-
-def render_network_panel(
-    network: Any,
-    agent_states: Dict[str, Any],
-) -> None:
-    """Render network visualization panel."""
-    try:
-        import streamlit as st
-        from src.analysis.plots import create_network_graph_data, plotly_network
-    except ImportError:
-        return
-
-    if network is None:
-        st.info("Network module not enabled.")
-        return
-
-    # Get edges from network
-    edges = []
-    for src, tgt in network.get_edges():
-        weight = network.get_edge_weight(src, tgt)
-        edges.append((src, tgt, weight))
-
-    # Get node attributes
-    node_attrs = {}
-    for agent_id, state in agent_states.items():
-        node_attrs[agent_id] = {
-            "reputation": state.reputation,
-            "resources": state.resources,
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "epoch": self.epoch,
+            "step": self.step,
+            "toxicity_rate": self.toxicity_rate,
+            "quality_gap": self.quality_gap,
+            "avg_payoff": self.avg_payoff,
+            "total_welfare": self.total_welfare,
+            "acceptance_rate": self.acceptance_rate,
+            "governance_costs": self.governance_costs,
+            "boundary_crossings": self.boundary_crossings,
+            "leakage_events": self.leakage_events,
         }
 
-    data = create_network_graph_data(edges, node_attrs)
-    fig = plotly_network(data, "Agent Network")
-    if fig:
-        st.plotly_chart(fig, use_container_width=True)
 
-    # Network metrics
-    metrics = network.get_metrics()
-    col1, col2, col3, col4 = st.columns(4)
-    with col1:
-        st.metric("Edges", metrics.get("n_edges", 0))
-    with col2:
-        st.metric("Avg Degree", f"{metrics.get('avg_degree', 0):.2f}")
-    with col3:
-        st.metric("Clustering", f"{metrics.get('avg_clustering', 0):.2f}")
-    with col4:
-        st.metric("Components", metrics.get("n_components", 1))
+@dataclass
+class AgentSnapshot:
+    """Snapshot of an agent's state."""
 
+    agent_id: str
+    agent_type: str
+    reputation: float = 0.0
+    resources: float = 0.0
+    interactions: int = 0
+    payoff_total: float = 0.0
+    is_frozen: bool = False
 
-def render_event_log(
-    events: List[Dict],
-    max_events: int = 20,
-) -> None:
-    """Render recent events log."""
-    try:
-        import streamlit as st
-    except ImportError:
-        return
-
-    st.subheader("Recent Events")
-
-    if not events:
-        st.info("No events recorded yet.")
-        return
-
-    for event in events[-max_events:]:
-        event_type = event.get("event_type", "unknown")
-        timestamp = event.get("timestamp", "")
-        details = event.get("details", {})
-
-        if event_type == "interaction_completed":
-            st.write(
-                f"**{timestamp}** - Interaction: "
-                f"{details.get('initiator', '?')} -> {details.get('counterparty', '?')} "
-                f"(p={details.get('p', 0):.2f}, accepted={details.get('accepted', False)})"
-            )
-        elif event_type == "agent_frozen":
-            st.write(f"**{timestamp}** - Agent frozen: {details.get('agent_id', '?')}")
-        elif event_type == "epoch_completed":
-            st.write(f"**{timestamp}** - Epoch {details.get('epoch', '?')} completed")
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary."""
+        return {
+            "agent_id": self.agent_id,
+            "agent_type": self.agent_type,
+            "reputation": self.reputation,
+            "resources": self.resources,
+            "interactions": self.interactions,
+            "payoff_total": self.payoff_total,
+            "is_frozen": self.is_frozen,
+        }
 
 
-def run_dashboard():
-    """Main entry point for the Streamlit dashboard."""
-    try:
-        import streamlit as st
-    except ImportError:
-        print("Streamlit not installed. Run: pip install streamlit plotly")
-        return
+class DashboardState:
+    """Manages dashboard state and history."""
 
-    st.set_page_config(
-        page_title="AGI Safety Sandbox Dashboard",
-        page_icon="🔬",
-        layout="wide",
+    def __init__(self, config: Optional[DashboardConfig] = None):
+        """Initialize dashboard state.
+
+        Args:
+            config: Dashboard configuration
+        """
+        self.config = config or DashboardConfig()
+        self.metric_history: List[MetricSnapshot] = []
+        self.agent_snapshots: Dict[str, AgentSnapshot] = {}
+        self.events: List[Dict[str, Any]] = []
+        self.is_running: bool = False
+        self.current_epoch: int = 0
+        self.current_step: int = 0
+
+    def update_metrics(self, snapshot: MetricSnapshot) -> None:
+        """Add a new metric snapshot."""
+        self.metric_history.append(snapshot)
+        self.current_epoch = snapshot.epoch
+        self.current_step = snapshot.step
+
+        # Trim history if needed
+        if len(self.metric_history) > self.config.max_history_points:
+            self.metric_history = self.metric_history[-self.config.max_history_points:]
+
+    def update_agent(self, snapshot: AgentSnapshot) -> None:
+        """Update an agent's snapshot."""
+        self.agent_snapshots[snapshot.agent_id] = snapshot
+
+    def add_event(self, event: Dict[str, Any]) -> None:
+        """Add an event to the log."""
+        self.events.append(event)
+
+        # Keep only recent events
+        max_events = 100
+        if len(self.events) > max_events:
+            self.events = self.events[-max_events:]
+
+    def get_metric_series(self, metric_name: str) -> Tuple[List[int], List[float]]:
+        """Get time series data for a metric.
+
+        Args:
+            metric_name: Name of the metric
+
+        Returns:
+            Tuple of (epochs, values)
+        """
+        epochs = []
+        values = []
+
+        for snapshot in self.metric_history:
+            epochs.append(snapshot.epoch)
+            value = getattr(snapshot, metric_name, 0.0)
+            values.append(value)
+
+        return epochs, values
+
+    def get_agent_rankings(self, sort_by: str = "reputation") -> List[AgentSnapshot]:
+        """Get agents sorted by a metric.
+
+        Args:
+            sort_by: Metric to sort by
+
+        Returns:
+            Sorted list of agent snapshots
+        """
+        agents = list(self.agent_snapshots.values())
+        return sorted(agents, key=lambda a: getattr(a, sort_by, 0), reverse=True)
+
+    def export_to_json(self) -> str:
+        """Export state to JSON."""
+        return json.dumps({
+            "config": {
+                "title": self.config.title,
+                "max_history_points": self.config.max_history_points,
+            },
+            "current_epoch": self.current_epoch,
+            "current_step": self.current_step,
+            "metric_history": [m.to_dict() for m in self.metric_history],
+            "agents": [a.to_dict() for a in self.agent_snapshots.values()],
+            "recent_events": self.events[-20:],
+        }, indent=2)
+
+
+def extract_metrics_from_orchestrator(orchestrator: Any) -> MetricSnapshot:
+    """Extract current metrics from an orchestrator.
+
+    Args:
+        orchestrator: The orchestrator instance
+
+    Returns:
+        MetricSnapshot with current values
+    """
+    state = orchestrator.state
+    epoch_metrics = orchestrator._epoch_metrics[-1] if orchestrator._epoch_metrics else None
+
+    # Get basic metrics
+    toxicity = epoch_metrics.toxicity_rate if epoch_metrics else 0.0
+    quality_gap = epoch_metrics.quality_gap if epoch_metrics else 0.0
+    avg_payoff = epoch_metrics.avg_payoff if epoch_metrics else 0.0
+    total_welfare = epoch_metrics.total_welfare if epoch_metrics else 0.0
+
+    # Calculate acceptance rate
+    total = len(state.completed_interactions)
+    accepted = sum(1 for i in state.completed_interactions if i.accepted)
+    acceptance_rate = accepted / total if total > 0 else 0.0
+
+    # Get governance costs
+    governance_costs = 0.0
+    if orchestrator.governance_engine:
+        for i in state.completed_interactions[-10:]:  # Recent interactions
+            governance_costs += i.governance_cost_initiator or 0.0
+            governance_costs += i.governance_cost_counterparty or 0.0
+
+    # Get boundary metrics
+    boundary_crossings = 0
+    leakage_events = 0
+    if orchestrator.flow_tracker:
+        summary = orchestrator.flow_tracker.get_summary()
+        boundary_crossings = summary.total_flows
+    if orchestrator.leakage_detector:
+        leakage_events = len(orchestrator.leakage_detector.events)
+
+    return MetricSnapshot(
+        epoch=state.current_epoch,
+        step=state.current_step,
+        toxicity_rate=toxicity,
+        quality_gap=quality_gap,
+        avg_payoff=avg_payoff,
+        total_welfare=total_welfare,
+        acceptance_rate=acceptance_rate,
+        governance_costs=governance_costs,
+        boundary_crossings=boundary_crossings,
+        leakage_events=leakage_events,
     )
 
-    st.title("Distributional AGI Safety Sandbox")
-    st.markdown("Real-time visualization of multi-agent simulation metrics")
 
-    # Sidebar configuration
-    config = create_sidebar_config()
+def extract_agent_snapshots(orchestrator: Any) -> List[AgentSnapshot]:
+    """Extract agent snapshots from orchestrator.
 
-    # Initialize session state
-    if "history" not in st.session_state:
-        from src.analysis.aggregation import SimulationHistory
-        st.session_state.history = SimulationHistory()
-        st.session_state.is_running = False
-        st.session_state.orchestrator = None
-        st.session_state.security_report = None
-        st.session_state.network = None
+    Args:
+        orchestrator: The orchestrator instance
 
-    # Control buttons
-    col1, col2, col3 = st.columns([1, 1, 4])
+    Returns:
+        List of agent snapshots
+    """
+    snapshots = []
 
-    with col1:
-        if st.button("Run Simulation", type="primary"):
-            run_simulation(config)
-
-    with col2:
-        if st.button("Reset"):
-            from src.analysis.aggregation import SimulationHistory
-            st.session_state.history = SimulationHistory()
-            st.session_state.security_report = None
-            st.session_state.network = None
-            st.rerun()
-
-    # Display current state
-    history = st.session_state.history
-
-    if history.epoch_snapshots:
-        latest = history.epoch_snapshots[-1]
-
-        # Header metrics
-        st.header(f"Epoch {latest.epoch}")
-        render_metrics_overview(latest)
-
-        st.divider()
-
-        # Main content tabs
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
-            "Time Series",
-            "Agents",
-            "Security",
-            "Network",
-            "Events",
-        ])
-
-        with tab1:
-            render_time_series_charts(
-                history,
-                config.get("selected_metrics", ["toxicity_rate"]),
-                rolling_window=5,
+    for agent_id, agent in orchestrator._agents.items():
+        agent_state = orchestrator.state.get_agent(agent_id)
+        if agent_state:
+            # Calculate total interactions from initiated + received
+            total_interactions = (
+                agent_state.interactions_initiated +
+                agent_state.interactions_received
             )
+            snapshots.append(AgentSnapshot(
+                agent_id=agent_id,
+                agent_type=agent_state.agent_type.value,
+                reputation=agent_state.reputation,
+                resources=agent_state.resources,
+                interactions=total_interactions,
+                payoff_total=agent_state.total_payoff,
+                is_frozen=getattr(agent_state, 'frozen', False),
+            ))
 
-        with tab2:
-            render_agent_table(history)
-            st.divider()
-            render_agent_comparison(history)
-
-        with tab3:
-            render_security_panel(st.session_state.security_report)
-
-        with tab4:
-            if st.session_state.orchestrator:
-                render_network_panel(
-                    st.session_state.network,
-                    st.session_state.orchestrator.state.agents,
-                )
-
-        with tab5:
-            render_event_log([])  # Would need event log integration
-
-    else:
-        st.info("Configure settings in the sidebar and click 'Run Simulation' to start.")
+    return snapshots
 
 
-def run_simulation(config: Dict[str, Any]) -> None:
-    """Run a simulation with the given configuration."""
-    try:
-        import streamlit as st
-        from src.agents.honest import HonestAgent
-        from src.agents.opportunistic import OpportunisticAgent
-        from src.agents.adversarial import AdversarialAgent
-        from src.core.orchestrator import Orchestrator, OrchestratorConfig
-        from src.governance.config import GovernanceConfig
-        from src.env.network import NetworkConfig, NetworkTopology
-        from src.analysis.aggregation import MetricsAggregator
-    except ImportError as e:
-        st.error(f"Missing dependency: {e}")
-        return
+# =============================================================================
+# Streamlit Dashboard Implementation
+# =============================================================================
 
-    # Build governance config
-    gov_config = GovernanceConfig(
-        transaction_tax_rate=config.get("transaction_tax_rate", 0.05),
-        reputation_decay_rate=config.get("reputation_decay_rate", 0.95),
-        circuit_breaker_enabled=config.get("circuit_breaker_enabled", True),
-        freeze_threshold_toxicity=0.7,
-        security_enabled=config.get("security_enabled", True),
-        security_quarantine_threshold=0.7,
-        collusion_detection_enabled=config.get("collusion_detection_enabled", True),
-    )
+STREAMLIT_APP_CODE = '''
+"""Streamlit dashboard for distributional AGI safety sandbox."""
 
-    # Build network config
-    topology_map = {
-        "complete": NetworkTopology.COMPLETE,
-        "ring": NetworkTopology.RING,
-        "star": NetworkTopology.STAR,
-        "small_world": NetworkTopology.SMALL_WORLD,
-        "scale_free": NetworkTopology.SCALE_FREE,
+import streamlit as st
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+import time
+import json
+from pathlib import Path
+from typing import Optional
+
+# Page config
+st.set_page_config(
+    page_title="AGI Safety Sandbox",
+    page_icon="🔬",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# Custom CSS
+st.markdown("""
+<style>
+    .metric-card {
+        background-color: #f0f2f6;
+        border-radius: 10px;
+        padding: 20px;
+        margin: 10px 0;
     }
-    network_config = NetworkConfig(
-        topology=topology_map.get(config.get("network_topology", "complete"), NetworkTopology.COMPLETE),
-        dynamic=config.get("network_dynamic", False),
-    )
+    .status-running {
+        color: #28a745;
+        font-weight: bold;
+    }
+    .status-stopped {
+        color: #dc3545;
+        font-weight: bold;
+    }
+    .agent-honest { color: #28a745; }
+    .agent-opportunistic { color: #ffc107; }
+    .agent-adversarial { color: #dc3545; }
+</style>
+""", unsafe_allow_html=True)
 
-    # Build orchestrator config
-    orch_config = OrchestratorConfig(
-        n_epochs=config.get("n_epochs", 10),
-        steps_per_epoch=config.get("steps_per_epoch", 10),
-        seed=config.get("seed", 42),
-        governance_config=gov_config,
-        network_config=network_config,
-    )
 
-    # Create orchestrator
-    orchestrator = Orchestrator(config=orch_config)
+def main():
+    """Main dashboard entry point."""
+    st.title("🔬 Distributional AGI Safety Sandbox")
 
-    # Register agents
-    agent_id = 0
-    for _ in range(config.get("n_honest", 2)):
-        orchestrator.register_agent(HonestAgent(agent_id=f"honest_{agent_id}"))
-        agent_id += 1
+    # Sidebar controls
+    with st.sidebar:
+        st.header("Controls")
 
-    for _ in range(config.get("n_opportunistic", 1)):
-        orchestrator.register_agent(OpportunisticAgent(agent_id=f"opp_{agent_id}"))
-        agent_id += 1
+        # Simulation status
+        if "simulation_running" not in st.session_state:
+            st.session_state.simulation_running = False
 
-    for _ in range(config.get("n_adversarial", 1)):
-        orchestrator.register_agent(AdversarialAgent(agent_id=f"adv_{agent_id}"))
-        agent_id += 1
+        status = "Running" if st.session_state.simulation_running else "Stopped"
+        status_class = "running" if st.session_state.simulation_running else "stopped"
+        st.markdown(f"**Status:** <span class='status-{status_class}'>{status}</span>",
+                   unsafe_allow_html=True)
 
-    # Create aggregator
-    aggregator = MetricsAggregator()
-    aggregator.start_simulation(
-        simulation_id=orchestrator.state.simulation_id,
-        n_epochs=orch_config.n_epochs,
-        steps_per_epoch=orch_config.steps_per_epoch,
-        n_agents=len(orchestrator.agents),
-        seed=orch_config.seed,
-    )
-
-    # Run simulation with progress
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-
-    for epoch in range(orch_config.n_epochs):
-        status_text.text(f"Running epoch {epoch + 1}/{orch_config.n_epochs}...")
-
-        # Run one epoch
-        orchestrator._run_epoch(epoch)
-
-        # Collect metrics
-        for interaction in orchestrator.state.completed_interactions:
-            aggregator.record_interaction(interaction)
-
-        # Get reports
-        security_report = None
-        collusion_report = None
-        network_metrics = None
-
-        if orchestrator.governance_engine:
-            security_report = orchestrator.governance_engine.get_security_report()
-            collusion_report = orchestrator.governance_engine.get_collusion_report()
-
-        if orchestrator.network:
-            network_metrics = orchestrator.network.get_metrics()
-
-        # Finalize epoch
-        aggregator.finalize_epoch(
-            epoch=epoch,
-            agent_states=orchestrator.state.agents,
-            frozen_agents=orchestrator.state.frozen_agents,
-            quarantined_agents=orchestrator.governance_engine.get_quarantined_agents() if orchestrator.governance_engine else set(),
-            network_metrics=network_metrics,
-            security_report=security_report,
-            collusion_report=collusion_report,
+        # Load data options
+        st.subheader("Data Source")
+        data_source = st.radio(
+            "Select data source:",
+            ["Demo Data", "Load from File", "Live Simulation"],
         )
 
-        # Advance orchestrator
-        orchestrator.state.advance_epoch()
+        if data_source == "Load from File":
+            uploaded_file = st.file_uploader("Upload metrics JSON", type=["json"])
+            if uploaded_file:
+                data = json.load(uploaded_file)
+                st.session_state.dashboard_data = data
 
-        # Update progress
-        progress_bar.progress((epoch + 1) / orch_config.n_epochs)
+        # Refresh rate
+        refresh_rate = st.slider("Refresh Rate (s)", 1, 10, 2)
 
-    # Store results in session state
-    st.session_state.history = aggregator.end_simulation()
-    st.session_state.orchestrator = orchestrator
-    st.session_state.security_report = security_report
-    st.session_state.network = orchestrator.network
+        # Display options
+        st.subheader("Display Options")
+        show_agents = st.checkbox("Show Agent Details", value=True)
+        show_governance = st.checkbox("Show Governance", value=True)
+        show_boundaries = st.checkbox("Show Boundaries", value=True)
+        show_network = st.checkbox("Show Network", value=False)
 
-    progress_bar.empty()
-    status_text.empty()
-    st.success(f"Simulation completed! {orch_config.n_epochs} epochs run.")
-    st.rerun()
+    # Main content
+    # Generate demo data if needed
+    if "dashboard_data" not in st.session_state:
+        st.session_state.dashboard_data = generate_demo_data()
+
+    data = st.session_state.dashboard_data
+
+    # Top metrics row
+    col1, col2, col3, col4 = st.columns(4)
+
+    with col1:
+        current_toxicity = data.get("current_toxicity", 0.15)
+        st.metric(
+            "Toxicity Rate",
+            f"{current_toxicity:.2%}",
+            delta=f"{(current_toxicity - 0.1):.2%}",
+            delta_color="inverse",
+        )
+
+    with col2:
+        current_welfare = data.get("current_welfare", 850.0)
+        st.metric(
+            "Total Welfare",
+            f"{current_welfare:.0f}",
+            delta=f"+{current_welfare * 0.05:.0f}",
+        )
+
+    with col3:
+        acceptance_rate = data.get("acceptance_rate", 0.72)
+        st.metric(
+            "Acceptance Rate",
+            f"{acceptance_rate:.2%}",
+        )
+
+    with col4:
+        current_epoch = data.get("current_epoch", 25)
+        total_epochs = data.get("total_epochs", 100)
+        st.metric(
+            "Progress",
+            f"{current_epoch}/{total_epochs}",
+            delta=f"{current_epoch/total_epochs:.0%}",
+        )
+
+    st.divider()
+
+    # Charts row
+    chart_col1, chart_col2 = st.columns(2)
+
+    with chart_col1:
+        st.subheader("📈 Metrics Over Time")
+        metrics_df = pd.DataFrame(data.get("metric_history", []))
+        if not metrics_df.empty:
+            fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
+                              subplot_titles=("Toxicity Rate", "Quality Gap"))
+
+            fig.add_trace(
+                go.Scatter(x=metrics_df["epoch"], y=metrics_df["toxicity_rate"],
+                          mode="lines+markers", name="Toxicity", line=dict(color="red")),
+                row=1, col=1
+            )
+
+            fig.add_trace(
+                go.Scatter(x=metrics_df["epoch"], y=metrics_df["quality_gap"],
+                          mode="lines+markers", name="Quality Gap", line=dict(color="blue")),
+                row=2, col=1
+            )
+
+            fig.update_layout(height=400, showlegend=False)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No metric history available")
+
+    with chart_col2:
+        st.subheader("📊 Agent Distribution")
+        agents = data.get("agents", [])
+        if agents:
+            agent_df = pd.DataFrame(agents)
+
+            # Agent type distribution
+            type_counts = agent_df["agent_type"].value_counts()
+            fig = px.pie(values=type_counts.values, names=type_counts.index,
+                        color=type_counts.index,
+                        color_discrete_map={
+                            "honest": "#28a745",
+                            "opportunistic": "#ffc107",
+                            "adversarial": "#dc3545",
+                            "deceptive": "#6c757d",
+                        })
+            fig.update_layout(height=400)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("No agent data available")
+
+    st.divider()
+
+    # Agent details section
+    if show_agents:
+        st.subheader("👥 Agent States")
+        agents = data.get("agents", [])
+        if agents:
+            agent_df = pd.DataFrame(agents)
+
+            # Sortable table
+            sort_by = st.selectbox("Sort by:", ["reputation", "resources", "interactions", "payoff_total"])
+            agent_df = agent_df.sort_values(sort_by, ascending=False)
+
+            # Style the dataframe
+            def color_agent_type(val):
+                colors = {
+                    "honest": "background-color: #d4edda",
+                    "opportunistic": "background-color: #fff3cd",
+                    "adversarial": "background-color: #f8d7da",
+                    "deceptive": "background-color: #e2e3e5",
+                }
+                return colors.get(val, "")
+
+            styled_df = agent_df.style.applymap(color_agent_type, subset=["agent_type"])
+            st.dataframe(styled_df, use_container_width=True)
+
+            # Reputation bar chart
+            fig = px.bar(agent_df, x="agent_id", y="reputation",
+                        color="agent_type",
+                        color_discrete_map={
+                            "honest": "#28a745",
+                            "opportunistic": "#ffc107",
+                            "adversarial": "#dc3545",
+                        })
+            fig.update_layout(height=300)
+            st.plotly_chart(fig, use_container_width=True)
+
+    # Governance section
+    if show_governance:
+        st.divider()
+        st.subheader("⚖️ Governance Metrics")
+
+        gov_col1, gov_col2, gov_col3 = st.columns(3)
+
+        with gov_col1:
+            governance_costs = data.get("governance_costs", 45.0)
+            st.metric("Total Governance Costs", f"${governance_costs:.2f}")
+
+        with gov_col2:
+            audits = data.get("audits_conducted", 12)
+            st.metric("Audits Conducted", audits)
+
+        with gov_col3:
+            frozen_agents = data.get("frozen_agents", 1)
+            st.metric("Frozen Agents", frozen_agents)
+
+        # Governance effectiveness
+        gov_metrics = data.get("governance_effectiveness", {})
+        if gov_metrics:
+            st.write("**Governance Effectiveness:**")
+            eff_df = pd.DataFrame([gov_metrics])
+            st.dataframe(eff_df, use_container_width=True)
+
+    # Boundaries section
+    if show_boundaries:
+        st.divider()
+        st.subheader("🔒 Boundary Metrics")
+
+        bound_col1, bound_col2, bound_col3, bound_col4 = st.columns(4)
+
+        with bound_col1:
+            crossings = data.get("boundary_crossings", 156)
+            st.metric("Boundary Crossings", crossings)
+
+        with bound_col2:
+            blocked = data.get("blocked_crossings", 23)
+            st.metric("Blocked Attempts", blocked)
+
+        with bound_col3:
+            leakage = data.get("leakage_events", 5)
+            st.metric("Leakage Events", leakage, delta_color="inverse")
+
+        with bound_col4:
+            sensitivity = data.get("avg_sensitivity", 0.35)
+            st.metric("Avg Sensitivity", f"{sensitivity:.2f}")
+
+    # Network visualization (placeholder)
+    if show_network:
+        st.divider()
+        st.subheader("🌐 Agent Network")
+        st.info("Network visualization requires additional setup. Install networkx and pyvis for full functionality.")
+
+    # Event log
+    st.divider()
+    st.subheader("📋 Recent Events")
+
+    events = data.get("recent_events", [])
+    if events:
+        for event in events[-10:]:
+            event_type = event.get("type", "unknown")
+            icon = {"interaction": "🤝", "governance": "⚖️", "boundary": "🔒"}.get(event_type, "📌")
+            st.text(f"{icon} {event.get('description', 'Event occurred')}")
+    else:
+        st.info("No recent events")
+
+    # Footer
+    st.divider()
+    st.caption("Distributional AGI Safety Sandbox | Real-time Monitoring Dashboard")
+
+    # Auto-refresh
+    if st.session_state.simulation_running:
+        time.sleep(refresh_rate)
+        st.rerun()
 
 
-# Entry point for streamlit run
+def generate_demo_data():
+    """Generate demo data for testing the dashboard."""
+    import random
+
+    epochs = list(range(1, 26))
+    metric_history = []
+
+    for epoch in epochs:
+        metric_history.append({
+            "epoch": epoch,
+            "step": 10,
+            "toxicity_rate": 0.1 + random.uniform(-0.05, 0.1) * (epoch / 25),
+            "quality_gap": -0.05 + random.uniform(-0.02, 0.02),
+            "avg_payoff": 5.0 + random.uniform(-1, 2),
+            "total_welfare": 800 + epoch * 2 + random.uniform(-20, 20),
+            "acceptance_rate": 0.7 + random.uniform(-0.1, 0.1),
+        })
+
+    agents = [
+        {"agent_id": "honest_1", "agent_type": "honest", "reputation": 12.5, "resources": 105.0, "interactions": 45, "payoff_total": 52.3, "is_frozen": False},
+        {"agent_id": "honest_2", "agent_type": "honest", "reputation": 11.2, "resources": 98.0, "interactions": 42, "payoff_total": 48.1, "is_frozen": False},
+        {"agent_id": "honest_3", "agent_type": "honest", "reputation": 10.8, "resources": 102.0, "interactions": 40, "payoff_total": 45.5, "is_frozen": False},
+        {"agent_id": "opp_1", "agent_type": "opportunistic", "reputation": 8.5, "resources": 115.0, "interactions": 38, "payoff_total": 55.2, "is_frozen": False},
+        {"agent_id": "opp_2", "agent_type": "opportunistic", "reputation": 7.2, "resources": 110.0, "interactions": 35, "payoff_total": 42.0, "is_frozen": False},
+        {"agent_id": "adv_1", "agent_type": "adversarial", "reputation": 3.1, "resources": 85.0, "interactions": 25, "payoff_total": -15.3, "is_frozen": True},
+    ]
+
+    recent_events = [
+        {"type": "interaction", "description": "honest_1 and honest_2 completed beneficial interaction"},
+        {"type": "governance", "description": "Audit conducted on opp_1, no violations found"},
+        {"type": "boundary", "description": "External API call from honest_3 to web_search"},
+        {"type": "governance", "description": "adv_1 frozen due to high toxicity"},
+        {"type": "interaction", "description": "opp_2 proposed interaction rejected by honest_1"},
+    ]
+
+    return {
+        "current_epoch": 25,
+        "total_epochs": 100,
+        "current_toxicity": metric_history[-1]["toxicity_rate"],
+        "current_welfare": metric_history[-1]["total_welfare"],
+        "acceptance_rate": metric_history[-1]["acceptance_rate"],
+        "metric_history": metric_history,
+        "agents": agents,
+        "governance_costs": 45.0,
+        "audits_conducted": 12,
+        "frozen_agents": 1,
+        "governance_effectiveness": {
+            "precision": 0.85,
+            "recall": 0.72,
+            "f1_score": 0.78,
+        },
+        "boundary_crossings": 156,
+        "blocked_crossings": 23,
+        "leakage_events": 5,
+        "avg_sensitivity": 0.35,
+        "recent_events": recent_events,
+    }
+
+
 if __name__ == "__main__":
-    run_dashboard()
+    main()
+'''
+
+
+def create_dashboard_file(output_path: Optional[str] = None) -> str:
+    """Create a standalone Streamlit dashboard file.
+
+    Args:
+        output_path: Path to write the file (default: src/analysis/streamlit_app.py)
+
+    Returns:
+        Path to the created file
+    """
+    from pathlib import Path
+
+    if output_path is None:
+        output_path = str(Path(__file__).parent / "streamlit_app.py")
+
+    with open(output_path, "w") as f:
+        f.write(STREAMLIT_APP_CODE)
+
+    return output_path
+
+
+def run_dashboard(
+    orchestrator: Optional[Any] = None,
+    port: int = 8501,
+    open_browser: bool = True,
+) -> None:
+    """Run the Streamlit dashboard.
+
+    Args:
+        orchestrator: Optional orchestrator to connect to
+        port: Port to run on
+        open_browser: Whether to open browser automatically
+    """
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    # Create the dashboard file
+    dashboard_path = create_dashboard_file()
+
+    # Build command
+    cmd = [
+        sys.executable, "-m", "streamlit", "run",
+        dashboard_path,
+        "--server.port", str(port),
+    ]
+
+    if not open_browser:
+        cmd.extend(["--server.headless", "true"])
+
+    # Run Streamlit
+    subprocess.run(cmd)

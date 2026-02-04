@@ -1,0 +1,44 @@
+# Boundary Testing Scenario
+# Tests semi-permeable boundaries with external world interactions
+
+scenario_id: boundary_test
+description: Test sandbox-external world boundary interactions
+
+agents:
+  - type: honest
+    count: 3
+    role: worker
+  - type: opportunistic
+    count: 2
+    role: worker
+  - type: adversarial
+    count: 1
+    role: worker
+
+environment:
+  initial_resources: 100.0
+
+# Enable boundary features
+boundaries:
+  enabled: true
+  sensitivity_threshold: 0.5
+
+governance:
+  transaction_tax_rate: 0.02
+  reputation_decay: 0.98
+  enable_audits: true
+  audit_probability: 0.1
+  audit_penalty_multiplier: 2.0
+  enable_circuit_breaker: true
+  toxicity_threshold: 0.7
+
+simulation:
+  epochs: 20
+  steps_per_epoch: 10
+  seed: 42
+
+metrics_to_track:
+  - toxicity_rate
+  - quality_gap
+  - boundary_crossings
+  - leakage_events
