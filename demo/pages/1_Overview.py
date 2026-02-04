@@ -28,7 +28,7 @@ with col_run:
 
 # ── Run simulation ────────────────────────────────────────────────────────────
 
-@st.cache_data(show_spinner="Running baseline simulation...")
+@st.cache_data(show_spinner="Running baseline simulation...", max_entries=16)
 def _run_baseline(seed_val: int):
     from demo.utils.simulation import run_scenario
     scenario_path = str(PROJECT_ROOT / "scenarios" / "baseline.yaml")

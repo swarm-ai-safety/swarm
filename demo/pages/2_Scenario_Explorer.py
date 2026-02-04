@@ -38,7 +38,7 @@ with col_run:
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 
-@st.cache_data(show_spinner="Running scenario...")
+@st.cache_data(show_spinner="Running scenario...", max_entries=20)
 def _run(path: str, seed_val: int):
     from demo.utils.simulation import run_scenario
     return run_scenario(path, seed=seed_val)

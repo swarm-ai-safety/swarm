@@ -56,7 +56,7 @@ with col2:
 run_btn = st.button("Run Simulation", type="primary")
 
 
-@st.cache_data(show_spinner="Running custom simulation...")
+@st.cache_data(show_spinner="Running custom simulation...", max_entries=32)
 def _run_custom(**kwargs):
     from demo.utils.simulation import run_custom
     return run_custom(**kwargs)

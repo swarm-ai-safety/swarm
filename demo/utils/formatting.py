@@ -1,5 +1,6 @@
 """Formatting helpers for the demo: KPI cards, colors, descriptions."""
 
+from html import escape as _esc
 from typing import Any, Dict, List
 
 AGENT_TYPE_COLORS = {
@@ -104,20 +105,24 @@ def format_epoch_metrics_kpis(epoch_metrics: list) -> str:
 def agent_type_badge(agent_type: str) -> str:
     """Return colored HTML badge for agent type."""
     color = AGENT_TYPE_COLORS.get(agent_type, "#999")
-    label = AGENT_TYPE_LABELS.get(agent_type, agent_type)
+    label = AGENT_TYPE_LABELS.get(agent_type, _esc(agent_type))
     return (
         f'<span style="background:{color};color:white;padding:2px 8px;'
-        f'border-radius:4px;font-size:0.8rem;">{label}</span>'
+        f'border-radius:4px;font-size:0.8rem;">{_esc(label)}</span>'
     )
 
 
 def scenario_description_card(result: Dict[str, Any]) -> str:
     """Render a description card for a scenario result."""
+    sid = _esc(str(result.get('scenario_id', 'Unknown')))
+    desc = _esc(str(result.get('description', '')))
+    n_agents = _esc(str(result.get('n_agents', '?')))
+    n_epochs = _esc(str(result.get('n_epochs', '?')))
     return f"""
     <div style="background:#f0f4f8;padding:1rem;border-radius:8px;margin-bottom:1rem;">
-        <strong>{result.get('scenario_id', 'Unknown')}</strong>
-        <br/><span style="color:#6c757d;">{result.get('description', '')}</span>
-        <br/><small>{result.get('n_agents', '?')} agents &middot;
-        {result.get('n_epochs', '?')} epochs</small>
+        <strong>{sid}</strong>
+        <br/><span style="color:#6c757d;">{desc}</span>
+        <br/><small>{n_agents} agents &middot;
+        {n_epochs} epochs</small>
     </div>
     """

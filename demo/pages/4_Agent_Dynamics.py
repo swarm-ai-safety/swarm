@@ -36,7 +36,7 @@ seed = st.sidebar.number_input("Seed", value=42, min_value=0, step=1, key="dyn_s
 run_btn = st.button("Run Simulation", type="primary")
 
 
-@st.cache_data(show_spinner="Running simulation...")
+@st.cache_data(show_spinner="Running simulation...", max_entries=16)
 def _run(**kwargs):
     from demo.utils.simulation import run_custom
     return run_custom(**kwargs)

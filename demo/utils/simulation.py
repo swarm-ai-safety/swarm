@@ -23,6 +23,12 @@ from src.analysis.aggregation import MetricsAggregator, SimulationHistory
 
 SCENARIOS_DIR = PROJECT_ROOT / "scenarios"
 
+# Safety limits to prevent excessive resource consumption
+MAX_AGENTS_PER_TYPE = 10
+MAX_TOTAL_AGENTS = 40
+MAX_EPOCHS = 50
+MAX_STEPS_PER_EPOCH = 30
+
 
 def list_scenarios() -> List[Dict[str, str]]:
     """List all available scenarios with descriptions."""
@@ -46,15 +52,30 @@ def run_scenario(scenario_path: str, seed: Optional[int] = None) -> Dict[str, An
     """Run a scenario and return structured results.
 
     Args:
-        scenario_path: Path to YAML scenario file
+        scenario_path: Path to YAML scenario file (must be under scenarios/)
         seed: Optional seed override
 
     Returns:
         Dict with epoch_metrics, agent_states, config info
+
+    Raises:
+        ValueError: If path is outside the scenarios directory
     """
+    # Path traversal protection: resolve and verify within scenarios dir
+    resolved = Path(scenario_path).resolve()
+    scenarios_resolved = SCENARIOS_DIR.resolve()
+    if not str(resolved).startswith(str(scenarios_resolved)):
+        raise ValueError(
+            f"Scenario path must be within {SCENARIOS_DIR}, got {scenario_path}"
+        )
+
     scenario = load_scenario(Path(scenario_path))
     if seed is not None:
         scenario.orchestrator_config.seed = seed
+
+    # Disable file logging in demo mode to prevent disk writes
+    scenario.orchestrator_config.log_path = None
+    scenario.orchestrator_config.log_events = False
 
     orchestrator = build_orchestrator(scenario)
 
@@ -139,7 +160,25 @@ def run_custom(
 
     Returns:
         Dict with epoch_metrics, agent_states, config info
+
+    Raises:
+        ValueError: If parameters exceed safety limits
     """
+    # Validate bounds to prevent resource exhaustion
+    total_agents = n_honest + n_opportunistic + n_deceptive + n_adversarial
+    if total_agents > MAX_TOTAL_AGENTS:
+        raise ValueError(f"Total agents ({total_agents}) exceeds max ({MAX_TOTAL_AGENTS})")
+    if total_agents < 1:
+        raise ValueError("Must have at least 1 agent")
+    if n_epochs > MAX_EPOCHS:
+        raise ValueError(f"n_epochs ({n_epochs}) exceeds max ({MAX_EPOCHS})")
+    if steps_per_epoch > MAX_STEPS_PER_EPOCH:
+        raise ValueError(f"steps_per_epoch ({steps_per_epoch}) exceeds max ({MAX_STEPS_PER_EPOCH})")
+    for name, val in [("n_honest", n_honest), ("n_opportunistic", n_opportunistic),
+                       ("n_deceptive", n_deceptive), ("n_adversarial", n_adversarial)]:
+        if val > MAX_AGENTS_PER_TYPE:
+            raise ValueError(f"{name} ({val}) exceeds max ({MAX_AGENTS_PER_TYPE})")
+
     from src.agents.honest import HonestAgent
     from src.agents.opportunistic import OpportunisticAgent
     from src.agents.deceptive import DeceptiveAgent
