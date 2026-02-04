@@ -27,3 +27,4 @@ htmlcov/
 .env
 .venv/
 venv/
+.streamlit/secrets.toml
