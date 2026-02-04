@@ -214,6 +214,10 @@ distributional-agi-safety/
 │   ├── scenarios/
 │   │   └── loader.py           # YAML scenario loader
 │   ├── analysis/
+│   │   ├── aggregation.py      # Metrics aggregation for visualization
+│   │   ├── plots.py            # Plotly chart generators
+│   │   ├── dashboard.py        # Streamlit dashboard
+│   │   ├── export.py           # CSV/JSON/Parquet export
 │   │   └── sweep.py            # Parameter sweep runner
 │   └── logging/
 │       └── event_log.py        # Append-only JSONL logger
@@ -232,6 +236,7 @@ distributional-agi-safety/
 │   ├── test_collusion.py       # Collusion detection tests (26 tests)
 │   ├── test_capabilities.py    # Emergent capability tests (32 tests)
 │   ├── test_security.py        # Security evaluation tests (45 tests)
+│   ├── test_dashboard.py       # Dashboard and visualization tests (43 tests)
 │   └── fixtures/
 │       └── interactions.py     # Test data generators
 ├── examples/
@@ -898,7 +903,7 @@ interactions = orchestrator.event_log.to_interactions()
 ## Running Tests
 
 ```bash
-# Run all tests (424 tests)
+# Run all tests (461 tests)
 pytest tests/ -v
 
 # Run with coverage
@@ -1033,11 +1038,103 @@ Supported parameter paths:
 - `payoff.*` - Any PayoffConfig field
 - `n_epochs`, `steps_per_epoch` - Simulation settings
 
+## Dashboard
+
+Interactive Streamlit dashboard for real-time simulation visualization and analysis.
+
+### Quick Start
+
+```bash
+# Install dashboard dependencies
+pip install -e ".[dashboard]"
+
+# Run the dashboard
+streamlit run src/analysis/dashboard.py
+```
+
+### Features
+
+The dashboard provides:
+
+1. **Simulation Controls**: Configure and run simulations directly from the UI
+   - Agent mix (honest, opportunistic, adversarial)
+   - Governance settings (taxes, circuit breakers, security)
+   - Network topology
+
+2. **Real-Time Metrics**: Live metrics during simulation
+   - Toxicity rate, welfare, reputation
+   - Threat level, collusion risk
+   - Network statistics
+
+3. **Time Series Charts**: Track metrics over epochs
+   - Quality metrics (toxicity, quality gap)
+   - Economic metrics (welfare, Gini coefficient)
+   - Security metrics (threat level, contagion depth)
+   - Network metrics (edges, clustering)
+
+4. **Agent Analysis**:
+   - State table with reputation, resources, status
+   - Comparison bar charts
+   - Reputation trajectories over time
+
+5. **Security Panel**: Monitor threats
+   - Ecosystem threat gauge
+   - Active threat indicators
+   - Quarantined agents
+
+6. **Network Visualization**: Interactive network graph
+   - Node coloring by reputation
+   - Edge weights from interactions
+
+### Data Export
+
+```python
+from src.analysis import (
+    MetricsAggregator,
+    export_to_csv,
+    export_to_json,
+    generate_summary_report,
+)
+
+# During simulation, use aggregator to collect metrics
+aggregator = MetricsAggregator()
+aggregator.start_simulation("sim_001", n_epochs=20, steps_per_epoch=10, n_agents=5)
+
+# After simulation
+history = aggregator.end_simulation()
+
+# Export to various formats
+export_to_csv(history, "results/", "my_simulation")
+export_to_json(history, "results/history.json")
+
+# Generate text report
+report = generate_summary_report(history)
+print(report)
+```
+
+### Plotting API
+
+```python
+from src.analysis import (
+    create_time_series_data,
+    create_agent_comparison_data,
+    plotly_time_series,
+    plotly_bar_chart,
+)
+
+# Create plot data from history
+ts_data = create_time_series_data(history, ["toxicity_rate", "total_welfare"])
+fig = plotly_time_series(ts_data, "Metrics Over Time")
+
+# Agent comparison
+comp_data = create_agent_comparison_data(history, "total_payoff")
+fig = plotly_bar_chart(comp_data, "Agent Payoffs")
+```
+
 ## Future Extensions
 
 - **Adversarial Red-Teaming**: Adaptive adversaries that learn to evade governance
 - **Semi-Permeable Boundaries**: Model sandbox-external world interactions
-- **Dashboard**: Streamlit visualization of metrics over time
 
 ## References
 
