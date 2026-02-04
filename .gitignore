@@ -24,6 +24,7 @@ htmlcov/
 .mypy_cache/
 .ruff_cache/
 *.jsonl
+logs/
 .env
 .venv/
 venv/

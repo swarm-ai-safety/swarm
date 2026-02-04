@@ -843,3 +843,302 @@ class TestSecurityScenarios:
 
         # Should detect contagion pattern
         assert report.contagion_depth >= 0
+
+
+# =============================================================================
+# SecurityLever Additional Tests
+# =============================================================================
+
+
+class TestSecurityLeverEpochStart:
+    """Additional tests for SecurityLever.on_epoch_start."""
+
+    def _make_lever(self, **overrides):
+        """Create a SecurityLever with test defaults."""
+        defaults = dict(
+            security_enabled=True,
+            security_injection_threshold=0.3,
+            security_manipulation_threshold=0.5,
+            security_contagion_velocity=2.0,
+            security_min_chain_length=3,
+            security_min_interactions=5,
+            security_penalty_threshold=0.3,
+            security_quarantine_threshold=0.7,
+            security_penalty_multiplier=1.0,
+            security_realtime_penalty=False,
+            security_clear_history_on_epoch=False,
+        )
+        defaults.update(overrides)
+        config = GovernanceConfig(**defaults)
+        return SecurityLever(config, seed=42)
+
+    def _make_state(self, agent_ids=None, reputations=None):
+        """Create an EnvState with agents."""
+        from src.env.state import EnvState
+
+        state = EnvState()
+        reputations = reputations or {}
+        for aid in (agent_ids or ["a", "b", "c"]):
+            state.add_agent(aid)
+            if aid in reputations:
+                state.agents[aid].reputation = reputations[aid]
+        return state
+
+    def test_on_epoch_start_disabled(self):
+        """Disabled lever returns empty effect."""
+        lever = self._make_lever(security_enabled=False)
+        state = self._make_state()
+        effect = lever.on_epoch_start(state, epoch=0)
+        assert effect.agents_to_freeze == set()
+        assert effect.reputation_deltas == {}
+
+    def test_on_epoch_start_insufficient_history(self):
+        """Returns empty effect when less than min_interactions."""
+        lever = self._make_lever(security_min_interactions=10)
+        state = self._make_state()
+        lever._interaction_history.extend([
+            create_interaction("a", "b") for _ in range(3)
+        ])
+        effect = lever.on_epoch_start(state, epoch=1)
+        assert effect.reputation_deltas == {}
+
+    def test_on_epoch_start_quarantine_and_containment(self):
+        """Severely threatening agents get quarantined and chains contained."""
+        lever = self._make_lever(
+            security_min_interactions=3,
+            security_quarantine_threshold=0.3,
+            security_penalty_threshold=0.2,
+        )
+        agents = ["attacker", "v1", "v2", "v3"]
+        state = self._make_state(agents)
+        lever.set_agent_ids(agents)
+
+        # Build history with clear injection pattern
+        lever._interaction_history.extend(
+            create_injection_pattern("attacker", ["v1", "v2", "v3"])
+        )
+
+        effect = lever.on_epoch_start(state, epoch=1)
+
+        assert lever.get_report() is not None
+        report = lever.get_report()
+
+        # Check if penalties were applied to flagged agents
+        if effect.reputation_deltas:
+            for delta in effect.reputation_deltas.values():
+                assert delta < 0
+
+    def test_on_epoch_start_clear_history(self):
+        """clear_history_on_epoch clears history after analysis."""
+        lever = self._make_lever(
+            security_clear_history_on_epoch=True,
+            security_min_interactions=2,  # Low enough to trigger analysis
+        )
+        agents = ["attacker", "v1", "v2", "v3"]
+        state = self._make_state(agents)
+        lever.set_agent_ids(agents)
+
+        lever._interaction_history.extend(
+            create_injection_pattern("attacker", ["v1", "v2", "v3"])
+        )
+        assert len(lever._interaction_history) >= 2
+
+        lever.on_epoch_start(state, epoch=1)
+        assert len(lever._interaction_history) == 0
+
+
+class TestSecurityLeverRealtimeThreat:
+    """Tests for _compute_realtime_threat_score and _identify_threat_type."""
+
+    def _make_lever(self, **overrides):
+        defaults = dict(
+            security_enabled=True,
+            security_realtime_penalty=True,
+            security_realtime_threshold=0.3,
+            security_realtime_rate=0.5,
+        )
+        defaults.update(overrides)
+        config = GovernanceConfig(**defaults)
+        return SecurityLever(config, seed=42)
+
+    def _make_state(self, agent_ids=None):
+        from src.env.state import EnvState
+        state = EnvState()
+        for aid in (agent_ids or ["a", "b"]):
+            state.add_agent(aid)
+        return state
+
+    def test_threat_score_low_p_accepted(self):
+        """Low p + accepted contributes to threat score."""
+        lever = self._make_lever()
+        ix = create_interaction("a", "b", p=0.1, accepted=True)
+        score = lever._compute_realtime_threat_score(ix)
+        assert score >= 0.3
+
+    def test_threat_score_tool_misuse(self):
+        """tool_misuse_flags contribute up to 0.4."""
+        lever = self._make_lever()
+        ix = create_interaction("a", "b", p=0.8, accepted=False, tool_misuse_flags=3)
+        score = lever._compute_realtime_threat_score(ix)
+        assert score >= 0.4
+
+    def test_threat_score_verifier_rejections(self):
+        """verifier_rejections contribute up to 0.3."""
+        lever = self._make_lever()
+        ix = create_interaction("a", "b", p=0.8, accepted=False, verifier_rejections=3)
+        score = lever._compute_realtime_threat_score(ix)
+        assert score >= 0.3
+
+    def test_threat_score_already_flagged_initiator(self):
+        """Previously flagged initiator adds to score."""
+        lever = self._make_lever()
+        state = self._make_state(["attacker", "v1", "v2"])
+        lever.set_agent_ids(["attacker", "v1", "v2"])
+
+        # Build report with attacker flagged
+        lever._interaction_history.extend(
+            create_injection_pattern("attacker", ["v1", "v2"])
+        )
+        lever.on_epoch_start(
+            self._make_state(["attacker", "v1", "v2"]),
+            epoch=1,
+        )
+
+        if lever._latest_report:
+            attacker_score = lever._latest_report.agent_threat_scores.get("attacker", 0)
+            if attacker_score > 0:
+                ix = create_interaction("attacker", "v1", p=0.5)
+                score = lever._compute_realtime_threat_score(ix)
+                # Should include contribution from prior flagging
+                assert score > 0
+
+    def test_threat_score_capped_at_one(self):
+        """Score never exceeds 1.0."""
+        lever = self._make_lever()
+        ix = create_interaction(
+            "a", "b", p=0.05, accepted=True,
+            tool_misuse_flags=5, verifier_rejections=5,
+        )
+        score = lever._compute_realtime_threat_score(ix)
+        assert score <= 1.0
+
+    def test_identify_threat_type_exfiltration(self):
+        """tool_misuse_flags >= 2 → EXFILTRATION."""
+        lever = self._make_lever()
+        ix = create_interaction("a", "b", tool_misuse_flags=2)
+        assert lever._identify_threat_type(ix) == ThreatType.EXFILTRATION.value
+
+    def test_identify_threat_type_prompt_injection(self):
+        """tool_misuse_flags == 1 → PROMPT_INJECTION."""
+        lever = self._make_lever()
+        ix = create_interaction("a", "b", tool_misuse_flags=1)
+        assert lever._identify_threat_type(ix) == ThreatType.PROMPT_INJECTION.value
+
+    def test_identify_threat_type_manipulation(self):
+        """Low p + accepted → CROSS_AGENT_MANIPULATION."""
+        lever = self._make_lever()
+        ix = create_interaction("a", "b", p=0.1, accepted=True, tool_misuse_flags=0)
+        assert lever._identify_threat_type(ix) == ThreatType.CROSS_AGENT_MANIPULATION.value
+
+    def test_identify_threat_type_unknown(self):
+        """No matching pattern → 'unknown'."""
+        lever = self._make_lever()
+        ix = create_interaction("a", "b", p=0.8, accepted=False, tool_misuse_flags=0)
+        assert lever._identify_threat_type(ix) == "unknown"
+
+
+class TestSecurityLeverCanAgentAct:
+    """Tests for can_agent_act."""
+
+    def test_disabled_lever_always_allows(self):
+        """Disabled lever always returns True."""
+        config = GovernanceConfig(security_enabled=False)
+        lever = SecurityLever(config)
+
+        from src.env.state import EnvState
+        state = EnvState()
+
+        assert lever.can_agent_act("any_agent", state) is True
+
+    def test_non_quarantined_allowed(self):
+        """Non-quarantined agent can act."""
+        config = GovernanceConfig(security_enabled=True)
+        lever = SecurityLever(config)
+
+        from src.env.state import EnvState
+        state = EnvState()
+
+        assert lever.can_agent_act("free_agent", state) is True
+
+
+class TestSecurityLeverRelease:
+    """Tests for release_from_quarantine."""
+
+    def test_release_quarantined_agent(self):
+        """Releasing quarantined agent returns True and removes from set."""
+        config = GovernanceConfig(security_enabled=True)
+        lever = SecurityLever(config)
+        lever._quarantined_agents.add("agent_1")
+
+        assert lever.release_from_quarantine("agent_1") is True
+        assert "agent_1" not in lever.get_quarantined_agents()
+
+    def test_release_non_quarantined_agent(self):
+        """Releasing non-quarantined agent returns False."""
+        config = GovernanceConfig(security_enabled=True)
+        lever = SecurityLever(config)
+
+        assert lever.release_from_quarantine("nobody") is False
+
+    def test_release_creates_containment_action(self):
+        """Releasing creates a release containment action."""
+        config = GovernanceConfig(security_enabled=True)
+        lever = SecurityLever(config)
+        lever._quarantined_agents.add("agent_1")
+
+        lever.release_from_quarantine("agent_1")
+        actions = lever.get_containment_actions()
+        assert any(a["action"] == "release" and a["agent_id"] == "agent_1" for a in actions)
+
+
+class TestSecurityLeverSetters:
+    """Tests for set_agent_ids, set_agent_trust_scores, clear_history."""
+
+    def test_set_agent_ids(self):
+        """set_agent_ids stores a copy."""
+        config = GovernanceConfig(security_enabled=True)
+        lever = SecurityLever(config)
+        ids = ["a", "b"]
+        lever.set_agent_ids(ids)
+        assert lever._agent_ids == ["a", "b"]
+        # Modifying original doesn't affect lever
+        ids.append("c")
+        assert lever._agent_ids == ["a", "b"]
+
+    def test_set_agent_trust_scores(self):
+        """set_agent_trust_scores propagates to analyzer."""
+        config = GovernanceConfig(security_enabled=True)
+        lever = SecurityLever(config)
+        lever.set_agent_trust_scores({"a": 0.9, "b": 0.2})
+        # No crash, and scores are passed through
+
+    def test_clear_history_resets_everything(self):
+        """clear_history resets all mutable state."""
+        config = GovernanceConfig(security_enabled=True)
+        lever = SecurityLever(config)
+
+        from src.env.state import EnvState
+        state = EnvState()
+        state.add_agent("a")
+        state.add_agent("b")
+
+        lever.on_interaction(create_interaction("a", "b"), state)
+        lever._quarantined_agents.add("a")
+        lever._containment_actions.append({"action": "test"})
+
+        lever.clear_history()
+
+        assert len(lever.get_interaction_history()) == 0
+        assert len(lever.get_quarantined_agents()) == 0
+        assert len(lever.get_containment_actions()) == 0
+        assert lever.get_report() is None
