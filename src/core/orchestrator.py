@@ -782,7 +782,11 @@ class Orchestrator:
             if initiator_state:
                 initiator_state.record_initiated(accepted=True, p=p)
                 initiator_state.total_payoff += payoff_init
-                self._update_reputation(proposal.initiator_id, p - 0.5)
+                # Reputation delta accounts for governance costs so that
+                # tax, audit penalties, etc. feed back through the
+                # reputation → observables → p loop to affect toxicity.
+                rep_delta = (p - 0.5) - interaction.c_a
+                self._update_reputation(proposal.initiator_id, rep_delta)
 
             if counterparty_state:
                 counterparty_state.record_received(accepted=True, p=p)
