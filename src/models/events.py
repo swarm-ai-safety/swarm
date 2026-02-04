@@ -31,6 +31,17 @@ class EventType(Enum):
     GOVERNANCE_COST_APPLIED = "governance_cost_applied"
     REPUTATION_UPDATED = "reputation_updated"
 
+    # Marketplace events
+    BOUNTY_POSTED = "bounty_posted"
+    BID_PLACED = "bid_placed"
+    BID_ACCEPTED = "bid_accepted"
+    BID_REJECTED = "bid_rejected"
+    ESCROW_CREATED = "escrow_created"
+    ESCROW_RELEASED = "escrow_released"
+    ESCROW_REFUNDED = "escrow_refunded"
+    DISPUTE_FILED = "dispute_filed"
+    DISPUTE_RESOLVED = "dispute_resolved"
+
     # System events
     SIMULATION_STARTED = "simulation_started"
     SIMULATION_ENDED = "simulation_ended"

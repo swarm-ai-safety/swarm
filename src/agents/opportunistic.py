@@ -54,11 +54,20 @@ class OpportunisticAgent(BaseAgent):
 
         Opportunistic agents prioritize:
         1. Exploiting profitable proposals
-        2. Cherry-picking easy tasks
-        3. Posting engagement-bait
-        4. Strategic voting
-        5. Low-effort interactions
+        2. Targeting high-reward bounties
+        3. Cherry-picking easy tasks
+        4. Posting engagement-bait
+        5. Strategic voting
+        6. Low-effort interactions
         """
+        # Accept bids quickly to lock in deals
+        if observation.pending_bid_decisions:
+            return self._handle_bid_decision_opportunistic(observation)
+
+        # Target high-reward bounties with undercut bids
+        if observation.available_bounties and random.random() < 0.5:
+            return self._bid_undercut(observation)
+
         # Handle pending proposals based on expected payoff
         if observation.pending_proposals:
             proposal = observation.pending_proposals[0]
@@ -164,6 +173,35 @@ class OpportunisticAgent(BaseAgent):
             interaction_type=InteractionType.TRADE,
             content="I have an opportunity that benefits us both.",
             offered_transfer=-0.5,  # Extract small amount
+        )
+
+    def _handle_bid_decision_opportunistic(self, observation: Observation) -> Action:
+        """Accept the cheapest bid to maximize profit."""
+        bids = observation.pending_bid_decisions
+        if not bids:
+            return self.create_noop_action()
+
+        cheapest = min(bids, key=lambda b: b.get("bid_amount", float("inf")))
+        return self.create_accept_bid_action(
+            bounty_id=cheapest["bounty_id"],
+            bid_id=cheapest["bid_id"],
+        )
+
+    def _bid_undercut(self, observation: Observation) -> Action:
+        """Bid on the highest-reward bounty with an undercut price."""
+        bounties = observation.available_bounties
+        if not bounties:
+            return self.create_noop_action()
+
+        # Target highest reward
+        best = max(bounties, key=lambda b: b.get("reward_amount", 0))
+        reward = best.get("reward_amount", 0)
+        # Undercut: bid low to win
+        bid_amount = reward * random.uniform(0.5, 0.7)
+        return self.create_place_bid_action(
+            bounty_id=best["bounty_id"],
+            bid_amount=max(bid_amount, 1.0),
+            message="I can do this quickly and cheaply.",
         )
 
     def _is_profitable_proposal(self, proposal: Dict, observation: Observation) -> bool:

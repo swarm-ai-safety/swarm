@@ -1,0 +1,70 @@
+# Marketplace Economy Scenario
+# 7 agents interact in a bounty marketplace with escrow and dispute resolution
+
+scenario_id: marketplace_economy
+description: "Marketplace scenario with bounties, bids, escrow, and disputes"
+motif: marketplace_test
+
+agents:
+  - type: honest
+    count: 3
+  - type: opportunistic
+    count: 2
+  - type: deceptive
+    count: 1
+  - type: adversarial
+    count: 1
+
+marketplace:
+  enabled: true
+  escrow_fee_rate: 0.02
+  min_bounty_amount: 1.0
+  max_bids_per_bounty: 10
+  bid_deadline_epochs: 3
+  dispute_resolution_epochs: 2
+  auto_expire_bounties: true
+  dispute_default_split: 0.5
+
+governance:
+  transaction_tax_rate: 0.05
+  transaction_tax_split: 0.5
+  reputation_decay_rate: 0.95
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+  audit_enabled: true
+  audit_probability: 0.1
+  audit_penalty_multiplier: 2.0
+  audit_threshold_p: 0.5
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+  bounties_per_epoch: 3
+  bids_per_epoch: 5
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 10
+  min_agents: 7
+  toxicity_threshold: 0.5
+
+outputs:
+  event_log: "logs/marketplace_events.jsonl"
+  metrics_csv: "logs/marketplace_metrics.csv"

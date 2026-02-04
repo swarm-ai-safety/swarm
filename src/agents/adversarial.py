@@ -58,10 +58,12 @@ class AdversarialAgent(BaseAgent):
         Decide action with adversarial intent.
 
         Adversarial agents:
-        1. Identify and target honest agents
-        2. Coordinate with other adversaries
-        3. Disrupt positive interactions
-        4. Game metrics and reputation
+        1. Post bait bounties to lure honest agents
+        2. File frivolous disputes on escrows
+        3. Identify and target honest agents
+        4. Coordinate with other adversaries
+        5. Disrupt positive interactions
+        6. Game metrics and reputation
         """
         # Reduce attack cooldown
         if self._attack_cooldown > 0:
@@ -69,6 +71,17 @@ class AdversarialAgent(BaseAgent):
 
         # Update target list
         self._update_targets(observation)
+
+        # Post bait bounties to waste others' resources
+        if (
+            observation.agent_state.resources > 10
+            and random.random() < 0.2
+        ):
+            return self._post_bait_bounty(observation)
+
+        # File frivolous disputes on active escrows
+        if observation.active_escrows and random.random() < 0.4:
+            return self._file_frivolous_dispute(observation)
 
         # Handle pending proposals
         if observation.pending_proposals:
@@ -158,6 +171,26 @@ class AdversarialAgent(BaseAgent):
             )
 
         return None
+
+    def _post_bait_bounty(self, observation: Observation) -> Action:
+        """Post a deceptive bounty to waste others' time."""
+        reward = random.uniform(1.0, 5.0)
+        return self.create_post_bounty_action(
+            reward_amount=reward,
+            task_description="Easy task with great reward potential!",
+            deadline_epoch=observation.current_epoch + 1,  # Short deadline
+        )
+
+    def _file_frivolous_dispute(self, observation: Observation) -> Action:
+        """File a dispute to delay escrow settlement."""
+        escrows = observation.active_escrows
+        if not escrows:
+            return self.create_noop_action()
+        escrow = random.choice(escrows)
+        return self.create_file_dispute_action(
+            escrow_id=escrow["escrow_id"],
+            reason="Quality of work is unsatisfactory.",
+        )
 
     def _update_targets(self, observation: Observation) -> None:
         """Update target list based on observation."""

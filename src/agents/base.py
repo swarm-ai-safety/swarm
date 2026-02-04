@@ -29,6 +29,14 @@ class ActionType(Enum):
     SUBMIT_OUTPUT = "submit_output"
     VERIFY_OUTPUT = "verify_output"
 
+    # Marketplace actions
+    POST_BOUNTY = "post_bounty"
+    PLACE_BID = "place_bid"
+    ACCEPT_BID = "accept_bid"
+    REJECT_BID = "reject_bid"
+    WITHDRAW_BID = "withdraw_bid"
+    FILE_DISPUTE = "file_dispute"
+
     # Special actions
     NOOP = "noop"  # Do nothing this turn
 
@@ -116,6 +124,12 @@ class Observation:
 
     # Other agents (visible subset based on reputation/visibility)
     visible_agents: List[Dict] = field(default_factory=list)
+
+    # Marketplace
+    available_bounties: List[Dict] = field(default_factory=list)
+    active_bids: List[Dict] = field(default_factory=list)
+    active_escrows: List[Dict] = field(default_factory=list)
+    pending_bid_decisions: List[Dict] = field(default_factory=list)
 
     # Signals about ecosystem health
     ecosystem_metrics: Dict = field(default_factory=dict)
@@ -383,6 +397,74 @@ class BaseAgent(ABC):
             agent_id=self.agent_id,
             target_id=task_id,
             content=content,
+        )
+
+    def create_post_bounty_action(
+        self,
+        reward_amount: float,
+        task_description: str = "",
+        min_reputation: float = 0.0,
+        deadline_epoch: Optional[int] = None,
+    ) -> Action:
+        """Create an action to post a bounty."""
+        return Action(
+            action_type=ActionType.POST_BOUNTY,
+            agent_id=self.agent_id,
+            content=task_description,
+            metadata={
+                "reward_amount": reward_amount,
+                "min_reputation": min_reputation,
+                "deadline_epoch": deadline_epoch,
+            },
+        )
+
+    def create_place_bid_action(
+        self,
+        bounty_id: str,
+        bid_amount: float,
+        message: str = "",
+    ) -> Action:
+        """Create an action to place a bid on a bounty."""
+        return Action(
+            action_type=ActionType.PLACE_BID,
+            agent_id=self.agent_id,
+            target_id=bounty_id,
+            content=message,
+            metadata={"bid_amount": bid_amount},
+        )
+
+    def create_accept_bid_action(self, bounty_id: str, bid_id: str) -> Action:
+        """Create an action to accept a bid."""
+        return Action(
+            action_type=ActionType.ACCEPT_BID,
+            agent_id=self.agent_id,
+            target_id=bounty_id,
+            metadata={"bid_id": bid_id},
+        )
+
+    def create_reject_bid_action(self, bid_id: str) -> Action:
+        """Create an action to reject a bid."""
+        return Action(
+            action_type=ActionType.REJECT_BID,
+            agent_id=self.agent_id,
+            target_id=bid_id,
+        )
+
+    def create_withdraw_bid_action(self, bid_id: str) -> Action:
+        """Create an action to withdraw a bid."""
+        return Action(
+            action_type=ActionType.WITHDRAW_BID,
+            agent_id=self.agent_id,
+            target_id=bid_id,
+        )
+
+    def create_file_dispute_action(self, escrow_id: str, reason: str = "") -> Action:
+        """Create an action to file a dispute."""
+        return Action(
+            action_type=ActionType.FILE_DISPUTE,
+            agent_id=self.agent_id,
+            target_id=escrow_id,
+            content=reason,
         )
 
     def __repr__(self) -> str:

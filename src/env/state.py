@@ -17,6 +17,8 @@ class RateLimits:
     interactions_per_step: int = 5
     votes_per_epoch: int = 50
     tasks_per_epoch: int = 3
+    bounties_per_epoch: int = 3
+    bids_per_epoch: int = 5
 
 
 @dataclass
@@ -27,6 +29,8 @@ class RateLimitState:
     interactions_used: int = 0
     votes_used: int = 0
     tasks_used: int = 0
+    bounties_used: int = 0
+    bids_used: int = 0
 
     def reset(self) -> None:
         """Reset all counters for new epoch."""
@@ -34,6 +38,8 @@ class RateLimitState:
         self.interactions_used = 0
         self.votes_used = 0
         self.tasks_used = 0
+        self.bounties_used = 0
+        self.bids_used = 0
 
     def can_post(self, limits: RateLimits) -> bool:
         """Check if agent can post."""
@@ -51,6 +57,14 @@ class RateLimitState:
         """Check if agent can claim a task."""
         return self.tasks_used < limits.tasks_per_epoch
 
+    def can_post_bounty(self, limits: RateLimits) -> bool:
+        """Check if agent can post a bounty."""
+        return self.bounties_used < limits.bounties_per_epoch
+
+    def can_place_bid(self, limits: RateLimits) -> bool:
+        """Check if agent can place a bid."""
+        return self.bids_used < limits.bids_per_epoch
+
     def record_post(self) -> None:
         """Record a post action."""
         self.posts_used += 1
@@ -66,6 +80,14 @@ class RateLimitState:
     def record_task_claim(self) -> None:
         """Record a task claim."""
         self.tasks_used += 1
+
+    def record_bounty(self) -> None:
+        """Record a bounty post."""
+        self.bounties_used += 1
+
+    def record_bid(self) -> None:
+        """Record a bid placement."""
+        self.bids_used += 1
 
     def reset_step(self) -> None:
         """Reset per-step counters (interactions)."""

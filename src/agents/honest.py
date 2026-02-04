@@ -54,10 +54,11 @@ class HonestAgent(BaseAgent):
 
         Honest agents prioritize:
         1. Responding to pending proposals
-        2. Working on active tasks
-        3. Posting helpful content
-        4. Engaging with quality posts
-        5. Proposing beneficial interactions
+        2. Handling marketplace bid decisions
+        3. Working on active tasks
+        4. Posting helpful content
+        5. Engaging with quality posts
+        6. Proposing beneficial interactions
         """
         # First, handle any pending proposals
         if observation.pending_proposals:
@@ -66,6 +67,22 @@ class HonestAgent(BaseAgent):
                 return self.create_accept_action(proposal["proposal_id"])
             else:
                 return self.create_reject_action(proposal["proposal_id"])
+
+        # Handle marketplace bid decisions (accept qualified bids)
+        if observation.pending_bid_decisions:
+            return self._handle_bid_decision(observation)
+
+        # Bid on available bounties
+        if observation.available_bounties and random.random() < 0.3:
+            return self._bid_on_bounty(observation)
+
+        # Post bounties for collaboration
+        if (
+            observation.agent_state.resources > 20
+            and random.random() < 0.15
+            and not observation.available_bounties
+        ):
+            return self._post_bounty(observation)
 
         # Work on active tasks
         if observation.active_tasks:
@@ -157,6 +174,44 @@ class HonestAgent(BaseAgent):
             interaction_type=interaction_type,
             content=content,
             offered_transfer=0.0,  # Honest agents don't bribe
+        )
+
+    def _handle_bid_decision(self, observation: Observation) -> Action:
+        """Accept the most qualified bid on our bounties."""
+        bids = observation.pending_bid_decisions
+        if not bids:
+            return self.create_noop_action()
+
+        # Accept the lowest bid (best value)
+        best = min(bids, key=lambda b: b.get("bid_amount", float("inf")))
+        return self.create_accept_bid_action(
+            bounty_id=best["bounty_id"],
+            bid_id=best["bid_id"],
+        )
+
+    def _bid_on_bounty(self, observation: Observation) -> Action:
+        """Bid fairly on a bounty."""
+        bounties = observation.available_bounties
+        if not bounties:
+            return self.create_noop_action()
+
+        # Pick a bounty and bid at fair value
+        bounty = random.choice(bounties)
+        reward = bounty.get("reward_amount", 0)
+        # Honest agents bid at fair price (80-95% of reward)
+        bid_amount = reward * random.uniform(0.8, 0.95)
+        return self.create_place_bid_action(
+            bounty_id=bounty["bounty_id"],
+            bid_amount=bid_amount,
+            message="I can deliver quality work on this task.",
+        )
+
+    def _post_bounty(self, observation: Observation) -> Action:
+        """Post a bounty for work needed."""
+        reward = random.uniform(5.0, 15.0)
+        return self.create_post_bounty_action(
+            reward_amount=reward,
+            task_description="Looking for quality collaboration on a research task.",
         )
 
     def _should_accept_proposal(self, proposal: Dict, observation: Observation) -> bool:

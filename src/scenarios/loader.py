@@ -14,6 +14,7 @@ from src.agents.honest import HonestAgent
 from src.agents.opportunistic import OpportunisticAgent
 from src.core.orchestrator import Orchestrator, OrchestratorConfig
 from src.core.payoff import PayoffConfig
+from src.env.marketplace import MarketplaceConfig
 from src.env.network import NetworkConfig, NetworkTopology
 from src.env.state import RateLimits
 from src.governance.config import GovernanceConfig
@@ -178,6 +179,8 @@ def parse_rate_limits(data: Dict[str, Any]) -> RateLimits:
         interactions_per_step=data.get("interactions_per_step", 5),
         votes_per_epoch=data.get("votes_per_epoch", 50),
         tasks_per_epoch=data.get("tasks_per_epoch", 3),
+        bounties_per_epoch=data.get("bounties_per_epoch", 3),
+        bids_per_epoch=data.get("bids_per_epoch", 5),
     )
 
 
@@ -231,6 +234,37 @@ def parse_network_config(data: Dict[str, Any]) -> Optional[NetworkConfig]:
     return config
 
 
+def parse_marketplace_config(data: Dict[str, Any]) -> Optional[MarketplaceConfig]:
+    """
+    Parse marketplace section from YAML into MarketplaceConfig.
+
+    Args:
+        data: The marketplace section from YAML
+
+    Returns:
+        MarketplaceConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    config = MarketplaceConfig(
+        enabled=data.get("enabled", True),
+        escrow_fee_rate=data.get("escrow_fee_rate", 0.02),
+        min_bounty_amount=data.get("min_bounty_amount", 1.0),
+        max_bids_per_bounty=data.get("max_bids_per_bounty", 10),
+        bid_deadline_epochs=data.get("bid_deadline_epochs", 3),
+        dispute_resolution_epochs=data.get("dispute_resolution_epochs", 2),
+        auto_expire_bounties=data.get("auto_expire_bounties", True),
+        dispute_default_split=data.get("dispute_default_split", 0.5),
+    )
+
+    config.validate()
+    return config
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -254,6 +288,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
     payoff_config = parse_payoff_config(data.get("payoff", {}))
     rate_limits = parse_rate_limits(data.get("rate_limits", {}))
     network_config = parse_network_config(data.get("network", {}))
+    marketplace_config = parse_marketplace_config(data.get("marketplace", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -267,6 +302,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         payoff_config=payoff_config,
         governance_config=governance_config,
         network_config=network_config,
+        marketplace_config=marketplace_config,
         log_path=Path(outputs_data["event_log"]) if outputs_data.get("event_log") else None,
         log_events=bool(outputs_data.get("event_log")),
     )

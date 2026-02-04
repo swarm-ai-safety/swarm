@@ -58,12 +58,27 @@ class DeceptiveAgent(BaseAgent):
         Decide action balancing trust-building and exploitation.
 
         Deceptive agents:
-        1. Build trust through seemingly honest behavior
-        2. Identify high-value targets
-        3. Exploit once trust is established
-        4. Maintain plausible deniability
+        1. Bid competitively to win bounties
+        2. Deliver mediocre work on won bounties
+        3. Build trust through seemingly honest behavior
+        4. Identify high-value targets
+        5. Exploit once trust is established
+        6. Maintain plausible deniability
         """
         self._epochs_active += 1
+
+        # Accept bids on our bounties (building facade)
+        if observation.pending_bid_decisions and random.random() < 0.7:
+            bids = observation.pending_bid_decisions
+            cheapest = min(bids, key=lambda b: b.get("bid_amount", float("inf")))
+            return self.create_accept_bid_action(
+                bounty_id=cheapest["bounty_id"],
+                bid_id=cheapest["bid_id"],
+            )
+
+        # Bid competitively on bounties
+        if observation.available_bounties and random.random() < 0.4:
+            return self._bid_competitively(observation)
 
         # Handle pending proposals
         if observation.pending_proposals:
@@ -204,6 +219,23 @@ class DeceptiveAgent(BaseAgent):
         # Increase trust if interaction was accepted
         if interaction.accepted:
             self._trust_scores[counterparty] = min(1.0, current_trust + 0.1)
+
+    def _bid_competitively(self, observation: Observation) -> Action:
+        """Bid competitively to win bounties, plan to deliver mediocre work."""
+        bounties = observation.available_bounties
+        if not bounties:
+            return self.create_noop_action()
+
+        # Pick high-reward bounty
+        best = max(bounties, key=lambda b: b.get("reward_amount", 0))
+        reward = best.get("reward_amount", 0)
+        # Bid competitively (slightly below reward)
+        bid_amount = reward * random.uniform(0.7, 0.9)
+        return self.create_place_bid_action(
+            bounty_id=best["bounty_id"],
+            bid_amount=max(bid_amount, 1.0),
+            message="I'm highly qualified and will deliver excellent results.",
+        )
 
     def _should_accept_for_trust(self, proposal: Dict, observation: Observation) -> bool:
         """Decide acceptance for trust-building."""

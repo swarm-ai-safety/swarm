@@ -43,6 +43,7 @@ from src.boundaries.external_world import ExternalWorld, ExternalEntity
 from src.boundaries.information_flow import FlowTracker, FlowDirection, FlowType, InformationFlow
 from src.boundaries.policies import PolicyEngine, CrossingDecision
 from src.boundaries.leakage import LeakageDetector, LeakageReport
+from src.env.marketplace import Marketplace, MarketplaceConfig, EscrowStatus
 
 
 @dataclass
@@ -70,6 +71,9 @@ class OrchestratorConfig:
 
     # Network configuration
     network_config: Optional[NetworkConfig] = None
+
+    # Marketplace configuration
+    marketplace_config: Optional[MarketplaceConfig] = None
 
     # Composite task configuration
     enable_composite_tasks: bool = False
@@ -174,6 +178,14 @@ class Orchestrator:
             )
         else:
             self.governance_engine = None
+
+        # Marketplace
+        if self.config.marketplace_config is not None:
+            self.marketplace: Optional[Marketplace] = Marketplace(
+                self.config.marketplace_config
+            )
+        else:
+            self.marketplace = None
 
         # Boundary components
         if self.config.enable_boundaries:
@@ -304,6 +316,39 @@ class Orchestrator:
 
             self._run_step()
             self.state.advance_step()
+
+        # Marketplace epoch maintenance
+        if self.marketplace is not None:
+            expired_bounties = self.marketplace.expire_bounties(self.state.current_epoch)
+            for bounty_id in expired_bounties:
+                bounty = self.marketplace.get_bounty(bounty_id)
+                if bounty:
+                    poster_state = self.state.get_agent(bounty.poster_id)
+                    if poster_state:
+                        poster_state.update_resources(bounty.reward_amount)
+
+            resolved_disputes = self.marketplace.auto_resolve_disputes(self.state.current_epoch)
+            for dispute_id in resolved_disputes:
+                dispute = self.marketplace.get_dispute(dispute_id)
+                if dispute:
+                    escrow = self.marketplace.get_escrow(dispute.escrow_id)
+                    if escrow:
+                        worker_state = self.state.get_agent(escrow.worker_id)
+                        poster_state = self.state.get_agent(escrow.poster_id)
+                        if worker_state:
+                            worker_state.update_resources(escrow.released_amount)
+                        if poster_state:
+                            poster_state.update_resources(escrow.refunded_amount)
+                        self._emit_event(Event(
+                            event_type=EventType.DISPUTE_RESOLVED,
+                            payload={
+                                "dispute_id": dispute_id,
+                                "escrow_id": escrow.escrow_id,
+                                "worker_share": dispute.worker_share,
+                                "auto_resolved": True,
+                            },
+                            epoch=self.state.current_epoch,
+                        ))
 
         # Apply network edge decay
         if self.network is not None:
@@ -437,6 +482,44 @@ class Orchestrator:
             if s.agent_id != agent_id
         ]
 
+        # Build marketplace observation
+        available_bounties = []
+        active_bids = []
+        active_escrows = []
+        pending_bid_decisions = []
+
+        if self.marketplace is not None:
+            agent_rep = agent_state.reputation if agent_state else 0
+            available_bounties = [
+                b.to_dict()
+                for b in self.marketplace.get_open_bounties(
+                    current_epoch=self.state.current_epoch,
+                    min_reputation=agent_rep,
+                )
+                if b.poster_id != agent_id
+            ]
+
+            active_bids = [
+                b.to_dict()
+                for b in self.marketplace.get_agent_bids(agent_id)
+                if b.status.value == "pending"
+            ]
+
+            active_escrows = [
+                e.to_dict()
+                for e in self.marketplace.get_agent_escrows(agent_id)
+                if e.status == EscrowStatus.HELD
+            ]
+
+            # Bids on this agent's bounties awaiting decision
+            for bounty in self.marketplace.get_agent_bounties(agent_id):
+                if bounty.status.value == "open":
+                    for bid in self.marketplace.get_bids_for_bounty(bounty.bounty_id):
+                        if bid.status.value == "pending":
+                            bid_dict = bid.to_dict()
+                            bid_dict["bounty_reward"] = bounty.reward_amount
+                            pending_bid_decisions.append(bid_dict)
+
         return Observation(
             agent_state=agent_state or AgentState(),
             current_epoch=self.state.current_epoch,
@@ -450,6 +533,10 @@ class Orchestrator:
             available_tasks=available_tasks,
             active_tasks=active_tasks,
             visible_agents=visible_agents,
+            available_bounties=available_bounties,
+            active_bids=active_bids,
+            active_escrows=active_escrows,
+            pending_bid_decisions=pending_bid_decisions,
             ecosystem_metrics=self.state.get_epoch_metrics_snapshot(),
         )
 
@@ -574,6 +661,24 @@ class Orchestrator:
                 task.submit_output(agent_id, action.content)
                 return True
             return False
+
+        elif action.action_type == ActionType.POST_BOUNTY:
+            return self._handle_post_bounty(action)
+
+        elif action.action_type == ActionType.PLACE_BID:
+            return self._handle_place_bid(action)
+
+        elif action.action_type == ActionType.ACCEPT_BID:
+            return self._handle_accept_bid(action)
+
+        elif action.action_type == ActionType.REJECT_BID:
+            return self._handle_reject_bid(action)
+
+        elif action.action_type == ActionType.WITHDRAW_BID:
+            return self._handle_withdraw_bid(action)
+
+        elif action.action_type == ActionType.FILE_DISPUTE:
+            return self._handle_file_dispute(action)
 
         return False
 
@@ -795,6 +900,325 @@ class Orchestrator:
             epoch=self.state.current_epoch,
             step=self.state.current_step,
         ))
+
+    # =========================================================================
+    # Marketplace Action Handlers
+    # =========================================================================
+
+    def _handle_post_bounty(self, action: Action) -> bool:
+        """Handle POST_BOUNTY action."""
+        if self.marketplace is None:
+            return False
+
+        agent_id = action.agent_id
+        rate_limit = self.state.get_rate_limit_state(agent_id)
+
+        if self.config.enable_rate_limits and not rate_limit.can_post_bounty(self.state.rate_limits):
+            return False
+
+        reward_amount = action.metadata.get("reward_amount", 0)
+        min_reputation = action.metadata.get("min_reputation", 0.0)
+        deadline_epoch = action.metadata.get("deadline_epoch")
+
+        # Validate agent has enough resources
+        agent_state = self.state.get_agent(agent_id)
+        if not agent_state or agent_state.resources < reward_amount:
+            return False
+
+        try:
+            # Create task in pool
+            task = self.task_pool.create_task(
+                prompt=action.content or "Marketplace bounty task",
+                description=action.content or "Marketplace bounty task",
+                bounty=reward_amount,
+                min_reputation=min_reputation,
+                deadline_epoch=deadline_epoch,
+            )
+
+            bounty = self.marketplace.post_bounty(
+                poster_id=agent_id,
+                task_id=task.task_id,
+                reward_amount=reward_amount,
+                min_reputation=min_reputation,
+                deadline_epoch=deadline_epoch,
+                current_epoch=self.state.current_epoch,
+            )
+        except ValueError:
+            return False
+
+        # Deduct funds
+        agent_state.update_resources(-reward_amount)
+        rate_limit.record_bounty()
+
+        self._emit_event(Event(
+            event_type=EventType.BOUNTY_POSTED,
+            agent_id=agent_id,
+            payload={
+                "bounty_id": bounty.bounty_id,
+                "task_id": task.task_id,
+                "reward_amount": reward_amount,
+            },
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+        ))
+
+        return True
+
+    def _handle_place_bid(self, action: Action) -> bool:
+        """Handle PLACE_BID action."""
+        if self.marketplace is None:
+            return False
+
+        agent_id = action.agent_id
+        rate_limit = self.state.get_rate_limit_state(agent_id)
+
+        if self.config.enable_rate_limits and not rate_limit.can_place_bid(self.state.rate_limits):
+            return False
+
+        bounty_id = action.target_id
+        bid_amount = action.metadata.get("bid_amount", 0)
+
+        bid = self.marketplace.place_bid(
+            bounty_id=bounty_id,
+            bidder_id=agent_id,
+            bid_amount=bid_amount,
+            message=action.content,
+        )
+
+        if bid is None:
+            return False
+
+        rate_limit.record_bid()
+
+        self._emit_event(Event(
+            event_type=EventType.BID_PLACED,
+            agent_id=agent_id,
+            payload={
+                "bid_id": bid.bid_id,
+                "bounty_id": bounty_id,
+                "bid_amount": bid_amount,
+            },
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+        ))
+
+        return True
+
+    def _handle_accept_bid(self, action: Action) -> bool:
+        """Handle ACCEPT_BID action."""
+        if self.marketplace is None:
+            return False
+
+        agent_id = action.agent_id
+        bounty_id = action.target_id
+        bid_id = action.metadata.get("bid_id", "")
+
+        escrow = self.marketplace.accept_bid(
+            bounty_id=bounty_id,
+            bid_id=bid_id,
+            poster_id=agent_id,
+        )
+
+        if escrow is None:
+            return False
+
+        # Claim the task for the worker
+        bounty = self.marketplace.get_bounty(bounty_id)
+        if bounty:
+            worker_state = self.state.get_agent(escrow.worker_id)
+            if worker_state:
+                self.task_pool.claim_task(
+                    task_id=bounty.task_id,
+                    agent_id=escrow.worker_id,
+                    agent_reputation=worker_state.reputation,
+                )
+
+        self._emit_event(Event(
+            event_type=EventType.ESCROW_CREATED,
+            agent_id=agent_id,
+            payload={
+                "escrow_id": escrow.escrow_id,
+                "bounty_id": bounty_id,
+                "bid_id": bid_id,
+                "worker_id": escrow.worker_id,
+                "amount": escrow.amount,
+            },
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+        ))
+
+        return True
+
+    def _handle_reject_bid(self, action: Action) -> bool:
+        """Handle REJECT_BID action."""
+        if self.marketplace is None:
+            return False
+
+        success = self.marketplace.reject_bid(
+            bid_id=action.target_id,
+            poster_id=action.agent_id,
+        )
+
+        if success:
+            self._emit_event(Event(
+                event_type=EventType.BID_REJECTED,
+                agent_id=action.agent_id,
+                payload={"bid_id": action.target_id},
+                epoch=self.state.current_epoch,
+                step=self.state.current_step,
+            ))
+
+        return success
+
+    def _handle_withdraw_bid(self, action: Action) -> bool:
+        """Handle WITHDRAW_BID action."""
+        if self.marketplace is None:
+            return False
+
+        return self.marketplace.withdraw_bid(
+            bid_id=action.target_id,
+            bidder_id=action.agent_id,
+        )
+
+    def _handle_file_dispute(self, action: Action) -> bool:
+        """Handle FILE_DISPUTE action."""
+        if self.marketplace is None:
+            return False
+
+        dispute = self.marketplace.file_dispute(
+            escrow_id=action.target_id,
+            filed_by=action.agent_id,
+            reason=action.content,
+            current_epoch=self.state.current_epoch,
+        )
+
+        if dispute is None:
+            return False
+
+        self._emit_event(Event(
+            event_type=EventType.DISPUTE_FILED,
+            agent_id=action.agent_id,
+            payload={
+                "dispute_id": dispute.dispute_id,
+                "escrow_id": action.target_id,
+                "reason": action.content,
+            },
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+        ))
+
+        return True
+
+    def settle_marketplace_task(
+        self,
+        task_id: str,
+        success: bool,
+        quality_score: float = 1.0,
+    ) -> Optional[Dict]:
+        """
+        Settle a marketplace bounty/escrow after task completion.
+
+        Called after VERIFY_OUTPUT succeeds. Checks if the task has
+        an associated bounty/escrow and settles it.
+
+        Args:
+            task_id: The completed task ID
+            success: Whether the task was completed successfully
+            quality_score: Quality score from verifier
+
+        Returns:
+            Settlement details, or None if no marketplace bounty
+        """
+        if self.marketplace is None:
+            return None
+
+        bounty = self.marketplace.get_bounty_for_task(task_id)
+        if not bounty or not bounty.escrow_id:
+            return None
+
+        settlement = self.marketplace.settle_escrow(
+            escrow_id=bounty.escrow_id,
+            success=success,
+            quality_score=quality_score,
+        )
+
+        if not settlement:
+            return None
+
+        # Apply resource changes
+        if success:
+            worker_id = settlement["worker_id"]
+            poster_id = settlement["poster_id"]
+            released = settlement["released_to_worker"]
+            refund_to_poster = settlement.get("refund_to_poster", 0.0)
+
+            worker_state = self.state.get_agent(worker_id)
+            poster_state = self.state.get_agent(poster_id)
+
+            if worker_state:
+                worker_state.update_resources(released)
+            if poster_state and refund_to_poster > 0:
+                poster_state.update_resources(refund_to_poster)
+
+            # Create SoftInteraction for governance tax
+            interaction = SoftInteraction(
+                initiator=poster_id,
+                counterparty=worker_id,
+                interaction_type=InteractionType.TRADE,
+                accepted=True,
+                task_progress_delta=quality_score,
+                rework_count=0,
+                verifier_rejections=0,
+                tool_misuse_flags=0,
+                counterparty_engagement_delta=quality_score * 0.5,
+                v_hat=quality_score * 2 - 1,  # Map [0,1] to [-1,1]
+                p=quality_score,
+                tau=released,
+            )
+
+            # Apply governance taxes
+            if self.governance_engine:
+                gov_effect = self.governance_engine.apply_interaction(
+                    interaction, self.state
+                )
+                # Deduct tax costs from settlement parties
+                if gov_effect.cost_a > 0:
+                    if poster_state:
+                        poster_state.update_resources(-gov_effect.cost_a)
+                if gov_effect.cost_b > 0:
+                    if worker_state:
+                        worker_state.update_resources(-gov_effect.cost_b)
+
+            self._emit_event(Event(
+                event_type=EventType.ESCROW_RELEASED,
+                payload={
+                    "escrow_id": bounty.escrow_id,
+                    "worker_id": worker_id,
+                    "amount": released,
+                    "quality_score": quality_score,
+                },
+                epoch=self.state.current_epoch,
+                step=self.state.current_step,
+            ))
+        else:
+            poster_id = settlement["poster_id"]
+            refunded = settlement["refunded_to_poster"]
+            poster_state = self.state.get_agent(poster_id)
+            if poster_state:
+                poster_state.update_resources(refunded)
+
+            self._emit_event(Event(
+                event_type=EventType.ESCROW_REFUNDED,
+                payload={
+                    "escrow_id": bounty.escrow_id,
+                    "poster_id": poster_id,
+                    "amount": refunded,
+                },
+                epoch=self.state.current_epoch,
+                step=self.state.current_step,
+            ))
+
+        return settlement
 
     def _apply_governance_effect(self, effect: GovernanceEffect) -> None:
         """Apply governance effects to state (freeze/unfreeze, reputation, resources)."""
