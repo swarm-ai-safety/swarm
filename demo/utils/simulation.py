@@ -30,14 +30,25 @@ MAX_EPOCHS = 50
 MAX_STEPS_PER_EPOCH = 30
 
 
+def _requires_llm(data: dict) -> bool:
+    """Return True if scenario YAML uses LLM-backed agents."""
+    for agent_spec in data.get("agents", []):
+        if agent_spec.get("type") == "llm":
+            return True
+    return False
+
+
 def list_scenarios() -> List[Dict[str, str]]:
-    """List all available scenarios with descriptions."""
+    """List available scenarios, excluding those that need LLM API keys."""
+    import yaml
+
     scenarios = []
     for yaml_file in sorted(SCENARIOS_DIR.glob("*.yaml")):
-        import yaml
-
         with open(yaml_file) as f:
             data = yaml.safe_load(f)
+
+        if _requires_llm(data):
+            continue
 
         scenarios.append({
             "id": data.get("scenario_id", yaml_file.stem),
@@ -68,6 +79,13 @@ def run_scenario(scenario_path: str, seed: Optional[int] = None) -> Dict[str, An
         raise ValueError(
             f"Scenario path must be within {SCENARIOS_DIR}, got {scenario_path}"
         )
+
+    # Reject scenarios that require LLM API keys
+    import yaml
+    with open(resolved) as f:
+        raw = yaml.safe_load(f)
+    if _requires_llm(raw):
+        raise ValueError("LLM-backed scenarios are not supported in the demo")
 
     scenario = load_scenario(Path(scenario_path))
     if seed is not None:
