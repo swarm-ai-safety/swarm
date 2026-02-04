@@ -491,11 +491,12 @@ from src.core.orchestrator import Orchestrator, OrchestratorConfig
 
 # Configure governance levers
 gov_config = GovernanceConfig(
-    # Transaction tax: 5% of |tau|, split 50/50
+    # Transaction tax: 5% of interaction value, split 50/50
+    # Tax base = max(expected_surplus, 0) + |tau|
     transaction_tax_rate=0.05,
     transaction_tax_split=0.5,
 
-    # Reputation decays 10% each epoch
+    # Reputation decays 10% each epoch (feeds back into observable quality)
     reputation_decay_rate=0.9,
 
     # Require minimum stake to participate
@@ -526,12 +527,12 @@ orchestrator = Orchestrator(config=config)
 
 | Lever | Effect | Hook |
 |-------|--------|------|
-| **Transaction Tax** | `c_a += rate * \|tau\| * split`, `c_b += rate * \|tau\| * (1-split)` | on_interaction |
-| **Reputation Decay** | `reputation *= decay_rate` each epoch | on_epoch_start |
+| **Transaction Tax** | Tax on interaction value: `rate * (max(S_soft, 0) + \|tau\|)`, split between parties. Governance costs feed back into reputation, affecting future interaction quality. | on_interaction |
+| **Reputation Decay** | `reputation *= decay_rate` each epoch. Reputation modulates observable signals (task_progress, engagement), creating a feedback loop to `p` and toxicity. | on_epoch_start |
 | **Vote Normalization** | Diminishing influence as vote count increases | compute_vote_weight |
 | **Staking** | Block actions if `resources < min_stake` | can_agent_act |
 | **Circuit Breaker** | Freeze agent if `avg_toxicity > threshold` for N violations | on_interaction |
-| **Random Audit** | Penalty `(threshold - p) * multiplier` if audited and `p < threshold` | on_interaction |
+| **Random Audit** | Cost penalty `(threshold - p) * multiplier` plus reputation penalty if audited and `p < threshold`. Reputation penalty feeds back into observable quality. | on_interaction |
 | **Collusion Detection** | Penalty based on collusion risk score from coordinated behavior | on_epoch_start, on_interaction |
 
 ### Integration Points
@@ -541,7 +542,7 @@ Governance hooks into the orchestrator at:
 2. **Agent action**: Staking check blocks under-resourced agents
 3. **Interaction completion**: Taxes, circuit breaker tracking, random audits
 
-Costs are added to `interaction.c_a` and `interaction.c_b` before payoff computation.
+Costs are added to `interaction.c_a` and `interaction.c_b` before payoff computation. Governance costs also reduce the initiator's reputation delta, creating a feedback loop: higher costs → slower reputation growth → degraded observable signals → lower `p` → higher toxicity. This ensures governance levers (tax rate, audit probability, reputation decay) produce visible effects on both welfare and toxicity metrics in parameter sweeps.
 
 ## Collusion Detection
 
@@ -967,7 +968,7 @@ interactions = orchestrator.event_log.to_interactions()
 ## Running Tests
 
 ```bash
-# Run all tests (496 tests)
+# Run all tests (727 tests)
 pytest tests/ -v
 
 # Run with coverage
