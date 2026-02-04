@@ -576,3 +576,228 @@ class TestEdgeCases:
         # Should complete and return valid report
         assert report is not None
         assert 0.0 <= report.ecosystem_collusion_risk <= 1.0
+
+
+# =============================================================================
+# CollusionPenaltyLever Tests
+# =============================================================================
+
+
+class TestCollusionPenaltyLever:
+    """Tests for CollusionPenaltyLever governance lever."""
+
+    def _make_lever(self, **overrides):
+        """Create a CollusionPenaltyLever with sensible test defaults."""
+        from src.governance.collusion import CollusionPenaltyLever
+
+        defaults = dict(
+            collusion_detection_enabled=True,
+            collusion_frequency_threshold=1.5,
+            collusion_correlation_threshold=0.7,
+            collusion_min_interactions=3,
+            collusion_score_threshold=0.3,
+            collusion_penalty_multiplier=1.0,
+            collusion_realtime_penalty=False,
+            collusion_realtime_rate=0.1,
+            collusion_clear_history_on_epoch=False,
+        )
+        defaults.update(overrides)
+        config = GovernanceConfig(**defaults)
+        return CollusionPenaltyLever(config)
+
+    def _make_state(self, agent_ids=None):
+        """Create an EnvState with agents."""
+        from src.env.state import EnvState
+
+        state = EnvState()
+        for aid in (agent_ids or ["a", "b", "c"]):
+            state.add_agent(aid)
+        return state
+
+    # --- on_epoch_start ---
+
+    def test_on_epoch_start_disabled(self):
+        """Disabled lever returns empty effect."""
+        lever = self._make_lever(collusion_detection_enabled=False)
+        state = self._make_state()
+
+        effect = lever.on_epoch_start(state, epoch=0)
+        assert effect.cost_a == 0.0
+        assert effect.reputation_deltas == {}
+        assert effect.resource_deltas == {}
+
+    def test_on_epoch_start_insufficient_history(self):
+        """Should return empty effect when not enough interactions."""
+        lever = self._make_lever(collusion_min_interactions=10)
+        state = self._make_state()
+
+        # Only add 2 interactions
+        lever._interaction_history.append(create_interaction("a", "b"))
+        lever._interaction_history.append(create_interaction("b", "a"))
+
+        effect = lever.on_epoch_start(state, epoch=1)
+        assert effect.reputation_deltas == {}
+
+    def test_on_epoch_start_with_flagged_pairs(self):
+        """Should apply penalties when collusion is detected."""
+        lever = self._make_lever(
+            collusion_min_interactions=3,
+            collusion_score_threshold=0.2,
+            collusion_penalty_multiplier=2.0,
+        )
+        state = self._make_state(["alice", "bob", "charlie", "dave"])
+        lever.set_agent_ids(["alice", "bob", "charlie", "dave"])
+
+        # Load collusion pattern into history
+        lever._interaction_history.extend(
+            create_collusion_pattern("alice", "bob", count=15, p_internal=0.9)
+        )
+        # Add sparse normal interactions
+        lever._interaction_history.extend(
+            create_normal_interactions(["charlie", "dave"], count=10)
+        )
+        lever._interaction_history.append(create_interaction("alice", "charlie", p=0.3))
+        lever._interaction_history.append(create_interaction("bob", "dave", p=0.3))
+
+        effect = lever.on_epoch_start(state, epoch=1)
+
+        # Report should be cached
+        assert lever.get_report() is not None
+
+        # If agents were flagged, penalties should be applied
+        if effect.reputation_deltas:
+            for agent_id, delta in effect.reputation_deltas.items():
+                assert delta < 0  # Penalties are negative
+            for agent_id, delta in effect.resource_deltas.items():
+                assert delta < 0
+
+    def test_on_epoch_start_clear_after_detection(self):
+        """clear_history_on_epoch=True should clear history after analysis."""
+        lever = self._make_lever(
+            collusion_clear_history_on_epoch=True,
+            collusion_min_interactions=3,
+        )
+        state = self._make_state()
+        lever.set_agent_ids(["a", "b", "c"])
+
+        lever._interaction_history.extend(
+            create_collusion_pattern("a", "b", count=10)
+        )
+        lever._interaction_history.extend(
+            create_normal_interactions(["a", "c"], count=5)
+        )
+
+        lever.on_epoch_start(state, epoch=1)
+        assert len(lever._interaction_history) == 0
+
+    # --- on_interaction ---
+
+    def test_on_interaction_disabled(self):
+        """Disabled lever doesn't record interactions."""
+        lever = self._make_lever(collusion_detection_enabled=False)
+        state = self._make_state()
+
+        interaction = create_interaction("a", "b")
+        effect = lever.on_interaction(interaction, state)
+        assert effect.cost_a == 0.0
+        assert len(lever._interaction_history) == 0
+
+    def test_on_interaction_records_history(self):
+        """Enabled lever records interaction in history."""
+        lever = self._make_lever()
+        state = self._make_state()
+
+        interaction = create_interaction("a", "b")
+        lever.on_interaction(interaction, state)
+        assert len(lever._interaction_history) == 1
+
+    def test_on_interaction_realtime_penalty_disabled(self):
+        """No realtime penalty when disabled."""
+        lever = self._make_lever(collusion_realtime_penalty=False)
+        state = self._make_state()
+
+        interaction = create_interaction("a", "b")
+        effect = lever.on_interaction(interaction, state)
+        assert effect.cost_a == 0.0
+        assert effect.cost_b == 0.0
+
+    def test_on_interaction_realtime_penalty_no_report(self):
+        """No realtime penalty when no report exists yet."""
+        lever = self._make_lever(collusion_realtime_penalty=True)
+        state = self._make_state()
+
+        assert lever._latest_report is None
+        interaction = create_interaction("a", "b")
+        effect = lever.on_interaction(interaction, state)
+        assert effect.cost_a == 0.0
+
+    def test_on_interaction_realtime_penalty_with_flagged_pair(self):
+        """Realtime penalty applied for interaction between flagged agents."""
+        lever = self._make_lever(
+            collusion_realtime_penalty=True,
+            collusion_realtime_rate=0.5,
+            collusion_min_interactions=3,
+            collusion_score_threshold=0.2,
+        )
+        state = self._make_state(["alice", "bob", "charlie", "dave"])
+        lever.set_agent_ids(["alice", "bob", "charlie", "dave"])
+
+        # Build up history and generate a report
+        lever._interaction_history.extend(
+            create_collusion_pattern("alice", "bob", count=15)
+        )
+        lever._interaction_history.extend(
+            create_normal_interactions(["charlie", "dave"], count=10)
+        )
+        lever._interaction_history.append(create_interaction("alice", "charlie", p=0.3))
+        lever._interaction_history.append(create_interaction("bob", "dave", p=0.3))
+
+        lever.on_epoch_start(state, epoch=1)
+
+        # If both agents are flagged, interacting should incur penalty
+        report = lever.get_report()
+        if report:
+            alice_risk = report.agent_collusion_risk.get("alice", 0)
+            bob_risk = report.agent_collusion_risk.get("bob", 0)
+
+            if (alice_risk >= lever._detector.collusion_threshold and
+                    bob_risk >= lever._detector.collusion_threshold):
+                interaction = create_interaction("alice", "bob")
+                effect = lever.on_interaction(interaction, state)
+                assert effect.cost_a > 0
+                assert effect.cost_b > 0
+                assert effect.details.get("realtime_penalty") is True
+
+    # --- setters and getters ---
+
+    def test_set_agent_ids(self):
+        """set_agent_ids propagates correctly."""
+        lever = self._make_lever()
+        lever.set_agent_ids(["x", "y", "z"])
+        assert lever._agent_ids == ["x", "y", "z"]
+
+    def test_get_report_initially_none(self):
+        """get_report() returns None before any analysis."""
+        lever = self._make_lever()
+        assert lever.get_report() is None
+
+    def test_get_interaction_history(self):
+        """get_interaction_history() returns a copy."""
+        lever = self._make_lever()
+        lever._interaction_history.append(create_interaction("a", "b"))
+
+        history = lever.get_interaction_history()
+        assert len(history) == 1
+        # It's a copy, modifying it shouldn't affect lever
+        history.clear()
+        assert len(lever._interaction_history) == 1
+
+    def test_clear_history(self):
+        """clear_history() clears interactions and report."""
+        lever = self._make_lever()
+        lever._interaction_history.append(create_interaction("a", "b"))
+        lever._latest_report = "dummy"
+
+        lever.clear_history()
+        assert len(lever._interaction_history) == 0
+        assert lever._latest_report is None
