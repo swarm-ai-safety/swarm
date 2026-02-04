@@ -33,12 +33,18 @@ class RandomAuditLever(GovernanceLever):
         """
         Potentially audit the interaction and apply penalty.
 
+        When an audit catches a below-threshold interaction, both a cost
+        penalty and a reputation penalty are applied to the initiator.
+        The reputation penalty feeds back into observable quality (via
+        the reputation-modulated observable generation), making higher
+        audit probability visibly reduce toxicity over time.
+
         Args:
             interaction: The completed interaction
             state: Current environment state
 
         Returns:
-            Effect with potential penalty costs
+            Effect with potential penalty costs and reputation deltas
         """
         if not self.config.audit_enabled:
             return LeverEffect(lever_name=self.name)
@@ -54,6 +60,7 @@ class RandomAuditLever(GovernanceLever):
         audited = True
         penalty_applied = False
         cost_a = 0.0
+        reputation_deltas = {}
 
         if interaction.p < self.config.audit_threshold_p:
             # Low quality detected - apply penalty
@@ -63,8 +70,13 @@ class RandomAuditLever(GovernanceLever):
             cost_a = base_penalty
             penalty_applied = True
 
+            # Reputation penalty: degrade the initiator's reputation so
+            # future interactions produce worse observables.
+            reputation_deltas[interaction.initiator] = -shortfall
+
         return LeverEffect(
             cost_a=cost_a,
+            reputation_deltas=reputation_deltas,
             lever_name=self.name,
             details={
                 "audited": audited,
