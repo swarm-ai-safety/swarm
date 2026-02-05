@@ -1,0 +1,27 @@
+# Default owner for everything
+* @rsavitt
+
+# Core simulation engine
+/src/core/ @rsavitt
+
+# Agent implementations
+/src/agents/ @rsavitt
+
+# Metrics and analysis
+/src/metrics/ @rsavitt
+/src/analysis/ @rsavitt
+
+# Governance and boundaries
+/src/governance/ @rsavitt
+/src/boundaries/ @rsavitt
+
+# CI/CD and tooling
+/.github/ @rsavitt
+/Makefile @rsavitt
+/pyproject.toml @rsavitt
+
+# Scenarios
+/scenarios/ @rsavitt
+
+# Tests
+/tests/ @rsavitt
