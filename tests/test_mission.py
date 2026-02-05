@@ -3,7 +3,6 @@
 import pytest
 
 from src.env.mission import (
-    Mission,
     MissionConfig,
     MissionEconomy,
     MissionObjective,
