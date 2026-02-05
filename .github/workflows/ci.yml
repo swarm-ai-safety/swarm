@@ -38,4 +38,4 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: pip install -e ".[dev,runtime]"
-      - run: pytest tests/ -v --cov=src --cov-report=term-missing
+      - run: pytest tests/ -v --cov=src --cov-report=term-missing --cov-fail-under=70
