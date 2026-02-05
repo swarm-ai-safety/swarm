@@ -29,3 +29,4 @@ logs/
 .venv/
 venv/
 .streamlit/secrets.toml
+.hypothesis/

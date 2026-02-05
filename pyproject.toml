@@ -104,7 +104,7 @@ source = ["src"]
 branch = true
 
 [tool.coverage.report]
-fail_under = 78
+fail_under = 84
 exclude_lines = [
     "pragma: no cover",
     "def __repr__",
