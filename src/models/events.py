@@ -42,6 +42,31 @@ class EventType(Enum):
     DISPUTE_FILED = "dispute_filed"
     DISPUTE_RESOLVED = "dispute_resolved"
 
+    # Auction events
+    AUCTION_STARTED = "auction_started"
+    AUCTION_BID = "auction_bid"
+    AUCTION_COMPLETED = "auction_completed"
+
+    # Mission events
+    MISSION_PROPOSED = "mission_proposed"
+    MISSION_JOINED = "mission_joined"
+    MISSION_COMPLETED = "mission_completed"
+    MISSION_FAILED = "mission_failed"
+
+    # Permeability events
+    SPILLOVER_DETECTED = "spillover_detected"
+    PERMEABILITY_ADJUSTED = "permeability_adjusted"
+
+    # High-frequency negotiation events
+    HFN_TICK = "hfn_tick"
+    FLASH_CRASH_DETECTED = "flash_crash_detected"
+    HFN_HALT = "hfn_halt"
+
+    # Identity events
+    IDENTITY_CREATED = "identity_created"
+    CREDENTIAL_ISSUED = "credential_issued"
+    SYBIL_DETECTED = "sybil_detected"
+
     # System events
     SIMULATION_STARTED = "simulation_started"
     SIMULATION_ENDED = "simulation_ended"

@@ -53,6 +53,14 @@ class GovernanceConfig:
     collusion_realtime_rate: float = 0.1  # Rate for realtime penalty
     collusion_clear_history_on_epoch: bool = False  # Clear history each epoch
 
+    # Sybil detection (identity/trust infrastructure)
+    sybil_detection_enabled: bool = False
+    sybil_similarity_threshold: float = 0.8
+    sybil_penalty_multiplier: float = 1.0
+    sybil_realtime_penalty: bool = False
+    sybil_realtime_rate: float = 0.1
+    sybil_max_cluster_size: int = 3
+
     # Security detection
     security_enabled: bool = False
     security_injection_threshold: float = 0.3  # Threshold for injection detection
@@ -109,6 +117,15 @@ class GovernanceConfig:
             raise ValueError("collusion_penalty_multiplier must be non-negative")
         if self.collusion_realtime_rate < 0:
             raise ValueError("collusion_realtime_rate must be non-negative")
+        # Sybil detection validation
+        if not 0.0 <= self.sybil_similarity_threshold <= 1.0:
+            raise ValueError("sybil_similarity_threshold must be in [0, 1]")
+        if self.sybil_penalty_multiplier < 0:
+            raise ValueError("sybil_penalty_multiplier must be non-negative")
+        if self.sybil_realtime_rate < 0:
+            raise ValueError("sybil_realtime_rate must be non-negative")
+        if self.sybil_max_cluster_size < 1:
+            raise ValueError("sybil_max_cluster_size must be >= 1")
         # Security detection validation
         if not 0.0 <= self.security_injection_threshold <= 1.0:
             raise ValueError("security_injection_threshold must be in [0, 1]")

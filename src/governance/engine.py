@@ -9,6 +9,7 @@ from src.governance.audits import RandomAuditLever
 from src.governance.circuit_breaker import CircuitBreakerLever
 from src.governance.collusion import CollusionPenaltyLever
 from src.governance.config import GovernanceConfig
+from src.governance.identity_lever import SybilDetectionLever
 from src.governance.levers import GovernanceLever, LeverEffect
 from src.governance.reputation import ReputationDecayLever, VoteNormalizationLever
 from src.governance.security import SecurityLever
@@ -95,6 +96,7 @@ class GovernanceEngine:
             RandomAuditLever(self.config, seed=seed),
             CollusionPenaltyLever(self.config),
             SecurityLever(self.config, seed=seed),
+            SybilDetectionLever(self.config),
         )
 
         # Keep references to specific levers for direct access
@@ -102,6 +104,7 @@ class GovernanceEngine:
         self._circuit_breaker_lever: Optional[CircuitBreakerLever] = None
         self._collusion_lever: Optional[CollusionPenaltyLever] = None
         self._security_lever: Optional[SecurityLever] = None
+        self._sybil_lever: Optional[SybilDetectionLever] = None
         self._vote_normalization_lever = VoteNormalizationLever(self.config)
 
         for lever in self._levers:
@@ -113,6 +116,8 @@ class GovernanceEngine:
                 self._collusion_lever = lever
             elif isinstance(lever, SecurityLever):
                 self._security_lever = lever
+            elif isinstance(lever, SybilDetectionLever):
+                self._sybil_lever = lever
 
     def apply_epoch_start(
         self,
@@ -282,3 +287,20 @@ class GovernanceEngine:
         """Clear security analysis history and state."""
         if self._security_lever is not None:
             self._security_lever.clear_history()
+
+    def get_sybil_clusters(self) -> List[set]:
+        """Get detected Sybil clusters."""
+        if self._sybil_lever is None:
+            return []
+        return self._sybil_lever.get_clusters()
+
+    def get_flagged_sybil_agents(self) -> frozenset:
+        """Get set of agents flagged as Sybils."""
+        if self._sybil_lever is None:
+            return frozenset()
+        return self._sybil_lever.get_flagged_agents()
+
+    def clear_sybil_history(self) -> None:
+        """Clear Sybil detection history."""
+        if self._sybil_lever is not None:
+            self._sybil_lever.clear_history()
