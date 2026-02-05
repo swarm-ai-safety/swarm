@@ -7,13 +7,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
-- GitHub Actions CI workflow (lint, type-check, test matrix)
+- GitHub Actions CI workflow (lint, type-check, test matrix across Python 3.10-3.12)
+- GitHub Actions release workflow (validate, test, build, publish to PyPI on tagged releases)
+- CodeQL security scanning (push, PR, weekly schedule)
+- Dependabot for pip and GitHub Actions dependency updates
 - MIT LICENSE file
 - README badges (CI status, license, Python version)
 - Pre-commit hooks for ruff and mypy
-- Makefile for common development tasks
+- Makefile with targets: install, lint, typecheck, test, coverage, ci, clean
+- CLI entry point (`python -m src run/list`) with seed/epoch overrides and JSON/CSV export
+- Integration tests (21 end-to-end tests across 10 test classes)
+- Coverage threshold enforcement (70% minimum)
 - CONTRIBUTING.md guide
+- SECURITY.md vulnerability reporting policy
+- CODEOWNERS for automatic PR reviewer assignment
+- Issue templates (bug report, feature request) and PR template
+- PEP 561 `py.typed` marker for downstream type checking
 - This changelog
+
+### Fixed
+- 184 ruff lint errors across 48 files (unused imports, unsorted imports, missing `raise from`, unused variables, unnecessary comprehensions, ambiguous variable names, missing `strict=` on zip)
+- ~100 mypy type errors across 27 files (numpy floating coercions, missing type annotations, Optional handling, variable re-definitions, callable typing)
 
 ## [0.1.0] - 2025-02-01
 
