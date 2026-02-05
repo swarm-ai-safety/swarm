@@ -48,6 +48,14 @@ python examples/run_scenario.py scenarios/status_game.yaml
 python examples/run_scenario.py scenarios/strict_governance.yaml
 ```
 
+Or use the package CLI entry point:
+
+```bash
+python -m src list
+python -m src run scenarios/baseline.yaml
+python -m src run scenarios/status_game.yaml --seed 42 --epochs 20
+```
+
 Or load programmatically:
 
 ```python

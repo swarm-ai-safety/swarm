@@ -4,7 +4,40 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
-A simulation framework for studying distributional safety in multi-agent AI systems using soft (probabilistic) labels.
+An open-source simulation lab for AGI safety research: model multi-agent
+failure modes, quantify distributional harm, and test governance interventions
+before deployment.
+
+## What Problem Does This Solve?
+
+If you care about AGI safety research, this repo gives you a practical way to:
+
+- Turn qualitative worries ("deception", "coordination failures", "policy lag")
+  into measurable signals (`toxicity`, `quality_gap`, calibration, incoherence).
+- Stress-test governance mechanisms against adaptive and deceptive agents.
+- Compare safety interventions under replay and scenario sweeps instead of
+  one-off anecdotes.
+- Separate sandbox wins from deployment reality using explicit transferability
+  caveats.
+
+## Questions You Can Study Quickly
+
+- Does self-ensemble reduce variance-driven incoherence without masking bias?
+- When do circuit breakers and friction reduce harm vs. suppress useful work?
+- Which governance settings improve safety with the smallest welfare cost?
+- How robust are conclusions under delayed/noisy labels and task shifts?
+
+## Start Here (Researcher Path)
+
+- Read the framing: [Theoretical Foundations](docs/theory.md)
+- Run an incoherence artifact: [Incoherence Scaling Analysis](docs/analysis/incoherence_scaling.md)
+- Inspect policy caveats: [Incoherence Governance Transferability](docs/transferability/incoherence_governance.md)
+- Reproduce from CLI: `python -m src run scenarios/baseline.yaml`
+
+## Cite This Work
+
+- Machine-readable citation metadata: [`CITATION.cff`](CITATION.cff)
+- Short whitepaper-style overview: [`docs/whitepaper.md`](docs/whitepaper.md)
 
 ## Overview
 
@@ -29,6 +62,7 @@ The system provides:
 **Governance Layer:**
 - Configurable levers (taxes, reputation decay, staking, circuit breakers, audits) ([docs](docs/governance.md))
 - **Collusion detection** with pair-level and group-level analysis ([docs](docs/governance.md#collusion-detection))
+- **Incoherence-targeted interventions** (self-ensemble, incoherence breaker, decomposition checkpoints, dynamic friction) with replay calibration and transferability caveats ([notes](docs/transferability/incoherence_governance.md))
 - Integration with orchestrator via epoch and interaction hooks
 - Populates `c_a` and `c_b` governance costs on interactions
 
@@ -86,6 +120,24 @@ for m in metrics:
 Run the demo:
 ```bash
 python examples/mvp_demo.py
+```
+
+## CLI Quick Start
+
+Run simulations directly from the package CLI:
+
+```bash
+# List available scenarios
+python -m src list
+
+# Run a scenario
+python -m src run scenarios/baseline.yaml
+
+# Override simulation settings
+python -m src run scenarios/baseline.yaml --seed 42 --epochs 20 --steps 15
+
+# Export outputs
+python -m src run scenarios/baseline.yaml --export-json results.json --export-csv outputs/
 ```
 
 ## Quick Start: Computing Metrics
@@ -184,7 +236,7 @@ Where:
 ## Running Tests
 
 ```bash
-# Run all tests (727 tests)
+# Run all tests
 pytest tests/ -v
 
 # Run with coverage
@@ -192,6 +244,9 @@ pytest tests/ --cov=src --cov-report=html
 
 # Run specific test file
 pytest tests/test_orchestrator.py -v
+
+# Run CI checks (lint, type-checking, tests)
+make ci
 ```
 
 ## Documentation
@@ -209,6 +264,10 @@ Detailed documentation for each subsystem:
 | [Scenarios & Sweeps](docs/scenarios.md) | YAML scenarios, scenario comparison, parameter sweeps |
 | [Boundaries](docs/boundaries.md) | External world simulation, flow tracking, leakage detection |
 | [Dashboard](docs/dashboard.md) | Streamlit dashboard setup and features |
+| [Incoherence Metric Contract](docs/incoherence_metric_contract.md) | Definitions and edge-case semantics for `D`, `E`, and `I` |
+| [Incoherence Scaling Analysis](docs/analysis/incoherence_scaling.md) | Replay-sweep artifact and upgrade path to decision-level replay metrics |
+| [Incoherence Governance Transferability](docs/transferability/incoherence_governance.md) | Deployment caveats and assumptions for incoherence interventions |
+| [Whitepaper (Short)](docs/whitepaper.md) | Problem framing, method, and citation-friendly summary |
 
 ## Directory Structure
 
@@ -221,13 +280,15 @@ distributional-agi-safety/
 │   ├── env/             # EnvState, feed, tasks, network, composite tasks
 │   ├── governance/      # Config, levers, taxes, reputation, audits, collusion
 │   ├── metrics/         # SoftMetrics, reporters, collusion detection, capabilities
+│   ├── forecaster/      # Risk forecasters for adaptive governance activation
+│   ├── replay/          # Replay runner and decision-level replay utilities
 │   ├── scenarios/       # YAML scenario loader
 │   ├── analysis/        # Parameter sweeps, dashboard
 │   ├── redteam/         # Attack scenarios, evaluator, evasion metrics
 │   ├── boundaries/      # External world, flow tracking, policies, leakage
 │   └── logging/         # Append-only JSONL logger
-├── tests/               # 727 tests across all modules
-├── examples/            # mvp_demo, run_scenario, parameter_sweep, llm_demo
+├── tests/               # Test suite across core modules, governance, and analysis
+├── examples/            # mvp_demo, run_scenario, parameter_sweep, llm_demo, incoherence scaling
 ├── scenarios/           # YAML scenario definitions
 ├── docs/                # Detailed documentation
 └── pyproject.toml
@@ -248,4 +309,5 @@ distributional-agi-safety/
 - Glosten, L.R. & Milgrom, P.R. (1985). *Bid, Ask and Transaction Prices in a Specialist Market*. JFE.
 - [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
 - [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
+- [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
 - [Moltbook](https://moltbook.com) | [@sebkrier](https://x.com/sebkrier/status/2017993948132774232)

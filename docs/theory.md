@@ -145,6 +145,22 @@ The **leakage detector** scans outbound content for PII, credentials, and code p
 
 ---
 
+## 10. Incoherence as Variance-Dominated Failure ("Hot Mess" Theory)
+
+Anthropic's "hot mess" framing models difficult reasoning failures as rising
+variance across sampled trajectories, not only systematic bias [6]. This maps
+directly to our incoherence decomposition:
+
+- `D` captures within-policy disagreement across replayed trajectories
+- `E` captures benchmark deviation for decision quality
+- `I = D / (E + eps)` highlights instability relative to observed error
+
+Practical implication for governance: interventions such as self-ensemble and
+decomposition checkpoints can reduce variance-driven incoherence even when mean
+capability remains unchanged.
+
+---
+
 ## References
 
 1. Kyle, A.S. (1985). *Continuous Auctions and Insider Trading*. Econometrica, 53(6), 1315–1335.
@@ -152,6 +168,7 @@ The **leakage detector** scans outbound content for PII, credentials, and code p
 3. Myerson, R.B. (1981). *Optimal Auction Design*. Mathematics of Operations Research, 6(1), 58–73. See also Hurwicz, L. (1960). *Optimality and Informational Efficiency in Resource Allocation Processes*. Mathematical Methods in the Social Sciences.
 4. [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
 5. [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
+6. [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
 
 **Further reading:**
 - Akerlof, G.A. (1970). *The Market for "Lemons": Quality Uncertainty and the Market Mechanism*. Quarterly Journal of Economics, 84(3), 488–500.

@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use this project, please cite it using the metadata below."
+title: "Distributional AGI Safety Sandbox"
+type: software
+authors:
+  - name: "Raeli Savitt (with AI assistance)"
+version: "0.1.0"
+date-released: "2026-02-05"
+license: "MIT"
+url: "https://github.com/rsavitt/distributional-agi-safety"
+repository-code: "https://github.com/rsavitt/distributional-agi-safety"
+keywords:
+  - "AGI safety"
+  - "distributional safety"
+  - "multi-agent systems"
+  - "simulation"
+  - "governance"
+abstract: >
+  A simulation framework for studying distributional AGI safety with soft labels,
+  replay-based incoherence metrics, and configurable governance interventions.
+preferred-citation:
+  type: report
+  authors:
+    - name: "Raeli Savitt (with AI assistance)"
+  title: "Distributional AGI Safety Sandbox: A Practical Lab for AGI Safety Research"
+  year: 2026
+  url: "https://github.com/rsavitt/distributional-agi-safety"

@@ -1,6 +1,7 @@
 # Dashboard
 
-Real-time Streamlit dashboard for monitoring simulation metrics.
+Streamlit dashboard for monitoring simulation metrics, including replay-based
+incoherence analytics.
 
 ## Running the Dashboard
 
@@ -44,5 +45,11 @@ run_dashboard(port=8501)
 - **Metrics Over Time**: Toxicity rate, quality gap, welfare trends
 - **Agent Distribution**: Type breakdown, reputation rankings
 - **Governance Metrics**: Costs, audits, frozen agents
+- **Incoherence Analytics**: Time-series and scatter views for disagreement, error, and incoherence index
 - **Boundary Metrics**: Crossings, blocked attempts, leakage events
 - **Event Log**: Recent interactions and governance actions
+
+## Related Notes
+
+- Incoherence scaling artifact: `docs/analysis/incoherence_scaling.md`
+- Transferability caveats: `docs/transferability/incoherence_governance.md`

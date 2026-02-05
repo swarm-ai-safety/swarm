@@ -52,6 +52,19 @@ orchestrator = Orchestrator(config=config)
 | **Random Audit** | Cost penalty `(threshold - p) * multiplier` plus reputation penalty if audited and `p < threshold`. Reputation penalty feeds back into observable quality. | on_interaction |
 | **Collusion Detection** | Penalty based on collusion risk score from coordinated behavior | on_epoch_start, on_interaction |
 
+## Incoherence-Targeted Controls
+
+In addition to baseline levers, the project includes replay-calibrated
+incoherence controls focused on variance-dominated failures:
+
+- self-ensemble
+- incoherence breaker
+- decomposition checkpoints
+- dynamic friction
+
+For deployment assumptions and caveats, see
+`docs/transferability/incoherence_governance.md`.
+
 ## Integration Points
 
 Governance hooks into the orchestrator at:
