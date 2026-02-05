@@ -2,6 +2,7 @@
 
 import json
 import tempfile
+from types import SimpleNamespace
 from pathlib import Path
 
 import pytest
@@ -11,8 +12,11 @@ from src.analysis.dashboard import (
     DashboardConfig,
     DashboardState,
     MetricSnapshot,
+    create_condition_comparison_data,
     create_dashboard_file,
+    create_incoherence_panel_data,
     extract_agent_snapshots,
+    extract_incoherence_agent_profiles,
     extract_metrics_from_orchestrator,
 )
 
@@ -67,6 +71,9 @@ class TestMetricSnapshot:
             step=5,
             toxicity_rate=0.2,
             total_welfare=850.0,
+            incoherence_index=0.32,
+            forecaster_risk=0.61,
+            governance_condition="adaptive_on",
         )
 
         d = snapshot.to_dict()
@@ -75,6 +82,9 @@ class TestMetricSnapshot:
         assert d["step"] == 5
         assert d["toxicity_rate"] == 0.2
         assert d["total_welfare"] == 850.0
+        assert d["incoherence_index"] == 0.32
+        assert d["forecaster_risk"] == 0.61
+        assert d["governance_condition"] == "adaptive_on"
 
 
 class TestAgentSnapshot:
@@ -258,6 +268,95 @@ class TestOrchestratorExtraction:
         assert snapshots[0].agent_type == "honest"
 
 
+class TestIncoherenceDashboardHelpers:
+    """Tests for incoherence-specific dashboard helper utilities."""
+
+    def test_create_incoherence_panel_data(self):
+        """Panel data should preserve epoch/index/risk series ordering."""
+        state = DashboardState()
+        state.update_metrics(
+            MetricSnapshot(epoch=1, step=0, incoherence_index=0.2, forecaster_risk=0.3)
+        )
+        state.update_metrics(
+            MetricSnapshot(epoch=2, step=0, incoherence_index=0.4, forecaster_risk=0.7)
+        )
+
+        panel = create_incoherence_panel_data(state)
+
+        assert panel["epochs"] == [1, 2]
+        assert panel["incoherence_index"] == pytest.approx([0.2, 0.4])
+        assert panel["forecaster_risk"] == pytest.approx([0.3, 0.7])
+
+    def test_create_condition_comparison_data(self):
+        """Condition comparison should aggregate rows by governance condition."""
+        rows = create_condition_comparison_data([
+            MetricSnapshot(
+                epoch=1,
+                step=0,
+                governance_condition="static",
+                toxicity_rate=0.2,
+                incoherence_index=0.3,
+                forecaster_risk=0.2,
+                total_welfare=100.0,
+            ),
+            MetricSnapshot(
+                epoch=2,
+                step=0,
+                governance_condition="adaptive_on",
+                toxicity_rate=0.1,
+                incoherence_index=0.2,
+                forecaster_risk=0.8,
+                total_welfare=120.0,
+            ),
+            MetricSnapshot(
+                epoch=3,
+                step=0,
+                governance_condition="static",
+                toxicity_rate=0.4,
+                incoherence_index=0.5,
+                forecaster_risk=0.4,
+                total_welfare=110.0,
+            ),
+        ])
+
+        assert [row["condition"] for row in rows] == ["adaptive_on", "static"]
+        by_condition = {row["condition"]: row for row in rows}
+
+        assert by_condition["adaptive_on"]["n_points"] == 1
+        assert by_condition["adaptive_on"]["mean_toxicity_rate"] == pytest.approx(0.1)
+        assert by_condition["static"]["n_points"] == 2
+        assert by_condition["static"]["mean_incoherence_index"] == pytest.approx(0.4)
+        assert by_condition["static"]["mean_forecaster_risk"] == pytest.approx(0.3)
+
+    def test_extract_incoherence_agent_profiles(self):
+        """Agent profile extraction should compute per-initiator incoherence means."""
+        from src.env.state import EnvState
+        from src.models.agent import AgentType
+        from src.models.interaction import SoftInteraction
+
+        state = EnvState()
+        state.add_agent("a1", AgentType.HONEST)
+        state.add_agent("a2", AgentType.ADVERSARIAL)
+
+        state.record_interaction(SoftInteraction(initiator="a1", counterparty="a2", p=0.5))
+        state.record_interaction(SoftInteraction(initiator="a1", counterparty="a2", p=1.0))
+        state.record_interaction(SoftInteraction(initiator="a2", counterparty="a1", p=0.25))
+        # Unknown agent should be skipped gracefully.
+        state.record_interaction(SoftInteraction(initiator="ghost", counterparty="a1", p=0.5))
+
+        orchestrator = SimpleNamespace(state=state)
+        profiles = extract_incoherence_agent_profiles(orchestrator)
+        by_agent = {row["agent_id"]: row for row in profiles}
+
+        assert set(by_agent) == {"a1", "a2"}
+        assert by_agent["a1"]["agent_type"] == "honest"
+        assert by_agent["a1"]["n_interactions"] == 2
+        assert by_agent["a1"]["incoherence_index"] == pytest.approx(0.5)
+        assert by_agent["a2"]["agent_type"] == "adversarial"
+        assert by_agent["a2"]["n_interactions"] == 1
+        assert by_agent["a2"]["incoherence_index"] == pytest.approx(0.5)
+
+
 class TestDashboardFileCreation:
     """Tests for dashboard file creation."""
 
@@ -288,6 +387,8 @@ class TestDashboardFileCreation:
             assert "plotly" in content
             assert "st.metric" in content
             assert "st.plotly_chart" in content
+            assert "Incoherence Panel" in content
+            assert "condition_comparison" in content
 
 
 class TestDashboardIntegration:

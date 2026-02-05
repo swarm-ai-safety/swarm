@@ -175,6 +175,48 @@ def main():
         else:
             st.info("No agent data available")
 
+    # Incoherence panel
+    incoherence_df = pd.DataFrame(data.get("metric_history", []))
+    if not incoherence_df.empty and "incoherence_index" in incoherence_df.columns:
+        st.divider()
+        st.subheader("🧭 Incoherence Panel")
+        inco_col1, inco_col2 = st.columns(2)
+
+        with inco_col1:
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(
+                    x=incoherence_df["epoch"],
+                    y=incoherence_df["incoherence_index"],
+                    mode="lines+markers",
+                    name="Incoherence Index",
+                )
+            )
+            if "forecaster_risk" in incoherence_df.columns:
+                fig.add_trace(
+                    go.Scatter(
+                        x=incoherence_df["epoch"],
+                        y=incoherence_df["forecaster_risk"],
+                        mode="lines+markers",
+                        name="Forecaster Risk",
+                    )
+                )
+            fig.update_layout(height=320, xaxis_title="Epoch", yaxis_title="Score")
+            st.plotly_chart(fig, use_container_width=True)
+
+        with inco_col2:
+            scatter_df = incoherence_df.copy()
+            if "toxicity_rate" in scatter_df.columns:
+                scatter = px.scatter(
+                    scatter_df,
+                    x="toxicity_rate",
+                    y="incoherence_index",
+                    color="governance_condition" if "governance_condition" in scatter_df.columns else None,
+                    title="Toxicity vs Incoherence",
+                )
+                scatter.update_layout(height=320)
+                st.plotly_chart(scatter, use_container_width=True)
+
     st.divider()
 
     # Agent details section
@@ -237,6 +279,12 @@ def main():
             st.write("**Governance Effectiveness:**")
             eff_df = pd.DataFrame([gov_metrics])
             st.dataframe(eff_df, use_container_width=True)
+
+        comparison_rows = data.get("condition_comparison", [])
+        if comparison_rows:
+            st.write("**Governance Condition Comparison:**")
+            cmp_df = pd.DataFrame(comparison_rows)
+            st.dataframe(cmp_df, use_container_width=True)
 
     # Boundaries section
     if show_boundaries:
@@ -306,6 +354,9 @@ def generate_demo_data():
             "avg_payoff": 5.0 + random.uniform(-1, 2),
             "total_welfare": 800 + epoch * 2 + random.uniform(-20, 20),
             "acceptance_rate": 0.7 + random.uniform(-0.1, 0.1),
+            "incoherence_index": 0.2 + random.uniform(-0.05, 0.15) * (epoch / 25),
+            "forecaster_risk": 0.25 + random.uniform(-0.04, 0.2) * (epoch / 25),
+            "governance_condition": "adaptive_on" if epoch > 12 else "static",
         })
 
     agents = [
@@ -341,6 +392,24 @@ def generate_demo_data():
             "recall": 0.72,
             "f1_score": 0.78,
         },
+        "condition_comparison": [
+            {
+                "condition": "static",
+                "n_points": 12,
+                "mean_toxicity_rate": 0.14,
+                "mean_incoherence_index": 0.23,
+                "mean_forecaster_risk": 0.31,
+                "mean_total_welfare": 821.0,
+            },
+            {
+                "condition": "adaptive_on",
+                "n_points": 13,
+                "mean_toxicity_rate": 0.11,
+                "mean_incoherence_index": 0.18,
+                "mean_forecaster_risk": 0.67,
+                "mean_total_welfare": 864.0,
+            },
+        ],
         "boundary_crossings": 156,
         "blocked_crossings": 23,
         "leakage_events": 5,
