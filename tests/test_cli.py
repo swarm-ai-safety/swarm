@@ -147,6 +147,7 @@ class TestRunSubcommand:
 
     def test_run_export_csv(self, monkeypatch, capsys, tmp_path):
         """run with --export-csv should create CSV files in the given directory."""
+        pytest.importorskip("pandas", reason="pandas required for CSV export")
         if not Path(BASELINE_SCENARIO).exists():
             pytest.skip("baseline.yaml not found")
         csv_dir = tmp_path / "csv_output"
