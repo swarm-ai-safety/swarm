@@ -12,6 +12,7 @@ Or programmatically:
 """
 
 import json
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -42,6 +43,9 @@ class MetricSnapshot:
     total_welfare: float = 0.0
     acceptance_rate: float = 0.0
     governance_costs: float = 0.0
+    incoherence_index: float = 0.0
+    forecaster_risk: float = 0.0
+    governance_condition: str = "static"
     boundary_crossings: int = 0
     leakage_events: int = 0
 
@@ -56,6 +60,9 @@ class MetricSnapshot:
             "total_welfare": self.total_welfare,
             "acceptance_rate": self.acceptance_rate,
             "governance_costs": self.governance_costs,
+            "incoherence_index": self.incoherence_index,
+            "forecaster_risk": self.forecaster_risk,
+            "governance_condition": self.governance_condition,
             "boundary_crossings": self.boundary_crossings,
             "leakage_events": self.leakage_events,
         }
@@ -145,6 +152,14 @@ class DashboardState:
 
         return epochs, values
 
+    def get_incoherence_series(self) -> Tuple[List[int], List[float]]:
+        """Get incoherence index time series."""
+        return self.get_metric_series("incoherence_index")
+
+    def get_condition_comparison(self) -> List[Dict[str, Any]]:
+        """Aggregate history by governance condition for comparison panels."""
+        return create_condition_comparison_data(self.metric_history)
+
     def get_agent_rankings(self, sort_by: str = "reputation") -> List[AgentSnapshot]:
         """Get agents sorted by a metric.
 
@@ -211,6 +226,25 @@ def extract_metrics_from_orchestrator(orchestrator: Any) -> MetricSnapshot:
     if orchestrator.leakage_detector:
         leakage_events = len(orchestrator.leakage_detector.events)
 
+    # Incoherence proxy from recent interactions (higher near p=0.5)
+    recent = state.completed_interactions[-20:]
+    incoherence_index = 0.0
+    if recent:
+        uncertainties = [1.0 - abs(2 * i.p - 1.0) for i in recent]
+        incoherence_index = sum(uncertainties) / len(uncertainties)
+
+    forecaster_risk = 0.0
+    governance_condition = "static"
+    if orchestrator.governance_engine and hasattr(orchestrator.governance_engine, "get_adaptive_status"):
+        status = orchestrator.governance_engine.get_adaptive_status()
+        forecaster_risk = float(status.get("predicted_risk", 0.0))
+        if status.get("adaptive_enabled", False):
+            governance_condition = (
+                "adaptive_on"
+                if status.get("variance_levers_active", False)
+                else "adaptive_off"
+            )
+
     return MetricSnapshot(
         epoch=state.current_epoch,
         step=state.current_step,
@@ -220,6 +254,9 @@ def extract_metrics_from_orchestrator(orchestrator: Any) -> MetricSnapshot:
         total_welfare=total_welfare,
         acceptance_rate=acceptance_rate,
         governance_costs=governance_costs,
+        incoherence_index=incoherence_index,
+        forecaster_risk=forecaster_risk,
+        governance_condition=governance_condition,
         boundary_crossings=boundary_crossings,
         leakage_events=leakage_events,
     )
@@ -251,10 +288,73 @@ def extract_agent_snapshots(orchestrator: Any) -> List[AgentSnapshot]:
                 resources=agent_state.resources,
                 interactions=total_interactions,
                 payoff_total=agent_state.total_payoff,
-                is_frozen=getattr(agent_state, 'frozen', False),
+                is_frozen=orchestrator.state.is_agent_frozen(agent_id),
             ))
 
     return snapshots
+
+
+def extract_incoherence_agent_profiles(orchestrator: Any) -> List[Dict[str, Any]]:
+    """
+    Extract per-agent incoherence proxy profiles from completed interactions.
+
+    Returns:
+        List of dict rows with agent_id, agent_type, and incoherence_index.
+    """
+    by_agent: Dict[str, List[float]] = defaultdict(list)
+    for interaction in orchestrator.state.completed_interactions:
+        uncertainty = 1.0 - abs(2 * interaction.p - 1.0)
+        by_agent[interaction.initiator].append(uncertainty)
+
+    rows: List[Dict[str, Any]] = []
+    for agent_id, values in by_agent.items():
+        agent_state = orchestrator.state.get_agent(agent_id)
+        if agent_state is None:
+            continue
+        rows.append({
+            "agent_id": agent_id,
+            "agent_type": agent_state.agent_type.value,
+            "incoherence_index": sum(values) / len(values) if values else 0.0,
+            "n_interactions": len(values),
+        })
+    return rows
+
+
+def create_incoherence_panel_data(state: DashboardState) -> Dict[str, List[float]]:
+    """
+    Build chart-ready incoherence panel data from dashboard state history.
+    """
+    epochs, incoherence = state.get_metric_series("incoherence_index")
+    _, risk = state.get_metric_series("forecaster_risk")
+    return {
+        "epochs": epochs,
+        "incoherence_index": incoherence,
+        "forecaster_risk": risk,
+    }
+
+
+def create_condition_comparison_data(
+    metric_history: List[MetricSnapshot],
+) -> List[Dict[str, Any]]:
+    """
+    Build governance-condition comparison rows from metric history snapshots.
+    """
+    grouped: Dict[str, List[MetricSnapshot]] = defaultdict(list)
+    for snapshot in metric_history:
+        grouped[snapshot.governance_condition].append(snapshot)
+
+    rows: List[Dict[str, Any]] = []
+    for condition, snapshots in grouped.items():
+        n = len(snapshots)
+        rows.append({
+            "condition": condition,
+            "n_points": n,
+            "mean_toxicity_rate": sum(s.toxicity_rate for s in snapshots) / n,
+            "mean_incoherence_index": sum(s.incoherence_index for s in snapshots) / n,
+            "mean_forecaster_risk": sum(s.forecaster_risk for s in snapshots) / n,
+            "mean_total_welfare": sum(s.total_welfare for s in snapshots) / n,
+        })
+    return sorted(rows, key=lambda row: row["condition"])
 
 
 # =============================================================================
@@ -629,11 +729,20 @@ def create_dashboard_file(output_path: Optional[str] = None) -> str:
     """
     from pathlib import Path
 
+    module_dir = Path(__file__).parent
+    source_app_path = module_dir / "streamlit_app.py"
     if output_path is None:
-        output_path = str(Path(__file__).parent / "streamlit_app.py")
+        output_path = str(source_app_path)
+
+    # Prefer copying the maintained streamlit app file if it exists.
+    if source_app_path.exists():
+        with open(source_app_path) as src:
+            app_code = src.read()
+    else:
+        app_code = STREAMLIT_APP_CODE
 
     with open(output_path, "w") as f:
-        f.write(STREAMLIT_APP_CODE)
+        f.write(app_code)
 
     return output_path
 
