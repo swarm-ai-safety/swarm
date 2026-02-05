@@ -323,7 +323,9 @@ class SensitivityPolicy(BoundaryPolicy):
             self._record_evaluation(decision)
             return decision
 
-        # Check if approval required
+        # Deny flows above the approval threshold.  Previously this
+        # was allowed-with-logging, but there is no automated review
+        # mechanism so the data would pass through unblocked.
         if sensitivity > self.require_approval_above:
             self.pending_approvals.append({
                 "agent_id": agent_id,
@@ -331,12 +333,11 @@ class SensitivityPolicy(BoundaryPolicy):
                 "sensitivity": sensitivity,
                 "timestamp": datetime.now(),
             })
-            decision = CrossingDecision(
-                allowed=True,
-                reason="Allowed with logging (high sensitivity)",
-                policy_name=self.name,
+            decision = CrossingDecision.deny(
+                self.name,
+                f"Sensitivity {sensitivity:.2f} exceeds approval threshold "
+                f"{self.require_approval_above:.2f}",
                 risk_score=sensitivity,
-                conditions={"logged": True, "requires_review": True},
             )
             self._record_evaluation(decision)
             return decision

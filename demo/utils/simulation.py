@@ -87,7 +87,7 @@ def run_scenario(scenario_path: str, seed: Optional[int] = None) -> Dict[str, An
     if _requires_llm(raw):
         raise ValueError("LLM-backed scenarios are not supported in the demo")
 
-    scenario = load_scenario(Path(scenario_path))
+    scenario = load_scenario(resolved)
     if seed is not None:
         scenario.orchestrator_config.seed = seed
 

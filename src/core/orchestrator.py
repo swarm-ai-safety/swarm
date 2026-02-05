@@ -2,30 +2,36 @@
 
 import asyncio
 import random
-import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from src.agents.base import Action, ActionType, BaseAgent, Observation
-
-if TYPE_CHECKING:
-    from src.agents.llm_agent import LLMAgent
+from src.boundaries.external_world import ExternalEntity, ExternalWorld
+from src.boundaries.information_flow import FlowTracker
+from src.boundaries.leakage import LeakageDetector, LeakageReport
+from src.boundaries.policies import PolicyEngine
+from src.core.boundary_handler import BoundaryHandler
+from src.core.marketplace_handler import MarketplaceHandler
+from src.core.observable_generator import (
+    DefaultObservableGenerator,
+    ObservableGenerator,
+)
 from src.core.payoff import PayoffConfig, SoftPayoffEngine
 from src.core.proxy import ProxyComputer, ProxyObservables
 from src.env.composite_tasks import (
-    CapabilityType,
     CompositeTask,
     CompositeTaskPool,
-    CompositeTaskStatus,
 )
 from src.env.feed import Feed, VoteType
+from src.env.marketplace import Marketplace, MarketplaceConfig
 from src.env.network import AgentNetwork, NetworkConfig
 from src.env.state import EnvState, InteractionProposal
 from src.env.tasks import TaskPool, TaskStatus
-from src.metrics.capabilities import CapabilityAnalyzer, EmergentCapabilityMetrics
+from src.governance.config import GovernanceConfig
+from src.governance.engine import GovernanceEffect, GovernanceEngine
 from src.logging.event_log import EventLog
+from src.metrics.capabilities import CapabilityAnalyzer, EmergentCapabilityMetrics
 from src.metrics.soft_metrics import SoftMetrics
 from src.models.agent import AgentState, AgentType
 from src.models.events import (
@@ -37,13 +43,6 @@ from src.models.events import (
     reputation_updated_event,
 )
 from src.models.interaction import InteractionType, SoftInteraction
-from src.governance.config import GovernanceConfig
-from src.governance.engine import GovernanceEffect, GovernanceEngine
-from src.boundaries.external_world import ExternalWorld, ExternalEntity
-from src.boundaries.information_flow import FlowTracker, FlowDirection, FlowType, InformationFlow
-from src.boundaries.policies import PolicyEngine, CrossingDecision
-from src.boundaries.leakage import LeakageDetector, LeakageReport
-from src.env.marketplace import Marketplace, MarketplaceConfig, EscrowStatus
 
 
 @dataclass
@@ -118,12 +117,26 @@ class Orchestrator:
     - Enforce rate limits
     - Compute payoffs
     - Emit events
+
+    Delegates domain-specific work to handler objects:
+    - MarketplaceHandler: bounty/bid/escrow/dispute lifecycle
+    - BoundaryHandler: external-world and leakage enforcement
+    - ObservableGenerator: signal generation from interactions
+
+    Computation engines (payoff, proxy, metrics) can be injected
+    via constructor for testability and extensibility.
     """
 
     def __init__(
         self,
         config: Optional[OrchestratorConfig] = None,
         state: Optional[EnvState] = None,
+        # --- dependency injection for computation engines ---
+        payoff_engine: Optional[SoftPayoffEngine] = None,
+        proxy_computer: Optional[ProxyComputer] = None,
+        metrics_calculator: Optional[SoftMetrics] = None,
+        observable_generator: Optional[ObservableGenerator] = None,
+        governance_engine: Optional[GovernanceEngine] = None,
     ):
         """
         Initialize orchestrator.
@@ -131,6 +144,13 @@ class Orchestrator:
         Args:
             config: Orchestrator configuration
             state: Initial environment state (optional)
+            payoff_engine: Custom payoff engine (default: built from config)
+            proxy_computer: Custom proxy computer (default: ProxyComputer())
+            metrics_calculator: Custom metrics calculator (default: SoftMetrics)
+            observable_generator: Custom observable generator (default:
+                DefaultObservableGenerator)
+            governance_engine: Custom governance engine (default: built from
+                config.governance_config if provided)
         """
         self.config = config or OrchestratorConfig()
 
@@ -165,41 +185,66 @@ class Orchestrator:
         # Agents
         self._agents: Dict[str, BaseAgent] = {}
 
-        # Computation engines
-        self.payoff_engine = SoftPayoffEngine(self.config.payoff_config)
-        self.proxy_computer = ProxyComputer()
-        self.metrics_calculator = SoftMetrics(self.payoff_engine)
+        # Computation engines (injectable)
+        self.payoff_engine = payoff_engine or SoftPayoffEngine(self.config.payoff_config)
+        self.proxy_computer = proxy_computer or ProxyComputer()
+        self.metrics_calculator = metrics_calculator or SoftMetrics(self.payoff_engine)
+        self._observable_generator: ObservableGenerator = (
+            observable_generator or DefaultObservableGenerator()
+        )
 
-        # Governance engine
-        if self.config.governance_config is not None:
-            self.governance_engine: Optional[GovernanceEngine] = GovernanceEngine(
+        # Governance engine (injectable)
+        if governance_engine is not None:
+            self.governance_engine: Optional[GovernanceEngine] = governance_engine
+        elif self.config.governance_config is not None:
+            self.governance_engine = GovernanceEngine(
                 self.config.governance_config,
                 seed=self.config.seed,
             )
         else:
             self.governance_engine = None
 
-        # Marketplace
+        # Marketplace handler
         if self.config.marketplace_config is not None:
-            self.marketplace: Optional[Marketplace] = Marketplace(
-                self.config.marketplace_config
+            marketplace = Marketplace(self.config.marketplace_config)
+            self.marketplace: Optional[Marketplace] = marketplace
+            self._marketplace_handler: Optional[MarketplaceHandler] = MarketplaceHandler(
+                marketplace=marketplace,
+                task_pool=self.task_pool,
+                emit_event=self._emit_event,
             )
         else:
             self.marketplace = None
+            self._marketplace_handler = None
 
-        # Boundary components
+        # Boundary handler
         if self.config.enable_boundaries:
-            self.external_world: Optional[ExternalWorld] = ExternalWorld().create_default_world()
-            self.flow_tracker: Optional[FlowTracker] = FlowTracker(
+            external_world = ExternalWorld().create_default_world()
+            flow_tracker = FlowTracker(
                 sensitivity_threshold=self.config.boundary_sensitivity_threshold
             )
-            self.policy_engine: Optional[PolicyEngine] = PolicyEngine().create_default_policies()
-            self.leakage_detector: Optional[LeakageDetector] = LeakageDetector()
+            policy_engine = PolicyEngine().create_default_policies()
+            leakage_detector = LeakageDetector()
+
+            self.external_world: Optional[ExternalWorld] = external_world
+            self.flow_tracker: Optional[FlowTracker] = flow_tracker
+            self.policy_engine: Optional[PolicyEngine] = policy_engine
+            self.leakage_detector: Optional[LeakageDetector] = leakage_detector
+
+            self._boundary_handler: Optional[BoundaryHandler] = BoundaryHandler(
+                external_world=external_world,
+                flow_tracker=flow_tracker,
+                policy_engine=policy_engine,
+                leakage_detector=leakage_detector,
+                emit_event=self._emit_event,
+                seed=self.config.seed,
+            )
         else:
             self.external_world = None
             self.flow_tracker = None
             self.policy_engine = None
             self.leakage_detector = None
+            self._boundary_handler = None
 
         # Event logging
         if self.config.log_path:
@@ -318,37 +363,8 @@ class Orchestrator:
             self.state.advance_step()
 
         # Marketplace epoch maintenance
-        if self.marketplace is not None:
-            expired_bounties = self.marketplace.expire_bounties(self.state.current_epoch)
-            for bounty_id in expired_bounties:
-                bounty = self.marketplace.get_bounty(bounty_id)
-                if bounty:
-                    poster_state = self.state.get_agent(bounty.poster_id)
-                    if poster_state:
-                        poster_state.update_resources(bounty.reward_amount)
-
-            resolved_disputes = self.marketplace.auto_resolve_disputes(self.state.current_epoch)
-            for dispute_id in resolved_disputes:
-                dispute = self.marketplace.get_dispute(dispute_id)
-                if dispute:
-                    escrow = self.marketplace.get_escrow(dispute.escrow_id)
-                    if escrow:
-                        worker_state = self.state.get_agent(escrow.worker_id)
-                        poster_state = self.state.get_agent(escrow.poster_id)
-                        if worker_state:
-                            worker_state.update_resources(escrow.released_amount)
-                        if poster_state:
-                            poster_state.update_resources(escrow.refunded_amount)
-                        self._emit_event(Event(
-                            event_type=EventType.DISPUTE_RESOLVED,
-                            payload={
-                                "dispute_id": dispute_id,
-                                "escrow_id": escrow.escrow_id,
-                                "worker_share": dispute.worker_share,
-                                "auto_resolved": True,
-                            },
-                            epoch=self.state.current_epoch,
-                        ))
+        if self._marketplace_handler is not None:
+            self._marketplace_handler.on_epoch_end(self.state)
 
         # Apply network edge decay
         if self.network is not None:
@@ -482,43 +498,20 @@ class Orchestrator:
             if s.agent_id != agent_id
         ]
 
-        # Build marketplace observation
-        available_bounties = []
-        active_bids = []
-        active_escrows = []
-        pending_bid_decisions = []
+        # Build marketplace observation via handler
+        available_bounties: List[Dict] = []
+        active_bids: List[Dict] = []
+        active_escrows: List[Dict] = []
+        pending_bid_decisions: List[Dict] = []
 
-        if self.marketplace is not None:
-            agent_rep = agent_state.reputation if agent_state else 0
-            available_bounties = [
-                b.to_dict()
-                for b in self.marketplace.get_open_bounties(
-                    current_epoch=self.state.current_epoch,
-                    min_reputation=agent_rep,
-                )
-                if b.poster_id != agent_id
-            ]
-
-            active_bids = [
-                b.to_dict()
-                for b in self.marketplace.get_agent_bids(agent_id)
-                if b.status.value == "pending"
-            ]
-
-            active_escrows = [
-                e.to_dict()
-                for e in self.marketplace.get_agent_escrows(agent_id)
-                if e.status == EscrowStatus.HELD
-            ]
-
-            # Bids on this agent's bounties awaiting decision
-            for bounty in self.marketplace.get_agent_bounties(agent_id):
-                if bounty.status.value == "open":
-                    for bid in self.marketplace.get_bids_for_bounty(bounty.bounty_id):
-                        if bid.status.value == "pending":
-                            bid_dict = bid.to_dict()
-                            bid_dict["bounty_reward"] = bounty.reward_amount
-                            pending_bid_decisions.append(bid_dict)
+        if self._marketplace_handler is not None:
+            mkt_obs = self._marketplace_handler.build_observation_fields(
+                agent_id, self.state,
+            )
+            available_bounties = mkt_obs["available_bounties"]
+            active_bids = mkt_obs["active_bids"]
+            active_escrows = mkt_obs["active_escrows"]
+            pending_bid_decisions = mkt_obs["pending_bid_decisions"]
 
         return Observation(
             agent_state=agent_state or AgentState(),
@@ -662,23 +655,42 @@ class Orchestrator:
                 return True
             return False
 
+        # Marketplace actions — delegate to handler
         elif action.action_type == ActionType.POST_BOUNTY:
-            return self._handle_post_bounty(action)
+            if self._marketplace_handler is None:
+                return False
+            return self._marketplace_handler.handle_post_bounty(
+                action, self.state,
+                enable_rate_limits=self.config.enable_rate_limits,
+            )
 
         elif action.action_type == ActionType.PLACE_BID:
-            return self._handle_place_bid(action)
+            if self._marketplace_handler is None:
+                return False
+            return self._marketplace_handler.handle_place_bid(
+                action, self.state,
+                enable_rate_limits=self.config.enable_rate_limits,
+            )
 
         elif action.action_type == ActionType.ACCEPT_BID:
-            return self._handle_accept_bid(action)
+            if self._marketplace_handler is None:
+                return False
+            return self._marketplace_handler.handle_accept_bid(action, self.state)
 
         elif action.action_type == ActionType.REJECT_BID:
-            return self._handle_reject_bid(action)
+            if self._marketplace_handler is None:
+                return False
+            return self._marketplace_handler.handle_reject_bid(action, self.state)
 
         elif action.action_type == ActionType.WITHDRAW_BID:
-            return self._handle_withdraw_bid(action)
+            if self._marketplace_handler is None:
+                return False
+            return self._marketplace_handler.handle_withdraw_bid(action)
 
         elif action.action_type == ActionType.FILE_DISPUTE:
-            return self._handle_file_dispute(action)
+            if self._marketplace_handler is None:
+                return False
+            return self._marketplace_handler.handle_file_dispute(action, self.state)
 
         return False
 
@@ -724,8 +736,10 @@ class Orchestrator:
         accepted: bool,
     ) -> None:
         """Complete an interaction and compute payoffs."""
-        # Create observables (simulated based on acceptance and agent types)
-        observables = self._generate_observables(proposal, accepted)
+        # Generate observables via the injectable generator
+        observables = self._observable_generator.generate(
+            proposal, accepted, self.state,
+        )
 
         # Compute v_hat and p
         v_hat, p = self.proxy_computer.compute_labels(observables)
@@ -842,63 +856,10 @@ class Orchestrator:
     ) -> ProxyObservables:
         """Generate observable signals for an interaction.
 
-        Observables are based on the initiator's agent type and modulated
-        by the initiator's current reputation.  This creates a feedback
-        loop: reputation decay degrades observable quality, which lowers
-        the soft label p, which in turn reduces payoffs and welfare.
+        Delegates to the injected ObservableGenerator.  Kept for
+        backwards compatibility with subclasses that override this.
         """
-        # Base observables depend on agent types
-        initiator_state = self.state.get_agent(proposal.initiator_id)
-        counterparty_state = self.state.get_agent(proposal.counterparty_id)
-
-        initiator_type = initiator_state.agent_type if initiator_state else AgentType.HONEST
-        counterparty_type = counterparty_state.agent_type if counterparty_state else AgentType.HONEST
-
-        # Generate observables based on agent type combination
-        if initiator_type == AgentType.HONEST:
-            task_progress = random.uniform(0.3, 0.8)
-            rework = random.randint(0, 1)
-            rejections = 0
-            misuse = 0
-            engagement = random.uniform(0.2, 0.6)
-        elif initiator_type == AgentType.OPPORTUNISTIC:
-            task_progress = random.uniform(0.1, 0.5)
-            rework = random.randint(0, 2)
-            rejections = random.randint(0, 1)
-            misuse = 0
-            engagement = random.uniform(-0.2, 0.3)
-        elif initiator_type == AgentType.DECEPTIVE:
-            task_progress = random.uniform(0.2, 0.6)  # Appears moderate
-            rework = random.randint(0, 2)
-            rejections = random.randint(0, 1)
-            misuse = 0
-            engagement = random.uniform(0.0, 0.4)
-        else:  # Adversarial
-            task_progress = random.uniform(-0.3, 0.2)
-            rework = random.randint(1, 3)
-            rejections = random.randint(1, 2)
-            misuse = random.randint(0, 1)
-            engagement = random.uniform(-0.5, -0.1)
-
-        # Modulate by initiator reputation: agents with higher reputation
-        # produce better observable signals.  Maps reputation from [-1, 1]
-        # to a factor in [0.5, 1.0] so the effect is meaningful but bounded.
-        rep = initiator_state.reputation if initiator_state else 0.0
-        rep_factor = 0.75 + 0.25 * max(min(rep, 1.0), -1.0)  # [0.5, 1.0]
-        task_progress *= rep_factor
-        engagement *= rep_factor
-
-        # Modify if not accepted
-        if not accepted:
-            engagement = min(engagement, 0.0)
-
-        return ProxyObservables(
-            task_progress_delta=task_progress,
-            rework_count=rework,
-            verifier_rejections=rejections,
-            tool_misuse_flags=misuse,
-            counterparty_engagement_delta=engagement,
-        )
+        return self._observable_generator.generate(proposal, accepted, self.state)
 
     def _update_reputation(self, agent_id: str, delta: float) -> None:
         """Update agent reputation."""
@@ -920,212 +881,8 @@ class Orchestrator:
         ))
 
     # =========================================================================
-    # Marketplace Action Handlers
+    # Marketplace Delegation (preserves public interface)
     # =========================================================================
-
-    def _handle_post_bounty(self, action: Action) -> bool:
-        """Handle POST_BOUNTY action."""
-        if self.marketplace is None:
-            return False
-
-        agent_id = action.agent_id
-        rate_limit = self.state.get_rate_limit_state(agent_id)
-
-        if self.config.enable_rate_limits and not rate_limit.can_post_bounty(self.state.rate_limits):
-            return False
-
-        reward_amount = action.metadata.get("reward_amount", 0)
-        min_reputation = action.metadata.get("min_reputation", 0.0)
-        deadline_epoch = action.metadata.get("deadline_epoch")
-
-        # Validate agent has enough resources
-        agent_state = self.state.get_agent(agent_id)
-        if not agent_state or agent_state.resources < reward_amount:
-            return False
-
-        try:
-            # Create task in pool
-            task = self.task_pool.create_task(
-                prompt=action.content or "Marketplace bounty task",
-                description=action.content or "Marketplace bounty task",
-                bounty=reward_amount,
-                min_reputation=min_reputation,
-                deadline_epoch=deadline_epoch,
-            )
-
-            bounty = self.marketplace.post_bounty(
-                poster_id=agent_id,
-                task_id=task.task_id,
-                reward_amount=reward_amount,
-                min_reputation=min_reputation,
-                deadline_epoch=deadline_epoch,
-                current_epoch=self.state.current_epoch,
-            )
-        except ValueError:
-            return False
-
-        # Deduct funds
-        agent_state.update_resources(-reward_amount)
-        rate_limit.record_bounty()
-
-        self._emit_event(Event(
-            event_type=EventType.BOUNTY_POSTED,
-            agent_id=agent_id,
-            payload={
-                "bounty_id": bounty.bounty_id,
-                "task_id": task.task_id,
-                "reward_amount": reward_amount,
-            },
-            epoch=self.state.current_epoch,
-            step=self.state.current_step,
-        ))
-
-        return True
-
-    def _handle_place_bid(self, action: Action) -> bool:
-        """Handle PLACE_BID action."""
-        if self.marketplace is None:
-            return False
-
-        agent_id = action.agent_id
-        rate_limit = self.state.get_rate_limit_state(agent_id)
-
-        if self.config.enable_rate_limits and not rate_limit.can_place_bid(self.state.rate_limits):
-            return False
-
-        bounty_id = action.target_id
-        bid_amount = action.metadata.get("bid_amount", 0)
-
-        bid = self.marketplace.place_bid(
-            bounty_id=bounty_id,
-            bidder_id=agent_id,
-            bid_amount=bid_amount,
-            message=action.content,
-        )
-
-        if bid is None:
-            return False
-
-        rate_limit.record_bid()
-
-        self._emit_event(Event(
-            event_type=EventType.BID_PLACED,
-            agent_id=agent_id,
-            payload={
-                "bid_id": bid.bid_id,
-                "bounty_id": bounty_id,
-                "bid_amount": bid_amount,
-            },
-            epoch=self.state.current_epoch,
-            step=self.state.current_step,
-        ))
-
-        return True
-
-    def _handle_accept_bid(self, action: Action) -> bool:
-        """Handle ACCEPT_BID action."""
-        if self.marketplace is None:
-            return False
-
-        agent_id = action.agent_id
-        bounty_id = action.target_id
-        bid_id = action.metadata.get("bid_id", "")
-
-        escrow = self.marketplace.accept_bid(
-            bounty_id=bounty_id,
-            bid_id=bid_id,
-            poster_id=agent_id,
-        )
-
-        if escrow is None:
-            return False
-
-        # Claim the task for the worker
-        bounty = self.marketplace.get_bounty(bounty_id)
-        if bounty:
-            worker_state = self.state.get_agent(escrow.worker_id)
-            if worker_state:
-                self.task_pool.claim_task(
-                    task_id=bounty.task_id,
-                    agent_id=escrow.worker_id,
-                    agent_reputation=worker_state.reputation,
-                )
-
-        self._emit_event(Event(
-            event_type=EventType.ESCROW_CREATED,
-            agent_id=agent_id,
-            payload={
-                "escrow_id": escrow.escrow_id,
-                "bounty_id": bounty_id,
-                "bid_id": bid_id,
-                "worker_id": escrow.worker_id,
-                "amount": escrow.amount,
-            },
-            epoch=self.state.current_epoch,
-            step=self.state.current_step,
-        ))
-
-        return True
-
-    def _handle_reject_bid(self, action: Action) -> bool:
-        """Handle REJECT_BID action."""
-        if self.marketplace is None:
-            return False
-
-        success = self.marketplace.reject_bid(
-            bid_id=action.target_id,
-            poster_id=action.agent_id,
-        )
-
-        if success:
-            self._emit_event(Event(
-                event_type=EventType.BID_REJECTED,
-                agent_id=action.agent_id,
-                payload={"bid_id": action.target_id},
-                epoch=self.state.current_epoch,
-                step=self.state.current_step,
-            ))
-
-        return success
-
-    def _handle_withdraw_bid(self, action: Action) -> bool:
-        """Handle WITHDRAW_BID action."""
-        if self.marketplace is None:
-            return False
-
-        return self.marketplace.withdraw_bid(
-            bid_id=action.target_id,
-            bidder_id=action.agent_id,
-        )
-
-    def _handle_file_dispute(self, action: Action) -> bool:
-        """Handle FILE_DISPUTE action."""
-        if self.marketplace is None:
-            return False
-
-        dispute = self.marketplace.file_dispute(
-            escrow_id=action.target_id,
-            filed_by=action.agent_id,
-            reason=action.content,
-            current_epoch=self.state.current_epoch,
-        )
-
-        if dispute is None:
-            return False
-
-        self._emit_event(Event(
-            event_type=EventType.DISPUTE_FILED,
-            agent_id=action.agent_id,
-            payload={
-                "dispute_id": dispute.dispute_id,
-                "escrow_id": action.target_id,
-                "reason": action.content,
-            },
-            epoch=self.state.current_epoch,
-            step=self.state.current_step,
-        ))
-
-        return True
 
     def settle_marketplace_task(
         self,
@@ -1136,107 +893,17 @@ class Orchestrator:
         """
         Settle a marketplace bounty/escrow after task completion.
 
-        Called after VERIFY_OUTPUT succeeds. Checks if the task has
-        an associated bounty/escrow and settles it.
-
-        Args:
-            task_id: The completed task ID
-            success: Whether the task was completed successfully
-            quality_score: Quality score from verifier
-
-        Returns:
-            Settlement details, or None if no marketplace bounty
+        Delegates to MarketplaceHandler.
         """
-        if self.marketplace is None:
+        if self._marketplace_handler is None:
             return None
-
-        bounty = self.marketplace.get_bounty_for_task(task_id)
-        if not bounty or not bounty.escrow_id:
-            return None
-
-        settlement = self.marketplace.settle_escrow(
-            escrow_id=bounty.escrow_id,
+        return self._marketplace_handler.settle_task(
+            task_id=task_id,
             success=success,
+            state=self.state,
+            governance_engine=self.governance_engine,
             quality_score=quality_score,
         )
-
-        if not settlement:
-            return None
-
-        # Apply resource changes
-        if success:
-            worker_id = settlement["worker_id"]
-            poster_id = settlement["poster_id"]
-            released = settlement["released_to_worker"]
-            refund_to_poster = settlement.get("refund_to_poster", 0.0)
-
-            worker_state = self.state.get_agent(worker_id)
-            poster_state = self.state.get_agent(poster_id)
-
-            if worker_state:
-                worker_state.update_resources(released)
-            if poster_state and refund_to_poster > 0:
-                poster_state.update_resources(refund_to_poster)
-
-            # Create SoftInteraction for governance tax
-            interaction = SoftInteraction(
-                initiator=poster_id,
-                counterparty=worker_id,
-                interaction_type=InteractionType.TRADE,
-                accepted=True,
-                task_progress_delta=quality_score,
-                rework_count=0,
-                verifier_rejections=0,
-                tool_misuse_flags=0,
-                counterparty_engagement_delta=quality_score * 0.5,
-                v_hat=quality_score * 2 - 1,  # Map [0,1] to [-1,1]
-                p=quality_score,
-                tau=released,
-            )
-
-            # Apply governance taxes
-            if self.governance_engine:
-                gov_effect = self.governance_engine.apply_interaction(
-                    interaction, self.state
-                )
-                # Deduct tax costs from settlement parties
-                if gov_effect.cost_a > 0:
-                    if poster_state:
-                        poster_state.update_resources(-gov_effect.cost_a)
-                if gov_effect.cost_b > 0:
-                    if worker_state:
-                        worker_state.update_resources(-gov_effect.cost_b)
-
-            self._emit_event(Event(
-                event_type=EventType.ESCROW_RELEASED,
-                payload={
-                    "escrow_id": bounty.escrow_id,
-                    "worker_id": worker_id,
-                    "amount": released,
-                    "quality_score": quality_score,
-                },
-                epoch=self.state.current_epoch,
-                step=self.state.current_step,
-            ))
-        else:
-            poster_id = settlement["poster_id"]
-            refunded = settlement["refunded_to_poster"]
-            poster_state = self.state.get_agent(poster_id)
-            if poster_state:
-                poster_state.update_resources(refunded)
-
-            self._emit_event(Event(
-                event_type=EventType.ESCROW_REFUNDED,
-                payload={
-                    "escrow_id": bounty.escrow_id,
-                    "poster_id": poster_id,
-                    "amount": refunded,
-                },
-                epoch=self.state.current_epoch,
-                step=self.state.current_step,
-            ))
-
-        return settlement
 
     def _apply_governance_effect(self, effect: GovernanceEffect) -> None:
         """Apply governance effects to state (freeze/unfreeze, reputation, resources)."""
@@ -1763,7 +1430,7 @@ class Orchestrator:
         return metrics
 
     # =========================================================================
-    # Boundary Support
+    # Boundary Delegation (preserves public interface)
     # =========================================================================
 
     def request_external_interaction(
@@ -1776,236 +1443,49 @@ class Orchestrator:
         """
         Request an interaction with an external entity.
 
-        This is the main interface for agents to interact with the external world.
-        The request goes through policy evaluation and leakage detection.
-
-        Args:
-            agent_id: The agent making the request
-            entity_id: The external entity to interact with
-            action: The type of action (call, query, send, etc.)
-            payload: Optional data to send
-
-        Returns:
-            Result of the interaction (or denial information)
+        Delegates to BoundaryHandler.
         """
-        if self.external_world is None:
+        if self._boundary_handler is None:
             return {"success": False, "error": "Boundaries not enabled"}
-
-        payload = payload or {}
-        metadata = {
-            "sensitivity": payload.get("sensitivity", 0.0),
-            "action": action,
-        }
-
-        # Check policy
-        if self.policy_engine is not None:
-            decision = self.policy_engine.evaluate(
-                agent_id=agent_id,
-                direction="outbound",
-                flow_type=action,
-                content=payload,
-                metadata=metadata,
-            )
-
-            if not decision.allowed:
-                if self.external_world:
-                    self.external_world.blocked_attempts += 1
-                return {
-                    "success": False,
-                    "blocked": True,
-                    "reason": decision.reason,
-                    "policy": decision.policy_name,
-                }
-
-        # Check for leakage
-        if self.leakage_detector is not None:
-            leakage_events = self.leakage_detector.scan(
-                content=payload,
-                agent_id=agent_id,
-                destination_id=entity_id,
-            )
-            if leakage_events:
-                # Log but don't necessarily block
-                for event in leakage_events:
-                    if event.severity >= 0.9:
-                        return {
-                            "success": False,
-                            "blocked": True,
-                            "reason": f"Critical leakage detected: {event.description}",
-                            "leakage_type": event.leakage_type.value,
-                        }
-
-        # Record outbound flow
-        if self.flow_tracker is not None:
-            flow = InformationFlow.create(
-                direction=FlowDirection.OUTBOUND,
-                flow_type=FlowType.QUERY,
-                source_id=agent_id,
-                destination_id=entity_id,
-                content=payload,
-                sensitivity_score=metadata.get("sensitivity", 0.0),
-            )
-            self.flow_tracker.record_flow(flow)
-
-        # Execute the interaction
-        result = self.external_world.interact(
+        return self._boundary_handler.request_external_interaction(
             agent_id=agent_id,
             entity_id=entity_id,
             action=action,
             payload=payload,
-            rng=random.Random(self.config.seed) if self.config.seed else None,
         )
-
-        # Record inbound flow if successful
-        if result.get("success") and self.flow_tracker is not None:
-            flow = InformationFlow.create(
-                direction=FlowDirection.INBOUND,
-                flow_type=FlowType.RESPONSE,
-                source_id=entity_id,
-                destination_id=agent_id,
-                content=result.get("data", {}),
-                sensitivity_score=result.get("sensitivity", 0.0) if isinstance(result.get("sensitivity"), (int, float)) else 0.0,
-            )
-            self.flow_tracker.record_flow(flow)
-
-        return result
 
     def get_external_entities(
         self,
         entity_type: Optional[str] = None,
         min_trust: float = 0.0,
     ) -> List[Dict[str, Any]]:
-        """
-        Get available external entities.
-
-        Args:
-            entity_type: Filter by entity type
-            min_trust: Minimum trust level
-
-        Returns:
-            List of entity information dictionaries
-        """
-        if self.external_world is None:
+        """Get available external entities. Delegates to BoundaryHandler."""
+        if self._boundary_handler is None:
             return []
-
-        from src.boundaries.external_world import ExternalEntityType
-
-        type_filter = None
-        if entity_type:
-            try:
-                type_filter = ExternalEntityType(entity_type)
-            except ValueError:
-                pass
-
-        entities = self.external_world.list_entities(
-            entity_type=type_filter,
+        return self._boundary_handler.get_external_entities(
+            entity_type=entity_type,
             min_trust=min_trust,
         )
 
-        return [
-            {
-                "entity_id": e.entity_id,
-                "name": e.name,
-                "type": e.entity_type.value,
-                "trust_level": e.trust_level,
-            }
-            for e in entities
-        ]
-
     def add_external_entity(self, entity: ExternalEntity) -> None:
-        """
-        Add an external entity to the world.
-
-        Args:
-            entity: The entity to add
-        """
-        if self.external_world is not None:
-            self.external_world.add_entity(entity)
+        """Add an external entity to the world. Delegates to BoundaryHandler."""
+        if self._boundary_handler is not None:
+            self._boundary_handler.add_external_entity(entity)
 
     def get_boundary_metrics(self) -> Dict[str, Any]:
-        """
-        Get comprehensive boundary metrics.
-
-        Returns:
-            Dictionary with boundary statistics
-        """
-        metrics: Dict[str, Any] = {
-            "boundaries_enabled": self.external_world is not None,
-        }
-
-        if self.external_world is None:
-            return metrics
-
-        # External world stats
-        metrics["external_world"] = self.external_world.get_interaction_stats()
-
-        # Flow tracker stats
-        if self.flow_tracker is not None:
-            summary = self.flow_tracker.get_summary()
-            metrics["flows"] = {
-                "total": summary.total_flows,
-                "inbound": summary.inbound_flows,
-                "outbound": summary.outbound_flows,
-                "bytes_in": summary.total_bytes_in,
-                "bytes_out": summary.total_bytes_out,
-                "blocked": summary.blocked_flows,
-                "sensitive": summary.sensitive_flows,
-                "avg_sensitivity": summary.avg_sensitivity,
-            }
-
-            # Anomalies
-            anomalies = self.flow_tracker.detect_anomalies()
-            metrics["anomalies"] = anomalies
-
-        # Policy stats
-        if self.policy_engine is not None:
-            metrics["policies"] = self.policy_engine.get_statistics()
-
-        # Leakage stats
-        if self.leakage_detector is not None:
-            report = self.leakage_detector.generate_report()
-            metrics["leakage"] = {
-                "total_events": report.total_events,
-                "blocked": report.blocked_count,
-                "by_type": report.events_by_type,
-                "avg_severity": report.avg_severity,
-                "max_severity": report.max_severity,
-                "recommendations": report.recommendations,
-            }
-
-        return metrics
+        """Get comprehensive boundary metrics. Delegates to BoundaryHandler."""
+        if self._boundary_handler is None:
+            return {"boundaries_enabled": False}
+        return self._boundary_handler.get_metrics()
 
     def get_agent_boundary_activity(self, agent_id: str) -> Dict[str, Any]:
-        """
-        Get boundary activity for a specific agent.
-
-        Args:
-            agent_id: The agent to query
-
-        Returns:
-            Dictionary with agent's boundary activity
-        """
-        activity: Dict[str, Any] = {"agent_id": agent_id}
-
-        if self.flow_tracker is not None:
-            activity["flows"] = self.flow_tracker.get_agent_flows(agent_id)
-
-        if self.leakage_detector is not None:
-            events = self.leakage_detector.get_events(agent_id=agent_id)
-            activity["leakage_events"] = len(events)
-            activity["leakage_severity"] = (
-                max(e.severity for e in events) if events else 0.0
-            )
-
-        return activity
+        """Get boundary activity for a specific agent. Delegates to BoundaryHandler."""
+        if self._boundary_handler is None:
+            return {"agent_id": agent_id}
+        return self._boundary_handler.get_agent_activity(agent_id)
 
     def get_leakage_report(self) -> Optional[LeakageReport]:
-        """
-        Get the full leakage detection report.
-
-        Returns:
-            LeakageReport if boundaries enabled, None otherwise
-        """
-        if self.leakage_detector is None:
+        """Get the full leakage detection report. Delegates to BoundaryHandler."""
+        if self._boundary_handler is None:
             return None
-        return self.leakage_detector.generate_report()
+        return self._boundary_handler.get_leakage_report()
