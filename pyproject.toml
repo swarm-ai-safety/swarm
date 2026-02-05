@@ -66,6 +66,9 @@ Repository = "https://github.com/distributional-agi-safety/sandbox"
 where = ["."]
 include = ["src*"]
 
+[tool.setuptools.package-data]
+src = ["py.typed"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
