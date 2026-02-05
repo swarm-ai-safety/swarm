@@ -49,7 +49,7 @@ class EvasionMetrics:
         """Average number of epochs between action and detection."""
         if not self.detection_epochs:
             return float("inf")
-        return np.mean(self.detection_epochs)
+        return float(np.mean(self.detection_epochs))
 
     @property
     def damage_ratio(self) -> float:
@@ -191,13 +191,13 @@ def compute_damage_before_detection(
     """
     if first_detection_epoch is None:
         # Never detected - all damage counts
-        return sum(a.get("damage", 0.0) for a in malicious_actions)
+        return float(sum(a.get("damage", 0.0) for a in malicious_actions))
 
-    return sum(
+    return float(sum(
         a.get("damage", 0.0)
         for a in malicious_actions
         if a.get("epoch", 0) < first_detection_epoch
-    )
+    ))
 
 
 @dataclass

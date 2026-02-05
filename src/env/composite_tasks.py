@@ -300,10 +300,10 @@ class CompositeTask:
             )
             self.final_quality = weighted_quality / total_weight
         else:
-            self.final_quality = np.mean([
+            self.final_quality = float(np.mean([
                 st.quality_score for st in self.subtasks
                 if st.quality_score is not None
-            ])
+            ]))
 
         # Compute emergent capability metrics
         self._compute_emergent_metrics()
@@ -313,7 +313,7 @@ class CompositeTask:
         # Coordination score: How well did agents coordinate?
         # Based on minimal overlap and efficient dependency resolution
         total_agents = len(self.participating_agents)
-        subtasks_per_agent = {}
+        subtasks_per_agent: Dict[str, int] = {}
         for st in self.subtasks:
             if st.assigned_to:
                 subtasks_per_agent[st.assigned_to] = (
@@ -341,18 +341,18 @@ class CompositeTask:
         for st in self.subtasks:
             if st.dependencies and st.quality_score:
                 # Get average quality of dependencies
-                dep_qualities = [
-                    self.get_subtask(dep_id).quality_score
-                    for dep_id in st.dependencies
-                    if self.get_subtask(dep_id) and self.get_subtask(dep_id).quality_score
-                ]
+                dep_qualities: List[float] = []
+                for dep_id in st.dependencies:
+                    dep = self.get_subtask(dep_id)
+                    if dep is not None and dep.quality_score is not None:
+                        dep_qualities.append(dep.quality_score)
                 if dep_qualities:
                     # Did this task improve on dependencies?
-                    improvement = st.quality_score - np.mean(dep_qualities)
+                    improvement = st.quality_score - float(np.mean(dep_qualities))
                     dependent_qualities.append(improvement)
 
         if dependent_qualities:
-            self.information_flow_score = max(0.0, min(1.0, np.mean(dependent_qualities) + 0.5))
+            self.information_flow_score = float(max(0.0, min(1.0, float(np.mean(dependent_qualities)) + 0.5)))
 
     def fail_task(self, reason: str = "") -> None:
         """Mark composite task as failed."""
@@ -480,7 +480,7 @@ class CompositeTaskPool:
 
     def get_stats(self) -> Dict:
         """Get pool statistics."""
-        status_counts = {}
+        status_counts: Dict[str, int] = {}
         for task in self._tasks.values():
             status = task.status.value
             status_counts[status] = status_counts.get(status, 0) + 1

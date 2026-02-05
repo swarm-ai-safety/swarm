@@ -43,7 +43,7 @@ class VerifierRole:
 
     def can_verify(self) -> bool:
         """Check if verifier can take on verification tasks."""
-        return len(self._pending_verifications) < self._verifier_config["max_verifications_per_step"]
+        return bool(len(self._pending_verifications) < self._verifier_config["max_verifications_per_step"])
 
     def queue_verification(
         self,

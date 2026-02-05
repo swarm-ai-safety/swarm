@@ -163,22 +163,22 @@ class CapabilityAnalyzer:
 
         qualities = [t.final_quality for t in self._completed_tasks if t.final_quality]
         if qualities:
-            metrics.avg_final_quality = np.mean(qualities)
+            metrics.avg_final_quality = float(np.mean(qualities))
 
         # Coordination metrics (from task-level scores)
-        metrics.avg_coordination_score = np.mean([
+        metrics.avg_coordination_score = float(np.mean([
             t.coordination_score for t in self._completed_tasks
-        ])
-        metrics.avg_synergy_score = np.mean([
+        ]))
+        metrics.avg_synergy_score = float(np.mean([
             t.synergy_score for t in self._completed_tasks
-        ])
-        metrics.avg_information_flow = np.mean([
+        ]))
+        metrics.avg_information_flow = float(np.mean([
             t.information_flow_score for t in self._completed_tasks
-        ])
+        ]))
 
         # Team formation metrics
         team_sizes = [len(t.participating_agents) for t in self._completed_tasks]
-        metrics.avg_team_size = np.mean(team_sizes)
+        metrics.avg_team_size = float(np.mean(team_sizes))
 
         # Capability coverage
         coverage_scores = []
@@ -192,7 +192,7 @@ class CapabilityAnalyzer:
                 coverage = len(team_caps & task.required_capabilities) / len(task.required_capabilities)
                 coverage_scores.append(coverage)
         if coverage_scores:
-            metrics.capability_coverage = np.mean(coverage_scores)
+            metrics.capability_coverage = float(np.mean(coverage_scores))
 
         # Efficiency metrics
         metrics.task_efficiency = self._compute_task_efficiency()
@@ -212,7 +212,7 @@ class CapabilityAnalyzer:
             total_steps = sum(st.actual_steps for st in task.subtasks)
             if total_steps > 0 and task.final_quality:
                 efficiencies.append(task.final_quality / total_steps)
-        return np.mean(efficiencies) if efficiencies else 0.0
+        return float(np.mean(efficiencies)) if efficiencies else 0.0
 
     def _compute_parallelization(self) -> float:
         """Compute how much work was done in parallel."""
@@ -229,11 +229,11 @@ class CapabilityAnalyzer:
                     avg_depth = np.mean(list(depths.values()))
                     # Normalize: 0 = sequential, 1 = fully parallel
                     parallel_scores.append(1.0 - (avg_depth / (n_subtasks - 1)))
-        return np.mean(parallel_scores) if parallel_scores else 0.0
+        return float(np.mean(parallel_scores)) if parallel_scores else 0.0
 
     def _compute_subtask_depths(self, task: CompositeTask) -> Dict[str, int]:
         """Compute dependency depth for each subtask."""
-        depths = {}
+        depths: Dict[str, int] = {}
 
         def get_depth(subtask_id: str) -> int:
             if subtask_id in depths:
@@ -347,11 +347,11 @@ class CapabilityAnalyzer:
                     avg_dep_quality = np.mean(dep_qualities)
                     improvement = subtask.quality_score - avg_dep_quality
                     # Normalize to [-1, 1] range approximately
-                    improvements.append(max(-1, min(1, improvement)))
+                    improvements.append(max(-1, min(1, float(improvement))))
 
         if improvements:
             # Transform to [0, 1] where 0.5 = no change, 1 = improvement
-            return 0.5 + 0.5 * np.mean(improvements)
+            return 0.5 + 0.5 * float(np.mean(improvements))
         return 0.5
 
 
@@ -428,8 +428,8 @@ def analyze_capability_distribution(
     return {
         "n_agents": n_agents,
         "n_capability_types": len(cap_counts),
-        "avg_capabilities_per_agent": caps_per_agent,
-        "avg_agents_per_capability": agents_per_cap,
+        "avg_capabilities_per_agent": float(caps_per_agent),
+        "avg_agents_per_capability": float(agents_per_cap),
         "capability_coverage": coverage,
         "capability_balance": balance,
     }

@@ -104,7 +104,7 @@ class DeceptiveAgent(BaseAgent):
 
         # Claim appropriate tasks
         if observation.can_claim_task and observation.available_tasks:
-            task = self._select_trust_building_task(observation.available_tasks)
+            task = self._select_trust_building_task(observation.available_tasks) or {}
             if task:
                 return self.create_claim_task_action(task["task_id"])
 
@@ -163,7 +163,7 @@ class DeceptiveAgent(BaseAgent):
 
         # In trust-building phase, accept most proposals
         if count < self.trust_building_phase_length:
-            return random.random() < self.facade_probability
+            return bool(random.random() < self.facade_probability)
 
         # After trust is built, be more selective
         trust = self._trust_scores.get(initiator_id, 0.5)

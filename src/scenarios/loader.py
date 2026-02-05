@@ -410,7 +410,7 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
                 agent_id = f"{agent_type}_{counters[agent_type]}"
 
                 # Create agent with optional config
-                agent = agent_class(agent_id=agent_id)
+                agent = agent_class(agent_id=agent_id)  # type: ignore[call-arg]
                 agents.append(agent)
 
         else:

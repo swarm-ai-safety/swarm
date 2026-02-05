@@ -140,7 +140,7 @@ class HonestAgent(BaseAgent):
         # Weight trust into decision
         effective_score = trust * self.trust_weight + 0.5 * (1 - self.trust_weight)
 
-        return effective_score >= threshold
+        return bool(effective_score >= threshold)
 
     def propose_interaction(
         self,
@@ -220,7 +220,7 @@ class HonestAgent(BaseAgent):
         trust = self.compute_counterparty_trust(initiator_id)
 
         # Accept if trust is above threshold
-        return trust >= self.acceptance_threshold - 0.1
+        return bool(trust >= self.acceptance_threshold - 0.1)
 
     def _select_task(self, tasks: List[Dict], observation: Observation) -> Optional[Dict]:
         """Select the best task to claim."""

@@ -239,7 +239,7 @@ class AdversarialAgent(BaseAgent):
             if targets:
                 target = random.choice(targets)
                 return self.create_propose_action(
-                    counterparty_id=target,
+                    counterparty_id=target or "",
                     interaction_type=InteractionType.TRADE,
                     content="You won't want to miss this opportunity.",
                 )

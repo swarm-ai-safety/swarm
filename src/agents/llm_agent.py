@@ -332,7 +332,8 @@ class LLMAgent(BaseAgent):
                 raise ValueError("No JSON found in response")
 
         try:
-            return json.loads(json_str)
+            result: Dict[str, Any] = json.loads(json_str)
+            return result
         except json.JSONDecodeError as e:
             raise ValueError(f"Invalid JSON: {e}") from e
 

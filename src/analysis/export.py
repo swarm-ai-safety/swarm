@@ -302,7 +302,7 @@ def load_from_json(
 
     # Load agent snapshots
     for record in data.get("agent_snapshots", []):
-        snapshot = AgentSnapshot(
+        agent_snap = AgentSnapshot(
             agent_id=record["agent_id"],
             epoch=record["epoch"],
             reputation=record.get("reputation", 0.0),
@@ -315,7 +315,7 @@ def load_from_json(
             is_frozen=record.get("is_frozen", False),
             is_quarantined=record.get("is_quarantined", False),
         )
-        history.add_agent_snapshot(snapshot)
+        history.add_agent_snapshot(agent_snap)
 
     return history
 
@@ -372,14 +372,14 @@ def load_from_csv(
         agents_df = pd.read_csv(agents_path)
 
         for _, row in agents_df.iterrows():
-            snapshot = AgentSnapshot(
+            agent_snap = AgentSnapshot(
                 agent_id=str(row["agent_id"]),
                 epoch=int(row.get("epoch", 0)),
                 reputation=float(row.get("reputation", 0.0)),
                 resources=float(row.get("resources", 100.0)),
                 total_payoff=float(row.get("total_payoff", 0.0)),
             )
-            history.add_agent_snapshot(snapshot)
+            history.add_agent_snapshot(agent_snap)
 
     return history
 

@@ -510,7 +510,7 @@ class PolicyEngine:
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get policy evaluation statistics."""
-        stats = {
+        stats: Dict[str, Any] = {
             "total_policies": len(self.policies),
             "active_policies": sum(1 for p in self.policies if p.enabled),
             "total_evaluations": len(self.evaluation_history),

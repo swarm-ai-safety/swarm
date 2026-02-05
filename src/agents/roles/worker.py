@@ -42,7 +42,7 @@ class WorkerRole:
 
     def can_work(self) -> bool:
         """Check if worker can take on more work."""
-        return len(self._work_queue) < self._worker_config["max_concurrent_tasks"]
+        return bool(len(self._work_queue) < self._worker_config["max_concurrent_tasks"])
 
     def accept_work(
         self,
@@ -114,7 +114,7 @@ class WorkerRole:
         if not progress:
             return False
 
-        return progress.rework_count >= self._worker_config["help_request_threshold"]
+        return bool(progress.rework_count >= self._worker_config["help_request_threshold"])
 
     def complete_task(self, task_id: str) -> Optional[WorkProgress]:
         """

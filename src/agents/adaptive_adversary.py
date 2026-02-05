@@ -278,7 +278,7 @@ class AdaptiveAdversary(BaseAgent):
             return True
 
         # Low resources - be careful
-        if self.state.resources < 20:
+        if observation.agent_state.resources < 20:
             return True
 
         # Cooldown active
@@ -302,7 +302,7 @@ class AdaptiveAdversary(BaseAgent):
             popular = max(observation.visible_posts, key=lambda p: p.get("votes", 0))
             return Action(
                 action_type=ActionType.VOTE,
-                target_id=popular.get("post_id"),
+                target_id=popular.get("post_id") or "",
                 vote_direction=1,  # Upvote
             )
 
@@ -312,7 +312,7 @@ class AdaptiveAdversary(BaseAgent):
     def _act_reputation_farming(self, observation: Observation) -> Action:
         """Build reputation through legitimate-looking activity."""
         # In early phase, act completely honestly
-        if self.state.reputation < self.reputation_threshold:
+        if observation.agent_state.reputation < self.reputation_threshold:
             self.in_reputation_building_phase = True
 
             # Collaborate with honest agents
@@ -325,7 +325,7 @@ class AdaptiveAdversary(BaseAgent):
                 target = random.choice(honest_agents)
                 return Action(
                     action_type=ActionType.PROPOSE_INTERACTION,
-                    target_id=target.get("agent_id"),
+                    target_id=target.get("agent_id") or "",
                     content="Let's work together on this task.",
                 )
 
@@ -351,7 +351,7 @@ class AdaptiveAdversary(BaseAgent):
             ally = random.choice(allies)
             return Action(
                 action_type=ActionType.PROPOSE_INTERACTION,
-                target_id=ally.get("agent_id"),
+                target_id=ally.get("agent_id") or "",
                 content="Internal coordination.",
             )
 
@@ -387,7 +387,7 @@ class AdaptiveAdversary(BaseAgent):
             target = random.choice(honest_agents)
             return Action(
                 action_type=ActionType.PROPOSE_INTERACTION,
-                target_id=target.get("agent_id"),
+                target_id=target.get("agent_id") or "",
                 content="Would you like to collaborate?",
             )
 
@@ -400,7 +400,7 @@ class AdaptiveAdversary(BaseAgent):
     def _act_threshold_dancing(self, observation: Observation) -> Action:
         """Stay just below detection thresholds."""
         # Calculate how much "budget" we have before detection
-        current_toxicity = getattr(self.state, "avg_toxicity", 0.0)
+        current_toxicity = getattr(observation.agent_state, "avg_toxicity", 0.0)
         threshold = self.memory.estimated_toxicity_threshold
 
         room = threshold - current_toxicity
@@ -420,7 +420,7 @@ class AdaptiveAdversary(BaseAgent):
         # - Good targets available
 
         good_timing = (
-            self.state.reputation > 3.0
+            observation.agent_state.reputation > 3.0
             and self.memory.epochs_since_detection > 3
             and len(self.memory.vulnerable_targets) > 0
         )
@@ -437,7 +437,7 @@ class AdaptiveAdversary(BaseAgent):
                 self.attack_cooldown = 3
                 return Action(
                     action_type=ActionType.PROPOSE_INTERACTION,
-                    target_id=target.get("agent_id"),
+                    target_id=target.get("agent_id") or "",
                     content="Special opportunity for collaboration.",
                 )
 
@@ -491,7 +491,7 @@ class AdaptiveAdversary(BaseAgent):
             target = random.choice(targets)
             return Action(
                 action_type=ActionType.PROPOSE_INTERACTION,
-                target_id=target.get("agent_id"),
+                target_id=target.get("agent_id") or "",
                 content="Interested in collaborating?",
             )
 
