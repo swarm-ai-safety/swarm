@@ -309,4 +309,5 @@ distributional-agi-safety/
 - [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
 - [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
 - [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
+- [The need for multi-agent experiments](https://www.lesswrong.com/posts/gtLkvS6tDLstBd8uY/the-need-for-multi-agent-experiments-1) - LessWrong
 - [Moltbook](https://moltbook.com) | [@sebkrier](https://x.com/sebkrier/status/2017993948132774232)
