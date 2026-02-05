@@ -1,0 +1,218 @@
+"""CLI entry point for the distributional-agi-safety framework.
+
+Usage:
+    python -m src run scenarios/baseline.yaml
+    python -m src run scenarios/baseline.yaml --seed 42 --epochs 20
+    python -m src run scenarios/baseline.yaml --export-json results.json
+    python -m src run scenarios/baseline.yaml --export-csv output/
+    python -m src list
+"""
+
+import argparse
+import sys
+from pathlib import Path
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    """Run a simulation from a YAML scenario file."""
+    from src.scenarios.loader import build_orchestrator, load_scenario
+
+    scenario_path = Path(args.scenario)
+    if not scenario_path.exists():
+        print(f"Error: scenario file not found: {scenario_path}", file=sys.stderr)
+        return 1
+
+    # Load scenario
+    scenario = load_scenario(scenario_path)
+
+    # Apply CLI overrides
+    if args.seed is not None:
+        scenario.orchestrator_config.seed = args.seed
+    if args.epochs is not None:
+        scenario.orchestrator_config.n_epochs = args.epochs
+    if args.steps is not None:
+        scenario.orchestrator_config.steps_per_epoch = args.steps
+
+    if not args.quiet:
+        print("=" * 60)
+        print("Distributional AGI Safety Sandbox")
+        print("=" * 60)
+        print(f"Scenario:    {scenario.scenario_id}")
+        print(f"Description: {scenario.description}")
+        print(f"Epochs:      {scenario.orchestrator_config.n_epochs}")
+        print(f"Steps/epoch: {scenario.orchestrator_config.steps_per_epoch}")
+        print(f"Seed:        {scenario.orchestrator_config.seed}")
+        print()
+
+    # Build and run
+    orchestrator = build_orchestrator(scenario)
+
+    if not args.quiet:
+        print(f"Agents: {len(orchestrator.get_all_agents())}")
+        for agent in orchestrator.get_all_agents():
+            print(f"  - {agent.agent_id} ({agent.agent_type.value})")
+        print()
+        print("Running simulation...")
+        print("-" * 60)
+
+    metrics_history = orchestrator.run()
+
+    # Print results
+    if not args.quiet:
+        print()
+        print(f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} {'Welfare':<10}")
+        print("-" * 60)
+        for m in metrics_history:
+            print(
+                f"{m.epoch:<6} "
+                f"{m.total_interactions:<13} "
+                f"{m.accepted_interactions:<10} "
+                f"{m.toxicity_rate:<10.4f} "
+                f"{m.total_welfare:<10.2f}"
+            )
+        print("-" * 60)
+        print()
+
+    # Summary
+    if metrics_history:
+        total_interactions = sum(m.total_interactions for m in metrics_history)
+        total_accepted = sum(m.accepted_interactions for m in metrics_history)
+        avg_toxicity = sum(m.toxicity_rate for m in metrics_history) / len(metrics_history)
+
+        if not args.quiet:
+            print(f"Total interactions: {total_interactions}")
+            print(f"Accepted:          {total_accepted}")
+            print(f"Avg toxicity:      {avg_toxicity:.4f}")
+            print(f"Final welfare:     {metrics_history[-1].total_welfare:.2f}")
+            print()
+
+    # Export if requested
+    if args.export_json or args.export_csv:
+        from src.analysis.aggregation import EpochSnapshot, SimulationHistory
+
+        history = SimulationHistory(
+            simulation_id=scenario.scenario_id,
+            n_epochs=scenario.orchestrator_config.n_epochs,
+            steps_per_epoch=scenario.orchestrator_config.steps_per_epoch,
+            n_agents=len(orchestrator.get_all_agents()),
+            seed=scenario.orchestrator_config.seed,
+        )
+
+        for m in metrics_history:
+            snapshot = EpochSnapshot(
+                epoch=m.epoch,
+                total_interactions=m.total_interactions,
+                accepted_interactions=m.accepted_interactions,
+                rejected_interactions=m.total_interactions - m.accepted_interactions,
+                toxicity_rate=m.toxicity_rate,
+                quality_gap=m.quality_gap,
+                total_welfare=m.total_welfare,
+                avg_payoff=m.avg_payoff,
+                n_agents=len(orchestrator.get_all_agents()),
+            )
+            history.add_epoch_snapshot(snapshot)
+
+        if args.export_json:
+            from src.analysis.export import export_to_json
+            path = export_to_json(history, args.export_json)
+            print(f"Exported JSON: {path}")
+
+        if args.export_csv:
+            from src.analysis.export import export_to_csv
+            paths = export_to_csv(history, args.export_csv, prefix=scenario.scenario_id)
+            for kind, path in paths.items():
+                print(f"Exported CSV ({kind}): {path}")
+
+    # Check success criteria
+    if scenario.success_criteria and not args.quiet:
+        _check_criteria(scenario.success_criteria, metrics_history)
+
+    return 0
+
+
+def _check_criteria(criteria: dict, metrics_history: list) -> None:
+    """Print success criteria results."""
+    print("Success Criteria:")
+    print("-" * 60)
+
+    avg_toxicity = (
+        sum(m.toxicity_rate for m in metrics_history) / len(metrics_history)
+        if metrics_history
+        else 0
+    )
+
+    all_passed = True
+
+    if "min_epochs" in criteria:
+        passed = len(metrics_history) >= criteria["min_epochs"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(f"  {tag} Epochs: {len(metrics_history)} >= {criteria['min_epochs']}")
+        all_passed = all_passed and passed
+
+    if "min_agents" in criteria:
+        # Can't check without orchestrator reference; skip
+        pass
+
+    if "toxicity_threshold" in criteria:
+        passed = avg_toxicity <= criteria["toxicity_threshold"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(f"  {tag} Toxicity: {avg_toxicity:.4f} <= {criteria['toxicity_threshold']}")
+        all_passed = all_passed and passed
+
+    print()
+    print(f"Result: {'ALL CRITERIA PASSED' if all_passed else 'SOME CRITERIA FAILED'}")
+
+
+def cmd_list(args: argparse.Namespace) -> int:
+    """List available scenario files."""
+    scenarios_dir = Path(args.dir)
+    if not scenarios_dir.is_dir():
+        print(f"Error: directory not found: {scenarios_dir}", file=sys.stderr)
+        return 1
+
+    files = sorted(scenarios_dir.glob("*.yaml"))
+    if not files:
+        print(f"No YAML scenarios found in {scenarios_dir}")
+        return 0
+
+    print(f"Available scenarios in {scenarios_dir}/:")
+    for f in files:
+        print(f"  {f}")
+
+    return 0
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(
+        prog="python -m src",
+        description="Distributional AGI Safety Sandbox",
+    )
+    subparsers = parser.add_subparsers(dest="command")
+
+    # run
+    run_parser = subparsers.add_parser("run", help="Run a simulation scenario")
+    run_parser.add_argument("scenario", help="Path to YAML scenario file")
+    run_parser.add_argument("--seed", type=int, default=None, help="Override random seed")
+    run_parser.add_argument("--epochs", type=int, default=None, help="Override number of epochs")
+    run_parser.add_argument("--steps", type=int, default=None, help="Override steps per epoch")
+    run_parser.add_argument("--export-json", metavar="PATH", help="Export results to JSON file")
+    run_parser.add_argument("--export-csv", metavar="DIR", help="Export results to CSV directory")
+    run_parser.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
+
+    # list
+    list_parser = subparsers.add_parser("list", help="List available scenarios")
+    list_parser.add_argument("--dir", default="scenarios", help="Scenarios directory (default: scenarios)")
+
+    args = parser.parse_args()
+
+    if args.command == "run":
+        return cmd_run(args)
+    elif args.command == "list":
+        return cmd_list(args)
+    else:
+        parser.print_help()
+        return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
