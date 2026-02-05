@@ -327,7 +327,7 @@ def create_incoherence_panel_data(state: DashboardState) -> Dict[str, List[float
     epochs, incoherence = state.get_metric_series("incoherence_index")
     _, risk = state.get_metric_series("forecaster_risk")
     return {
-        "epochs": epochs,
+        "epochs": [float(e) for e in epochs],
         "incoherence_index": incoherence,
         "forecaster_risk": risk,
     }
