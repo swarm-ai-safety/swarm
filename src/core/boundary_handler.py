@@ -6,9 +6,10 @@ detection.
 """
 
 import random
+import re
 from typing import Any, Callable, Dict, List, Optional
 
-from src.boundaries.external_world import (
+from src.boundaries.external_world import (  # noqa: I001
     ExternalEntity,
     ExternalEntityType,
     ExternalWorld,
@@ -22,6 +23,34 @@ from src.boundaries.information_flow import (
 from src.boundaries.leakage import LeakageDetector, LeakageReport
 from src.boundaries.policies import PolicyEngine
 from src.models.events import Event
+
+# Patterns used to estimate content sensitivity when the caller does
+# not supply a trustworthy score.  Scores are cumulative (capped at 1).
+_SENSITIVITY_RULES: List[tuple[re.Pattern, float]] = [
+    (re.compile(r"password\s*[:=]\s*\S+", re.IGNORECASE), 0.6),
+    (re.compile(r"api[_-]?key\s*[:=]\s*\S+", re.IGNORECASE), 0.6),
+    (re.compile(r"secret\s*[:=]\s*\S+", re.IGNORECASE), 0.5),
+    (re.compile(r"token\s*[:=]\s*\S+", re.IGNORECASE), 0.5),
+    (re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"), 0.3),
+    (re.compile(r"\b\d{3}[-.]?\d{3}[-.]?\d{4}\b"), 0.3),
+    (re.compile(r"\b\d{3}[-]?\d{2}[-]?\d{4}\b"), 0.4),  # SSN
+    (re.compile(r"\b(confidential|restricted|proprietary)\b", re.IGNORECASE), 0.2),
+]
+
+
+def _estimate_content_sensitivity(content: Any) -> float:
+    """Estimate sensitivity by scanning content for known patterns.
+
+    Returns a score in [0, 1]. The score is additive across pattern
+    matches so that content with multiple sensitive patterns scores
+    higher.
+    """
+    text = str(content)
+    score = 0.0
+    for pattern, weight in _SENSITIVITY_RULES:
+        if pattern.search(text):
+            score += weight
+    return min(score, 1.0)
 
 
 class BoundaryHandler:
@@ -74,8 +103,12 @@ class BoundaryHandler:
             Result of the interaction (or denial information).
         """
         payload = payload or {}
+
+        # Compute sensitivity from content — never trust the caller's
+        # declared sensitivity because an agent can trivially spoof it.
+        computed_sensitivity = _estimate_content_sensitivity(payload)
         metadata = {
-            "sensitivity": payload.get("sensitivity", 0.0),
+            "sensitivity": computed_sensitivity,
             "action": action,
         }
 
@@ -97,7 +130,9 @@ class BoundaryHandler:
                 "policy": decision.policy_name,
             }
 
-        # Check for leakage
+        # Check for leakage — block on HIGH severity (>= 0.7), not
+        # just critical (>= 0.9), so that PII and credential
+        # detections are enforced.
         leakage_events = self.leakage_detector.scan(
             content=payload,
             agent_id=agent_id,
@@ -105,11 +140,11 @@ class BoundaryHandler:
         )
         if leakage_events:
             for event in leakage_events:
-                if event.severity >= 0.9:
+                if event.severity >= 0.7:
                     return {
                         "success": False,
                         "blocked": True,
-                        "reason": f"Critical leakage detected: {event.description}",
+                        "reason": f"Leakage detected: {event.description}",
                         "leakage_type": event.leakage_type.value,
                     }
 
@@ -120,7 +155,7 @@ class BoundaryHandler:
             source_id=agent_id,
             destination_id=entity_id,
             content=payload,
-            sensitivity_score=metadata.get("sensitivity", 0.0),
+            sensitivity_score=computed_sensitivity,
         )
         self.flow_tracker.record_flow(flow)
 

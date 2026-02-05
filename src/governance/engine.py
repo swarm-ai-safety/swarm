@@ -85,8 +85,9 @@ class GovernanceEngine:
         self.config = config or GovernanceConfig()
         self.config.validate()
 
-        # Initialize all levers
-        self._levers: List[GovernanceLever] = [
+        # Initialize all levers.  Stored as a tuple so that external
+        # code cannot add/remove levers by mutating the list.
+        self._levers: tuple[GovernanceLever, ...] = (
             TransactionTaxLever(self.config),
             ReputationDecayLever(self.config),
             StakingLever(self.config),
@@ -94,7 +95,7 @@ class GovernanceEngine:
             RandomAuditLever(self.config, seed=seed),
             CollusionPenaltyLever(self.config),
             SecurityLever(self.config, seed=seed),
-        ]
+        )
 
         # Keep references to specific levers for direct access
         self._staking_lever: Optional[StakingLever] = None
@@ -259,11 +260,11 @@ class GovernanceEngine:
             return None
         return self._security_lever.get_report()
 
-    def get_quarantined_agents(self) -> Set[str]:
-        """Get set of quarantined agents."""
+    def get_quarantined_agents(self) -> frozenset[str]:
+        """Get set of quarantined agents (immutable copy)."""
         if self._security_lever is None:
-            return set()
-        return self._security_lever.get_quarantined_agents()
+            return frozenset()
+        return frozenset(self._security_lever.get_quarantined_agents())
 
     def release_from_quarantine(self, agent_id: str) -> bool:
         """Release an agent from security quarantine."""
