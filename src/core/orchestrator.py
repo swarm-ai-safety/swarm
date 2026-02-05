@@ -1010,6 +1010,18 @@ class Orchestrator:
             return None
         return self.governance_engine.get_collusion_report()
 
+    def get_sybil_clusters(self) -> List[set]:
+        """Get detected Sybil clusters."""
+        if self.governance_engine is None:
+            return []
+        return self.governance_engine.get_sybil_clusters()
+
+    def get_flagged_sybil_agents(self) -> frozenset:
+        """Get set of agents flagged as Sybils."""
+        if self.governance_engine is None:
+            return frozenset()
+        return self.governance_engine.get_flagged_sybil_agents()
+
     # =========================================================================
     # Composite Task Support
     # =========================================================================
