@@ -211,7 +211,7 @@ class TestDworkinAuction:
         resources = {"compute": 50.0, "bandwidth": 50.0}
         result = auction.run_auction(bids, resources)
 
-        for r, price in result.clearing_prices.items():
+        for _r, price in result.clearing_prices.items():
             assert price > 0
 
     def test_total_utility_positive(self):
