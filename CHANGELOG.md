@@ -7,6 +7,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Virtual Agent Economies components** inspired by [Tomasev et al. (2025)](https://arxiv.org/abs/2509.10147):
+  - **Dworkin-style auctions** (`src/env/auction.py`): Fair resource allocation with equal endowments, tatonnement price adjustment, envy-freeness verification, Gini coefficient
+  - **Mission economies** (`src/env/mission.py`): Collective goal coordination with measurable objectives, three reward distribution strategies (equal, proportional, Shapley), free-rider detection
+  - **High-frequency negotiation** (`src/env/hfn.py`): Order book with bid/ask matching, batch clearing, flash crash detection via rolling window, market halt circuit breaker
+  - **Permeability model** (`src/boundaries/permeability.py`): Parameterized sandbox boundaries, adaptive permeability, contagion probability tied to soft labels, spillover harm tracking
+  - **Identity and trust infrastructure** (`src/models/identity.py`): Verifiable credentials with expiry/revocation, Proof-of-Personhood, trust score computation
+  - **Sybil detection governance lever** (`src/governance/identity_lever.py`): Behavioral similarity analysis, cluster detection, reputation/resource penalties
+- 15 new event types for auction, mission, permeability, HFN, and identity events
+- 123 new tests across 5 test files (test_auction, test_mission, test_permeability, test_hfn, test_identity)
+- Documentation for all new components (`docs/virtual-agent-economies.md`)
+- arXiv paper reference in README, whitepaper, governance, and boundaries docs
 - GitHub Actions CI workflow (lint, type-check, test matrix across Python 3.10-3.12)
 - GitHub Actions release workflow (validate, test, build, publish to PyPI on tagged releases)
 - CodeQL security scanning (push, PR, weekly schedule)
