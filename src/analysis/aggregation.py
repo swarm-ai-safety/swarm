@@ -174,7 +174,7 @@ class MetricsAggregator:
 
     def __init__(self):
         """Initialize the aggregator."""
-        self._history = SimulationHistory()
+        self._history: SimulationHistory = SimulationHistory()
         self._current_epoch_interactions: List[SoftInteraction] = []
         self._agent_epoch_data: Dict[str, Dict[str, Any]] = defaultdict(dict)
 
@@ -231,8 +231,8 @@ class MetricsAggregator:
         self,
         epoch: int,
         agent_states: Dict[str, Any],
-        frozen_agents: set = None,
-        quarantined_agents: set = None,
+        frozen_agents: Optional[set] = None,
+        quarantined_agents: Optional[set] = None,
         posts_count: int = 0,
         votes_count: int = 0,
         tasks_completed: int = 0,
@@ -273,13 +273,13 @@ class MetricsAggregator:
 
         toxicity_rate = 0.0
         if accepted_p:
-            toxicity_rate = 1.0 - np.mean(accepted_p)
+            toxicity_rate = float(1.0 - np.mean(accepted_p))
 
         quality_gap = 0.0
         if accepted_p and rejected_p:
-            quality_gap = np.mean(accepted_p) - np.mean(rejected_p)
+            quality_gap = float(np.mean(accepted_p) - np.mean(rejected_p))
 
-        avg_p = np.mean([i.p for i in interactions]) if interactions else 0.5
+        avg_p = float(np.mean([i.p for i in interactions])) if interactions else 0.5
 
         # Compute payoff metrics
         all_payoffs = []
@@ -428,7 +428,7 @@ def compute_rolling_average(
 
     for i in range(len(values)):
         start = max(0, i - window + 1)
-        rolling.append(np.mean(values[start:i + 1]))
+        rolling.append(float(np.mean(values[start:i + 1])))
 
     return [
         TimeSeriesPoint(epoch=points[i].epoch, value=rolling[i])

@@ -31,7 +31,7 @@ def create_time_series_data(
     Returns:
         PlotData dict with 'epochs' and metric values
     """
-    data = {
+    data: PlotData = {
         "epochs": [s.epoch for s in history.epoch_snapshots],
     }
 
@@ -46,7 +46,7 @@ def create_time_series_data(
             smoothed = []
             for i in range(len(values)):
                 start = max(0, i - rolling_window + 1)
-                smoothed.append(np.mean(values[start:i + 1]))
+                smoothed.append(float(np.mean(values[start:i + 1])))
             values = smoothed
 
         data[metric] = values
@@ -100,7 +100,7 @@ def create_agent_trajectory_data(
     Returns:
         PlotData with epochs and per-agent time series
     """
-    data = {"epochs": []}
+    data: PlotData = {"epochs": []}
     max_epochs = 0
 
     for agent_id in agent_ids:
@@ -472,7 +472,7 @@ def plotly_scatter(
     except ImportError:
         return None
 
-    marker_dict = {"size": 10}
+    marker_dict: Dict[str, Any] = {"size": 10}
     if "colors" in data:
         marker_dict["color"] = data["colors"]
         marker_dict["colorscale"] = "Viridis"

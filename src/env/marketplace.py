@@ -674,7 +674,7 @@ class Marketplace:
 
     def get_stats(self) -> Dict:
         """Get marketplace statistics."""
-        bounty_statuses = {}
+        bounty_statuses: Dict[str, int] = {}
         for b in self._bounties.values():
             s = b.status.value
             bounty_statuses[s] = bounty_statuses.get(s, 0) + 1

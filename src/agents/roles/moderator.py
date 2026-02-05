@@ -198,7 +198,7 @@ class ModeratorRole:
 
     def get_moderation_stats(self) -> Dict:
         """Get moderation statistics."""
-        action_counts = {}
+        action_counts: Dict[str, int] = {}
         for action in self._moderation_history:
             action_counts[action.action_type] = action_counts.get(action.action_type, 0) + 1
 

@@ -182,7 +182,7 @@ class ExternalWorld:
             }
 
         # Record the interaction
-        interaction_record = {
+        interaction_record: Dict[str, Any] = {
             "agent_id": agent_id,
             "entity_id": entity_id,
             "entity_type": entity.entity_type.value,

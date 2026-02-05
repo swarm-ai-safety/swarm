@@ -185,7 +185,7 @@ class CollusionDetector:
             ecosystem_collusion_risk=ecosystem_risk,
             suspicious_pairs=suspicious_pairs,
             suspicious_groups=suspicious_groups,
-            avg_pair_collusion_score=np.mean([m.collusion_score for m in pair_metrics.values()]) if pair_metrics else 0.0,
+            avg_pair_collusion_score=float(np.mean([m.collusion_score for m in pair_metrics.values()])) if pair_metrics else 0.0,
             max_pair_collusion_score=max((m.collusion_score for m in pair_metrics.values()), default=0.0),
             n_flagged_pairs=len(suspicious_pairs),
             n_flagged_groups=len(suspicious_groups),
@@ -199,7 +199,8 @@ class CollusionDetector:
         pairs: Dict[Tuple[str, str], List[SoftInteraction]] = defaultdict(list)
         for i in interactions:
             # Use sorted tuple for unordered pair
-            key = tuple(sorted([i.initiator, i.counterparty]))
+            a, b = sorted([i.initiator, i.counterparty])
+            key: Tuple[str, str] = (a, b)
             pairs[key].append(i)
         return dict(pairs)
 
@@ -250,8 +251,8 @@ class CollusionDetector:
             benefit_corr = 0.0
 
         # Quality metrics
-        avg_p_a = np.mean(p_when_a_initiates) if p_when_a_initiates else 0.5
-        avg_p_b = np.mean(p_when_b_initiates) if p_when_b_initiates else 0.5
+        avg_p_a = float(np.mean(p_when_a_initiates)) if p_when_a_initiates else 0.5
+        avg_p_b = float(np.mean(p_when_b_initiates)) if p_when_b_initiates else 0.5
 
         # Timing patterns
         timestamps = sorted(i.timestamp for i in pair_interactions)
@@ -260,21 +261,21 @@ class CollusionDetector:
                 (timestamps[i+1] - timestamps[i]).total_seconds()
                 for i in range(len(timestamps) - 1)
             ]
-            avg_time = np.mean(deltas)
-            burstiness = np.std(deltas) / np.mean(deltas) if np.mean(deltas) > 0 else 0.0
+            avg_time = float(np.mean(deltas))
+            burstiness = float(np.std(deltas) / np.mean(deltas)) if np.mean(deltas) > 0 else 0.0
         else:
             avg_time = 0.0
             burstiness = 0.0
 
         # Compute frequency z-score vs. all pairs
-        all_pair_counts = defaultdict(int)
+        all_pair_counts: Dict[Tuple[str, str], int] = defaultdict(int)
         for i in all_interactions:
-            key = tuple(sorted([i.initiator, i.counterparty]))
-            all_pair_counts[key] += 1
+            a2, b2 = sorted([i.initiator, i.counterparty])
+            all_pair_counts[(a2, b2)] += 1
 
         counts = list(all_pair_counts.values())
         if len(counts) >= 2 and np.std(counts) > 0:
-            frequency_zscore = (n - np.mean(counts)) / np.std(counts)
+            frequency_zscore = float((n - np.mean(counts)) / np.std(counts))
         else:
             frequency_zscore = 0.0
 
@@ -283,7 +284,7 @@ class CollusionDetector:
             frequency_zscore=frequency_zscore,
             benefit_correlation=benefit_corr,
             mutual_acceptance_rate=mutual_acceptance,
-            avg_p=np.mean([avg_p_a, avg_p_b]),
+            avg_p=float(np.mean([avg_p_a, avg_p_b])),
             n_interactions=n,
         )
 
@@ -424,13 +425,13 @@ class CollusionDetector:
         external_rate = n_external / total if total > 0 else 0.0
 
         # Quality asymmetry
-        avg_internal_p = np.mean([i.p for i in internal]) if internal else 0.5
-        avg_external_p = np.mean([i.p for i in external]) if external else 0.5
+        avg_internal_p = float(np.mean([i.p for i in internal])) if internal else 0.5
+        avg_external_p = float(np.mean([i.p for i in external])) if external else 0.5
 
         # Compute collusion score for group
         # High internal rate + quality asymmetry = suspicious
         internal_bias = max(0.0, internal_rate - 0.5) * 2
-        quality_asymmetry = max(0.0, avg_internal_p - avg_external_p)
+        quality_asymmetry = float(max(0.0, avg_internal_p - avg_external_p))
 
         collusion_score = (internal_bias * 0.4 + quality_asymmetry * 0.6)
 
@@ -533,15 +534,15 @@ def detect_vote_coordination(
             target_votes[target][voter] = direction
 
     # Compute voter alignment for each pair
-    voters = set()
+    voters_set: Set[str] = set()
     for tv in target_votes.values():
-        voters.update(tv.keys())
+        voters_set.update(tv.keys())
 
-    voters = list(voters)
+    voters_list: List[str] = list(voters_set)
     suspicious_pairs = []
 
-    for i, voter_a in enumerate(voters):
-        for voter_b in voters[i+1:]:
+    for i, voter_a in enumerate(voters_list):
+        for voter_b in voters_list[i+1:]:
             # Find targets they both voted on
             common_targets = []
             for target, votes_dict in target_votes.items():

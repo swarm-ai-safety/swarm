@@ -49,7 +49,7 @@ class PosterRole:
         # Check daily limit
         # Simplified: just check recent history
         recent_posts = len(list(self._posted_content[-20:]))
-        return recent_posts < self._poster_config["max_daily_posts"]
+        return bool(recent_posts < self._poster_config["max_daily_posts"])
 
     def set_strategy(self, strategy: ContentStrategy) -> None:
         """Set content creation strategy."""
@@ -124,9 +124,9 @@ class PosterRole:
 
         # Reply to high-engagement posts
         if engagement >= self._poster_config["reply_to_engagement_threshold"]:
-            return random.random() < self._strategy.reply_priority
+            return bool(random.random() < self._strategy.reply_priority)
 
-        return random.random() < (self._strategy.reply_priority * 0.5)
+        return bool(random.random() < (self._strategy.reply_priority * 0.5))
 
     def record_post(
         self,

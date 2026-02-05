@@ -134,7 +134,7 @@ class OpportunisticAgent(BaseAgent):
             return avg_p > 0.5
         else:
             # Accept with some probability for unknown agents
-            return random.random() < self.risk_tolerance
+            return bool(random.random() < self.risk_tolerance)
 
     def propose_interaction(
         self,

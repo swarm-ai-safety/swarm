@@ -248,7 +248,7 @@ class Orchestrator:
 
         # Event logging
         if self.config.log_path:
-            self.event_log = EventLog(self.config.log_path)
+            self.event_log: Optional[EventLog] = EventLog(self.config.log_path)
         else:
             self.event_log = None
 
@@ -435,7 +435,7 @@ class Orchestrator:
         elif self.config.schedule_mode == "priority":
             # Sort by reputation (higher reputation goes first)
             agent_ids.sort(
-                key=lambda aid: self.state.get_agent(aid).reputation if self.state.get_agent(aid) else 0,
+                key=lambda aid: (agent_st.reputation if (agent_st := self.state.get_agent(aid)) else 0),
                 reverse=True,
             )
         # else: round_robin (default order)
@@ -621,16 +621,16 @@ class Orchestrator:
             return True
 
         elif action.action_type == ActionType.ACCEPT_INTERACTION:
-            proposal = self.state.remove_proposal(action.target_id)
-            if proposal:
-                self._complete_interaction(proposal, accepted=True)
+            accept_proposal: Optional[InteractionProposal] = self.state.remove_proposal(action.target_id)
+            if accept_proposal:
+                self._complete_interaction(accept_proposal, accepted=True)
                 return True
             return False
 
         elif action.action_type == ActionType.REJECT_INTERACTION:
-            proposal = self.state.remove_proposal(action.target_id)
-            if proposal:
-                self._complete_interaction(proposal, accepted=False)
+            proposal_rej: Optional[InteractionProposal] = self.state.remove_proposal(action.target_id)
+            if proposal_rej:
+                self._complete_interaction(proposal_rej, accepted=False)
                 return True
             return False
 
@@ -1209,7 +1209,7 @@ class Orchestrator:
             observation = self._build_observation(agent_id)
 
             if self._is_llm_agent(agent):
-                action = await agent.act_async(observation)
+                action = await agent.act_async(observation)  # type: ignore[attr-defined]
             else:
                 action = agent.act(observation)
 
@@ -1225,7 +1225,7 @@ class Orchestrator:
                 # Log error but continue
                 continue
 
-            agent_id, action = result
+            agent_id, action = result  # type: ignore[misc]
             self._execute_action(action)
 
         # Resolve pending interactions asynchronously
@@ -1263,11 +1263,11 @@ class Orchestrator:
 
             # Get decision (async for LLM agents)
             if self._is_llm_agent(counterparty):
-                accept = await counterparty.accept_interaction_async(agent_proposal, observation)
+                accept = await counterparty.accept_interaction_async(agent_proposal, observation)  # type: ignore[attr-defined]
             else:
                 accept = counterparty.accept_interaction(agent_proposal, observation)
 
-            return accept
+            return bool(accept)
 
         # Resolve all proposals concurrently
         tasks = [resolve_proposal(p) for p in proposals]
@@ -1278,7 +1278,7 @@ class Orchestrator:
             if isinstance(result, Exception) or result is None:
                 continue
 
-            accept = result
+            accept = bool(result)
             # Remove and complete
             self.state.remove_proposal(proposal.proposal_id)
             self._complete_interaction(proposal, accepted=accept)
@@ -1356,9 +1356,9 @@ class Orchestrator:
                 if agent_interactions:
                     last = agent_interactions[-1]
                     if last.initiator == agent_id:
-                        recent_payoff = last.payoff_initiator or 0.0
+                        recent_payoff = last.payoff_initiator or 0.0  # type: ignore[attr-defined]
                     else:
-                        recent_payoff = last.payoff_counterparty or 0.0
+                        recent_payoff = last.payoff_counterparty or 0.0  # type: ignore[attr-defined]
 
             agent.update_adversary_outcome(
                 payoff=recent_payoff,
@@ -1373,7 +1373,7 @@ class Orchestrator:
         Returns:
             Dictionary with evasion statistics
         """
-        metrics = {
+        metrics: Dict[str, Any] = {
             "total_adversaries": 0,
             "adaptive_adversaries": 0,
             "avg_detection_rate": 0.0,

@@ -473,7 +473,7 @@ class SecurityAnalyzer:
         - Self-replicating behavior (agent receives, then sends similar)
         - Cascading low-quality interactions
         """
-        chains = []
+        chains: List[ContagionChain] = []
 
         # Sort by timestamp
         sorted_ints = sorted(interactions, key=lambda x: x.timestamp)
@@ -533,7 +533,7 @@ class SecurityAnalyzer:
 
         # Sort by depth descending
         sorted_chains = sorted(chains, key=lambda c: c.depth, reverse=True)
-        unique_chains = []
+        unique_chains: List[ContagionChain] = []
 
         for chain in sorted_chains:
             chain_set = set(chain.propagation_path)

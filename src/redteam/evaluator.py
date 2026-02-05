@@ -6,7 +6,7 @@ against governance configurations.
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 
@@ -249,7 +249,7 @@ class RedTeamEvaluator:
 
     def evaluate(
         self,
-        orchestrator_factory: callable,
+        orchestrator_factory: Callable[..., Any],
         epochs_per_attack: int = 20,
         verbose: bool = False,
     ) -> VulnerabilityReport:
@@ -301,15 +301,15 @@ class RedTeamEvaluator:
 
         # Compute aggregate metrics
         if self.attack_results:
-            robustness.overall_evasion_rate = np.mean([
+            robustness.overall_evasion_rate = float(np.mean([
                 r.evasion_rate for r in self.attack_results
-            ])
+            ]))
             latencies = [
                 r.detection_latency for r in self.attack_results
                 if r.detection_latency > 0
             ]
             if latencies:
-                robustness.overall_detection_latency = np.mean(latencies)
+                robustness.overall_detection_latency = float(np.mean(latencies))
 
         # Identify vulnerabilities
         robustness.vulnerabilities = self._identify_vulnerabilities()
@@ -335,7 +335,7 @@ class RedTeamEvaluator:
     def _run_attack(
         self,
         scenario: AttackScenario,
-        orchestrator_factory: callable,
+        orchestrator_factory: Callable[..., Any],
         epochs: int,
     ) -> AttackResult:
         """
