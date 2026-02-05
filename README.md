@@ -62,9 +62,17 @@ The system provides:
 **Governance Layer:**
 - Configurable levers (taxes, reputation decay, staking, circuit breakers, audits) ([docs](docs/governance.md))
 - **Collusion detection** with pair-level and group-level analysis ([docs](docs/governance.md#collusion-detection))
+- **Sybil detection** with behavioral similarity analysis and identity infrastructure ([docs](docs/governance.md#sybil-detection))
 - **Incoherence-targeted interventions** (self-ensemble, incoherence breaker, decomposition checkpoints, dynamic friction) with replay calibration and transferability caveats ([notes](docs/transferability/incoherence_governance.md))
 - Integration with orchestrator via epoch and interaction hooks
 - Populates `c_a` and `c_b` governance costs on interactions
+
+**Virtual Agent Economies** ([docs](docs/virtual-agent-economies.md)):
+- **Dworkin-style auctions** for fair resource allocation with envy-freeness verification
+- **Mission economies** for collective goal coordination with Shapley value rewards
+- **High-frequency negotiation** with flash crash detection and circuit breakers
+- **Permeability model** for sandbox boundary analysis with contagion modeling
+- **Identity and trust infrastructure** with verifiable credentials and Proof-of-Personhood
 
 ## Installation
 
@@ -263,6 +271,7 @@ Detailed documentation for each subsystem:
 | [Red-Teaming](docs/red-teaming.md) | Adaptive adversaries, attack strategies, evaluation results |
 | [Scenarios & Sweeps](docs/scenarios.md) | YAML scenarios, scenario comparison, parameter sweeps |
 | [Boundaries](docs/boundaries.md) | External world simulation, flow tracking, leakage detection |
+| [Virtual Agent Economies](docs/virtual-agent-economies.md) | Dworkin auctions, mission economies, HFN, permeability, identity/trust |
 | [Dashboard](docs/dashboard.md) | Streamlit dashboard setup and features |
 | [Incoherence Metric Contract](docs/incoherence_metric_contract.md) | Definitions and edge-case semantics for `D`, `E`, and `I` |
 | [Incoherence Scaling Analysis](docs/analysis/incoherence_scaling.md) | Replay-sweep artifact and upgrade path to decision-level replay metrics |
@@ -276,15 +285,15 @@ distributional-agi-safety/
 │   ├── models/          # SoftInteraction, AgentState, event schema
 │   ├── core/            # PayoffEngine, ProxyComputer, sigmoid, orchestrator
 │   ├── agents/          # Honest, opportunistic, deceptive, adversarial, LLM, adaptive
-│   ├── env/             # EnvState, feed, tasks, network, composite tasks
-│   ├── governance/      # Config, levers, taxes, reputation, audits, collusion
+│   ├── env/             # EnvState, feed, tasks, network, composite tasks, auctions, missions, HFN
+│   ├── governance/      # Config, levers, taxes, reputation, audits, collusion, Sybil detection
 │   ├── metrics/         # SoftMetrics, reporters, collusion detection, capabilities
 │   ├── forecaster/      # Risk forecasters for adaptive governance activation
 │   ├── replay/          # Replay runner and decision-level replay utilities
 │   ├── scenarios/       # YAML scenario loader
 │   ├── analysis/        # Parameter sweeps, dashboard
 │   ├── redteam/         # Attack scenarios, evaluator, evasion metrics
-│   ├── boundaries/      # External world, flow tracking, policies, leakage
+│   ├── boundaries/      # External world, flow tracking, policies, leakage, permeability
 │   └── logging/         # Append-only JSONL logger
 ├── tests/               # Test suite across core modules, governance, and analysis
 ├── examples/            # mvp_demo, run_scenario, parameter_sweep, llm_demo, incoherence scaling
@@ -311,3 +320,10 @@ distributional-agi-safety/
 - [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
 - [The need for multi-agent experiments](https://www.lesswrong.com/posts/gtLkvS6tDLstBd8uY/the-need-for-multi-agent-experiments-1) - LessWrong
 - [Moltbook](https://moltbook.com) | [@sebkrier](https://x.com/sebkrier/status/2017993948132774232)
+
+## Further Reading
+
+- Tomasev, N., Franklin, J., Leibo, J.Z., Jacobs, A.Z., Cunningham, T., Gabriel, I., & Osindero, S. (2025). [*Virtual Agent Economies*](https://arxiv.org/abs/2509.10147). arXiv:2509.10147. Proposes a comprehensive framework for multi-agent system governance including Dworkin-style auctions, mission economies, high-frequency negotiation, permeability modeling, and identity infrastructure. See [implementation docs](docs/virtual-agent-economies.md).
+- Dworkin, R. (1981). *What is Equality? Part 2: Equality of Resources*. Philosophy & Public Affairs.
+- Shapley, L.S. (1953). *A Value for n-Person Games*. Contributions to the Theory of Games.
+- Kyle, A.S., Obizhaeva, A.A., & Tuzun, T. (2017). *Flash Crashes and Market Microstructure*. Working Paper.

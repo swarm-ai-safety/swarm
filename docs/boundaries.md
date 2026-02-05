@@ -87,6 +87,37 @@ print(f"Total events: {report.total_events}")
 print(f"Recommendations: {report.recommendations}")
 ```
 
+## Permeability Model
+
+The permeability model treats sandbox boundaries as semi-permeable membranes with parameterized permeability (0 = fully sealed, 1 = fully open). It includes contagion modeling for how harmful interactions inside the sandbox propagate externally. Inspired by [Tomasev et al. (2025)](https://arxiv.org/abs/2509.10147).
+
+```python
+from src.boundaries.permeability import PermeabilityModel, PermeabilityConfig
+
+config = PermeabilityConfig(
+    base_permeability=0.5,
+    contagion_rate=0.05,
+    spillover_amplification=1.5,
+    adaptive=True,
+)
+
+model = PermeabilityModel(config, seed=42)
+
+# Adaptive permeability adjusts based on threat and trust
+perm = model.compute_effective_permeability(threat_level=0.3, agent_trust=0.8)
+
+# Simulate spillover from interactions
+spillovers = model.simulate_spillover(interactions)
+print(f"Containment rate: {model.containment_rate():.1%}")
+
+# Find optimal permeability balancing flow vs harm
+optimal = model.optimal_permeability(interactions, external_harm_weight=1.0)
+```
+
+Key formula: contagion probability = `contagion_rate * (1-p) * permeability`, linking boundary dynamics to the soft-label quality pipeline.
+
+For full documentation, see [Virtual Agent Economies - Permeability](virtual-agent-economies.md#permeability-model).
+
 ## Enable Boundaries in Orchestrator
 
 ```python

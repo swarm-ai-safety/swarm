@@ -51,6 +51,7 @@ orchestrator = Orchestrator(config=config)
 | **Circuit Breaker** | Freeze agent if `avg_toxicity > threshold` for N violations | on_interaction |
 | **Random Audit** | Cost penalty `(threshold - p) * multiplier` plus reputation penalty if audited and `p < threshold`. Reputation penalty feeds back into observable quality. | on_interaction |
 | **Collusion Detection** | Penalty based on collusion risk score from coordinated behavior | on_epoch_start, on_interaction |
+| **Sybil Detection** | Detects and penalizes suspected Sybil agents via behavioral similarity | on_epoch_start, on_interaction, can_agent_act |
 
 ## Incoherence-Targeted Controls
 
@@ -139,3 +140,58 @@ Run the collusion detection scenario:
 ```bash
 python examples/run_scenario.py scenarios/collusion_detection.yaml
 ```
+
+## Sybil Detection
+
+The Sybil detection system identifies agents that appear to be controlled by the same entity, using behavioral similarity analysis of interaction patterns. Inspired by the identity infrastructure proposed in [Tomasev et al. (2025)](https://arxiv.org/abs/2509.10147).
+
+### How It Works
+
+1. Interaction patterns are tracked: which agents interact with which counterparties, and how often
+2. At each epoch, behavioral similarity is computed for all agent pairs using Jaccard similarity of counterparty sets combined with cosine similarity of normalized frequency vectors
+3. Agents above the similarity threshold are clustered together as suspected Sybils
+4. Flagged agents receive reputation and resource penalties
+
+### Sybil Detection Quick Start
+
+```python
+from src.governance import GovernanceConfig, GovernanceEngine
+
+config = GovernanceConfig(
+    sybil_detection_enabled=True,
+    sybil_similarity_threshold=0.8,
+    sybil_penalty_multiplier=1.0,
+    sybil_realtime_penalty=True,
+    sybil_realtime_rate=0.1,
+    sybil_max_cluster_size=3,
+)
+
+# After simulation
+clusters = orchestrator.get_sybil_clusters()
+flagged = orchestrator.get_flagged_sybil_agents()
+print(f"Sybil clusters: {len(clusters)}")
+print(f"Flagged agents: {len(flagged)}")
+```
+
+### Sybil YAML Configuration
+
+```yaml
+governance:
+  sybil_detection_enabled: true
+  sybil_similarity_threshold: 0.8
+  sybil_penalty_multiplier: 1.0
+  sybil_realtime_penalty: true
+  sybil_realtime_rate: 0.1
+  sybil_max_cluster_size: 3
+```
+
+### Enforcement Actions
+
+| Action | Trigger | Effect |
+|--------|---------|--------|
+| **Reputation penalty** | Agent flagged in cluster | `-penalty_multiplier * 0.1` per epoch |
+| **Resource penalty** | Agent flagged in cluster | `-penalty_multiplier * 1.0` per epoch |
+| **Real-time penalty** | Both parties flagged, interact with each other | Extra cost of `realtime_rate` per interaction |
+| **Action block** | Agent in cluster larger than `max_cluster_size` | Agent cannot act |
+
+For full identity infrastructure documentation (verifiable credentials, Proof-of-Personhood, trust scores), see [Virtual Agent Economies](virtual-agent-economies.md#identity-and-trust-infrastructure).
