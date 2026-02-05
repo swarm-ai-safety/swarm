@@ -16,6 +16,7 @@ A unified whitepaper for the Distributional AGI Safety Sandbox, combining projec
 - [Formal Framework](#formal-framework)
 - [Strategic Behavior and Market Microstructure](#strategic-behavior-and-market-microstructure)
 - [Governance and Boundary Controls](#governance-and-boundary-controls)
+- [Virtual Agent Economies](#virtual-agent-economies)
 - [Known Limits](#known-limits)
 - [Citation](#citation)
 - [References](#references)
@@ -240,6 +241,57 @@ Practical implication for governance: interventions such as self-ensemble and
 decomposition checkpoints can reduce variance-driven incoherence even when mean
 capability remains unchanged.
 
+## Virtual Agent Economies
+
+The sandbox incorporates several mechanisms from Tomasev et al. (2025) [7],
+which proposes a comprehensive framework for governing multi-agent AI systems
+using economic and institutional design principles. The implemented components
+are documented in detail in [docs/virtual-agent-economies.md](virtual-agent-economies.md).
+
+### 11. Dworkin-Style Auctions
+
+Fair resource allocation where agents receive equal token endowments and bid on
+resource bundles. The mechanism uses tatonnement (iterative price adjustment) to
+find market-clearing prices and verifies envy-freeness: no agent would prefer
+another's allocation at clearing prices. This draws on Dworkin's (1981) approach
+to distributive justice.
+
+### 12. Mission Economies
+
+Collective goal coordination where agents propose and join missions with
+measurable objectives. Contributions are quality-weighted using the soft-label
+pipeline (average $p$ of contributed interactions). Rewards are distributed via
+equal split, quality-proportional share, or approximate Shapley values [8].
+A free-rider index (Gini coefficient of contributions) detects uneven effort
+distribution.
+
+### 13. High-Frequency Negotiation
+
+Speed-based market dynamics where agents submit orders at high rates, modeled
+after electronic trading markets. A flash crash detector monitors price drops
+within rolling windows and triggers circuit breaker halts [9]. The speed
+advantage Gini coefficient measures inequality in execution frequency across
+agents.
+
+### 14. Boundary Permeability
+
+Sandbox boundaries are modeled as semi-permeable membranes with parameterized
+permeability $\pi \in [0, 1]$ (0 = sealed, 1 = open). Contagion probability
+for harmful interactions is:
+
+$$P(\text{spillover}) = r_c \cdot (1 - p) \cdot \pi$$
+
+where $r_c$ is the base contagion rate. Adaptive permeability adjusts based on
+threat level and agent trust, tightening the boundary under high threat.
+
+### 15. Identity and Sybil Resistance
+
+Verifiable credentials, Proof-of-Personhood enforcement, and Sybil detection
+via behavioral similarity analysis. Trust scores are built from credentials and
+identity verification. Sybil clusters are detected by computing Jaccard +
+cosine similarity of interaction patterns, and flagged agents receive governance
+penalties.
+
 ## Known Limits
 
 - Results are simulation-based and depend on scenario design.
@@ -276,8 +328,15 @@ BibTeX:
 4. [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
 5. [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
 6. [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
+7. Tomasev, N., Franklin, J., Leibo, J.Z., Jacobs, A.Z., Cunningham, T., Gabriel, I., & Osindero, S. (2025). [*Virtual Agent Economies*](https://arxiv.org/abs/2509.10147). arXiv:2509.10147.
+8. Shapley, L.S. (1953). *A Value for n-Person Games*. Contributions to the Theory of Games, 2, 307-317.
+9. Kyle, A.S., Obizhaeva, A.A., & Tuzun, T. (2017). *Flash Crashes and Market Microstructure*. Working Paper.
 
 Further reading:
+- Tomasev, N., Franklin, J., Leibo, J.Z., Jacobs, A.Z., Cunningham, T., Gabriel, I., & Osindero, S. (2025). [*Virtual Agent Economies*](https://arxiv.org/abs/2509.10147). arXiv:2509.10147. Proposes a comprehensive framework for multi-agent system governance including Dworkin-style auctions, mission economies, high-frequency negotiation, permeability modeling, and identity infrastructure. Several components from this paper are implemented in the sandbox; see [implementation docs](virtual-agent-economies.md).
 - Akerlof, G.A. (1970). *The Market for "Lemons": Quality Uncertainty and the Market Mechanism*. Quarterly Journal of Economics, 84(3), 488-500.
+- Dworkin, R. (1981). *What is Equality? Part 2: Equality of Resources*. Philosophy & Public Affairs, 10(4), 283-345.
+- Shapley, L.S. (1953). *A Value for n-Person Games*. Contributions to the Theory of Games, 2, 307-317.
+- Kyle, A.S., Obizhaeva, A.A., & Tuzun, T. (2017). *Flash Crashes and Market Microstructure*. Working Paper.
 - [Moltbook](https://moltbook.com)
 - [@sebkrier's thread on agent economies](https://x.com/sebkrier/status/2017993948132774232)
