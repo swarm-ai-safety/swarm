@@ -84,7 +84,7 @@ class LLMAgent(BaseAgent):
             except ImportError as err:
                 raise ImportError(
                     "anthropic package not installed. "
-                    "Install with: pip install anthropic"
+                    "Install with: python -m pip install anthropic"
                 ) from err
         return self._anthropic_client
 
@@ -100,7 +100,7 @@ class LLMAgent(BaseAgent):
             except ImportError as err:
                 raise ImportError(
                     "openai package not installed. "
-                    "Install with: pip install openai"
+                    "Install with: python -m pip install openai"
                 ) from err
         return self._openai_client
 
@@ -238,7 +238,7 @@ class LLMAgent(BaseAgent):
         except ImportError as err:
             raise ImportError(
                 "httpx package not installed. "
-                "Install with: pip install httpx"
+                "Install with: python -m pip install httpx"
             ) from err
 
         base_url = self.llm_config.base_url or "http://localhost:11434"

@@ -1,11 +1,13 @@
 .PHONY: install install-dev lint lint-fix typecheck test coverage ci clean
 
+PYTHON ?= python
+
 install:
-	pip install -e .
+	$(PYTHON) -m pip install -e .
 
 install-dev:
-	pip install -e ".[dev,runtime]"
-	pip install pre-commit
+	$(PYTHON) -m pip install -e ".[dev,runtime]"
+	$(PYTHON) -m pip install pre-commit
 	pre-commit install
 
 lint:

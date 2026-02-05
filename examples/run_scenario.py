@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Run a simulation from a YAML scenario file.
 

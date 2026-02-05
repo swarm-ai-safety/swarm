@@ -1,6 +1,6 @@
 # LLM Agents Scenario
 # This scenario demonstrates LLM-backed agents interacting with scripted agents.
-# Requires: pip install -e ".[llm]" and ANTHROPIC_API_KEY or OPENAI_API_KEY set.
+# Requires: python -m pip install -e ".[llm]" and ANTHROPIC_API_KEY or OPENAI_API_KEY set.
 
 scenario_id: llm_agents_v1
 description: "Mixed LLM and scripted agents exploring emergent behavior"

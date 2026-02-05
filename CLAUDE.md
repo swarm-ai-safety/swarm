@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Install for development
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 
 # Run all tests
 pytest tests/ -v

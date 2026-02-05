@@ -14,7 +14,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install ruff
+      - run: python -m pip install ruff
       - run: ruff check src/ tests/
 
   type-check:
@@ -24,7 +24,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-      - run: pip install -e ".[dev,runtime]"
+      - run: python -m pip install -e ".[dev,runtime]"
       - run: mypy src/
 
   test:
@@ -37,5 +37,5 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install -e ".[dev,runtime]"
+      - run: python -m pip install -e ".[dev,runtime]"
       - run: pytest tests/ -v --cov=src --cov-report=term-missing --cov-fail-under=70

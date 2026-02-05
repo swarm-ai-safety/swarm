@@ -70,19 +70,19 @@ The system provides:
 
 ```bash
 # Install base dependencies
-pip install -e .
+python -m pip install -e .
 
 # Install with development tools
-pip install -e ".[dev]"
+python -m pip install -e ".[dev]"
 
 # Install with analysis tools (pandas, matplotlib)
-pip install -e ".[analysis]"
+python -m pip install -e ".[analysis]"
 
 # Install with LLM support (Anthropic, OpenAI, Ollama)
-pip install -e ".[llm]"
+python -m pip install -e ".[llm]"
 
 # Install everything
-pip install -e ".[all]"
+python -m pip install -e ".[all]"
 ```
 
 ## Quick Start: Running a Simulation

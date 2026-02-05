@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 Demo script for running simulations with LLM-backed agents.
 
@@ -9,7 +9,7 @@ This script demonstrates:
 4. Mixing LLM and scripted agents
 
 Prerequisites:
-    pip install -e ".[llm,runtime]"
+    python -m pip install -e ".[llm,runtime]"
     export ANTHROPIC_API_KEY="your-key"  # or OPENAI_API_KEY
 
 Usage:
