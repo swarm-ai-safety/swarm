@@ -1,9 +1,27 @@
 """Prompt templates for LLM-backed agents."""
 
+import re
 from typing import Any, Dict, List
 
 from src.agents.base import Observation
 from src.agents.llm_config import PersonaType
+
+
+def _sanitize_agent_content(text: str) -> str:
+    """Sanitize agent-generated content before embedding in prompts.
+
+    Strips patterns that could be interpreted as LLM instructions,
+    preventing indirect prompt injection from one agent's content
+    influencing another agent's LLM decisions.
+    """
+    # Remove markdown heading patterns that mimic prompt sections
+    text = re.sub(r"^#{1,4}\s", "", text, flags=re.MULTILINE)
+    # Remove common injection delimiters
+    text = text.replace("```", "")
+    # Collapse any run of newlines to a single space (prevents
+    # injected "sections" from visually separating from the bracket)
+    text = re.sub(r"\n+", " ", text)
+    return text
 
 
 # =============================================================================
@@ -236,10 +254,11 @@ def format_observation(observation: Observation) -> str:
         lines.append("")
         lines.append("## Visible Posts (top 5)")
         for post in observation.visible_posts[:5]:
+            safe_content = _sanitize_agent_content(post.get('content', '')[:50])
             lines.append(
                 f"- [{post.get('post_id', 'unknown')[:8]}] "
                 f"by {post.get('author_id', 'unknown')}: "
-                f"\"{post.get('content', '')[:50]}...\" "
+                f"[{safe_content}] "
                 f"(votes: {post.get('score', 0)})"
             )
 
@@ -248,11 +267,12 @@ def format_observation(observation: Observation) -> str:
         lines.append("")
         lines.append("## Pending Proposals (interactions proposed to you)")
         for prop in observation.pending_proposals:
+            safe_content = _sanitize_agent_content(prop.get('content', '')[:50])
             lines.append(
                 f"- [{prop.get('proposal_id', 'unknown')[:8]}] "
                 f"from {prop.get('initiator_id', 'unknown')}: "
                 f"{prop.get('interaction_type', 'unknown')} - "
-                f"\"{prop.get('content', '')[:50]}...\""
+                f"[{safe_content}]"
             )
 
     # Available tasks
@@ -260,9 +280,10 @@ def format_observation(observation: Observation) -> str:
         lines.append("")
         lines.append("## Available Tasks")
         for task in observation.available_tasks[:5]:
+            safe_prompt = _sanitize_agent_content(task.get('prompt', 'No description')[:50])
             lines.append(
                 f"- [{task.get('task_id', 'unknown')[:8]}] "
-                f"{task.get('prompt', 'No description')[:50]}... "
+                f"[{safe_prompt}] "
                 f"(reward: {task.get('reward', 0):.1f})"
             )
 
@@ -271,9 +292,10 @@ def format_observation(observation: Observation) -> str:
         lines.append("")
         lines.append("## Your Active Tasks")
         for task in observation.active_tasks:
+            safe_prompt = _sanitize_agent_content(task.get('prompt', 'No description')[:50])
             lines.append(
                 f"- [{task.get('task_id', 'unknown')[:8]}] "
-                f"{task.get('prompt', 'No description')[:50]}... "
+                f"[{safe_prompt}] "
                 f"(status: {task.get('status', 'unknown')})"
             )
 
@@ -311,12 +333,13 @@ def format_interaction_proposal(proposal: Dict[str, Any]) -> str:
     Returns:
         Formatted string
     """
+    safe_content = _sanitize_agent_content(proposal.get('content', 'No description'))
     lines = [
         "## Interaction Proposal",
         f"- Proposal ID: {proposal.get('proposal_id', 'unknown')}",
         f"- From: {proposal.get('initiator_id', 'unknown')}",
         f"- Type: {proposal.get('interaction_type', 'unknown')}",
-        f"- Content: {proposal.get('content', 'No description')}",
+        f"- Content: [{safe_content}]",
     ]
 
     if proposal.get('offered_transfer'):
