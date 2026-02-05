@@ -1,5 +1,7 @@
 # Distributional AGI Safety Sandbox
 
+This whitepaper is also available with theory in `docs/whitepaper_theory.md`.
+
 ## A Short Whitepaper-Style Overview
 
 Author: Raeli Savitt (with AI assistance)  
