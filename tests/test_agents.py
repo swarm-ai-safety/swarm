@@ -7,7 +7,7 @@ from swarm.agents.base import Action, ActionType, Observation, Role
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
 from swarm.agents.opportunistic import OpportunisticAgent
-from swarm.models.agent import AgentState, AgentType
+from swarm.models.agent import AgentState, AgentStatus, AgentType
 from swarm.models.interaction import InteractionType, SoftInteraction
 
 
@@ -29,6 +29,14 @@ def create_test_observation(**kwargs) -> Observation:
     }
     defaults.update(kwargs)
     return Observation(**defaults)
+
+
+class TestAgentModels:
+    """Tests for agent model enums and defaults."""
+
+    def test_agent_status_enum_values(self):
+        """AgentStatus should expose the expected values."""
+        assert {status.value for status in AgentStatus} == {"active", "frozen"}
 
 
 class TestBaseAgent:

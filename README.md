@@ -181,7 +181,7 @@ Observables -> ProxyComputer -> v_hat -> sigmoid -> p -> SoftPayoffEngine -> pay
 ```
 swarm/
 ├── swarm/
-│   ├── models/          # SoftInteraction, AgentState, event schema
+│   ├── models/          # SoftInteraction, AgentState/AgentStatus, event schema
 │   ├── core/            # PayoffEngine, ProxyComputer, sigmoid, orchestrator
 │   ├── agents/          # Honest, opportunistic, deceptive, adversarial, LLM, adaptive
 │   ├── env/             # EnvState, feed, tasks, network, composite tasks
