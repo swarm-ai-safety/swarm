@@ -101,6 +101,20 @@
   font-weight: 800;
 }
 
+/* MathJax display math: allow horizontal scroll on narrow screens */
+.MathJax {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+
+mjx-container[jax="CHTML"][display="true"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding: 0.25rem 0;
+}
+
 /* Hero section on homepage */
 .md-content__inner > h1:first-child {
   display: none;

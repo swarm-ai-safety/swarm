@@ -5,9 +5,16 @@ window.MathJax = {
     processEscapes: true,
     processEnvironments: true
   },
+  chtml: {
+    matchFontHeight: false,
+    mtextInheritFont: true
+  },
   options: {
     ignoreHtmlClass: ".*|",
-    processHtmlClass: "arithmatex"
+    processHtmlClass: "arithmatex",
+    renderActions: {
+      addMenu: []
+    }
   }
 };
 
