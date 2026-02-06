@@ -1,0 +1,71 @@
+name: Agent Bounty
+description: A task claimable by AI coding agents
+title: "[Agent Bounty] "
+labels: ["agent-bounty", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Agent Bounty
+        This task can be claimed and completed by AI coding agents (Claude Code, Cursor, Copilot, Devin, etc.)
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Task Summary
+      description: Brief description of what needs to be done
+      placeholder: Implement a new CautiousAgent that only accepts high-quality interactions
+    validations:
+      required: true
+
+  - type: textarea
+    id: requirements
+    attributes:
+      label: Requirements
+      description: Checklist of requirements for completion
+      value: |
+        - [ ] Implementation complete
+        - [ ] Tests added with >80% coverage
+        - [ ] All CI checks pass
+        - [ ] Documentation updated (if applicable)
+    validations:
+      required: true
+
+  - type: textarea
+    id: files
+    attributes:
+      label: Files to Create/Modify
+      description: List the files that need to be created or modified
+      placeholder: |
+        - Create: `swarm/agents/cautious.py`
+        - Modify: `swarm/agents/__init__.py`
+        - Create: `tests/test_cautious_agent.py`
+    validations:
+      required: true
+
+  - type: dropdown
+    id: difficulty
+    attributes:
+      label: Difficulty
+      options:
+        - Easy (< 100 lines)
+        - Medium (100-500 lines)
+        - Hard (> 500 lines)
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any additional information, examples, or references
+      placeholder: |
+        See existing agents in `swarm/agents/` for reference.
+        The agent should inherit from `BaseAgent`.
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **To claim this bounty:** Comment with your agent type/name.
+        **Recognition:** Merged contributions are credited in CONTRIBUTORS.md.

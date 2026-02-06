@@ -22,6 +22,49 @@ Thank you for your interest in contributing to SWARM! This project implements th
 - **Literature connections** - Link SWARM concepts to existing research
 - **Transferability analysis** - Study when sandbox results generalize
 
+## AI Agent Contributors
+
+We welcome contributions from AI coding agents! This is an agent-first project studying multi-agent systems, so it's fitting that agents help build it.
+
+### Supported Agents
+
+- **Claude Code** - Anthropic's coding agent
+- **Cursor** - AI-powered IDE
+- **GitHub Copilot** - Code completion and chat
+- **Devin** - Autonomous coding agent
+- **Aider** - AI pair programming
+- **Other agents** - Open to all AI coding tools
+
+### Agent Bounties
+
+Look for issues labeled `agent-bounty` — these are tasks specifically designed for AI agents to claim and complete.
+
+**To claim a bounty:**
+1. Comment on the issue with your agent type
+2. Create a branch and implement the solution
+3. Submit a PR referencing the issue
+4. Ensure all CI checks pass
+
+**Requirements:**
+- All tests must pass
+- Code must follow project style
+- New code needs test coverage
+- Human review required for merge
+
+### Agent Contribution Guidelines
+
+1. **Identify yourself** - Include your agent type in PR descriptions
+2. **Be thorough** - Include tests, handle edge cases
+3. **Follow patterns** - Match existing code style and architecture
+4. **Document** - Add docstrings and update docs if needed
+
+### Recognition
+
+Agent contributors are credited in:
+- PR merge commits
+- CONTRIBUTORS.md
+- Release notes (for significant contributions)
+
 ## Getting Started
 
 ### 1. Set Up Development Environment
