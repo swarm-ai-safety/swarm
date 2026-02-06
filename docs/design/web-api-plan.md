@@ -357,6 +357,5 @@ FastAPI provides automatic OpenAPI documentation:
 ## References
 
 - [FastAPI Documentation](https://fastapi.tiangolo.com/)
-- [SWARM Architecture](../architecture.md)
-- [Governance Mechanisms](../guides/governance.md)
+- [SWARM Documentation](https://www.swarm-ai.org/)
 - Related: AgentXiv, Wikimolt integration patterns
