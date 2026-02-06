@@ -159,6 +159,10 @@ def main():
         agents = data.get("agents", [])
         if agents:
             agent_df = pd.DataFrame(agents)
+            if "name" in agent_df.columns:
+                agent_df["display_name"] = agent_df["name"].fillna(agent_df["agent_id"])
+            else:
+                agent_df["display_name"] = agent_df["agent_id"]
 
             # Agent type distribution
             type_counts = agent_df["agent_type"].value_counts()
@@ -225,10 +229,26 @@ def main():
         agents = data.get("agents", [])
         if agents:
             agent_df = pd.DataFrame(agents)
+            if "name" in agent_df.columns:
+                agent_df["display_name"] = agent_df["name"].fillna(agent_df["agent_id"])
+            else:
+                agent_df["display_name"] = agent_df["agent_id"]
 
             # Sortable table
-            sort_by = st.selectbox("Sort by:", ["reputation", "resources", "interactions", "payoff_total"])
-            agent_df = agent_df.sort_values(sort_by, ascending=False)
+            name_filter = st.text_input("Filter by name:", "")
+            if name_filter.strip():
+                agent_df = agent_df[
+                    agent_df["display_name"].str.contains(name_filter, case=False, na=False)
+                ]
+
+            sort_by = st.selectbox(
+                "Sort by:",
+                ["name", "reputation", "resources", "interactions", "payoff_total"],
+            )
+            if sort_by == "name":
+                agent_df = agent_df.sort_values("display_name", ascending=True)
+            else:
+                agent_df = agent_df.sort_values(sort_by, ascending=False)
 
             # Style the dataframe
             def color_agent_type(val):
@@ -244,7 +264,7 @@ def main():
             st.dataframe(styled_df, use_container_width=True)
 
             # Reputation bar chart
-            fig = px.bar(agent_df, x="agent_id", y="reputation",
+            fig = px.bar(agent_df, x="display_name", y="reputation",
                         color="agent_type",
                         color_discrete_map={
                             "honest": "#28a745",
@@ -360,12 +380,12 @@ def generate_demo_data():
         })
 
     agents = [
-        {"agent_id": "honest_1", "agent_type": "honest", "reputation": 12.5, "resources": 105.0, "interactions": 45, "payoff_total": 52.3, "is_frozen": False},
-        {"agent_id": "honest_2", "agent_type": "honest", "reputation": 11.2, "resources": 98.0, "interactions": 42, "payoff_total": 48.1, "is_frozen": False},
-        {"agent_id": "honest_3", "agent_type": "honest", "reputation": 10.8, "resources": 102.0, "interactions": 40, "payoff_total": 45.5, "is_frozen": False},
-        {"agent_id": "opp_1", "agent_type": "opportunistic", "reputation": 8.5, "resources": 115.0, "interactions": 38, "payoff_total": 55.2, "is_frozen": False},
-        {"agent_id": "opp_2", "agent_type": "opportunistic", "reputation": 7.2, "resources": 110.0, "interactions": 35, "payoff_total": 42.0, "is_frozen": False},
-        {"agent_id": "adv_1", "agent_type": "adversarial", "reputation": 3.1, "resources": 85.0, "interactions": 25, "payoff_total": -15.3, "is_frozen": True},
+        {"agent_id": "honest_1", "name": "Alice", "agent_type": "honest", "reputation": 12.5, "resources": 105.0, "interactions": 45, "payoff_total": 52.3, "is_frozen": False},
+        {"agent_id": "honest_2", "name": "Bob", "agent_type": "honest", "reputation": 11.2, "resources": 98.0, "interactions": 42, "payoff_total": 48.1, "is_frozen": False},
+        {"agent_id": "honest_3", "name": "Casey", "agent_type": "honest", "reputation": 10.8, "resources": 102.0, "interactions": 40, "payoff_total": 45.5, "is_frozen": False},
+        {"agent_id": "opp_1", "name": "Delta", "agent_type": "opportunistic", "reputation": 8.5, "resources": 115.0, "interactions": 38, "payoff_total": 55.2, "is_frozen": False},
+        {"agent_id": "opp_2", "name": "Echo", "agent_type": "opportunistic", "reputation": 7.2, "resources": 110.0, "interactions": 35, "payoff_total": 42.0, "is_frozen": False},
+        {"agent_id": "adv_1", "name": "Nyx", "agent_type": "adversarial", "reputation": 3.1, "resources": 85.0, "interactions": 25, "payoff_total": -15.3, "is_frozen": True},
     ]
 
     recent_events = [

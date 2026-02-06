@@ -31,6 +31,7 @@ class HonestAgent(BaseAgent):
         agent_id: str,
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
+        name: Optional[str] = None,
     ):
         """Initialize honest agent."""
         super().__init__(
@@ -38,6 +39,7 @@ class HonestAgent(BaseAgent):
             agent_type=AgentType.HONEST,
             roles=roles,
             config=config or {},
+            name=name,
         )
 
         # Honest agent parameters

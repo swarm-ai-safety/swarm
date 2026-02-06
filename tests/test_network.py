@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from swarm.env.network import AgentNetwork, NetworkConfig, NetworkTopology
 
@@ -65,31 +66,31 @@ class TestNetworkConfig:
 
     def test_validation_edge_probability(self):
         """Test edge_probability validation."""
-        with pytest.raises(ValueError, match="edge_probability"):
-            NetworkConfig(edge_probability=1.5).validate()
+        with pytest.raises(ValidationError, match="edge_probability"):
+            NetworkConfig(edge_probability=1.5)
 
-        with pytest.raises(ValueError, match="edge_probability"):
-            NetworkConfig(edge_probability=-0.1).validate()
+        with pytest.raises(ValidationError, match="edge_probability"):
+            NetworkConfig(edge_probability=-0.1)
 
     def test_validation_rewire_probability(self):
         """Test rewire_probability validation."""
-        with pytest.raises(ValueError, match="rewire_probability"):
-            NetworkConfig(rewire_probability=2.0).validate()
+        with pytest.raises(ValidationError, match="rewire_probability"):
+            NetworkConfig(rewire_probability=2.0)
 
     def test_validation_k_neighbors(self):
         """Test k_neighbors validation."""
-        with pytest.raises(ValueError, match="k_neighbors"):
-            NetworkConfig(k_neighbors=1).validate()
+        with pytest.raises(ValidationError, match="k_neighbors"):
+            NetworkConfig(k_neighbors=1)
 
     def test_validation_m_edges(self):
         """Test m_edges validation."""
-        with pytest.raises(ValueError, match="m_edges"):
-            NetworkConfig(m_edges=0).validate()
+        with pytest.raises(ValidationError, match="m_edges"):
+            NetworkConfig(m_edges=0)
 
     def test_validation_decay_rate(self):
         """Test edge_decay_rate validation."""
-        with pytest.raises(ValueError, match="edge_decay_rate"):
-            NetworkConfig(edge_decay_rate=1.5).validate()
+        with pytest.raises(ValidationError, match="edge_decay_rate"):
+            NetworkConfig(edge_decay_rate=1.5)
 
 
 # =============================================================================

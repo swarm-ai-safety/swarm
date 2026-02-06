@@ -401,6 +401,7 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
     for spec in agent_specs:
         agent_type = spec.get("type", "honest")
         count = spec.get("count", 1)
+        base_name = spec.get("name")
 
         # Handle LLM agents
         if agent_type == "llm":
@@ -411,10 +412,14 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
                 # Generate unique ID
                 counters["llm"] = counters.get("llm", 0) + 1
                 agent_id = f"llm_{counters['llm']}"
+                agent_name = (
+                    f"{base_name}_{counters['llm']}" if base_name and count > 1 else base_name
+                )
 
                 agent = LLMAgent(
                     agent_id=agent_id,
                     llm_config=llm_config,
+                    name=agent_name,
                 )
                 agents.append(agent)
 
@@ -426,9 +431,12 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
                 # Generate unique ID
                 counters[agent_type] = counters.get(agent_type, 0) + 1
                 agent_id = f"{agent_type}_{counters[agent_type]}"
+                agent_name = (
+                    f"{base_name}_{counters[agent_type]}" if base_name and count > 1 else base_name
+                )
 
                 # Create agent with optional config
-                agent = agent_class(agent_id=agent_id)  # type: ignore[call-arg]
+                agent = agent_class(agent_id=agent_id, name=agent_name)  # type: ignore[call-arg]
                 agents.append(agent)
 
         else:

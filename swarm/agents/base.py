@@ -164,6 +164,7 @@ class BaseAgent(ABC):
         agent_type: AgentType,
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
+        name: Optional[str] = None,
     ):
         """
         Initialize agent.
@@ -173,8 +174,10 @@ class BaseAgent(ABC):
             agent_type: Behavioral archetype
             roles: List of roles this agent can fulfill
             config: Agent-specific configuration
+            name: Human-readable label (defaults to agent_id)
         """
         self.agent_id = agent_id
+        self.name = name or agent_id
         self.agent_type = agent_type
         self.roles = roles or [Role.WORKER]
         self.config = config or {}

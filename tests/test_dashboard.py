@@ -335,8 +335,8 @@ class TestIncoherenceDashboardHelpers:
         from swarm.models.interaction import SoftInteraction
 
         state = EnvState()
-        state.add_agent("a1", AgentType.HONEST)
-        state.add_agent("a2", AgentType.ADVERSARIAL)
+        state.add_agent("a1", agent_type=AgentType.HONEST)
+        state.add_agent("a2", agent_type=AgentType.ADVERSARIAL)
 
         state.record_interaction(SoftInteraction(initiator="a1", counterparty="a2", p=0.5))
         state.record_interaction(SoftInteraction(initiator="a1", counterparty="a2", p=1.0))

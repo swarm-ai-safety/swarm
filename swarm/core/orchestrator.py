@@ -1,12 +1,12 @@
 """Orchestrator for running the multi-agent simulation."""
 
 import asyncio
-import json
 import random
-from dataclasses import asdict, dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from pydantic import BaseModel, ConfigDict, Field
 from swarm.agents.base import Action, ActionType, BaseAgent, Observation
 from swarm.boundaries.external_world import ExternalEntity, ExternalWorld
 from swarm.boundaries.information_flow import FlowTracker
@@ -51,9 +51,10 @@ from swarm.models.events import (
 from swarm.models.interaction import InteractionType, SoftInteraction
 
 
-@dataclass
-class OrchestratorConfig:
+class OrchestratorConfig(BaseModel):
     """Configuration for the orchestrator."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     # Timing
     n_epochs: int = 10
@@ -69,7 +70,7 @@ class OrchestratorConfig:
     enable_kill_switch: bool = True
 
     # Payoff configuration
-    payoff_config: PayoffConfig = field(default_factory=PayoffConfig)
+    payoff_config: PayoffConfig = Field(default_factory=PayoffConfig)
 
     # Governance configuration
     governance_config: Optional[GovernanceConfig] = None
@@ -101,19 +102,6 @@ class OrchestratorConfig:
     # Stress-test knobs
     observation_noise_probability: float = 0.0
     observation_noise_std: float = 0.0
-
-    def model_dump(self) -> Dict[str, Any]:
-        """Return a JSON-serializable dict of config values."""
-        return asdict(self)
-
-    def model_dump_json(self, *, indent: Optional[int] = None) -> str:
-        """
-        Return a JSON string of the config.
-
-        Mirrors Pydantic's model_dump_json for convenience.
-        """
-        return json.dumps(self.model_dump(), indent=indent, default=str)
-
 
 @dataclass
 class EpochMetrics:
@@ -178,7 +166,7 @@ class Orchestrator:
             governance_engine: Custom governance engine (default: built from
                 config.governance_config if provided)
         """
-        self.config = config or OrchestratorConfig()
+        self.config = OrchestratorConfig() if config is None else config
         if not 0.0 <= self.config.observation_noise_probability <= 1.0:
             raise ValueError("observation_noise_probability must be in [0, 1]")
         if self.config.observation_noise_std < 0.0:
@@ -308,6 +296,7 @@ class Orchestrator:
         # Create agent state in environment
         state = self.state.add_agent(
             agent_id=agent.agent_id,
+            name=getattr(agent, "name", agent.agent_id),
             agent_type=agent.agent_type,
         )
 
@@ -317,6 +306,7 @@ class Orchestrator:
             agent_id=agent.agent_id,
             payload={
                 "agent_type": agent.agent_type.value,
+                "name": getattr(agent, "name", agent.agent_id),
                 "roles": [r.value for r in agent.roles],
             },
             epoch=self.state.current_epoch,
@@ -609,6 +599,7 @@ class Orchestrator:
         visible_agents = [
             {
                 "agent_id": s.agent_id,
+                "name": s.name,
                 "agent_type": s.agent_type.value,
                 "reputation": s.reputation,
                 "resources": s.resources,

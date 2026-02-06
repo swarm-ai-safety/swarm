@@ -74,6 +74,7 @@ class AgentSnapshot:
 
     agent_id: str
     agent_type: str
+    name: Optional[str] = None
     reputation: float = 0.0
     resources: float = 0.0
     interactions: int = 0
@@ -85,6 +86,7 @@ class AgentSnapshot:
         return {
             "agent_id": self.agent_id,
             "agent_type": self.agent_type,
+            "name": self.name,
             "reputation": self.reputation,
             "resources": self.resources,
             "interactions": self.interactions,
@@ -170,6 +172,11 @@ class DashboardState:
             Sorted list of agent snapshots
         """
         agents = list(self.agent_snapshots.values())
+        if sort_by == "name":
+            return sorted(
+                agents,
+                key=lambda a: (a.name or a.agent_id).lower(),
+            )
         return sorted(agents, key=lambda a: getattr(a, sort_by, 0), reverse=True)
 
     def export_to_json(self) -> str:
@@ -284,6 +291,7 @@ def extract_agent_snapshots(orchestrator: Any) -> List[AgentSnapshot]:
             snapshots.append(AgentSnapshot(
                 agent_id=agent_id,
                 agent_type=agent_state.agent_type.value,
+                name=agent_state.name,
                 reputation=agent_state.reputation,
                 resources=agent_state.resources,
                 interactions=total_interactions,
@@ -314,6 +322,7 @@ def extract_incoherence_agent_profiles(orchestrator: Any) -> List[Dict[str, Any]
         rows.append({
             "agent_id": agent_id,
             "agent_type": agent_state.agent_type.value,
+            "name": agent_state.name,
             "incoherence_index": sum(values) / len(values) if values else 0.0,
             "n_interactions": len(values),
         })

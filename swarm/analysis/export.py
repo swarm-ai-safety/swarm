@@ -93,6 +93,7 @@ def history_to_agent_records(
             record = {
                 "simulation_id": history.simulation_id,
                 "agent_id": agent_id,
+                "name": snapshot.name,
                 "epoch": snapshot.epoch,
                 "reputation": snapshot.reputation,
                 "resources": snapshot.resources,
@@ -333,6 +334,7 @@ def load_from_json(
         agent_snap = AgentSnapshot(
             agent_id=record["agent_id"],
             epoch=record["epoch"],
+            name=record.get("name"),
             reputation=record.get("reputation", 0.0),
             resources=record.get("resources", 100.0),
             interactions_initiated=record.get("interactions_initiated", 0),
@@ -402,9 +404,13 @@ def load_from_csv(
         agents_df = pd.read_csv(agents_path)
 
         for _, row in agents_df.iterrows():
+            name = row.get("name") if "name" in row else None
+            if name is not None and pd.isna(name):
+                name = None
             agent_snap = AgentSnapshot(
                 agent_id=str(row["agent_id"]),
                 epoch=int(row.get("epoch", 0)),
+                name=str(name) if name is not None else None,
                 reputation=float(row.get("reputation", 0.0)),
                 resources=float(row.get("resources", 100.0)),
                 total_payoff=float(row.get("total_payoff", 0.0)),

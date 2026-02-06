@@ -1,8 +1,9 @@
 """Network topology for agent interactions."""
 
-from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple
+
+from pydantic import BaseModel, model_validator
 
 import numpy as np
 
@@ -19,8 +20,7 @@ class NetworkTopology(Enum):
     CUSTOM = "custom"  # User-defined adjacency
 
 
-@dataclass
-class NetworkConfig:
+class NetworkConfig(BaseModel):
     """Configuration for agent network topology."""
 
     topology: NetworkTopology = NetworkTopology.COMPLETE
@@ -44,6 +44,11 @@ class NetworkConfig:
 
     # Reputation-based dynamics
     reputation_disconnect_threshold: Optional[float] = None  # Sever ties below this rep
+
+    @model_validator(mode="after")
+    def _validate_values(self) -> "NetworkConfig":
+        self.validate()
+        return self
 
     def validate(self) -> None:
         """Validate configuration parameters."""
@@ -79,7 +84,7 @@ class AgentNetwork:
             config: Network configuration
             seed: Random seed for reproducibility
         """
-        self.config = config or NetworkConfig()
+        self.config = NetworkConfig() if config is None else config
         self.config.validate()
         self._rng = np.random.default_rng(seed)
 

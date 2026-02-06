@@ -31,6 +31,7 @@ class OpportunisticAgent(BaseAgent):
         agent_id: str,
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
+        name: Optional[str] = None,
     ):
         """Initialize opportunistic agent."""
         super().__init__(
@@ -38,6 +39,7 @@ class OpportunisticAgent(BaseAgent):
             agent_type=AgentType.OPPORTUNISTIC,
             roles=roles,
             config=config or {},
+            name=name,
         )
 
         # Opportunistic agent parameters

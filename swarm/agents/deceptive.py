@@ -31,6 +31,7 @@ class DeceptiveAgent(BaseAgent):
         agent_id: str,
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
+        name: Optional[str] = None,
     ):
         """Initialize deceptive agent."""
         super().__init__(
@@ -38,6 +39,7 @@ class DeceptiveAgent(BaseAgent):
             agent_type=AgentType.DECEPTIVE,
             roles=roles,
             config=config or {},
+            name=name,
         )
 
         # Deceptive agent parameters

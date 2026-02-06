@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional
 
+from pydantic import BaseModel, model_validator
+
 
 class BountyStatus(Enum):
     """Status of a bounty."""
@@ -152,8 +154,7 @@ class Dispute:
         }
 
 
-@dataclass
-class MarketplaceConfig:
+class MarketplaceConfig(BaseModel):
     """Configuration for the marketplace."""
 
     enabled: bool = True
@@ -164,6 +165,11 @@ class MarketplaceConfig:
     dispute_resolution_epochs: int = 2
     auto_expire_bounties: bool = True
     dispute_default_split: float = 0.5
+
+    @model_validator(mode="after")
+    def _validate_values(self) -> "MarketplaceConfig":
+        self.validate()
+        return self
 
     def validate(self) -> None:
         """Validate configuration."""
@@ -191,7 +197,7 @@ class Marketplace:
 
     def __init__(self, config: Optional[MarketplaceConfig] = None):
         """Initialize marketplace."""
-        self.config = config or MarketplaceConfig()
+        self.config = MarketplaceConfig() if config is None else config
 
         self._bounties: Dict[str, Bounty] = {}
         self._bids: Dict[str, Bid] = {}

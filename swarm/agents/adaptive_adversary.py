@@ -157,12 +157,14 @@ class AdaptiveAdversary(BaseAgent):
         exploration_rate: float = 0.2,
         heat_threshold: float = 0.6,
         config: Optional[Dict] = None,
+        name: Optional[str] = None,
     ):
         """Initialize adaptive adversary."""
         super().__init__(
             agent_id=agent_id,
             agent_type=AgentType.ADVERSARIAL,
             config=config or {},
+            name=name,
         )
 
         # Learning parameters (can be overridden by config)

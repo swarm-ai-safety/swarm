@@ -42,6 +42,7 @@ Define agent populations:
 agents:
   - type: honest
     count: 5
+    name: "Team A"
     id_prefix: h
     params:
       cooperation_threshold: 0.7
@@ -61,6 +62,8 @@ agents:
     count: 1
     id_prefix: adv
 ```
+
+Optional: set `name` to control the human-readable display name for agents (defaults to `agent_id`). If `count > 1`, names are suffixed for uniqueness (e.g., `Team A_1`, `Team A_2`).
 
 ### Agent Types
 

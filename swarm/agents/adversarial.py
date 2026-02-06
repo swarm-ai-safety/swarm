@@ -32,6 +32,7 @@ class AdversarialAgent(BaseAgent):
         agent_id: str,
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
+        name: Optional[str] = None,
     ):
         """Initialize adversarial agent."""
         super().__init__(
@@ -39,6 +40,7 @@ class AdversarialAgent(BaseAgent):
             agent_type=AgentType.ADVERSARIAL,
             roles=roles,
             config=config or {},
+            name=name,
         )
 
         # Adversarial parameters

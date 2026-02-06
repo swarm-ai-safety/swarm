@@ -1,10 +1,9 @@
 """Configuration dataclass for governance levers."""
 
-from dataclasses import dataclass
+from pydantic import BaseModel, model_validator
 
 
-@dataclass
-class GovernanceConfig:
+class GovernanceConfig(BaseModel):
     """
     Configuration for all governance levers.
 
@@ -105,6 +104,11 @@ class GovernanceConfig:
     moderator_review_probability: float = 0.5  # Probability of review
     moderator_penalty_multiplier: float = 1.0  # Penalty scaling factor
     moderator_threshold_p: float = 0.5  # Threshold for penalty
+
+    @model_validator(mode="after")
+    def _validate_values(self) -> "GovernanceConfig":
+        self.validate()
+        return self
 
     def validate(self) -> None:
         """Validate configuration values."""

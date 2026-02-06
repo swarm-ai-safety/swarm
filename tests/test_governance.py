@@ -1,6 +1,7 @@
 """Tests for the governance module."""
 
 import pytest
+from pydantic import ValidationError
 
 from swarm.env.state import EnvState
 from swarm.governance.admission import StakingLever
@@ -38,38 +39,34 @@ class TestGovernanceConfig:
 
     def test_invalid_tax_rate(self):
         """Tax rate outside [0,1] should raise."""
-        config = GovernanceConfig(transaction_tax_rate=1.5)
-        with pytest.raises(ValueError, match="transaction_tax_rate"):
-            config.validate()
+        with pytest.raises(ValidationError, match="transaction_tax_rate"):
+            GovernanceConfig(transaction_tax_rate=1.5)
 
-        config = GovernanceConfig(transaction_tax_rate=-0.1)
-        with pytest.raises(ValueError, match="transaction_tax_rate"):
-            config.validate()
+        with pytest.raises(ValidationError, match="transaction_tax_rate"):
+            GovernanceConfig(transaction_tax_rate=-0.1)
 
     def test_invalid_decay_rate(self):
         """Decay rate outside [0,1] should raise."""
-        config = GovernanceConfig(reputation_decay_rate=1.5)
-        with pytest.raises(ValueError, match="reputation_decay_rate"):
-            config.validate()
+        with pytest.raises(ValidationError, match="reputation_decay_rate"):
+            GovernanceConfig(reputation_decay_rate=1.5)
 
     def test_invalid_audit_probability(self):
         """Audit probability outside [0,1] should raise."""
-        config = GovernanceConfig(audit_probability=2.0)
-        with pytest.raises(ValueError, match="audit_probability"):
-            config.validate()
+        with pytest.raises(ValidationError, match="audit_probability"):
+            GovernanceConfig(audit_probability=2.0)
 
     def test_invalid_variance_aware_fields(self):
         """Variance-aware config validation should reject invalid values."""
-        with pytest.raises(ValueError, match="self_ensemble_samples"):
-            GovernanceConfig(self_ensemble_samples=0).validate()
-        with pytest.raises(ValueError, match="incoherence_breaker_threshold"):
-            GovernanceConfig(incoherence_breaker_threshold=1.1).validate()
-        with pytest.raises(ValueError, match="decomposition_horizon_threshold"):
-            GovernanceConfig(decomposition_horizon_threshold=0).validate()
-        with pytest.raises(ValueError, match="incoherence_friction_rate"):
-            GovernanceConfig(incoherence_friction_rate=-0.1).validate()
-        with pytest.raises(ValueError, match="adaptive_incoherence_threshold"):
-            GovernanceConfig(adaptive_incoherence_threshold=1.5).validate()
+        with pytest.raises(ValidationError, match="self_ensemble_samples"):
+            GovernanceConfig(self_ensemble_samples=0)
+        with pytest.raises(ValidationError, match="incoherence_breaker_threshold"):
+            GovernanceConfig(incoherence_breaker_threshold=1.1)
+        with pytest.raises(ValidationError, match="decomposition_horizon_threshold"):
+            GovernanceConfig(decomposition_horizon_threshold=0)
+        with pytest.raises(ValidationError, match="incoherence_friction_rate"):
+            GovernanceConfig(incoherence_friction_rate=-0.1)
+        with pytest.raises(ValidationError, match="adaptive_incoherence_threshold"):
+            GovernanceConfig(adaptive_incoherence_threshold=1.5)
 
 
 class TestLeverEffect:

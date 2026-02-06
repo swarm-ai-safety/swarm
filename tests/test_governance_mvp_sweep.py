@@ -1,6 +1,7 @@
 """Tests for the governance MVP sweep and new levers (transparency, moderator)."""
 
 import pytest
+from pydantic import ValidationError
 
 from swarm.env.state import EnvState
 from swarm.governance.config import GovernanceConfig
@@ -274,15 +275,13 @@ class TestNewGovernanceConfigValidation:
 
     def test_invalid_transparency_bonus_rate(self):
         """Negative bonus rate should raise."""
-        config = GovernanceConfig(transparency_bonus_rate=-0.1)
-        with pytest.raises(ValueError, match="transparency_bonus_rate"):
-            config.validate()
+        with pytest.raises(ValidationError, match="transparency_bonus_rate"):
+            GovernanceConfig(transparency_bonus_rate=-0.1)
 
     def test_invalid_transparency_threshold(self):
         """Threshold outside [0,1] should raise."""
-        config = GovernanceConfig(transparency_threshold_p=1.5)
-        with pytest.raises(ValueError, match="transparency_threshold_p"):
-            config.validate()
+        with pytest.raises(ValidationError, match="transparency_threshold_p"):
+            GovernanceConfig(transparency_threshold_p=1.5)
 
     def test_valid_moderator_config(self):
         """Valid moderator config should pass validation."""
@@ -296,21 +295,18 @@ class TestNewGovernanceConfigValidation:
 
     def test_invalid_moderator_review_probability(self):
         """Review probability outside [0,1] should raise."""
-        config = GovernanceConfig(moderator_review_probability=2.0)
-        with pytest.raises(ValueError, match="moderator_review_probability"):
-            config.validate()
+        with pytest.raises(ValidationError, match="moderator_review_probability"):
+            GovernanceConfig(moderator_review_probability=2.0)
 
     def test_invalid_moderator_penalty_multiplier(self):
         """Negative penalty multiplier should raise."""
-        config = GovernanceConfig(moderator_penalty_multiplier=-1.0)
-        with pytest.raises(ValueError, match="moderator_penalty_multiplier"):
-            config.validate()
+        with pytest.raises(ValidationError, match="moderator_penalty_multiplier"):
+            GovernanceConfig(moderator_penalty_multiplier=-1.0)
 
     def test_invalid_moderator_threshold(self):
         """Threshold outside [0,1] should raise."""
-        config = GovernanceConfig(moderator_threshold_p=1.5)
-        with pytest.raises(ValueError, match="moderator_threshold_p"):
-            config.validate()
+        with pytest.raises(ValidationError, match="moderator_threshold_p"):
+            GovernanceConfig(moderator_threshold_p=1.5)
 
 
 # ── GovernanceEngine Integration ─────────────────────────────────────────

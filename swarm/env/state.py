@@ -151,6 +151,7 @@ class EnvState:
     def add_agent(
         self,
         agent_id: str,
+        name: Optional[str] = None,
         agent_type: AgentType = AgentType.HONEST,
         initial_reputation: float = 0.0,
         initial_resources: float = 100.0,
@@ -160,6 +161,7 @@ class EnvState:
 
         Args:
             agent_id: Unique identifier for the agent
+            name: Human-readable label (defaults to agent_id)
             agent_type: Behavioral type of the agent
             initial_reputation: Starting reputation
             initial_resources: Starting resources
@@ -172,6 +174,7 @@ class EnvState:
 
         state = AgentState(
             agent_id=agent_id,
+            name=name or agent_id,
             agent_type=agent_type,
             reputation=initial_reputation,
             resources=initial_resources,

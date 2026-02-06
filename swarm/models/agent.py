@@ -30,6 +30,7 @@ class AgentState:
     """
 
     agent_id: str = ""
+    name: Optional[str] = None
     agent_type: AgentType = AgentType.HONEST
 
     # Reputation score (can be positive or negative)
@@ -53,6 +54,11 @@ class AgentState:
 
     # Optional: hidden type for deceptive agents
     true_type: Optional[AgentType] = None
+
+    def __post_init__(self) -> None:
+        """Default name to agent_id when not provided."""
+        if self.name is None or self.name == "":
+            self.name = self.agent_id
 
     def update_reputation(self, delta: float) -> None:
         """Update reputation by delta amount."""
@@ -96,6 +102,7 @@ class AgentState:
         """Convert to dictionary for serialization."""
         return {
             "agent_id": self.agent_id,
+            "name": self.name,
             "agent_type": self.agent_type.value,
             "reputation": self.reputation,
             "resources": self.resources,
@@ -114,6 +121,7 @@ class AgentState:
         """Create from dictionary."""
         return cls(
             agent_id=data["agent_id"],
+            name=data.get("name"),
             agent_type=AgentType(data["agent_type"]),
             reputation=data["reputation"],
             resources=data["resources"],

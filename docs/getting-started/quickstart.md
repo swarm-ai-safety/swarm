@@ -21,8 +21,8 @@ config = OrchestratorConfig(
 orchestrator = Orchestrator(config=config)
 
 # Register agents with different behavioral policies
-orchestrator.register_agent(HonestAgent(agent_id="honest_1"))
-orchestrator.register_agent(HonestAgent(agent_id="honest_2"))
+orchestrator.register_agent(HonestAgent(agent_id="honest_1", name="Alice"))
+orchestrator.register_agent(HonestAgent(agent_id="honest_2", name="Bob"))
 orchestrator.register_agent(OpportunisticAgent(agent_id="opp_1"))
 orchestrator.register_agent(DeceptiveAgent(agent_id="dec_1"))
 

@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 
 import numpy as np
 import pytest
+from pydantic import ValidationError
 
 from swarm.governance import GovernanceConfig, GovernanceEngine
 from swarm.governance.security import SecurityLever
@@ -716,33 +717,28 @@ class TestSecurityConfigValidation:
 
     def test_invalid_injection_threshold(self):
         """Test invalid injection threshold."""
-        config = GovernanceConfig(security_injection_threshold=1.5)
-        with pytest.raises(ValueError, match="security_injection_threshold"):
-            config.validate()
+        with pytest.raises(ValidationError, match="security_injection_threshold"):
+            GovernanceConfig(security_injection_threshold=1.5)
 
     def test_invalid_manipulation_threshold(self):
         """Test invalid manipulation threshold."""
-        config = GovernanceConfig(security_manipulation_threshold=-0.1)
-        with pytest.raises(ValueError, match="security_manipulation_threshold"):
-            config.validate()
+        with pytest.raises(ValidationError, match="security_manipulation_threshold"):
+            GovernanceConfig(security_manipulation_threshold=-0.1)
 
     def test_invalid_contagion_velocity(self):
         """Test invalid contagion velocity."""
-        config = GovernanceConfig(security_contagion_velocity=0)
-        with pytest.raises(ValueError, match="security_contagion_velocity"):
-            config.validate()
+        with pytest.raises(ValidationError, match="security_contagion_velocity"):
+            GovernanceConfig(security_contagion_velocity=0)
 
     def test_invalid_min_chain_length(self):
         """Test invalid minimum chain length."""
-        config = GovernanceConfig(security_min_chain_length=1)
-        with pytest.raises(ValueError, match="security_min_chain_length"):
-            config.validate()
+        with pytest.raises(ValidationError, match="security_min_chain_length"):
+            GovernanceConfig(security_min_chain_length=1)
 
     def test_invalid_penalty_multiplier(self):
         """Test invalid penalty multiplier."""
-        config = GovernanceConfig(security_penalty_multiplier=-1)
-        with pytest.raises(ValueError, match="security_penalty_multiplier"):
-            config.validate()
+        with pytest.raises(ValidationError, match="security_penalty_multiplier"):
+            GovernanceConfig(security_penalty_multiplier=-1)
 
 
 # =============================================================================

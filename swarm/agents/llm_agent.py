@@ -37,6 +37,7 @@ class LLMAgent(BaseAgent):
         llm_config: LLMConfig,
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
+        name: Optional[str] = None,
     ):
         """
         Initialize LLM agent.
@@ -46,12 +47,14 @@ class LLMAgent(BaseAgent):
             llm_config: LLM API configuration
             roles: List of roles this agent can fulfill
             config: Additional agent configuration
+            name: Human-readable name for the agent
         """
         super().__init__(
             agent_id=agent_id,
             agent_type=AgentType.HONEST,  # Default, behavior comes from LLM
             roles=roles,
             config=config,
+            name=name,
         )
 
         self.llm_config = llm_config

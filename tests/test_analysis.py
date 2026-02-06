@@ -248,8 +248,8 @@ class TestMetricsAggregator:
 
         # Finalize epoch
         agent_states = {
-            "agent_a": SimpleNamespace(reputation=1.0, resources=110.0),
-            "agent_b": SimpleNamespace(reputation=0.5, resources=95.0),
+            "agent_a": SimpleNamespace(name="agent", reputation=1.0, resources=110.0),
+            "agent_b": SimpleNamespace(name="agent", reputation=0.5, resources=95.0),
         }
         snapshot = agg.finalize_epoch(epoch=0, agent_states=agent_states)
 
@@ -298,8 +298,8 @@ class TestMetricsAggregator:
         agg.record_interaction(i)
 
         agent_states = {
-            "a": SimpleNamespace(reputation=0.2, resources=50.0),
-            "b": SimpleNamespace(reputation=0.8, resources=150.0),
+            "a": SimpleNamespace(name="agent", reputation=0.2, resources=50.0),
+            "b": SimpleNamespace(name="agent", reputation=0.8, resources=150.0),
         }
         snapshot = agg.finalize_epoch(
             epoch=0,
@@ -322,7 +322,7 @@ class TestMetricsAggregator:
     def test_finalize_epoch_with_network_metrics(self):
         agg = MetricsAggregator()
         agg.start_simulation("net-test", 1, 1, 1)
-        agent_states = {"a": SimpleNamespace(reputation=0.5, resources=100.0)}
+        agent_states = {"a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)}
         snapshot = agg.finalize_epoch(
             epoch=0,
             agent_states=agent_states,
@@ -341,7 +341,7 @@ class TestMetricsAggregator:
     def test_finalize_epoch_no_interactions(self):
         agg = MetricsAggregator()
         agg.start_simulation("empty-test", 1, 1, 1)
-        agent_states = {"a": SimpleNamespace(reputation=0.0, resources=100.0)}
+        agent_states = {"a": SimpleNamespace(name="agent", reputation=0.0, resources=100.0)}
         snapshot = agg.finalize_epoch(epoch=0, agent_states=agent_states)
         assert snapshot.total_interactions == 0
         assert snapshot.avg_p == 0.5  # default when no interactions
@@ -358,8 +358,8 @@ class TestMetricsAggregator:
             agg.record_interaction(i)
             agg.record_payoff("a", 5.0 + ep)
             agent_states = {
-                "a": SimpleNamespace(reputation=0.5 + ep * 0.1, resources=100.0),
-                "b": SimpleNamespace(reputation=0.5, resources=100.0),
+                "a": SimpleNamespace(name="agent", reputation=0.5 + ep * 0.1, resources=100.0),
+                "b": SimpleNamespace(name="agent", reputation=0.5, resources=100.0),
             }
             agg.finalize_epoch(epoch=ep, agent_states=agent_states)
 
@@ -380,8 +380,8 @@ class TestMetricsAggregator:
         )
 
         agent_states = {
-            "a": SimpleNamespace(reputation=0.5, resources=100.0),
-            "b": SimpleNamespace(reputation=0.5, resources=100.0),
+            "a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0),
+            "b": SimpleNamespace(name="agent", reputation=0.5, resources=100.0),
         }
         agg.finalize_epoch(epoch=0, agent_states=agent_states)
 
@@ -743,7 +743,7 @@ class TestMetricsAggregatorOptionalReports:
     def test_security_report(self):
         agg = MetricsAggregator()
         agg.start_simulation("sec-test", 1, 1, 1)
-        agent_states = {"a": SimpleNamespace(reputation=0.5, resources=100.0)}
+        agent_states = {"a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)}
         sec = SimpleNamespace(
             ecosystem_threat_level=0.7,
             active_threat_count=3,
@@ -757,7 +757,7 @@ class TestMetricsAggregatorOptionalReports:
     def test_collusion_report(self):
         agg = MetricsAggregator()
         agg.start_simulation("col-test", 1, 1, 1)
-        agent_states = {"a": SimpleNamespace(reputation=0.5, resources=100.0)}
+        agent_states = {"a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)}
         col = SimpleNamespace(
             ecosystem_collusion_risk=0.4,
             n_flagged_pairs=5,
@@ -769,7 +769,7 @@ class TestMetricsAggregatorOptionalReports:
     def test_capability_metrics(self):
         agg = MetricsAggregator()
         agg.start_simulation("cap-test", 1, 1, 1)
-        agent_states = {"a": SimpleNamespace(reputation=0.5, resources=100.0)}
+        agent_states = {"a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)}
         cap = SimpleNamespace(
             avg_coordination_score=0.8,
             avg_synergy_score=0.6,

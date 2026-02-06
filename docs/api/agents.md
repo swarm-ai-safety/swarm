@@ -39,9 +39,12 @@ from swarm.agents.honest import HonestAgent
 
 agent = HonestAgent(
     agent_id="honest_1",
+    name="Alice",
     cooperation_threshold=0.7,
 )
 ```
+
+All agents accept an optional `name` parameter for human-readable display (defaults to `agent_id`).
 
 ### OpportunisticAgent
 

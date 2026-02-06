@@ -1,6 +1,7 @@
 """Tests for the soft payoff engine."""
 
 import pytest
+from pydantic import ValidationError
 
 from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.models.interaction import SoftInteraction
@@ -20,19 +21,16 @@ class TestPayoffConfig:
 
     def test_invalid_s_plus(self):
         """Negative s_plus should raise."""
-        config = PayoffConfig(s_plus=-1.0)
-        with pytest.raises(ValueError, match="s_plus"):
-            config.validate()
+        with pytest.raises(ValidationError, match="s_plus"):
+            PayoffConfig(s_plus=-1.0)
 
     def test_invalid_theta(self):
         """theta outside [0,1] should raise."""
-        config = PayoffConfig(theta=1.5)
-        with pytest.raises(ValueError, match="theta"):
-            config.validate()
+        with pytest.raises(ValidationError, match="theta"):
+            PayoffConfig(theta=1.5)
 
-        config = PayoffConfig(theta=-0.1)
-        with pytest.raises(ValueError, match="theta"):
-            config.validate()
+        with pytest.raises(ValidationError, match="theta"):
+            PayoffConfig(theta=-0.1)
 
 
 class TestExpectedValues:
