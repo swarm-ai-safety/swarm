@@ -104,6 +104,7 @@ nav:
     - LLM Agents: guides/llm-agents.md
     - Red Teaming: guides/red-teaming.md
   - API Reference:
+    - Overview: api/index.md
     - Core: api/core.md
     - Agents: api/agents.md
     - Governance: api/governance.md
