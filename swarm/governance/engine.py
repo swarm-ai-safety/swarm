@@ -12,11 +12,14 @@ from swarm.governance.config import GovernanceConfig
 from swarm.governance.decomposition import DecompositionLever
 from swarm.governance.dynamic_friction import IncoherenceFrictionLever
 from swarm.governance.ensemble import SelfEnsembleLever
+from swarm.governance.identity_lever import SybilDetectionLever
 from swarm.governance.incoherence_breaker import IncoherenceCircuitBreakerLever
 from swarm.governance.levers import GovernanceLever, LeverEffect
+from swarm.governance.moderator_lever import ModeratorLever
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever
 from swarm.governance.security import SecurityLever
 from swarm.governance.taxes import TransactionTaxLever
+from swarm.governance.transparency import TransparencyLever
 from swarm.models.interaction import SoftInteraction
 
 
@@ -107,6 +110,11 @@ class GovernanceEngine:
             levers.append(DecompositionLever(self.config))
         if self.config.incoherence_friction_enabled:
             levers.append(IncoherenceFrictionLever(self.config))
+
+        # VAE paper levers
+        levers.append(TransparencyLever(self.config))
+        levers.append(ModeratorLever(self.config, seed=seed))
+        levers.append(SybilDetectionLever(self.config))
 
         # Stored as a tuple so that external code cannot mutate in place.
         self._levers: tuple[GovernanceLever, ...] = tuple(levers)

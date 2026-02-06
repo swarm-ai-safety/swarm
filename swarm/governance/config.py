@@ -87,6 +87,25 @@ class GovernanceConfig:
     adaptive_incoherence_threshold: float = 0.5
     adaptive_use_behavioral_features: bool = False
 
+    # Sybil detection (VAE paper)
+    sybil_detection_enabled: bool = False
+    sybil_similarity_threshold: float = 0.8  # Behavioral similarity threshold
+    sybil_penalty_multiplier: float = 1.0  # Penalty scaling factor
+    sybil_realtime_penalty: bool = False  # Apply per-interaction penalty
+    sybil_realtime_rate: float = 0.1  # Rate for realtime penalty
+    sybil_max_cluster_size: int = 1  # Max allowed cluster size before blocking
+
+    # Transparency ledger (VAE paper)
+    transparency_enabled: bool = False
+    transparency_bonus_rate: float = 0.1  # Reputation bonus/penalty rate
+    transparency_threshold_p: float = 0.5  # Threshold for bonus vs penalty
+
+    # Moderator agent (VAE paper)
+    moderator_enabled: bool = False
+    moderator_review_probability: float = 0.5  # Probability of review
+    moderator_penalty_multiplier: float = 1.0  # Penalty scaling factor
+    moderator_threshold_p: float = 0.5  # Threshold for penalty
+
     def validate(self) -> None:
         """Validate configuration values."""
         if not 0.0 <= self.transaction_tax_rate <= 1.0:
@@ -162,3 +181,24 @@ class GovernanceConfig:
         # Adaptive governance validation
         if not 0.0 <= self.adaptive_incoherence_threshold <= 1.0:
             raise ValueError("adaptive_incoherence_threshold must be in [0, 1]")
+        # Sybil detection validation
+        if not 0.0 <= self.sybil_similarity_threshold <= 1.0:
+            raise ValueError("sybil_similarity_threshold must be in [0, 1]")
+        if self.sybil_penalty_multiplier < 0:
+            raise ValueError("sybil_penalty_multiplier must be non-negative")
+        if self.sybil_realtime_rate < 0:
+            raise ValueError("sybil_realtime_rate must be non-negative")
+        if self.sybil_max_cluster_size < 1:
+            raise ValueError("sybil_max_cluster_size must be >= 1")
+        # Transparency validation
+        if self.transparency_bonus_rate < 0:
+            raise ValueError("transparency_bonus_rate must be non-negative")
+        if not 0.0 <= self.transparency_threshold_p <= 1.0:
+            raise ValueError("transparency_threshold_p must be in [0, 1]")
+        # Moderator validation
+        if not 0.0 <= self.moderator_review_probability <= 1.0:
+            raise ValueError("moderator_review_probability must be in [0, 1]")
+        if self.moderator_penalty_multiplier < 0:
+            raise ValueError("moderator_penalty_multiplier must be non-negative")
+        if not 0.0 <= self.moderator_threshold_p <= 1.0:
+            raise ValueError("moderator_threshold_p must be in [0, 1]")
