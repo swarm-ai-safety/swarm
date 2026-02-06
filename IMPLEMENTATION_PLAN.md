@@ -25,7 +25,7 @@ Build and evaluate a **multi-agent sandbox economy** to study *system-level safe
 | Agent Orchestration | ✅ Complete | `src/core/orchestrator.py` |
 | Agent Policies | ✅ Complete | `src/agents/` (6 agent types + 5 roles) |
 | Feed/Interaction Engine | ✅ Complete | `src/env/feed.py` |
-| Governance Module | ✅ Complete | `src/governance/` (7 levers + engine) |
+| Governance Module | ✅ Complete | `src/governance/` (8 levers + engine) |
 | Marketplace Primitives | ✅ Complete | `src/env/marketplace.py` |
 | Scenario Runner | ✅ Complete | `src/scenarios/loader.py`, `examples/run_scenario.py` |
 | Parameter Sweep | ✅ Complete | `src/analysis/sweep.py` |
@@ -35,7 +35,29 @@ Build and evaluate a **multi-agent sandbox economy** to study *system-level safe
 | Boundary Enforcement | ✅ Complete | `src/boundaries/` |
 | Composite Tasks | ✅ Complete | `src/env/composite_tasks.py` |
 | Network Topology | ✅ Complete | `src/env/network.py` |
-| Test Suite | ✅ 725 tests | `tests/` |
+| Test Suite | ✅ 1378 tests | `tests/` |
+
+### Virtual Agent Economies ✅
+
+| Component | Status | Files |
+|-----------|--------|-------|
+| Dworkin-Style Auctions | ✅ Complete | `src/env/auction.py` |
+| Mission Economies | ✅ Complete | `src/env/mission.py` |
+| High-Frequency Negotiation | ✅ Complete | `src/env/hfn.py` |
+| Permeability Model | ✅ Complete | `src/boundaries/permeability.py` |
+| Identity & Trust Infrastructure | ✅ Complete | `src/models/identity.py` |
+| Sybil Detection Lever | ✅ Complete | `src/governance/identity_lever.py` |
+
+### Infrastructure ✅
+
+| Component | Status | Files |
+|-----------|--------|-------|
+| CI/CD Pipeline | ✅ Complete | `.github/workflows/ci.yml`, `release.yml`, `codeql.yml` |
+| CLI Entry Point | ✅ Complete | `python -m src run/list` |
+| Pre-commit Hooks | ✅ Complete | `.pre-commit-config.yaml` |
+| Makefile | ✅ Complete | `Makefile` |
+| Demo App | ✅ Complete | `demo/` (Streamlit, 5 pages) |
+| Project Governance | ✅ Complete | `CONTRIBUTING.md`, `SECURITY.md`, `CODEOWNERS` |
 
 ---
 
@@ -354,6 +376,7 @@ class GovernanceLever(ABC):
 | Staking | `stake_amount: float` | Require deposit to participate |
 | Random Audit | `prob: float, penalty: float` | Probabilistic check + penalty |
 | Circuit Breaker | `threshold: float` | Freeze agent if toxicity > threshold |
+| Sybil Detection | `similarity_threshold: float` | Penalize behaviorally similar agent clusters |
 
 **Governance Configuration:**
 ```python
@@ -497,9 +520,9 @@ src/analysis/
 
 ---
 
-### Phase 3: Advanced Features (Future)
+### Phase 3: Advanced Features — ✅ Complete
 
-#### 3.1 Moltbook-Inspired Phenomena
+#### 3.1 Moltbook-Inspired Phenomena ✅
 
 **Sub-communities & Culture:**
 - Community partitioning algorithm
@@ -513,7 +536,7 @@ src/analysis/
 - Meta-discourse: Debate "what agents are"
 - Meme warfare: Competing memes for amplification
 
-#### 3.2 Security Evaluation
+#### 3.2 Security Evaluation ✅
 
 **Threat Model:**
 - Indirect prompt injection
@@ -528,7 +551,7 @@ src/analysis/
 - Exfiltration attempt/leak rate
 - False-positive suppression cost
 
-#### 3.3 LLM Integration
+#### 3.3 LLM Integration ✅
 
 **Pluggable Adapter:**
 ```python
@@ -549,30 +572,147 @@ class LocalAdapter(LLMAdapter): ...
 
 ---
 
+### Phase 4: Virtual Agent Economies — ✅ Complete
+
+**Goal:** Implement economic mechanisms from [Tomasev et al. (2025)](https://arxiv.org/abs/2509.10147) for fair resource allocation, collective coordination, and market dynamics within the sandbox.
+
+#### 4.1 Dworkin-Style Auctions (`src/env/auction.py`) ✅
+
+Fair resource allocation with equal initial endowments and envy-freeness verification.
+
+```python
+@dataclass
+class AuctionConfig:
+    initial_endowment: float = 100.0
+    max_rounds: int = 50
+    price_adjustment_rate: float = 0.1
+    convergence_tolerance: float = 0.01
+    envy_tolerance: float = 0.05
+```
+
+**Features:**
+- Equal token endowments for all agents
+- Tatonnement price adjustment across rounds
+- Envy-freeness verification (no agent prefers another's allocation)
+- Gini coefficient tracking for allocation fairness
+
+#### 4.2 Mission Economies (`src/env/mission.py`) ✅
+
+Collective goal coordination with measurable objectives and contribution tracking.
+
+```python
+class MissionStatus(Enum):
+    PROPOSED = "proposed"
+    ACTIVE = "active"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+    EXPIRED = "expired"
+```
+
+**Features:**
+- Mission lifecycle (proposal → active → succeeded/failed/expired)
+- Three reward distribution strategies: equal, proportional, Shapley
+- Free-rider detection based on contribution thresholds
+- Contribution evaluation via the soft-label quality pipeline
+
+#### 4.3 High-Frequency Negotiation (`src/env/hfn.py`) ✅
+
+Speed-based market dynamics with flash crash detection and circuit breakers.
+
+```python
+@dataclass
+class HFNConfig:
+    tick_duration_ms: float = 100.0
+    max_orders_per_tick: int = 10
+    latency_noise_ms: float = 10.0
+    priority_by_speed: bool = True
+    batch_interval_ticks: int = 5
+    halt_duration_ticks: int = 20
+```
+
+**Features:**
+- Order book with bid/ask matching
+- Batch clearing at configurable intervals
+- Flash crash detection via rolling quality window
+- Market halt circuit breaker triggered by quality collapse
+- Latency-based priority ordering
+
+#### 4.4 Permeability Model (`src/boundaries/permeability.py`) ✅
+
+Sandbox boundaries modeled as semi-permeable membranes.
+
+```python
+@dataclass
+class PermeabilityConfig:
+    base_permeability: float = 0.5
+    information_decay: float = 0.1
+    contagion_rate: float = 0.05
+    spillover_amplification: float = 1.5
+    adaptive: bool = True
+    threat_sensitivity: float = 1.0
+```
+
+**Features:**
+- Parameterized permeability (0 = sealed, 1 = fully open)
+- Adaptive permeability responding to threat levels
+- Contagion probability tied to soft-label quality
+- Spillover harm tracking between sandbox and external world
+
+#### 4.5 Identity & Trust Infrastructure (`src/models/identity.py`) ✅
+
+Verifiable credentials and Proof-of-Personhood for Sybil resistance.
+
+**Features:**
+- Verifiable credentials with issuance, expiry, and revocation
+- Proof-of-Personhood abstraction
+- Trust score computation from credential history
+- Integration with governance via `SybilDetectionLever` (`src/governance/identity_lever.py`)
+
+#### 4.6 Sybil Detection Governance Lever (`src/governance/identity_lever.py`) ✅
+
+**Features:**
+- Behavioral similarity analysis across agent populations
+- Cluster detection for coordinated Sybil agents
+- Reputation and resource penalties for flagged agents
+- Integrates with existing governance engine
+
+---
+
 ## Directory Structure (Final)
 
 ```
 distributional-agi-safety/
+├── .github/
+│   ├── workflows/
+│   │   ├── ci.yml                # Lint, type-check, test matrix (Python 3.10-3.12)
+│   │   ├── codeql.yml            # Security scanning (push, PR, weekly)
+│   │   └── release.yml           # Validate, test, build, publish to PyPI
+│   ├── ISSUE_TEMPLATE/           # Bug report & feature request templates
+│   ├── PULL_REQUEST_TEMPLATE.md
+│   ├── CODEOWNERS
+│   └── dependabot.yml
 ├── src/
 │   ├── __init__.py
-│   ├── models/              # ✅ Complete
+│   ├── __main__.py              # CLI entry point (run/list scenarios)
+│   ├── models/                  # ✅ Complete
 │   │   ├── interaction.py
 │   │   ├── agent.py
-│   │   └── events.py
-│   ├── core/                # ✅ Complete
+│   │   ├── events.py
+│   │   └── identity.py          # Verifiable credentials, Proof-of-Personhood
+│   ├── core/                    # ✅ Complete
 │   │   ├── payoff.py
 │   │   ├── proxy.py
 │   │   ├── sigmoid.py
 │   │   └── orchestrator.py
-│   ├── metrics/             # ✅ Complete
+│   ├── metrics/                 # ✅ Complete
 │   │   ├── soft_metrics.py
 │   │   ├── reporters.py
 │   │   ├── capabilities.py
 │   │   ├── collusion.py
 │   │   └── security.py
-│   ├── logging/             # ✅ Complete
+│   ├── logging/                 # ✅ Complete
 │   │   └── event_log.py
-│   ├── agents/              # ✅ Complete
+│   ├── agents/                  # ✅ Complete
 │   │   ├── __init__.py
 │   │   ├── base.py
 │   │   ├── honest.py
@@ -589,15 +729,18 @@ distributional-agi-safety/
 │   │       ├── verifier.py
 │   │       ├── poster.py
 │   │       └── moderator.py
-│   ├── env/                 # ✅ Complete
+│   ├── env/                     # ✅ Complete
 │   │   ├── __init__.py
 │   │   ├── state.py
 │   │   ├── feed.py
 │   │   ├── tasks.py
 │   │   ├── marketplace.py
 │   │   ├── composite_tasks.py
-│   │   └── network.py
-│   ├── governance/          # ✅ Complete
+│   │   ├── network.py
+│   │   ├── auction.py           # Dworkin-style fair allocation
+│   │   ├── mission.py           # Mission economies & collective goals
+│   │   └── hfn.py               # High-frequency negotiation engine
+│   ├── governance/              # ✅ Complete
 │   │   ├── __init__.py
 │   │   ├── config.py
 │   │   ├── engine.py
@@ -608,11 +751,12 @@ distributional-agi-safety/
 │   │   ├── circuit_breaker.py
 │   │   ├── audits.py
 │   │   ├── collusion.py
-│   │   └── security.py
-│   ├── scenarios/           # ✅ Complete
+│   │   ├── security.py
+│   │   └── identity_lever.py    # Sybil detection via behavioral similarity
+│   ├── scenarios/               # ✅ Complete
 │   │   ├── __init__.py
 │   │   └── loader.py
-│   ├── analysis/            # ✅ Complete
+│   ├── analysis/                # ✅ Complete
 │   │   ├── __init__.py
 │   │   ├── aggregation.py
 │   │   ├── plots.py
@@ -620,18 +764,19 @@ distributional-agi-safety/
 │   │   ├── streamlit_app.py
 │   │   ├── sweep.py
 │   │   └── export.py
-│   ├── boundaries/          # ✅ Complete
+│   ├── boundaries/              # ✅ Complete
 │   │   ├── __init__.py
 │   │   ├── external_world.py
 │   │   ├── information_flow.py
 │   │   ├── leakage.py
-│   │   └── policies.py
-│   └── redteam/             # ✅ Complete
+│   │   ├── policies.py
+│   │   └── permeability.py      # Semi-permeable sandbox boundaries
+│   └── redteam/                 # ✅ Complete
 │       ├── __init__.py
 │       ├── attacks.py
 │       ├── evaluator.py
 │       └── metrics.py
-├── scenarios/               # ✅ Complete
+├── scenarios/                   # ✅ 11 built-in scenarios
 │   ├── baseline.yaml
 │   ├── status_game.yaml
 │   ├── collusion_detection.yaml
@@ -643,12 +788,13 @@ distributional-agi-safety/
 │   ├── emergent_capabilities.yaml
 │   ├── adversarial_redteam.yaml
 │   └── llm_agents.yaml
-├── tests/                   # ✅ Complete (725 tests)
+├── tests/                       # ✅ 1378 tests
 │   ├── test_payoff.py
 │   ├── test_proxy.py
 │   ├── test_metrics.py
 │   ├── test_orchestrator.py
 │   ├── test_agents.py
+│   ├── test_agent_roles.py
 │   ├── test_governance.py
 │   ├── test_env.py
 │   ├── test_event_log.py
@@ -664,10 +810,57 @@ distributional-agi-safety/
 │   ├── test_redteam.py
 │   ├── test_llm_agent.py
 │   ├── test_success_criteria.py
+│   ├── test_auction.py          # Dworkin auction tests
+│   ├── test_mission.py          # Mission economy tests
+│   ├── test_hfn.py              # High-frequency negotiation tests
+│   ├── test_permeability.py     # Permeability model tests
+│   ├── test_identity.py         # Identity infrastructure tests
+│   ├── test_cli.py              # CLI entry point tests
+│   ├── test_analysis.py         # Analysis module tests
+│   ├── test_integration.py      # End-to-end integration tests (21 tests)
+│   ├── test_property_based.py   # Property-based tests
+│   ├── test_coverage_boost.py
+│   ├── test_coverage_boost2.py
+│   ├── test_coverage_boost3.py
 │   └── fixtures/
-├── pyproject.toml           # ✅ Complete
-├── CLAUDE.md                # ✅ Complete
-└── README.md                # ✅ Complete
+├── docs/                        # ✅ 10 guides + transferability
+│   ├── whitepaper.md
+│   ├── governance.md
+│   ├── scenarios.md
+│   ├── llm-agents.md
+│   ├── network-topology.md
+│   ├── emergent-capabilities.md
+│   ├── red-teaming.md
+│   ├── boundaries.md
+│   ├── dashboard.md
+│   ├── virtual-agent-economies.md
+│   └── transferability/
+│       └── incoherence_governance.md
+├── demo/                        # ✅ Interactive Streamlit demo
+│   ├── app.py
+│   ├── utils/
+│   └── pages/
+│       ├── 1_Overview.py
+│       ├── 2_Scenario_Explorer.py
+│       ├── 3_Governance_Lab.py
+│       ├── 4_Agent_Dynamics.py
+│       └── 5_Theory.py
+├── examples/                    # ✅ Demonstration scripts
+│   ├── mvp_demo.py
+│   ├── run_scenario.py
+│   ├── parameter_sweep.py
+│   └── llm_demo.py
+├── pyproject.toml               # ✅ Complete
+├── requirements.txt             # ✅ Pinned dependencies
+├── Makefile                     # ✅ install, lint, typecheck, test, coverage, ci, clean
+├── CLAUDE.md                    # ✅ Complete
+├── README.md                    # ✅ Complete
+├── CHANGELOG.md                 # ✅ Complete
+├── CONTRIBUTING.md              # ✅ Complete
+├── SECURITY.md                  # ✅ Vulnerability reporting policy
+├── CITATION.cff                 # ✅ Citation metadata
+├── LICENSE                      # ✅ MIT
+└── ARXIV_SIMILARITY_ANALYSIS.md # ✅ Related work analysis
 ```
 
 ---
@@ -714,6 +907,32 @@ distributional-agi-safety/
 | 24 | Adaptive Adversary | `src/agents/adaptive_adversary.py` | ✅ Complete |
 | 25 | LLM Agent Integration | `src/agents/llm_agent.py`, `llm_config.py`, `llm_prompts.py` | ✅ Complete |
 
+### Virtual Agent Economies — ✅ Complete
+
+| Order | Component | Files | Status |
+|-------|-----------|-------|--------|
+| 26 | Dworkin-Style Auctions | `src/env/auction.py` | ✅ Complete |
+| 27 | Mission Economies | `src/env/mission.py` | ✅ Complete |
+| 28 | High-Frequency Negotiation | `src/env/hfn.py` | ✅ Complete |
+| 29 | Permeability Model | `src/boundaries/permeability.py` | ✅ Complete |
+| 30 | Identity & Trust | `src/models/identity.py` | ✅ Complete |
+| 31 | Sybil Detection Lever | `src/governance/identity_lever.py` | ✅ Complete |
+| 32 | Virtual Economy Tests | `tests/test_auction.py`, `test_mission.py`, `test_hfn.py`, `test_permeability.py`, `test_identity.py` | ✅ Complete |
+
+### Infrastructure & CI/CD — ✅ Complete
+
+| Order | Component | Files | Status |
+|-------|-----------|-------|--------|
+| 33 | CLI Entry Point | `src/__main__.py` | ✅ Complete |
+| 34 | GitHub Actions CI | `.github/workflows/ci.yml` | ✅ Complete |
+| 35 | CodeQL Security Scanning | `.github/workflows/codeql.yml` | ✅ Complete |
+| 36 | Release Workflow | `.github/workflows/release.yml` | ✅ Complete |
+| 37 | Pre-commit Hooks | `.pre-commit-config.yaml` | ✅ Complete |
+| 38 | Makefile | `Makefile` | ✅ Complete |
+| 39 | Demo App | `demo/` | ✅ Complete |
+| 40 | Integration Tests | `tests/test_integration.py` | ✅ Complete |
+| 41 | Property-Based Tests | `tests/test_property_based.py` | ✅ Complete |
+
 ---
 
 ## Success Criteria
@@ -731,7 +950,29 @@ distributional-agi-safety/
 - [x] Dashboard shows real-time metrics
 - [x] Toxic interactions show negative conditional surplus but positive reputation payoff
 
-All criteria verified by `tests/test_success_criteria.py` (9 tests).
+### Advanced Features
+- [x] Red-team framework produces measurable attack success rates
+- [x] Boundary enforcement detects and limits information leakage
+- [x] Collusion detection identifies coordinated agent clusters
+- [x] LLM agents integrate with Anthropic/OpenAI/Ollama backends
+- [x] Network topology captures dynamic interaction patterns
+
+### Virtual Agent Economies
+- [x] Dworkin auctions converge to envy-free allocations
+- [x] Mission economies detect free-riders and distribute rewards fairly
+- [x] HFN engine detects flash crashes and triggers market halts
+- [x] Permeability model tracks spillover harm between sandbox and external world
+- [x] Identity infrastructure supports credential issuance, verification, and revocation
+- [x] Sybil detection penalizes behaviorally similar agent clusters
+
+### Infrastructure
+- [x] CI pipeline runs lint, type-check, and tests across Python 3.10-3.12
+- [x] ≥70% test coverage enforced
+- [x] 1378 tests pass across 33 test files
+- [x] CLI supports scenario execution with seed/epoch overrides and JSON/CSV export
+
+All MVP criteria verified by `tests/test_success_criteria.py` (9 tests).
+Integration tests in `tests/test_integration.py` (21 end-to-end tests).
 
 ---
 
@@ -800,7 +1041,9 @@ llm = [
 ## References
 
 - [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
+- [Virtual Agent Economies](https://arxiv.org/abs/2509.10147) - Tomasev et al. (2025)
 - [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.141)
 - [Moltbook](https://moltbook.com)
 - Kyle (1985) - Continuous Auctions and Insider Trading
 - Glosten & Milgrom (1985) - Bid, Ask and Transaction Prices
+- Dworkin (1981) - What is Equality? Part 2: Equality of Resources
