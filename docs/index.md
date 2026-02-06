@@ -160,6 +160,5 @@ Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine �
 ---
 
 <p style="text-align: center; opacity: 0.7;">
-  MIT License · <a href="https://github.com/swarm-ai-safety/swarm">GitHub</a> ·
-  <a href="https://discord.gg/swarm-ai">Discord</a>
+  MIT License · <a href="https://github.com/swarm-ai-safety/swarm">GitHub</a>
 </p>

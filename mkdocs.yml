@@ -126,6 +126,4 @@ extra:
   social:
     - icon: fontawesome/brands/github
       link: https://github.com/swarm-ai-safety/swarm
-    - icon: fontawesome/brands/discord
-      link: https://discord.gg/swarm-ai
   generator: false
