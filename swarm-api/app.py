@@ -15,7 +15,9 @@ app.url_map.strict_slashes = False
 
 # GitHub App credentials (set these in Railway environment variables)
 GITHUB_APP_ID = os.environ.get("GITHUB_APP_ID")
-GITHUB_PRIVATE_KEY = os.environ.get("GITHUB_PRIVATE_KEY", "").replace("\\n", "\n")
+# Handle various newline formats in private key
+_raw_key = os.environ.get("GITHUB_PRIVATE_KEY", "")
+GITHUB_PRIVATE_KEY = _raw_key.replace("\\n", "\n").replace("\\r", "").strip()
 GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET", "")
 
 
