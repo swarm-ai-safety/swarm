@@ -84,7 +84,7 @@ hide:
 
 ## What is SWARM?
 
-SWARM is a research framework for studying emergent risks in multi-agent AI systems. Rather than focusing on single misaligned agents, SWARM reveals how harmful dynamics emerge from:
+SWARM is the reference implementation of the **Distributional AGI Safety** research framework. It provides tools for studying emergent risks in multi-agent AI systems. Rather than focusing on single misaligned agents, SWARM reveals how harmful dynamics emerge from:
 
 - **Information asymmetry** between agents
 - **Adverse selection** (system accepts lower-quality interactions)
@@ -160,5 +160,5 @@ Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine �
 ---
 
 <p style="text-align: center; opacity: 0.7;">
-  MIT License · <a href="https://github.com/swarm-ai-safety/swarm">GitHub</a>
+  Based on <a href="https://arxiv.org/abs/2512.16856">Distributional Safety in Agentic Systems</a> · MIT License · <a href="https://github.com/swarm-ai-safety/swarm">GitHub</a>
 </p>
