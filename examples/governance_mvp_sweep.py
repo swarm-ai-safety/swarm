@@ -220,7 +220,9 @@ def run_governance_sweep(
 
         for run_idx in range(runs_per_config):
             current_run += 1
-            seed = seed_base + current_run
+            # Seed by run_idx so every config shares the same seed for
+            # corresponding runs, enabling paired comparison.
+            seed = seed_base + run_idx
 
             if progress:
                 print(
