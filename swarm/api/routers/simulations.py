@@ -1,7 +1,7 @@
 """Simulation management endpoints."""
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 
 from fastapi import APIRouter, HTTPException
 
@@ -30,7 +30,7 @@ async def create_simulation(request: SimulationCreate) -> SimulationResponse:
         Created simulation details.
     """
     simulation_id = str(uuid.uuid4())
-    now = datetime.utcnow()
+    now = datetime.now(UTC)
 
     simulation = SimulationResponse(
         simulation_id=simulation_id,
