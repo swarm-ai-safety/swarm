@@ -7,6 +7,7 @@ import os
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
+app.url_map.strict_slashes = False
 
 
 def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
