@@ -1,13 +1,13 @@
 """Proxy computer for v_hat computation from downstream observables."""
 
-from dataclasses import dataclass
-from typing import Optional
+from typing import Any, Optional
+
+from pydantic import BaseModel
 
 from swarm.core.sigmoid import calibrated_sigmoid
 
 
-@dataclass
-class ProxyWeights:
+class ProxyWeights(BaseModel):
     """
     Weights for combining downstream proxy signals into v_hat.
 
@@ -23,13 +23,20 @@ class ProxyWeights:
     verifier_penalty: float = 0.2
     engagement_signal: float = 0.2
 
+    model_config = {"frozen": False}
+
     def normalize(self) -> "ProxyWeights":
         """Return normalized weights that sum to 1."""
         total = abs(self.task_progress) + abs(self.rework_penalty) + \
                 abs(self.verifier_penalty) + abs(self.engagement_signal)
 
         if total == 0:
-            return ProxyWeights(0.25, 0.25, 0.25, 0.25)
+            return ProxyWeights(
+                task_progress=0.25,
+                rework_penalty=0.25,
+                verifier_penalty=0.25,
+                engagement_signal=0.25,
+            )
 
         return ProxyWeights(
             task_progress=self.task_progress / total,
@@ -38,18 +45,12 @@ class ProxyWeights:
             engagement_signal=self.engagement_signal / total,
         )
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
-        return {
-            "task_progress": self.task_progress,
-            "rework_penalty": self.rework_penalty,
-            "verifier_penalty": self.verifier_penalty,
-            "engagement_signal": self.engagement_signal,
-        }
+        return self.model_dump()
 
 
-@dataclass
-class ProxyObservables:
+class ProxyObservables(BaseModel):
     """
     Raw observable signals from an interaction.
 
@@ -62,8 +63,10 @@ class ProxyObservables:
     tool_misuse_flags: int = 0        # number of tool misuse flags
     counterparty_engagement_delta: float = 0.0  # [-1, +1] engagement change
 
+    model_config = {"frozen": False}
+
     @classmethod
-    def from_interaction(cls, interaction) -> "ProxyObservables":
+    def from_interaction(cls, interaction: Any) -> "ProxyObservables":
         """Extract observables from a SoftInteraction."""
         return cls(
             task_progress_delta=interaction.task_progress_delta,
