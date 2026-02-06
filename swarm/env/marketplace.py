@@ -167,11 +167,11 @@ class MarketplaceConfig(BaseModel):
     dispute_default_split: float = 0.5
 
     @model_validator(mode="after")
-    def _validate_values(self) -> "MarketplaceConfig":
-        self.validate()
+    def _run_validation(self) -> "MarketplaceConfig":
+        self._check_values()
         return self
 
-    def validate(self) -> None:
+    def _check_values(self) -> None:
         """Validate configuration."""
         if self.escrow_fee_rate < 0 or self.escrow_fee_rate > 1:
             raise ValueError("escrow_fee_rate must be in [0, 1]")

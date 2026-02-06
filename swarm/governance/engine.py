@@ -90,7 +90,7 @@ class GovernanceEngine:
             seed: Random seed for reproducible audits
         """
         self.config = GovernanceConfig() if config is None else config
-        self.config.validate()
+        # Pydantic auto-validates
 
         levers: List[GovernanceLever] = [
             TransactionTaxLever(self.config),

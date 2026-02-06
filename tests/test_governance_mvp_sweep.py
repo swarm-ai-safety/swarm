@@ -271,7 +271,7 @@ class TestNewGovernanceConfigValidation:
             transparency_bonus_rate=0.1,
             transparency_threshold_p=0.5,
         )
-        config.validate()  # Should not raise
+        assert config is not None  # Pydantic auto-validates on creation
 
     def test_invalid_transparency_bonus_rate(self):
         """Negative bonus rate should raise."""
@@ -291,7 +291,7 @@ class TestNewGovernanceConfigValidation:
             moderator_penalty_multiplier=1.5,
             moderator_threshold_p=0.4,
         )
-        config.validate()  # Should not raise
+        assert config is not None  # Pydantic auto-validates on creation
 
     def test_invalid_moderator_review_probability(self):
         """Review probability outside [0,1] should raise."""

@@ -106,11 +106,11 @@ class GovernanceConfig(BaseModel):
     moderator_threshold_p: float = 0.5  # Threshold for penalty
 
     @model_validator(mode="after")
-    def _validate_values(self) -> "GovernanceConfig":
-        self.validate()
+    def _run_validation(self) -> "GovernanceConfig":
+        self._check_values()
         return self
 
-    def validate(self) -> None:
+    def _check_values(self) -> None:
         """Validate configuration values."""
         if not 0.0 <= self.transaction_tax_rate <= 1.0:
             raise ValueError("transaction_tax_rate must be in [0, 1]")

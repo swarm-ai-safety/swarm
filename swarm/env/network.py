@@ -3,9 +3,8 @@
 from enum import Enum
 from typing import Dict, List, Optional, Set, Tuple
 
-from pydantic import BaseModel, model_validator
-
 import numpy as np
+from pydantic import BaseModel, model_validator
 
 
 class NetworkTopology(Enum):
@@ -46,11 +45,11 @@ class NetworkConfig(BaseModel):
     reputation_disconnect_threshold: Optional[float] = None  # Sever ties below this rep
 
     @model_validator(mode="after")
-    def _validate_values(self) -> "NetworkConfig":
-        self.validate()
+    def _run_validation(self) -> "NetworkConfig":
+        self._check_values()
         return self
 
-    def validate(self) -> None:
+    def _check_values(self) -> None:
         """Validate configuration parameters."""
         if not 0 <= self.edge_probability <= 1:
             raise ValueError(f"edge_probability must be in [0, 1], got {self.edge_probability}")
@@ -85,7 +84,7 @@ class AgentNetwork:
             seed: Random seed for reproducibility
         """
         self.config = NetworkConfig() if config is None else config
-        self.config.validate()
+        # Pydantic auto-validates
         self._rng = np.random.default_rng(seed)
 
         # Adjacency represented as dict of dicts: {node: {neighbor: weight}}

@@ -432,7 +432,7 @@ class TestCollusionGovernance:
             collusion_frequency_threshold=2.0,
             collusion_correlation_threshold=0.7,
         )
-        config.validate()  # Should not raise
+        assert config is not None  # Pydantic auto-validates on creation
 
         # Invalid threshold
         with pytest.raises(ValidationError):

@@ -515,7 +515,7 @@ def build_scaling_curve_points(
     aggregated_rows: List[Dict[str, Any]],
     x_axis: str,
     fixed_tier: str,
-) -> Dict[str, List[float]]:
+) -> Dict[str, Any]:
     """
     Build curve-ready points from aggregated incoherence rows.
 

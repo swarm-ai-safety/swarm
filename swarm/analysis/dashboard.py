@@ -329,7 +329,7 @@ def extract_incoherence_agent_profiles(orchestrator: Any) -> List[Dict[str, Any]
     return rows
 
 
-def create_incoherence_panel_data(state: DashboardState) -> Dict[str, List[float]]:
+def create_incoherence_panel_data(state: DashboardState) -> Dict[str, List[Any]]:
     """
     Build chart-ready incoherence panel data from dashboard state history.
     """

@@ -33,11 +33,11 @@ class PayoffConfig(BaseModel):
     sigmoid_k: float = 2.0
 
     @model_validator(mode="after")
-    def _validate_values(self) -> "PayoffConfig":
-        self.validate()
+    def _run_validation(self) -> "PayoffConfig":
+        self._check_values()
         return self
 
-    def validate(self) -> None:
+    def _check_values(self) -> None:
         """Validate configuration parameters."""
         if self.s_plus < 0:
             raise ValueError("s_plus must be non-negative")
@@ -104,7 +104,7 @@ class SoftPayoffEngine:
             config: Payoff configuration (default: PayoffConfig())
         """
         self.config = PayoffConfig() if config is None else config
-        self.config.validate()
+        # Pydantic auto-validates
 
     def expected_surplus(self, p: float) -> float:
         """

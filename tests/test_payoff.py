@@ -13,7 +13,7 @@ class TestPayoffConfig:
     def test_default_config(self):
         """Default config should be valid."""
         config = PayoffConfig()
-        config.validate()  # Should not raise
+        assert config is not None  # Pydantic auto-validates on creation
 
         assert config.s_plus == 2.0
         assert config.s_minus == 1.0

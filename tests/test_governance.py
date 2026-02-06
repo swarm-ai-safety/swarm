@@ -35,7 +35,7 @@ class TestGovernanceConfig:
     def test_default_config_valid(self):
         """Default config should pass validation."""
         config = GovernanceConfig()
-        config.validate()  # Should not raise
+        assert config is not None  # Pydantic auto-validates on creation
 
     def test_invalid_tax_rate(self):
         """Tax rate outside [0,1] should raise."""

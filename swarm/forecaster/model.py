@@ -9,7 +9,7 @@ import numpy as np
 
 
 def _sigmoid(value: np.ndarray) -> np.ndarray:
-    return 1.0 / (1.0 + np.exp(-value))
+    return 1.0 / (1.0 + np.exp(-value))  # type: ignore[no-any-return]
 
 
 def _auc_roc(y_true: Sequence[int], y_score: Sequence[float]) -> float:

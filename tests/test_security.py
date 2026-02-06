@@ -713,7 +713,7 @@ class TestSecurityConfigValidation:
             security_manipulation_threshold=0.5,
             security_quarantine_threshold=0.7,
         )
-        config.validate()  # Should not raise
+        assert config is not None  # Pydantic auto-validates on creation
 
     def test_invalid_injection_threshold(self):
         """Test invalid injection threshold."""

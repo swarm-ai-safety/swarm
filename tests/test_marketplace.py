@@ -81,7 +81,7 @@ class TestModels:
 
     def test_config_validation(self):
         config = MarketplaceConfig()
-        config.validate()  # Should not raise
+        assert config is not None  # Pydantic auto-validates on creation
 
         with pytest.raises(ValidationError, match="escrow_fee_rate"):
             MarketplaceConfig(escrow_fee_rate=-0.1)

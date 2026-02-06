@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 from pydantic import BaseModel, ConfigDict, Field
+
 from swarm.agents.base import Action, ActionType, BaseAgent, Observation
 from swarm.boundaries.external_world import ExternalEntity, ExternalWorld
 from swarm.boundaries.information_flow import FlowTracker
@@ -487,8 +488,8 @@ class Orchestrator:
             or self.governance_engine.config.self_ensemble_samples <= 1
         ):
             if self._is_llm_agent(agent):
-                return await agent.act_async(observation)  # type: ignore[attr-defined]
-            return agent.act(observation)
+                return await agent.act_async(observation)  # type: ignore[attr-defined, no-any-return]
+            return agent.act(observation)  # type: ignore[no-any-return]
 
         samples = self.governance_engine.config.self_ensemble_samples
         candidate_actions: List[Action] = []

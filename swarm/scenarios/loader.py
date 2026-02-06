@@ -144,8 +144,7 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         adaptive_incoherence_threshold=data.get("adaptive_incoherence_threshold", 0.5),
         adaptive_use_behavioral_features=data.get("adaptive_use_behavioral_features", False),
     )
-
-    config.validate()
+    # Pydantic auto-validates
     return config
 
 
@@ -171,8 +170,7 @@ def parse_payoff_config(data: Dict[str, Any]) -> PayoffConfig:
         rho_b=data.get("rho_b", 0.0),
         w_rep=data.get("w_rep", 1.0),
     )
-
-    config.validate()
+    # Pydantic auto-validates
     return config
 
 
@@ -244,8 +242,7 @@ def parse_network_config(data: Dict[str, Any]) -> Optional[NetworkConfig]:
         # Reputation-based
         reputation_disconnect_threshold=data.get("reputation_disconnect_threshold"),
     )
-
-    config.validate()
+    # Pydantic auto-validates
     return config
 
 
@@ -275,8 +272,7 @@ def parse_marketplace_config(data: Dict[str, Any]) -> Optional[MarketplaceConfig
         auto_expire_bounties=data.get("auto_expire_bounties", True),
         dispute_default_split=data.get("dispute_default_split", 0.5),
     )
-
-    config.validate()
+    # Pydantic auto-validates
     return config
 
 

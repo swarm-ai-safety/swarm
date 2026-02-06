@@ -17,6 +17,7 @@ simulation:
 agents:
   - type: honest
     count: 3
+    name: "Team A"
     id_prefix: honest
   - type: opportunistic
     count: 2
@@ -36,6 +37,8 @@ payoff:
   h: 0.3
   theta: 0.5
 ```
+
+Optional: add `name` to set a human-readable display label (defaults to `agent_id`). If `count > 1`, names are suffixed for uniqueness (e.g., `Team A_1`, `Team A_2`).
 
 ## Running Your Scenario
 
