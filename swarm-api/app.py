@@ -47,7 +47,10 @@ def get_jwt_token() -> str:
     # Debug: log key format (first 50 chars only for security)
     print(f"DEBUG: App ID = {GITHUB_APP_ID}")
     print(f"DEBUG: Key starts with = {GITHUB_PRIVATE_KEY[:50]}...")
+    print(f"DEBUG: Key ends with = ...{GITHUB_PRIVATE_KEY[-50:]}")
     print(f"DEBUG: Key length = {len(GITHUB_PRIVATE_KEY)}")
+    print(f"DEBUG: Newline count = {GITHUB_PRIVATE_KEY.count(chr(10))}")
+    print(f"DEBUG: Using base64 = {bool(_base64_key)}")
 
     now = int(time.time())
     payload = {
