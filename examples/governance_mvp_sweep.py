@@ -219,11 +219,10 @@ def run_governance_sweep(
         params = config_entry["params"]
 
         for run_idx in range(runs_per_config):
-            current_run += 1
             # Seed by run_idx so every config shares the same seed for
             # corresponding runs, enabling paired comparison.
             seed = seed_base + run_idx
-
+            current_run = run_idx + 1
             if progress:
                 print(
                     f"  [{current_run:>3}/{total_runs}] "
