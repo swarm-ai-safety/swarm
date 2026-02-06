@@ -17,7 +17,13 @@ app.url_map.strict_slashes = False
 GITHUB_APP_ID = os.environ.get("GITHUB_APP_ID")
 # Handle various newline formats in private key
 _raw_key = os.environ.get("GITHUB_PRIVATE_KEY", "")
-GITHUB_PRIVATE_KEY = _raw_key.replace("\\n", "\n").replace("\\r", "").strip()
+_base64_key = os.environ.get("GITHUB_PRIVATE_KEY_BASE64", "")
+
+if _base64_key:
+    import base64
+    GITHUB_PRIVATE_KEY = base64.b64decode(_base64_key).decode("utf-8")
+else:
+    GITHUB_PRIVATE_KEY = _raw_key.replace("\\n", "\n").replace("\\r", "").strip()
 GITHUB_WEBHOOK_SECRET = os.environ.get("GITHUB_WEBHOOK_SECRET", "")
 
 
