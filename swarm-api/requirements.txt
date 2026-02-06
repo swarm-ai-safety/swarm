@@ -1,2 +1,5 @@
 flask
 gunicorn
+PyJWT
+requests
+cryptography
