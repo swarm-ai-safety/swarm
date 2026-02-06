@@ -11,10 +11,10 @@ def calibrated_sigmoid(v_hat: float, k: float = 2.0) -> float:
     Args:
         v_hat: Raw proxy score in [-1, +1]
         k: Calibration sharpness parameter (default 2.0)
-           - k = 0: Always returns 0.5
-           - k < 2: Soft/uncertain labels
-           - k = 2: Moderate calibration
-           - k > 2: Sharp/confident labels
+            - k = 0: Always returns 0.5
+            - k < 2: Soft/uncertain labels
+            - k = 2: Moderate calibration
+            - k > 2: Sharp/confident labels
 
     Returns:
         p: Probability in [0, 1]
