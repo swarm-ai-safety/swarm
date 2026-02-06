@@ -5,13 +5,13 @@ import pytest
 # Skip all tests if fastapi is not installed
 fastapi = pytest.importorskip("fastapi")
 
-from fastapi.testclient import TestClient
+from fastapi.testclient import TestClient  # noqa: E402
 
-from swarm.api.app import create_app
-from swarm.api.config import APIConfig
-from swarm.api.models.agent import AgentStatus
-from swarm.api.models.scenario import ScenarioStatus
-from swarm.api.models.simulation import SimulationMode, SimulationStatus
+from swarm.api.app import create_app  # noqa: E402
+from swarm.api.config import APIConfig  # noqa: E402
+from swarm.api.models.agent import AgentStatus  # noqa: E402
+from swarm.api.models.scenario import ScenarioStatus  # noqa: E402
+from swarm.api.models.simulation import SimulationMode, SimulationStatus  # noqa: E402
 
 
 @pytest.fixture
