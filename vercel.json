@@ -1,9 +1,4 @@
 {
   "buildCommand": "pip install mkdocs-material 'mkdocstrings[python]' pymdown-extensions && mkdocs build",
-  "outputDirectory": "site",
-  "functions": {
-    "api/**/*.py": {
-      "runtime": "python3.12"
-    }
-  }
+  "outputDirectory": "site"
 }

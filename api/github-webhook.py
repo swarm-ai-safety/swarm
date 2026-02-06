@@ -2,8 +2,12 @@
 
 import hashlib
 import hmac
+import json
 import os
-from http.server import BaseHTTPRequestHandler
+
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
 
 
 def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
@@ -16,46 +20,29 @@ def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
     return hmac.compare_digest(expected, signature)
 
 
-class handler(BaseHTTPRequestHandler):
-    """Vercel serverless function handler."""
+@app.route("/api/github-webhook", methods=["GET", "POST"])
+def webhook():
+    """Handle GitHub webhook requests."""
+    # Health check
+    if request.method == "GET":
+        return jsonify({"status": "ok", "service": "swarm-ai-bot webhook"})
 
-    def do_POST(self):
-        """Handle incoming webhook POST requests."""
-        content_length = int(self.headers.get("Content-Length", 0))
-        payload = self.rfile.read(content_length)
+    # Webhook POST
+    payload = request.get_data()
 
-        # Verify signature
-        signature = self.headers.get("X-Hub-Signature-256", "")
-        webhook_secret = os.environ.get("GITHUB_WEBHOOK_SECRET", "")
+    # Verify signature
+    signature = request.headers.get("X-Hub-Signature-256", "")
+    webhook_secret = os.environ.get("GITHUB_WEBHOOK_SECRET", "")
 
-        if webhook_secret and not verify_signature(payload, signature, webhook_secret):
-            self.send_response(401)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(b'{"error": "Invalid signature"}')
-            return
+    if webhook_secret and not verify_signature(payload, signature, webhook_secret):
+        return jsonify({"error": "Invalid signature"}), 401
 
-        # Get event type
-        event_type = self.headers.get("X-GitHub-Event", "")
+    # Get event type
+    event_type = request.headers.get("X-GitHub-Event", "")
 
-        # Handle ping event (sent when webhook is first configured)
-        if event_type == "ping":
-            self.send_response(200)
-            self.send_header("Content-Type", "application/json")
-            self.end_headers()
-            self.wfile.write(b'{"message": "pong"}')
-            return
+    # Handle ping event
+    if event_type == "ping":
+        return jsonify({"message": "pong"})
 
-        # For now, just acknowledge other events
-        # TODO: Add handlers for issues, issue_comment, etc.
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(f'{{"event": "{event_type}", "status": "received"}}'.encode())
-
-    def do_GET(self):
-        """Health check endpoint."""
-        self.send_response(200)
-        self.send_header("Content-Type", "application/json")
-        self.end_headers()
-        self.wfile.write(b'{"status": "ok", "service": "swarm-ai-bot webhook"}')
+    # Acknowledge other events
+    return jsonify({"event": event_type, "status": "received"})
