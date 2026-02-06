@@ -229,7 +229,7 @@ class FlashCrashDetector:
 
         mean_return = sum(returns) / len(returns)
         variance = sum((r - mean_return) ** 2 for r in returns) / len(returns)
-        return variance ** 0.5
+        return float(variance ** 0.5)
 
     def get_crash_history(self) -> List[FlashCrashEvent]:
         """Get all detected crash events."""

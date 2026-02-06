@@ -11,7 +11,7 @@ Reference: "Virtual Agent Economies" (arXiv 2509.10147) - Tomasev et al.
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set
+from typing import Any, Dict, List, Optional, Set
 
 from src.models.interaction import SoftInteraction
 
@@ -254,7 +254,7 @@ class MissionEconomy:
         ]
 
         # Evaluate each objective
-        objective_scores = []
+        objective_scores: List[Dict[str, Any]] = []
         for obj in mission.objectives:
             score = self._evaluate_objective(obj, contributed)
             objective_scores.append({
