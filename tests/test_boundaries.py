@@ -836,6 +836,7 @@ class TestBoundaryIntegration:
             enable_boundaries=True,
             n_epochs=1,
             steps_per_epoch=1,
+            seed=42,
         )
         orchestrator = Orchestrator(config)
 
