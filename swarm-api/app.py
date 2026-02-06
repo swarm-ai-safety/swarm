@@ -2,7 +2,6 @@
 
 import hashlib
 import hmac
-import json
 import os
 
 from flask import Flask, request, jsonify
@@ -18,6 +17,12 @@ def verify_signature(payload: bytes, signature: str, secret: str) -> bool:
         secret.encode(), payload, hashlib.sha256
     ).hexdigest()
     return hmac.compare_digest(expected, signature)
+
+
+@app.route("/", methods=["GET"])
+def health():
+    """Health check endpoint."""
+    return jsonify({"status": "ok", "service": "swarm-ai-bot"})
 
 
 @app.route("/api/github-webhook", methods=["GET", "POST"])
@@ -46,3 +51,8 @@ def webhook():
 
     # Acknowledge other events
     return jsonify({"event": event_type, "status": "received"})
+
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
