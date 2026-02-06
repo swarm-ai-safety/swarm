@@ -8,23 +8,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Install for development
 pip install -e ".[dev]"
 
-# Run all tests
-pytest tests/ -v
+# Run all tests (use python -m to ensure correct environment)
+python -m pytest tests/ -v
 
 # Run a single test file
-pytest tests/test_payoff.py -v
+python -m pytest tests/test_payoff.py -v
 
 # Run a specific test
-pytest tests/test_payoff.py::TestPayoffInitiator::test_payoff_linear_in_p -v
+python -m pytest tests/test_payoff.py::TestPayoffInitiator::test_payoff_linear_in_p -v
 
 # Run with coverage
-pytest tests/ --cov=src --cov-report=html
+python -m pytest tests/ --cov=src --cov-report=html
 
 # Lint
 ruff check src/ tests/
 
 # Type check
-mypy src/
+python -m mypy src/
 ```
 
 ## Architecture
