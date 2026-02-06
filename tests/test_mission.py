@@ -1,6 +1,7 @@
 """Tests for mission economy."""
 
 import pytest
+from src.models.interaction import SoftInteraction
 
 from src.env.mission import (
     MissionConfig,
@@ -8,7 +9,6 @@ from src.env.mission import (
     MissionObjective,
     MissionStatus,
 )
-from src.models.interaction import SoftInteraction
 
 
 def _make_interaction(interaction_id: str, p: float, accepted: bool = True) -> SoftInteraction:

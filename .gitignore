@@ -31,3 +31,5 @@ venv/
 .streamlit/secrets.toml
 .hypothesis/
 site/
+.vercel
+.env*.local

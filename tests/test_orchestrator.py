@@ -6,7 +6,13 @@ from pathlib import Path
 import pytest
 
 from swarm.agents.adversarial import AdversarialAgent
-from swarm.agents.base import Action, ActionType, BaseAgent, InteractionProposal, Observation
+from swarm.agents.base import (
+    Action,
+    ActionType,
+    BaseAgent,
+    InteractionProposal,
+    Observation,
+)
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
 from swarm.agents.opportunistic import OpportunisticAgent

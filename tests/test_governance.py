@@ -9,8 +9,8 @@ from swarm.governance.circuit_breaker import CircuitBreakerLever
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.decomposition import DecompositionLever
 from swarm.governance.dynamic_friction import IncoherenceFrictionLever
-from swarm.governance.ensemble import SelfEnsembleLever
 from swarm.governance.engine import GovernanceEffect, GovernanceEngine
+from swarm.governance.ensemble import SelfEnsembleLever
 from swarm.governance.incoherence_breaker import IncoherenceCircuitBreakerLever
 from swarm.governance.levers import LeverEffect
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever

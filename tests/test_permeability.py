@@ -1,13 +1,13 @@
 """Tests for permeability model."""
 
 import pytest
+from src.models.interaction import SoftInteraction
 
 from src.boundaries.permeability import (
     PermeabilityConfig,
     PermeabilityModel,
     SpilloverEvent,
 )
-from src.models.interaction import SoftInteraction
 
 
 def _make_interaction(p: float, accepted: bool = True) -> SoftInteraction:

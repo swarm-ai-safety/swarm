@@ -6,8 +6,8 @@ Supports export to:
 - JSON (full history)
 """
 
-import json
 import csv
+import json
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union

@@ -4,7 +4,11 @@ from typing import Any, Hashable, Mapping, Optional
 
 import pytest
 
-from swarm.metrics.incoherence import BenchmarkPolicy, DecisionRecord, IncoherenceMetrics
+from swarm.metrics.incoherence import (
+    BenchmarkPolicy,
+    DecisionRecord,
+    IncoherenceMetrics,
+)
 from swarm.metrics.reporters import MetricsReporter
 from swarm.metrics.soft_metrics import SoftMetrics
 from swarm.models.interaction import SoftInteraction

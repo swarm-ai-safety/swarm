@@ -14,15 +14,15 @@ to verify they integrate correctly through shared data structures
 """
 
 import pytest
+from src.governance.config import GovernanceConfig
+from src.models.interaction import SoftInteraction
 
 from src.boundaries.permeability import PermeabilityConfig, PermeabilityModel
 from src.env.auction import AuctionBid, AuctionConfig, DworkinAuction
 from src.env.hfn import HFNConfig, HFNEngine, HFNOrder
 from src.env.mission import MissionConfig, MissionEconomy, MissionObjective
-from src.governance.config import GovernanceConfig
 from src.governance.identity_lever import SybilDetectionLever
 from src.models.identity import CredentialIssuer, IdentityConfig, IdentityRegistry
-from src.models.interaction import SoftInteraction
 
 # ---------------------------------------------------------------------------
 # Helpers

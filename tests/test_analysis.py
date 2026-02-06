@@ -17,7 +17,6 @@ from swarm.analysis.aggregation import (
     compute_rolling_average,
     compute_trend,
 )
-from swarm.analysis.plots import create_incoherence_scaling_data
 from swarm.analysis.export import (
     export_to_json,
     generate_summary_report,
@@ -25,6 +24,7 @@ from swarm.analysis.export import (
     history_to_epoch_records,
     load_from_json,
 )
+from swarm.analysis.plots import create_incoherence_scaling_data
 from swarm.models.interaction import SoftInteraction
 
 # ---------------------------------------------------------------------------
