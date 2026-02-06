@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
 
-import yaml
+import yaml  # type: ignore[import-untyped]
 
 from src.agents.adaptive_adversary import AdaptiveAdversary
 from src.agents.adversarial import AdversarialAgent
