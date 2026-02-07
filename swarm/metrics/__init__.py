@@ -38,8 +38,8 @@ from swarm.metrics.security import (
 )
 from swarm.metrics.soft_metrics import SoftMetrics
 from swarm.metrics.time_horizons import (
-    CAPABILITY_PROFILES,
     AgentCapabilityProfile,
+    CAPABILITY_PROFILES,
     ComputeConstraints,
     TimeHorizonBucket,
     TimeHorizonMetrics,
