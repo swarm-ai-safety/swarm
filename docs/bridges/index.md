@@ -4,6 +4,16 @@ SWARM bridges connect the core framework to external systems for validation and 
 
 ## Available Bridges
 
+### SWARM-Claude Code
+
+Govern and score Claude Code CLI agents with SWARM's safety framework.
+
+- **Purpose:** Programmatic orchestration of Claude Code agents under governance
+- **Features:** Plan/permission adjudication, tool budgets, circuit breakers, event streaming
+- **Status:** In development
+
+[Learn more →](claude_code.md)
+
 ### SWARM-Concordia
 
 Integrate with Google DeepMind's Concordia for realistic LLM agent simulations.
