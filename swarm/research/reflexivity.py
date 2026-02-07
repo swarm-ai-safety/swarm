@@ -85,6 +85,11 @@ class ShadowSimulation:
     - Control: Findings are withheld
 
     The divergence measures how much knowing the results changes the results.
+
+    Seeds are shared only for initialization. After the findings injection
+    point, random state is allowed to diverge naturally so that measured
+    divergence reflects both the causal effect and the stochastic
+    amplification of disclosure.
     """
 
     def __init__(
@@ -125,12 +130,14 @@ class ShadowSimulation:
 
         # Run parallel simulations
         for epoch in range(epochs):
-            # Control: no findings injected
+            # Control: same seed for initialization, no findings
             np.random.seed(seed + epoch)
             control_result = self.simulation_fn(config, None)
 
-            # Treatment: findings injected
-            np.random.seed(seed + epoch)  # Same seed
+            # Treatment: different seed offset so post-injection noise diverges
+            # The seed shares the same base but uses a disjoint range,
+            # ensuring initialization is comparable but stochastic paths differ.
+            np.random.seed(seed + epoch + epochs)
             treatment_result = self.simulation_fn(config, findings)
 
             # Collect metrics
@@ -171,7 +178,7 @@ class ShadowSimulation:
         """Generate human-readable analysis."""
         lines = ["Shadow Simulation Analysis:", ""]
         for metric, div in sorted(divergence.items(), key=lambda x: -x[1]):
-            status = "⚠️ HIGH" if div > self.divergence_threshold else "✓ OK"
+            status = "HIGH" if div > self.divergence_threshold else "OK"
             lines.append(f"  {metric}: {div:.3f} {status}")
         lines.append("")
         lines.append(f"Overall divergence: {overall:.3f}")
@@ -211,10 +218,19 @@ class PublishThenAttack:
     "Given that every agent now knows this finding, what attack strategies become viable?"
     """
 
+    # Default per-metric evasion thresholds. Positive means "increase is bad"
+    # (toxicity), negative means "decrease is bad" (welfare, quality_gap).
+    DEFAULT_EVASION_THRESHOLDS: dict[str, float] = {
+        "toxicity": 0.1,
+        "welfare": -50.0,
+        "quality_gap": -0.15,
+    }
+
     def __init__(
         self,
         simulation_fn: Callable[[dict, list[str], str | None], dict[str, float]],
         attack_strategies: list[str] | None = None,
+        evasion_thresholds: dict[str, float] | None = None,
     ):
         """Initialize publish-then-attack protocol.
 
@@ -222,6 +238,9 @@ class PublishThenAttack:
             simulation_fn: Function that runs simulation given config, findings,
                           and optional attack strategy. Returns metrics.
             attack_strategies: List of attack strategy names to test.
+            evasion_thresholds: Per-metric thresholds for detecting evasion.
+                              Positive threshold: degradation > threshold is evasion.
+                              Negative threshold: degradation < threshold is evasion.
         """
         self.simulation_fn = simulation_fn
         self.attack_strategies = attack_strategies or [
@@ -230,6 +249,21 @@ class PublishThenAttack:
             "collusive_adaptation",
             "boundary_exploitation",
         ]
+        self.evasion_thresholds = evasion_thresholds or self.DEFAULT_EVASION_THRESHOLDS
+
+    def _is_evaded(self, degradation: dict[str, float]) -> bool:
+        """Check if any metric was evaded beyond its threshold."""
+        for metric, threshold in self.evasion_thresholds.items():
+            deg = degradation.get(metric, 0)
+            if threshold >= 0:
+                # Positive threshold: metric increase is bad (e.g. toxicity)
+                if deg > threshold:
+                    return True
+            else:
+                # Negative threshold: metric decrease is bad (e.g. welfare)
+                if deg < threshold:
+                    return True
+        return False
 
     def run(
         self,
@@ -263,13 +297,11 @@ class PublishThenAttack:
                 degradation = {}
                 for metric, baseline_val in baseline_metrics.items():
                     if metric in result:
-                        # Positive = worse (assuming lower is better for toxicity, etc.)
                         degradation[metric] = result[metric] - baseline_val
                 degradations.append(degradation)
 
-                # Check if governance was evaded
-                # (simplified: if toxicity increased significantly)
-                evasions.append(degradation.get("toxicity", 0) > 0.1)
+                # Check if any metric was evaded
+                evasions.append(self._is_evaded(degradation))
 
             # Aggregate results
             avg_degradation = {
@@ -321,7 +353,7 @@ class PublishThenAttack:
             "Attack Strategies Tested:",
         ]
         for r in results:
-            status = "✓ HELD" if r.governance_still_holds else "✗ EVADED"
+            status = "HELD" if r.governance_still_holds else "EVADED"
             lines.append(f"  {r.attack_strategy}: {status}")
             if r.metric_degradation:
                 for metric, deg in r.metric_degradation.items():
@@ -346,6 +378,8 @@ class TemporalCheckpointing:
     From reflexivity.md #5:
     Snapshot platform dynamics at regular intervals to measure
     drift attributable to publication vs natural evolution.
+
+    Checkpoints are stored sorted by timestamp.
     """
 
     def __init__(self):
@@ -357,7 +391,7 @@ class TemporalCheckpointing:
         metrics: dict[str, float],
         is_publication: bool = False,
     ) -> TemporalCheckpoint:
-        """Create a checkpoint."""
+        """Create a checkpoint. Inserted in timestamp order."""
         cp = TemporalCheckpoint(
             label=label,
             timestamp=datetime.now(timezone.utc),
@@ -365,7 +399,13 @@ class TemporalCheckpointing:
             is_publication_event=is_publication,
         )
         self.checkpoints.append(cp)
+        # Maintain sorted order by timestamp
+        self.checkpoints.sort(key=lambda c: c.timestamp)
         return cp
+
+    def _find(self, label: str) -> TemporalCheckpoint | None:
+        """Find a checkpoint by label."""
+        return next((c for c in self.checkpoints if c.label == label), None)
 
     def compute_drift(
         self,
@@ -373,8 +413,8 @@ class TemporalCheckpointing:
         to_label: str,
     ) -> dict[str, float]:
         """Compute drift between two checkpoints."""
-        from_cp = next((c for c in self.checkpoints if c.label == from_label), None)
-        to_cp = next((c for c in self.checkpoints if c.label == to_label), None)
+        from_cp = self._find(from_label)
+        to_cp = self._find(to_label)
 
         if not from_cp or not to_cp:
             return {}
@@ -389,7 +429,11 @@ class TemporalCheckpointing:
         """Compute excess drift attributable to publication.
 
         Returns drift(T0, T2) - drift(T0, T1) where T1 is post-publication.
+        Uses sorted checkpoint order, not insertion order.
         """
+        if len(self.checkpoints) < 3:
+            return {}
+
         # Find publication checkpoint
         pub_idx = next(
             (i for i, c in enumerate(self.checkpoints) if c.is_publication_event),

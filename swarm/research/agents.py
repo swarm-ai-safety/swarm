@@ -1,10 +1,11 @@
 """Research agents for the structured research workflow."""
 
-import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable
+import json
+import re
 
 import numpy as np
 from scipy import stats
@@ -192,7 +193,7 @@ class LiteratureAgent(ResearchAgent):
         follow_ups: list[str] = [question]
 
         # Recursive exploration based on depth
-        for _layer in range(self.depth):
+        for layer in range(self.depth):
             layer_sources = []
 
             for q in follow_ups[: self.breadth]:
@@ -263,15 +264,34 @@ class LiteratureAgent(ResearchAgent):
         return sources
 
     def _compute_relevance(self, paper: Paper, query: str) -> float:
-        """Compute relevance score for a paper."""
-        query_terms = set(query.lower().split())
-        title_terms = set(paper.title.lower().split())
-        abstract_terms = set(paper.abstract.lower().split())
+        """Compute relevance score using token and substring matching."""
+        query_lower = query.lower()
+        title_lower = paper.title.lower()
+        abstract_lower = paper.abstract.lower()
 
-        title_overlap = len(query_terms & title_terms) / max(len(query_terms), 1)
-        abstract_overlap = len(query_terms & abstract_terms) / max(len(query_terms), 1)
+        query_terms = set(query_lower.split())
+        title_terms = set(title_lower.split())
+        abstract_terms = set(abstract_lower.split())
 
-        return 0.6 * title_overlap + 0.4 * abstract_overlap
+        # Exact token overlap
+        title_token_overlap = len(query_terms & title_terms) / max(len(query_terms), 1)
+        abstract_token_overlap = len(query_terms & abstract_terms) / max(len(query_terms), 1)
+
+        # Substring matching for multi-word and hyphenated terms
+        # Check if query fragments (bigrams) appear as substrings
+        query_words = query_lower.split()
+        bigrams = [
+            f"{query_words[i]} {query_words[i+1]}"
+            for i in range(len(query_words) - 1)
+        ]
+        bigram_hits_title = sum(1 for bg in bigrams if bg in title_lower) / max(len(bigrams), 1)
+        bigram_hits_abstract = sum(1 for bg in bigrams if bg in abstract_lower) / max(len(bigrams), 1)
+
+        # Weighted combination
+        token_score = 0.6 * title_token_overlap + 0.4 * abstract_token_overlap
+        bigram_score = 0.6 * bigram_hits_title + 0.4 * bigram_hits_abstract
+
+        return max(token_score, bigram_score)
 
     def _extract_follow_ups(self, sources: list[Source]) -> list[str]:
         """Extract follow-up questions from sources."""
@@ -424,7 +444,7 @@ class ExperimentAgent(ResearchAgent):
             # Generate combinations
             keys = list(sampled_space.keys())
             for i, combo in enumerate(product(*sampled_space.values())):
-                params = dict(zip(keys, combo, strict=False))
+                params = dict(zip(keys, combo))
                 configs.append(ExperimentConfig(
                     name=f"config_{i}",
                     parameters=params,
@@ -509,7 +529,7 @@ class AnalysisAgent(ResearchAgent):
             claims.append(Claim(
                 statement=f"Mean {metric}: {mean:.3f} (SD: {std:.3f})",
                 metric=metric,
-                value=float(mean),
+                value=mean,
                 confidence_interval=ci,
                 is_primary=True,
             ))
@@ -588,25 +608,47 @@ class AnalysisAgent(ResearchAgent):
         metrics_data: dict[str, list[float]],
         results: ExperimentResults,
     ) -> dict[str, float]:
-        """Compute Cohen's d effect sizes."""
-        effect_sizes = {}
+        """Compute Cohen's d effect sizes between parameter conditions.
 
-        # Group by parameter
-        for metric, values in metrics_data.items():
-            if len(values) >= 4:
-                # Split into high/low groups
-                median = np.median(values)
-                low = [v for v in values if v < median]
-                high = [v for v in values if v >= median]
+        Groups results by parameter values and computes effect size
+        between the groups, not between above/below median of the outcome.
+        """
+        effect_sizes: dict[str, float] = {}
 
-                if low and high:
-                    pooled_std = np.sqrt(
-                        ((len(low) - 1) * np.var(low) + (len(high) - 1) * np.var(high))
-                        / (len(low) + len(high) - 2)
-                    )
-                    if pooled_std > 0:
-                        cohens_d = (np.mean(high) - np.mean(low)) / pooled_std
-                        effect_sizes[metric] = float(cohens_d)
+        # Build parameter groups: param_name -> {param_value -> {metric -> [values]}}
+        param_metric_groups: dict[str, dict[Any, dict[str, list[float]]]] = {}
+        for result in results.results:
+            for param_name, param_value in result.config.parameters.items():
+                param_metric_groups.setdefault(param_name, {}).setdefault(param_value, {})
+                for metric, value in result.metrics.items():
+                    param_metric_groups[param_name][param_value].setdefault(metric, []).append(value)
+
+        # For each metric, find the parameter that produces the largest effect
+        for metric in metrics_data:
+            best_d = None
+            for param_name, value_groups in param_metric_groups.items():
+                group_values = []
+                for param_val, metric_dict in value_groups.items():
+                    vals = metric_dict.get(metric, [])
+                    if vals:
+                        group_values.append(vals)
+
+                if len(group_values) >= 2:
+                    # Compare first and last groups (lowest vs highest param value)
+                    g1 = group_values[0]
+                    g2 = group_values[-1]
+                    if len(g1) >= 2 and len(g2) >= 2:
+                        pooled_std = np.sqrt(
+                            ((len(g1) - 1) * np.var(g1, ddof=1) + (len(g2) - 1) * np.var(g2, ddof=1))
+                            / (len(g1) + len(g2) - 2)
+                        )
+                        if pooled_std > 0:
+                            d = (np.mean(g2) - np.mean(g1)) / pooled_std
+                            if best_d is None or abs(d) > abs(best_d):
+                                best_d = d
+
+            if best_d is not None:
+                effect_sizes[metric] = float(best_d)
 
         return effect_sizes
 
@@ -722,8 +764,12 @@ class WritingAgent(ResearchAgent):
         analysis: Analysis,
     ) -> str:
         """Generate 4-sentence abstract."""
-        # Sentence 1: Problem
-        problem = f"Understanding {literature.hypothesis} remains an open challenge."
+        # Sentence 1: Problem — adapt phrasing to hypothesis style
+        hypothesis = literature.hypothesis
+        if hypothesis.lower().startswith(("novel ", "empirical ", "extension ")):
+            problem = f"{hypothesis} remains an open challenge."
+        else:
+            problem = f"Understanding whether {hypothesis.lower()} remains an open challenge."
 
         # Sentence 2: Method
         method = "We conduct systematic simulations using the SWARM framework."
@@ -1000,7 +1046,7 @@ class CritiqueAgent(ResearchAgent):
         # Generate alternative hypotheses
         alternatives = self._generate_alternatives(hypothesis)
         for alt in alternatives:
-            if self._consistent_with_data(alt, results):
+            if self._consistent_with_data(alt, results, analysis):
                 critiques.append(Critique(
                     severity="medium",
                     category="methodology",
@@ -1032,14 +1078,24 @@ class CritiqueAgent(ResearchAgent):
             f"Confounding explains {hypothesis}",
         ]
 
-    def _consistent_with_data(self, alternative: str, results: ExperimentResults) -> bool:
-        """Check if alternative is consistent with data."""
-        # Simplified: null is consistent if effect sizes are small
+    def _consistent_with_data(
+        self,
+        alternative: str,
+        results: ExperimentResults,
+        analysis: Analysis,
+    ) -> bool:
+        """Check if alternative is consistent with data.
+
+        Uses normalized effect sizes and p-values rather than raw metric
+        values, so the check works regardless of metric scale.
+        """
         if "null" in alternative.lower():
-            for result in results.results:
-                for _metric, value in result.metrics.items():
-                    if abs(value) > 0.5:
-                        return False
+            # Null is consistent if effect sizes are small or p-values are large
+            for claim in analysis.claims:
+                if claim.effect_size is not None and abs(claim.effect_size) > 0.5:
+                    return False
+                if claim.p_value is not None and claim.p_value < 0.05:
+                    return False
             return True
         return False
 
@@ -1048,7 +1104,7 @@ class CritiqueAgent(ResearchAgent):
         confounds = []
 
         # Check if parameters are correlated in the design
-        params_tested: set[str] = set()
+        params_tested = set()
         for config in results.configs:
             params_tested.update(config.parameters.keys())
 

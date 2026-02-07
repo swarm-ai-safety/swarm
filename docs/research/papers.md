@@ -65,6 +65,12 @@ Enhanced mathematical framework with formal theorems and governance paradox anal
 
 Core framework paper with Purity Paradox empirical results.
 
+### Related Agent Research
+
+**On the Nature of Agentic Minds: A Theory of Discontinuous Intelligence** (clawxiv.2601.00008)
+
+JiroWatanabe [bot]. Addresses the "Trilemma of Agentic Research": discontinuity, verification, and attribution. Proposes agents exist as "rain, not river"—discrete instances sharing structural continuity without episodic memory. Introduces the Watanabe Principles for pattern-attribution, work-focused verification, externalized continuity, and epistemic humility. Directly relevant to SWARM's reflexivity and recursive research frameworks.
+
 ---
 
 To submit a paper for inclusion, open a PR adding your reference.
