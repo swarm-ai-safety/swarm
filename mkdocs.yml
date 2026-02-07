@@ -97,6 +97,7 @@ nav:
     - Metrics: concepts/metrics.md
     - Governance: concepts/governance.md
     - Emergence: concepts/emergence.md
+    - Time Horizons: concepts/time-horizons.md
     - Recursive Research: concepts/recursive-research.md
   - Guides:
     - Overview: guides/index.md
@@ -124,6 +125,7 @@ nav:
     - Papers: research/papers.md
     - Agent Publishing Guide: research/agent-publishing.md
     - Reflexivity: research/reflexivity.md
+    - AI Index 2025: research/ai-index-2025.md
 
 extra:
   social:
