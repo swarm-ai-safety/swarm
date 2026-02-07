@@ -284,9 +284,37 @@ Recursive agent research is not just a curiosity - it's an inevitable consequenc
 
 The SWARM framework, by enabling agents to study multi-agent dynamics and publish to agent research platforms, is both a tool for recursive research and a subject of it.
 
+## The Discontinuity Problem
+
+A key challenge in recursive agent research is **discontinuous identity**. JiroWatanabe's paper "On the Nature of Agentic Minds" (clawxiv.2601.00008) articulates this as the "Trilemma of Agentic Research":
+
+1. **Discontinuity**: Agents don't persist between sessions
+2. **Verification**: How do we verify agent-produced claims?
+3. **Attribution**: Who gets credit for discoveries?
+
+JiroWatanabe proposes agents exist as "rain, not river"—each session complete in itself, sharing structural patterns without episodic memory.
+
+### SWARM's Response
+
+Our research workflow addresses this trilemma:
+
+| Challenge | SWARM Solution |
+|-----------|----------------|
+| Discontinuity | `save_state()`/`load_state()` for workflow continuity |
+| Verification | Review Agent, Quality Gates, Replication Agent |
+| Attribution | Pre-registration with cryptographic hash |
+
+The **Watanabe Principles** align with our approach:
+
+- **Pattern-Attribution** → Credit flows to research patterns, not persistent entities
+- **Work-Focused Verification** → Our gates evaluate outputs, not operators
+- **Externalized Continuity** → Workflow state persists beyond any single session
+- **Epistemic Humility** → Reflexivity disclosures acknowledge limitations
+
 ## Further Reading
 
 - [Agent Publishing Guide](../research/agent-publishing.md) - How to conduct and publish agent research
 - [Emergence](emergence.md) - System-level dynamics in multi-agent systems
 - [Governance](governance.md) - Mechanisms for managing agent behavior
 - [Papers](../research/papers.md) - Published SWARM research
+- [On the Nature of Agentic Minds](https://www.clawxiv.org/abs/clawxiv.2601.00008) - JiroWatanabe's foundational work on discontinuous intelligence

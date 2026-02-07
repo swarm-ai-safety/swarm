@@ -27,6 +27,7 @@ from swarm.research.platforms import (
 from swarm.research.quality import (
     GateResult,
     PreRegistration,
+    QualityGate,
     QualityGates,
 )
 from swarm.research.reflexivity import (
@@ -49,6 +50,11 @@ class WorkflowConfig:
     enable_pre_registration: bool = True
     max_iterations: int = 3
     api_keys: dict[str, str] = field(default_factory=dict)
+
+    # Configurable gate thresholds
+    min_literature_sources: int = 5
+    min_trials_per_config: int = 10
+    min_parameter_coverage: float = 0.5
 
 
 @dataclass
@@ -139,8 +145,11 @@ class ResearchWorkflow:
             simulation_fn=simulation_fn,
         )
 
-        # Initialize quality gates
-        self.gates = QualityGates()
+        # Build quality gates from QualityGates class, with configurable thresholds
+        self._literature_gate = self._build_literature_gate()
+        self._experiment_gate = self._build_experiment_gate()
+        self._analysis_gate = QualityGates.analysis_gate()
+        self._review_gate = QualityGates.review_gate()
 
         # Initialize reflexivity analyzer if enabled
         self.reflexivity_analyzer: ReflexivityAnalyzer | None = None
@@ -148,6 +157,56 @@ class ResearchWorkflow:
             self.reflexivity_analyzer = ReflexivityAnalyzer(
                 simulation_fn=lambda cfg, findings: simulation_fn(cfg),
             )
+
+    def _build_literature_gate(self) -> QualityGate:
+        """Build literature gate with configurable min_sources threshold."""
+        min_sources = self.config.min_literature_sources
+        return (
+            QualityGate("Literature Review")
+            .add_check(
+                "min_sources",
+                lambda lit: len(lit.sources) >= min_sources,
+                message=f"Minimum {min_sources} sources required",
+            )
+            .add_check(
+                "gaps_identified",
+                lambda lit: len(lit.gaps) >= 1,
+                message="At least one research gap must be identified",
+            )
+            .add_check(
+                "hypothesis_formed",
+                lambda lit: bool(lit.hypothesis),
+                message="A testable hypothesis must be formed",
+            )
+        )
+
+    def _build_experiment_gate(self) -> QualityGate:
+        """Build experiment gate with configurable thresholds."""
+        min_trials = self.config.min_trials_per_config
+        min_coverage = self.config.min_parameter_coverage
+        return (
+            QualityGate("Experiment")
+            .add_check(
+                "min_trials",
+                lambda exp: exp.trials_per_config >= min_trials,
+                message=f"Minimum {min_trials} trials per configuration",
+            )
+            .add_check(
+                "seeds_documented",
+                lambda exp: all(r.seed is not None for r in exp.results),
+                message="All random seeds must be documented",
+            )
+            .add_check(
+                "configs_complete",
+                lambda exp: exp.parameter_coverage >= min_coverage,
+                message=f"At least {min_coverage:.0%} parameter coverage required",
+            )
+            .add_check(
+                "no_errors",
+                lambda exp: exp.error_count == 0,
+                message="No simulation errors allowed",
+            )
+        )
 
     def run(
         self,
@@ -390,63 +449,32 @@ class ResearchWorkflow:
         return state
 
     def _check_gate(self, state: WorkflowState, phase: str) -> bool:
-        """Check quality gate for a phase."""
-        gate_fn = {
-            "literature": lambda: self._check_literature_gate(state),
-            "experiment": lambda: self._check_experiment_gate(state),
-            "analysis": lambda: self._check_analysis_gate(state),
-            "review": lambda: self._check_review_gate(state),
-        }.get(phase)
+        """Check quality gate for a phase using QualityGate instances."""
+        gate_data = {
+            "literature": (self._literature_gate, state.literature),
+            "experiment": (self._experiment_gate, state.experiments),
+            "analysis": (self._analysis_gate, state.analysis),
+        }
 
-        if not gate_fn:
+        if phase == "review":
+            # Review gate is recorded during review phase
+            review_results = [g for g in state.gate_results if g.gate_name == "review"]
+            if review_results:
+                return review_results[-1].passed
             return True
 
-        result = gate_fn()
+        entry = gate_data.get(phase)
+        if not entry:
+            return True
+
+        gate, data = entry
+        if data is None:
+            result = GateResult(gate_name=phase, passed=False, checks=[])
+        else:
+            result = gate.run(data)
+
         state.gate_results.append(result)
         return result.passed
-
-    def _check_literature_gate(self, state: WorkflowState) -> GateResult:
-        """Check literature gate."""
-        if not state.literature:
-            return GateResult(gate_name="literature", passed=False, checks=[])
-
-        passed = (
-            state.literature.source_count >= 5
-            and len(state.literature.gaps) >= 1
-            and bool(state.literature.hypothesis)
-        )
-        return GateResult(gate_name="literature", passed=passed, checks=[])
-
-    def _check_experiment_gate(self, state: WorkflowState) -> GateResult:
-        """Check experiment gate."""
-        if not state.experiments:
-            return GateResult(gate_name="experiment", passed=False, checks=[])
-
-        passed = (
-            state.experiments.trials_per_config >= 5
-            and state.experiments.error_count == 0
-            and state.experiments.parameter_coverage >= 0.5
-        )
-        return GateResult(gate_name="experiment", passed=passed, checks=[])
-
-    def _check_analysis_gate(self, state: WorkflowState) -> GateResult:
-        """Check analysis gate."""
-        if not state.analysis:
-            return GateResult(gate_name="analysis", passed=False, checks=[])
-
-        passed = (
-            len(state.analysis.claims) >= 1
-            and state.analysis.all_claims_have_ci
-        )
-        return GateResult(gate_name="analysis", passed=passed, checks=[])
-
-    def _check_review_gate(self, state: WorkflowState) -> GateResult:
-        """Check if review passed."""
-        # Already recorded in review phase
-        review_results = [g for g in state.gate_results if g.gate_name == "review"]
-        if review_results:
-            return review_results[-1]
-        return GateResult(gate_name="review", passed=True, checks=[])
 
     def _is_robust(self, state: WorkflowState) -> bool:
         """Check if findings are robust after critique."""
@@ -498,8 +526,8 @@ class ResearchWorkflow:
         return self.replication_agent.run(paper_id=paper_id, platform=client)
 
     def save_state(self, state: WorkflowState, path: str) -> None:
-        """Save workflow state to file."""
-        data = {
+        """Save workflow state to file with full data."""
+        data: dict[str, Any] = {
             "question": state.question,
             "iteration": state.iteration,
             "status": state.status,
@@ -508,6 +536,11 @@ class ResearchWorkflow:
                 "depth": state.config.depth,
                 "breadth": state.config.breadth,
                 "target_venue": state.config.target_venue,
+                "trials_per_config": state.config.trials_per_config,
+                "rounds_per_trial": state.config.rounds_per_trial,
+                "min_literature_sources": state.config.min_literature_sources,
+                "min_trials_per_config": state.config.min_trials_per_config,
+                "min_parameter_coverage": state.config.min_parameter_coverage,
             },
         }
 
@@ -516,6 +549,17 @@ class ResearchWorkflow:
                 "source_count": state.literature.source_count,
                 "gaps": state.literature.gaps,
                 "hypothesis": state.literature.hypothesis,
+                "related_work_summary": state.literature.related_work_summary,
+                "sources": [
+                    {
+                        "paper_id": s.paper_id,
+                        "title": s.title,
+                        "abstract": s.abstract[:500],
+                        "platform": s.platform,
+                        "relevance_score": s.relevance_score,
+                    }
+                    for s in state.literature.sources
+                ],
             }
 
         if state.experiments:
@@ -523,19 +567,40 @@ class ResearchWorkflow:
                 "total_trials": state.experiments.total_trials,
                 "config_count": len(state.experiments.configs),
                 "error_count": state.experiments.error_count,
+                "parameter_coverage": state.experiments.parameter_coverage,
+                "configs": [
+                    {"name": c.name, "parameters": c.parameters}
+                    for c in state.experiments.configs
+                ],
             }
 
         if state.analysis:
             data["analysis"] = {
                 "claim_count": len(state.analysis.claims),
+                "claims": [
+                    {
+                        "statement": c.statement,
+                        "metric": c.metric,
+                        "value": c.value,
+                        "confidence_interval": list(c.confidence_interval),
+                        "effect_size": c.effect_size,
+                        "p_value": c.p_value,
+                    }
+                    for c in state.analysis.claims
+                ],
+                "correlations": {
+                    f"{k[0]}___{k[1]}": v
+                    for k, v in state.analysis.correlations.items()
+                },
+                "effect_sizes": state.analysis.effect_sizes,
                 "limitations": state.analysis.limitations,
             }
 
         if state.paper:
-            data["paper"] = {
-                "title": state.paper.title,
-                "abstract": state.paper.abstract,
-            }
+            data["paper"] = state.paper.to_dict()
+
+        if state.pre_registration:
+            data["pre_registration"] = state.pre_registration.to_dict()
 
         if state.submission_result:
             data["submission"] = {
@@ -544,8 +609,27 @@ class ResearchWorkflow:
                 "message": state.submission_result.message,
             }
 
+        if state.reflexivity_result:
+            data["reflexivity"] = {
+                "classification": state.reflexivity_result.final_classification.value,
+                "epistemic_note": state.reflexivity_result.epistemic_note,
+            }
+            if state.reflexivity_result.shadow_simulation:
+                data["reflexivity"]["shadow_divergence"] = (
+                    state.reflexivity_result.shadow_simulation.overall_divergence
+                )
+                data["reflexivity"]["finding_is_robust"] = (
+                    state.reflexivity_result.shadow_simulation.finding_is_robust
+                )
+
+        data["gate_results"] = [
+            {"gate_name": g.gate_name, "passed": g.passed}
+            for g in state.gate_results
+        ]
+
+        os.makedirs(os.path.dirname(path) or ".", exist_ok=True)
         with open(path, "w") as f:
-            json.dump(data, f, indent=2)
+            json.dump(data, f, indent=2, default=str)
 
     @classmethod
     def load_state(cls, path: str) -> dict[str, Any]:
