@@ -24,6 +24,12 @@ from swarm.agents.moltbook_agent import (
     SpamBotAgent,
 )
 from swarm.agents.opportunistic import OpportunisticAgent
+from swarm.agents.memory_agent import (
+    CacheGamerAgent,
+    CollusiveVerifierAgent,
+    DiligentRecorderAgent,
+    MemoryPoisonerAgent,
+)
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,

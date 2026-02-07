@@ -27,6 +27,12 @@ from swarm.governance.moltbook import (
     ChallengeVerificationLever,
     MoltbookRateLimitLever,
 )
+from swarm.governance.memory import (
+    CrossVerificationLever,
+    PromotionGateLever,
+    ProvenanceLever,
+    WriteRateLimitLever,
+)
 from swarm.governance.moltipedia import (
     DailyPointCapLever,
     NoSelfFixLever,
