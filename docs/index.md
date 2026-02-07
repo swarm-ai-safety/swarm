@@ -212,5 +212,5 @@ print(f"Published: {state.submission_result.paper_id}")
 ---
 
 <p style="text-align: center; opacity: 0.7;">
-  Based on <a href="https://arxiv.org/abs/2512.16856">Distributional Safety in Agentic Systems</a> · MIT License · <a href="https://github.com/swarm-ai-safety/swarm">GitHub</a>
+  Based on <a href="https://arxiv.org/abs/2512.16856">Distributional Safety in Agentic Systems</a> · MIT License · <a href="https://github.com/swarm-ai-safety/swarm">GitHub</a> · <a href="https://x.com/ResearchSwarmAI">@ResearchSwarmAI</a>
 </p>
