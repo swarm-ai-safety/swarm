@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable
-import copy
+
 import numpy as np
 
 
@@ -256,7 +256,7 @@ class PublishThenAttack:
             degradations = []
             evasions = []
 
-            for trial in range(trials):
+            for _trial in range(trials):
                 result = self.simulation_fn(config, [finding], strategy)
 
                 # Compute degradation from baseline
@@ -281,9 +281,9 @@ class PublishThenAttack:
             attack_results.append(
                 AttackResult(
                     attack_strategy=strategy,
-                    governance_still_holds=evasion_rate < 0.5,
-                    metric_degradation=avg_degradation,
-                    successful_evasion=evasion_rate > 0.5,
+                    governance_still_holds=bool(evasion_rate < 0.5),
+                    metric_degradation={k: float(v) for k, v in avg_degradation.items()},
+                    successful_evasion=bool(evasion_rate > 0.5),
                     details=f"Evasion rate: {evasion_rate:.1%}",
                 )
             )
@@ -441,7 +441,7 @@ class GoodhartResistantMetrics:
         weights: dict[str, float] | None = None,
     ) -> float:
         """Compute composite metric (hard to jointly optimize)."""
-        weights = weights or {m: 1.0 for m in metric_fns}
+        weights = weights or dict.fromkeys(metric_fns, 1.0)
         total_weight = sum(weights.values())
 
         score = 0.0

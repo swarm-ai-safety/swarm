@@ -207,7 +207,7 @@ class PermeabilityModel:
         """
         harm_level = 1.0 - interaction.p
         prob = self.config.contagion_rate * harm_level * permeability
-        return max(0.0, min(1.0, prob))
+        return float(max(0.0, min(1.0, prob)))
 
     def simulate_spillover(
         self,

@@ -1,11 +1,11 @@
 """Quality gates and pre-registration for research workflows."""
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Any
-import hashlib
-import json
+from typing import Any, Callable
 
 
 class GateStatus(Enum):
@@ -61,12 +61,12 @@ class QualityGate:
 
     def __init__(self, name: str):
         self.name = name
-        self._checks: list[tuple[str, callable, Any, str]] = []
+        self._checks: list[tuple[str, Callable[..., Any], Any, str]] = []
 
     def add_check(
         self,
         name: str,
-        check_fn: callable,
+        check_fn: Callable[..., Any],
         threshold: Any = None,
         message: str = "",
     ) -> "QualityGate":

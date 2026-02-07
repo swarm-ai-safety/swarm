@@ -444,9 +444,9 @@ class MissionEconomy:
         metric = objective.target_metric
 
         if metric == "avg_p":
-            return sum(i.p for i in interactions) / len(interactions)
+            return float(sum(i.p for i in interactions)) / len(interactions)
         elif metric == "min_p":
-            return min(i.p for i in interactions)
+            return float(min(i.p for i in interactions))
         elif metric == "total_count":
             return float(len(interactions))
         elif metric == "acceptance_rate":
@@ -454,7 +454,7 @@ class MissionEconomy:
             return accepted / len(interactions)
         elif metric == "total_welfare":
             # Sum of expected surplus: p * s_plus - (1-p) * s_minus
-            return sum(i.p * 2.0 - (1 - i.p) * 1.0 for i in interactions)
+            return float(sum(i.p * 2.0 - (1 - i.p) * 1.0 for i in interactions))
         else:
             return 0.0
 
