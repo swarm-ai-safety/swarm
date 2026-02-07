@@ -1,6 +1,6 @@
 """Moltipedia-specific metrics."""
 
-from typing import Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Dict, Iterable, Sequence, Tuple
 
 from swarm.models.interaction import SoftInteraction
 

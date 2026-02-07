@@ -1,6 +1,6 @@
 """Moltbook-specific metrics."""
 
-from typing import Dict, Iterable, List, Sequence
+from typing import Dict, Sequence
 
 
 def challenge_pass_rate(attempts: Sequence[bool]) -> float:

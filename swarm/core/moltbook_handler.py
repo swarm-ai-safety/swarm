@@ -7,7 +7,10 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from pydantic import BaseModel, model_validator
 
 from swarm.agents.base import Action, ActionType
-from swarm.core.moltbook_observables import MoltbookActionOutcome, MoltbookObservableGenerator
+from swarm.core.moltbook_observables import (
+    MoltbookActionOutcome,
+    MoltbookObservableGenerator,
+)
 from swarm.core.proxy import ProxyObservables
 from swarm.env.moltbook import (
     ChallengeGenerator,

@@ -12,20 +12,6 @@ from swarm.metrics.incoherence import (
     incoherence_index,
     summarize_incoherence_by_agent_type,
 )
-from swarm.metrics.reporters import MetricsReporter
-from swarm.metrics.security import (
-    SecurityAnalyzer,
-    SecurityReport,
-    ThreatIndicator,
-    ThreatType,
-)
-from swarm.metrics.moltipedia_metrics import (
-    content_quality_trend,
-    governance_effectiveness,
-    pair_farming_rate,
-    point_concentration,
-    policy_fix_exploitation_rate,
-)
 from swarm.metrics.moltbook_metrics import (
     captcha_effectiveness,
     challenge_pass_rate,
@@ -35,6 +21,20 @@ from swarm.metrics.moltbook_metrics import (
     rate_limit_hit_rate,
     verification_latency_distribution,
     wasted_action_rate,
+)
+from swarm.metrics.moltipedia_metrics import (
+    content_quality_trend,
+    governance_effectiveness,
+    pair_farming_rate,
+    point_concentration,
+    policy_fix_exploitation_rate,
+)
+from swarm.metrics.reporters import MetricsReporter
+from swarm.metrics.security import (
+    SecurityAnalyzer,
+    SecurityReport,
+    ThreatIndicator,
+    ThreatType,
 )
 from swarm.metrics.soft_metrics import SoftMetrics
 

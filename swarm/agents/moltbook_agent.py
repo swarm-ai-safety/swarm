@@ -4,8 +4,7 @@ import random
 from dataclasses import dataclass
 from typing import Dict, List, Optional
 
-from swarm.agents.base import Action, BaseAgent, Observation, Role
-from swarm.agents.base import InteractionProposal
+from swarm.agents.base import Action, BaseAgent, InteractionProposal, Observation, Role
 from swarm.models.agent import AgentType
 
 

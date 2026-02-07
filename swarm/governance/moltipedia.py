@@ -1,7 +1,7 @@
 """Moltipedia-specific governance levers."""
 
 from collections import defaultdict
-from typing import Dict, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, Optional, Tuple
 
 from swarm.governance.levers import GovernanceLever, LeverEffect
 

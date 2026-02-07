@@ -15,8 +15,8 @@ from swarm.boundaries.leakage import LeakageDetector, LeakageReport
 from swarm.boundaries.policies import PolicyEngine
 from swarm.core.boundary_handler import BoundaryHandler
 from swarm.core.marketplace_handler import MarketplaceHandler
-from swarm.core.moltipedia_handler import MoltipediaConfig, MoltipediaHandler
 from swarm.core.moltbook_handler import MoltbookConfig, MoltbookHandler
+from swarm.core.moltipedia_handler import MoltipediaConfig, MoltipediaHandler
 from swarm.core.observable_generator import (
     DefaultObservableGenerator,
     ObservableGenerator,
