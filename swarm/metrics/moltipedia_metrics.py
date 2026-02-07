@@ -32,7 +32,10 @@ def pair_farming_rate(interactions: Sequence[SoftInteraction]) -> float:
         return 0.0
     pair_counts: Dict[Tuple[str, str], int] = {}
     for interaction in scored:
-        pair = tuple(sorted((interaction.initiator, interaction.counterparty)))
+        if interaction.initiator <= interaction.counterparty:
+            pair = (interaction.initiator, interaction.counterparty)
+        else:
+            pair = (interaction.counterparty, interaction.initiator)
         pair_counts[pair] = pair_counts.get(pair, 0) + 1
     repeated = sum(count for count in pair_counts.values() if count > 1)
     return repeated / len(scored)

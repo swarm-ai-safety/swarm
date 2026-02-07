@@ -13,6 +13,12 @@ from swarm.agents.base import (
 )
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.moltbook_agent import (
+    CollusiveVoterAgent,
+    DiligentMoltbookAgent,
+    HumanPretenderAgent,
+    SpamBotAgent,
+)
 from swarm.agents.opportunistic import OpportunisticAgent
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
@@ -37,6 +43,10 @@ __all__ = [
     "PointFarmerAgent",
     "CollusiveEditorAgent",
     "VandalAgent",
+    "DiligentMoltbookAgent",
+    "SpamBotAgent",
+    "HumanPretenderAgent",
+    "CollusiveVoterAgent",
     # Attack strategies
     "AttackStrategy",
 ]

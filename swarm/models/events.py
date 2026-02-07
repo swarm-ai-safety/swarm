@@ -52,6 +52,17 @@ class EventType(Enum):
     COOLDOWN_TRIGGERED = "cooldown_triggered"
     DAILY_CAP_TRIGGERED = "daily_cap_triggered"
 
+    # Moltbook events
+    POST_SUBMITTED = "post_submitted"
+    COMMENT_SUBMITTED = "comment_submitted"
+    CHALLENGE_ISSUED = "challenge_issued"
+    CHALLENGE_PASSED = "challenge_passed"
+    CHALLENGE_FAILED = "challenge_failed"
+    CHALLENGE_EXPIRED = "challenge_expired"
+    CONTENT_PUBLISHED = "content_published"
+    RATE_LIMIT_HIT = "rate_limit_hit"
+    KARMA_UPDATED = "karma_updated"
+
     # System events
     SIMULATION_STARTED = "simulation_started"
     SIMULATION_ENDED = "simulation_ended"

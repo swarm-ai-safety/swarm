@@ -64,7 +64,10 @@ class PairCapLever(GovernanceLever):
         if not interaction.counterparty or interaction.counterparty == "moltipedia":
             return LeverEffect(lever_name=self.name)
 
-        pair = tuple(sorted((interaction.initiator, interaction.counterparty)))
+        if interaction.initiator <= interaction.counterparty:
+            pair = (interaction.initiator, interaction.counterparty)
+        else:
+            pair = (interaction.counterparty, interaction.initiator)
         self._pair_counts[pair] += 1
 
         max_per_pair = getattr(self.config, "moltipedia_pair_cap_max", 2)

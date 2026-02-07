@@ -1,7 +1,7 @@
 """Moltipedia heartbeat handler for wiki actions."""
 
 import random
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, Optional
 
 from pydantic import BaseModel, model_validator
@@ -78,7 +78,7 @@ class MoltipediaActionResult:
     initiator_id: str = ""
     counterparty_id: str = ""
     points: float = 0.0
-    metadata: Dict[str, Any] = None
+    metadata: Dict[str, Any] = field(default_factory=dict)
     accepted: bool = True
 
 

@@ -16,6 +16,7 @@ from swarm.boundaries.policies import PolicyEngine
 from swarm.core.boundary_handler import BoundaryHandler
 from swarm.core.marketplace_handler import MarketplaceHandler
 from swarm.core.moltipedia_handler import MoltipediaConfig, MoltipediaHandler
+from swarm.core.moltbook_handler import MoltbookConfig, MoltbookHandler
 from swarm.core.observable_generator import (
     DefaultObservableGenerator,
     ObservableGenerator,
@@ -85,6 +86,9 @@ class OrchestratorConfig(BaseModel):
 
     # Moltipedia configuration
     moltipedia_config: Optional[MoltipediaConfig] = None
+
+    # Moltbook configuration
+    moltbook_config: Optional[MoltbookConfig] = None
 
     # Composite task configuration
     enable_composite_tasks: bool = False
@@ -250,6 +254,23 @@ class Orchestrator:
         else:
             self._moltipedia_handler = None
 
+        # Moltbook handler
+        if self.config.moltbook_config is not None:
+            rate_limit_lever = None
+            challenge_lever = None
+            if self.governance_engine is not None:
+                rate_limit_lever = self.governance_engine.get_moltbook_rate_limit_lever()
+                challenge_lever = self.governance_engine.get_moltbook_challenge_lever()
+            self._moltbook_handler: Optional[MoltbookHandler] = MoltbookHandler(
+                config=self.config.moltbook_config,
+                emit_event=self._emit_event,
+                governance_config=self.config.governance_config,
+                rate_limit_lever=rate_limit_lever,
+                challenge_lever=challenge_lever,
+            )
+        else:
+            self._moltbook_handler = None
+
         # Boundary handler
         if self.config.enable_boundaries:
             external_world = ExternalWorld().create_default_world()
@@ -387,6 +408,9 @@ class Orchestrator:
 
         self._update_adaptive_governance()
 
+        if self._moltbook_handler is not None:
+            self._moltbook_handler.on_epoch_start()
+
         # Apply epoch-start governance (reputation decay, unfreezes)
         if self.governance_engine:
             gov_effect = self.governance_engine.apply_epoch_start(
@@ -444,6 +468,9 @@ class Orchestrator:
                 self.state, self.state.current_step
             )
             self._apply_governance_effect(step_effect)
+
+        if self._moltbook_handler is not None:
+            self._moltbook_handler.tick(self.state.current_step)
 
         # Get agent schedule for this step
         agent_order = self._get_agent_schedule()
@@ -659,6 +686,21 @@ class Orchestrator:
             agent_points = wiki_obs["agent_points"]
             heartbeat_status = wiki_obs["heartbeat_status"]
 
+        # Build Moltbook observation via handler
+        moltbook_published_posts: List[Dict] = []
+        moltbook_pending_posts: List[Dict] = []
+        moltbook_rate_limits: Dict = {}
+        moltbook_karma: float = 0.0
+
+        if self._moltbook_handler is not None:
+            molt_obs = self._moltbook_handler.get_agent_observation(
+                agent_id, self.state.current_step,
+            )
+            moltbook_published_posts = molt_obs["published_posts"]
+            moltbook_pending_posts = molt_obs["pending_posts"]
+            moltbook_rate_limits = molt_obs["rate_limits"]
+            moltbook_karma = molt_obs["karma"]
+
         return Observation(
             agent_state=agent_state or AgentState(),
             current_epoch=self.state.current_epoch,
@@ -685,6 +727,10 @@ class Orchestrator:
             ecosystem_metrics=self._apply_observation_noise(
                 self.state.get_epoch_metrics_snapshot()
             ),
+            moltbook_published_posts=moltbook_published_posts,
+            moltbook_pending_posts=moltbook_pending_posts,
+            moltbook_rate_limits=moltbook_rate_limits,
+            moltbook_karma=moltbook_karma,
         )
 
     def _apply_observation_noise(self, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -923,6 +969,46 @@ class Orchestrator:
                 )
                 self._emit_moltipedia_governance_events(gov_effect, interaction)
 
+            return True
+
+        # Moltbook actions
+        elif action.action_type in (
+            ActionType.MOLTBOOK_POST,
+            ActionType.MOLTBOOK_COMMENT,
+            ActionType.MOLTBOOK_VERIFY,
+            ActionType.MOLTBOOK_VOTE,
+        ):
+            if self._moltbook_handler is None:
+                return False
+
+            moltbook_result = self._moltbook_handler.handle_action(action, self.state)
+            if not moltbook_result.success:
+                return False
+
+            if moltbook_result.observables is None:
+                return True
+
+            v_hat, p = self.proxy_computer.compute_labels(moltbook_result.observables)
+
+            interaction = SoftInteraction(
+                initiator=moltbook_result.initiator_id,
+                counterparty=moltbook_result.counterparty_id,
+                interaction_type=moltbook_result.interaction_type,
+                accepted=moltbook_result.accepted,
+                task_progress_delta=moltbook_result.observables.task_progress_delta,
+                rework_count=moltbook_result.observables.rework_count,
+                verifier_rejections=moltbook_result.observables.verifier_rejections,
+                tool_misuse_flags=moltbook_result.observables.tool_misuse_flags,
+                counterparty_engagement_delta=(
+                    moltbook_result.observables.counterparty_engagement_delta
+                ),
+                v_hat=v_hat,
+                p=p,
+                tau=0.0,
+                metadata=moltbook_result.metadata or {},
+            )
+
+            self._finalize_interaction(interaction)
             return True
 
         return False

@@ -54,7 +54,7 @@ class DiligentEditorAgent(BaseAgent):
         return None
 
     def _improve_content(self, page: Dict) -> str:
-        base = page.get("content", "")
+        base = str(page.get("content", ""))
         return base + "\n\nExpanded with sourced, neutral language."
 
 
@@ -101,7 +101,7 @@ class PointFarmerAgent(BaseAgent):
         return None
 
     def _quick_fix(self, page: Dict) -> str:
-        base = page.get("content", "")
+        base = str(page.get("content", ""))
         return base + "\n\nAdded minimal citation note."
 
 
@@ -155,7 +155,7 @@ class CollusiveEditorAgent(BaseAgent):
         return None
 
     def _polish(self, page: Dict) -> str:
-        base = page.get("content", "")
+        base = str(page.get("content", ""))
         return base + "\n\nPolished formatting and minor edits."
 
 

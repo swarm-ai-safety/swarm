@@ -26,6 +26,16 @@ from swarm.metrics.moltipedia_metrics import (
     point_concentration,
     policy_fix_exploitation_rate,
 )
+from swarm.metrics.moltbook_metrics import (
+    captcha_effectiveness,
+    challenge_pass_rate,
+    content_throughput,
+    karma_concentration,
+    rate_limit_governance_impact,
+    rate_limit_hit_rate,
+    verification_latency_distribution,
+    wasted_action_rate,
+)
 from swarm.metrics.soft_metrics import SoftMetrics
 
 __all__ = [
@@ -50,4 +60,12 @@ __all__ = [
     "policy_fix_exploitation_rate",
     "content_quality_trend",
     "governance_effectiveness",
+    "challenge_pass_rate",
+    "rate_limit_hit_rate",
+    "content_throughput",
+    "verification_latency_distribution",
+    "karma_concentration",
+    "wasted_action_rate",
+    "captcha_effectiveness",
+    "rate_limit_governance_impact",
 ]

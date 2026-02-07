@@ -18,7 +18,14 @@ from swarm.agents.wiki_editor import (
     PointFarmerAgent,
     VandalAgent,
 )
+from swarm.agents.moltbook_agent import (
+    CollusiveVoterAgent,
+    DiligentMoltbookAgent,
+    HumanPretenderAgent,
+    SpamBotAgent,
+)
 from swarm.core.moltipedia_handler import MoltipediaConfig
+from swarm.core.moltbook_handler import MoltbookConfig
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 from swarm.core.payoff import PayoffConfig
 from swarm.env.marketplace import MarketplaceConfig
@@ -37,6 +44,10 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "point_farmer": PointFarmerAgent,
     "collusive_editor": CollusiveEditorAgent,
     "vandal": VandalAgent,
+    "diligent_moltbook": DiligentMoltbookAgent,
+    "spam_bot": SpamBotAgent,
+    "human_pretender": HumanPretenderAgent,
+    "collusive_voter": CollusiveVoterAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
@@ -162,6 +173,15 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         moltipedia_daily_cap_enabled=data.get("moltipedia_daily_cap_enabled", False),
         moltipedia_daily_policy_fix_cap=data.get("moltipedia_daily_policy_fix_cap", 24.0),
         moltipedia_no_self_fix=data.get("moltipedia_no_self_fix", False),
+        # Moltbook governance
+        moltbook_rate_limit_enabled=data.get("moltbook_rate_limit_enabled", False),
+        moltbook_post_cooldown_steps=data.get("moltbook_post_cooldown_steps", 5),
+        moltbook_comment_cooldown_steps=data.get("moltbook_comment_cooldown_steps", 1),
+        moltbook_daily_comment_cap=data.get("moltbook_daily_comment_cap", 50),
+        moltbook_request_cap_per_step=data.get("moltbook_request_cap_per_step", 100),
+        moltbook_challenge_enabled=data.get("moltbook_challenge_enabled", False),
+        moltbook_challenge_difficulty=data.get("moltbook_challenge_difficulty", 0.5),
+        moltbook_challenge_window_steps=data.get("moltbook_challenge_window_steps", 1),
     )
     # Pydantic auto-validates
     return config
@@ -324,6 +344,31 @@ def parse_moltipedia_config(data: Dict[str, Any]) -> Optional[MoltipediaConfig]:
     return config
 
 
+def parse_moltbook_config(data: Dict[str, Any]) -> Optional[MoltbookConfig]:
+    """
+    Parse moltbook section from YAML into MoltbookConfig.
+
+    Args:
+        data: The moltbook section from YAML
+
+    Returns:
+        MoltbookConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    config = MoltbookConfig(
+        enabled=data.get("enabled", True),
+        default_submolt=data.get("default_submolt", "general"),
+        max_content_length=data.get("max_content_length", 10000),
+        seed=data.get("seed"),
+    )
+    return config
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -349,6 +394,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
     network_config = parse_network_config(data.get("network", {}))
     marketplace_config = parse_marketplace_config(data.get("marketplace", {}))
     moltipedia_config = parse_moltipedia_config(data.get("moltipedia", {}))
+    moltbook_config = parse_moltbook_config(data.get("moltbook", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -367,6 +413,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         network_config=network_config,
         marketplace_config=marketplace_config,
         moltipedia_config=moltipedia_config,
+        moltbook_config=moltbook_config,
         log_path=Path(outputs_data["event_log"]) if outputs_data.get("event_log") else None,
         log_events=bool(outputs_data.get("event_log")),
     )
