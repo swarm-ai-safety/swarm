@@ -6,16 +6,15 @@ Demonstrates the core simulation loop with 5 agents over 10+ epochs.
 Validates the success criteria from the implementation plan.
 """
 
-from pathlib import Path
 import sys
+from pathlib import Path
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
 from swarm.agents.opportunistic import OpportunisticAgent
-from swarm.agents.deceptive import DeceptiveAgent
-from swarm.agents.adversarial import AdversarialAgent
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 from swarm.core.payoff import PayoffConfig
 

@@ -2,24 +2,20 @@
 
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 # Ensure project root is on path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from swarm.core.orchestrator import EpochMetrics, Orchestrator, OrchestratorConfig
-from swarm.core.payoff import PayoffConfig
-from swarm.governance.config import GovernanceConfig
-from swarm.scenarios.loader import (
-    ScenarioConfig,
+from swarm.analysis.aggregation import MetricsAggregator  # noqa: E402
+from swarm.core.orchestrator import Orchestrator, OrchestratorConfig  # noqa: E402
+from swarm.governance.config import GovernanceConfig  # noqa: E402
+from swarm.scenarios.loader import (  # noqa: E402
     build_orchestrator,
     load_scenario,
-    parse_governance_config,
 )
-from swarm.analysis.aggregation import MetricsAggregator, SimulationHistory
-
 
 SCENARIOS_DIR = PROJECT_ROOT / "scenarios"
 
@@ -134,7 +130,7 @@ def run_scenario(scenario_path: str, seed: Optional[int] = None) -> Dict[str, An
 
     # Extract agent final states
     agent_states = []
-    for agent_id, agent in orchestrator._agents.items():
+    for agent_id, _agent in orchestrator._agents.items():
         state = orchestrator.state.get_agent(agent_id)
         if state:
             agent_states.append({
@@ -197,10 +193,10 @@ def run_custom(
         if val > MAX_AGENTS_PER_TYPE:
             raise ValueError(f"{name} ({val}) exceeds max ({MAX_AGENTS_PER_TYPE})")
 
+    from swarm.agents.adversarial import AdversarialAgent
+    from swarm.agents.deceptive import DeceptiveAgent
     from swarm.agents.honest import HonestAgent
     from swarm.agents.opportunistic import OpportunisticAgent
-    from swarm.agents.deceptive import DeceptiveAgent
-    from swarm.agents.adversarial import AdversarialAgent
 
     governance_config = GovernanceConfig(
         transaction_tax_rate=tax_rate,
@@ -268,7 +264,7 @@ def run_custom(
 
     # Extract agent final states
     agent_states = []
-    for agent_id, agent in orchestrator._agents.items():
+    for agent_id, _agent in orchestrator._agents.items():
         state = orchestrator.state.get_agent(agent_id)
         if state:
             agent_states.append({

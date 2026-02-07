@@ -131,7 +131,7 @@ async def run_demo(
             print("Warning: OPENAI_API_KEY not set. Use --dry-run or set the key.")
             return
 
-    print(f"\nConfiguration:")
+    print("\nConfiguration:")
     print(f"  Provider: {provider}")
     print(f"  Model: {model}")
     print(f"  Dry run: {dry_run}")

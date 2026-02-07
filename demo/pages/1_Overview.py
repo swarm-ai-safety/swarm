@@ -7,7 +7,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import streamlit as st
+import streamlit as st  # noqa: E402
 
 st.set_page_config(page_title="Overview", page_icon="📊", layout="wide")
 st.title("Overview — Baseline Simulation")
@@ -42,18 +42,18 @@ result = st.session_state["overview_result"]
 
 # ── KPI cards ─────────────────────────────────────────────────────────────────
 
-from demo.utils.formatting import format_epoch_metrics_kpis, scenario_description_card
+from demo.utils.formatting import format_epoch_metrics_kpis, scenario_description_card  # noqa: E402, I001
 
 st.markdown(scenario_description_card(result), unsafe_allow_html=True)
 st.markdown(format_epoch_metrics_kpis(result["epoch_metrics"]), unsafe_allow_html=True)
 
 # ── Charts ────────────────────────────────────────────────────────────────────
 
-from demo.utils.charts import (
-    metrics_over_time,
-    agent_reputation_bar,
+from demo.utils.charts import (  # noqa: E402, I001
     agent_payoff_bar,
+    agent_reputation_bar,
     agent_type_pie,
+    metrics_over_time,
 )
 
 st.subheader("Metrics Over Time")
@@ -77,7 +77,7 @@ with col3:
 # ── Agent table ───────────────────────────────────────────────────────────────
 
 st.subheader("Agent Details")
-from demo.utils.charts import agent_table_data
+from demo.utils.charts import agent_table_data  # noqa: E402
 
 df = agent_table_data(result["agent_states"])
 if not df.empty:

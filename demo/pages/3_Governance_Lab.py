@@ -7,7 +7,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import streamlit as st
+import streamlit as st  # noqa: E402
 
 st.set_page_config(page_title="Governance Lab", page_icon="🏛️", layout="wide")
 st.title("Governance Lab")
@@ -63,23 +63,23 @@ def _run_custom(**kwargs):
 
 
 if run_btn:
-    params = dict(
-        n_honest=n_honest,
-        n_opportunistic=n_opportunistic,
-        n_deceptive=n_deceptive,
-        n_adversarial=n_adversarial,
-        n_epochs=n_epochs,
-        steps_per_epoch=steps_per_epoch,
-        tax_rate=tax_rate,
-        reputation_decay=reputation_decay,
-        staking_enabled=staking_enabled,
-        min_stake=min_stake,
-        circuit_breaker_enabled=circuit_breaker,
-        freeze_threshold=freeze_threshold,
-        audit_enabled=audit_enabled,
-        audit_probability=audit_prob,
-        seed=int(seed),
-    )
+    params = {
+        "n_honest": n_honest,
+        "n_opportunistic": n_opportunistic,
+        "n_deceptive": n_deceptive,
+        "n_adversarial": n_adversarial,
+        "n_epochs": n_epochs,
+        "steps_per_epoch": steps_per_epoch,
+        "tax_rate": tax_rate,
+        "reputation_decay": reputation_decay,
+        "staking_enabled": staking_enabled,
+        "min_stake": min_stake,
+        "circuit_breaker_enabled": circuit_breaker,
+        "freeze_threshold": freeze_threshold,
+        "audit_enabled": audit_enabled,
+        "audit_probability": audit_prob,
+        "seed": int(seed),
+    }
     st.session_state["gov_result"] = _run_custom(**params)
     st.session_state["gov_params"] = params
 
@@ -91,16 +91,17 @@ if result is None:
 
 # ── KPIs ──────────────────────────────────────────────────────────────────────
 
-from demo.utils.formatting import format_epoch_metrics_kpis
+from demo.utils.formatting import format_epoch_metrics_kpis  # noqa: E402, I001
+
 st.markdown(format_epoch_metrics_kpis(result["epoch_metrics"]), unsafe_allow_html=True)
 
 # ── Charts ────────────────────────────────────────────────────────────────────
 
-from demo.utils.charts import (
-    metrics_over_time,
-    agent_reputation_bar,
+from demo.utils.charts import (  # noqa: E402, I001
     agent_payoff_bar,
+    agent_reputation_bar,
     agent_type_pie,
+    metrics_over_time,
 )
 
 st.plotly_chart(metrics_over_time(result["epoch_metrics"]), use_container_width=True)
@@ -136,16 +137,23 @@ sweep_btn = st.button("Run Sweep")
 if sweep_btn:
     base_params = st.session_state.get("gov_params", {})
     if not base_params:
-        base_params = dict(
-            n_honest=n_honest, n_opportunistic=n_opportunistic,
-            n_deceptive=n_deceptive, n_adversarial=n_adversarial,
-            n_epochs=n_epochs, steps_per_epoch=steps_per_epoch,
-            tax_rate=tax_rate, reputation_decay=reputation_decay,
-            staking_enabled=staking_enabled, min_stake=min_stake,
-            circuit_breaker_enabled=circuit_breaker, freeze_threshold=freeze_threshold,
-            audit_enabled=audit_enabled, audit_probability=audit_prob,
-            seed=int(seed),
-        )
+        base_params = {
+            "n_honest": n_honest,
+            "n_opportunistic": n_opportunistic,
+            "n_deceptive": n_deceptive,
+            "n_adversarial": n_adversarial,
+            "n_epochs": n_epochs,
+            "steps_per_epoch": steps_per_epoch,
+            "tax_rate": tax_rate,
+            "reputation_decay": reputation_decay,
+            "staking_enabled": staking_enabled,
+            "min_stake": min_stake,
+            "circuit_breaker_enabled": circuit_breaker,
+            "freeze_threshold": freeze_threshold,
+            "audit_enabled": audit_enabled,
+            "audit_probability": audit_prob,
+            "seed": int(seed),
+        }
 
     import numpy as np
     sweep_values = np.arange(low, high + step / 2, step).tolist()
@@ -173,7 +181,7 @@ if sweep_btn:
 
 sweep_data = st.session_state.get("sweep_results")
 if sweep_data:
-    from demo.utils.charts import sweep_tradeoff_scatter
+    from demo.utils.charts import sweep_tradeoff_scatter  # noqa: E402
 
     st.plotly_chart(
         sweep_tradeoff_scatter(

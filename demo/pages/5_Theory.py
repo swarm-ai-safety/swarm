@@ -7,8 +7,8 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import pandas as pd
-import streamlit as st
+import pandas as pd  # noqa: E402
+import streamlit as st  # noqa: E402
 
 st.set_page_config(page_title="Theory", page_icon="📐", layout="wide")
 st.title("Mathematical Foundations")
