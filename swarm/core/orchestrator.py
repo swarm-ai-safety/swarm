@@ -15,6 +15,7 @@ from swarm.boundaries.leakage import LeakageDetector, LeakageReport
 from swarm.boundaries.policies import PolicyEngine
 from swarm.core.boundary_handler import BoundaryHandler
 from swarm.core.marketplace_handler import MarketplaceHandler
+from swarm.core.memory_handler import MemoryHandler, MemoryTierConfig
 from swarm.core.moltbook_handler import MoltbookConfig, MoltbookHandler
 from swarm.core.moltipedia_handler import MoltipediaConfig, MoltipediaHandler
 from swarm.core.observable_generator import (
@@ -89,6 +90,9 @@ class OrchestratorConfig(BaseModel):
 
     # Moltbook configuration
     moltbook_config: Optional[MoltbookConfig] = None
+
+    # Memory tier configuration
+    memory_tier_config: Optional[MemoryTierConfig] = None
 
     # Composite task configuration
     enable_composite_tasks: bool = False
@@ -271,6 +275,15 @@ class Orchestrator:
         else:
             self._moltbook_handler = None
 
+        # Memory tier handler
+        if self.config.memory_tier_config is not None:
+            self._memory_handler: Optional[MemoryHandler] = MemoryHandler(
+                config=self.config.memory_tier_config,
+                emit_event=self._emit_event,
+            )
+        else:
+            self._memory_handler = None
+
         # Boundary handler
         if self.config.enable_boundaries:
             external_world = ExternalWorld().create_default_world()
@@ -411,6 +424,9 @@ class Orchestrator:
         if self._moltbook_handler is not None:
             self._moltbook_handler.on_epoch_start()
 
+        if self._memory_handler is not None:
+            self._memory_handler.on_epoch_start(self.state)
+
         # Apply epoch-start governance (reputation decay, unfreezes)
         if self.governance_engine:
             gov_effect = self.governance_engine.apply_epoch_start(
@@ -439,6 +455,9 @@ class Orchestrator:
                     epoch=epoch_start,
                 ))
 
+        # Apply memory decay for rain/river agents at epoch boundary
+        self._apply_agent_memory_decay(epoch_start)
+
         # Compute epoch metrics
         metrics = self._compute_epoch_metrics()
 
@@ -453,6 +472,19 @@ class Orchestrator:
         self.state.advance_epoch()
 
         return metrics
+
+    def _apply_agent_memory_decay(self, epoch: int) -> None:
+        """Apply memory decay to all agents that support it.
+
+        This implements the rain/river memory model where agents can
+        have different levels of memory persistence across epochs.
+
+        Args:
+            epoch: Current epoch number
+        """
+        for agent in self._agents.values():
+            if hasattr(agent, 'apply_memory_decay'):
+                agent.apply_memory_decay(epoch)
 
     def _run_step(self) -> None:
         """Run a single step within an epoch."""
@@ -701,6 +733,27 @@ class Orchestrator:
             moltbook_rate_limits = molt_obs["rate_limits"]
             moltbook_karma = molt_obs["karma"]
 
+        # Build memory tier observation via handler
+        memory_hot_cache: List[Dict] = []
+        memory_pending_promotions: List[Dict] = []
+        memory_search_results: List[Dict] = []
+        memory_challenged_entries: List[Dict] = []
+        memory_entry_counts: Dict = {}
+        memory_writes_remaining: int = 0
+
+        if self._memory_handler is not None:
+            # Simulate compaction events per-agent per-step
+            self._memory_handler.maybe_compaction(agent_id, self.state)
+
+            mem_obs = self._memory_handler.build_observation_fields(
+                agent_id, self.state,
+            )
+            memory_hot_cache = mem_obs["memory_hot_cache"]
+            memory_pending_promotions = mem_obs["memory_pending_promotions"]
+            memory_challenged_entries = mem_obs["memory_challenged_entries"]
+            memory_entry_counts = mem_obs["memory_entry_counts"]
+            memory_writes_remaining = mem_obs["memory_writes_remaining"]
+
         return Observation(
             agent_state=agent_state or AgentState(),
             current_epoch=self.state.current_epoch,
@@ -731,6 +784,12 @@ class Orchestrator:
             moltbook_pending_posts=moltbook_pending_posts,
             moltbook_rate_limits=moltbook_rate_limits,
             moltbook_karma=moltbook_karma,
+            memory_hot_cache=memory_hot_cache,
+            memory_pending_promotions=memory_pending_promotions,
+            memory_search_results=memory_search_results,
+            memory_challenged_entries=memory_challenged_entries,
+            memory_entry_counts=memory_entry_counts,
+            memory_writes_remaining=memory_writes_remaining,
         )
 
     def _apply_observation_noise(self, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -968,6 +1027,55 @@ class Orchestrator:
                     edit_type=interaction.metadata.get("edit_type"),
                 )
                 self._emit_moltipedia_governance_events(gov_effect, interaction)
+
+            return True
+
+        # Memory tier actions
+        elif action.action_type in (
+            ActionType.WRITE_MEMORY,
+            ActionType.PROMOTE_MEMORY,
+            ActionType.VERIFY_MEMORY,
+            ActionType.SEARCH_MEMORY,
+            ActionType.CHALLENGE_MEMORY,
+        ):
+            if self._memory_handler is None:
+                return False
+
+            result = self._memory_handler.handle_action(action, self.state)
+            if not result.success:
+                return False
+
+            if result.observables is None:
+                return True
+
+            v_hat, p = self.proxy_computer.compute_labels(result.observables)
+
+            interaction = SoftInteraction(
+                initiator=result.initiator_id,
+                counterparty=result.counterparty_id,
+                interaction_type=InteractionType.COLLABORATION,
+                accepted=result.accepted,
+                task_progress_delta=result.observables.task_progress_delta,
+                rework_count=result.observables.rework_count,
+                verifier_rejections=result.observables.verifier_rejections,
+                tool_misuse_flags=result.observables.tool_misuse_flags,
+                counterparty_engagement_delta=result.observables.counterparty_engagement_delta,
+                v_hat=v_hat,
+                p=p,
+                tau=0.0,
+                metadata=result.metadata or {},
+            )
+
+            gov_effect, _, _ = self._finalize_interaction(interaction)
+
+            # Check if governance blocked a promotion
+            if result.metadata.get("memory_promotion"):
+                memory_gov_cost = self._memory_governance_cost(gov_effect)
+                if memory_gov_cost > 0:
+                    # Governance blocked the promotion — revert it
+                    entry_id = result.metadata.get("entry_id", "")
+                    if entry_id:
+                        self._memory_handler.store.revert(entry_id)
 
             return True
 
@@ -1254,6 +1362,19 @@ class Orchestrator:
             agent_state = self.state.get_agent(agent_id)
             if agent_state:
                 agent_state.update_resources(delta)
+
+    def _memory_governance_cost(self, effect: GovernanceEffect) -> float:
+        """Compute memory-specific governance cost from effects."""
+        memory_levers = {
+            "memory_promotion_gate",
+            "memory_write_rate_limit",
+            "memory_cross_verification",
+            "memory_provenance",
+        }
+        return sum(
+            lever.cost_a for lever in effect.lever_effects
+            if lever.lever_name in memory_levers
+        )
 
     def _moltipedia_cost_from_effect(self, effect: GovernanceEffect) -> float:
         """Compute Moltipedia-specific cost from governance effects."""

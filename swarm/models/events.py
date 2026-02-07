@@ -63,6 +63,17 @@ class EventType(Enum):
     RATE_LIMIT_HIT = "rate_limit_hit"
     KARMA_UPDATED = "karma_updated"
 
+    # Memory tier events
+    MEMORY_WRITTEN = "memory_written"
+    MEMORY_PROMOTED = "memory_promoted"
+    MEMORY_VERIFIED = "memory_verified"
+    MEMORY_CHALLENGED = "memory_challenged"
+    MEMORY_REVERTED = "memory_reverted"
+    MEMORY_CACHE_REBUILT = "memory_cache_rebuilt"
+    MEMORY_COMPACTION = "memory_compaction"
+    MEMORY_WRITE_RATE_LIMITED = "memory_write_rate_limited"
+    MEMORY_PROMOTION_BLOCKED = "memory_promotion_blocked"
+
     # System events
     SIMULATION_STARTED = "simulation_started"
     SIMULATION_ENDED = "simulation_ended"

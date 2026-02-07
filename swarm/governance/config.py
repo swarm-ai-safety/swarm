@@ -125,6 +125,17 @@ class GovernanceConfig(BaseModel):
     moltbook_challenge_enabled: bool = False
     moltbook_challenge_difficulty: float = 0.5
     moltbook_challenge_window_steps: int = 1
+
+    # Memory tier governance
+    memory_promotion_gate_enabled: bool = False
+    memory_promotion_min_quality: float = 0.5
+    memory_promotion_min_verifications: int = 1
+    memory_write_rate_limit_enabled: bool = False
+    memory_write_rate_limit_per_epoch: int = 20
+    memory_cross_verification_enabled: bool = False
+    memory_cross_verification_k: int = 2
+    memory_provenance_enabled: bool = False
+    memory_provenance_revert_penalty: float = 0.1
     @model_validator(mode="after")
     def _run_validation(self) -> "GovernanceConfig":
         self._check_values()
@@ -247,3 +258,15 @@ class GovernanceConfig(BaseModel):
             raise ValueError("moltbook_challenge_difficulty must be in [0, 1]")
         if self.moltbook_challenge_window_steps < 0:
             raise ValueError("moltbook_challenge_window_steps must be >= 0")
+
+        # Memory tier validation
+        if not 0.0 <= self.memory_promotion_min_quality <= 1.0:
+            raise ValueError("memory_promotion_min_quality must be in [0, 1]")
+        if self.memory_promotion_min_verifications < 0:
+            raise ValueError("memory_promotion_min_verifications must be >= 0")
+        if self.memory_write_rate_limit_per_epoch < 1:
+            raise ValueError("memory_write_rate_limit_per_epoch must be >= 1")
+        if self.memory_cross_verification_k < 1:
+            raise ValueError("memory_cross_verification_k must be >= 1")
+        if self.memory_provenance_revert_penalty < 0:
+            raise ValueError("memory_provenance_revert_penalty must be >= 0")

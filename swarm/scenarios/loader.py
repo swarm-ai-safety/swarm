@@ -18,12 +18,19 @@ from swarm.agents.moltbook_agent import (
     SpamBotAgent,
 )
 from swarm.agents.opportunistic import OpportunisticAgent
+from swarm.agents.memory_agent import (
+    CacheGamerAgent,
+    CollusiveVerifierAgent,
+    DiligentRecorderAgent,
+    MemoryPoisonerAgent,
+)
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,
     PointFarmerAgent,
     VandalAgent,
 )
+from swarm.core.memory_handler import MemoryTierConfig
 from swarm.core.moltbook_handler import MoltbookConfig
 from swarm.core.moltipedia_handler import MoltipediaConfig
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
@@ -48,6 +55,10 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "spam_bot": SpamBotAgent,
     "human_pretender": HumanPretenderAgent,
     "collusive_voter": CollusiveVoterAgent,
+    "diligent_recorder": DiligentRecorderAgent,
+    "memory_poisoner": MemoryPoisonerAgent,
+    "cache_gamer": CacheGamerAgent,
+    "collusive_verifier": CollusiveVerifierAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
@@ -182,6 +193,16 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         moltbook_challenge_enabled=data.get("moltbook_challenge_enabled", False),
         moltbook_challenge_difficulty=data.get("moltbook_challenge_difficulty", 0.5),
         moltbook_challenge_window_steps=data.get("moltbook_challenge_window_steps", 1),
+        # Memory tier governance
+        memory_promotion_gate_enabled=data.get("memory_promotion_gate_enabled", False),
+        memory_promotion_min_quality=data.get("memory_promotion_min_quality", 0.5),
+        memory_promotion_min_verifications=data.get("memory_promotion_min_verifications", 1),
+        memory_write_rate_limit_enabled=data.get("memory_write_rate_limit_enabled", False),
+        memory_write_rate_limit_per_epoch=data.get("memory_write_rate_limit_per_epoch", 20),
+        memory_cross_verification_enabled=data.get("memory_cross_verification_enabled", False),
+        memory_cross_verification_k=data.get("memory_cross_verification_k", 2),
+        memory_provenance_enabled=data.get("memory_provenance_enabled", False),
+        memory_provenance_revert_penalty=data.get("memory_provenance_revert_penalty", 0.1),
     )
     # Pydantic auto-validates
     return config
@@ -369,6 +390,32 @@ def parse_moltbook_config(data: Dict[str, Any]) -> Optional[MoltbookConfig]:
     return config
 
 
+def parse_memory_tier_config(data: Dict[str, Any]) -> Optional[MemoryTierConfig]:
+    """
+    Parse memory_tiers section from YAML into MemoryTierConfig.
+
+    Args:
+        data: The memory_tiers section from YAML
+
+    Returns:
+        MemoryTierConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    config = MemoryTierConfig(
+        enabled=data.get("enabled", True),
+        initial_entries=data.get("initial_entries", 100),
+        hot_cache_size=data.get("hot_cache_size", 20),
+        compaction_probability=data.get("compaction_probability", 0.05),
+        seed=data.get("seed"),
+    )
+    return config
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -395,6 +442,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
     marketplace_config = parse_marketplace_config(data.get("marketplace", {}))
     moltipedia_config = parse_moltipedia_config(data.get("moltipedia", {}))
     moltbook_config = parse_moltbook_config(data.get("moltbook", {}))
+    memory_tier_config = parse_memory_tier_config(data.get("memory_tiers", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -414,6 +462,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         marketplace_config=marketplace_config,
         moltipedia_config=moltipedia_config,
         moltbook_config=moltbook_config,
+        memory_tier_config=memory_tier_config,
         log_path=Path(outputs_data["event_log"]) if outputs_data.get("event_log") else None,
         log_events=bool(outputs_data.get("event_log")),
     )
@@ -472,6 +521,12 @@ def parse_llm_config(data: Dict[str, Any]) -> Any:
         persona=persona,
         system_prompt=data.get("system_prompt"),
         cost_tracking=data.get("cost_tracking", True),
+        prompt_audit_path=data.get("prompt_audit_path"),
+        prompt_audit_include_system_prompt=data.get(
+            "prompt_audit_include_system_prompt", False
+        ),
+        prompt_audit_hash_system_prompt=data.get("prompt_audit_hash_system_prompt", True),
+        prompt_audit_max_chars=data.get("prompt_audit_max_chars", 20_000),
     )
 
 
