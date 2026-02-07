@@ -56,6 +56,20 @@ def cmd_run(args: argparse.Namespace) -> int:
     # Build and run
     orchestrator = build_orchestrator(scenario)
 
+    # CLI override: prompt audit logging for LLM agents
+    if args.prompt_audit is not None:
+        for agent in orchestrator.get_all_agents():
+            llm_config = getattr(agent, "llm_config", None)
+            if llm_config is None:
+                continue
+            if not hasattr(llm_config, "prompt_audit_path"):
+                continue
+            llm_config.prompt_audit_path = args.prompt_audit
+            llm_config.prompt_audit_include_system_prompt = bool(
+                args.prompt_audit_include_system
+            )
+            llm_config.prompt_audit_hash_system_prompt = True
+
     if not args.quiet:
         print(f"Agents: {len(orchestrator.get_all_agents())}")
         for agent in orchestrator.get_all_agents():
@@ -206,6 +220,16 @@ def main() -> int:
     run_parser.add_argument("--steps", type=int, default=None, help="Override steps per epoch")
     run_parser.add_argument("--export-json", metavar="PATH", help="Export results to JSON file")
     run_parser.add_argument("--export-csv", metavar="DIR", help="Export results to CSV directory")
+    run_parser.add_argument(
+        "--prompt-audit",
+        metavar="PATH",
+        help="Write LLM prompt/response audit JSONL to PATH (hashes system prompt by default)",
+    )
+    run_parser.add_argument(
+        "--prompt-audit-include-system",
+        action="store_true",
+        help="Include full system prompt text in the audit log (more sensitive)",
+    )
     run_parser.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
 
     # list

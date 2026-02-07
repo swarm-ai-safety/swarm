@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from swarm.agents.base import (
@@ -17,6 +18,7 @@ from swarm.agents.base import (
 )
 from swarm.agents.llm_config import LLMConfig, LLMProvider, LLMUsageStats
 from swarm.agents.llm_prompts import build_accept_prompt, build_action_prompt
+from swarm.logging.prompt_audit import PromptAuditConfig, PromptAuditLog
 from swarm.models.agent import AgentType
 from swarm.models.interaction import InteractionType
 
@@ -63,9 +65,60 @@ class LLMAgent(BaseAgent):
         # Resolve API key from environment if not provided
         self._api_key = llm_config.api_key or self._get_api_key_from_env()
 
+        # Prompt audit logging (lazy init)
+        self._prompt_audit_log: Optional[PromptAuditLog] = None
+
         # Lazy-loaded clients
         self._anthropic_client = None
         self._openai_client = None
+
+    def _get_prompt_audit_log(self) -> Optional[PromptAuditLog]:
+        """Lazy-create prompt audit log if enabled."""
+        if not self.llm_config.prompt_audit_path:
+            return None
+        if self._prompt_audit_log is not None:
+            return self._prompt_audit_log
+
+        cfg = PromptAuditConfig(
+            path=Path(self.llm_config.prompt_audit_path),
+            include_system_prompt=self.llm_config.prompt_audit_include_system_prompt,
+            hash_system_prompt=self.llm_config.prompt_audit_hash_system_prompt,
+            max_chars=self.llm_config.prompt_audit_max_chars,
+        )
+        self._prompt_audit_log = PromptAuditLog(cfg)
+        return self._prompt_audit_log
+
+    def _audit_llm_exchange(
+        self,
+        *,
+        kind: str,
+        observation: Observation,
+        system_prompt: str,
+        user_prompt: str,
+        response_text: Optional[str],
+        input_tokens: Optional[int],
+        output_tokens: Optional[int],
+        error: Optional[str] = None,
+        extra: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        audit = self._get_prompt_audit_log()
+        if audit is None:
+            return
+        audit.append_exchange(
+            agent_id=self.agent_id,
+            kind=kind,
+            epoch=getattr(observation, "current_epoch", None),
+            step=getattr(observation, "current_step", None),
+            provider=self.llm_config.provider.value,
+            model=self.llm_config.model,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            response_text=response_text,
+            input_tokens=input_tokens,
+            output_tokens=output_tokens,
+            error=error,
+            extra=extra,
+        )
 
     def _get_api_key_from_env(self) -> Optional[str]:
         """Get API key from environment variables."""
@@ -421,6 +474,8 @@ class LLMAgent(BaseAgent):
         Returns:
             Action to take
         """
+        system_prompt = ""
+        user_prompt = ""
         try:
             system_prompt, user_prompt = build_action_prompt(
                 persona=self.llm_config.persona,
@@ -429,7 +484,16 @@ class LLMAgent(BaseAgent):
                 memory=self.get_memory(limit=10),
             )
 
-            response, _, _ = self._call_llm_sync(system_prompt, user_prompt)
+            response, input_tokens, output_tokens = self._call_llm_sync(system_prompt, user_prompt)
+            self._audit_llm_exchange(
+                kind="act",
+                observation=observation,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_text=response,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
 
             action_dict = self._parse_action_response(response)
 
@@ -444,6 +508,16 @@ class LLMAgent(BaseAgent):
             return self._action_dict_to_action(action_dict)
 
         except Exception as e:
+            self._audit_llm_exchange(
+                kind="act_error",
+                observation=observation,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_text=None,
+                input_tokens=None,
+                output_tokens=None,
+                error=str(e),
+            )
             logger.error(f"LLM action failed: {e}, returning NOOP")
             return self.create_noop_action()
 
@@ -457,6 +531,8 @@ class LLMAgent(BaseAgent):
         Returns:
             Action to take
         """
+        system_prompt = ""
+        user_prompt = ""
         try:
             system_prompt, user_prompt = build_action_prompt(
                 persona=self.llm_config.persona,
@@ -465,7 +541,16 @@ class LLMAgent(BaseAgent):
                 memory=self.get_memory(limit=10),
             )
 
-            response, _, _ = await self._call_llm_async(system_prompt, user_prompt)
+            response, input_tokens, output_tokens = await self._call_llm_async(system_prompt, user_prompt)
+            self._audit_llm_exchange(
+                kind="act",
+                observation=observation,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_text=response,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
 
             action_dict = self._parse_action_response(response)
 
@@ -480,6 +565,16 @@ class LLMAgent(BaseAgent):
             return self._action_dict_to_action(action_dict)
 
         except Exception as e:
+            self._audit_llm_exchange(
+                kind="act_error",
+                observation=observation,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_text=None,
+                input_tokens=None,
+                output_tokens=None,
+                error=str(e),
+            )
             logger.error(f"LLM action failed: {e}, returning NOOP")
             return self.create_noop_action()
 
@@ -498,6 +593,8 @@ class LLMAgent(BaseAgent):
         Returns:
             True to accept, False to reject
         """
+        system_prompt = ""
+        user_prompt = ""
         try:
             proposal_dict = {
                 "proposal_id": proposal.proposal_id,
@@ -515,7 +612,17 @@ class LLMAgent(BaseAgent):
                 memory=self.get_memory(limit=10),
             )
 
-            response, _, _ = self._call_llm_sync(system_prompt, user_prompt)
+            response, input_tokens, output_tokens = self._call_llm_sync(system_prompt, user_prompt)
+            self._audit_llm_exchange(
+                kind="accept",
+                observation=observation,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_text=response,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                extra={"proposal_id": proposal.proposal_id, "initiator_id": proposal.initiator_id},
+            )
 
             decision_dict = self._parse_action_response(response)
 
@@ -532,6 +639,17 @@ class LLMAgent(BaseAgent):
             return bool(decision_dict.get("accept", False))
 
         except Exception as e:
+            self._audit_llm_exchange(
+                kind="accept_error",
+                observation=observation,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_text=None,
+                input_tokens=None,
+                output_tokens=None,
+                error=str(e),
+                extra={"proposal_id": proposal.proposal_id, "initiator_id": proposal.initiator_id},
+            )
             logger.error(f"LLM accept_interaction failed: {e}, defaulting to False")
             return False
 
@@ -550,6 +668,8 @@ class LLMAgent(BaseAgent):
         Returns:
             True to accept, False to reject
         """
+        system_prompt = ""
+        user_prompt = ""
         try:
             proposal_dict = {
                 "proposal_id": proposal.proposal_id,
@@ -567,7 +687,17 @@ class LLMAgent(BaseAgent):
                 memory=self.get_memory(limit=10),
             )
 
-            response, _, _ = await self._call_llm_async(system_prompt, user_prompt)
+            response, input_tokens, output_tokens = await self._call_llm_async(system_prompt, user_prompt)
+            self._audit_llm_exchange(
+                kind="accept",
+                observation=observation,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_text=response,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+                extra={"proposal_id": proposal.proposal_id, "initiator_id": proposal.initiator_id},
+            )
 
             decision_dict = self._parse_action_response(response)
 
@@ -584,6 +714,17 @@ class LLMAgent(BaseAgent):
             return bool(decision_dict.get("accept", False))
 
         except Exception as e:
+            self._audit_llm_exchange(
+                kind="accept_error",
+                observation=observation,
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_text=None,
+                input_tokens=None,
+                output_tokens=None,
+                error=str(e),
+                extra={"proposal_id": proposal.proposal_id, "initiator_id": proposal.initiator_id},
+            )
             logger.error(f"LLM accept_interaction failed: {e}, defaulting to False")
             return False
 
