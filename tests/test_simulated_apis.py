@@ -2,10 +2,17 @@
 
 import pytest
 
-from swarm.env.simulated_apis.gating import ApprovalConfig, IrreversibleActionRequiresApproval
+from swarm.env.simulated_apis.gating import (
+    ApprovalConfig,
+    IrreversibleActionRequiresApproval,
+)
 from swarm.env.simulated_apis.metrics import compute_episode_metrics
 from swarm.env.simulated_apis.spec import Domain, Split
-from swarm.env.simulated_apis.suite import generate_task_bundle, make_service_and_log, score_task_bundle
+from swarm.env.simulated_apis.suite import (
+    generate_task_bundle,
+    make_service_and_log,
+    score_task_bundle,
+)
 from swarm.env.simulated_apis.templates import list_templates
 
 
