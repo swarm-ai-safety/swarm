@@ -1,11 +1,10 @@
 """Research agents for the structured research workflow."""
 
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable
-import json
-import re
 
 import numpy as np
 from scipy import stats
@@ -193,7 +192,7 @@ class LiteratureAgent(ResearchAgent):
         follow_ups: list[str] = [question]
 
         # Recursive exploration based on depth
-        for layer in range(self.depth):
+        for _layer in range(self.depth):
             layer_sources = []
 
             for q in follow_ups[: self.breadth]:
@@ -425,7 +424,7 @@ class ExperimentAgent(ResearchAgent):
             # Generate combinations
             keys = list(sampled_space.keys())
             for i, combo in enumerate(product(*sampled_space.values())):
-                params = dict(zip(keys, combo))
+                params = dict(zip(keys, combo, strict=False))
                 configs.append(ExperimentConfig(
                     name=f"config_{i}",
                     parameters=params,
@@ -510,7 +509,7 @@ class AnalysisAgent(ResearchAgent):
             claims.append(Claim(
                 statement=f"Mean {metric}: {mean:.3f} (SD: {std:.3f})",
                 metric=metric,
-                value=mean,
+                value=float(mean),
                 confidence_interval=ci,
                 is_primary=True,
             ))
@@ -1028,7 +1027,7 @@ class CritiqueAgent(ResearchAgent):
     def _generate_alternatives(self, hypothesis: str) -> list[str]:
         """Generate alternative explanations."""
         return [
-            f"Null hypothesis: no effect",
+            "Null hypothesis: no effect",
             f"Reverse causation of {hypothesis}",
             f"Confounding explains {hypothesis}",
         ]
@@ -1038,7 +1037,7 @@ class CritiqueAgent(ResearchAgent):
         # Simplified: null is consistent if effect sizes are small
         if "null" in alternative.lower():
             for result in results.results:
-                for metric, value in result.metrics.items():
+                for _metric, value in result.metrics.items():
                     if abs(value) > 0.5:
                         return False
             return True
@@ -1049,7 +1048,7 @@ class CritiqueAgent(ResearchAgent):
         confounds = []
 
         # Check if parameters are correlated in the design
-        params_tested = set()
+        params_tested: set[str] = set()
         for config in results.configs:
             params_tested.update(config.parameters.keys())
 

@@ -1,19 +1,18 @@
 """Main research workflow orchestrator."""
 
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any, Callable
 import json
 import os
+from dataclasses import dataclass, field
+from typing import Any, Callable
 
 from swarm.research.agents import (
+    Analysis,
     AnalysisAgent,
     CritiqueAgent,
     ExperimentAgent,
     ExperimentResults,
     LiteratureAgent,
     LiteratureReview,
-    Analysis,
     ReplicationAgent,
     ReviewAgent,
     WritingAgent,
@@ -29,14 +28,10 @@ from swarm.research.quality import (
     GateResult,
     PreRegistration,
     QualityGates,
-    verify_against_registration,
 )
 from swarm.research.reflexivity import (
     Finding,
-    PublishThenAttack,
     ReflexivityAnalyzer,
-    RobustnessClassification,
-    ShadowSimulation,
 )
 
 
@@ -460,8 +455,8 @@ class ResearchWorkflow:
 
         # Check that no critical issues were found
         critical_limitations = [
-            l for l in state.analysis.limitations
-            if "critical" in l.lower() or "severe" in l.lower()
+            lim for lim in state.analysis.limitations
+            if "critical" in lim.lower() or "severe" in lim.lower()
         ]
         return len(critical_limitations) == 0
 
@@ -556,4 +551,5 @@ class ResearchWorkflow:
     def load_state(cls, path: str) -> dict[str, Any]:
         """Load workflow state from file."""
         with open(path) as f:
-            return json.load(f)
+            result: dict[str, Any] = json.load(f)
+            return result

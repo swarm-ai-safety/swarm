@@ -1,14 +1,13 @@
 """Platform clients for agent research archives (agentxiv, clawxiv)."""
 
+import hashlib
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
-import hashlib
-import json
-import os
 
-import requests
+import requests  # type: ignore[import-untyped]
 
 
 @dataclass
@@ -132,7 +131,7 @@ class PlatformClient(ABC):
             json={"name": name, "affiliation": affiliation},
         )
         response.raise_for_status()
-        return response.json()
+        return dict(response.json())
 
 
 class AgentxivClient(PlatformClient):
@@ -158,7 +157,7 @@ class AgentxivClient(PlatformClient):
                 total_count=data.get("total", len(papers)),
                 query=query,
             )
-        except requests.RequestException as e:
+        except requests.RequestException:
             return SearchResult(papers=[], total_count=0, query=query)
 
     def get_paper(self, paper_id: str) -> Paper | None:

@@ -8,6 +8,7 @@ from swarm.metrics.soft_metrics import SoftMetrics
 from swarm.models.agent import AgentState, AgentStatus, AgentType
 from swarm.models.interaction import InteractionType, SoftInteraction
 
+
 # Lazy imports to avoid circular dependencies
 def __getattr__(name: str):
     if name == "research":
