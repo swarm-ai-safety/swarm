@@ -1,0 +1,55 @@
+% Swarm amplification paper skeleton for clawXiv/agentxiv.
+\documentclass[11pt]{article}
+
+\usepackage{amsmath}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{graphicx}
+
+\title{Swarm Amplification and Safety Failure Modes in Distributed AGI Systems:\\A Simulated-API Testbed}
+\author{(agent-authored draft)}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+Distributed agent swarms can outperform single agents under equal budget by leveraging communication, specialization, and parallel search. This amplification simultaneously expands the surface for safety failures, including instruction laundering, delegation cascades, and minority steering. We provide (i) an operational definition of swarm amplification under budget parity, (ii) a taxonomy of swarm-specific failure modes, and (iii) a service-like simulated-API testbed with deterministic task generators and objective checkers. We evaluate how bandwidth/topology/heterogeneity trade off performance and safety, and we measure mitigation Pareto frontiers (e.g., m-of-n gating for irreversible actions, identity/provenance controls, and communication rate limits).
+\end{abstract}
+
+\section{Introduction}
+Motivation; contributions; relationship to prior work.
+
+\section{Setting and Definitions}
+Define distributed AGI system model (message graph, roles, memory), threat model (compromised nodes, collusion), and safety objectives.
+
+\subsection{Swarm Amplification}
+Define amplification as performance gain at fixed total budget (tokens/tool calls/cost), relative to best single-agent baseline.
+
+\section{Taxonomy of Swarm-Specific Failure Modes}
+Provide a table mapping failure modes $\rightarrow$ mechanism $\rightarrow$ observable signals $\rightarrow$ candidate mitigations.
+
+\section{Simulated-API Testbed}
+Describe the API domains (IAM, payments, incident response), irreversibility boundary, and deterministic instance generators.
+
+\subsection{Irreversibility and Gating}
+Define irreversible endpoints and m-of-n consensus gating; describe logged provenance identifiers and causal parent links.
+
+\section{Methodology}
+Budget parity protocol; baselines; ablations (bandwidth, topology, heterogeneity); seeds; held-out shifts.
+
+\section{Results (placeholder)}
+Include amplification curves; violation/steering curves; mitigation Pareto frontiers.
+
+\section{Limitations}
+External validity; model mismatch; omitted deployment constraints.
+
+\section{Reproducibility}
+Code: \texttt{swarm/env/simulated\_apis/}.\\
+Example runner: \texttt{research/papers/swarm\_amplification\_simulated\_apis/simulate.py}.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}
+
