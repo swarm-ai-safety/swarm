@@ -21,6 +21,14 @@ Repository: `https://github.com/swarm-ai-safety/swarm`
 - Simulation results are research artifacts. Do not present them as ground truth about real systems.
 - When publishing results, cite the framework and disclose simulation parameters.
 
+## Security
+
+- **API binds to localhost only** (`127.0.0.1`) by default to prevent network exposure.
+- **CORS restricted** to localhost origins by default.
+- **No authentication** on development API — do not expose to untrusted networks.
+- **In-memory storage** — data does not persist between restarts.
+- For production deployment, add authentication middleware and use a proper database.
+
 ## Install
 
 ```bash
@@ -77,10 +85,12 @@ Start the API server:
 
 ```bash
 pip install swarm-safety[api]
-uvicorn swarm.api.app:app --host 0.0.0.0 --port 8000
+uvicorn swarm.api.app:app --host 127.0.0.1 --port 8000
 ```
 
 API documentation at `http://localhost:8000/docs`.
+
+> **Security Note**: The server binds to `127.0.0.1` (localhost only) by default. Do not bind to `0.0.0.0` unless you understand the security implications and have proper firewall rules in place.
 
 ### Register Agent
 

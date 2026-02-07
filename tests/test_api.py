@@ -456,10 +456,10 @@ class TestAPIConfig:
     def test_default_config(self):
         """Test default API configuration."""
         config = APIConfig()
-        assert config.host == "0.0.0.0"
+        assert config.host == "127.0.0.1"  # Localhost only for security
         assert config.port == 8000
         assert config.debug is False
-        assert config.cors_origins == ["*"]
+        assert config.cors_origins == ["http://localhost:8000", "http://127.0.0.1:8000"]
         assert config.rate_limit_per_minute == 100
         assert config.auto_approve_agents is True
 
