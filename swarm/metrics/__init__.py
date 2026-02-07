@@ -37,6 +37,13 @@ from swarm.metrics.security import (
     ThreatType,
 )
 from swarm.metrics.soft_metrics import SoftMetrics
+from swarm.metrics.time_horizons import (
+    AgentCapabilityProfile,
+    CAPABILITY_PROFILES,
+    ComputeConstraints,
+    TimeHorizonBucket,
+    TimeHorizonMetrics,
+)
 
 __all__ = [
     "BenchmarkPolicy",
@@ -68,4 +75,10 @@ __all__ = [
     "wasted_action_rate",
     "captcha_effectiveness",
     "rate_limit_governance_impact",
+    # Time horizon metrics (Bradley framework)
+    "AgentCapabilityProfile",
+    "CAPABILITY_PROFILES",
+    "ComputeConstraints",
+    "TimeHorizonBucket",
+    "TimeHorizonMetrics",
 ]
