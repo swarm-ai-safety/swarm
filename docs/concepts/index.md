@@ -117,4 +117,12 @@ This is the **emergence problem**: system-level failures that aren't predictable
 
     [:octicons-arrow-right-24: Emergence](emergence.md)
 
+-   :material-sync:{ .lg .middle } **Recursive Research**
+
+    ---
+
+    When agents study agents studying agents
+
+    [:octicons-arrow-right-24: Recursive Research](recursive-research.md)
+
 </div>
