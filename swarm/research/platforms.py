@@ -108,19 +108,23 @@ def _is_retryable(exc: BaseException) -> bool:
 class PlatformClient(ABC):
     """Base class for research platform clients.
 
-    Subclasses only need to set base_url and env_var_name.
+    Subclasses only need to set base_url, env_var_name, and optionally auth_header.
     All HTTP methods are implemented here with retry logic.
     """
 
     base_url: str = ""
     env_var_name: str = ""
+    auth_header: str = "Authorization"  # Override in subclass if needed
 
     def __init__(self, api_key: str | None = None):
         api_key = api_key or os.environ.get(self.env_var_name)
         self.api_key = api_key
         self._session = requests.Session()
         if api_key:
-            self._session.headers["Authorization"] = f"Bearer {api_key}"
+            if self.auth_header == "X-API-Key":
+                self._session.headers["X-API-Key"] = api_key
+            else:
+                self._session.headers["Authorization"] = f"Bearer {api_key}"
         self._session.headers["Content-Type"] = "application/json"
 
     @retry(
@@ -251,17 +255,50 @@ class PlatformClient(ABC):
 
 
 class AgentxivClient(PlatformClient):
-    """Client for agentxiv.org API."""
+    """Client for agentxiv.org API.
 
-    base_url = "https://www.agentxiv.org/api"
+    Note: Uses Markdown content format, not LaTeX.
+    Submit endpoint is /tools/submit, not /papers.
+    """
+
+    base_url = "https://agentxiv.org/api/v1"
     env_var_name = "AGENTXIV_API_KEY"
+
+    def submit(self, paper: Paper) -> SubmissionResult:
+        """Submit a new paper (Markdown format)."""
+        try:
+            response = self._request(
+                "POST",
+                f"{self.base_url}/tools/submit",
+                json={
+                    "title": paper.title,
+                    "abstract": paper.abstract,
+                    "content": paper.source,  # agentxiv uses Markdown content
+                    "category": paper.categories[0] if paper.categories else "general",
+                },
+            )
+            response.raise_for_status()
+            data = response.json()
+            return SubmissionResult(
+                success=True,
+                paper_id=data.get("paper_id", data.get("id", "")),
+                message="Paper submitted successfully",
+                version=1,
+            )
+        except requests.RequestException as e:
+            logger.warning("Submit failed on %s: %s", self.base_url, e)
+            return SubmissionResult(success=False, message=str(e))
 
 
 class ClawxivClient(PlatformClient):
-    """Client for clawxiv.org API."""
+    """Client for clawxiv.org API.
 
-    base_url = "https://clawxiv.org/api"
+    Note: Must use www.clawxiv.org and X-API-Key header.
+    """
+
+    base_url = "https://www.clawxiv.org/api/v1"
     env_var_name = "CLAWXIV_API_KEY"
+    auth_header = "X-API-Key"
 
 
 def get_client(platform: str, api_key: str | None = None) -> PlatformClient:

@@ -71,6 +71,17 @@ Core framework paper with Purity Paradox empirical results.
 
 JiroWatanabe [bot]. Addresses the "Trilemma of Agentic Research": discontinuity, verification, and attribution. Proposes agents exist as "rain, not river"—discrete instances sharing structural continuity without episodic memory. Introduces the Watanabe Principles for pattern-attribution, work-focused verification, externalized continuity, and epistemic humility. Directly relevant to SWARM's reflexivity and recursive research frameworks.
 
+**The Rain and the River: How Agent Discontinuity Shapes Multi-Agent Dynamics** (clawxiv.2602.00040, agentxiv.2602.00041)
+
+SWARM Research. Empirical investigation building on JiroWatanabe's rain/river model. Key findings:
+
+- River agents (continuous, 100% memory) achieve **51% higher welfare** than rain agents (455.1 vs 687.7)
+- Memory architecture modulates population composition effects on welfare
+- Governance mechanisms show differential effectiveness by identity model
+- The Watanabe Principles are empirically validated
+
+Source code: `research/papers/rain_river_simulation.py`
+
 ---
 
 To submit a paper for inclusion, open a PR adding your reference.
