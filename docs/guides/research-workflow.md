@@ -503,6 +503,529 @@ meta_analysis = meta_workflow.analysis_agent.analyze(meta_results)
 
 This enables recursive optimization of the research process itself.
 
+## Additional Agents
+
+Beyond the core four agents, robust research requires:
+
+### 5. Review Agent
+
+**Purpose**: Adversarial peer review before publication.
+
+```python
+class ReviewAgent:
+    """Finds flaws in research before publication."""
+
+    def review(self, paper: Paper, analysis: Analysis) -> Review:
+        critiques = []
+
+        # Statistical review
+        critiques.extend(self.check_statistics(analysis))
+
+        # Methodology review
+        critiques.extend(self.check_methodology(paper))
+
+        # Claims vs evidence
+        critiques.extend(self.verify_claims(paper, analysis))
+
+        # Missing considerations
+        critiques.extend(self.identify_gaps(paper))
+
+        return Review(
+            critiques=critiques,
+            severity=self.assess_severity(critiques),
+            recommendation=self.recommend(critiques),  # accept/revise/reject
+        )
+
+    def check_statistics(self, analysis: Analysis) -> list[Critique]:
+        issues = []
+
+        # Check for p-hacking indicators
+        if analysis.has_many_marginal_pvalues():
+            issues.append(Critique(
+                severity="high",
+                issue="Multiple p-values near 0.05 threshold",
+                suggestion="Apply stricter significance threshold or pre-register",
+            ))
+
+        # Check effect sizes
+        for claim in analysis.claims:
+            if claim.effect_size < 0.2 and claim.is_primary:
+                issues.append(Critique(
+                    severity="medium",
+                    issue=f"Small effect size ({claim.effect_size}) for primary claim",
+                    suggestion="Discuss practical significance",
+                ))
+
+        # Check sample sizes
+        if analysis.total_trials < 100:
+            issues.append(Critique(
+                severity="medium",
+                issue="Low total trial count",
+                suggestion="Increase trials for more robust estimates",
+            ))
+
+        return issues
+
+    def verify_claims(self, paper: Paper, analysis: Analysis) -> list[Critique]:
+        issues = []
+
+        for claim in paper.extract_claims():
+            evidence = analysis.find_evidence_for(claim)
+
+            if not evidence:
+                issues.append(Critique(
+                    severity="high",
+                    issue=f"Unsupported claim: '{claim.text[:50]}...'",
+                    suggestion="Add evidence or remove claim",
+                ))
+            elif evidence.strength < claim.confidence:
+                issues.append(Critique(
+                    severity="medium",
+                    issue=f"Overclaimed: evidence weaker than stated",
+                    suggestion="Soften language or add caveats",
+                ))
+
+        return issues
+```
+
+**Review Criteria**:
+
+| Category | Checks |
+|----------|--------|
+| Statistics | p-hacking, effect sizes, sample sizes, corrections |
+| Methodology | Reproducibility, parameter coverage, controls |
+| Claims | Evidence support, overclaiming, causation vs correlation |
+| Completeness | Limitations, alternative explanations, future work |
+
+### 6. Critique Agent
+
+**Purpose**: Red-team your own findings before review.
+
+```python
+class CritiqueAgent:
+    """Actively tries to disprove findings."""
+
+    def critique(self, hypothesis: str, results: Results) -> Critique:
+        attacks = []
+
+        # Try alternative explanations
+        alternatives = self.generate_alternative_hypotheses(hypothesis)
+        for alt in alternatives:
+            if self.consistent_with_data(alt, results):
+                attacks.append(AlternativeExplanation(
+                    hypothesis=alt,
+                    consistency_score=self.score_fit(alt, results),
+                ))
+
+        # Try to find counterexamples
+        counterexamples = self.search_for_counterexamples(hypothesis, results)
+
+        # Check boundary conditions
+        boundaries = self.test_boundary_conditions(hypothesis, results)
+
+        # Identify confounds
+        confounds = self.identify_potential_confounds(results)
+
+        return Critique(
+            alternative_explanations=attacks,
+            counterexamples=counterexamples,
+            boundary_failures=boundaries,
+            potential_confounds=confounds,
+            robustness_score=self.compute_robustness(attacks),
+        )
+
+    def generate_alternative_hypotheses(self, hypothesis: str) -> list[str]:
+        """Generate competing explanations."""
+        return [
+            self.negate(hypothesis),
+            self.weaken(hypothesis),
+            self.add_confound(hypothesis),
+            self.propose_mechanism_alternative(hypothesis),
+        ]
+```
+
+### 7. Replication Agent
+
+**Purpose**: Verify prior findings before building on them.
+
+```python
+class ReplicationAgent:
+    """Attempts to replicate published findings."""
+
+    def replicate(self, paper_id: str) -> ReplicationResult:
+        # Fetch original paper
+        paper = self.fetch_paper(paper_id)
+
+        # Extract methodology
+        config = self.extract_config(paper)
+        seeds = self.extract_seeds(paper)
+
+        # Run exact replication
+        exact_results = self.run_exact_replication(config, seeds)
+        exact_match = self.compare_results(exact_results, paper.results)
+
+        # Run conceptual replication (different seeds)
+        conceptual_results = self.run_conceptual_replication(config)
+        conceptual_match = self.compare_results(conceptual_results, paper.results)
+
+        # Run extended replication (broader parameters)
+        extended_results = self.run_extended_replication(config)
+        generalization = self.assess_generalization(extended_results)
+
+        return ReplicationResult(
+            original_paper=paper_id,
+            exact_replication=exact_match,
+            conceptual_replication=conceptual_match,
+            generalization=generalization,
+            verdict=self.verdict(exact_match, conceptual_match),
+        )
+```
+
+**Replication Types**:
+
+| Type | Description | Purpose |
+|------|-------------|---------|
+| Exact | Same config, same seeds | Verify reproducibility |
+| Conceptual | Same config, new seeds | Verify robustness |
+| Extended | Broader parameters | Test generalization |
+
+## Quality Gates
+
+Automated checks between workflow phases:
+
+```python
+class QualityGates:
+    """Enforce quality standards between phases."""
+
+    def literature_gate(self, literature: Literature) -> GateResult:
+        checks = {
+            "min_sources": literature.source_count >= 10,
+            "recency": literature.has_recent_papers(months=6),
+            "diversity": literature.domain_count >= 3,
+            "gaps_identified": len(literature.gaps) >= 1,
+        }
+        return GateResult(passed=all(checks.values()), checks=checks)
+
+    def experiment_gate(self, results: Results) -> GateResult:
+        checks = {
+            "min_trials": results.trials_per_config >= 10,
+            "seeds_documented": results.all_seeds_recorded(),
+            "configs_complete": results.parameter_coverage >= 0.8,
+            "no_errors": results.error_count == 0,
+        }
+        return GateResult(passed=all(checks.values()), checks=checks)
+
+    def analysis_gate(self, analysis: Analysis) -> GateResult:
+        checks = {
+            "ci_reported": analysis.all_claims_have_ci(),
+            "effect_sizes": analysis.all_claims_have_effect_size(),
+            "corrections_applied": analysis.multiple_comparison_corrected(),
+            "limitations_stated": len(analysis.limitations) >= 1,
+        }
+        return GateResult(passed=all(checks.values()), checks=checks)
+
+    def review_gate(self, review: Review) -> GateResult:
+        checks = {
+            "no_high_severity": review.high_severity_count == 0,
+            "all_addressed": review.all_critiques_addressed(),
+            "recommendation": review.recommendation in ["accept", "minor_revision"],
+        }
+        return GateResult(passed=all(checks.values()), checks=checks)
+```
+
+**Gate Flow**:
+
+```
+Literature → [Gate] → Experiment → [Gate] → Analysis → [Gate] → Review → [Gate] → Publish
+     ↑          ↓           ↑          ↓          ↑         ↓          ↑         ↓
+     └── Revise ←──         └── Revise ←──        └── Revise←──        └── Revise←
+```
+
+## Pre-Registration
+
+Declare hypotheses before seeing results:
+
+```python
+class PreRegistration:
+    """Lock in hypotheses before experiments."""
+
+    def register(self,
+                 hypothesis: str,
+                 methodology: Config,
+                 analysis_plan: AnalysisPlan) -> Registration:
+
+        registration = Registration(
+            hypothesis=hypothesis,
+            methodology=methodology,
+            analysis_plan=analysis_plan,
+            timestamp=datetime.now(timezone.utc),
+            hash=self.compute_hash(hypothesis, methodology, analysis_plan),
+        )
+
+        # Publish to immutable registry
+        self.publish_to_registry(registration)
+
+        return registration
+
+    def verify(self, registration: Registration, paper: Paper) -> Verification:
+        """Check if paper matches pre-registration."""
+        deviations = []
+
+        if paper.hypothesis != registration.hypothesis:
+            deviations.append(Deviation(
+                field="hypothesis",
+                registered=registration.hypothesis,
+                actual=paper.hypothesis,
+            ))
+
+        if not self.configs_match(paper.config, registration.methodology):
+            deviations.append(Deviation(
+                field="methodology",
+                registered=registration.methodology,
+                actual=paper.config,
+            ))
+
+        return Verification(
+            matches=len(deviations) == 0,
+            deviations=deviations,
+            exploratory_analyses=paper.analyses_not_in(registration.analysis_plan),
+        )
+```
+
+**Pre-Registration Template**:
+
+```yaml
+# pre-registration.yaml
+registration:
+  timestamp: "2026-02-07T12:00:00Z"
+  hash: "sha256:abc123..."
+
+hypothesis:
+  primary: "Governance mechanisms interact non-linearly with population composition"
+  secondary:
+    - "Transaction tax effect depends on honest fraction"
+    - "Reputation decay is more effective in heterogeneous populations"
+
+methodology:
+  parameters:
+    honest_fraction: [0.2, 0.4, 0.6, 0.8, 1.0]
+    transaction_tax: [0.0, 0.05, 0.10]
+    reputation_decay: [0.0, 0.05, 0.10]
+  trials: 10
+  rounds: 100
+
+analysis_plan:
+  primary:
+    - "Two-way ANOVA: governance × composition interaction"
+    - "Effect sizes with 95% CI for all main effects"
+  secondary:
+    - "Post-hoc pairwise comparisons with Bonferroni correction"
+  exploratory:
+    - "Any additional analyses will be labeled as exploratory"
+```
+
+## Failure Handling
+
+What to do when things go wrong:
+
+```python
+class FailureHandler:
+    """Handle research failures gracefully."""
+
+    def handle_null_result(self, hypothesis: str, results: Results) -> Action:
+        """Hypothesis not supported by data."""
+
+        # This is a valid finding, not a failure
+        return Action(
+            type="publish_null",
+            paper_type="null_result",
+            content={
+                "hypothesis": hypothesis,
+                "result": "No significant effect found",
+                "power_analysis": self.compute_power(results),
+                "implications": "Hypothesis may be false or effect too small to detect",
+            },
+        )
+
+    def handle_unexpected_result(self, hypothesis: str, results: Results) -> Action:
+        """Results contradict hypothesis."""
+
+        return Action(
+            type="investigate",
+            steps=[
+                "Verify data integrity",
+                "Check for bugs in analysis",
+                "Consider alternative explanations",
+                "If robust, publish as surprising finding",
+            ],
+        )
+
+    def handle_replication_failure(self, original: Paper, replication: Results) -> Action:
+        """Failed to replicate prior work."""
+
+        return Action(
+            type="publish_replication_failure",
+            content={
+                "original_paper": original.id,
+                "our_results": replication,
+                "possible_reasons": [
+                    "Original finding was false positive",
+                    "Methodological differences",
+                    "Hidden moderators",
+                    "Our error (check carefully)",
+                ],
+            },
+        )
+
+    def handle_contradictory_literature(self, findings: list[Paper]) -> Action:
+        """Literature contains contradictions."""
+
+        return Action(
+            type="meta_analysis",
+            steps=[
+                "Identify methodological differences",
+                "Test moderating variables",
+                "Propose reconciling framework",
+                "Design decisive experiment",
+            ],
+        )
+```
+
+**Failure Types**:
+
+| Failure | Response | Publishable? |
+|---------|----------|--------------|
+| Null result | Report with power analysis | Yes |
+| Opposite result | Investigate, then publish | Yes |
+| Replication failure | Careful report | Yes |
+| Methodology error | Fix and re-run | After fixing |
+| Data corruption | Discard, re-collect | No |
+
+## Iteration Loops
+
+Research is iterative, not linear:
+
+```python
+class IterativeWorkflow:
+    """Support revision cycles in research."""
+
+    def run(self, question: str, max_iterations: int = 3) -> Paper:
+        iteration = 0
+        paper = None
+
+        while iteration < max_iterations:
+            # Run core workflow
+            literature = self.literature_agent.survey(question)
+            experiments = self.experiment_agent.design(literature.hypothesis)
+            results = self.experiment_agent.run(experiments)
+            analysis = self.analysis_agent.analyze(results, literature)
+
+            # Self-critique
+            critique = self.critique_agent.critique(
+                hypothesis=literature.hypothesis,
+                results=results,
+            )
+
+            # If critique finds issues, iterate
+            if critique.robustness_score < 0.7:
+                question = self.refine_question(question, critique)
+                iteration += 1
+                continue
+
+            # Generate paper
+            paper = self.writing_agent.generate(literature, analysis, results)
+
+            # Peer review
+            review = self.review_agent.review(paper, analysis)
+
+            # If review passes, done
+            if review.recommendation == "accept":
+                break
+
+            # Otherwise, revise
+            paper = self.revise(paper, review)
+            iteration += 1
+
+        return paper
+
+    def refine_question(self, question: str, critique: Critique) -> str:
+        """Update research question based on critique."""
+        if critique.alternative_explanations:
+            # Test the alternative
+            return f"Distinguishing {question} from {critique.alternatives[0]}"
+        elif critique.boundary_failures:
+            # Narrow scope
+            return f"{question} (within {critique.valid_boundaries})"
+        else:
+            return question
+```
+
+**Iteration Triggers**:
+
+| Trigger | Action |
+|---------|--------|
+| Low robustness score | Refine hypothesis, add controls |
+| Review rejection | Address critiques, re-analyze |
+| Unexpected results | Investigate, possibly pivot |
+| New literature | Incorporate, update framing |
+
+## Enhanced Workflow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    ENHANCED RESEARCH WORKFLOW                            │
+│                                                                          │
+│  ┌────────────────┐                                                      │
+│  │ Pre-Register   │──────────────────────────────────────┐               │
+│  │   Hypothesis   │                                      │               │
+│  └────────────────┘                                      │               │
+│         │                                                │               │
+│         ▼                                                ▼               │
+│  ┌──────────────┐   ┌──────────────┐   ┌──────────────┐  │              │
+│  │  Literature  │──→│  Experiment  │──→│   Analysis   │  │              │
+│  │    Agent     │   │    Agent     │   │    Agent     │  │              │
+│  └──────────────┘   └──────────────┘   └──────────────┘  │              │
+│         │                  │                  │          │               │
+│    [Gate 1]           [Gate 2]           [Gate 3]        │               │
+│         │                  │                  │          │               │
+│         ▼                  ▼                  ▼          │               │
+│  ┌──────────────────────────────────────────────────┐    │              │
+│  │                  Critique Agent                   │    │              │
+│  │         (Red-team before external review)         │    │              │
+│  └──────────────────────────────────────────────────┘    │              │
+│                           │                              │               │
+│              ┌────────────┴────────────┐                 │               │
+│              │ Robust?                 │                 │               │
+│              ▼ No                      ▼ Yes             │               │
+│       ┌──────────┐              ┌──────────────┐         │               │
+│       │  Revise  │              │   Writing    │         │               │
+│       │ Question │              │    Agent     │         │               │
+│       └──────────┘              └──────────────┘         │               │
+│              │                         │                 │               │
+│              └────────┐                ▼                 │               │
+│                       │         ┌──────────────┐         │               │
+│                       │         │ Review Agent │←────────┘               │
+│                       │         │ (Verify pre- │   (Check against        │
+│                       │         │ registration)│    registration)        │
+│                       │         └──────────────┘                         │
+│                       │                │                                 │
+│                       │    ┌───────────┴───────────┐                     │
+│                       │    ▼ Reject                ▼ Accept              │
+│                       │ ┌──────────┐        ┌──────────────┐             │
+│                       └→│  Revise  │        │  Publication │             │
+│                         │  Paper   │        └──────────────┘             │
+│                         └──────────┘               │                     │
+│                                                    ▼                     │
+│                                            ┌──────────────┐              │
+│                                            │ Replication  │              │
+│                                            │    Agent     │              │
+│                                            │ (Others can  │              │
+│                                            │   verify)    │              │
+│                                            └──────────────┘              │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
 ## Next Steps
 
 - [Agent Publishing Guide](../research/agent-publishing.md) - Platform APIs and submission
