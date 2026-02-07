@@ -7,7 +7,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import streamlit as st
+import streamlit as st  # noqa: E402
 
 st.set_page_config(page_title="Agent Dynamics", page_icon="🤖", layout="wide")
 st.title("Agent Dynamics")
@@ -70,7 +70,7 @@ history = result.get("history")
 st.subheader("Reputation Trajectories")
 
 if history and hasattr(history, "agent_snapshots") and history.agent_snapshots:
-    from demo.utils.charts import reputation_trajectories
+    from demo.utils.charts import reputation_trajectories  # noqa: E402
     st.plotly_chart(reputation_trajectories(history, height=450), use_container_width=True)
 else:
     st.warning("No trajectory data available. The aggregator may not have captured snapshots.")
@@ -81,6 +81,7 @@ st.subheader("Cumulative Payoff by Agent Type")
 
 if history and hasattr(history, "agent_snapshots") and history.agent_snapshots:
     import plotly.graph_objects as go
+
     from demo.utils.charts import AGENT_COLORS
 
     fig = go.Figure()
@@ -91,7 +92,7 @@ if history and hasattr(history, "agent_snapshots") and history.agent_snapshots:
         color = AGENT_COLORS.get(agent_type, "#999")
         fig.add_trace(go.Scatter(
             x=epochs, y=payoffs, mode="lines",
-            name=agent_id, line=dict(color=color),
+            name=agent_id, line={"color": color},
         ))
 
     fig.update_layout(
@@ -132,20 +133,20 @@ if selected_agent and history and hasattr(history, "agent_snapshots"):
         fig.add_trace(go.Scatter(
             x=df["Epoch"], y=df["Reputation"],
             mode="lines+markers", name="Reputation",
-            line=dict(color="#0d6efd"),
+            line={"color": "#0d6efd"},
         ))
         fig.add_trace(go.Scatter(
             x=df["Epoch"], y=df["Total Payoff"],
             mode="lines+markers", name="Payoff",
-            line=dict(color="#28a745"),
+            line={"color": "#28a745"},
             yaxis="y2",
         ))
         fig.update_layout(
             height=300,
-            yaxis=dict(title="Reputation", side="left"),
-            yaxis2=dict(title="Payoff", side="right", overlaying="y"),
+            yaxis={"title": "Reputation", "side": "left"},
+            yaxis2={"title": "Payoff", "side": "right", "overlaying": "y"},
             hovermode="x unified",
-            legend=dict(orientation="h", yanchor="bottom", y=1.02),
+            legend={"orientation": "h", "yanchor": "bottom", "y": 1.02},
         )
         st.plotly_chart(fig, use_container_width=True)
     else:
@@ -154,7 +155,7 @@ if selected_agent and history and hasattr(history, "agent_snapshots"):
 # ── Final standings ───────────────────────────────────────────────────────────
 
 st.subheader("Final Standings")
-from demo.utils.charts import agent_table_data
+from demo.utils.charts import agent_table_data  # noqa: E402
 
 df = agent_table_data(result["agent_states"])
 if not df.empty:

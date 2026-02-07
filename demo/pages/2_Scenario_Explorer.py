@@ -7,7 +7,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-import streamlit as st
+import streamlit as st  # noqa: E402
 
 st.set_page_config(page_title="Scenario Explorer", page_icon="🗂️", layout="wide")
 st.title("Scenario Explorer")
@@ -15,7 +15,7 @@ st.markdown("Select one or more pre-built scenarios, run them, and compare resul
 
 # ── Load available scenarios ──────────────────────────────────────────────────
 
-from demo.utils.simulation import list_scenarios
+from demo.utils.simulation import list_scenarios  # noqa: E402
 
 scenarios = list_scenarios()
 scenario_map = {s["id"]: s for s in scenarios}
@@ -61,16 +61,16 @@ if not results:
 
 # ── Per-scenario tabs ─────────────────────────────────────────────────────────
 
-from demo.utils.formatting import format_epoch_metrics_kpis, scenario_description_card
-from demo.utils.charts import (
-    metrics_over_time,
-    agent_reputation_bar,
+from demo.utils.charts import (  # noqa: E402, I001
     agent_payoff_bar,
+    agent_reputation_bar,
+    metrics_over_time,
 )
+from demo.utils.formatting import format_epoch_metrics_kpis, scenario_description_card  # noqa: E402, I001
 
 tabs = st.tabs(list(results.keys()))
 
-for tab, (sid, result) in zip(tabs, results.items()):
+for tab, (_sid, result) in zip(tabs, results.items(), strict=False):
     with tab:
         st.markdown(scenario_description_card(result), unsafe_allow_html=True)
         st.markdown(format_epoch_metrics_kpis(result["epoch_metrics"]), unsafe_allow_html=True)
@@ -91,7 +91,7 @@ if len(results) > 1:
     st.markdown("---")
     st.subheader("Cross-Scenario Comparison")
 
-    from demo.utils.charts import scenario_comparison_bar
+    from demo.utils.charts import scenario_comparison_bar  # noqa: E402
 
     metric_choice = st.selectbox(
         "Metric to compare",

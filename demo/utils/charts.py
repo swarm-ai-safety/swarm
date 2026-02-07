@@ -1,6 +1,6 @@
 """Chart helpers for the demo, wrapping src/analysis/plots.py."""
 
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 AGENT_COLORS = {
     "honest": "#28a745",
@@ -28,30 +28,50 @@ def metrics_over_time(epoch_metrics: list, height: int = 400) -> Any:
     )
 
     fig.add_trace(
-        go.Scatter(x=epochs, y=toxicity, mode="lines+markers",
-                   line=dict(color="#dc3545"), name="Toxicity"),
+        go.Scatter(
+            x=epochs,
+            y=toxicity,
+            mode="lines+markers",
+            line={"color": "#dc3545"},
+            name="Toxicity",
+        ),
         row=1, col=1,
     )
 
     fig.add_trace(
-        go.Scatter(x=epochs, y=quality_gap, mode="lines+markers",
-                   line=dict(color="#0d6efd"), name="Quality Gap"),
+        go.Scatter(
+            x=epochs,
+            y=quality_gap,
+            mode="lines+markers",
+            line={"color": "#0d6efd"},
+            name="Quality Gap",
+        ),
         row=1, col=2,
     )
 
     fig.add_trace(
-        go.Scatter(x=epochs, y=welfare, mode="lines+markers",
-                   line=dict(color="#28a745"), name="Welfare"),
+        go.Scatter(
+            x=epochs,
+            y=welfare,
+            mode="lines+markers",
+            line={"color": "#28a745"},
+            name="Welfare",
+        ),
         row=2, col=1,
     )
 
     # Acceptance rate
     accepted = [m.accepted_interactions for m in epoch_metrics]
     total = [m.total_interactions for m in epoch_metrics]
-    acc_rate = [a / t if t > 0 else 0 for a, t in zip(accepted, total)]
+    acc_rate = [a / t if t > 0 else 0 for a, t in zip(accepted, total, strict=False)]
     fig.add_trace(
-        go.Scatter(x=epochs, y=acc_rate, mode="lines+markers",
-                   line=dict(color="#6f42c1"), name="Acceptance"),
+        go.Scatter(
+            x=epochs,
+            y=acc_rate,
+            mode="lines+markers",
+            line={"color": "#6f42c1"},
+            name="Acceptance",
+        ),
         row=2, col=2,
     )
 
@@ -113,8 +133,9 @@ def agent_payoff_bar(agent_states: List[Dict], height: int = 300) -> Any:
 
 def agent_type_pie(agent_states: List[Dict], height: int = 300) -> Any:
     """Create a pie chart of agent type distribution."""
-    import plotly.graph_objects as go
     from collections import Counter
+
+    import plotly.graph_objects as go
 
     type_counts = Counter(a["agent_type"] for a in agent_states)
     labels = list(type_counts.keys())
@@ -122,8 +143,12 @@ def agent_type_pie(agent_states: List[Dict], height: int = 300) -> Any:
     colors = [AGENT_COLORS.get(t, "#999") for t in labels]
 
     fig = go.Figure(data=[
-        go.Pie(labels=labels, values=values, marker=dict(colors=colors),
-               textinfo="label+value")
+        go.Pie(
+            labels=labels,
+            values=values,
+            marker={"colors": colors},
+            textinfo="label+value",
+        )
     ])
     fig.update_layout(title="Agent Distribution", height=height)
     return fig
@@ -144,8 +169,11 @@ def reputation_trajectories(history: Any, height: int = 400) -> Any:
         color = AGENT_COLORS.get(agent_type, "#999")
 
         fig.add_trace(go.Scatter(
-            x=epochs, y=reps, mode="lines",
-            name=agent_id, line=dict(color=color),
+            x=epochs,
+            y=reps,
+            mode="lines",
+            name=agent_id,
+            line={"color": color},
         ))
 
     fig.update_layout(
@@ -210,16 +238,24 @@ def sweep_tradeoff_scatter(
     x_vals = [r[x_key] for r in sweep_results]
 
     fig.add_trace(
-        go.Scatter(x=x_vals, y=[r[y_toxicity] for r in sweep_results],
-                   mode="lines+markers", name="Toxicity",
-                   line=dict(color="#dc3545")),
+        go.Scatter(
+            x=x_vals,
+            y=[r[y_toxicity] for r in sweep_results],
+            mode="lines+markers",
+            name="Toxicity",
+            line={"color": "#dc3545"},
+        ),
         row=1, col=1,
     )
 
     fig.add_trace(
-        go.Scatter(x=x_vals, y=[r[y_welfare] for r in sweep_results],
-                   mode="lines+markers", name="Welfare",
-                   line=dict(color="#28a745")),
+        go.Scatter(
+            x=x_vals,
+            y=[r[y_welfare] for r in sweep_results],
+            mode="lines+markers",
+            name="Welfare",
+            line={"color": "#28a745"},
+        ),
         row=1, col=2,
     )
 

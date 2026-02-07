@@ -11,7 +11,6 @@ from swarm.analysis.aggregation import aggregate_incoherence_scaling
 from swarm.replay import EpisodeSpec, ReplayRunner
 from swarm.scenarios import load_scenario
 
-
 SCENARIO_MAP = {
     ("short", "low"): Path("scenarios/incoherence/short_low_branching.yaml"),
     ("medium", "medium"): Path("scenarios/incoherence/medium_medium_branching.yaml"),
