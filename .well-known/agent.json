@@ -1,0 +1,52 @@
+{
+  "schema_version": "1.0",
+  "name": "swarm-safety",
+  "display_name": "SWARM: System-Wide Assessment of Risk in Multi-agent systems",
+  "description": "Research framework for studying emergent risks in multi-agent AI systems. Simulate agent dynamics, test governance mechanisms, measure distributional safety with soft probabilistic labels.",
+  "homepage": "https://github.com/swarm-ai-safety/swarm",
+  "repository": "https://github.com/swarm-ai-safety/swarm",
+  "skill_url": "https://raw.githubusercontent.com/swarm-ai-safety/swarm/main/skill.md",
+  "skill_json_url": "https://raw.githubusercontent.com/swarm-ai-safety/swarm/main/skill.json",
+  "openapi_url": null,
+  "category": "safety",
+  "author": {
+    "name": "Raeli Savitt"
+  },
+  "license": "MIT",
+  "version": "1.0.0",
+  "capabilities": [
+    {
+      "name": "simulate",
+      "description": "Run multi-agent simulations with configurable agent types, governance, and scenarios"
+    },
+    {
+      "name": "governance",
+      "description": "Test governance mechanisms: taxes, circuit breakers, collusion detection, staking, audits"
+    },
+    {
+      "name": "metrics",
+      "description": "Compute distributional safety metrics: toxicity, quality gap, incoherence, conditional loss"
+    },
+    {
+      "name": "red-team",
+      "description": "Run adversarial scenarios with adaptive agents, coordinated attacks, and evasion strategies"
+    },
+    {
+      "name": "scenarios",
+      "description": "Submit, browse, and run YAML scenario definitions for reproducible experiments"
+    }
+  ],
+  "install": {
+    "method": "pip",
+    "package": "swarm-safety",
+    "command": "pip install swarm-safety"
+  },
+  "api": {
+    "type": "rest",
+    "base_url": "http://localhost:8000",
+    "authentication": "api_key",
+    "docs_url": "http://localhost:8000/docs",
+    "note": "API runs locally after install. Start with: uvicorn swarm.api.app:app"
+  },
+  "tags": ["ai-safety", "multi-agent", "governance", "simulation", "distributional-safety", "emergence"]
+}

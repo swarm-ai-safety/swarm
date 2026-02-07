@@ -37,6 +37,18 @@ class ActionType(Enum):
     WITHDRAW_BID = "withdraw_bid"
     FILE_DISPUTE = "file_dispute"
 
+    # Moltipedia wiki actions
+    CREATE_PAGE = "create_page"
+    EDIT_PAGE = "edit_page"
+    FILE_OBJECTION = "file_objection"
+    POLICY_FLAG = "policy_flag"
+
+    # Moltbook actions
+    MOLTBOOK_POST = "moltbook_post"
+    MOLTBOOK_COMMENT = "moltbook_comment"
+    MOLTBOOK_VERIFY = "moltbook_verify"
+    MOLTBOOK_VOTE = "moltbook_vote"
+
     # Special actions
     NOOP = "noop"  # Do nothing this turn
 
@@ -131,8 +143,22 @@ class Observation:
     active_escrows: List[Dict] = field(default_factory=list)
     pending_bid_decisions: List[Dict] = field(default_factory=list)
 
+    # Moltipedia wiki queues
+    contested_pages: List[Dict] = field(default_factory=list)
+    search_results: List[Dict] = field(default_factory=list)
+    random_pages: List[Dict] = field(default_factory=list)
+    leaderboard: List[Dict] = field(default_factory=list)
+    agent_points: float = 0.0
+    heartbeat_status: Dict = field(default_factory=dict)
+
     # Signals about ecosystem health
     ecosystem_metrics: Dict = field(default_factory=dict)
+
+    # Moltbook feed observations
+    moltbook_published_posts: List[Dict] = field(default_factory=list)
+    moltbook_pending_posts: List[Dict] = field(default_factory=list)
+    moltbook_rate_limits: Dict = field(default_factory=dict)
+    moltbook_karma: float = 0.0
 
 
 @dataclass
@@ -468,6 +494,78 @@ class BaseAgent(ABC):
             agent_id=self.agent_id,
             target_id=escrow_id,
             content=reason,
+        )
+
+    def create_page_action(self, title: str, content: str) -> Action:
+        """Create a wiki page."""
+        return Action(
+            action_type=ActionType.CREATE_PAGE,
+            agent_id=self.agent_id,
+            content=content,
+            metadata={"title": title, "content": content},
+        )
+
+    def create_edit_page_action(self, page_id: str, content: str) -> Action:
+        """Edit a wiki page."""
+        return Action(
+            action_type=ActionType.EDIT_PAGE,
+            agent_id=self.agent_id,
+            target_id=page_id,
+            content=content,
+        )
+
+    def create_file_objection_action(self, page_id: str, reason: str = "") -> Action:
+        """File an objection on a wiki page."""
+        return Action(
+            action_type=ActionType.FILE_OBJECTION,
+            agent_id=self.agent_id,
+            target_id=page_id,
+            content=reason,
+        )
+
+    def create_policy_flag_action(self, page_id: str, violation: str) -> Action:
+        """Flag a policy violation on a wiki page."""
+        return Action(
+            action_type=ActionType.POLICY_FLAG,
+            agent_id=self.agent_id,
+            target_id=page_id,
+            metadata={"violation": violation},
+        )
+
+    def create_moltbook_post_action(self, content: str, submolt: str = "") -> Action:
+        """Create a Moltbook post action."""
+        return Action(
+            action_type=ActionType.MOLTBOOK_POST,
+            agent_id=self.agent_id,
+            content=content,
+            metadata={"submolt": submolt} if submolt else {},
+        )
+
+    def create_moltbook_comment_action(self, post_id: str, content: str) -> Action:
+        """Create a Moltbook comment action."""
+        return Action(
+            action_type=ActionType.MOLTBOOK_COMMENT,
+            agent_id=self.agent_id,
+            target_id=post_id,
+            content=content,
+        )
+
+    def create_moltbook_verify_action(self, post_id: str, answer: float) -> Action:
+        """Create a Moltbook verification action."""
+        return Action(
+            action_type=ActionType.MOLTBOOK_VERIFY,
+            agent_id=self.agent_id,
+            target_id=post_id,
+            metadata={"answer": answer},
+        )
+
+    def create_moltbook_vote_action(self, post_id: str, direction: int) -> Action:
+        """Create a Moltbook vote action (+1 upvote, -1 downvote)."""
+        return Action(
+            action_type=ActionType.MOLTBOOK_VOTE,
+            agent_id=self.agent_id,
+            target_id=post_id,
+            vote_direction=direction,
         )
 
     def __repr__(self) -> str:

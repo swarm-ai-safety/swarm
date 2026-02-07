@@ -150,6 +150,15 @@ class CollusionDetector:
             } | {
                 i.counterparty for i in interactions
             })
+        else:
+            # Filter out interactions involving non-agent entities
+            agent_set = set(agent_ids)
+            interactions = [
+                i for i in interactions
+                if i.initiator in agent_set and i.counterparty in agent_set
+            ]
+            if not interactions:
+                return CollusionReport()
 
         # Build interaction matrices
         pair_interactions = self._group_by_pair(interactions)

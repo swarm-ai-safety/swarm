@@ -16,6 +16,16 @@ from swarm.governance.identity_lever import SybilDetectionLever
 from swarm.governance.incoherence_breaker import IncoherenceCircuitBreakerLever
 from swarm.governance.levers import GovernanceLever, LeverEffect
 from swarm.governance.moderator_lever import ModeratorLever
+from swarm.governance.moltbook import (
+    ChallengeVerificationLever,
+    MoltbookRateLimitLever,
+)
+from swarm.governance.moltipedia import (
+    DailyPointCapLever,
+    NoSelfFixLever,
+    PageCooldownLever,
+    PairCapLever,
+)
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever
 from swarm.governance.security import SecurityLever
 from swarm.governance.taxes import TransactionTaxLever
@@ -100,7 +110,15 @@ class GovernanceEngine:
             RandomAuditLever(self.config, seed=seed),
             CollusionPenaltyLever(self.config),
             SecurityLever(self.config, seed=seed),
+            PairCapLever(self.config),
+            PageCooldownLever(self.config),
+            DailyPointCapLever(self.config),
+            NoSelfFixLever(self.config),
         ]
+        if self.config.moltbook_rate_limit_enabled:
+            levers.append(MoltbookRateLimitLever(self.config))
+        if self.config.moltbook_challenge_enabled:
+            levers.append(ChallengeVerificationLever(self.config))
         # Variance-aware levers (scaffold registration; behavior in #35)
         if self.config.self_ensemble_enabled:
             levers.append(SelfEnsembleLever(self.config))
@@ -125,6 +143,8 @@ class GovernanceEngine:
         self._collusion_lever: Optional[CollusionPenaltyLever] = None
         self._security_lever: Optional[SecurityLever] = None
         self._vote_normalization_lever = VoteNormalizationLever(self.config)
+        self._moltbook_rate_limit_lever: Optional[MoltbookRateLimitLever] = None
+        self._moltbook_challenge_lever: Optional[ChallengeVerificationLever] = None
 
         for lever in self._levers:
             if isinstance(lever, StakingLever):
@@ -135,11 +155,23 @@ class GovernanceEngine:
                 self._collusion_lever = lever
             elif isinstance(lever, SecurityLever):
                 self._security_lever = lever
+            elif isinstance(lever, MoltbookRateLimitLever):
+                self._moltbook_rate_limit_lever = lever
+            elif isinstance(lever, ChallengeVerificationLever):
+                self._moltbook_challenge_lever = lever
 
         # Adaptive governance state
         self._incoherence_forecaster: Optional[Any] = None
         self._adaptive_risk: float = 0.0
         self._adaptive_variance_active: bool = True
+
+    def get_moltbook_rate_limit_lever(self) -> Optional[MoltbookRateLimitLever]:
+        """Return Moltbook rate limit lever if registered."""
+        return self._moltbook_rate_limit_lever
+
+    def get_moltbook_challenge_lever(self) -> Optional[ChallengeVerificationLever]:
+        """Return Moltbook challenge lever if registered."""
+        return self._moltbook_challenge_lever
 
     def apply_epoch_start(
         self,

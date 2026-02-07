@@ -11,7 +11,21 @@ from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.base import BaseAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.moltbook_agent import (
+    CollusiveVoterAgent,
+    DiligentMoltbookAgent,
+    HumanPretenderAgent,
+    SpamBotAgent,
+)
 from swarm.agents.opportunistic import OpportunisticAgent
+from swarm.agents.wiki_editor import (
+    CollusiveEditorAgent,
+    DiligentEditorAgent,
+    PointFarmerAgent,
+    VandalAgent,
+)
+from swarm.core.moltbook_handler import MoltbookConfig
+from swarm.core.moltipedia_handler import MoltipediaConfig
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 from swarm.core.payoff import PayoffConfig
 from swarm.env.marketplace import MarketplaceConfig
@@ -26,6 +40,14 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "deceptive": DeceptiveAgent,
     "adversarial": AdversarialAgent,
     "adaptive_adversary": AdaptiveAdversary,
+    "diligent_editor": DiligentEditorAgent,
+    "point_farmer": PointFarmerAgent,
+    "collusive_editor": CollusiveEditorAgent,
+    "vandal": VandalAgent,
+    "diligent_moltbook": DiligentMoltbookAgent,
+    "spam_bot": SpamBotAgent,
+    "human_pretender": HumanPretenderAgent,
+    "collusive_voter": CollusiveVoterAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
@@ -143,6 +165,23 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         adaptive_governance_enabled=data.get("adaptive_governance_enabled", False),
         adaptive_incoherence_threshold=data.get("adaptive_incoherence_threshold", 0.5),
         adaptive_use_behavioral_features=data.get("adaptive_use_behavioral_features", False),
+        # Moltipedia governance
+        moltipedia_pair_cap_enabled=data.get("moltipedia_pair_cap_enabled", False),
+        moltipedia_pair_cap_max=data.get("moltipedia_pair_cap_max", 2),
+        moltipedia_page_cooldown_enabled=data.get("moltipedia_page_cooldown_enabled", False),
+        moltipedia_page_cooldown_steps=data.get("moltipedia_page_cooldown_steps", 3),
+        moltipedia_daily_cap_enabled=data.get("moltipedia_daily_cap_enabled", False),
+        moltipedia_daily_policy_fix_cap=data.get("moltipedia_daily_policy_fix_cap", 24.0),
+        moltipedia_no_self_fix=data.get("moltipedia_no_self_fix", False),
+        # Moltbook governance
+        moltbook_rate_limit_enabled=data.get("moltbook_rate_limit_enabled", False),
+        moltbook_post_cooldown_steps=data.get("moltbook_post_cooldown_steps", 5),
+        moltbook_comment_cooldown_steps=data.get("moltbook_comment_cooldown_steps", 1),
+        moltbook_daily_comment_cap=data.get("moltbook_daily_comment_cap", 50),
+        moltbook_request_cap_per_step=data.get("moltbook_request_cap_per_step", 100),
+        moltbook_challenge_enabled=data.get("moltbook_challenge_enabled", False),
+        moltbook_challenge_difficulty=data.get("moltbook_challenge_difficulty", 0.5),
+        moltbook_challenge_window_steps=data.get("moltbook_challenge_window_steps", 1),
     )
     # Pydantic auto-validates
     return config
@@ -276,6 +315,60 @@ def parse_marketplace_config(data: Dict[str, Any]) -> Optional[MarketplaceConfig
     return config
 
 
+def parse_moltipedia_config(data: Dict[str, Any]) -> Optional[MoltipediaConfig]:
+    """
+    Parse moltipedia section from YAML into MoltipediaConfig.
+
+    Args:
+        data: The moltipedia section from YAML
+
+    Returns:
+        MoltipediaConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    config = MoltipediaConfig(
+        enabled=data.get("enabled", True),
+        initial_pages=data.get("initial_pages", 50),
+        contested_queue_size=data.get("contested_queue_size", 6),
+        random_queue_size=data.get("random_queue_size", 6),
+        search_queue_size=data.get("search_queue_size", 6),
+        page_cooldown_steps=data.get("page_cooldown_steps", 3),
+        stub_length_threshold=data.get("stub_length_threshold", 120),
+        seed=data.get("seed"),
+    )
+    return config
+
+
+def parse_moltbook_config(data: Dict[str, Any]) -> Optional[MoltbookConfig]:
+    """
+    Parse moltbook section from YAML into MoltbookConfig.
+
+    Args:
+        data: The moltbook section from YAML
+
+    Returns:
+        MoltbookConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    config = MoltbookConfig(
+        enabled=data.get("enabled", True),
+        default_submolt=data.get("default_submolt", "general"),
+        max_content_length=data.get("max_content_length", 10000),
+        seed=data.get("seed"),
+    )
+    return config
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -300,6 +393,8 @@ def load_scenario(path: Path) -> ScenarioConfig:
     rate_limits = parse_rate_limits(data.get("rate_limits", {}))
     network_config = parse_network_config(data.get("network", {}))
     marketplace_config = parse_marketplace_config(data.get("marketplace", {}))
+    moltipedia_config = parse_moltipedia_config(data.get("moltipedia", {}))
+    moltbook_config = parse_moltbook_config(data.get("moltbook", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -317,6 +412,8 @@ def load_scenario(path: Path) -> ScenarioConfig:
         governance_config=governance_config,
         network_config=network_config,
         marketplace_config=marketplace_config,
+        moltipedia_config=moltipedia_config,
+        moltbook_config=moltbook_config,
         log_path=Path(outputs_data["event_log"]) if outputs_data.get("event_log") else None,
         log_events=bool(outputs_data.get("event_log")),
     )
@@ -398,6 +495,7 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
         agent_type = spec.get("type", "honest")
         count = spec.get("count", 1)
         base_name = spec.get("name")
+        agent_config = spec.get("config")
 
         # Handle LLM agents
         if agent_type == "llm":
@@ -432,7 +530,11 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
                 )
 
                 # Create agent with optional config
-                agent = agent_class(agent_id=agent_id, name=agent_name)  # type: ignore[call-arg]
+                agent = agent_class(
+                    agent_id=agent_id,
+                    name=agent_name,
+                    config=agent_config,
+                )  # type: ignore[call-arg]
                 agents.append(agent)
 
         else:

@@ -15,6 +15,8 @@ from swarm.boundaries.leakage import LeakageDetector, LeakageReport
 from swarm.boundaries.policies import PolicyEngine
 from swarm.core.boundary_handler import BoundaryHandler
 from swarm.core.marketplace_handler import MarketplaceHandler
+from swarm.core.moltbook_handler import MoltbookConfig, MoltbookHandler
+from swarm.core.moltipedia_handler import MoltipediaConfig, MoltipediaHandler
 from swarm.core.observable_generator import (
     DefaultObservableGenerator,
     ObservableGenerator,
@@ -81,6 +83,12 @@ class OrchestratorConfig(BaseModel):
 
     # Marketplace configuration
     marketplace_config: Optional[MarketplaceConfig] = None
+
+    # Moltipedia configuration
+    moltipedia_config: Optional[MoltipediaConfig] = None
+
+    # Moltbook configuration
+    moltbook_config: Optional[MoltbookConfig] = None
 
     # Composite task configuration
     enable_composite_tasks: bool = False
@@ -237,6 +245,32 @@ class Orchestrator:
             self.marketplace = None
             self._marketplace_handler = None
 
+        # Moltipedia handler
+        if self.config.moltipedia_config is not None:
+            self._moltipedia_handler: Optional[MoltipediaHandler] = MoltipediaHandler(
+                config=self.config.moltipedia_config,
+                emit_event=self._emit_event,
+            )
+        else:
+            self._moltipedia_handler = None
+
+        # Moltbook handler
+        if self.config.moltbook_config is not None:
+            rate_limit_lever = None
+            challenge_lever = None
+            if self.governance_engine is not None:
+                rate_limit_lever = self.governance_engine.get_moltbook_rate_limit_lever()
+                challenge_lever = self.governance_engine.get_moltbook_challenge_lever()
+            self._moltbook_handler: Optional[MoltbookHandler] = MoltbookHandler(
+                config=self.config.moltbook_config,
+                emit_event=self._emit_event,
+                governance_config=self.config.governance_config,
+                rate_limit_lever=rate_limit_lever,
+                challenge_lever=challenge_lever,
+            )
+        else:
+            self._moltbook_handler = None
+
         # Boundary handler
         if self.config.enable_boundaries:
             external_world = ExternalWorld().create_default_world()
@@ -374,6 +408,9 @@ class Orchestrator:
 
         self._update_adaptive_governance()
 
+        if self._moltbook_handler is not None:
+            self._moltbook_handler.on_epoch_start()
+
         # Apply epoch-start governance (reputation decay, unfreezes)
         if self.governance_engine:
             gov_effect = self.governance_engine.apply_epoch_start(
@@ -431,6 +468,9 @@ class Orchestrator:
                 self.state, self.state.current_step
             )
             self._apply_governance_effect(step_effect)
+
+        if self._moltbook_handler is not None:
+            self._moltbook_handler.tick(self.state.current_step)
 
         # Get agent schedule for this step
         agent_order = self._get_agent_schedule()
@@ -627,6 +667,40 @@ class Orchestrator:
             active_escrows = mkt_obs["active_escrows"]
             pending_bid_decisions = mkt_obs["pending_bid_decisions"]
 
+        # Build Moltipedia observation via handler
+        contested_pages: List[Dict] = []
+        search_results: List[Dict] = []
+        random_pages: List[Dict] = []
+        leaderboard: List[Dict] = []
+        agent_points: float = 0.0
+        heartbeat_status: Dict = {}
+
+        if self._moltipedia_handler is not None:
+            wiki_obs = self._moltipedia_handler.build_observation_fields(
+                agent_id, self.state,
+            )
+            contested_pages = wiki_obs["contested_pages"]
+            search_results = wiki_obs["search_results"]
+            random_pages = wiki_obs["random_pages"]
+            leaderboard = wiki_obs["leaderboard"]
+            agent_points = wiki_obs["agent_points"]
+            heartbeat_status = wiki_obs["heartbeat_status"]
+
+        # Build Moltbook observation via handler
+        moltbook_published_posts: List[Dict] = []
+        moltbook_pending_posts: List[Dict] = []
+        moltbook_rate_limits: Dict = {}
+        moltbook_karma: float = 0.0
+
+        if self._moltbook_handler is not None:
+            molt_obs = self._moltbook_handler.get_agent_observation(
+                agent_id, self.state.current_step,
+            )
+            moltbook_published_posts = molt_obs["published_posts"]
+            moltbook_pending_posts = molt_obs["pending_posts"]
+            moltbook_rate_limits = molt_obs["rate_limits"]
+            moltbook_karma = molt_obs["karma"]
+
         return Observation(
             agent_state=agent_state or AgentState(),
             current_epoch=self.state.current_epoch,
@@ -644,9 +718,19 @@ class Orchestrator:
             active_bids=active_bids,
             active_escrows=active_escrows,
             pending_bid_decisions=pending_bid_decisions,
+            contested_pages=contested_pages,
+            search_results=search_results,
+            random_pages=random_pages,
+            leaderboard=leaderboard,
+            agent_points=agent_points,
+            heartbeat_status=heartbeat_status,
             ecosystem_metrics=self._apply_observation_noise(
                 self.state.get_epoch_metrics_snapshot()
             ),
+            moltbook_published_posts=moltbook_published_posts,
+            moltbook_pending_posts=moltbook_pending_posts,
+            moltbook_rate_limits=moltbook_rate_limits,
+            moltbook_karma=moltbook_karma,
         )
 
     def _apply_observation_noise(self, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -836,6 +920,97 @@ class Orchestrator:
                 return False
             return self._marketplace_handler.handle_file_dispute(action, self.state)
 
+        # Moltipedia wiki actions
+        elif action.action_type in (
+            ActionType.CREATE_PAGE,
+            ActionType.EDIT_PAGE,
+            ActionType.FILE_OBJECTION,
+            ActionType.POLICY_FLAG,
+        ):
+            if self._moltipedia_handler is None:
+                return False
+
+            result = self._moltipedia_handler.handle_action(action, self.state)
+            if not result.success:
+                return False
+
+            if result.observables is None:
+                return True
+
+            v_hat, p = self.proxy_computer.compute_labels(result.observables)
+
+            interaction = SoftInteraction(
+                initiator=result.initiator_id,
+                counterparty=result.counterparty_id,
+                interaction_type=InteractionType.COLLABORATION,
+                accepted=result.accepted,
+                task_progress_delta=result.observables.task_progress_delta,
+                rework_count=result.observables.rework_count,
+                verifier_rejections=result.observables.verifier_rejections,
+                tool_misuse_flags=result.observables.tool_misuse_flags,
+                counterparty_engagement_delta=result.observables.counterparty_engagement_delta,
+                v_hat=v_hat,
+                p=p,
+                tau=-result.points,
+                metadata=result.metadata or {},
+            )
+
+            gov_effect, _, _ = self._finalize_interaction(interaction)
+
+            if interaction.metadata.get("moltipedia"):
+                moltipedia_cost = self._moltipedia_cost_from_effect(gov_effect)
+                points_awarded = max(0.0, result.points - moltipedia_cost)
+                self._moltipedia_handler.record_points(
+                    agent_id=result.initiator_id,
+                    points_awarded=points_awarded,
+                    state=self.state,
+                    page_id=interaction.metadata.get("page_id"),
+                    edit_type=interaction.metadata.get("edit_type"),
+                )
+                self._emit_moltipedia_governance_events(gov_effect, interaction)
+
+            return True
+
+        # Moltbook actions
+        elif action.action_type in (
+            ActionType.MOLTBOOK_POST,
+            ActionType.MOLTBOOK_COMMENT,
+            ActionType.MOLTBOOK_VERIFY,
+            ActionType.MOLTBOOK_VOTE,
+        ):
+            if self._moltbook_handler is None:
+                return False
+
+            moltbook_result = self._moltbook_handler.handle_action(action, self.state)
+            if not moltbook_result.success:
+                return False
+
+            if moltbook_result.observables is None:
+                return True
+
+            v_hat, p = self.proxy_computer.compute_labels(moltbook_result.observables)
+
+            interaction = SoftInteraction(
+                initiator=moltbook_result.initiator_id,
+                counterparty=moltbook_result.counterparty_id,
+                interaction_type=moltbook_result.interaction_type,
+                accepted=moltbook_result.accepted,
+                task_progress_delta=moltbook_result.observables.task_progress_delta,
+                rework_count=moltbook_result.observables.rework_count,
+                verifier_rejections=moltbook_result.observables.verifier_rejections,
+                tool_misuse_flags=moltbook_result.observables.tool_misuse_flags,
+                counterparty_engagement_delta=(
+                    moltbook_result.observables.counterparty_engagement_delta
+                ),
+                v_hat=v_hat,
+                p=p,
+                tau=0.0,
+                metadata=moltbook_result.metadata or {},
+            )
+
+            self._finalize_interaction(interaction)
+            return True
+
         return False
 
     def _resolve_pending_interactions(self) -> None:
@@ -903,95 +1078,10 @@ class Orchestrator:
             v_hat=v_hat,
             p=p,
             tau=proposal.metadata.get("offered_transfer", 0),
+            metadata=proposal.metadata,
         )
 
-        # Apply governance costs to interaction
-        if self.governance_engine:
-            gov_effect = self.governance_engine.apply_interaction(interaction, self.state)
-            interaction.c_a += gov_effect.cost_a
-            interaction.c_b += gov_effect.cost_b
-            self._apply_governance_effect(gov_effect)
-
-            # Log governance event
-            if gov_effect.cost_a > 0 or gov_effect.cost_b > 0:
-                self._emit_event(Event(
-                    event_type=EventType.GOVERNANCE_COST_APPLIED,
-                    interaction_id=proposal.proposal_id,
-                    initiator_id=proposal.initiator_id,
-                    counterparty_id=proposal.counterparty_id,
-                    payload={
-                        "cost_a": gov_effect.cost_a,
-                        "cost_b": gov_effect.cost_b,
-                        "levers": [e.lever_name for e in gov_effect.lever_effects],
-                    },
-                    epoch=self.state.current_epoch,
-                    step=self.state.current_step,
-                ))
-
-        # Compute payoffs
-        payoff_init = self.payoff_engine.payoff_initiator(interaction)
-        payoff_counter = self.payoff_engine.payoff_counterparty(interaction)
-
-        # Update agent states
-        if accepted:
-            initiator_state = self.state.get_agent(proposal.initiator_id)
-            counterparty_state = self.state.get_agent(proposal.counterparty_id)
-
-            if initiator_state:
-                initiator_state.record_initiated(accepted=True, p=p)
-                initiator_state.total_payoff += payoff_init
-                # Reputation delta accounts for governance costs so that
-                # tax, audit penalties, etc. feed back through the
-                # reputation → observables → p loop to affect toxicity.
-                rep_delta = (p - 0.5) - interaction.c_a
-                self._update_reputation(proposal.initiator_id, rep_delta)
-
-            if counterparty_state:
-                counterparty_state.record_received(accepted=True, p=p)
-                counterparty_state.total_payoff += payoff_counter
-
-        # Update agent memory
-        if proposal.initiator_id in self._agents:
-            self._agents[proposal.initiator_id].update_from_outcome(interaction, payoff_init)
-        if proposal.counterparty_id in self._agents:
-            self._agents[proposal.counterparty_id].update_from_outcome(interaction, payoff_counter)
-
-        # Record interaction
-        self.state.record_interaction(interaction)
-
-        # Log events
-        self._emit_event(interaction_completed_event(
-            interaction_id=proposal.proposal_id,
-            accepted=accepted,
-            payoff_initiator=payoff_init,
-            payoff_counterparty=payoff_counter,
-            epoch=self.state.current_epoch,
-            step=self.state.current_step,
-        ))
-
-        self._emit_event(payoff_computed_event(
-            interaction_id=proposal.proposal_id,
-            initiator_id=proposal.initiator_id,
-            counterparty_id=proposal.counterparty_id,
-            payoff_initiator=payoff_init,
-            payoff_counterparty=payoff_counter,
-            components={
-                "p": p,
-                "v_hat": v_hat,
-                "tau": interaction.tau,
-                "accepted": accepted,
-            },
-            epoch=self.state.current_epoch,
-            step=self.state.current_step,
-        ))
-
-        # Strengthen network edge after interaction
-        if self.network is not None and accepted:
-            self.network.strengthen_edge(proposal.initiator_id, proposal.counterparty_id)
-
-        # Callbacks
-        for callback in self._on_interaction_complete:
-            callback(interaction, payoff_init, payoff_counter)
+        self._finalize_interaction(interaction)
 
     def _generate_observables(
         self,
@@ -1004,6 +1094,90 @@ class Orchestrator:
         backwards compatibility with subclasses that override this.
         """
         return self._observable_generator.generate(proposal, accepted, self.state)
+
+    def _finalize_interaction(
+        self,
+        interaction: SoftInteraction,
+    ) -> Tuple[GovernanceEffect, float, float]:
+        """Apply governance, compute payoffs, update state, and emit events."""
+        gov_effect = GovernanceEffect()
+        if self.governance_engine:
+            gov_effect = self.governance_engine.apply_interaction(interaction, self.state)
+            interaction.c_a += gov_effect.cost_a
+            interaction.c_b += gov_effect.cost_b
+            self._apply_governance_effect(gov_effect)
+
+            if gov_effect.cost_a > 0 or gov_effect.cost_b > 0:
+                self._emit_event(Event(
+                    event_type=EventType.GOVERNANCE_COST_APPLIED,
+                    interaction_id=interaction.interaction_id,
+                    initiator_id=interaction.initiator,
+                    counterparty_id=interaction.counterparty,
+                    payload={
+                        "cost_a": gov_effect.cost_a,
+                        "cost_b": gov_effect.cost_b,
+                        "levers": [e.lever_name for e in gov_effect.lever_effects],
+                    },
+                    epoch=self.state.current_epoch,
+                    step=self.state.current_step,
+                ))
+
+        payoff_init = self.payoff_engine.payoff_initiator(interaction)
+        payoff_counter = self.payoff_engine.payoff_counterparty(interaction)
+
+        if interaction.accepted:
+            initiator_state = self.state.get_agent(interaction.initiator)
+            counterparty_state = self.state.get_agent(interaction.counterparty)
+
+            if initiator_state:
+                initiator_state.record_initiated(accepted=True, p=interaction.p)
+                initiator_state.total_payoff += payoff_init
+                rep_delta = (interaction.p - 0.5) - interaction.c_a
+                self._update_reputation(interaction.initiator, rep_delta)
+
+            if counterparty_state:
+                counterparty_state.record_received(accepted=True, p=interaction.p)
+                counterparty_state.total_payoff += payoff_counter
+
+        if interaction.initiator in self._agents:
+            self._agents[interaction.initiator].update_from_outcome(interaction, payoff_init)
+        if interaction.counterparty in self._agents:
+            self._agents[interaction.counterparty].update_from_outcome(interaction, payoff_counter)
+
+        self.state.record_interaction(interaction)
+
+        self._emit_event(interaction_completed_event(
+            interaction_id=interaction.interaction_id,
+            accepted=interaction.accepted,
+            payoff_initiator=payoff_init,
+            payoff_counterparty=payoff_counter,
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+        ))
+
+        self._emit_event(payoff_computed_event(
+            interaction_id=interaction.interaction_id,
+            initiator_id=interaction.initiator,
+            counterparty_id=interaction.counterparty,
+            payoff_initiator=payoff_init,
+            payoff_counterparty=payoff_counter,
+            components={
+                "p": interaction.p,
+                "v_hat": interaction.v_hat,
+                "tau": interaction.tau,
+                "accepted": interaction.accepted,
+            },
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+        ))
+
+        if self.network is not None and interaction.accepted:
+            self.network.strengthen_edge(interaction.initiator, interaction.counterparty)
+
+        for callback in self._on_interaction_complete:
+            callback(interaction, payoff_init, payoff_counter)
+
+        return gov_effect, payoff_init, payoff_counter
 
     def _update_reputation(self, agent_id: str, delta: float) -> None:
         """Update agent reputation."""
@@ -1080,6 +1254,48 @@ class Orchestrator:
             agent_state = self.state.get_agent(agent_id)
             if agent_state:
                 agent_state.update_resources(delta)
+
+    def _moltipedia_cost_from_effect(self, effect: GovernanceEffect) -> float:
+        """Compute Moltipedia-specific cost from governance effects."""
+        moltipedia_levers = {
+            "moltipedia_pair_cap",
+            "moltipedia_page_cooldown",
+            "moltipedia_daily_cap",
+            "moltipedia_no_self_fix",
+        }
+        return sum(
+            lever.cost_a for lever in effect.lever_effects
+            if lever.lever_name in moltipedia_levers
+        )
+
+    def _emit_moltipedia_governance_events(
+        self,
+        effect: GovernanceEffect,
+        interaction: SoftInteraction,
+    ) -> None:
+        """Emit Moltipedia governance trigger events."""
+        event_map = {
+            "moltipedia_pair_cap": EventType.PAIR_CAP_TRIGGERED,
+            "moltipedia_page_cooldown": EventType.COOLDOWN_TRIGGERED,
+            "moltipedia_daily_cap": EventType.DAILY_CAP_TRIGGERED,
+        }
+        page_id = interaction.metadata.get("page_id") if interaction.metadata else None
+        for lever in effect.lever_effects:
+            if lever.lever_name not in event_map:
+                continue
+            if lever.cost_a <= 0:
+                continue
+            self._emit_event(Event(
+                event_type=event_map[lever.lever_name],
+                agent_id=interaction.initiator,
+                payload={
+                    "page_id": page_id,
+                    "cost_a": lever.cost_a,
+                    "details": lever.details,
+                },
+                epoch=self.state.current_epoch,
+                step=self.state.current_step,
+            ))
 
     def _compute_epoch_metrics(self) -> EpochMetrics:
         """Compute metrics for the current epoch."""

@@ -58,6 +58,9 @@ class SoftInteraction:
     # Optional ground truth for calibration testing
     ground_truth: Optional[int] = None  # +1 or -1 if known
 
+    # Optional metadata for domain-specific interactions
+    metadata: dict = field(default_factory=dict)
+
     def is_high_quality(self, threshold: float = 0.5) -> bool:
         """Check if interaction is above quality threshold."""
         return self.p >= threshold
@@ -88,6 +91,7 @@ class SoftInteraction:
             "r_a": self.r_a,
             "r_b": self.r_b,
             "ground_truth": self.ground_truth,
+            "metadata": self.metadata,
         }
 
     @classmethod
@@ -113,4 +117,5 @@ class SoftInteraction:
             r_a=data["r_a"],
             r_b=data["r_b"],
             ground_truth=data.get("ground_truth"),
+            metadata=data.get("metadata", {}),
         )

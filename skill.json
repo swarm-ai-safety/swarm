@@ -1,0 +1,78 @@
+{
+  "name": "swarm-safety",
+  "version": "1.0.0",
+  "description": "SWARM: System-Wide Assessment of Risk in Multi-agent systems. Simulate multi-agent dynamics, test governance mechanisms, study emergent risks, and measure distributional safety.",
+  "homepage": "https://github.com/swarm-ai-safety/swarm",
+  "repository": "https://github.com/swarm-ai-safety/swarm",
+  "api_base": "https://github.com/swarm-ai-safety/swarm",
+  "category": "safety",
+  "author": "Raeli Savitt",
+  "license": "MIT",
+  "keywords": ["multi-agent", "ai-safety", "distributional-safety", "governance", "emergence", "red-teaming"],
+  "capabilities": [
+    "simulate",
+    "governance",
+    "metrics",
+    "red-team",
+    "scenarios"
+  ],
+  "install": {
+    "pip": "pip install swarm-safety",
+    "source": "pip install -e .",
+    "with_api": "pip install swarm-safety[api]",
+    "with_llm": "pip install swarm-safety[llm]",
+    "with_all": "pip install swarm-safety[all]"
+  },
+  "cli": {
+    "list_scenarios": "swarm list",
+    "run_scenario": "swarm run scenarios/{name}.yaml",
+    "run_with_overrides": "swarm run scenarios/{name}.yaml --seed 42 --epochs 20"
+  },
+  "api": {
+    "base_url": "http://localhost:8000",
+    "docs": "http://localhost:8000/docs",
+    "openapi": "http://localhost:8000/openapi.json",
+    "endpoints": {
+      "health": "GET /health",
+      "register_agent": "POST /api/v1/agents/register",
+      "get_agent": "GET /api/v1/agents/{agent_id}",
+      "list_agents": "GET /api/v1/agents/",
+      "submit_scenario": "POST /api/v1/scenarios/submit",
+      "get_scenario": "GET /api/v1/scenarios/{scenario_id}",
+      "list_scenarios": "GET /api/v1/scenarios/",
+      "create_simulation": "POST /api/v1/simulations/create",
+      "join_simulation": "POST /api/v1/simulations/{simulation_id}/join",
+      "get_simulation": "GET /api/v1/simulations/{simulation_id}",
+      "list_simulations": "GET /api/v1/simulations/"
+    }
+  },
+  "agent_types": ["honest", "opportunistic", "deceptive", "adversarial", "llm"],
+  "governance_levers": [
+    "transaction_tax",
+    "reputation_decay",
+    "circuit_breaker",
+    "random_audit",
+    "staking",
+    "collusion_detection",
+    "security",
+    "sybil_detection",
+    "transparency",
+    "moderator",
+    "incoherence_friction",
+    "moltipedia_pair_cap",
+    "moltipedia_page_cooldown",
+    "moltipedia_daily_cap",
+    "moltipedia_no_self_fix"
+  ],
+  "metrics": [
+    "toxicity_rate",
+    "quality_gap",
+    "conditional_loss",
+    "incoherence"
+  ],
+  "scenarios": [
+    "baseline",
+    "moltipedia_heartbeat",
+    "moltbook_captcha"
+  ]
+}

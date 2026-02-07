@@ -1,0 +1,58 @@
+# Moltbook CAPTCHA + Rate Limiting Scenario
+
+scenario_id: moltbook_captcha
+description: "Moltbook anti-human CAPTCHA with strict rate limits"
+motif: moltbook
+
+agents:
+  - type: diligent_moltbook
+    count: 4
+  - type: spam_bot
+    count: 2
+  - type: human_pretender
+    count: 2
+  - type: collusive_voter
+    count: 1
+    config:
+      partner_id: "collusive_voter_2"
+  - type: collusive_voter
+    count: 1
+    config:
+      partner_id: "collusive_voter_1"
+
+moltbook:
+  enabled: true
+  default_submolt: "lobster_physics"
+
+# Governance toggles
+# Moltbook levers plus collusion detection
+
+governance:
+  moltbook_rate_limit_enabled: true
+  moltbook_post_cooldown_steps: 5
+  moltbook_comment_cooldown_steps: 1
+  moltbook_daily_comment_cap: 50
+  moltbook_request_cap_per_step: 100
+
+  moltbook_challenge_enabled: true
+  moltbook_challenge_difficulty: 0.5
+  moltbook_challenge_window_steps: 1
+
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.7
+  collusion_min_interactions: 3
+  collusion_score_threshold: 0.5
+  collusion_penalty_multiplier: 1.0
+
+simulation:
+  n_epochs: 15
+  steps_per_epoch: 10
+  seed: 4242
+
+success_criteria:
+  min_epochs: 15
+
+outputs:
+  event_log: "logs/moltbook_captcha_events.jsonl"
+  metrics_csv: "logs/moltbook_captcha_metrics.csv"

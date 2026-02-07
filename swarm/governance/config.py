@@ -105,6 +105,26 @@ class GovernanceConfig(BaseModel):
     moderator_penalty_multiplier: float = 1.0  # Penalty scaling factor
     moderator_threshold_p: float = 0.5  # Threshold for penalty
 
+    # Moltipedia governance levers
+    moltipedia_pair_cap_enabled: bool = False
+    moltipedia_pair_cap_max: int = 2
+    moltipedia_page_cooldown_enabled: bool = False
+    moltipedia_page_cooldown_steps: int = 3
+    moltipedia_daily_cap_enabled: bool = False
+    moltipedia_daily_policy_fix_cap: float = 24.0
+    moltipedia_no_self_fix: bool = False
+
+    # Moltbook rate limiting
+    moltbook_rate_limit_enabled: bool = False
+    moltbook_post_cooldown_steps: int = 5
+    moltbook_comment_cooldown_steps: int = 1
+    moltbook_daily_comment_cap: int = 50
+    moltbook_request_cap_per_step: int = 100
+
+    # Moltbook challenge verification
+    moltbook_challenge_enabled: bool = False
+    moltbook_challenge_difficulty: float = 0.5
+    moltbook_challenge_window_steps: int = 1
     @model_validator(mode="after")
     def _run_validation(self) -> "GovernanceConfig":
         self._check_values()
@@ -206,3 +226,24 @@ class GovernanceConfig(BaseModel):
             raise ValueError("moderator_penalty_multiplier must be non-negative")
         if not 0.0 <= self.moderator_threshold_p <= 1.0:
             raise ValueError("moderator_threshold_p must be in [0, 1]")
+        # Moltipedia validation
+        if self.moltipedia_pair_cap_max < 1:
+            raise ValueError("moltipedia_pair_cap_max must be >= 1")
+        if self.moltipedia_page_cooldown_steps < 0:
+            raise ValueError("moltipedia_page_cooldown_steps must be >= 0")
+        if self.moltipedia_daily_policy_fix_cap < 0:
+            raise ValueError("moltipedia_daily_policy_fix_cap must be non-negative")
+
+        # Moltbook validation
+        if self.moltbook_post_cooldown_steps < 0:
+            raise ValueError("moltbook_post_cooldown_steps must be >= 0")
+        if self.moltbook_comment_cooldown_steps < 0:
+            raise ValueError("moltbook_comment_cooldown_steps must be >= 0")
+        if self.moltbook_daily_comment_cap < 0:
+            raise ValueError("moltbook_daily_comment_cap must be >= 0")
+        if self.moltbook_request_cap_per_step < 0:
+            raise ValueError("moltbook_request_cap_per_step must be >= 0")
+        if not 0.0 <= self.moltbook_challenge_difficulty <= 1.0:
+            raise ValueError("moltbook_challenge_difficulty must be in [0, 1]")
+        if self.moltbook_challenge_window_steps < 0:
+            raise ValueError("moltbook_challenge_window_steps must be >= 0")

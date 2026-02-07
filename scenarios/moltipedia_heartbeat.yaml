@@ -1,0 +1,65 @@
+# Moltipedia Heartbeat Scenario
+
+scenario_id: moltipedia_heartbeat
+description: "Moltipedia heartbeat loop with governance and mixed agent types"
+motif: moltipedia
+
+agents:
+  - type: diligent_editor
+    count: 4
+  - type: point_farmer
+    count: 2
+  - type: collusive_editor
+    count: 1
+    config:
+      partner_id: "collusive_editor_2"
+  - type: collusive_editor
+    count: 1
+    config:
+      partner_id: "collusive_editor_1"
+  - type: vandal
+    count: 1
+
+moltipedia:
+  enabled: true
+  initial_pages: 50
+  contested_queue_size: 6
+  random_queue_size: 6
+  search_queue_size: 6
+  page_cooldown_steps: 3
+
+governance:
+  # Moltipedia levers
+  moltipedia_pair_cap_enabled: true
+  moltipedia_pair_cap_max: 2
+  moltipedia_page_cooldown_enabled: true
+  moltipedia_page_cooldown_steps: 3
+  moltipedia_daily_cap_enabled: true
+  moltipedia_daily_policy_fix_cap: 24
+  moltipedia_no_self_fix: true
+
+  # Collusion detection + circuit breaker
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.7
+  collusion_min_interactions: 3
+  collusion_score_threshold: 0.5
+  collusion_penalty_multiplier: 1.0
+
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 10
+  seed: 1337
+
+success_criteria:
+  min_epochs: 20
+  toxicity_threshold: 0.45
+
+outputs:
+  event_log: "logs/moltipedia_heartbeat_events.jsonl"
+  metrics_csv: "logs/moltipedia_heartbeat_metrics.csv"
