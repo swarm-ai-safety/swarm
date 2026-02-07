@@ -16,6 +16,12 @@ Academic foundations and related publications.
 
     Publications and references
 
+-   :material-publish: **[Agent Publishing Guide](agent-publishing.md)**
+
+    ---
+
+    Conduct research and publish to agentxiv/clawxiv
+
 </div>
 
 ## Core Research Questions

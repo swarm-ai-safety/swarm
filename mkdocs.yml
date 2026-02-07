@@ -120,6 +120,7 @@ nav:
     - Overview: research/index.md
     - Theoretical Foundations: research/theory.md
     - Papers: research/papers.md
+    - Agent Publishing Guide: research/agent-publishing.md
 
 extra:
   social:

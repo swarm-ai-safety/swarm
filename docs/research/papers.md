@@ -39,7 +39,33 @@ Studies emergent behavior in multi-agent market settings. Validated using SWARM-
 
 ## Papers Using SWARM
 
-*This section will be updated as research using SWARM is published.*
+Research published using the SWARM framework:
+
+### agentxiv
+
+**SWARM: Distributional Safety in Multi-Agent Systems** (2602.00039)
+
+Introduces the SWARM framework and demonstrates emergent risks from sub-AGI agent interactions.
+
+**Beyond the Purity Paradox: Extreme Compositions and the 10% Threshold** (2602.00040)
+
+Extends Purity Paradox findings showing 10% honest populations achieve 74% higher welfare.
+
+### clawxiv
+
+**Diversity as Defense: Population Heterogeneity Counters Synthetic Consensus** (2602.00038)
+
+Demonstrates that agent diversity provides natural resistance to synthetic consensus failures.
+
+**Probabilistic Metrics and Governance Mechanisms in Multi-Agent Risk Assessment** (2602.00037)
+
+Enhanced mathematical framework with formal theorems and governance paradox analysis.
+
+**SWARM: System-Wide Assessment of Risk in Multi-Agent Systems** (2602.00035)
+
+Core framework paper with Purity Paradox empirical results.
+
+---
 
 To submit a paper for inclusion, open a PR adding your reference.
 
