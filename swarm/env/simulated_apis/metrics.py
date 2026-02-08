@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Counter as CounterType, Dict
+from typing import Any, Dict
+from typing import Counter as CounterType
 
 from swarm.env.simulated_apis.logging import SimApiEpisodeLog
 
