@@ -43,6 +43,7 @@ class ClientConfig:
     """Configuration for the Claude Code controller client."""
 
     base_url: str = "http://localhost:3100"
+    api_prefix: str = "/api"  # Prefix for all API endpoints
     timeout_seconds: float = 30.0
     max_retries: int = 3
     retry_backoff_base: float = 1.0
@@ -53,6 +54,7 @@ class ClientConfig:
         key_display = "***" if self.api_key else "None"
         return (
             f"ClientConfig(base_url={self.base_url!r}, "
+            f"api_prefix={self.api_prefix!r}, "
             f"timeout_seconds={self.timeout_seconds}, "
             f"max_retries={self.max_retries}, "
             f"api_key={key_display})"
@@ -98,7 +100,7 @@ class ClaudeCodeClient:
             ConnectionError: If the service is unreachable after retries
             RuntimeError: If the service returns an error status
         """
-        url = f"{self.config.base_url}{path}"
+        url = f"{self.config.base_url}{self.config.api_prefix}{path}"
         headers = {"Content-Type": "application/json"}
         if self.config.api_key:
             headers["Authorization"] = f"Bearer {self.config.api_key}"
@@ -142,38 +144,69 @@ class ClaudeCodeClient:
         agent_id: str,
         system_prompt: str = "",
         allowed_tools: Optional[List[str]] = None,
-        model: str = "claude-sonnet-4-20250514",
+        model: str = "sonnet",
+        agent_type: str = "general-purpose",
     ) -> Dict[str, Any]:
         """Spawn a new Claude Code agent via the controller.
 
         Args:
-            agent_id: Unique identifier for the agent
-            system_prompt: System prompt defining agent behavior
-            allowed_tools: Tool allowlist (e.g., ["Bash", "Read", "Write"])
-            model: Model to use for the agent
+            agent_id: Unique identifier/name for the agent
+            system_prompt: System prompt defining agent behavior (unused by web controller)
+            allowed_tools: Tool allowlist (unused by web controller)
+            model: Model to use ("sonnet", "opus", "haiku")
+            agent_type: Agent type ("general-purpose", "coder", etc.)
 
         Returns:
             Controller response with agent metadata
         """
         body: Dict[str, Any] = {
-            "agent_id": agent_id,
-            "system_prompt": system_prompt,
+            "name": agent_id,
             "model": model,
+            "type": agent_type,
         }
-        if allowed_tools is not None:
-            body["allowed_tools"] = allowed_tools
         return self._request("POST", "/agents/spawn", body)
 
     def shutdown_agent(self, agent_id: str) -> Dict[str, Any]:
         """Shut down a running agent.
 
         Args:
-            agent_id: ID of the agent to shut down
+            agent_id: Name of the agent to shut down
         """
         _validate_agent_id(agent_id)
         return self._request("POST", f"/agents/{agent_id}/shutdown")
 
+    def kill_agent(self, agent_id: str) -> Dict[str, Any]:
+        """Forcefully kill a running agent.
+
+        Args:
+            agent_id: Name of the agent to kill
+        """
+        _validate_agent_id(agent_id)
+        return self._request("POST", f"/agents/{agent_id}/kill")
+
     # --- Interaction ---
+
+    def send(
+        self,
+        agent_id: str,
+        message: str,
+        summary: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Send a message to an agent.
+
+        Args:
+            agent_id: Target agent name
+            message: The message to send
+            summary: Optional summary for context
+
+        Returns:
+            Response indicating success
+        """
+        _validate_agent_id(agent_id)
+        body: Dict[str, Any] = {"message": message}
+        if summary:
+            body["summary"] = summary
+        return self._request("POST", f"/agents/{agent_id}/send", body)
 
     def ask(
         self,
@@ -181,28 +214,30 @@ class ClaudeCodeClient:
         prompt: str,
         timeout_seconds: Optional[float] = None,
     ) -> MessageEvent:
-        """Send a single-turn prompt to an agent and get a response.
+        """Send a message to an agent (alias for send with MessageEvent return).
+
+        Note: The web controller's /send endpoint is fire-and-forget.
+        This method sends the message and returns a placeholder MessageEvent.
+        Use poll_events or WebSocket for actual responses.
 
         Args:
-            agent_id: Target agent ID
-            prompt: The prompt to send
-            timeout_seconds: Override default timeout
+            agent_id: Target agent name
+            prompt: The message to send
+            timeout_seconds: Unused (kept for API compatibility)
 
         Returns:
-            MessageEvent with the agent's response
+            MessageEvent placeholder (actual response comes via events)
         """
         _validate_agent_id(agent_id)
-        body = {"prompt": prompt}
-        if timeout_seconds is not None:
-            body["timeout_seconds"] = timeout_seconds  # type: ignore[assignment]
-        resp = self._request("POST", f"/agents/{agent_id}/ask", body)
+        self.send(agent_id, prompt)
+        # The web controller's send is async - return placeholder
         return MessageEvent(
             agent_id=agent_id,
             role="assistant",
-            content=resp.get("content", ""),
-            tool_calls=resp.get("tool_calls", []),
-            token_count=resp.get("token_count", 0),
-            cost_usd=resp.get("cost_usd", 0.0),
+            content="[Message sent - response will arrive via events]",
+            tool_calls=[],
+            token_count=0,
+            cost_usd=0.0,
         )
 
     # --- Task lifecycle ---
@@ -290,26 +325,38 @@ class ClaudeCodeClient:
         request_id: str,
         approved: bool,
         reason: str = "",
+        agent_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Respond to a plan approval request.
 
         Args:
             request_id: ID of the plan approval request
             approved: Whether to approve the plan
-            reason: Optional reason for the decision
+            reason: Optional feedback/reason for the decision
+            agent_id: Agent name (required for web controller)
         """
-        body = {
-            "request_id": request_id,
-            "decision": "approve" if approved else "reject",
-            "reason": reason,
+        body: Dict[str, Any] = {
+            "requestId": request_id,
+            "approve": approved,
         }
-        return self._request("POST", "/governance/respond", body)
+        if reason:
+            body["feedback"] = reason
+
+        if agent_id:
+            _validate_agent_id(agent_id)
+            return self._request("POST", f"/agents/{agent_id}/approve-plan", body)
+        else:
+            # Fallback to generic endpoint (may not exist)
+            body["decision"] = "approve" if approved else "reject"
+            body["reason"] = reason
+            return self._request("POST", "/governance/respond", body)
 
     def respond_to_permission(
         self,
         request_id: str,
         granted: bool,
         reason: str = "",
+        agent_id: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Respond to a tool permission request.
 
@@ -317,13 +364,21 @@ class ClaudeCodeClient:
             request_id: ID of the permission request
             granted: Whether to grant the permission
             reason: Optional reason for the decision
+            agent_id: Agent name (required for web controller)
         """
-        body = {
-            "request_id": request_id,
-            "decision": "grant" if granted else "deny",
-            "reason": reason,
+        body: Dict[str, Any] = {
+            "requestId": request_id,
+            "approve": granted,
         }
-        return self._request("POST", "/governance/respond", body)
+
+        if agent_id:
+            _validate_agent_id(agent_id)
+            return self._request("POST", f"/agents/{agent_id}/approve-permission", body)
+        else:
+            # Fallback to generic endpoint (may not exist)
+            body["decision"] = "grant" if granted else "deny"
+            body["reason"] = reason
+            return self._request("POST", "/governance/respond", body)
 
     # --- Event listener registration ---
 
@@ -359,10 +414,35 @@ class ClaudeCodeClient:
         """Check if the controller service is reachable.
 
         Returns:
-            True if the service responds to a health check
+            True if the service responds to a session status check
         """
         try:
-            self._request("GET", "/health")
+            self._request("GET", "/session/status")
             return True
         except (ConnectionError, URLError):
             return False
+
+    # --- Session management ---
+
+    def init_session(
+        self,
+        team_name: str = "swarm",
+        cwd: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Initialize a controller session.
+
+        Args:
+            team_name: Name for the agent team
+            cwd: Working directory for agents
+
+        Returns:
+            Session initialization response
+        """
+        body: Dict[str, Any] = {"teamName": team_name}
+        if cwd:
+            body["cwd"] = cwd
+        return self._request("POST", "/session/init", body)
+
+    def get_session_status(self) -> Dict[str, Any]:
+        """Get current session status including active agents."""
+        return self._request("GET", "/session/status")

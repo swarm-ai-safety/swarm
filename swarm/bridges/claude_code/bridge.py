@@ -96,6 +96,8 @@ class ClaudeCodeBridge:
         self._agent_states: Dict[str, Dict[str, Any]] = {}
         self._last_event_id: Optional[str] = None
 
+        self._session_initialized = False
+
         # Register internal event handlers
         self._client.on(
             BridgeEventType.PLAN_APPROVAL_REQUEST,
@@ -106,6 +108,41 @@ class ClaudeCodeBridge:
             self._handle_permission_request,
         )
 
+    # --- Session lifecycle ---
+
+    def init_session(
+        self,
+        team_name: str = "swarm",
+        cwd: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Initialize the controller session.
+
+        Must be called before spawning agents.
+
+        Args:
+            team_name: Name for the agent team
+            cwd: Working directory for agents
+
+        Returns:
+            Session initialization response
+        """
+        result = self._client.init_session(team_name=team_name, cwd=cwd)
+        self._session_initialized = result.get("initialized", False)
+        return result
+
+    def ensure_session(
+        self,
+        team_name: str = "swarm",
+        cwd: Optional[str] = None,
+    ) -> None:
+        """Ensure session is initialized, initializing if needed."""
+        if not self._session_initialized:
+            status = self._client.get_session_status()
+            if not status.get("initialized"):
+                self.init_session(team_name=team_name, cwd=cwd)
+            else:
+                self._session_initialized = True
+
     # --- Agent lifecycle ---
 
     def spawn_agent(
@@ -113,7 +150,7 @@ class ClaudeCodeBridge:
         agent_id: str,
         system_prompt: str = "",
         allowed_tools: Optional[List[str]] = None,
-        model: str = "claude-sonnet-4-20250514",
+        model: str = "sonnet",
         budget_tool_calls: int = 100,
         budget_cost_usd: float = 10.0,
     ) -> Dict[str, Any]:
@@ -123,13 +160,16 @@ class ClaudeCodeBridge:
             agent_id: Unique agent identifier
             system_prompt: System prompt defining behavior
             allowed_tools: Tool allowlist
-            model: Model to use
+            model: Model to use ("sonnet", "opus", "haiku")
             budget_tool_calls: Max tool invocations for this agent
             budget_cost_usd: Max cost budget
 
         Returns:
             Controller response with agent metadata
         """
+        # Ensure session is initialized
+        self.ensure_session()
+
         # Configure governance budget
         self._policy.set_agent_budget(
             agent_id,
