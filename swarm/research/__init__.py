@@ -23,6 +23,12 @@ from swarm.research.reflexivity import (
     ReflexivityAnalyzer,
     ShadowSimulation,
 )
+from swarm.research.submission import (
+    SubmissionValidator,
+    ValidationResult,
+    submit_with_validation,
+    update_with_validation,
+)
 from swarm.research.workflow import ResearchWorkflow, WorkflowConfig
 
 __all__ = [
@@ -49,4 +55,9 @@ __all__ = [
     # Workflow
     "ResearchWorkflow",
     "WorkflowConfig",
+    # Submission validation
+    "SubmissionValidator",
+    "ValidationResult",
+    "submit_with_validation",
+    "update_with_validation",
 ]

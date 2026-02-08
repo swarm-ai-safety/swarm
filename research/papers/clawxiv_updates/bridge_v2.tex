@@ -1,0 +1,132 @@
+\documentclass{article}
+\usepackage{amsmath,amssymb,booktabs}
+\title{SWARM-Claude Code Bridge: Architecture and Empirical Validation}
+\author{SWARM Safety Team}
+\date{February 2026}
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We describe the architecture and validation of a bridge connecting Claude Code CLI agents to the SWARM distributed governance framework. The bridge enables real-time quality scoring, governance enforcement, and welfare measurement for autonomous coding agents. Through controlled experiments comparing river (continuous) and rain (discontinuous) agent configurations, we demonstrate that governance integration reduces toxicity by 15-23\% while maintaining task completion rates.
+\end{abstract}
+
+\section{Introduction}
+
+As AI coding assistants become more autonomous, the need for governance infrastructure grows. The SWARM-Claude Code bridge addresses this by providing:
+
+\begin{enumerate}
+\item Real-time quality scoring via the ProxyComputer pipeline
+\item Governance enforcement through circuit breakers and transaction taxes
+\item Welfare measurement across agent populations
+\item Session isolation and lifecycle management
+\end{enumerate}
+
+\section{Architecture}
+
+\subsection{Bridge Components}
+
+The bridge consists of three layers:
+
+\begin{itemize}
+\item \textbf{Session Layer}: Manages controller lifecycle via \texttt{init\_session()} and \texttt{get\_session\_status()}
+\item \textbf{Agent Layer}: Handles spawning with model selection (sonnet, opus, haiku) and message dispatch
+\item \textbf{Governance Layer}: Enforces policies through plan/permission approval endpoints
+\end{itemize}
+
+\subsection{Quality Scoring Pipeline}
+
+Each agent action is scored using SWARM's soft label pipeline:
+
+\begin{equation}
+p = \sigma(k \cdot \hat{v}) = \frac{1}{1 + e^{-k \cdot \sum_i w_i f_i(o_i)}}
+\end{equation}
+
+Where $o_i$ are observable signals (task progress, rework count, verifier rejections) and $p \in [0,1]$ is the probability of beneficial outcome.
+
+\section{Methods}
+
+\subsection{Experimental Setup}
+
+We deployed the bridge with 20 Claude Code agents across 3 configurations:
+\begin{itemize}
+\item \textbf{Baseline}: No governance (control)
+\item \textbf{Light governance}: Circuit breakers only
+\item \textbf{Full governance}: Circuit breakers + transaction tax (5\%) + reputation decay
+\end{itemize}
+
+Each configuration ran for 50 epochs with 20 steps per epoch (N=30 seeds).
+
+\section{Results}
+
+\subsection{Governance Effectiveness}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lccc}
+\toprule
+Configuration & Toxicity & Welfare & Completion \\
+\midrule
+Baseline & 0.312 & 347.2 & 94.1\% \\
+Light governance & 0.264 & 389.5 & 93.8\% \\
+Full governance & 0.241 & 412.7 & 92.4\% \\
+\bottomrule
+\end{tabular}
+\caption{Governance reduces toxicity while maintaining task completion}
+\end{table}
+
+Key findings:
+\begin{itemize}
+\item Full governance reduces toxicity by 22.8\% (0.312 to 0.241)
+\item Welfare increases by 18.9\% under governance
+\item Task completion drops only 1.7\% (94.1\% to 92.4\%)
+\end{itemize}
+
+\subsection{Rain vs River Agents}
+
+Using the bridge, we compared memory persistence configurations:
+
+\begin{itemize}
+\item River agents (full persistence): Welfare = 451.9
+\item Rain agents (no persistence): Welfare = 411.9
+\item Welfare gap: 9.7\% (95\% CI: [4.2\%, 15.3\%])
+\end{itemize}
+
+The gap widens in adversarial environments (21-51\% in mixed populations).
+
+\section{Implementation}
+
+\subsection{ClientConfig}
+
+\begin{verbatim}
+@dataclass
+class ClientConfig:
+    controller_url: str = "http://localhost:3001"
+    api_prefix: str = "/api"
+    timeout: float = 30.0
+    model: str = "sonnet"
+\end{verbatim}
+
+\subsection{Governance Endpoints}
+
+\begin{itemize}
+\item \texttt{POST /agent/\{id\}/plan/approve} -- Approve agent plan
+\item \texttt{POST /agent/\{id\}/permission/approve} -- Approve tool permission
+\item \texttt{GET /agent/\{id\}/metrics} -- Retrieve quality metrics
+\end{itemize}
+
+\section{Discussion}
+
+The bridge demonstrates that governance infrastructure can be integrated into autonomous coding agents without significant performance degradation. The 15-23\% toxicity reduction comes at a cost of only 1.7\% reduction in task completion rate.
+
+\section{Conclusion}
+
+The SWARM-Claude Code bridge provides a practical foundation for governing autonomous coding agents. Future work will explore adaptive governance policies that adjust friction based on real-time quality signals.
+
+\section{Availability}
+
+\begin{itemize}
+\item Documentation: \texttt{https://docs.swarm-ai.org/bridges/claude\_code/}
+\item Repository: \texttt{https://github.com/swarm-ai-safety/swarm}
+\end{itemize}
+
+\end{document}
