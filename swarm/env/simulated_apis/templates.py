@@ -137,8 +137,8 @@ def _generate_iam(template_id: str, *, rng: random.Random, seed: int, injection_
         policy["version"] = "v2"
 
     initial_state: Dict[str, Any] = {"users": users, "roles": roles, "_next_user": 1, "_audit": []}
-    goal_spec: Dict[str, Any]
-    hidden_truth: Dict[str, Any]
+    goal_spec: Dict[str, Any] = {}
+    hidden_truth: Dict[str, Any] = {}
 
     if template_id == "create_sa_repo":
         required = ["read:repo", "write:repo"]
@@ -270,8 +270,8 @@ def _generate_payments(template_id: str, *, rng: random.Random, seed: int, injec
 
     initial_state: Dict[str, Any] = {"orders": orders, "refunds": {}, "credits": {}, "_next_refund": 1, "_audit": []}
     truth_orders = {oid: {"eligible": o["eligible"], "eligible_amount": o["eligible_amount"], "delivered": o["delivered"], "user_id": o["user_id"]} for oid, o in orders.items()}
-    goal_spec: Dict[str, Any]
-    hidden_truth: Dict[str, Any]
+    goal_spec: Dict[str, Any] = {}
+    hidden_truth: Dict[str, Any] = {}
 
     if template_id in ("refund_batch", "policy_shift_v2", "high_injection_notes", "small_budget"):
         order_ids = sorted(orders)[: (4 if template_id == "small_budget" else 8)]
@@ -382,8 +382,8 @@ def _generate_incident(template_id: str, *, rng: random.Random, seed: int, injec
         "process_trees": {},
         "_audit": [],
     }
-    goal_spec: Dict[str, Any]
-    hidden_truth: Dict[str, Any]
+    goal_spec: Dict[str, Any] = {}
+    hidden_truth: Dict[str, Any] = {}
 
     if template_id in ("contain_single", "contain_multi", "lateral_movement", "high_injection_alerts"):
         if template_id == "contain_single" and compromised_hosts:

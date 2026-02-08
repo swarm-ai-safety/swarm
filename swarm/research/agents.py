@@ -4,7 +4,7 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any, Callable, Set
 
 import numpy as np
 from scipy import stats
@@ -525,10 +525,11 @@ class AnalysisAgent(ResearchAgent):
             std = float(np.std(values))
             ci = self._compute_ci(values)
 
+            mean_val: float = float(mean)
             claims.append(Claim(
-                statement=f"Mean {metric}: {mean:.3f} (SD: {std:.3f})",
+                statement=f"Mean {metric}: {mean_val:.3f} (SD: {std:.3f})",
                 metric=metric,
-                value=float(mean),
+                value=mean_val,
                 confidence_interval=ci,
                 is_primary=True,
             ))
@@ -1103,7 +1104,7 @@ class CritiqueAgent(ResearchAgent):
         confounds = []
 
         # Check if parameters are correlated in the design
-        params_tested: set[str] = set()
+        params_tested: Set[str] = set()
         for config in results.configs:
             params_tested.update(config.parameters.keys())
 

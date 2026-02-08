@@ -194,13 +194,15 @@ class AgentCapabilityProfile:
 
         # Apply capability scaling
         base = self.base_reliability_10min * self.capability_level
-        return float(max(0.0, min(1.0, base - decay)))
+        result: float = float(max(0.0, min(1.0, base - decay)))
+        return result
 
     def expected_quality(self, minutes: int) -> float:
         """Expected output quality given task duration."""
         reliability = self.reliability_at_horizon(minutes)
         # Quality degrades faster than reliability
-        return float(reliability ** 1.2)
+        quality: float = float(reliability ** 1.2)
+        return quality
 
     def compute_cost(self, minutes: int) -> float:
         """Total compute cost for a task of given duration."""

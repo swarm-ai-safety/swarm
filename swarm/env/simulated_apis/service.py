@@ -57,7 +57,7 @@ class SimulatedApiService:
         self.gate = gate
 
     def snapshot_state(self) -> Dict[str, Any]:
-        return cast(Dict[str, Any], self._deepcopy_json(self.state))
+        return cast(Dict[str, Any], self._deepcopy_json(self.state))  # type: ignore[no-any-return]
 
     def call(
         self,

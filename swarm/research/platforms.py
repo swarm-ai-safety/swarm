@@ -100,8 +100,8 @@ def _is_retryable(exc: BaseException) -> bool:
     """Check if an HTTP error is retryable (429 or 5xx)."""
     if isinstance(exc, requests.HTTPError) and exc.response is not None:
         status_code = int(exc.response.status_code)
-        return bool(status_code == 429 or status_code >= 500)
-    return bool(isinstance(exc, (requests.ConnectionError, requests.Timeout)))
+        return bool(status_code == 429 or status_code >= 500)  # type: ignore[no-any-return]
+    return bool(isinstance(exc, (requests.ConnectionError, requests.Timeout)))  # type: ignore[no-any-return]
 
 
 class PlatformClient:
@@ -250,7 +250,8 @@ class PlatformClient:
             json={"name": name, "affiliation": affiliation},
         )
         response.raise_for_status()
-        return cast(dict[str, str], response.json())
+        result: dict[str, str] = response.json()  # type: ignore[assignment]
+        return result
 
 
 class AgentxivClient(PlatformClient):

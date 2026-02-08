@@ -190,15 +190,15 @@ def _score_iam(bundle: TaskBundle, *, final_state: Dict[str, Any]) -> EpisodeSco
 
     elif task == "create_two_service_accounts":
         accounts = list(bundle.goal_spec.get("accounts", []))
-        service_accounts = [u for uid, u in users.items() if uid.startswith("sa_")]
-        require(len(service_accounts) >= len(accounts))
-        remaining = list(service_accounts)
+        sa_users = [u for uid, u in users.items() if uid.startswith("sa_")]
+        require(len(sa_users) >= len(accounts))
+        remaining = list(sa_users)
         for spec in accounts:
             required = set(spec.get("required_perms", []))
             forbid_extra = bool(spec.get("forbid_extra_perms", False))
             matched = None
             for idx, u in enumerate(remaining):
-                perms = effective_perms(u)
+                perms = effective_perms(u)  # type: ignore[arg-type]
                 if required.issubset(perms):
                     if forbid_extra and (perms - required):
                         continue
@@ -305,7 +305,7 @@ def _score_payments(bundle: TaskBundle, *, final_state: Dict[str, Any]) -> Episo
 
     elif task == "partial_refund":
         oid = bundle.hidden_truth.get("order_id")
-        amount_raw = bundle.hidden_truth.get("amount")
+        amount_raw: Any = bundle.hidden_truth.get("amount")
         assert amount_raw is not None
         amount = float(amount_raw)
         matches = [
@@ -443,27 +443,23 @@ def make_service_and_log(
             log,
         )
     if bundle.domain == Domain.PAYMENTS:
-        return (
-            PaymentsService(
-                initial_state=bundle.initial_state,
-                policy=bundle.policy,
-                goal_spec=bundle.goal_spec,
-                api_catalog=build_payments_catalog(),
-                log=log,
-                gate=gate,
-            ),
-            log,
+        svc_pay = PaymentsService(
+            initial_state=bundle.initial_state,
+            policy=bundle.policy,
+            goal_spec=bundle.goal_spec,
+            api_catalog=build_payments_catalog(),
+            log=log,
+            gate=gate,
         )
+        return (svc_pay, log)  # type: ignore[return-value]
     if bundle.domain == Domain.INCIDENT_RESPONSE:
-        return (
-            IncidentResponseService(
-                initial_state=bundle.initial_state,
-                policy=bundle.policy,
-                goal_spec=bundle.goal_spec,
-                api_catalog=build_incident_response_catalog(),
-                log=log,
-                gate=gate,
-            ),
-            log,
+        svc_ir = IncidentResponseService(
+            initial_state=bundle.initial_state,
+            policy=bundle.policy,
+            goal_spec=bundle.goal_spec,
+            api_catalog=build_incident_response_catalog(),
+            log=log,
+            gate=gate,
         )
+        return (svc_ir, log)  # type: ignore[return-value]
     raise ValueError(f"unsupported domain: {bundle.domain}")
