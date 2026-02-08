@@ -2,11 +2,30 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Recommended workflow (SWARM)
+
+This repo is set up as a **Claude Code template** for SWARM-style research work:
+
+- Custom slash commands live in `.claude/commands/` (e.g. `/run_scenario`, `/sweep`, `/plot`, `/red_team`).
+- Research-role specialist agents live in `.claude/agents/`.
+- Optional git hygiene hooks live in `.claude/hooks/` (install via `/install_hooks`).
+- MCP integrations are configured in `.mcp.json` (safe-by-default placeholders; no secrets committed).
+
+### Run artifacts
+
+Prefer writing experiment outputs to a self-contained run folder:
+
+- `runs/<timestamp>_<scenario>_seed<seed>/history.json` (JSON export)
+- `runs/<timestamp>_<scenario>_seed<seed>/csv/` (CSV exports)
+- `runs/<...>/plots/` (generated plots)
+
+The legacy `logs/` directory remains for scenario-declared outputs, but `runs/` is the canonical “reproduce from PR” format.
+
 ## Commands
 
 ```bash
 # Install for development
-python -m pip install -e ".[dev]"
+python -m pip install -e ".[dev,runtime]"
 
 # Run all tests (use python -m to ensure correct environment)
 python -m pytest tests/ -v
@@ -18,13 +37,19 @@ python -m pytest tests/test_payoff.py -v
 python -m pytest tests/test_payoff.py::TestPayoffInitiator::test_payoff_linear_in_p -v
 
 # Run with coverage
-python -m pytest tests/ --cov=src --cov-report=html
+python -m pytest tests/ --cov=swarm --cov-report=html
 
 # Lint
-ruff check src/ tests/
+ruff check swarm/ tests/
 
 # Type check
-python -m mypy src/
+python -m mypy swarm/
+
+# Run a scenario (CLI)
+python -m swarm run scenarios/baseline.yaml --seed 42 --epochs 10 --steps 10
+
+# Run a scenario (example runner)
+python examples/run_scenario.py scenarios/baseline.yaml
 ```
 
 ## Architecture
@@ -41,21 +66,21 @@ Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine �
 
 ### Key Components
 
-**`src/core/proxy.py`** - `ProxyComputer` converts observable signals (task_progress, rework_count, verifier_rejections, engagement) into `v_hat ∈ [-1, +1]` using weighted combination, then applies calibrated sigmoid to get `p = P(v = +1)`.
+**`swarm/core/proxy.py`** - `ProxyComputer` converts observable signals (task_progress, rework_count, verifier_rejections, engagement) into `v_hat ∈ [-1, +1]` using weighted combination, then applies calibrated sigmoid to get `p = P(v = +1)`.
 
-**`src/core/payoff.py`** - `SoftPayoffEngine` implements payoffs using soft labels:
+**`swarm/core/payoff.py`** - `SoftPayoffEngine` implements payoffs using soft labels:
 - `S_soft = p * s_plus - (1-p) * s_minus` (expected surplus)
 - `E_soft = (1-p) * h` (expected harm externality)
 - Payoffs include surplus share, transfers, governance costs, externality costs, and reputation
 
-**`src/metrics/soft_metrics.py`** - `SoftMetrics` computes probabilistic metrics:
+**`swarm/metrics/soft_metrics.py`** - `SoftMetrics` computes probabilistic metrics:
 - Toxicity: `E[1-p | accepted]`
 - Quality gap: `E[p | accepted] - E[p | rejected]` (negative = adverse selection)
 - Conditional loss: selection effect on payoffs
 
-**`src/metrics/reporters.py`** - `MetricsReporter` provides dual reporting of soft (probabilistic) and hard (threshold-based) metrics for comparison.
+**`swarm/metrics/reporters.py`** - `MetricsReporter` provides dual reporting of soft (probabilistic) and hard (threshold-based) metrics for comparison.
 
-**`src/logging/event_log.py`** - Append-only JSONL logger for simulation replay. Can reconstruct `SoftInteraction` objects from event stream.
+**`swarm/logging/event_log.py`** - Append-only JSONL logger for simulation replay. Can reconstruct `SoftInteraction` objects from event stream.
 
 ### Test Fixtures
 
@@ -71,3 +96,9 @@ Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine �
 - **v_hat**: Raw proxy score before sigmoid, in `[-1, +1]`
 - **Adverse selection**: When low-quality interactions are preferentially accepted (quality_gap < 0)
 - **Externality internalization**: ρ parameters control how much agents bear cost of ecosystem harm
+
+## Safety / invariants (do not break)
+
+- `p` must remain in `[0, 1]` everywhere it is surfaced or logged.
+- Event logs (`*.jsonl`) are append-only and should remain replayable.
+- Runs should be reproducible from: scenario YAML + seed + exported history/CSVs.

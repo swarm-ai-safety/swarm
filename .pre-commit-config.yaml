@@ -12,4 +12,4 @@ repos:
         additional_dependencies: [numpy>=1.24, pydantic>=2.0]
         args: [--ignore-missing-imports]
         pass_filenames: false
-        entry: mypy src/
+        entry: mypy swarm/

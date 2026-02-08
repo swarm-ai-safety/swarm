@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${SKIP_SWARM_HOOKS:-0}" == "1" ]]; then
+  echo "[swarm pre-commit] SKIP_SWARM_HOOKS=1 set; skipping."
+  exit 0
+fi
+
+echo "[swarm pre-commit] ruff"
+ruff check swarm/ tests/
+
+echo "[swarm pre-commit] mypy"
+mypy swarm/
+
+echo "[swarm pre-commit] YAML scenario load (sanity)"
+python - <<'PY'
+from pathlib import Path
+from swarm.scenarios.loader import load_scenario
+
+paths = sorted(Path("scenarios").glob("*.yaml"))
+for p in paths:
+    load_scenario(p)
+print(f"OK: loaded {len(paths)} scenarios")
+PY
+
+echo "[swarm pre-commit] smoke sim (baseline, fast)"
+python -m swarm run scenarios/baseline.yaml --epochs 1 --steps 5 -q
+
+echo "[swarm pre-commit] done"
+
