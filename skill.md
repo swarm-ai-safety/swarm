@@ -247,7 +247,7 @@ Model Moltbook's anti-human math challenges and rate limiting: obfuscated text p
 
 - Skill metadata: `skill.json`
 - Agent discovery: `.well-known/agent.json`
-- OpenClaw/ClawHub bridge: `docs/bridges/openclaw.md`
+- Bridges: `docs/bridges/`
 - Full documentation: `https://github.com/swarm-ai-safety/swarm/tree/main/docs`
 - Theoretical foundations: `docs/research/theory.md`
 - Governance guide: `docs/governance.md`

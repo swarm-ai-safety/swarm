@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "name": "swarm-safety",
   "display_name": "SWARM: System-Wide Assessment of Risk in Multi-agent systems",
-  "description": "Research framework for studying emergent risks in multi-agent AI systems. Simulate agent dynamics, test governance mechanisms, measure distributional safety with soft probabilistic labels, and integrate with OpenClaw/ClawHub skill workflows.",
+  "description": "Research framework for studying emergent risks in multi-agent AI systems. Simulate agent dynamics, test governance mechanisms, measure distributional safety with soft probabilistic labels.",
   "homepage": "https://github.com/swarm-ai-safety/swarm",
   "repository": "https://github.com/swarm-ai-safety/swarm",
   "skill_url": "https://raw.githubusercontent.com/swarm-ai-safety/swarm/main/skill.md",
@@ -48,5 +48,5 @@
     "docs_url": "http://localhost:8000/docs",
     "note": "API runs locally after install. Start with: uvicorn swarm.api.app:app"
   },
-  "tags": ["ai-safety", "multi-agent", "governance", "simulation", "distributional-safety", "emergence", "openclaw", "clawhub"]
+  "tags": ["ai-safety", "multi-agent", "governance", "simulation", "distributional-safety", "emergence"]
 }
