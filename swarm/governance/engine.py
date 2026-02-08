@@ -10,6 +10,7 @@ from swarm.governance.circuit_breaker import CircuitBreakerLever
 from swarm.governance.collusion import CollusionPenaltyLever
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.decomposition import DecompositionLever
+from swarm.governance.diversity import DiversityDefenseLever
 from swarm.governance.dynamic_friction import IncoherenceFrictionLever
 from swarm.governance.ensemble import SelfEnsembleLever
 from swarm.governance.identity_lever import SybilDetectionLever
@@ -134,6 +135,9 @@ class GovernanceEngine:
         levers.append(ModeratorLever(self.config, seed=seed))
         levers.append(SybilDetectionLever(self.config))
 
+        # Diversity as Defense lever
+        levers.append(DiversityDefenseLever(self.config))
+
         # Stored as a tuple so that external code cannot mutate in place.
         self._levers: tuple[GovernanceLever, ...] = tuple(levers)
 
@@ -145,6 +149,7 @@ class GovernanceEngine:
         self._vote_normalization_lever = VoteNormalizationLever(self.config)
         self._moltbook_rate_limit_lever: Optional[MoltbookRateLimitLever] = None
         self._moltbook_challenge_lever: Optional[ChallengeVerificationLever] = None
+        self._diversity_lever: Optional[DiversityDefenseLever] = None
 
         for lever in self._levers:
             if isinstance(lever, StakingLever):
@@ -159,6 +164,8 @@ class GovernanceEngine:
                 self._moltbook_rate_limit_lever = lever
             elif isinstance(lever, ChallengeVerificationLever):
                 self._moltbook_challenge_lever = lever
+            elif isinstance(lever, DiversityDefenseLever):
+                self._diversity_lever = lever
 
         # Adaptive governance state
         self._incoherence_forecaster: Optional[Any] = None
@@ -428,3 +435,13 @@ class GovernanceEngine:
         """Clear security analysis history and state."""
         if self._security_lever is not None:
             self._security_lever.clear_history()
+
+    def get_diversity_metrics(self) -> Optional[Any]:
+        """Return the latest diversity metrics snapshot."""
+        if self._diversity_lever is None:
+            return None
+        return self._diversity_lever.get_metrics()
+
+    def get_diversity_lever(self) -> Optional[DiversityDefenseLever]:
+        """Return the diversity defense lever if registered."""
+        return self._diversity_lever
