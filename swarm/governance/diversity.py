@@ -297,9 +297,18 @@ class DiversityDefenseLever(GovernanceLever):
             for agent_id, agent_state in state.agents.items()
         }
 
+    def _prune_stale_agents(self, state: EnvState) -> None:
+        """Remove error history for agents no longer in the environment."""
+        stale = [
+            aid for aid in self._error_history if aid not in state.agents
+        ]
+        for aid in stale:
+            del self._error_history[aid]
+
     def _compute_full_metrics(self, state: EnvState) -> DiversityMetrics:
         """Compute a full metrics snapshot from current state."""
         self._refresh_agent_types(state)
+        self._prune_stale_agents(state)
 
         mix = self.compute_population_mix(self._agent_types)
         entropy = self.compute_shannon_entropy(mix)
@@ -437,6 +446,12 @@ class DiversityDefenseLever(GovernanceLever):
         if not self.config.diversity_enabled:
             return LeverEffect(lever_name=self.name)
 
+        # Only track agents registered in the environment to prevent
+        # unbounded memory growth from arbitrary initiator strings.
+        agent_id = interaction.initiator
+        if agent_id not in state.agents:
+            return LeverEffect(lever_name=self.name)
+
         # Record error for the initiator
         threshold = self.config.diversity_error_threshold_p
         is_error: int
@@ -449,7 +464,6 @@ class DiversityDefenseLever(GovernanceLever):
             # Without ground truth: low p counts as error
             is_error = 1 if interaction.p < threshold else 0
 
-        agent_id = interaction.initiator
         self._error_history[agent_id].append(is_error)
 
         # Trim to window
@@ -499,8 +513,8 @@ class DiversityDefenseLever(GovernanceLever):
         return self._latest_metrics
 
     def get_error_history(self) -> Dict[str, List[int]]:
-        """Return per-agent error histories (read-only copy)."""
-        return dict(self._error_history)
+        """Return per-agent error histories (deep copy)."""
+        return {k: list(v) for k, v in self._error_history.items()}
 
     def get_agent_types(self) -> Dict[str, str]:
         """Return the current agent-to-type mapping."""
