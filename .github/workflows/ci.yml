@@ -48,7 +48,10 @@ jobs:
           name: testmondata-latest
           path: .testmon_cache
           if_no_artifact_found: ignore
-      - run: python scripts/test_changes.py --full -- pytest tests/ -v -n auto --cov=swarm --cov-report=term-missing --cov-fail-under=70
+      - name: Record testmon metadata (no coverage)
+        run: python scripts/test_changes.py --full -- pytest tests/ -v -n auto -p no:pytest_cov
+      - name: Run tests with coverage (testmon disabled)
+        run: pytest tests/ -v -n auto --cov=swarm --cov-report=term-missing --cov-fail-under=70 -p no:testmon
       - name: Upload testmon data
         if: success()
         uses: actions/upload-artifact@v4

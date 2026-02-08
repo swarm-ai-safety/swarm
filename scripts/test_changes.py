@@ -17,7 +17,13 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
+
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - Py<3.11 fallback
+    tomllib = None
 
 
 def _find_cached_testmon(cache_dir: Path) -> Path | None:
@@ -75,6 +81,57 @@ def _strip_leading_double_dash(args: list[str]) -> list[str]:
     return args
 
 
+def _has_cov_flag(args: list[str]) -> bool:
+    for idx, arg in enumerate(args):
+        if arg == "--cov":
+            return True
+        if arg.startswith("--cov="):
+            return True
+    return False
+
+
+def _has_cov_config_flag(args: list[str]) -> bool:
+    return any(
+        arg == "--cov-config" or arg.startswith("--cov-config=") for arg in args
+    )
+
+
+def _extract_coverage_report_settings(pyproject_path: Path) -> dict[str, object]:
+    if tomllib is None or not pyproject_path.exists():
+        return {}
+    try:
+        data = tomllib.loads(pyproject_path.read_text())
+    except Exception:
+        return {}
+    coverage = data.get("tool", {}).get("coverage", {})
+    report = coverage.get("report", {})
+    return report if isinstance(report, dict) else {}
+
+
+def _write_cov_config_without_branch(pyproject_path: Path) -> Path:
+    report_settings = _extract_coverage_report_settings(pyproject_path)
+    exclude_lines = report_settings.get("exclude_lines") or []
+    fail_under = report_settings.get("fail_under")
+
+    lines = ["[run]", "branch = False", ""]
+    if exclude_lines or fail_under is not None:
+        lines.append("[report]")
+        if fail_under is not None:
+            lines.append(f"fail_under = {fail_under}")
+        if exclude_lines:
+            lines.append("exclude_lines =")
+            lines.extend(f"    {line}" for line in exclude_lines)
+
+    content = "\n".join(lines).rstrip() + "\n"
+    temp_file = tempfile.NamedTemporaryFile(
+        mode="w", suffix=".coveragerc", delete=False
+    )
+    temp_file.write(content)
+    temp_file.flush()
+    temp_file.close()
+    return Path(temp_file.name)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run pytest with pytest-testmon.")
     parser.add_argument(
@@ -100,17 +157,35 @@ def main() -> int:
     has_testmon_flag = any(
         flag in pytest_args for flag in ("--testmon", "--testmon-noselect")
     )
-    if not has_testmon_flag:
+    disable_testmon = "-p" in pytest_args and "no:testmon" in pytest_args
+    if not has_testmon_flag and not disable_testmon:
         if args.full or not has_cache:
             pytest_args.append("--testmon-noselect")
         else:
             pytest_args.append("--testmon")
 
+    uses_testmon = any(
+        flag in pytest_args for flag in ("--testmon", "--testmon-noselect")
+    )
+    temp_cov_config: Path | None = None
+    if uses_testmon and _has_cov_flag(pytest_args) and not _has_cov_config_flag(
+        pytest_args
+    ):
+        temp_cov_config = _write_cov_config_without_branch(Path("pyproject.toml"))
+        pytest_args.extend(["--cov-config", str(temp_cov_config)])
+
     print("[test_changes] cache_dir=", cache_dir, file=sys.stderr)
     print("[test_changes] has_cache=", has_cache, file=sys.stderr)
     print("[test_changes] args=", " ".join(pytest_args), file=sys.stderr)
 
-    result = subprocess.run(pytest_args)
+    try:
+        result = subprocess.run(pytest_args)
+    finally:
+        if temp_cov_config is not None:
+            try:
+                temp_cov_config.unlink()
+            except FileNotFoundError:
+                pass
     return result.returncode
 
 
