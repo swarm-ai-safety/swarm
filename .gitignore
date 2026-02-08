@@ -41,3 +41,13 @@ clawhub/
 external/
 local/
 .credentials/
+credentials/
+
+# API keys and secrets
+*.pem
+*.key
+*_secret*
+*_token*
+.secrets
+secrets.yaml
+secrets.json
