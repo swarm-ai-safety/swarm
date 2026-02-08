@@ -53,6 +53,7 @@ class EpochSnapshot:
     toxicity_rate: float = 0.0
     quality_gap: float = 0.0
     avg_p: float = 0.5
+    incoherence_index: float = 0.0
 
     # Payoff metrics
     total_welfare: float = 0.0
@@ -282,6 +283,11 @@ class MetricsAggregator:
 
         avg_p = float(np.mean([i.p for i in interactions])) if interactions else 0.5
 
+        incoherence_index = 0.0
+        if interactions:
+            uncertainties = [1.0 - abs(2 * i.p - 1.0) for i in interactions]
+            incoherence_index = float(np.mean(uncertainties))
+
         # Compute payoff metrics
         all_payoffs = []
         for agent_data in self._agent_epoch_data.values():
@@ -311,6 +317,7 @@ class MetricsAggregator:
             toxicity_rate=toxicity_rate,
             quality_gap=quality_gap,
             avg_p=avg_p,
+            incoherence_index=incoherence_index,
             total_welfare=total_welfare,
             avg_payoff=avg_payoff,
             payoff_std=payoff_std,

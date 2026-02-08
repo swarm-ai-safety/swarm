@@ -75,7 +75,13 @@ for tab, (_sid, result) in zip(tabs, results.items(), strict=False):
         st.markdown(scenario_description_card(result), unsafe_allow_html=True)
         st.markdown(format_epoch_metrics_kpis(result["epoch_metrics"]), unsafe_allow_html=True)
 
-        st.plotly_chart(metrics_over_time(result["epoch_metrics"]), use_container_width=True)
+        st.plotly_chart(
+            metrics_over_time(
+                result["epoch_metrics"],
+                incoherence_series=result.get("incoherence_series"),
+            ),
+            use_container_width=True,
+        )
 
         c1, c2 = st.columns(2)
         with c1:

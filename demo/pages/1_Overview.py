@@ -57,7 +57,13 @@ from demo.utils.charts import (  # noqa: E402, I001
 )
 
 st.subheader("Metrics Over Time")
-st.plotly_chart(metrics_over_time(result["epoch_metrics"]), use_container_width=True)
+st.plotly_chart(
+    metrics_over_time(
+        result["epoch_metrics"],
+        incoherence_series=result.get("incoherence_series"),
+    ),
+    use_container_width=True,
+)
 
 st.subheader("Agent Summary")
 col1, col2, col3 = st.columns(3)
@@ -91,13 +97,16 @@ with st.expander("Raw epoch metrics"):
     import pandas as pd
 
     rows = []
+    incoherence = result.get("incoherence_series") or []
     for i, m in enumerate(result["epoch_metrics"]):
         accepted = m.accepted_interactions
         total = m.total_interactions
+        incoh = incoherence[i] if i < len(incoherence) else 0.0
         rows.append({
             "Epoch": i,
             "Toxicity": round(m.toxicity_rate, 4),
             "Quality Gap": round(m.quality_gap, 4),
+            "Incoherence": round(incoh, 4),
             "Total Welfare": round(m.total_welfare, 2),
             "Acceptance Rate": round(accepted / total, 3) if total > 0 else 0,
         })

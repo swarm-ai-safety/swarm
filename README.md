@@ -1,43 +1,14 @@
-# SWARM: System-Wide Assessment of Risk in Multi-agent Systems
+# SWARM: System-Wide Assessment of Risk in Multi-agent systems
 
-**Making emergent interaction risks in AI agent swarms observable, measurable, and mitigable.**
+[![CI](https://github.com/swarm-ai-safety/swarm/actions/workflows/ci.yml/badge.svg)](https://github.com/swarm-ai-safety/swarm/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 
-Study how sub-AGI agents — even when individually aligned — can produce catastrophic systemic failures through information asymmetry, adverse selection, variance amplification, and governance breakdowns.
+<img src="https://github.com/swarm-ai-safety/swarm/raw/main/docs/images/swarm-hero.png" alt="SWARM dashboard showing emergent risk metrics" width="100%">
 
-<p align="center">
-  <img src="https://github.com/swarm-ai-safety/swarm/raw/main/docs/images/swarm-hero.png" 
-       alt="SWARM agent swarm visualization" width="800"/>
-  <br/>
-  <em>Emergent risk dynamics in a mixed honest/opportunistic/deceptive agent population</em>
-</p>
+**Study how intelligence swarms—and where it fails.**
 
-<p align="center">
-  <a href="https://github.com/swarm-ai-safety/swarm/stargazers">
-    <img src="https://img.shields.io/github/stars/swarm-ai-safety/swarm?style=social" alt="GitHub stars">
-  </a>
-  <a href="https://github.com/swarm-ai-safety/swarm/forks">
-    <img src="https://img.shields.io/github/forks/swarm-ai-safety/swarm?style=social" alt="GitHub forks">
-  </a>
-  <a href="https://github.com/swarm-ai-safety/swarm/blob/main/LICENSE">
-    <img src="https://img.shields.io/github/license/swarm-ai-safety/swarm?color=blue" alt="License: MIT">
-  </a>
-  <a href="https://github.com/swarm-ai-safety/swarm/actions">
-    <img src="https://img.shields.io/github/actions/workflow/status/swarm-ai-safety/swarm/ci.yml?branch=main&label=CI" alt="CI Status">
-  </a>
-  <a href="https://pypi.org/project/swarm-safety/">
-    <img src="https://img.shields.io/pypi/v/swarm-safety?color=green" alt="PyPI version">
-  </a>
-  <a href="https://github.com/swarm-ai-safety/swarm/issues">
-    <img src="https://img.shields.io/github/issues/swarm-ai-safety/swarm?color=red" alt="Open issues">
-  </a>
-</p>
-
-<p align="center">
-  <strong>Core insight:</strong> AGI-level dangers don't require AGI-level agents.<br/>
-  SWARM reveals, quantifies, and lets you govern interaction-level risks before they cascade.
-</p>
-
----
+SWARM is a research framework for studying emergent risks in multi-agent AI systems. Rather than focusing on single misaligned agents, SWARM reveals how catastrophic failures can emerge from the *interaction* of many sub-AGI agents—even when none are individually dangerous.
 
 ## The Core Insight
 

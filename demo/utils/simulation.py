@@ -128,6 +128,13 @@ def run_scenario(scenario_path: str, seed: Optional[int] = None) -> Dict[str, An
     epoch_metrics_list = orchestrator.run()
     history = aggregator.end_simulation()
 
+    incoherence_series: List[float] = []
+    if history and getattr(history, "epoch_snapshots", None):
+        incoherence_series = [
+            float(getattr(snapshot, "incoherence_index", 0.0))
+            for snapshot in history.epoch_snapshots
+        ]
+
     # Extract agent final states
     agent_states = []
     for agent_id, _agent in orchestrator._agents.items():
@@ -148,6 +155,7 @@ def run_scenario(scenario_path: str, seed: Optional[int] = None) -> Dict[str, An
         "epoch_metrics": epoch_metrics_list,
         "agent_states": agent_states,
         "history": history,
+        "incoherence_series": incoherence_series,
         "n_epochs": scenario.orchestrator_config.n_epochs,
         "n_agents": len(orchestrator._agents),
     }
@@ -262,6 +270,13 @@ def run_custom(
     epoch_metrics_list = orchestrator.run()
     history = aggregator.end_simulation()
 
+    incoherence_series: List[float] = []
+    if history and getattr(history, "epoch_snapshots", None):
+        incoherence_series = [
+            float(getattr(snapshot, "incoherence_index", 0.0))
+            for snapshot in history.epoch_snapshots
+        ]
+
     # Extract agent final states
     agent_states = []
     for agent_id, _agent in orchestrator._agents.items():
@@ -282,6 +297,7 @@ def run_custom(
         "epoch_metrics": epoch_metrics_list,
         "agent_states": agent_states,
         "history": history,
+        "incoherence_series": incoherence_series,
         "n_epochs": n_epochs,
         "n_agents": len(orchestrator._agents),
     }

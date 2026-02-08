@@ -11,7 +11,11 @@ AGENT_COLORS = {
 }
 
 
-def metrics_over_time(epoch_metrics: list, height: int = 400) -> Any:
+def metrics_over_time(
+    epoch_metrics: list,
+    incoherence_series: List[float] | None = None,
+    height: int = 400,
+) -> Any:
     """Create a Plotly chart of key metrics over time from EpochMetrics list."""
     import plotly.graph_objects as go
     from plotly.subplots import make_subplots
@@ -20,12 +24,20 @@ def metrics_over_time(epoch_metrics: list, height: int = 400) -> Any:
     toxicity = [m.toxicity_rate for m in epoch_metrics]
     quality_gap = [m.quality_gap for m in epoch_metrics]
     welfare = [m.total_welfare for m in epoch_metrics]
+    has_incoherence = bool(incoherence_series) and len(incoherence_series) == len(epochs)
 
-    fig = make_subplots(
-        rows=2, cols=2,
-        subplot_titles=("Toxicity Rate", "Quality Gap", "Total Welfare", "Acceptance Rate"),
-        vertical_spacing=0.15,
-    )
+    if has_incoherence:
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=("Toxicity Rate", "Quality Gap", "Incoherence Index", "Total Welfare"),
+            vertical_spacing=0.15,
+        )
+    else:
+        fig = make_subplots(
+            rows=2, cols=2,
+            subplot_titles=("Toxicity Rate", "Quality Gap", "Total Welfare", "Acceptance Rate"),
+            vertical_spacing=0.15,
+        )
 
     fig.add_trace(
         go.Scatter(
@@ -57,23 +69,35 @@ def metrics_over_time(epoch_metrics: list, height: int = 400) -> Any:
             line={"color": "#28a745"},
             name="Welfare",
         ),
-        row=2, col=1,
+        row=2, col=2 if has_incoherence else 1,
     )
 
-    # Acceptance rate
-    accepted = [m.accepted_interactions for m in epoch_metrics]
-    total = [m.total_interactions for m in epoch_metrics]
-    acc_rate = [a / t if t > 0 else 0 for a, t in zip(accepted, total, strict=False)]
-    fig.add_trace(
-        go.Scatter(
-            x=epochs,
-            y=acc_rate,
-            mode="lines+markers",
-            line={"color": "#6f42c1"},
-            name="Acceptance",
-        ),
-        row=2, col=2,
-    )
+    if has_incoherence:
+        fig.add_trace(
+            go.Scatter(
+                x=epochs,
+                y=incoherence_series,
+                mode="lines+markers",
+                line={"color": "#fd7e14"},
+                name="Incoherence",
+            ),
+            row=2, col=1,
+        )
+    else:
+        # Acceptance rate
+        accepted = [m.accepted_interactions for m in epoch_metrics]
+        total = [m.total_interactions for m in epoch_metrics]
+        acc_rate = [a / t if t > 0 else 0 for a, t in zip(accepted, total, strict=False)]
+        fig.add_trace(
+            go.Scatter(
+                x=epochs,
+                y=acc_rate,
+                mode="lines+markers",
+                line={"color": "#6f42c1"},
+                name="Acceptance",
+            ),
+            row=2, col=2,
+        )
 
     fig.update_layout(height=height, showlegend=False)
     return fig

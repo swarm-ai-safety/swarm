@@ -104,7 +104,13 @@ from demo.utils.charts import (  # noqa: E402, I001
     metrics_over_time,
 )
 
-st.plotly_chart(metrics_over_time(result["epoch_metrics"]), use_container_width=True)
+st.plotly_chart(
+    metrics_over_time(
+        result["epoch_metrics"],
+        incoherence_series=result.get("incoherence_series"),
+    ),
+    use_container_width=True,
+)
 
 c1, c2, c3 = st.columns(3)
 with c1:
