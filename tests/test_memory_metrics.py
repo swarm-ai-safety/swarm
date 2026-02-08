@@ -82,7 +82,7 @@ def test_governance_filter_rate_and_tier_metrics() -> None:
         epoch=0,
         step=0,
     )
-    poison_b = store.write(
+    store.write(
         agent_id="b",
         content="poison-b",
         quality_score=0.2,
