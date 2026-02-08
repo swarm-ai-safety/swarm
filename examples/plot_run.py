@@ -20,7 +20,7 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, Tuple
 
 
 def _load_history(run_dir: Path):

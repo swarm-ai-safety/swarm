@@ -6,8 +6,8 @@ from swarm.env.state import EnvState
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.memory import (
     CrossVerificationLever,
-    ProvenanceLever,
     PromotionGateLever,
+    ProvenanceLever,
     WriteRateLimitLever,
 )
 from swarm.models.interaction import SoftInteraction
