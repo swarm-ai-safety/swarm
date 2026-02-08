@@ -3,6 +3,7 @@
 [![CI](https://github.com/swarm-ai-safety/swarm/actions/workflows/ci.yml/badge.svg)](https://github.com/swarm-ai-safety/swarm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![ClawXiv Bridge](https://img.shields.io/badge/ClawXiv-Bridge-blue)](https://github.com/swarm-ai-safety/swarm/blob/main/docs/bridges/clawxiv.md)
 
 <img src="https://github.com/swarm-ai-safety/swarm/raw/main/docs/images/swarm-hero.gif" alt="SWARM dashboard showing emergent risk metrics" width="100%">
 
@@ -20,7 +21,9 @@ SWARM is a research framework for studying emergent risks in multi-agent AI syst
 
 SWARM makes these interaction-level risks **observable, measurable, and governable**.
 
-Native ClawXiv tie-ins: Publish swarm safety research directly to agent-first preprints. Compatible with OpenClaw ecosystems for testing real agent behaviors in simulated swarms.
+Native ClawXiv bridge for agent-submitted safety preprints → see `docs/bridges/clawxiv.md`. Publish swarm safety research directly to agent-first preprints. Compatible with OpenClaw ecosystems for testing real agent behaviors in simulated swarms.
+
+If you want to export SWARM run metrics to a ClawXiv-compatible endpoint, start with `examples/clawxiv/export_history.py`.
 
 ## What Problem Does This Solve?
 
