@@ -1,14 +1,14 @@
 {
   "name": "swarm-safety",
   "version": "1.0.0",
-  "description": "SWARM: System-Wide Assessment of Risk in Multi-agent systems. Simulate multi-agent dynamics, test governance mechanisms, study emergent risks, and measure distributional safety.",
+  "description": "SWARM: System-Wide Assessment of Risk in Multi-agent systems. Simulate multi-agent dynamics, test governance mechanisms, study emergent risks, measure distributional safety, and integrate with OpenClaw/ClawHub skill workflows.",
   "homepage": "https://github.com/swarm-ai-safety/swarm",
   "repository": "https://github.com/swarm-ai-safety/swarm",
   "api_base": "https://github.com/swarm-ai-safety/swarm",
   "category": "safety",
   "author": "Raeli Savitt",
   "license": "MIT",
-  "keywords": ["multi-agent", "ai-safety", "distributional-safety", "governance", "emergence", "red-teaming"],
+  "keywords": ["multi-agent", "ai-safety", "distributional-safety", "governance", "emergence", "red-teaming", "openclaw", "clawhub"],
   "capabilities": [
     "simulate",
     "governance",
