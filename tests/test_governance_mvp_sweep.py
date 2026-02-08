@@ -10,6 +10,8 @@ from swarm.governance.moderator_lever import ModeratorLever
 from swarm.governance.transparency import TransparencyLever
 from swarm.models.interaction import SoftInteraction
 
+pytestmark = pytest.mark.slow
+
 # ── TransparencyLever Tests ──────────────────────────────────────────────
 
 

@@ -14,6 +14,8 @@ from swarm.analysis import (
 )
 from swarm.scenarios import load_scenario
 
+pytestmark = pytest.mark.slow
+
 
 @pytest.fixture
 def base_scenario():
