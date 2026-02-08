@@ -613,6 +613,92 @@ class TestDiversityLeverClearHistory:
 
 
 # ---------------------------------------------------------------------------
+# Security hardening
+# ---------------------------------------------------------------------------
+
+
+class TestDiversityLeverSecurity:
+    """Tests for security hardening."""
+
+    def test_unknown_agent_id_ignored(self):
+        """Interactions from agents not in EnvState must not create entries."""
+        config = GovernanceConfig(
+            diversity_enabled=True,
+            diversity_disagreement_tau=1.0,
+        )
+        lever = DiversityDefenseLever(config)
+        state = _make_diverse_state()
+
+        # "phantom" is not in state.agents
+        effect = lever.on_interaction(
+            SoftInteraction(initiator="phantom", p=0.3), state
+        )
+
+        assert "phantom" not in lever.get_error_history()
+        assert effect.cost_a == 0.0
+
+    def test_many_unknown_agents_no_memory_growth(self):
+        """Flood of unknown agent IDs must not grow internal dict."""
+        config = GovernanceConfig(
+            diversity_enabled=True,
+            diversity_disagreement_tau=1.0,
+        )
+        lever = DiversityDefenseLever(config)
+        state = _make_diverse_state()
+
+        for i in range(1000):
+            lever.on_interaction(
+                SoftInteraction(initiator=f"fake_{i}", p=0.3), state
+            )
+
+        assert len(lever.get_error_history()) == 0
+
+    def test_get_error_history_returns_deep_copy(self):
+        """Mutating the returned history must not affect internal state."""
+        config = GovernanceConfig(
+            diversity_enabled=True,
+            diversity_disagreement_tau=1.0,
+        )
+        lever = DiversityDefenseLever(config)
+        state = _make_diverse_state()
+
+        lever.on_interaction(
+            SoftInteraction(initiator="h1", p=0.3), state
+        )
+
+        history = lever.get_error_history()
+        history["h1"].append(999)
+        history["injected"] = [1, 2, 3]
+
+        internal = lever.get_error_history()
+        assert 999 not in internal["h1"]
+        assert "injected" not in internal
+
+    def test_stale_agents_pruned_on_epoch_start(self):
+        """Agents removed from EnvState should be pruned from history."""
+        config = GovernanceConfig(
+            diversity_enabled=True,
+            diversity_rho_max=1.0,
+            diversity_entropy_min=0.0,
+        )
+        lever = DiversityDefenseLever(config)
+        state = _make_diverse_state()
+
+        # Record error for h1
+        lever.on_interaction(
+            SoftInteraction(initiator="h1", p=0.3), state
+        )
+        assert "h1" in lever.get_error_history()
+
+        # Remove h1 from environment
+        del state.agents["h1"]
+
+        # Epoch start should prune stale key
+        lever.on_epoch_start(state, epoch=1)
+        assert "h1" not in lever.get_error_history()
+
+
+# ---------------------------------------------------------------------------
 # Engine integration
 # ---------------------------------------------------------------------------
 
