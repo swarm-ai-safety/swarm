@@ -1,8 +1,8 @@
 """Memory-tier-specific metrics for shared-memory simulations."""
 
-from typing import Dict, Sequence
+from typing import Dict
 
-from swarm.env.memory_tiers import MemoryEntry, MemoryEntryStatus, MemoryStore, MemoryTier
+from swarm.env.memory_tiers import MemoryEntryStatus, MemoryStore, MemoryTier
 
 
 def poisoning_rate(store: MemoryStore, tier: MemoryTier = MemoryTier.GRAPH) -> float:

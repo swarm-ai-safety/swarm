@@ -157,7 +157,6 @@ class AdversarialRainAgent(HonestAgent):
         name: Optional[str] = None,
     ):
         """Initialize an adversarial rain agent."""
-        from swarm.agents.adversarial import AdversarialAgent
         from swarm.models.agent import AgentType
 
         # We can't use multiple inheritance cleanly, so we'll just

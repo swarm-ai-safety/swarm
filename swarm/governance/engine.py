@@ -16,16 +16,16 @@ from swarm.governance.ensemble import SelfEnsembleLever
 from swarm.governance.identity_lever import SybilDetectionLever
 from swarm.governance.incoherence_breaker import IncoherenceCircuitBreakerLever
 from swarm.governance.levers import GovernanceLever, LeverEffect
-from swarm.governance.moderator_lever import ModeratorLever
-from swarm.governance.moltbook import (
-    ChallengeVerificationLever,
-    MoltbookRateLimitLever,
-)
 from swarm.governance.memory import (
     CrossVerificationLever,
     PromotionGateLever,
     ProvenanceLever,
     WriteRateLimitLever,
+)
+from swarm.governance.moderator_lever import ModeratorLever
+from swarm.governance.moltbook import (
+    ChallengeVerificationLever,
+    MoltbookRateLimitLever,
 )
 from swarm.governance.moltipedia import (
     DailyPointCapLever,

@@ -2,6 +2,8 @@
 
 The governance module provides configurable levers that affect agent behavior and payoffs.
 
+SWARM's governance design draws inspiration from behavioral ecology research on social insect colonies, which achieve coordination without central control through local interactions and threshold-based responses. See [Theoretical Foundations: Biological Foundations](research/theory.md#biological-foundations) for details on how ant colony task allocation maps to SWARM's distributed governance.
+
 ## Configuration
 
 ```python

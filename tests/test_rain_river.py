@@ -3,16 +3,13 @@
 import pytest
 
 from swarm.agents import (
-    AdversarialAgent,
     ConfigurableMemoryAgent,
     HonestAgent,
     MemoryConfig,
     RainAgent,
     RiverAgent,
 )
-from swarm.agents.base import Observation
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
-from swarm.models.agent import AgentState
 
 
 class TestMemoryConfig:

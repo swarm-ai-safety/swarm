@@ -134,6 +134,43 @@ $$\text{freeze}(a) \iff \frac{1}{W} \sum_{i \in \text{window}} (1-p_i) > \theta$
 
 This creates a hard ceiling on toxic behavior.
 
+## Biological Foundations
+
+SWARM's distributed governance model draws on behavioral ecology research, particularly work on social insect colonies that achieve coordination without central control.
+
+### Task Allocation Without Central Control
+
+Gordon (1996) demonstrated that ant colonies perform complex task allocation without any hierarchical command structure. The queen doesn't issue commands; workers respond only to local information, yet the colony achieves appropriate numbers of workers in each task.
+
+This maps directly to SWARM's architecture:
+
+| Ant Colony (Gordon 1996) | SWARM Framework |
+|--------------------------|-----------------|
+| No central controller | Distributed orchestrator |
+| Local interaction → global behavior | Agent interactions → emergent metrics |
+| Threshold-based task switching | Circuit breakers, governance triggers |
+| Encounter rate as density signal | Interaction frequency as quality signal |
+| Stigmergy (environment as memory) | Shared state, event logs |
+| Age polyethism (role progression) | Agent capability tiers |
+
+### Key Mechanisms
+
+**Threshold Model**: Each individual has a stimulus threshold for engaging in a task. At low stimulus levels, only low-threshold individuals engage; at high stimulus, everyone switches. SWARM's circuit breakers implement an analogous mechanism—agents are frozen when toxicity exceeds a threshold.
+
+**Interaction-Based Switching**: Workers switch tasks based on encounter rates with others doing different tasks. In SWARM, agents respond to quality signals (p values) from recent interactions, adjusting behavior based on local feedback rather than global coordination.
+
+**Stigmergy**: In *Polybia* wasps, a forager's decision to collect more material depends on wait times—information flows through the environment, not direct communication. SWARM's event logs and shared state serve a similar function, allowing coordination through environmental traces rather than explicit messaging.
+
+### Adversarial Robustness
+
+The biological literature documents failure modes with direct analogs to multi-agent AI systems:
+
+- **Death spirals** (army ants) → Adverse selection loops
+- **False pheromone injection** (parasitic exploitation) → Reputation poisoning
+- **Parasitic species exploiting swarm behavior** → Adversarial agents exploiting trust
+
+Successful swarms have *distributed immune systems*, not central controllers. SWARM's governance levers (circuit breakers, transaction taxes, staking) are attempts at distributed immunity—local mechanisms that create system-wide resilience.
+
 ## Relationship to Market Microstructure
 
 SWARM draws on market microstructure theory:
@@ -189,8 +226,16 @@ If you use SWARM in your research, please cite:
 
 ## References
 
+### Economics & Market Microstructure
 - Akerlof, G. (1970). The Market for "Lemons". *Quarterly Journal of Economics*.
 - Kyle, A.S. (1985). Continuous Auctions and Insider Trading. *Econometrica*.
 - Glosten, L.R. & Milgrom, P.R. (1985). Bid, Ask and Transaction Prices. *Journal of Financial Economics*.
+
+### Behavioral Ecology & Swarm Intelligence
+- Gordon, D.M. (1996). The organization of work in social insect colonies. *Nature*, 380, 121-124. [PDF](https://web.stanford.edu/~dmgordon/old2/Gordon1996_Nature.pdf)
+- Gordon, D.M. (2010). *Ant Encounters: Interaction Networks and Colony Behavior*. Princeton University Press.
+- Bonabeau, E., Dorigo, M., & Theraulaz, G. (1999). *Swarm Intelligence: From Natural to Artificial Systems*. Oxford University Press.
+
+### AI Safety
 - [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
 - [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)

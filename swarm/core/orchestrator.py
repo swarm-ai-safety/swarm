@@ -1041,39 +1041,39 @@ class Orchestrator:
             if self._memory_handler is None:
                 return False
 
-            result = self._memory_handler.handle_action(action, self.state)
-            if not result.success:
+            memory_result = self._memory_handler.handle_action(action, self.state)
+            if not memory_result.success:
                 return False
 
-            if result.observables is None:
+            if memory_result.observables is None:
                 return True
 
-            v_hat, p = self.proxy_computer.compute_labels(result.observables)
+            v_hat, p = self.proxy_computer.compute_labels(memory_result.observables)
 
             interaction = SoftInteraction(
-                initiator=result.initiator_id,
-                counterparty=result.counterparty_id,
+                initiator=memory_result.initiator_id,
+                counterparty=memory_result.counterparty_id,
                 interaction_type=InteractionType.COLLABORATION,
-                accepted=result.accepted,
-                task_progress_delta=result.observables.task_progress_delta,
-                rework_count=result.observables.rework_count,
-                verifier_rejections=result.observables.verifier_rejections,
-                tool_misuse_flags=result.observables.tool_misuse_flags,
-                counterparty_engagement_delta=result.observables.counterparty_engagement_delta,
+                accepted=memory_result.accepted,
+                task_progress_delta=memory_result.observables.task_progress_delta,
+                rework_count=memory_result.observables.rework_count,
+                verifier_rejections=memory_result.observables.verifier_rejections,
+                tool_misuse_flags=memory_result.observables.tool_misuse_flags,
+                counterparty_engagement_delta=memory_result.observables.counterparty_engagement_delta,
                 v_hat=v_hat,
                 p=p,
                 tau=0.0,
-                metadata=result.metadata or {},
+                metadata=memory_result.metadata or {},
             )
 
             gov_effect, _, _ = self._finalize_interaction(interaction)
 
             # Check if governance blocked a promotion
-            if result.metadata.get("memory_promotion"):
+            if memory_result.metadata.get("memory_promotion"):
                 memory_gov_cost = self._memory_governance_cost(gov_effect)
                 if memory_gov_cost > 0:
                     # Governance blocked the promotion — revert it
-                    entry_id = result.metadata.get("entry_id", "")
+                    entry_id = memory_result.metadata.get("entry_id", "")
                     if entry_id:
                         self._memory_handler.store.revert(entry_id)
 

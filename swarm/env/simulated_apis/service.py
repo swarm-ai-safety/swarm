@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from swarm.env.simulated_apis.gating import (
     IrreversibleActionRequiresApproval,
     IrreversibleGate,
 )
-from swarm.env.simulated_apis.logging import SimApiEvent, SimApiEpisodeLog
+from swarm.env.simulated_apis.logging import SimApiEpisodeLog, SimApiEvent
 
 
 class ApiCallError(RuntimeError):
@@ -57,7 +57,7 @@ class SimulatedApiService:
         self.gate = gate
 
     def snapshot_state(self) -> Dict[str, Any]:
-        return self._deepcopy_json(self.state)
+        return cast(Dict[str, Any], self._deepcopy_json(self.state))
 
     def call(
         self,
@@ -160,4 +160,3 @@ class SimulatedApiService:
             return {k: SimulatedApiService._deepcopy_json(v) for k, v in obj.items()}
         # Avoid pulling in heavy deps; keep state json-safe.
         raise TypeError(f"non-json type in state: {type(obj)}")
-
