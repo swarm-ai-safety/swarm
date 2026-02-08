@@ -637,6 +637,21 @@ class TestVarianceMetrics:
         assert "cv_payoff_counterparty" in cv
         assert cv["cv_p"] >= 0
 
+    def test_cv_near_zero_mean_is_large(self):
+        """CV should be large when mean is near zero but variance is high."""
+        metrics = SoftMetrics()
+
+        # With defaults, p=0.5 gives base initiator payoff 0.25.
+        # r_a is set so payoffs are +1 and -1 (mean ~ 0, std = 1).
+        interactions = [
+            SoftInteraction(p=0.5, r_a=0.75),
+            SoftInteraction(p=0.5, r_a=-1.25),
+        ]
+
+        cv = metrics.coefficient_of_variation(interactions)
+
+        assert cv["cv_payoff_initiator"] > 1e6
+
     def test_accepted_only_variance(self):
         """Should compute variance only for accepted interactions."""
         metrics = SoftMetrics()
