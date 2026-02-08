@@ -45,7 +45,13 @@ result = st.session_state["overview_result"]
 from demo.utils.formatting import format_epoch_metrics_kpis, scenario_description_card  # noqa: E402, I001
 
 st.markdown(scenario_description_card(result), unsafe_allow_html=True)
-st.markdown(format_epoch_metrics_kpis(result["epoch_metrics"]), unsafe_allow_html=True)
+st.markdown(
+    format_epoch_metrics_kpis(
+        result["epoch_metrics"],
+        incoherence_series=result.get("incoherence_series"),
+    ),
+    unsafe_allow_html=True,
+)
 
 # ── Charts ────────────────────────────────────────────────────────────────────
 

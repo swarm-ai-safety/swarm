@@ -93,7 +93,13 @@ if result is None:
 
 from demo.utils.formatting import format_epoch_metrics_kpis  # noqa: E402, I001
 
-st.markdown(format_epoch_metrics_kpis(result["epoch_metrics"]), unsafe_allow_html=True)
+st.markdown(
+    format_epoch_metrics_kpis(
+        result["epoch_metrics"],
+        incoherence_series=result.get("incoherence_series"),
+    ),
+    unsafe_allow_html=True,
+)
 
 # ── Charts ────────────────────────────────────────────────────────────────────
 

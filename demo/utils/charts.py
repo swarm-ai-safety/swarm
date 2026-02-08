@@ -222,6 +222,11 @@ def scenario_comparison_bar(
     values = []
 
     for sid in scenario_ids:
+        if metric_name == "incoherence_index":
+            series = results[sid].get("incoherence_series") or []
+            values.append(float(series[-1]) if series else 0.0)
+            continue
+
         epoch_metrics = results[sid]["epoch_metrics"]
         if epoch_metrics:
             last = epoch_metrics[-1]
