@@ -227,7 +227,19 @@ class DiversityDefenseLever(GovernanceLever):
                 )
 
         # Mix-weighted mean: rho_bar = sum_k,l x_k x_l rho_{k,l}
+        # Renormalize mix over types with history so agents without
+        # error records don't dilute the correlation estimate.
         mix = self.compute_population_mix(self._agent_types)
+        types_with_history = set(types)
+        active_total = sum(
+            w for t, w in mix.items() if t in types_with_history
+        )
+        if active_total > 0.0:
+            mix = {
+                t: w / active_total
+                for t, w in mix.items()
+                if t in types_with_history
+            }
         rho_bar = 0.0
         for (tk, tl), rho_kl in type_corr.items():
             rho_bar += mix.get(tk, 0.0) * mix.get(tl, 0.0) * rho_kl
