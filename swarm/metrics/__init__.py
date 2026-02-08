@@ -1,5 +1,11 @@
 """Metrics system for soft label analysis."""
 
+from swarm.metrics.horizon_eval import (
+    HorizonEvalConfig,
+    HorizonEvalResult,
+    SystemHorizonEvaluator,
+    group_by_epoch,
+)
 from swarm.metrics.incoherence import (
     BenchmarkPolicy,
     DecisionRecord,
@@ -81,4 +87,9 @@ __all__ = [
     "ComputeConstraints",
     "TimeHorizonBucket",
     "TimeHorizonMetrics",
+    # Multi-agent horizon evaluation (system-level)
+    "HorizonEvalConfig",
+    "HorizonEvalResult",
+    "SystemHorizonEvaluator",
+    "group_by_epoch",
 ]
