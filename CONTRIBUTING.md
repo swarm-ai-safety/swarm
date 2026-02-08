@@ -89,6 +89,25 @@ python -m pip install -e ".[dev,runtime]"
 pytest tests/ -v
 ```
 
+### Faster Local Tests (testmon)
+
+Use `pytest-testmon` to run only tests affected by your changes. The helper
+script will reuse cached metadata when available:
+
+```bash
+# Fast incremental run (skips slow tests by default)
+make test-changes
+
+# Force a full run while recording metadata
+python scripts/test_changes.py --full -- pytest tests/ -v
+```
+
+Testmon metadata cache lives in `.testmon_cache/` by default. Override with:
+
+```bash
+TESTMON_CACHE_DIR=/path/to/cache python scripts/test_changes.py -- pytest -q
+```
+
 ### 2. Find Something to Work On
 
 - Check [open issues](https://github.com/swarm-ai-safety/swarm/issues)

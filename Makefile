@@ -1,4 +1,4 @@
-.PHONY: install install-dev lint lint-fix typecheck test coverage ci clean docs docs-serve
+.PHONY: install install-dev lint lint-fix typecheck test coverage ci clean docs docs-serve test-changes
 
 PYTHON ?= python
 
@@ -21,6 +21,9 @@ typecheck:
 
 test:
 	pytest tests/ -v
+
+test-changes:
+	python scripts/test_changes.py -- pytest -m "not slow" -q
 
 coverage:
 	pytest tests/ --cov=swarm --cov-report=term-missing --cov-report=html
