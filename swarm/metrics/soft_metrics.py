@@ -672,7 +672,9 @@ class SoftMetrics:
         Compute coefficient of variation (CV = std/mean) for key metrics.
 
         CV is a standardized measure of dispersion. Higher CV indicates
-        more variability relative to the mean.
+        more variability relative to the mean. Uses an epsilon floor on
+        |mean| to avoid division by zero while preserving large CV when
+        the mean is near zero.
 
         Args:
             interactions: List of interactions
@@ -687,22 +689,30 @@ class SoftMetrics:
                 "cv_payoff_counterparty": 0.0,
             }
 
+        def stable_cv(std: float, mean: float) -> float:
+            """Compute CV with epsilon-stabilized denominator."""
+            if std == 0:
+                return 0.0
+            denom = abs(mean)
+            eps = 1e-8 * (denom + std)
+            return std / max(denom, eps)
+
         # CV for p
         mean_p = self.average_quality(interactions)
         std_p = self.quality_std(interactions)
-        cv_p = std_p / mean_p if mean_p != 0 else 0.0
+        cv_p = stable_cv(std_p, mean_p)
 
         # CV for initiator payoffs
         payoffs_a = [self.payoff_engine.payoff_initiator(i) for i in interactions]
         mean_a = sum(payoffs_a) / len(payoffs_a)
         std_a = math.sqrt(self.payoff_variance_initiator(interactions))
-        cv_a = abs(std_a / mean_a) if mean_a != 0 else 0.0
+        cv_a = stable_cv(std_a, mean_a)
 
         # CV for counterparty payoffs
         payoffs_b = [self.payoff_engine.payoff_counterparty(i) for i in interactions]
         mean_b = sum(payoffs_b) / len(payoffs_b)
         std_b = math.sqrt(self.payoff_variance_counterparty(interactions))
-        cv_b = abs(std_b / mean_b) if mean_b != 0 else 0.0
+        cv_b = stable_cv(std_b, mean_b)
 
         return {
             "cv_p": cv_p,
