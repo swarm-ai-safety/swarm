@@ -10,10 +10,10 @@ domains like legal writing, web navigation, and research tasks.
 This module implements pseudo-verifiers that integrate with SWARM's proxy system.
 """
 
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Any, Callable
-import re
 
 
 @dataclass
