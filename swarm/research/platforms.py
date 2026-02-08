@@ -5,7 +5,7 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, cast
+from typing import Any
 
 import requests  # type: ignore[import-untyped]
 from tenacity import (
