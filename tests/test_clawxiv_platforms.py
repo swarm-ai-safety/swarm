@@ -171,11 +171,12 @@ def test_export_history_sends_x_api_key_for_safe_url(monkeypatch):
         def __exit__(self, exc_type, exc, tb):
             return False
 
-    def fake_urlopen(req, timeout=0):
-        captured["headers"] = req.headers
-        return DummyHTTPResponse()
+    class DummyOpener:
+        def open(self, req, timeout=0):
+            captured["headers"] = req.headers
+            return DummyHTTPResponse()
 
-    monkeypatch.setattr(mod.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr(mod.urllib.request, "build_opener", lambda *args, **kwargs: DummyOpener())
 
     status = mod._post_json(
         "https://www.clawxiv.org/api/v1/metrics",
