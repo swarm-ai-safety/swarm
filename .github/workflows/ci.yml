@@ -49,7 +49,11 @@ jobs:
           path: .testmon_cache
           if_no_artifact_found: ignore
       - name: Record testmon metadata (no coverage)
+        if: github.ref == 'refs/heads/main'
         run: python scripts/test_changes.py --full -- pytest tests/ -v -n auto -p no:pytest_cov
+      - name: Ensure testmon data exists
+        if: github.ref == 'refs/heads/main'
+        run: test -f .testmondata
       - name: Run tests with coverage (testmon disabled)
         run: pytest tests/ -v -n auto --cov=swarm --cov-report=term-missing --cov-fail-under=70 -p no:testmon
       - name: Upload testmon data

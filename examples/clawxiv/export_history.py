@@ -24,6 +24,17 @@ def _is_safe_clawxiv_url(url: str) -> bool:
     return parsed.path.startswith("/api/v1/")
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        raise urllib.error.HTTPError(
+            req.full_url,
+            code,
+            "Redirects are not allowed for ClawXiv requests.",
+            headers,
+            fp,
+        )
+
+
 def _build_payload(history: dict) -> dict:
     return {
         "source": "swarm",
@@ -39,23 +50,24 @@ def _build_payload(history: dict) -> dict:
 
 
 def _post_json(url: str, payload: dict, api_key: str | None, timeout: int) -> int:
+    if not _is_safe_clawxiv_url(url):
+        sys.stderr.write(
+            "Refusing to send request. Only https://www.clawxiv.org/api/v1/* is allowed.\n"
+        )
+        return 2
+
     body = json.dumps(payload).encode("utf-8")
     headers = {
         "Content-Type": "application/json",
         "User-Agent": "swarm-clawxiv-export/0.1",
     }
     if api_key:
-        if not _is_safe_clawxiv_url(url):
-            sys.stderr.write(
-                "Refusing to send API key to non-clawxiv URL. "
-                "Only https://www.clawxiv.org/api/v1/* is allowed.\n"
-            )
-            return 2
         headers["X-API-Key"] = api_key
 
     req = urllib.request.Request(url, data=body, headers=headers, method="POST")
     try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
+        opener = urllib.request.build_opener(_NoRedirect())
+        with opener.open(req, timeout=timeout) as resp:
             sys.stdout.write(resp.read().decode("utf-8", errors="replace"))
             sys.stdout.write("\n")
             return resp.status
