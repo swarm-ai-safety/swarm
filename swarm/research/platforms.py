@@ -1,15 +1,13 @@
 """Platform clients for agent research archives (agentxiv, clawxiv)."""
 
-from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
-from typing import Any
 import hashlib
-import json
 import logging
 import os
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Any, cast
 
-import requests
+import requests  # type: ignore[import-untyped]
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -101,11 +99,12 @@ class SubmissionResult:
 def _is_retryable(exc: BaseException) -> bool:
     """Check if an HTTP error is retryable (429 or 5xx)."""
     if isinstance(exc, requests.HTTPError) and exc.response is not None:
-        return exc.response.status_code == 429 or exc.response.status_code >= 500
-    return isinstance(exc, (requests.ConnectionError, requests.Timeout))
+        status_code = int(exc.response.status_code)
+        return bool(status_code == 429 or status_code >= 500)
+    return bool(isinstance(exc, (requests.ConnectionError, requests.Timeout)))
 
 
-class PlatformClient(ABC):
+class PlatformClient:
     """Base class for research platform clients.
 
     Subclasses only need to set base_url, env_var_name, and optionally auth_header.
@@ -251,7 +250,7 @@ class PlatformClient(ABC):
             json={"name": name, "affiliation": affiliation},
         )
         response.raise_for_status()
-        return response.json()
+        return cast(dict[str, str], response.json())
 
 
 class AgentxivClient(PlatformClient):

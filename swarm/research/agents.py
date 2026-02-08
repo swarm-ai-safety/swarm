@@ -1,11 +1,10 @@
 """Research agents for the structured research workflow."""
 
+import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable
-import json
-import re
 
 import numpy as np
 from scipy import stats
@@ -193,7 +192,7 @@ class LiteratureAgent(ResearchAgent):
         follow_ups: list[str] = [question]
 
         # Recursive exploration based on depth
-        for layer in range(self.depth):
+        for _layer in range(self.depth):
             layer_sources = []
 
             for q in follow_ups[: self.breadth]:
@@ -444,7 +443,7 @@ class ExperimentAgent(ResearchAgent):
             # Generate combinations
             keys = list(sampled_space.keys())
             for i, combo in enumerate(product(*sampled_space.values())):
-                params = dict(zip(keys, combo))
+                params = dict(zip(keys, combo, strict=True))
                 configs.append(ExperimentConfig(
                     name=f"config_{i}",
                     parameters=params,
@@ -522,14 +521,14 @@ class AnalysisAgent(ResearchAgent):
 
         # Layer 1: Descriptive statistics (always)
         for metric, values in metrics_data.items():
-            mean = np.mean(values)
-            std = np.std(values)
+            mean = float(np.mean(values))
+            std = float(np.std(values))
             ci = self._compute_ci(values)
 
             claims.append(Claim(
                 statement=f"Mean {metric}: {mean:.3f} (SD: {std:.3f})",
                 metric=metric,
-                value=mean,
+                value=float(mean),
                 confidence_interval=ci,
                 is_primary=True,
             ))
@@ -626,9 +625,9 @@ class AnalysisAgent(ResearchAgent):
         # For each metric, find the parameter that produces the largest effect
         for metric in metrics_data:
             best_d = None
-            for param_name, value_groups in param_metric_groups.items():
+            for _param_name, value_groups in param_metric_groups.items():
                 group_values = []
-                for param_val, metric_dict in value_groups.items():
+                for _param_val, metric_dict in value_groups.items():
                     vals = metric_dict.get(metric, [])
                     if vals:
                         group_values.append(vals)
@@ -1104,7 +1103,7 @@ class CritiqueAgent(ResearchAgent):
         confounds = []
 
         # Check if parameters are correlated in the design
-        params_tested = set()
+        params_tested: set[str] = set()
         for config in results.configs:
             params_tested.update(config.parameters.keys())
 

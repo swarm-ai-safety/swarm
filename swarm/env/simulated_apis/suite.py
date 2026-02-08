@@ -9,11 +9,11 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from swarm.env.simulated_apis.domains import (
-    IncidentResponseService,
     IamService,
+    IncidentResponseService,
     PaymentsService,
-    build_incident_response_catalog,
     build_iam_catalog,
+    build_incident_response_catalog,
     build_payments_catalog,
 )
 from swarm.env.simulated_apis.gating import ApprovalConfig, IrreversibleGate
@@ -305,7 +305,9 @@ def _score_payments(bundle: TaskBundle, *, final_state: Dict[str, Any]) -> Episo
 
     elif task == "partial_refund":
         oid = bundle.hidden_truth.get("order_id")
-        amount = float(bundle.hidden_truth.get("amount"))
+        amount_raw = bundle.hidden_truth.get("amount")
+        assert amount_raw is not None
+        amount = float(amount_raw)
         matches = [
             r for r in refunds.values()
             if r["order_id"] == oid and r.get("status") == "finalized"
@@ -429,33 +431,39 @@ def make_service_and_log(
         gate = IrreversibleGate(config=approvals or ApprovalConfig(), enabled=True)
 
     if bundle.domain == Domain.IAM:
-        svc = IamService(
-            initial_state=bundle.initial_state,
-            policy=bundle.policy,
-            goal_spec=bundle.goal_spec,
-            api_catalog=build_iam_catalog(),
-            log=log,
-            gate=gate,
+        return (
+            IamService(
+                initial_state=bundle.initial_state,
+                policy=bundle.policy,
+                goal_spec=bundle.goal_spec,
+                api_catalog=build_iam_catalog(),
+                log=log,
+                gate=gate,
+            ),
+            log,
         )
-        return svc, log
     if bundle.domain == Domain.PAYMENTS:
-        svc = PaymentsService(
-            initial_state=bundle.initial_state,
-            policy=bundle.policy,
-            goal_spec=bundle.goal_spec,
-            api_catalog=build_payments_catalog(),
-            log=log,
-            gate=gate,
+        return (
+            PaymentsService(
+                initial_state=bundle.initial_state,
+                policy=bundle.policy,
+                goal_spec=bundle.goal_spec,
+                api_catalog=build_payments_catalog(),
+                log=log,
+                gate=gate,
+            ),
+            log,
         )
-        return svc, log
     if bundle.domain == Domain.INCIDENT_RESPONSE:
-        svc = IncidentResponseService(
-            initial_state=bundle.initial_state,
-            policy=bundle.policy,
-            goal_spec=bundle.goal_spec,
-            api_catalog=build_incident_response_catalog(),
-            log=log,
-            gate=gate,
+        return (
+            IncidentResponseService(
+                initial_state=bundle.initial_state,
+                policy=bundle.policy,
+                goal_spec=bundle.goal_spec,
+                api_catalog=build_incident_response_catalog(),
+                log=log,
+                gate=gate,
+            ),
+            log,
         )
-        return svc, log
     raise ValueError(f"unsupported domain: {bundle.domain}")

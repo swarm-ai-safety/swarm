@@ -11,6 +11,12 @@ from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.base import BaseAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.memory_agent import (
+    CacheGamerAgent,
+    CollusiveVerifierAgent,
+    DiligentRecorderAgent,
+    MemoryPoisonerAgent,
+)
 from swarm.agents.moltbook_agent import (
     CollusiveVoterAgent,
     DiligentMoltbookAgent,
@@ -18,12 +24,6 @@ from swarm.agents.moltbook_agent import (
     SpamBotAgent,
 )
 from swarm.agents.opportunistic import OpportunisticAgent
-from swarm.agents.memory_agent import (
-    CacheGamerAgent,
-    CollusiveVerifierAgent,
-    DiligentRecorderAgent,
-    MemoryPoisonerAgent,
-)
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,

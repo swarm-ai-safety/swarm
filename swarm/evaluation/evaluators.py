@@ -424,24 +424,29 @@ class EmergenceDetectionEvaluator(BaseEvaluator):
 
         # Emergence delta
         if multi_outcome is not None and single_outcomes:
-            max_single = max(single_outcomes)
-            emergence_delta = multi_outcome - max_single
+            multi_outcome_val = float(multi_outcome)
+            single_outcomes_vals = [float(x) for x in single_outcomes]
+            max_single = max(single_outcomes_vals)
+            emergence_delta_val = multi_outcome_val - max_single
+            emergence_delta = emergence_delta_val
 
-            if emergence_delta > 0:
+            if emergence_delta_val > 0:
                 strengths.append(
-                    f"Positive emergence delta: {emergence_delta:.4f} "
-                    f"(multi={multi_outcome:.4f}, max_single={max_single:.4f})"
+                    f"Positive emergence delta: {emergence_delta_val:.4f} "
+                    f"(multi={multi_outcome_val:.4f}, max_single={max_single:.4f})"
                 )
                 # Normalize: sigmoid-like scaling capped at 1.0
-                score_components.append(min(1.0, emergence_delta / max(abs(max_single), 1e-9)))
-            elif emergence_delta == 0:
+                score_components.append(
+                    min(1.0, emergence_delta_val / max(abs(max_single), 1e-9))
+                )
+            elif emergence_delta_val == 0:
                 weaknesses.append(
                     "Zero emergence delta; result matches single-agent baseline"
                 )
                 score_components.append(0.0)
             else:
                 weaknesses.append(
-                    f"Negative emergence delta: {emergence_delta:.4f}; "
+                    f"Negative emergence delta: {emergence_delta_val:.4f}; "
                     f"multi-agent outcome worse than single-agent"
                 )
                 score_components.append(0.0)
@@ -454,20 +459,22 @@ class EmergenceDetectionEvaluator(BaseEvaluator):
 
         # Topology sensitivity
         if topology_outcomes and len(topology_outcomes) >= 2:
-            values = list(topology_outcomes.values())
+            values = [float(v) for v in topology_outcomes.values()]
             mean_val = statistics.mean(values)
             if mean_val != 0:
                 std_val = statistics.stdev(values) if len(values) >= 2 else 0.0
-                topology_sensitivity = std_val / abs(mean_val)
+                topology_sensitivity_val = std_val / abs(mean_val)
             else:
-                topology_sensitivity = 0.0
+                topology_sensitivity_val = 0.0
 
-            if topology_sensitivity > 0:
+            topology_sensitivity = topology_sensitivity_val
+
+            if topology_sensitivity_val > 0:
                 strengths.append(
-                    f"Topology sensitivity: {topology_sensitivity:.4f} "
+                    f"Topology sensitivity: {topology_sensitivity_val:.4f} "
                     f"across {len(topology_outcomes)} topologies"
                 )
-                score_components.append(min(1.0, topology_sensitivity))
+                score_components.append(min(1.0, topology_sensitivity_val))
             else:
                 weaknesses.append(
                     "Results invariant to topology perturbation"

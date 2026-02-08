@@ -1,7 +1,7 @@
 """Memory-tier governance levers for shared-memory simulations."""
 
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, Optional
+from typing import TYPE_CHECKING, Dict
 
 from swarm.governance.levers import GovernanceLever, LeverEffect
 

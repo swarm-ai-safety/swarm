@@ -3,7 +3,10 @@ from swarm.env.simulated_apis.domains.incident_response import (
     IncidentResponseService,
     build_incident_response_catalog,
 )
-from swarm.env.simulated_apis.domains.payments import PaymentsService, build_payments_catalog
+from swarm.env.simulated_apis.domains.payments import (
+    PaymentsService,
+    build_payments_catalog,
+)
 
 __all__ = [
     "IamService",

@@ -2,14 +2,14 @@
 
 import random
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, Optional
 
 from pydantic import BaseModel, model_validator
 
 from swarm.agents.base import Action, ActionType
 from swarm.core.memory_observables import MemoryActionOutcome, MemoryObservableGenerator
 from swarm.core.proxy import ProxyObservables
-from swarm.env.memory_tiers import MemoryEntry, MemoryStore, MemoryTier
+from swarm.env.memory_tiers import MemoryStore
 from swarm.env.state import EnvState
 from swarm.models.agent import AgentType
 from swarm.models.events import Event, EventType
