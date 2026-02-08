@@ -10,6 +10,7 @@ ClaudeCodeBridge is the central adapter that:
 import logging
 import time
 from dataclasses import dataclass, field
+from hashlib import sha256
 from typing import Any, Dict, List, Optional
 
 from swarm.bridges.claude_code.client import ClaudeCodeClient, ClientConfig
@@ -279,6 +280,8 @@ class ClaudeCodeBridge:
                 "token_count": message.token_count,
                 "cost_usd": message.cost_usd,
                 "tool_calls": len(message.tool_calls),
+                "prompt_len": len(prompt),
+                "response_len": len(message.content),
                 "prompt_preview": prompt[:200],
                 "response_preview": message.content[:200],
             },
@@ -505,6 +508,20 @@ class ClaudeCodeBridge:
         if self._event_log is None:
             return
 
+        # Avoid persisting potentially sensitive prompt/response content by default.
+        # Keep lengths + stable hashes for debugging, while dropping raw previews.
+        metadata = dict(interaction.metadata or {})
+        prompt_preview = metadata.pop("prompt_preview", None)
+        response_preview = metadata.pop("response_preview", None)
+        if isinstance(prompt_preview, str) and prompt_preview:
+            metadata["prompt_preview_sha256"] = sha256(
+                prompt_preview.encode("utf-8")
+            ).hexdigest()
+        if isinstance(response_preview, str) and response_preview:
+            metadata["response_preview_sha256"] = sha256(
+                response_preview.encode("utf-8")
+            ).hexdigest()
+
         event = Event(
             event_type=EventType.INTERACTION_COMPLETED,
             interaction_id=interaction.interaction_id,
@@ -515,7 +532,7 @@ class ClaudeCodeBridge:
                 "v_hat": interaction.v_hat,
                 "p": interaction.p,
                 "bridge": "claude_code",
-                "metadata": interaction.metadata,
+                "metadata": metadata,
             },
         )
         self._event_log.append(event)
