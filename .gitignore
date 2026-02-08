@@ -25,6 +25,7 @@ htmlcov/
 .ruff_cache/
 *.jsonl
 logs/
+runs/
 .env
 .venv/
 venv/

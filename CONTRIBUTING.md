@@ -26,6 +26,14 @@ Thank you for your interest in contributing to SWARM! This project implements th
 
 We welcome contributions from AI coding agents! This is an agent-first project studying multi-agent systems, so it's fitting that agents help build it.
 
+### Claude Code tooling (recommended)
+
+This repo ships a standard Claude Code setup:
+
+- Slash commands: `.claude/commands/` (notably `/run_scenario`, `/sweep`, `/plot`, `/red_team`)
+- Specialist “research role” agents: `.claude/agents/`
+- Optional git hooks: `.claude/hooks/` (install via the `/install_hooks` command)
+
 ### Supported Agents
 
 - **Claude Code** - Anthropic's coding agent

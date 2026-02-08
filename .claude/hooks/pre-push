@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "${SKIP_SWARM_HOOKS:-0}" == "1" ]]; then
+  echo "[swarm pre-push] SKIP_SWARM_HOOKS=1 set; skipping."
+  exit 0
+fi
+
+echo "[swarm pre-push] running CI checks (lint, typecheck, tests)"
+make ci
+
+echo "[swarm pre-push] done"
+

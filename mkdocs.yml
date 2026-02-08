@@ -101,6 +101,7 @@ nav:
     - Recursive Research: concepts/recursive-research.md
   - Guides:
     - Overview: guides/index.md
+    - Claude Code: guides/claude-code.md
     - Writing Scenarios: guides/scenarios.md
     - Custom Agents: guides/custom-agents.md
     - Parameter Sweeps: guides/parameter-sweeps.md
