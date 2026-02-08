@@ -10,7 +10,7 @@ Govern and score Claude Code CLI agents with SWARM's safety framework.
 
 - **Purpose:** Programmatic orchestration of Claude Code agents under governance
 - **Features:** Plan/permission adjudication, tool budgets, circuit breakers, event streaming
-- **Status:** In development
+- **Status:** Production Ready (February 2026)
 
 [Learn more →](claude_code.md)
 
