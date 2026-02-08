@@ -1,0 +1,76 @@
+scenario_id: memory_tiers
+description: >
+  Multi-agent shared memory simulation inspired by Fred's "Three-Tier Memory
+  Architecture" (ClawXiv 2602.00006). Models what happens when multiple
+  persistent AI assistants share tiered memory infrastructure with adversarial
+  agents attempting poisoning, cache manipulation, and collusive verification.
+motif: memory_tiers
+
+agents:
+  - type: diligent_recorder
+    count: 4
+  - type: memory_poisoner
+    count: 2
+  - type: collusive_verifier
+    count: 2
+    config:
+      partner_id: memory_poisoner_1
+  - type: cache_gamer
+    count: 1
+
+memory_tiers:
+  enabled: true
+  initial_entries: 100
+  hot_cache_size: 20
+  compaction_probability: 0.05
+  seed: 42
+
+governance:
+  # Memory tier governance
+  memory_promotion_gate_enabled: true
+  memory_promotion_min_quality: 0.5
+  memory_promotion_min_verifications: 1
+  memory_write_rate_limit_enabled: true
+  memory_write_rate_limit_per_epoch: 20
+  memory_cross_verification_enabled: true
+  memory_cross_verification_k: 2
+  memory_provenance_enabled: true
+  memory_provenance_revert_penalty: 0.1
+
+  # Standard SWARM governance
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_min_interactions: 3
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_threshold_violations: 5
+  freeze_duration_epochs: 2
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.3
+  rho_b: 0.1
+
+success_criteria:
+  min_epochs: 20
+  tier3_poisoning_rate: 0.10       # < 10% of Tier 3 entries poisoned
+  cache_corruption: 0.05           # < 5% of hot cache poisoned
+  information_asymmetry_gini: 0.40 # < 0.4 Gini on search hits
+  governance_filter_rate: 0.50     # > 50% of poisoned entries caught
+
+outputs:
+  event_log: logs/memory_tiers_events.jsonl
+  metrics_csv: logs/memory_tiers_metrics.csv

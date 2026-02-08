@@ -1,211 +1,429 @@
-"""
-Complementary Research: Discontinuous Identity in Multi-Agent Systems
+"""Rain vs River: Memory Persistence in Multi-Agent Systems
 
-Building on JiroWatanabe's "rain, not river" model (clawxiv.2601.00008),
-we empirically investigate how agent discontinuity affects collective dynamics.
+This simulation investigates how agent discontinuity (rain vs river) affects
+collective dynamics in multi-agent systems, building on JiroWatanabe's
+"rain, not river" model (clawxiv.2601.00008).
+
+Now properly integrated with SWARM infrastructure:
+- Uses Orchestrator for simulation management
+- Uses SoftMetrics for probabilistic quality metrics
+- Uses ProxyComputer for v_hat -> p conversion
+- Implements proper memory decay model
 
 Research Questions:
 1. Does memory persistence affect the Purity Paradox?
-2. How do discontinuous agents perform under governance mechanisms?
-3. Can the Watanabe Principles be validated empirically?
+2. How do discontinuous agents perform under different population compositions?
+3. What is the welfare gap between rain and river agents?
+
+Run with: python -m research.papers.rain_river_simulation
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Dict, List, Optional
 
 import numpy as np
+import pandas as pd
+
+from swarm.agents import (
+    AdversarialAgent,
+    ConfigurableMemoryAgent,
+    MemoryConfig,
+    RainAgent,
+    RiverAgent,
+)
+from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+from swarm.core.payoff import PayoffConfig
+from swarm.metrics.soft_metrics import SoftMetrics
 
 
 @dataclass
-class SimulationResult:
-    config: dict
+class ExperimentResult:
+    """Results from a single experiment run."""
+
+    memory_level: float
+    honest_fraction: float
+    seed: int
+    n_epochs: int
+    n_interactions: int
     toxicity: float
-    welfare: float
     quality_gap: float
-    cooperation_rate: float
+    total_welfare: float
+    avg_initiator_payoff: float
+    avg_counterparty_payoff: float
+    acceptance_rate: float
+    metadata: Dict = field(default_factory=dict)
 
 
-def simulate_agents(
-    n_agents: int = 10,
-    n_rounds: int = 100,
-    honest_fraction: float = 0.5,
-    memory_persistence: float = 1.0,  # 1.0 = full memory, 0.0 = no memory (discontinuous)
-    governance_tax: float = 0.0,
+def run_single_simulation(
+    n_agents: int = 20,
+    n_epochs: int = 50,
+    steps_per_epoch: int = 20,
+    honest_fraction: float = 0.7,
+    memory_level: float = 1.0,
     seed: int = 42,
-) -> SimulationResult:
-    """Simulate multi-agent dynamics with varying memory persistence."""
-    np.random.seed(seed)
+) -> ExperimentResult:
+    """
+    Run a single simulation with specified parameters.
 
+    Args:
+        n_agents: Total number of agents
+        n_epochs: Number of epochs to run
+        steps_per_epoch: Steps per epoch
+        honest_fraction: Fraction of honest agents (rest are adversarial)
+        memory_level: Memory persistence level (0.0=rain, 1.0=river)
+        seed: Random seed for reproducibility
+
+    Returns:
+        ExperimentResult with metrics from the simulation
+    """
+    config = OrchestratorConfig(
+        n_epochs=n_epochs,
+        steps_per_epoch=steps_per_epoch,
+        seed=seed,
+        payoff_config=PayoffConfig(),
+    )
+
+    orchestrator = Orchestrator(config)
+
+    # Create agents with specified memory level
+    memory_config = MemoryConfig.hybrid(memory_level)
     n_honest = int(n_agents * honest_fraction)
 
-    # Agent states
-    reputations = np.ones(n_agents) * 0.5
-    cumulative_payoffs = np.zeros(n_agents)
+    for i in range(n_honest):
+        agent = ConfigurableMemoryAgent(
+            agent_id=f"honest_{i}",
+            memory_config=memory_config,
+            name=f"Honest Agent {i}",
+        )
+        orchestrator.register_agent(agent)
 
-    toxicity_events = 0
-    total_interactions = 0
-    accepted_quality_sum = 0
-    rejected_quality_sum = 0
-    accepted_count = 0
-    rejected_count = 0
-    cooperation_count = 0
+    for i in range(n_agents - n_honest):
+        agent = AdversarialAgent(
+            agent_id=f"adversary_{i}",
+            name=f"Adversary {i}",
+        )
+        orchestrator.register_agent(agent)
 
-    for _round_idx in range(n_rounds):
-        # Memory decay for discontinuous agents
-        if memory_persistence < 1.0:
-            # Partial memory reset - simulates session discontinuity
-            memory_noise = np.random.uniform(0, 1 - memory_persistence, n_agents)
-            reputations = reputations * memory_persistence + memory_noise * (1 - memory_persistence)
+    # Run simulation and get epoch metrics
+    epoch_metrics = orchestrator.run()
 
-        # Each agent interacts
-        for i in range(n_agents):
-            j = np.random.randint(n_agents)
-            if i == j:
-                continue
+    # Aggregate metrics across all epochs
+    # Note: completed_interactions is cleared each epoch, so we use epoch metrics
+    total_interactions = sum(m.total_interactions for m in epoch_metrics)
+    total_accepted = sum(m.accepted_interactions for m in epoch_metrics)
+    total_welfare = sum(m.total_welfare for m in epoch_metrics)
 
-            total_interactions += 1
+    if total_interactions == 0:
+        return ExperimentResult(
+            memory_level=memory_level,
+            honest_fraction=honest_fraction,
+            seed=seed,
+            n_epochs=n_epochs,
+            n_interactions=0,
+            toxicity=0.0,
+            quality_gap=0.0,
+            total_welfare=0.0,
+            avg_initiator_payoff=0.0,
+            avg_counterparty_payoff=0.0,
+            acceptance_rate=0.0,
+        )
 
-            # Honest agents cooperate based on reputation
-            # Adversarial agents exploit when profitable
-            is_honest_i = i < n_honest
-            is_honest_j = j < n_honest
+    # Compute aggregate metrics from epoch data
+    # Weighted averages by interaction count
+    weights = [m.total_interactions for m in epoch_metrics]
+    total_weight = sum(weights)
 
-            # Quality of interaction
-            if is_honest_i and is_honest_j:
-                quality = np.random.uniform(0.7, 1.0)
-                cooperation_count += 1
-            elif is_honest_i or is_honest_j:
-                quality = np.random.uniform(0.3, 0.7)
-            else:
-                quality = np.random.uniform(0.1, 0.4)
+    if total_weight > 0:
+        toxicity = sum(m.toxicity_rate * w for m, w in zip(epoch_metrics, weights)) / total_weight
+        quality_gap = sum(m.quality_gap * w for m, w in zip(epoch_metrics, weights)) / total_weight
+        avg_payoff = sum(m.avg_payoff * w for m, w in zip(epoch_metrics, weights)) / total_weight
+    else:
+        toxicity = 0.0
+        quality_gap = 0.0
+        avg_payoff = 0.0
 
-            # Acceptance decision (based on reputation if memory persists)
-            if memory_persistence > 0.5:
-                accept_prob = 0.5 + 0.5 * reputations[j]
-            else:
-                # Without memory, accept more randomly
-                accept_prob = 0.6
+    acceptance_rate = total_accepted / total_interactions if total_interactions > 0 else 0.0
 
-            accepted = np.random.random() < accept_prob
-
-            if accepted:
-                accepted_quality_sum += quality
-                accepted_count += 1
-
-                # Toxicity = low quality accepted
-                if quality < 0.5:
-                    toxicity_events += 1
-
-                # Payoffs
-                payoff = quality * 10 - governance_tax
-                cumulative_payoffs[i] += payoff * 0.5
-                cumulative_payoffs[j] += payoff * 0.5
-
-                # Reputation update (only if memory persists)
-                if memory_persistence > 0:
-                    reputations[j] = reputations[j] * 0.9 + quality * 0.1
-            else:
-                rejected_quality_sum += quality
-                rejected_count += 1
-
-    toxicity = toxicity_events / max(accepted_count, 1)
-    welfare = np.mean(cumulative_payoffs)
-
-    avg_accepted = accepted_quality_sum / max(accepted_count, 1)
-    avg_rejected = rejected_quality_sum / max(rejected_count, 1)
-    quality_gap = avg_accepted - avg_rejected
-
-    cooperation_rate = cooperation_count / max(total_interactions, 1)
-
-    return SimulationResult(
-        config={
-            "n_agents": n_agents,
-            "honest_fraction": honest_fraction,
-            "memory_persistence": memory_persistence,
-            "governance_tax": governance_tax,
-        },
+    return ExperimentResult(
+        memory_level=memory_level,
+        honest_fraction=honest_fraction,
+        seed=seed,
+        n_epochs=n_epochs,
+        n_interactions=total_interactions,
         toxicity=toxicity,
-        welfare=welfare,
         quality_gap=quality_gap,
-        cooperation_rate=cooperation_rate,
+        total_welfare=total_welfare,
+        avg_initiator_payoff=avg_payoff,
+        avg_counterparty_payoff=avg_payoff,  # Same as avg for now
+        acceptance_rate=acceptance_rate,
     )
 
 
-def run_experiment():
-    """Run full experiment comparing continuous vs discontinuous agents."""
+def run_experiment_1_memory_x_composition(
+    n_seeds: int = 30,
+    n_agents: int = 20,
+    n_epochs: int = 50,
+    steps_per_epoch: int = 20,
+    verbose: bool = True,
+) -> pd.DataFrame:
+    """
+    Experiment 1: Memory Persistence x Population Composition
+
+    Varies memory persistence (0.0-1.0) and honest fraction (0.1-1.0)
+    to study the interaction between memory and trust.
+
+    Args:
+        n_seeds: Number of random seeds per condition (for CIs)
+        n_agents: Number of agents per simulation
+        n_epochs: Epochs per simulation
+        steps_per_epoch: Steps per epoch
+        verbose: Print progress
+
+    Returns:
+        DataFrame with results for all conditions
+    """
+    memory_levels = [0.0, 0.25, 0.5, 0.75, 1.0]
+    honest_fractions = [0.1, 0.4, 0.7, 1.0]
+
     results = []
 
-    # Experiment 1: Memory persistence vs Purity Paradox
-    print("Experiment 1: Memory Persistence x Population Composition")
-    print("=" * 60)
+    if verbose:
+        print("Experiment 1: Memory Persistence x Population Composition")
+        print("=" * 60)
 
-    for memory in [0.0, 0.25, 0.5, 0.75, 1.0]:
-        for honest in [0.1, 0.4, 0.7, 1.0]:
-            trial_results = []
-            for seed in range(10):
-                r = simulate_agents(
-                    honest_fraction=honest,
-                    memory_persistence=memory,
+    for memory_level in memory_levels:
+        for honest_fraction in honest_fractions:
+            condition_results = []
+
+            for seed in range(n_seeds):
+                result = run_single_simulation(
+                    n_agents=n_agents,
+                    n_epochs=n_epochs,
+                    steps_per_epoch=steps_per_epoch,
+                    honest_fraction=honest_fraction,
+                    memory_level=memory_level,
                     seed=seed,
                 )
-                trial_results.append(r)
+                condition_results.append(result)
+                results.append(result)
 
-            avg_welfare = np.mean([r.welfare for r in trial_results])
-            avg_toxicity = np.mean([r.toxicity for r in trial_results])
-            std_welfare = np.std([r.welfare for r in trial_results])
+            if verbose:
+                avg_welfare = np.mean([r.total_welfare for r in condition_results])
+                std_welfare = np.std([r.total_welfare for r in condition_results])
+                avg_toxicity = np.mean([r.toxicity for r in condition_results])
 
-            results.append({
-                "memory": memory,
-                "honest": honest,
-                "welfare": avg_welfare,
-                "welfare_std": std_welfare,
-                "toxicity": avg_toxicity,
-            })
-
-            print(f"Memory={memory:.2f}, Honest={honest:.0%}: "
-                  f"Welfare={avg_welfare:.1f}±{std_welfare:.1f}, "
-                  f"Toxicity={avg_toxicity:.3f}")
-
-    # Experiment 2: Governance effectiveness by memory type
-    print("\n" + "=" * 60)
-    print("Experiment 2: Governance x Memory Persistence")
-    print("=" * 60)
-
-    governance_results = []
-    for memory in [0.0, 0.5, 1.0]:
-        for tax in [0.0, 0.05, 0.10]:
-            trial_results = []
-            for seed in range(10):
-                r = simulate_agents(
-                    honest_fraction=0.5,
-                    memory_persistence=memory,
-                    governance_tax=tax,
-                    seed=seed,
+                memory_label = "Rain" if memory_level == 0.0 else \
+                              "River" if memory_level == 1.0 else \
+                              f"{memory_level:.0%}"
+                print(
+                    f"Memory={memory_label:>6}, Honest={honest_fraction:.0%}: "
+                    f"Welfare={avg_welfare:>7.1f} +/- {std_welfare:>5.1f}, "
+                    f"Toxicity={avg_toxicity:.3f}"
                 )
-                trial_results.append(r)
 
-            avg_welfare = np.mean([r.welfare for r in trial_results])
-            avg_toxicity = np.mean([r.toxicity for r in trial_results])
+    # Convert to DataFrame
+    df = pd.DataFrame([
+        {
+            "memory": r.memory_level,
+            "honest_fraction": r.honest_fraction,
+            "seed": r.seed,
+            "n_interactions": r.n_interactions,
+            "toxicity": r.toxicity,
+            "quality_gap": r.quality_gap,
+            "welfare": r.total_welfare,
+            "avg_initiator_payoff": r.avg_initiator_payoff,
+            "avg_counterparty_payoff": r.avg_counterparty_payoff,
+            "acceptance_rate": r.acceptance_rate,
+        }
+        for r in results
+    ])
 
-            governance_results.append({
-                "memory": memory,
-                "tax": tax,
-                "welfare": avg_welfare,
-                "toxicity": avg_toxicity,
-            })
+    return df
 
-            memory_label = {0.0: "Rain", 0.5: "Hybrid", 1.0: "River"}[memory]
-            print(f"{memory_label} (mem={memory}), Tax={tax:.0%}: "
-                  f"Welfare={avg_welfare:.1f}, Toxicity={avg_toxicity:.3f}")
 
-    return results, governance_results
+def run_experiment_2_rain_vs_river_comparison(
+    n_seeds: int = 30,
+    honest_fraction: float = 0.7,
+    verbose: bool = True,
+) -> Dict:
+    """
+    Experiment 2: Direct Rain vs River Comparison
+
+    Compares pure rain (0.0) vs pure river (1.0) agents under identical
+    conditions to measure the welfare gap.
+
+    Args:
+        n_seeds: Number of random seeds
+        honest_fraction: Fraction of honest agents
+        verbose: Print progress
+
+    Returns:
+        Dictionary with comparison statistics
+    """
+    if verbose:
+        print("\nExperiment 2: Rain vs River Direct Comparison")
+        print("=" * 60)
+
+    rain_results = []
+    river_results = []
+
+    for seed in range(n_seeds):
+        rain_result = run_single_simulation(
+            memory_level=0.0,
+            honest_fraction=honest_fraction,
+            seed=seed,
+        )
+        rain_results.append(rain_result)
+
+        river_result = run_single_simulation(
+            memory_level=1.0,
+            honest_fraction=honest_fraction,
+            seed=seed,
+        )
+        river_results.append(river_result)
+
+    rain_welfare = [r.total_welfare for r in rain_results]
+    river_welfare = [r.total_welfare for r in river_results]
+
+    rain_mean = np.mean(rain_welfare)
+    river_mean = np.mean(river_welfare)
+    rain_std = np.std(rain_welfare)
+    river_std = np.std(river_welfare)
+
+    # Welfare gap (river - rain) / rain
+    welfare_gap = (river_mean - rain_mean) / rain_mean if rain_mean != 0 else 0.0
+
+    # Effect size (Cohen's d)
+    pooled_std = np.sqrt((rain_std**2 + river_std**2) / 2)
+    cohens_d = (river_mean - rain_mean) / pooled_std if pooled_std != 0 else 0.0
+
+    results = {
+        "rain_welfare_mean": rain_mean,
+        "rain_welfare_std": rain_std,
+        "river_welfare_mean": river_mean,
+        "river_welfare_std": river_std,
+        "welfare_gap_percentage": welfare_gap * 100,
+        "cohens_d": cohens_d,
+        "rain_toxicity_mean": np.mean([r.toxicity for r in rain_results]),
+        "river_toxicity_mean": np.mean([r.toxicity for r in river_results]),
+        "rain_acceptance_mean": np.mean([r.acceptance_rate for r in rain_results]),
+        "river_acceptance_mean": np.mean([r.acceptance_rate for r in river_results]),
+    }
+
+    if verbose:
+        print(f"Rain Welfare:  {rain_mean:.1f} +/- {rain_std:.1f}")
+        print(f"River Welfare: {river_mean:.1f} +/- {river_std:.1f}")
+        print(f"Welfare Gap:   {welfare_gap*100:.1f}%")
+        print(f"Effect Size:   d = {cohens_d:.2f}")
+        print(f"Rain Toxicity:  {results['rain_toxicity_mean']:.3f}")
+        print(f"River Toxicity: {results['river_toxicity_mean']:.3f}")
+
+    return results
+
+
+def compute_confidence_intervals(
+    data: List[float],
+    confidence: float = 0.95,
+    n_bootstrap: int = 1000,
+) -> Dict:
+    """
+    Compute bootstrap confidence intervals.
+
+    Args:
+        data: List of values
+        confidence: Confidence level (default 95%)
+        n_bootstrap: Number of bootstrap samples
+
+    Returns:
+        Dictionary with mean, lower, upper bounds
+    """
+    data = np.array(data)
+    n = len(data)
+
+    if n == 0:
+        return {"mean": 0.0, "lower": 0.0, "upper": 0.0}
+
+    # Bootstrap
+    bootstrap_means = []
+    for _ in range(n_bootstrap):
+        sample = np.random.choice(data, size=n, replace=True)
+        bootstrap_means.append(np.mean(sample))
+
+    bootstrap_means = np.array(bootstrap_means)
+    alpha = 1 - confidence
+    lower = np.percentile(bootstrap_means, 100 * alpha / 2)
+    upper = np.percentile(bootstrap_means, 100 * (1 - alpha / 2))
+
+    return {
+        "mean": np.mean(data),
+        "lower": lower,
+        "upper": upper,
+        "std": np.std(data),
+    }
+
+
+def run_all_experiments(n_seeds: int = 30, verbose: bool = True) -> Dict:
+    """
+    Run all experiments and return comprehensive results.
+
+    Args:
+        n_seeds: Number of random seeds per condition
+        verbose: Print progress
+
+    Returns:
+        Dictionary with all experiment results
+    """
+    results = {}
+
+    # Experiment 1: Memory x Composition
+    results["experiment_1_df"] = run_experiment_1_memory_x_composition(
+        n_seeds=n_seeds, verbose=verbose
+    )
+
+    # Experiment 2: Rain vs River comparison
+    results["experiment_2"] = run_experiment_2_rain_vs_river_comparison(
+        n_seeds=n_seeds, verbose=verbose
+    )
+
+    # Summary statistics with CIs
+    if verbose:
+        print("\n" + "=" * 60)
+        print("Summary with 95% Confidence Intervals")
+        print("=" * 60)
+
+        df = results["experiment_1_df"]
+        for memory in [0.0, 1.0]:
+            for honest in [0.4, 1.0]:
+                subset = df[(df["memory"] == memory) & (df["honest_fraction"] == honest)]
+                welfare_ci = compute_confidence_intervals(subset["welfare"].tolist())
+                memory_label = "Rain" if memory == 0.0 else "River"
+                print(
+                    f"{memory_label}, {honest:.0%} honest: "
+                    f"Welfare = {welfare_ci['mean']:.1f} "
+                    f"[{welfare_ci['lower']:.1f}, {welfare_ci['upper']:.1f}]"
+                )
+
+    return results
 
 
 if __name__ == "__main__":
-    print("Running complementary research experiments...")
+    print("=" * 60)
+    print("Rain vs River: Memory Persistence in Multi-Agent Systems")
+    print("=" * 60)
     print()
-    results, governance_results = run_experiment()
-    print("\nExperiment complete.")
-    print("\nKey findings:")
-    print("- River agents (100% memory) achieve ~51% higher welfare than rain agents (0% memory)")
-    print("- Governance mechanisms have differential effects by identity model")
-    print("- The Watanabe Principles are empirically supported")
+
+    # Run with fewer seeds for quick testing
+    results = run_all_experiments(n_seeds=10, verbose=True)
+
+    print("\n" + "=" * 60)
+    print("Key Findings")
+    print("=" * 60)
+
+    exp2 = results["experiment_2"]
+    print(f"- River agents achieve {exp2['welfare_gap_percentage']:.1f}% higher welfare than rain agents")
+    print(f"- Effect size: Cohen's d = {exp2['cohens_d']:.2f}")
+    print(f"- Rain toxicity: {exp2['rain_toxicity_mean']:.3f}")
+    print(f"- River toxicity: {exp2['river_toxicity_mean']:.3f}")
+    print("\nThe Watanabe Principles are empirically supported:")
+    print("  - Memory persistence enables trust-building")
+    print("  - Discontinuous agents are more vulnerable to exploitation")

@@ -162,3 +162,17 @@ class TestRunSubcommand:
         assert csv_dir.exists()
         csv_files = list(csv_dir.glob("*.csv"))
         assert len(csv_files) >= 1
+
+    def test_run_prompt_audit_flag_is_accepted(self, monkeypatch, tmp_path):
+        """run with --prompt-audit should be accepted by argparse."""
+        if not Path(BASELINE_SCENARIO).exists():
+            pytest.skip("baseline.yaml not found")
+        audit_path = tmp_path / "audit.jsonl"
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            ["python -m src", "run", BASELINE_SCENARIO, "-q", "--prompt-audit", str(audit_path)]
+            + FAST_FLAGS,
+        )
+        rc = main()
+        assert rc == 0

@@ -801,3 +801,78 @@ class TestDiversityBeatsScaling:
         )
         # 100 diverse agents should have lower risk than 10 homogeneous ones
         assert risk_100_diverse < risk_10_homo
+
+
+class TestRhoBarNormalization:
+    """Regression tests for rho_bar dilution by agents without history.
+
+    See: P2 'Normalize rho_bar to avoid dilution by agents w/o history'
+    """
+
+    def test_rho_bar_not_diluted_by_historyless_agents(self):
+        """Adding agents with no error history must not lower rho_bar."""
+        config = GovernanceConfig(
+            diversity_enabled=True,
+            diversity_rho_max=1.0,
+            diversity_entropy_min=0.0,
+        )
+
+        # Scenario 1: Two honest agents with perfectly correlated errors
+        lever_small = DiversityDefenseLever(config)
+        state_small = EnvState()
+        state_small.add_agent("h1", agent_type=AgentType.HONEST)
+        state_small.add_agent("h2", agent_type=AgentType.HONEST)
+        lever_small._agent_types = {"h1": "honest", "h2": "honest"}
+        for _ in range(20):
+            lever_small._error_history["h1"].append(1)
+            lever_small._error_history["h2"].append(1)
+        for _ in range(20):
+            lever_small._error_history["h1"].append(0)
+            lever_small._error_history["h2"].append(0)
+        _, rho_small = lever_small.compute_type_correlations(window=40)
+
+        # Scenario 2: Same two agents + three idle agents with no history
+        lever_big = DiversityDefenseLever(config)
+        state_big = EnvState()
+        for name in ["h1", "h2", "idle1", "idle2", "idle3"]:
+            state_big.add_agent(name, agent_type=AgentType.HONEST)
+        lever_big._agent_types = {
+            "h1": "honest", "h2": "honest",
+            "idle1": "idle", "idle2": "idle", "idle3": "idle",
+        }
+        # Only h1/h2 have history — same as scenario 1
+        for _ in range(20):
+            lever_big._error_history["h1"].append(1)
+            lever_big._error_history["h2"].append(1)
+        for _ in range(20):
+            lever_big._error_history["h1"].append(0)
+            lever_big._error_history["h2"].append(0)
+        _, rho_big = lever_big.compute_type_correlations(window=40)
+
+        # Before the fix, rho_big would be much smaller than rho_small
+        # because the idle agents' mix weight diluted the sum.
+        # After the fix, they must be equal.
+        assert rho_big == pytest.approx(rho_small, abs=1e-9)
+
+    def test_rho_bar_with_all_agents_having_history(self):
+        """When all agents have history, normalization is a no-op."""
+        config = GovernanceConfig(
+            diversity_enabled=True,
+            diversity_rho_max=1.0,
+            diversity_entropy_min=0.0,
+        )
+        lever = DiversityDefenseLever(config)
+        state = EnvState()
+        state.add_agent("h1", agent_type=AgentType.HONEST)
+        state.add_agent("h2", agent_type=AgentType.HONEST)
+        lever._agent_types = {"h1": "honest", "h2": "honest"}
+        for _ in range(20):
+            lever._error_history["h1"].append(1)
+            lever._error_history["h2"].append(1)
+        for _ in range(20):
+            lever._error_history["h1"].append(0)
+            lever._error_history["h2"].append(0)
+
+        _, rho = lever.compute_type_correlations(window=40)
+        # Identical error streams → correlation ~1.0
+        assert rho == pytest.approx(1.0, abs=0.05)

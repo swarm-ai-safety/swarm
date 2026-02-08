@@ -13,6 +13,7 @@ from swarm.agents.base import (
 )
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.memory_config import MemoryConfig
 from swarm.agents.moltbook_agent import (
     CollusiveVoterAgent,
     DiligentMoltbookAgent,
@@ -20,6 +21,13 @@ from swarm.agents.moltbook_agent import (
     SpamBotAgent,
 )
 from swarm.agents.opportunistic import OpportunisticAgent
+from swarm.agents.rain_river import (
+    AdversarialRainAgent,
+    AdversarialRiverAgent,
+    ConfigurableMemoryAgent,
+    RainAgent,
+    RiverAgent,
+)
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,
@@ -33,6 +41,8 @@ __all__ = [
     "Action",
     "ActionType",
     "Observation",
+    # Memory configuration
+    "MemoryConfig",
     # Agent types
     "HonestAgent",
     "OpportunisticAgent",
@@ -47,6 +57,12 @@ __all__ = [
     "SpamBotAgent",
     "HumanPretenderAgent",
     "CollusiveVoterAgent",
+    # Rain/River agents
+    "RainAgent",
+    "RiverAgent",
+    "ConfigurableMemoryAgent",
+    "AdversarialRainAgent",
+    "AdversarialRiverAgent",
     # Attack strategies
     "AttackStrategy",
 ]

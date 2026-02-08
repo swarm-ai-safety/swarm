@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(make:*)",
+      "Bash(python -m pip:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(pytest:*)",
+      "Bash(ruff:*)",
+      "Bash(mypy:*)",
+      "Bash(python -m swarm:*)",
+      "Bash(swarm:*)",
+      "Bash(python examples/run_scenario.py:*)",
+      "Bash(python examples/plot_run.py:*)",
+      "Bash(python examples/parameter_sweep.py:*)",
+      "Bash(python examples/governance_mvp_sweep.py:*)",
+      "Bash(python examples/run_incoherence_scaling.py:*)",
+      "Bash(git status)",
+      "Bash(git diff:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git pull:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}
+

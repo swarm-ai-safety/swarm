@@ -24,6 +24,8 @@ from swarm.governance.identity_lever import SybilDetectionLever
 from swarm.models.identity import CredentialIssuer, IdentityConfig, IdentityRegistry
 from swarm.models.interaction import SoftInteraction
 
+pytestmark = pytest.mark.slow
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

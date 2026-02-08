@@ -16,6 +16,12 @@ from swarm.governance.ensemble import SelfEnsembleLever
 from swarm.governance.identity_lever import SybilDetectionLever
 from swarm.governance.incoherence_breaker import IncoherenceCircuitBreakerLever
 from swarm.governance.levers import GovernanceLever, LeverEffect
+from swarm.governance.memory import (
+    CrossVerificationLever,
+    PromotionGateLever,
+    ProvenanceLever,
+    WriteRateLimitLever,
+)
 from swarm.governance.moderator_lever import ModeratorLever
 from swarm.governance.moltbook import (
     ChallengeVerificationLever,
@@ -120,6 +126,11 @@ class GovernanceEngine:
             levers.append(MoltbookRateLimitLever(self.config))
         if self.config.moltbook_challenge_enabled:
             levers.append(ChallengeVerificationLever(self.config))
+        # Memory tier levers
+        levers.append(PromotionGateLever(self.config))
+        levers.append(WriteRateLimitLever(self.config))
+        levers.append(CrossVerificationLever(self.config))
+        levers.append(ProvenanceLever(self.config))
         # Variance-aware levers (scaffold registration; behavior in #35)
         if self.config.self_ensemble_enabled:
             levers.append(SelfEnsembleLever(self.config))

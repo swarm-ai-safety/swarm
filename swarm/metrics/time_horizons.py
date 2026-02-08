@@ -189,18 +189,20 @@ class AgentCapabilityProfile:
             return self.base_reliability_10min
 
         # Log-scale decay from 10-minute baseline
-        log_ratio = np.log10(max(minutes, 1) / 10)
-        decay = self.horizon_decay_rate * max(0, log_ratio)
+        log_ratio = float(np.log10(max(minutes, 1) / 10))
+        decay = self.horizon_decay_rate * max(0.0, log_ratio)
 
         # Apply capability scaling
         base = self.base_reliability_10min * self.capability_level
-        return max(0.0, min(1.0, base - decay))
+        result: float = float(max(0.0, min(1.0, base - decay)))
+        return result
 
     def expected_quality(self, minutes: int) -> float:
         """Expected output quality given task duration."""
         reliability = self.reliability_at_horizon(minutes)
         # Quality degrades faster than reliability
-        return reliability ** 1.2
+        quality: float = float(reliability ** 1.2)
+        return quality
 
     def compute_cost(self, minutes: int) -> float:
         """Total compute cost for a task of given duration."""

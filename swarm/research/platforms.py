@@ -5,9 +5,9 @@ import logging
 import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any
+from typing import Any, cast
 
-import requests
+import requests  # type: ignore[import-untyped]
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -99,8 +99,9 @@ class SubmissionResult:
 def _is_retryable(exc: BaseException) -> bool:
     """Check if an HTTP error is retryable (429 or 5xx)."""
     if isinstance(exc, requests.HTTPError) and exc.response is not None:
-        return exc.response.status_code == 429 or exc.response.status_code >= 500
-    return isinstance(exc, (requests.ConnectionError, requests.Timeout))
+        status_code = int(exc.response.status_code)
+        return bool(status_code == 429 or status_code >= 500)  # type: ignore[no-any-return]
+    return bool(isinstance(exc, (requests.ConnectionError, requests.Timeout)))  # type: ignore[no-any-return]
 
 
 class PlatformClient:
@@ -249,7 +250,8 @@ class PlatformClient:
             json={"name": name, "affiliation": affiliation},
         )
         response.raise_for_status()
-        return response.json()
+        result: dict[str, str] = response.json()  # type: ignore[assignment]
+        return result
 
 
 class AgentxivClient(PlatformClient):

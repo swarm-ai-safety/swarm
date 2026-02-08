@@ -189,6 +189,9 @@ swarm compare scenarios/comparison.yaml --output results/
 !!! tip "Version Control"
     Keep scenarios in git alongside your code.
 
+!!! warning "Untrusted Scenarios"
+    Scenario YAML can specify output paths. Only run trusted scenarios, and prefer outputs under `runs/` or `logs/` to avoid clobbering unrelated files.
+
 ## Example Scenarios
 
 See the [scenarios directory](https://github.com/swarm-ai-safety/swarm/tree/main/scenarios) for examples:

@@ -1,5 +1,7 @@
 """Integration tests for Moltbook handler with orchestrator."""
 
+import pytest
+
 from swarm.agents.moltbook_agent import (
     DiligentMoltbookAgent,
     HumanPretenderAgent,
@@ -9,6 +11,8 @@ from swarm.core.moltbook_handler import MoltbookConfig
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 from swarm.env.moltbook import ContentStatus
 from swarm.governance.config import GovernanceConfig
+
+pytestmark = pytest.mark.slow
 
 
 def _build_orchestrator(seed: int, challenge_enabled: bool = True) -> Orchestrator:

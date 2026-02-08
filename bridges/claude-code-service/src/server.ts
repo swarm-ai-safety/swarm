@@ -386,6 +386,18 @@ app.post("/governance/respond", (req: Request, res: Response) => {
 const PORT = parseInt(process.env.PORT || "3100", 10);
 const HOST = process.env.HOST || "127.0.0.1";
 
+function isLoopbackHost(host: string): boolean {
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return true;
+  // Treat any 127/8 address as loopback
+  return host.startsWith("127.");
+}
+
+if (!API_KEY && !isLoopbackHost(HOST)) {
+  throw new Error(
+    `Refusing to bind to non-loopback HOST=${HOST} without SWARM_BRIDGE_API_KEY set`
+  );
+}
+
 app.listen(PORT, HOST, () => {
   console.log(`SWARM Claude Code service listening on ${HOST}:${PORT}`);
   if (!API_KEY) {

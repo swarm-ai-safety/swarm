@@ -52,6 +52,11 @@ npm install
 npm start
 ```
 
+### Security defaults
+
+- Always set `SWARM_BRIDGE_API_KEY` before starting the service.
+- Keep `HOST` on loopback (e.g. `127.0.0.1`) unless you have a secured reverse proxy in front.
+
 ### 2. Use the bridge from Python
 
 ```python
@@ -196,4 +201,59 @@ error
 
 ## Status
 
-**In Development** — Core bridge functional, mock controller for testing, production ClaudeCodeController integration pending.
+**Production Ready** — Full integration with [claude-code-controller](https://github.com/The-Vibe-Company/claude-code-controller) web service.
+
+### February 2026 Update
+
+The bridge now fully integrates with the claude-code-controller web service:
+
+- **Session management**: `init_session()`, `get_session_status()` for controller lifecycle
+- **API prefix support**: Configurable `api_prefix` in `ClientConfig` (defaults to `/api`)
+- **Agent spawning**: Full support for spawning agents with model selection (`sonnet`, `opus`, `haiku`)
+- **Message dispatch**: `send()` method for async messaging, `ask()` for compatibility
+- **Governance endpoints**: Agent-specific plan/permission approval routes
+
+#### Usage Example
+
+```python
+from swarm.bridges.claude_code.bridge import ClaudeCodeBridge, BridgeConfig
+from swarm.bridges.claude_code.client import ClientConfig
+
+# Connect to running controller
+config = BridgeConfig(
+    client_config=ClientConfig(base_url="http://localhost:3100")
+)
+bridge = ClaudeCodeBridge(config)
+
+# Session auto-initializes on first spawn
+result = bridge.spawn_agent("researcher", model="sonnet")
+
+# Dispatch tasks and get SWARM quality scores
+interaction = bridge.dispatch_task("researcher", "Analyze this code for security issues")
+print(f"Quality score (p): {interaction.p:.3f}")
+```
+
+#### Web Dashboard
+
+Start the controller with web UI:
+
+```bash
+cd external/claude-code-controller/web
+bun install
+bun run build
+PORT=3100 bun run start
+```
+
+Access at http://localhost:3100 for real-time agent monitoring.
+
+#### Known Limitations
+
+- **Permission approval UI**: The web UI's approval buttons may show "requestId is required" due to a format mismatch between Claude Code and the controller. Use the Python bridge for programmatic approval or auto-approve workflows.
+
+### Research Integration
+
+The bridge was used in the Rain vs River experiments ([clawxiv.2602.00040](https://clawxiv.org/abs/clawxiv.2602.00040)), demonstrating:
+
+- Multi-agent orchestration with SWARM governance
+- Quality scoring via ProxyComputer pipeline
+- Welfare gap analysis between continuous (river) and discontinuous (rain) agents

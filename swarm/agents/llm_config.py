@@ -40,6 +40,10 @@ class LLMConfig:
         persona: Pre-defined persona type
         system_prompt: Custom system prompt (overrides persona if set)
         cost_tracking: Whether to track API costs
+        prompt_audit_path: Optional JSONL path to audit prompts/responses
+        prompt_audit_include_system_prompt: If true, log full system prompt
+        prompt_audit_hash_system_prompt: If true, log system prompt SHA256 hash
+        prompt_audit_max_chars: Truncate logged fields to this size
     """
 
     provider: LLMProvider = LLMProvider.ANTHROPIC
@@ -54,6 +58,10 @@ class LLMConfig:
     persona: PersonaType = PersonaType.OPEN
     system_prompt: Optional[str] = None
     cost_tracking: bool = True
+    prompt_audit_path: Optional[str] = None
+    prompt_audit_include_system_prompt: bool = False
+    prompt_audit_hash_system_prompt: bool = True
+    prompt_audit_max_chars: int = 20_000
 
     def __post_init__(self) -> None:
         """Validate configuration."""
@@ -76,6 +84,11 @@ class LLMConfig:
 
         if self.provider == LLMProvider.OLLAMA and not self.base_url:
             self.base_url = "http://localhost:11434"
+
+        if self.prompt_audit_max_chars < 0:
+            raise ValueError(
+                f"prompt_audit_max_chars must be >= 0, got {self.prompt_audit_max_chars}"
+            )
 
 
 @dataclass

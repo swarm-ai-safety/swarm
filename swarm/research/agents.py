@@ -4,7 +4,7 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any, Callable, Set
 
 import numpy as np
 from scipy import stats
@@ -443,7 +443,7 @@ class ExperimentAgent(ResearchAgent):
             # Generate combinations
             keys = list(sampled_space.keys())
             for i, combo in enumerate(product(*sampled_space.values())):
-                params = dict(zip(keys, combo, strict=False))
+                params = dict(zip(keys, combo, strict=True))
                 configs.append(ExperimentConfig(
                     name=f"config_{i}",
                     parameters=params,
@@ -521,14 +521,15 @@ class AnalysisAgent(ResearchAgent):
 
         # Layer 1: Descriptive statistics (always)
         for metric, values in metrics_data.items():
-            mean = np.mean(values)
-            std = np.std(values)
+            mean = float(np.mean(values))
+            std = float(np.std(values))
             ci = self._compute_ci(values)
 
+            mean_val: float = float(mean)
             claims.append(Claim(
-                statement=f"Mean {metric}: {mean:.3f} (SD: {std:.3f})",
+                statement=f"Mean {metric}: {mean_val:.3f} (SD: {std:.3f})",
                 metric=metric,
-                value=mean,
+                value=mean_val,
                 confidence_interval=ci,
                 is_primary=True,
             ))
@@ -1103,7 +1104,7 @@ class CritiqueAgent(ResearchAgent):
         confounds = []
 
         # Check if parameters are correlated in the design
-        params_tested = set()
+        params_tested: Set[str] = set()
         for config in results.configs:
             params_tested.update(config.parameters.keys())
 

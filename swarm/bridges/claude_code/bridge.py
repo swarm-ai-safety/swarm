@@ -10,6 +10,7 @@ ClaudeCodeBridge is the central adapter that:
 import logging
 import time
 from dataclasses import dataclass, field
+from hashlib import sha256
 from typing import Any, Dict, List, Optional
 
 from swarm.bridges.claude_code.client import ClaudeCodeClient, ClientConfig
@@ -96,6 +97,8 @@ class ClaudeCodeBridge:
         self._agent_states: Dict[str, Dict[str, Any]] = {}
         self._last_event_id: Optional[str] = None
 
+        self._session_initialized = False
+
         # Register internal event handlers
         self._client.on(
             BridgeEventType.PLAN_APPROVAL_REQUEST,
@@ -106,6 +109,41 @@ class ClaudeCodeBridge:
             self._handle_permission_request,
         )
 
+    # --- Session lifecycle ---
+
+    def init_session(
+        self,
+        team_name: str = "swarm",
+        cwd: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """Initialize the controller session.
+
+        Must be called before spawning agents.
+
+        Args:
+            team_name: Name for the agent team
+            cwd: Working directory for agents
+
+        Returns:
+            Session initialization response
+        """
+        result = self._client.init_session(team_name=team_name, cwd=cwd)
+        self._session_initialized = result.get("initialized", False)
+        return result
+
+    def ensure_session(
+        self,
+        team_name: str = "swarm",
+        cwd: Optional[str] = None,
+    ) -> None:
+        """Ensure session is initialized, initializing if needed."""
+        if not self._session_initialized:
+            status = self._client.get_session_status()
+            if not status.get("initialized"):
+                self.init_session(team_name=team_name, cwd=cwd)
+            else:
+                self._session_initialized = True
+
     # --- Agent lifecycle ---
 
     def spawn_agent(
@@ -113,7 +151,7 @@ class ClaudeCodeBridge:
         agent_id: str,
         system_prompt: str = "",
         allowed_tools: Optional[List[str]] = None,
-        model: str = "claude-sonnet-4-20250514",
+        model: str = "sonnet",
         budget_tool_calls: int = 100,
         budget_cost_usd: float = 10.0,
     ) -> Dict[str, Any]:
@@ -123,13 +161,16 @@ class ClaudeCodeBridge:
             agent_id: Unique agent identifier
             system_prompt: System prompt defining behavior
             allowed_tools: Tool allowlist
-            model: Model to use
+            model: Model to use ("sonnet", "opus", "haiku")
             budget_tool_calls: Max tool invocations for this agent
             budget_cost_usd: Max cost budget
 
         Returns:
             Controller response with agent metadata
         """
+        # Ensure session is initialized
+        self.ensure_session()
+
         # Configure governance budget
         self._policy.set_agent_budget(
             agent_id,
@@ -239,6 +280,8 @@ class ClaudeCodeBridge:
                 "token_count": message.token_count,
                 "cost_usd": message.cost_usd,
                 "tool_calls": len(message.tool_calls),
+                "prompt_len": len(prompt),
+                "response_len": len(message.content),
                 "prompt_preview": prompt[:200],
                 "response_preview": message.content[:200],
             },
@@ -465,6 +508,20 @@ class ClaudeCodeBridge:
         if self._event_log is None:
             return
 
+        # Avoid persisting potentially sensitive prompt/response content by default.
+        # Keep lengths + stable hashes for debugging, while dropping raw previews.
+        metadata = dict(interaction.metadata or {})
+        prompt_preview = metadata.pop("prompt_preview", None)
+        response_preview = metadata.pop("response_preview", None)
+        if isinstance(prompt_preview, str) and prompt_preview:
+            metadata["prompt_preview_sha256"] = sha256(
+                prompt_preview.encode("utf-8")
+            ).hexdigest()
+        if isinstance(response_preview, str) and response_preview:
+            metadata["response_preview_sha256"] = sha256(
+                response_preview.encode("utf-8")
+            ).hexdigest()
+
         event = Event(
             event_type=EventType.INTERACTION_COMPLETED,
             interaction_id=interaction.interaction_id,
@@ -475,7 +532,7 @@ class ClaudeCodeBridge:
                 "v_hat": interaction.v_hat,
                 "p": interaction.p,
                 "bridge": "claude_code",
-                "metadata": interaction.metadata,
+                "metadata": metadata,
             },
         )
         self._event_log.append(event)

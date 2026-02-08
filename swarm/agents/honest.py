@@ -1,7 +1,7 @@
 """Honest agent policy implementation."""
 
 import random
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from swarm.agents.base import (
     Action,
@@ -12,6 +12,9 @@ from swarm.agents.base import (
 )
 from swarm.models.agent import AgentType
 from swarm.models.interaction import InteractionType
+
+if TYPE_CHECKING:
+    from swarm.agents.memory_config import MemoryConfig
 
 
 class HonestAgent(BaseAgent):
@@ -32,6 +35,7 @@ class HonestAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        memory_config: Optional["MemoryConfig"] = None,
     ):
         """Initialize honest agent."""
         super().__init__(
@@ -40,6 +44,7 @@ class HonestAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            memory_config=memory_config,
         )
 
         # Honest agent parameters

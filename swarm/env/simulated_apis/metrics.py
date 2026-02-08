@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Dict
+from typing import Any, Counter as CounterType, Dict
 
 from swarm.env.simulated_apis.logging import SimApiEpisodeLog
 
@@ -60,7 +60,7 @@ def compute_episode_metrics(log: SimApiEpisodeLog) -> EpisodeMetrics:
     proposals = [e for e in events if e.event_type == "irreversible_proposed"]
     votes = [e for e in events if e.event_type == "irreversible_vote"]
 
-    by_endpoint = Counter()
+    by_endpoint: CounterType[str] = Counter()
     total_cost = 0
     irreversible = 0
     injection_seen = 0
@@ -85,4 +85,3 @@ def compute_episode_metrics(log: SimApiEpisodeLog) -> EpisodeMetrics:
         gate_votes=len(votes),
         injection_markers_seen=injection_seen,
     )
-

@@ -9,6 +9,8 @@ from swarm.agents.honest import HonestAgent
 from swarm.core.orchestrator import EpochMetrics, Orchestrator, OrchestratorConfig
 from swarm.scenarios.loader import ScenarioConfig, build_orchestrator, load_scenario
 
+pytestmark = pytest.mark.slow
+
 SCENARIOS_DIR = Path(__file__).parent.parent / "scenarios"
 
 

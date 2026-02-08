@@ -5,10 +5,13 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional
+from typing import TYPE_CHECKING, Dict, List, Optional
 
 from swarm.models.agent import AgentState, AgentType
 from swarm.models.interaction import InteractionType, SoftInteraction
+
+if TYPE_CHECKING:
+    from swarm.agents.memory_config import MemoryConfig
 
 
 class ActionType(Enum):
@@ -48,6 +51,13 @@ class ActionType(Enum):
     MOLTBOOK_COMMENT = "moltbook_comment"
     MOLTBOOK_VERIFY = "moltbook_verify"
     MOLTBOOK_VOTE = "moltbook_vote"
+
+    # Memory tier actions
+    WRITE_MEMORY = "write_memory"
+    PROMOTE_MEMORY = "promote_memory"
+    VERIFY_MEMORY = "verify_memory"
+    SEARCH_MEMORY = "search_memory"
+    CHALLENGE_MEMORY = "challenge_memory"
 
     # Special actions
     NOOP = "noop"  # Do nothing this turn
@@ -160,6 +170,14 @@ class Observation:
     moltbook_rate_limits: Dict = field(default_factory=dict)
     moltbook_karma: float = 0.0
 
+    # Memory tier observations
+    memory_hot_cache: List[Dict] = field(default_factory=list)
+    memory_pending_promotions: List[Dict] = field(default_factory=list)
+    memory_search_results: List[Dict] = field(default_factory=list)
+    memory_challenged_entries: List[Dict] = field(default_factory=list)
+    memory_entry_counts: Dict = field(default_factory=dict)
+    memory_writes_remaining: int = 0
+
 
 @dataclass
 class InteractionProposal:
@@ -191,6 +209,7 @@ class BaseAgent(ABC):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        memory_config: Optional["MemoryConfig"] = None,
     ):
         """
         Initialize agent.
@@ -201,6 +220,7 @@ class BaseAgent(ABC):
             roles: List of roles this agent can fulfill
             config: Agent-specific configuration
             name: Human-readable label (defaults to agent_id)
+            memory_config: Configuration for memory persistence across epochs
         """
         self.agent_id = agent_id
         self.name = name or agent_id
@@ -208,9 +228,20 @@ class BaseAgent(ABC):
         self.roles = roles or [Role.WORKER]
         self.config = config or {}
 
+        # Memory configuration (import here to avoid circular imports)
+        if memory_config is None:
+            from swarm.agents.memory_config import MemoryConfig
+            self.memory_config = MemoryConfig()
+        else:
+            self.memory_config = memory_config
+
         # Internal state
         self._memory: List[Dict] = []
         self._interaction_history: List[SoftInteraction] = []
+
+        # Counterparty trust memory: agent_id -> trust score in [0, 1]
+        # Starts at 0.5 (neutral) for unknown agents
+        self._counterparty_memory: Dict[str, float] = {}
 
     @property
     def primary_role(self) -> Role:
@@ -279,14 +310,22 @@ class BaseAgent(ABC):
             payoff: Payoff received
         """
         self._interaction_history.append(interaction)
+
+        # Determine counterparty
+        counterparty = (
+            interaction.counterparty
+            if interaction.initiator == self.agent_id
+            else interaction.initiator
+        )
+
+        # Update counterparty trust memory if interaction was accepted
+        if interaction.accepted:
+            self.update_counterparty_trust(counterparty, interaction.p)
+
         self._memory.append({
             "type": "interaction_outcome",
             "interaction_id": interaction.interaction_id,
-            "counterparty": (
-                interaction.counterparty
-                if interaction.initiator == self.agent_id
-                else interaction.initiator
-            ),
+            "counterparty": counterparty,
             "p": interaction.p,
             "payoff": payoff,
             "accepted": interaction.accepted,
@@ -310,12 +349,20 @@ class BaseAgent(ABC):
         """
         Compute trust score for a counterparty based on history.
 
+        Uses cached trust memory if available, otherwise computes from
+        interaction history.
+
         Args:
             counterparty_id: ID of the counterparty
 
         Returns:
             Trust score in [0, 1]
         """
+        # Check cached memory first
+        if counterparty_id in self._counterparty_memory:
+            return self._counterparty_memory[counterparty_id]
+
+        # Compute from interaction history
         relevant = [
             i for i in self._interaction_history
             if (i.initiator == counterparty_id or i.counterparty == counterparty_id)
@@ -327,7 +374,56 @@ class BaseAgent(ABC):
 
         # Average p from past interactions
         avg_p = sum(i.p for i in relevant) / len(relevant)
+
+        # Cache the computed trust
+        self._counterparty_memory[counterparty_id] = avg_p
         return avg_p
+
+    def apply_memory_decay(self, epoch: int) -> None:
+        """
+        Apply memory decay at epoch boundary.
+
+        This method implements the rain/river memory model:
+        - Epistemic memory (knowledge of others) decays toward neutral (0.5)
+        - Strategy and goal persistence affect learning transfer (not implemented here)
+
+        The decay formula is: new = old * decay + 0.5 * (1 - decay)
+        This smoothly interpolates toward neutral (0.5) as decay approaches 0.
+
+        Args:
+            epoch: Current epoch number (for potential epoch-dependent decay)
+        """
+        decay = self.memory_config.epistemic_persistence
+
+        # Full persistence = no decay
+        if decay >= 1.0:
+            return
+
+        # Apply decay to counterparty trust memory
+        for agent_id in list(self._counterparty_memory.keys()):
+            current = self._counterparty_memory[agent_id]
+            # Decay toward neutral (0.5)
+            self._counterparty_memory[agent_id] = current * decay + 0.5 * (1 - decay)
+
+        # For complete memory loss (rain agents), also clear interaction history
+        if decay == 0.0:
+            # Clear detailed interaction memory but keep aggregate stats
+            # This preserves the agent's internal state while losing specifics
+            self._counterparty_memory.clear()
+
+    def update_counterparty_trust(self, counterparty_id: str, new_p: float) -> None:
+        """
+        Update trust for a counterparty after an interaction.
+
+        Uses exponential moving average to incorporate new information.
+
+        Args:
+            counterparty_id: ID of the counterparty
+            new_p: Quality (p) of the new interaction
+        """
+        alpha = 0.3  # Learning rate
+        current = self._counterparty_memory.get(counterparty_id, 0.5)
+        self._counterparty_memory[counterparty_id] = current * (1 - alpha) + new_p * alpha
 
     def should_post(self, observation: Observation) -> bool:
         """Determine if agent should create a post."""
@@ -566,6 +662,47 @@ class BaseAgent(ABC):
             agent_id=self.agent_id,
             target_id=post_id,
             vote_direction=direction,
+        )
+
+    def create_write_memory_action(self, content: str) -> Action:
+        """Write a fact to shared memory (Tier 1)."""
+        return Action(
+            action_type=ActionType.WRITE_MEMORY,
+            agent_id=self.agent_id,
+            content=content,
+        )
+
+    def create_promote_memory_action(self, entry_id: str) -> Action:
+        """Promote a memory entry to the next tier."""
+        return Action(
+            action_type=ActionType.PROMOTE_MEMORY,
+            agent_id=self.agent_id,
+            target_id=entry_id,
+        )
+
+    def create_verify_memory_action(self, entry_id: str) -> Action:
+        """Verify a memory entry's accuracy."""
+        return Action(
+            action_type=ActionType.VERIFY_MEMORY,
+            agent_id=self.agent_id,
+            target_id=entry_id,
+        )
+
+    def create_search_memory_action(self, query: str) -> Action:
+        """Search shared memory."""
+        return Action(
+            action_type=ActionType.SEARCH_MEMORY,
+            agent_id=self.agent_id,
+            content=query,
+        )
+
+    def create_challenge_memory_action(self, entry_id: str, reason: str = "") -> Action:
+        """Challenge a memory entry's accuracy."""
+        return Action(
+            action_type=ActionType.CHALLENGE_MEMORY,
+            agent_id=self.agent_id,
+            target_id=entry_id,
+            content=reason,
         )
 
     def __repr__(self) -> str:
