@@ -98,6 +98,15 @@ testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_functions = ["test_*"]
 addopts = "-v --tb=short"
+norecursedirs = [
+    ".git",
+    ".testmon_cache",
+    ".venv",
+    "external",
+    "htmlcov",
+    "runs",
+    "site",
+]
 asyncio_default_fixture_loop_scope = "function"
 markers = [
     "asyncio: mark a test as an async test (used by pytest-asyncio)",
