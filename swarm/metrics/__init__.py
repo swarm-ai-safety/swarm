@@ -37,6 +37,12 @@ from swarm.metrics.security import (
     ThreatType,
 )
 from swarm.metrics.soft_metrics import SoftMetrics
+from swarm.metrics.horizon_eval import (
+    HorizonEvalConfig,
+    HorizonEvalResult,
+    SystemHorizonEvaluator,
+    group_by_epoch,
+)
 from swarm.metrics.time_horizons import (
     CAPABILITY_PROFILES,
     AgentCapabilityProfile,
@@ -81,4 +87,9 @@ __all__ = [
     "ComputeConstraints",
     "TimeHorizonBucket",
     "TimeHorizonMetrics",
+    # Multi-agent horizon evaluation (system-level)
+    "HorizonEvalConfig",
+    "HorizonEvalResult",
+    "SystemHorizonEvaluator",
+    "group_by_epoch",
 ]
