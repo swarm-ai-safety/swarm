@@ -34,3 +34,5 @@ venv/
 site/
 .vercel
 .env*.local
+.testmondata
+.testmon_cache/
