@@ -7,7 +7,11 @@ from datetime import datetime, timezone
 from typing import Any, Callable, Set
 
 import numpy as np
-from scipy import stats
+
+try:
+    from scipy import stats  # type: ignore[import-untyped]
+except Exception:  # pragma: no cover - optional dependency
+    stats = None  # type: ignore[assignment]
 
 from swarm.research.platforms import Paper, PlatformClient, SearchResult
 
@@ -160,6 +164,16 @@ class ResearchAgent(ABC):
     def run(self, *args, **kwargs) -> Any:
         """Execute the agent's primary function."""
         pass
+
+
+def _require_stats() -> Any:
+    """Return scipy.stats or raise with a helpful message."""
+    if stats is None:
+        raise RuntimeError(
+            "scipy is required for statistical analysis. "
+            "Install with `pip install scipy` or `swarm-safety[analysis]`."
+        )
+    return stats
 
 
 class LiteratureAgent(ResearchAgent):
@@ -568,8 +582,9 @@ class AnalysisAgent(ResearchAgent):
         if len(values) < 2:
             return (0.0, 0.0)
         mean = np.mean(values)
-        se = stats.sem(values)
-        ci = stats.t.interval(confidence, len(values) - 1, loc=mean, scale=se)
+        stats_mod = _require_stats()
+        se = stats_mod.sem(values)
+        ci = stats_mod.t.interval(confidence, len(values) - 1, loc=mean, scale=se)
         return (float(ci[0]), float(ci[1]))
 
     def _add_significance_tests(
@@ -592,7 +607,8 @@ class AnalysisAgent(ResearchAgent):
         for key, groups in param_groups.items():
             values_list = list(groups.values())
             if len(values_list) >= 2 and len(values_list[0]) >= 2 and len(values_list[1]) >= 2:
-                t_stat, p_value = stats.ttest_ind(values_list[0], values_list[1])
+                stats_mod = _require_stats()
+                t_stat, p_value = stats_mod.ttest_ind(values_list[0], values_list[1])
 
                 # Bonferroni correction
                 corrected_p = p_value * len(param_groups)
@@ -665,7 +681,8 @@ class AnalysisAgent(ResearchAgent):
                 v1 = metrics_data[m1]
                 v2 = metrics_data[m2]
                 if len(v1) == len(v2) and len(v1) >= 3:
-                    r, _ = stats.pearsonr(v1, v2)
+                    stats_mod = _require_stats()
+                    r, _ = stats_mod.pearsonr(v1, v2)
                     correlations[(m1, m2)] = float(r)
 
         return correlations
