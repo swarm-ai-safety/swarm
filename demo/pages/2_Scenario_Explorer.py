@@ -73,7 +73,13 @@ tabs = st.tabs(list(results.keys()))
 for tab, (_sid, result) in zip(tabs, results.items(), strict=False):
     with tab:
         st.markdown(scenario_description_card(result), unsafe_allow_html=True)
-        st.markdown(format_epoch_metrics_kpis(result["epoch_metrics"]), unsafe_allow_html=True)
+        st.markdown(
+            format_epoch_metrics_kpis(
+                result["epoch_metrics"],
+                incoherence_series=result.get("incoherence_series"),
+            ),
+            unsafe_allow_html=True,
+        )
 
         st.plotly_chart(
             metrics_over_time(
@@ -101,7 +107,7 @@ if len(results) > 1:
 
     metric_choice = st.selectbox(
         "Metric to compare",
-        ["toxicity_rate", "quality_gap", "total_welfare"],
+        ["toxicity_rate", "quality_gap", "incoherence_index", "total_welfare"],
     )
     st.plotly_chart(
         scenario_comparison_bar(results, metric_choice),

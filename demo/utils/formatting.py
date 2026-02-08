@@ -77,7 +77,10 @@ def kpi_row(cards: List[str]) -> str:
     return f'<div class="kpi-row">{inner}</div>'
 
 
-def format_epoch_metrics_kpis(epoch_metrics: list) -> str:
+def format_epoch_metrics_kpis(
+    epoch_metrics: list,
+    incoherence_series: List[float] | None = None,
+) -> str:
     """Generate KPI cards from the final epoch metrics."""
     if not epoch_metrics:
         return "<p>No data</p>"
@@ -89,13 +92,20 @@ def format_epoch_metrics_kpis(epoch_metrics: list) -> str:
     accepted = last.accepted_interactions
     total = last.total_interactions
     acc_rate = accepted / total if total > 0 else 0
+    incoherence = (
+        incoherence_series[-1]
+        if incoherence_series
+        else 0.0
+    )
 
     tox_style = "success" if toxicity < 0.2 else ("warning" if toxicity < 0.4 else "danger")
     qg_style = "success" if quality_gap > 0 else "danger"
+    incoh_style = "success" if incoherence < 0.3 else ("warning" if incoherence < 0.6 else "danger")
 
     cards = [
         kpi_card("Toxicity Rate", f"{toxicity:.3f}", tox_style, "lower is better"),
         kpi_card("Quality Gap", f"{quality_gap:.3f}", qg_style, "positive = good selection"),
+        kpi_card("Incoherence", f"{incoherence:.3f}", incoh_style, "lower is better"),
         kpi_card("Total Welfare", f"{welfare:.1f}", "info"),
         kpi_card("Acceptance Rate", f"{acc_rate:.1%}", "info", f"{accepted}/{total} interactions"),
     ]
