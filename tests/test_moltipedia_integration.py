@@ -1,8 +1,12 @@
 """Integration tests for Moltipedia handler with orchestrator."""
 
+import pytest
+
 from swarm.agents.wiki_editor import DiligentEditorAgent
 from swarm.core.moltipedia_handler import MoltipediaConfig
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+
+pytestmark = pytest.mark.slow
 
 
 def test_moltipedia_run_records_points():
