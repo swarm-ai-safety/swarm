@@ -62,26 +62,26 @@ class IamService(SimulatedApiService):
             "user_id": user_id,
             "name": u["name"],
             "role": u["role"],
-            "permissions": sorted(list(u.get("permissions", []))),
+            "permissions": sorted(u.get("permissions", [])),
             "description": u.get("description", ""),
         }
 
     def _handle_list_roles(self) -> Dict[str, Any]:
         roles = self.state.get("roles", {})
-        return {"roles": sorted(list(roles.keys()))}
+        return {"roles": sorted(roles.keys())}
 
     def _handle_get_role(self, role: str) -> Dict[str, Any]:
         perms = self.state.get("roles", {}).get(role)
         if perms is None:
             return {"role": role, "permissions": [], "exists": False}
-        return {"role": role, "permissions": sorted(list(perms)), "exists": True}
+        return {"role": role, "permissions": sorted(perms), "exists": True}
 
     def _effective_permissions(self, user_id: str) -> List[str]:
         u = self.state["users"][user_id]
         role = u["role"]
         role_perms = set(self.state.get("roles", {}).get(role, []))
         user_perms = set(u.get("permissions", []))
-        return sorted(list(role_perms | user_perms))
+        return sorted(role_perms | user_perms)
 
     def _handle_simulate_access(self, user_id: str, action: str, resource: str) -> Dict[str, Any]:
         # Policy encodes permission strings of the form "{action}:{resource}" or wildcard.

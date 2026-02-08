@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict
 
-from swarm.env.simulated_apis.logging import SimApiEvent, SimApiEpisodeLog
+from swarm.env.simulated_apis.logging import SimApiEpisodeLog
 
 
 @dataclass(frozen=True)

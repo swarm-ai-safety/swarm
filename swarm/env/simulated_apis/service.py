@@ -9,7 +9,7 @@ from swarm.env.simulated_apis.gating import (
     IrreversibleActionRequiresApproval,
     IrreversibleGate,
 )
-from swarm.env.simulated_apis.logging import SimApiEvent, SimApiEpisodeLog
+from swarm.env.simulated_apis.logging import SimApiEpisodeLog, SimApiEvent
 
 
 class ApiCallError(RuntimeError):

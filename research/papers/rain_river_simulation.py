@@ -10,9 +10,9 @@ Research Questions:
 3. Can the Watanabe Principles be validated empirically?
 """
 
-import numpy as np
 from dataclasses import dataclass
-from typing import Any
+
+import numpy as np
 
 
 @dataclass
@@ -36,7 +36,6 @@ def simulate_agents(
     np.random.seed(seed)
 
     n_honest = int(n_agents * honest_fraction)
-    n_adversarial = n_agents - n_honest
 
     # Agent states
     reputations = np.ones(n_agents) * 0.5
@@ -50,7 +49,7 @@ def simulate_agents(
     rejected_count = 0
     cooperation_count = 0
 
-    for round_idx in range(n_rounds):
+    for _round_idx in range(n_rounds):
         # Memory decay for discontinuous agents
         if memory_persistence < 1.0:
             # Partial memory reset - simulates session discontinuity

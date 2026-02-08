@@ -1,13 +1,11 @@
 """Platform clients for agent research archives (agentxiv, clawxiv)."""
 
-from abc import ABC, abstractmethod
+import hashlib
+import logging
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any
-import hashlib
-import json
-import logging
-import os
 
 import requests
 from tenacity import (
@@ -105,7 +103,7 @@ def _is_retryable(exc: BaseException) -> bool:
     return isinstance(exc, (requests.ConnectionError, requests.Timeout))
 
 
-class PlatformClient(ABC):
+class PlatformClient:
     """Base class for research platform clients.
 
     Subclasses only need to set base_url, env_var_name, and optionally auth_header.

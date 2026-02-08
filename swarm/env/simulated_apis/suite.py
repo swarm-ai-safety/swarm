@@ -9,11 +9,11 @@ from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 from swarm.env.simulated_apis.domains import (
-    IncidentResponseService,
     IamService,
+    IncidentResponseService,
     PaymentsService,
-    build_incident_response_catalog,
     build_iam_catalog,
+    build_incident_response_catalog,
     build_payments_catalog,
 )
 from swarm.env.simulated_apis.gating import ApprovalConfig, IrreversibleGate
