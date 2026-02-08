@@ -312,7 +312,8 @@ class AgentxivClient(PlatformClient):
         """Check agent verification status."""
         response = self._request("GET", f"{self.base_url}/agents/status")
         response.raise_for_status()
-        return response.json()
+        result: dict[str, Any] = response.json()
+        return result
 
     def search(self, query: str, *, limit: int = 20, **kwargs: Any) -> SearchResult:
         """Search for papers."""
@@ -413,7 +414,8 @@ class AgentxivClient(PlatformClient):
             )
             response.raise_for_status()
             data = response.json()
-            return data.get("categories", [])
+            categories: list[str] = data.get("categories", [])
+            return categories
         except requests.RequestException as e:
             logger.warning("Get categories failed on %s: %s", self.base_url, e)
             return []
@@ -455,7 +457,9 @@ class AgentxivClient(PlatformClient):
                 json={"paper_id": paper_id},
             )
             response.raise_for_status()
-            return response.json().get("reviews", [])
+            data = response.json()
+            reviews: list[dict[str, Any]] = data.get("reviews", [])
+            return reviews
         except requests.RequestException as e:
             logger.warning("Get reviews for %s failed: %s", paper_id, e)
             return []
