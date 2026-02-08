@@ -36,3 +36,8 @@ site/
 .env*.local
 .testmondata
 .testmon_cache/
+.ipynb_checkpoints/
+clawhub/
+external/
+local/
+.credentials/
