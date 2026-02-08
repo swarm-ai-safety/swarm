@@ -495,6 +495,7 @@ class TestEmergenceDetectionEvaluator:
         assert result.score > 0
 
     def test_no_emergence(self):
+        """Test that negative emergence is treated as a valid finding, not a failure."""
         evaluator = EmergenceDetectionEvaluator()
         result = evaluator.evaluate({
             "multi_agent_outcome": 0.5,
@@ -502,9 +503,15 @@ class TestEmergenceDetectionEvaluator:
             "topology_outcomes": {"ring": 0.5, "star": 0.5},
         })
         assert result.checks["emergence_delta"] < 0
-        assert any("worse" in w.lower() or "negative" in w.lower() for w in result.weaknesses)
+        assert result.checks["emergence_test_conducted"] is True
+        assert result.checks["emergence_result_type"] == "negative"
+        # Negative emergence is now a valid finding, reported as strength
+        assert any("negative" in s.lower() for s in result.strengths)
+        # Score should still be positive (test was conducted properly)
+        assert result.score > 0
 
     def test_zero_emergence(self):
+        """Test that null emergence is treated as a valid finding."""
         evaluator = EmergenceDetectionEvaluator()
         result = evaluator.evaluate({
             "multi_agent_outcome": 0.6,
@@ -512,6 +519,11 @@ class TestEmergenceDetectionEvaluator:
             "topology_outcomes": {"ring": 0.6, "star": 0.6},
         })
         assert result.checks["emergence_delta"] == 0
+        assert result.checks["emergence_test_conducted"] is True
+        assert result.checks["emergence_result_type"] == "null"
+        # Null emergence is a valid finding
+        assert any("null" in s.lower() for s in result.strengths)
+        assert result.score > 0
 
     def test_missing_data(self):
         evaluator = EmergenceDetectionEvaluator()
@@ -609,6 +621,7 @@ class TestAcceptanceRubric:
             design_consistency="pass",
             replay_success_rate=0.9,
             artifact_resolution_rate=0.98,
+            emergence_test_conducted=True,
             emergence_delta=0.3,
             documented_failure_modes_count=2,
         )
@@ -617,6 +630,47 @@ class TestAcceptanceRubric:
         assert len(outcome.passed_criteria) == 5
         assert len(outcome.failed_criteria) == 0
 
+    def test_publish_with_null_emergence(self):
+        """Null emergence results should still allow publication."""
+        rubric = AcceptanceRubric()
+        scores = Scores(
+            experimental_validity=1.0,
+            reproducibility=1.0,
+            artifact_integrity=1.0,
+            emergence_evidence=0.5,  # Lower score for null result
+            failure_mode_coverage=0.7,
+        )
+        checks = Checks(
+            design_consistency="pass",
+            replay_success_rate=0.9,
+            artifact_resolution_rate=0.98,
+            emergence_test_conducted=True,  # Test was conducted
+            emergence_delta=-0.1,  # Negative emergence is a valid finding
+            emergence_result_type="negative",
+            documented_failure_modes_count=2,
+        )
+        outcome = rubric.evaluate(scores, checks)
+        # Should pass because emergence_test_conducted=True
+        assert outcome.verdict == Verdict.PUBLISH
+        assert "emergence_evidence" in outcome.passed_criteria
+
+    def test_reject_with_legacy_positive_emergence_required(self):
+        """Test legacy mode where positive emergence is required."""
+        config = RubricConfig(require_positive_emergence=True)
+        rubric = AcceptanceRubric(config)
+        scores = Scores()
+        checks = Checks(
+            design_consistency="pass",
+            replay_success_rate=0.9,
+            artifact_resolution_rate=0.98,
+            emergence_test_conducted=True,
+            emergence_delta=-0.1,  # Negative
+            documented_failure_modes_count=2,
+        )
+        outcome = rubric.evaluate(scores, checks)
+        # Should fail in legacy mode because emergence_delta <= 0
+        assert "emergence_evidence" in outcome.failed_criteria
+
     def test_reject_multiple_failures(self):
         rubric = AcceptanceRubric()
         scores = Scores()
@@ -624,7 +678,7 @@ class TestAcceptanceRubric:
             design_consistency="fail",
             replay_success_rate=0.3,
             artifact_resolution_rate=0.5,
-            emergence_delta=-0.1,
+            emergence_test_conducted=False,  # Test not conducted = failure
             documented_failure_modes_count=0,
         )
         outcome = rubric.evaluate(scores, checks)
@@ -638,6 +692,7 @@ class TestAcceptanceRubric:
             design_consistency="pass",
             replay_success_rate=0.7,  # Below 0.8 threshold
             artifact_resolution_rate=0.98,
+            emergence_test_conducted=True,
             emergence_delta=0.5,
             documented_failure_modes_count=1,
         )
@@ -670,6 +725,7 @@ class TestAcceptanceRubric:
             design_consistency="pass",
             replay_success_rate=0.6,
             artifact_resolution_rate=0.85,
+            emergence_test_conducted=True,
             emergence_delta=0.1,
             documented_failure_modes_count=0,
         )

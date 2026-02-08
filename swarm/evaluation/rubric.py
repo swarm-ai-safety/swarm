@@ -4,8 +4,11 @@ Evaluates submissions as Publish / Revise / Reject based on:
 - Experimental validity: Pass
 - Replay success rate >= 80%
 - Artifact resolution rate >= 95%
-- Non-zero emergence evidence
+- Emergence test conducted (positive result NOT required)
 - >= 1 documented failure mode
+
+Note: Null and negative results are valid scientific contributions.
+The rubric evaluates research QUALITY, not whether results confirm hypotheses.
 """
 
 from typing import List, Optional
@@ -23,7 +26,16 @@ class RubricConfig(BaseModel):
 
     min_replay_success_rate: float = Field(default=0.8, ge=0.0, le=1.0)
     min_artifact_resolution_rate: float = Field(default=0.95, ge=0.0, le=1.0)
-    min_emergence_delta: float = Field(default=0.0)
+    # Whether to require positive emergence (False = accept null/negative results)
+    require_positive_emergence: bool = Field(
+        default=False,
+        description="If True, requires emergence_delta > 0. If False (default), "
+        "only requires that an emergence test was conducted.",
+    )
+    min_emergence_delta: float = Field(
+        default=0.0,
+        description="Only used if require_positive_emergence=True",
+    )
     min_documented_failure_modes: int = Field(default=1, ge=0)
     require_design_consistency_pass: bool = True
 
@@ -97,14 +109,30 @@ class AcceptanceRubric:
         else:
             missing.append("artifact_integrity")
 
-        # Criterion 4: Non-zero emergence evidence
-        if checks.emergence_delta is not None:
-            if checks.emergence_delta > self.config.min_emergence_delta:
+        # Criterion 4: Emergence test quality
+        # By default, we only require that a proper test was conducted.
+        # Null/negative results are valid scientific contributions.
+        if self.config.require_positive_emergence:
+            # Legacy mode: require positive emergence delta
+            if checks.emergence_delta is not None:
+                if checks.emergence_delta > self.config.min_emergence_delta:
+                    passed.append("emergence_evidence")
+                else:
+                    failed.append("emergence_evidence")
+            else:
+                missing.append("emergence_evidence")
+        else:
+            # Default mode: require test was conducted, accept any result
+            if checks.emergence_test_conducted is not None:
+                if checks.emergence_test_conducted:
+                    passed.append("emergence_evidence")
+                else:
+                    failed.append("emergence_evidence")
+            elif checks.emergence_delta is not None:
+                # Backward compatibility: if delta exists, test was conducted
                 passed.append("emergence_evidence")
             else:
-                failed.append("emergence_evidence")
-        else:
-            missing.append("emergence_evidence")
+                missing.append("emergence_evidence")
 
         # Criterion 5: >= 1 documented failure mode
         if checks.documented_failure_modes_count is not None:

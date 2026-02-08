@@ -65,7 +65,20 @@ class Checks(BaseModel):
     artifact_hash_match_rate: Optional[float] = Field(
         default=None, ge=0.0, le=1.0
     )
-    emergence_delta: Optional[float] = None
+    # Emergence detection: separate test quality from result
+    emergence_test_conducted: Optional[bool] = Field(
+        default=None,
+        description="Whether a proper multi-agent vs single-agent comparison was conducted",
+    )
+    emergence_delta: Optional[float] = Field(
+        default=None,
+        description="Multi-agent outcome minus max single-agent outcome (can be negative)",
+    )
+    emergence_result_type: Optional[str] = Field(
+        default=None,
+        pattern=r"^(positive|null|negative)$",
+        description="Classification of emergence result",
+    )
     topology_sensitivity: Optional[float] = None
     falsification_attempts_count: Optional[int] = Field(default=None, ge=0)
     documented_failure_modes_count: Optional[int] = Field(default=None, ge=0)

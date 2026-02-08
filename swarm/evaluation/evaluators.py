@@ -388,25 +388,35 @@ class ArtifactIntegrityEvaluator(BaseEvaluator):
 # ---------------------------------------------------------------------------
 
 class EmergenceDetectionEvaluator(BaseEvaluator):
-    """Evaluates whether results are irreducible to single-agent behavior.
+    """Evaluates whether multi-agent effects were properly tested.
+
+    This evaluator assesses the QUALITY of emergence testing, not whether
+    positive emergence was found. Null and negative results from well-designed
+    experiments are valid scientific contributions.
 
     Checks:
-    - Compare outcomes to single-agent baselines.
+    - Compare outcomes to single-agent baselines (test conducted).
     - Perturb agent count or network topology.
-    - Look for phase transitions or nonlinear effects.
+    - Report results honestly regardless of direction.
 
     Metrics:
-    - emergence_delta = outcome_multi - max(outcome_single)
-    - topology_sensitivity
+    - emergence_test_conducted: bool - Whether proper comparison exists
+    - emergence_delta: float - outcome_multi - max(outcome_single) (can be negative)
+    - emergence_result_type: "positive" | "null" | "negative"
+    - topology_sensitivity: float
 
-    A non-zero emergence signal is required.
+    A well-designed emergence test is required. Positive results are not required.
 
     Expected keys in submission_data:
         multi_agent_outcome: float - Outcome from the multi-agent experiment.
         single_agent_outcomes: list[float] - Outcomes from single-agent baselines.
         topology_outcomes: dict[str, float] - {topology_name: outcome} for perturbation analysis.
         baseline_topology: str | None - Name of the default topology.
+        statistical_analysis: bool - Whether proper stats were reported (optional).
     """
+
+    # Threshold for considering delta "null" vs positive/negative
+    NULL_THRESHOLD = 0.01  # 1% relative difference
 
     def evaluate(self, submission_data: Dict[str, Any]) -> EvaluationResult:
         strengths: List[str] = []
@@ -416,40 +426,66 @@ class EmergenceDetectionEvaluator(BaseEvaluator):
         multi_outcome = submission_data.get("multi_agent_outcome")
         single_outcomes = submission_data.get("single_agent_outcomes", [])
         topology_outcomes = submission_data.get("topology_outcomes", {})
+        has_stats = submission_data.get("statistical_analysis", False)
 
         emergence_delta: Optional[float] = None
+        emergence_test_conducted: bool = False
+        emergence_result_type: Optional[str] = None
         topology_sensitivity: Optional[float] = None
 
         score_components: List[float] = []
 
-        # Emergence delta
+        # Emergence test evaluation
         if multi_outcome is not None and single_outcomes:
+            # A proper emergence test was conducted
+            emergence_test_conducted = True
+            strengths.append(
+                "Proper emergence test conducted (multi-agent vs single-agent comparison)"
+            )
+            score_components.append(1.0)  # Full credit for conducting the test
+
             multi_outcome_val = float(multi_outcome)
             single_outcomes_vals = [float(x) for x in single_outcomes]
             max_single = max(single_outcomes_vals)
             emergence_delta_val = multi_outcome_val - max_single
             emergence_delta = emergence_delta_val
 
-            if emergence_delta_val > 0:
+            # Classify result type
+            relative_delta = (
+                emergence_delta_val / max(abs(max_single), 1e-9)
+            )
+
+            if relative_delta > self.NULL_THRESHOLD:
+                emergence_result_type = "positive"
                 strengths.append(
-                    f"Positive emergence delta: {emergence_delta_val:.4f} "
-                    f"(multi={multi_outcome_val:.4f}, max_single={max_single:.4f})"
+                    f"Positive emergence: multi-agent outperforms by {relative_delta:.1%} "
+                    f"(delta={emergence_delta_val:.4f})"
                 )
-                # Normalize: sigmoid-like scaling capped at 1.0
-                score_components.append(
-                    min(1.0, emergence_delta_val / max(abs(max_single), 1e-9))
+                # Bonus credit for positive emergence, but not required
+                score_components.append(min(1.0, relative_delta))
+            elif relative_delta < -self.NULL_THRESHOLD:
+                emergence_result_type = "negative"
+                # Negative emergence is a valid finding, not a failure
+                strengths.append(
+                    f"Negative emergence detected: multi-agent underperforms by {abs(relative_delta):.1%} "
+                    f"(delta={emergence_delta_val:.4f}) - valuable null/negative result"
                 )
-            elif emergence_delta_val == 0:
-                weaknesses.append(
-                    "Zero emergence delta; result matches single-agent baseline"
-                )
-                score_components.append(0.0)
+                # Partial credit: honest reporting of negative result
+                score_components.append(0.5)
             else:
-                weaknesses.append(
-                    f"Negative emergence delta: {emergence_delta_val:.4f}; "
-                    f"multi-agent outcome worse than single-agent"
+                emergence_result_type = "null"
+                strengths.append(
+                    f"Null emergence result: no significant difference detected "
+                    f"(delta={emergence_delta_val:.4f}) - valuable null result"
                 )
-                score_components.append(0.0)
+                # Partial credit: honest reporting of null result
+                score_components.append(0.5)
+
+            # Bonus for statistical analysis
+            if has_stats:
+                strengths.append("Statistical analysis reported for emergence comparison")
+                score_components.append(0.2)
+
         else:
             required_changes.append(
                 "Multi-agent and single-agent baseline outcomes required "
@@ -457,7 +493,7 @@ class EmergenceDetectionEvaluator(BaseEvaluator):
             )
             score_components.append(0.0)
 
-        # Topology sensitivity
+        # Topology sensitivity (optional but valued)
         if topology_outcomes and len(topology_outcomes) >= 2:
             values = [float(v) for v in topology_outcomes.values()]
             mean_val = statistics.mean(values)
@@ -476,22 +512,28 @@ class EmergenceDetectionEvaluator(BaseEvaluator):
                 )
                 score_components.append(min(1.0, topology_sensitivity_val))
             else:
-                weaknesses.append(
-                    "Results invariant to topology perturbation"
+                # Invariance to topology is a finding, not a failure
+                strengths.append(
+                    "Results robust across topologies (low sensitivity)"
                 )
-                score_components.append(0.0)
+                score_components.append(0.3)
         else:
             weaknesses.append(
-                "Insufficient topology perturbation data "
-                "(need >= 2 topologies)"
+                "Limited topology perturbation data "
+                "(consider testing >= 2 topologies)"
             )
+            # Not a hard failure, just a weakness
             score_components.append(0.0)
 
         score = sum(score_components) / len(score_components) if score_components else 0.0
 
-        checks: Dict[str, Any] = {}
+        checks: Dict[str, Any] = {
+            "emergence_test_conducted": emergence_test_conducted,
+        }
         if emergence_delta is not None:
             checks["emergence_delta"] = emergence_delta
+        if emergence_result_type is not None:
+            checks["emergence_result_type"] = emergence_result_type
         if topology_sensitivity is not None:
             checks["topology_sensitivity"] = topology_sensitivity
 
