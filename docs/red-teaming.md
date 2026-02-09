@@ -1,5 +1,7 @@
 # Adversarial Red-Teaming
 
+> **Website guide:** For attack YAML configs, scenario library, writing custom scenarios, best practices, and CI integration, see [docs/guides/red-teaming.md](guides/red-teaming.md).
+
 The red-teaming framework tests governance robustness against adaptive adversaries that learn to evade detection.
 
 ## Adaptive Adversaries
@@ -7,7 +9,7 @@ The red-teaming framework tests governance robustness against adaptive adversari
 Adaptive adversaries use reinforcement learning-style updates to evolve attack strategies:
 
 ```python
-from src.agents.adaptive_adversary import AdaptiveAdversary, AttackStrategy
+from swarm.agents.adaptive_adversary import AdaptiveAdversary, AttackStrategy
 
 # Create adaptive adversary
 adversary = AdaptiveAdversary(
@@ -48,7 +50,7 @@ print(f"Best strategies: {report['strategy_stats']}")
 Systematically test governance configurations:
 
 ```python
-from src.redteam import RedTeamEvaluator, AttackLibrary
+from swarm.redteam import RedTeamEvaluator, AttackLibrary
 
 # Define governance config to test
 governance_config = {

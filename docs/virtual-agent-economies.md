@@ -17,7 +17,7 @@ Components inspired by the "Virtual Agent Economies" paper (Tomasev et al., arXi
 
 Fair resource allocation using auction mechanisms inspired by Ronald Dworkin's approach to distributive justice. Agents start with equal token endowments and bid on resource bundles. The mechanism uses tatonnement (iterative price adjustment) to find market-clearing prices, then verifies envy-freeness.
 
-**Source:** `src/env/auction.py`
+**Source:** `swarm/env/auction.py`
 
 ### How It Works
 
@@ -30,7 +30,7 @@ Fair resource allocation using auction mechanisms inspired by Ronald Dworkin's a
 ### Quick Start
 
 ```python
-from src.env.auction import DworkinAuction, AuctionConfig, AuctionBid
+from swarm.env.auction import DworkinAuction, AuctionConfig, AuctionBid
 
 # Configure the auction
 config = AuctionConfig(
@@ -92,7 +92,7 @@ Agent effective endowments can be modulated by reputation (derived from average 
 
 Collective goal coordination where agents align around shared societal missions with measurable criteria. Contributions are evaluated using the soft-label quality pipeline, and rewards are distributed proportional to individual contributions.
 
-**Source:** `src/env/mission.py`
+**Source:** `swarm/env/mission.py`
 
 ### How It Works
 
@@ -105,7 +105,7 @@ Collective goal coordination where agents align around shared societal missions 
 ### Quick Start
 
 ```python
-from src.env.mission import MissionEconomy, MissionConfig, MissionObjective
+from swarm.env.mission import MissionEconomy, MissionConfig, MissionObjective
 
 config = MissionConfig(
     enabled=True,
@@ -186,7 +186,7 @@ print(f"Free-rider index (Gini): {gini:.3f}")
 
 Models speed-based market dynamics where agents submit orders at high rates, with risk of flash crashes (sudden correlated quality collapses). Includes a flash crash detector and circuit breaker mechanism.
 
-**Source:** `src/env/hfn.py`
+**Source:** `swarm/env/hfn.py`
 
 ### How It Works
 
@@ -199,7 +199,7 @@ Models speed-based market dynamics where agents submit orders at high rates, wit
 ### Quick Start
 
 ```python
-from src.env.hfn import HFNEngine, HFNConfig, HFNOrder
+from swarm.env.hfn import HFNEngine, HFNConfig, HFNOrder
 
 config = HFNConfig(
     tick_duration_ms=100.0,
@@ -277,7 +277,7 @@ Every executed trade generates an interaction with associated `p` values. Flash 
 
 Models sandbox boundaries as semi-permeable membranes with parameterized permeability (0 = fully sealed, 1 = fully open). Includes contagion modeling for how harmful interactions inside the sandbox propagate to the external world.
 
-**Source:** `src/boundaries/permeability.py`
+**Source:** `swarm/boundaries/permeability.py`
 
 ### How It Works
 
@@ -289,7 +289,7 @@ Models sandbox boundaries as semi-permeable membranes with parameterized permeab
 ### Quick Start
 
 ```python
-from src.boundaries.permeability import PermeabilityModel, PermeabilityConfig
+from swarm.boundaries.permeability import PermeabilityModel, PermeabilityConfig
 
 config = PermeabilityConfig(
     base_permeability=0.5,
@@ -361,7 +361,7 @@ Contagion probability is directly proportional to `(1-p) * permeability`, linkin
 
 Implements verifiable credentials, Proof-of-Personhood, and Sybil detection for the simulation. These are abstracted versions of the cryptographic infrastructure proposed in the paper.
 
-**Source:** `src/models/identity.py`, `src/governance/identity_lever.py`
+**Source:** `swarm/models/identity.py`, `swarm/governance/identity_lever.py`
 
 ### Components
 
@@ -376,7 +376,7 @@ Implements verifiable credentials, Proof-of-Personhood, and Sybil detection for 
 ### Quick Start
 
 ```python
-from src.models.identity import (
+from swarm.models.identity import (
     IdentityRegistry, IdentityConfig, CredentialIssuer,
 )
 
@@ -446,7 +446,7 @@ Agents above the `behavioral_similarity_threshold` are clustered together.
 The `SybilDetectionLever` integrates with the governance engine:
 
 ```python
-from src.governance import GovernanceConfig
+from swarm.governance import GovernanceConfig
 
 gov_config = GovernanceConfig(
     sybil_detection_enabled=True,

@@ -14,7 +14,7 @@ Lock the error benchmark semantics used for incoherence index `I = D / (E + eps)
 
 **Files**
 - `docs/incoherence_metric_contract.md` (new)
-- `src/metrics/incoherence.py` (new, interface + stubs)
+- `swarm/metrics/incoherence.py` (new, interface + stubs)
 - `tests/test_incoherence_metrics.py` (new, contract tests)
 
 **Acceptance Criteria**
@@ -39,9 +39,9 @@ Implement K-replay execution for fixed scenarios with controlled randomness.
 - Collect per-step actions, per-episode outcomes, and agent payoff sequences.
 
 **Files**
-- `src/replay/episode_spec.py` (new)
-- `src/replay/runner.py` (new)
-- `src/core/orchestrator.py` (replay metadata support)
+- `swarm/replay/episode_spec.py` (new)
+- `swarm/replay/runner.py` (new)
+- `swarm/core/orchestrator.py` (replay metadata support)
 - `tests/test_replay_runner.py` (new)
 
 **Acceptance Criteria**
@@ -67,8 +67,8 @@ Compute disagreement `D`, error `E`, and incoherence index `I` per agent/type/sy
 - Add columns to metrics summaries.
 
 **Files**
-- `src/metrics/incoherence.py` (new)
-- `src/metrics/reporters.py` (extend summary)
+- `swarm/metrics/incoherence.py` (new)
+- `swarm/metrics/reporters.py` (extend summary)
 - `tests/test_incoherence_metrics.py`
 - `tests/test_metrics.py`
 
@@ -94,9 +94,9 @@ Add replay and incoherence feature fields to event logs with backward-compatible
 - Preserve existing event log replay behavior.
 
 **Files**
-- `src/models/events.py`
-- `src/logging/event_log.py`
-- `src/core/orchestrator.py`
+- `swarm/models/events.py`
+- `swarm/logging/event_log.py`
+- `swarm/core/orchestrator.py`
 - `tests/test_event_log.py`
 - `tests/test_orchestrator.py`
 
@@ -122,8 +122,8 @@ Implement stress-test knobs needed for hot-mess scaling experiments.
 - Add observation-noise parameter in observation pipeline.
 
 **Files**
-- `src/core/orchestrator.py`
-- `src/scenarios/loader.py`
+- `swarm/core/orchestrator.py`
+- `swarm/scenarios/loader.py`
 - `scenarios/incoherence/` (new YAML set)
 - `tests/test_scenarios.py`
 - `tests/test_orchestrator.py`
@@ -151,8 +151,8 @@ Run Experiment A and generate `I` scaling artifacts vs horizon and branching.
 
 **Files**
 - `examples/run_incoherence_scaling.py` (new)
-- `src/analysis/aggregation.py`
-- `src/analysis/plots.py`
+- `swarm/analysis/aggregation.py`
+- `swarm/analysis/plots.py`
 - `docs/analysis/incoherence_scaling.md` (new)
 - `tests/test_analysis.py`
 - `tests/test_sweep.py`
@@ -179,8 +179,8 @@ Implement Experiment B decomposition by agent type and dual-failure-mode categor
 - Track ratio over complexity tiers.
 
 **Files**
-- `src/metrics/incoherence.py`
-- `src/analysis/aggregation.py`
+- `swarm/metrics/incoherence.py`
+- `swarm/analysis/aggregation.py`
 - `tests/test_metrics.py`
 
 **Acceptance Criteria**
@@ -205,9 +205,9 @@ Extend governance config/engine with toggles and thresholds for incoherence-targ
 - Scenario parsing support.
 
 **Files**
-- `src/governance/config.py`
-- `src/governance/engine.py`
-- `src/scenarios/loader.py`
+- `swarm/governance/config.py`
+- `swarm/governance/engine.py`
+- `swarm/scenarios/loader.py`
 - `tests/test_governance.py`
 
 **Acceptance Criteria**
@@ -234,12 +234,12 @@ Implement all Phase 4 levers and integrate with orchestrator hooks.
 - Orchestrator verification checkpoint hook
 
 **Files**
-- `src/governance/ensemble.py` (new)
-- `src/governance/incoherence_breaker.py` (new)
-- `src/governance/decomposition.py` (new)
-- `src/governance/dynamic_friction.py` (new)
-- `src/governance/engine.py`
-- `src/core/orchestrator.py`
+- `swarm/governance/ensemble.py` (new)
+- `swarm/governance/incoherence_breaker.py` (new)
+- `swarm/governance/decomposition.py` (new)
+- `swarm/governance/dynamic_friction.py` (new)
+- `swarm/governance/engine.py`
+- `swarm/core/orchestrator.py`
 - `tests/test_governance.py`
 - `tests/test_integration.py`
 - `tests/test_orchestrator.py`
@@ -267,10 +267,10 @@ Predict high-incoherence episodes and activate governance levers adaptively.
 - Optional behavioral model path behind flag.
 
 **Files**
-- `src/forecaster/features.py` (new)
-- `src/forecaster/model.py` (new)
-- `src/governance/engine.py`
-- `src/core/orchestrator.py`
+- `swarm/forecaster/features.py` (new)
+- `swarm/forecaster/model.py` (new)
+- `swarm/governance/engine.py`
+- `swarm/core/orchestrator.py`
 - `tests/test_forecaster.py` (new)
 - `tests/test_governance.py`
 
@@ -296,8 +296,8 @@ Expose incoherence analytics in dashboard and publish transferability caveats fo
 - Publish transferability annotation doc per intervention.
 
 **Files**
-- `src/analysis/dashboard.py`
-- `src/analysis/streamlit_app.py`
+- `swarm/analysis/dashboard.py`
+- `swarm/analysis/streamlit_app.py`
 - `docs/transferability/incoherence_governance.md` (new)
 - `tests/test_dashboard.py`
 

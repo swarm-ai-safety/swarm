@@ -58,7 +58,7 @@ The framework combines:
 
 The sandbox draws on market microstructure theory to model information
 asymmetry and adverse selection in multi-agent systems. Core formulas below are
-implemented in `src/core/`.
+implemented in `swarm/core/`.
 
 ### 1. Proxy Computation and Probabilistic Labels
 
@@ -70,7 +70,7 @@ where $x_i$ are normalised signals (task progress, rework count, verifier
 rejections, tool misuse flags, engagement) and $w_i$ are calibrated weights
 normalised to sum to one. Note that verifier rejections and tool misuse are
 averaged into a single verifier signal before weighting (see `ProxyComputer` in
-`src/core/proxy.py`).
+`swarm/core/proxy.py`).
 
 The raw score is then mapped to a probability through a calibrated sigmoid:
 

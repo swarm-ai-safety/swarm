@@ -7,13 +7,13 @@ incoherence analytics.
 
 ```bash
 # Generate and run dashboard
-streamlit run src/analysis/streamlit_app.py
+streamlit run swarm/analysis/streamlit_app.py
 ```
 
 ## Programmatic Usage
 
 ```python
-from src.analysis import (
+from swarm.analysis import (
     DashboardState,
     MetricSnapshot,
     AgentSnapshot,

@@ -26,7 +26,7 @@ the scaling runner.
 
 ## Intended Next Upgrade
 - Replace proxy signal with decision-level replay metrics from
-  `src/metrics/incoherence.py`:
+  `swarm/metrics/incoherence.py`:
   - benchmark-based `E`
   - replay disagreement `D`
   - `I = D / (E + eps)`

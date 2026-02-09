@@ -43,6 +43,12 @@ local/
 .credentials/
 credentials/
 
+# Relocated directories (prevent re-creation at root)
+submissions/
+bridges/
+swarm-api/
+demo/
+
 # API keys and secrets
 *.pem
 *.key

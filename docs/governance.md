@@ -7,8 +7,8 @@ SWARM's governance design draws inspiration from behavioral ecology research on 
 ## Configuration
 
 ```python
-from src.governance import GovernanceConfig, GovernanceEngine
-from src.core.orchestrator import Orchestrator, OrchestratorConfig
+from swarm.governance import GovernanceConfig, GovernanceEngine
+from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 
 gov_config = GovernanceConfig(
     # Transaction tax: 5% of interaction value, split 50/50
@@ -68,19 +68,6 @@ incoherence controls focused on variance-dominated failures:
 For deployment assumptions and caveats, see
 `docs/transferability/incoherence_governance.md`.
 
-## Incoherence-Targeted Controls
-
-In addition to baseline levers, the project includes replay-calibrated
-incoherence controls focused on variance-dominated failures:
-
-- self-ensemble
-- incoherence breaker
-- decomposition checkpoints
-- dynamic friction
-
-For deployment assumptions and caveats, see
-`docs/transferability/incoherence_governance.md`.
-
 ## Integration Points
 
 Governance hooks into the orchestrator at:
@@ -106,7 +93,7 @@ The collusion detection system identifies coordinated manipulation patterns amon
 ### Collusion Quick Start
 
 ```python
-from src.governance import GovernanceConfig, GovernanceEngine
+from swarm.governance import GovernanceConfig, GovernanceEngine
 
 config = GovernanceConfig(
     collusion_detection_enabled=True,
@@ -170,7 +157,7 @@ The Sybil detection system identifies agents that appear to be controlled by the
 ### Sybil Detection Quick Start
 
 ```python
-from src.governance import GovernanceConfig, GovernanceEngine
+from swarm.governance import GovernanceConfig, GovernanceEngine
 
 config = GovernanceConfig(
     sybil_detection_enabled=True,

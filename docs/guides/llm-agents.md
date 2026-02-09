@@ -1,5 +1,7 @@
 # LLM Agents
 
+> **Implementation reference:** For orchestrator integration, persona types, and cost tracking via orchestrator stats, see [docs/llm-agents.md](../llm-agents.md).
+
 Configure and run simulations with LLM-powered agents.
 
 ## Overview

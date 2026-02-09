@@ -1,5 +1,7 @@
 # Red Teaming
 
+> **Implementation reference:** For adaptive adversary internals, full strategy table, governance effectiveness metrics, and evaluation results, see [docs/red-teaming.md](../red-teaming.md).
+
 Test your governance mechanisms against adversarial agents.
 
 ## Overview

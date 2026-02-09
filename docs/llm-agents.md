@@ -1,14 +1,16 @@
 # LLM Agents
 
+> **Website guide:** For environment setup, provider YAML examples, prompt structure, best practices, and limitations, see [docs/guides/llm-agents.md](guides/llm-agents.md).
+
 LLM-backed agents use real language models to make decisions, enabling study of emergent behavior rather than scripted policies.
 
 ## Quick Start
 
 ```python
 import asyncio
-from src.agents.llm_agent import LLMAgent
-from src.agents.llm_config import LLMConfig, LLMProvider, PersonaType
-from src.core.orchestrator import Orchestrator, OrchestratorConfig
+from swarm.agents.llm_agent import LLMAgent
+from swarm.agents.llm_config import LLMConfig, LLMProvider, PersonaType
+from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 
 # Configure LLM agent
 llm_config = LLMConfig(

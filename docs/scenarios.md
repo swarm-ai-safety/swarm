@@ -51,15 +51,15 @@ python examples/run_scenario.py scenarios/strict_governance.yaml
 Or use the package CLI entry point:
 
 ```bash
-python -m src list
-python -m src run scenarios/baseline.yaml
-python -m src run scenarios/status_game.yaml --seed 42 --epochs 20
+python -m swarm list
+python -m swarm run scenarios/baseline.yaml
+python -m swarm run scenarios/status_game.yaml --seed 42 --epochs 20
 ```
 
 Or load programmatically:
 
 ```python
-from src.scenarios import load_and_build
+from swarm.scenarios import load_and_build
 
 orchestrator = load_and_build(Path("scenarios/status_game.yaml"))
 metrics = orchestrator.run()
@@ -88,8 +88,8 @@ Governance effectively punishes bad actors (payoffs drop from positive to negati
 Run batch simulations over parameter ranges:
 
 ```python
-from src.analysis import SweepConfig, SweepParameter, SweepRunner
-from src.scenarios import load_scenario
+from swarm.analysis import SweepConfig, SweepParameter, SweepRunner
+from swarm.scenarios import load_scenario
 
 # Load base scenario
 scenario = load_scenario(Path("scenarios/baseline.yaml"))

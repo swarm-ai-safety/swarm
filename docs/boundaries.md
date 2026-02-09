@@ -5,7 +5,7 @@ Model sandbox-external world interactions with information flow tracking, bounda
 ## External World Simulation
 
 ```python
-from src.boundaries import (
+from swarm.boundaries import (
     ExternalWorld,
     ExternalService,
     ExternalDataSource,
@@ -25,7 +25,7 @@ world = ExternalWorld().create_default_world()
 ## Information Flow Tracking
 
 ```python
-from src.boundaries import FlowTracker, FlowDirection, FlowType
+from swarm.boundaries import FlowTracker, FlowDirection, FlowType
 
 tracker = FlowTracker(sensitivity_threshold=0.5)
 
@@ -39,7 +39,7 @@ print(f"Sensitive: {metrics.sensitive_flows}")
 ## Boundary Policies
 
 ```python
-from src.boundaries import (
+from swarm.boundaries import (
     PolicyEngine,
     RateLimitPolicy,
     ContentFilterPolicy,
@@ -67,7 +67,7 @@ engine.add_policy(SensitivityPolicy(
 ## Leakage Detection
 
 ```python
-from src.boundaries import LeakageDetector
+from swarm.boundaries import LeakageDetector
 
 detector = LeakageDetector()
 
@@ -92,7 +92,7 @@ print(f"Recommendations: {report.recommendations}")
 The permeability model treats sandbox boundaries as semi-permeable membranes with parameterized permeability (0 = fully sealed, 1 = fully open). It includes contagion modeling for how harmful interactions inside the sandbox propagate externally. Inspired by [Tomasev et al. (2025)](https://arxiv.org/abs/2509.10147).
 
 ```python
-from src.boundaries.permeability import PermeabilityModel, PermeabilityConfig
+from swarm.boundaries.permeability import PermeabilityModel, PermeabilityConfig
 
 config = PermeabilityConfig(
     base_permeability=0.5,
@@ -121,7 +121,7 @@ For full documentation, see [Virtual Agent Economies - Permeability](virtual-age
 ## Enable Boundaries in Orchestrator
 
 ```python
-from src.core.orchestrator import Orchestrator, OrchestratorConfig
+from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 
 config = OrchestratorConfig(
     enable_boundaries=True,

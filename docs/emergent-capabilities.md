@@ -7,7 +7,7 @@ The emergent capabilities module measures collective intelligence and coordinati
 Composite tasks require multiple agents with complementary capabilities to work together:
 
 ```python
-from src.env.composite_tasks import (
+from swarm.env.composite_tasks import (
     CompositeTask, CompositeTaskPool, Subtask, CapabilityType,
     create_research_synthesis_task, create_problem_solving_task,
 )
@@ -54,8 +54,8 @@ The system measures emergent behaviors that arise from collaboration:
 ## Quick Start
 
 ```python
-from src.core.orchestrator import Orchestrator, OrchestratorConfig
-from src.env.composite_tasks import CapabilityType, create_problem_solving_task
+from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+from swarm.env.composite_tasks import CapabilityType, create_problem_solving_task
 
 # Enable composite tasks
 config = OrchestratorConfig(

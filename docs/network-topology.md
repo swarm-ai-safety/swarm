@@ -5,8 +5,8 @@ The network module controls which agents can interact, enabling study of informa
 ## Quick Start
 
 ```python
-from src.core.orchestrator import Orchestrator, OrchestratorConfig
-from src.env.network import NetworkConfig, NetworkTopology
+from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+from swarm.env.network import NetworkConfig, NetworkTopology
 
 # Configure small-world network
 network_config = NetworkConfig(
