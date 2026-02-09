@@ -1,8 +1,8 @@
 """Tests for the Claude Code bridge runner script."""
 
-from types import SimpleNamespace
-from pathlib import Path
 import sys
+from pathlib import Path
+from types import SimpleNamespace
 
 import scripts.run_claude_code_scenario as runner
 
