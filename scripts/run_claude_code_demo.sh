@@ -8,4 +8,5 @@ API_PREFIX=${API_PREFIX:-/api}
 python scripts/run_claude_code_scenario.py \
   --scenario "$SCENARIO" \
   --base-url "$BASE_URL" \
-  --api-prefix "$API_PREFIX"
+  --api-prefix "$API_PREFIX" \
+  --auto-approve

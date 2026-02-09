@@ -7,6 +7,7 @@ import argparse
 import os
 import re
 import sys
+from urllib.parse import urlparse
 from pathlib import Path
 from typing import Dict, List
 
@@ -21,6 +22,16 @@ def _sanitize_agent_id(raw: str) -> str:
     cleaned = re.sub(r"[^a-zA-Z0-9_-]+", "_", raw.strip())
     cleaned = cleaned.strip("_")
     return cleaned or "agent"
+
+
+def _is_loopback_url(url: str) -> bool:
+    """Return True if the URL host is loopback."""
+    parsed = urlparse(url)
+    host = parsed.hostname
+    if host is None:
+        # Fallback for scheme-less values
+        host = url.split("://")[-1].split("/")[0].split(":")[0]
+    return host in ("localhost", "127.0.0.1", "::1")
 
 
 def _build_agents(
@@ -73,8 +84,8 @@ def main() -> int:
     )
     parser.add_argument(
         "--api-key",
-        default=os.environ.get("SWARM_BRIDGE_API_KEY"),
-        help="Bearer token for controller (or set SWARM_BRIDGE_API_KEY)",
+        default=None,
+        help="Bearer token for controller (prefer SWARM_BRIDGE_API_KEY)",
     )
     parser.add_argument(
         "--team-name",
@@ -87,9 +98,14 @@ def main() -> int:
         help="Working directory for controller agents",
     )
     parser.add_argument(
+        "--auto-approve",
+        action="store_true",
+        help="Auto-approve plan/permission requests (loopback only)",
+    )
+    parser.add_argument(
         "--no-auto-approve",
         action="store_true",
-        help="Disable auto-approval of plan/permission requests",
+        help="Deprecated; auto-approval is off by default",
     )
 
     args = parser.parse_args()
@@ -111,15 +127,32 @@ def main() -> int:
     orchestrator = Orchestrator(config=scenario.orchestrator_config)
     orchestrator.state.rate_limits = scenario.rate_limits
 
+    cli_api_key = args.api_key
+    if cli_api_key:
+        print(
+            "Warning: --api-key may be exposed via shell history or process listings. "
+            "Prefer SWARM_BRIDGE_API_KEY.",
+            file=sys.stderr,
+        )
+    api_key = cli_api_key or os.environ.get("SWARM_BRIDGE_API_KEY")
+
+    auto_approve = args.auto_approve and not args.no_auto_approve
+    if auto_approve and not _is_loopback_url(args.base_url):
+        print(
+            "Warning: auto-approve is disabled for non-loopback controller URLs.",
+            file=sys.stderr,
+        )
+        auto_approve = False
+
     client_config = ClientConfig(
         base_url=args.base_url,
         api_prefix=args.api_prefix,
-        api_key=args.api_key,
+        api_key=api_key,
     )
     bridge_config = BridgeConfig(
         client_config=client_config,
         governance_config=scenario.orchestrator_config.governance_config,
-        auto_respond_governance=not args.no_auto_approve,
+        auto_respond_governance=auto_approve,
     )
     bridge = ClaudeCodeBridge(bridge_config, event_log=orchestrator.event_log)
 

@@ -67,6 +67,7 @@ npm start
 
 - Always set `SWARM_BRIDGE_API_KEY` before starting the service.
 - Keep `HOST` on loopback (e.g. `127.0.0.1`) unless you have a secured reverse proxy in front.
+- Auto-approval is off by default and only allowed for loopback controller URLs.
 
 ### Controller setup script (repeatable)
 ```bash
@@ -139,7 +140,8 @@ bridge.shutdown()
 python scripts/run_claude_code_scenario.py \
   --scenario scenarios/claude_code_demo.yaml \
   --base-url http://localhost:3100 \
-  --api-prefix /api
+  --api-prefix /api \
+  --auto-approve
 ```
 
 Shortcut wrapper:
@@ -332,6 +334,7 @@ Access at http://localhost:3100 for real-time agent monitoring.
 - **No responses after `ask()`**: The bridge uses `/send` as fire-and-forget; poll `/events` for responses.
 - **Approval buttons fail in UI**: Use the Python bridge `respond_to_plan()` or enable `auto_respond_governance`.
 - **Agent spawn succeeds but no output**: Confirm the controller session is initialized (`/session/status`) and agents are active.
+- **Auto-approval disabled unexpectedly**: Auto-approval only works for loopback controller URLs; use `http://localhost:3100` or `http://127.0.0.1:3100`.
 
 ## Validation Against Python Bridge (2026-02-09)
 Validated the API contract against `swarm/bridges/claude_code/client.py` and `swarm/bridges/claude_code/bridge.py`.
