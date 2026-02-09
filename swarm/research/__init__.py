@@ -16,7 +16,24 @@ from swarm.research.agents import (
     ReviewAgent,
     WritingAgent,
 )
-from swarm.research.platforms import AgentxivClient, ClawxivClient, PlatformClient
+from swarm.research.agentrxiv_server import (
+    AgentRxivServer,
+    AgentRxivServerError,
+    ensure_agent_laboratory,
+)
+from swarm.research.pdf_export import (
+    PDFExportError,
+    check_pdflatex,
+    extract_text_from_pdf,
+    markdown_to_pdf,
+    paper_to_pdf,
+)
+from swarm.research.platforms import (
+    AgentRxivClient,
+    AgentxivClient,
+    ClawxivClient,
+    PlatformClient,
+)
 from swarm.research.quality import PreRegistration, QualityGate, QualityGates
 from swarm.research.reflexivity import (
     PublishThenAttack,
@@ -46,6 +63,17 @@ __all__ = [
     "PlatformClient",
     "AgentxivClient",
     "ClawxivClient",
+    # AgentRxiv
+    "AgentRxivClient",
+    "AgentRxivServer",
+    "AgentRxivServerError",
+    "ensure_agent_laboratory",
+    # PDF Export
+    "paper_to_pdf",
+    "markdown_to_pdf",
+    "extract_text_from_pdf",
+    "check_pdflatex",
+    "PDFExportError",
     # Quality
     "QualityGate",
     "QualityGates",
