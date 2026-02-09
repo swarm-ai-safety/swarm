@@ -199,21 +199,25 @@ class ClaudeCodeBridge:
         )
 
         # Log spawn event
-        self._record_bridge_event(BridgeEvent(
-            event_type=BridgeEventType.AGENT_SPAWNED,
-            agent_id=agent_id,
-            payload={"model": model, "tools": allowed_tools or []},
-        ))
+        self._record_bridge_event(
+            BridgeEvent(
+                event_type=BridgeEventType.AGENT_SPAWNED,
+                agent_id=agent_id,
+                payload={"model": model, "tools": allowed_tools or []},
+            )
+        )
 
         return result
 
     def shutdown_agent(self, agent_id: str) -> None:
         """Shut down a single agent."""
         self._client.shutdown_agent(agent_id)
-        self._record_bridge_event(BridgeEvent(
-            event_type=BridgeEventType.AGENT_SHUTDOWN,
-            agent_id=agent_id,
-        ))
+        self._record_bridge_event(
+            BridgeEvent(
+                event_type=BridgeEventType.AGENT_SHUTDOWN,
+                agent_id=agent_id,
+            )
+        )
 
     def shutdown(self) -> None:
         """Shut down all agents managed by this bridge."""
@@ -440,9 +444,7 @@ class ClaudeCodeBridge:
             return
 
         request = PlanApprovalRequest.from_dict(event.payload)
-        agent_rep = self._agent_states.get(
-            request.agent_id, {}
-        ).get("reputation", 0.0)
+        agent_rep = self._agent_states.get(request.agent_id, {}).get("reputation", 0.0)
 
         result = self._policy.evaluate_plan(request, agent_rep)
 
@@ -471,9 +473,7 @@ class ClaudeCodeBridge:
             return
 
         request = PermissionRequest.from_dict(event.payload)
-        agent_rep = self._agent_states.get(
-            request.agent_id, {}
-        ).get("reputation", 0.0)
+        agent_rep = self._agent_states.get(request.agent_id, {}).get("reputation", 0.0)
 
         result = self._policy.evaluate_permission(request, agent_rep)
 
@@ -493,14 +493,18 @@ class ClaudeCodeBridge:
     def _record_bridge_event(self, event: BridgeEvent) -> None:
         """Record a bridge event to the internal log."""
         if len(self._bridge_events) >= self._config.max_bridge_events:
-            self._bridge_events = self._bridge_events[-self._config.max_bridge_events // 2 :]
+            self._bridge_events = self._bridge_events[
+                -self._config.max_bridge_events // 2 :
+            ]
         self._bridge_events.append(event)
         self._client._dispatch_event(event)
 
     def _record_interaction(self, interaction: SoftInteraction) -> None:
         """Record an interaction, enforcing the configured cap."""
         if len(self._interactions) >= self._config.max_interactions:
-            self._interactions = self._interactions[-self._config.max_interactions // 2 :]
+            self._interactions = self._interactions[
+                -self._config.max_interactions // 2 :
+            ]
         self._interactions.append(interaction)
 
     def _log_interaction(self, interaction: SoftInteraction) -> None:

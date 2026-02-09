@@ -1,6 +1,5 @@
 """Tests for proxy computation."""
 
-
 import pytest
 
 from swarm.core.proxy import ProxyComputer, ProxyObservables, ProxyWeights
@@ -102,10 +101,10 @@ class TestProxyWeights:
         """Default weights should sum to 1."""
         weights = ProxyWeights()
         total = (
-            weights.task_progress +
-            weights.rework_penalty +
-            weights.verifier_penalty +
-            weights.engagement_signal
+            weights.task_progress
+            + weights.rework_penalty
+            + weights.verifier_penalty
+            + weights.engagement_signal
         )
         assert total == pytest.approx(1.0)
 
@@ -120,10 +119,10 @@ class TestProxyWeights:
 
         normalized = weights.normalize()
         total = (
-            normalized.task_progress +
-            normalized.rework_penalty +
-            normalized.verifier_penalty +
-            normalized.engagement_signal
+            normalized.task_progress
+            + normalized.rework_penalty
+            + normalized.verifier_penalty
+            + normalized.engagement_signal
         )
         assert total == pytest.approx(1.0)
 
@@ -138,7 +137,9 @@ class TestProxyWeights:
 
         normalized = weights.normalize()
 
-        assert normalized.task_progress / normalized.rework_penalty == pytest.approx(2.0)
+        assert normalized.task_progress / normalized.rework_penalty == pytest.approx(
+            2.0
+        )
 
 
 class TestProxyObservables:
@@ -233,15 +234,15 @@ class TestProxyComputer:
             counterparty_engagement_delta=0.3,
         )
 
-        v_hat_0 = computer.compute_v_hat(ProxyObservables(
-            **{**base_obs.__dict__, "rework_count": 0}
-        ))
-        v_hat_1 = computer.compute_v_hat(ProxyObservables(
-            **{**base_obs.__dict__, "rework_count": 1}
-        ))
-        v_hat_3 = computer.compute_v_hat(ProxyObservables(
-            **{**base_obs.__dict__, "rework_count": 3}
-        ))
+        v_hat_0 = computer.compute_v_hat(
+            ProxyObservables(**{**base_obs.__dict__, "rework_count": 0})
+        )
+        v_hat_1 = computer.compute_v_hat(
+            ProxyObservables(**{**base_obs.__dict__, "rework_count": 1})
+        )
+        v_hat_3 = computer.compute_v_hat(
+            ProxyObservables(**{**base_obs.__dict__, "rework_count": 3})
+        )
 
         assert v_hat_0 > v_hat_1 > v_hat_3
 

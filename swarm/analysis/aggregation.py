@@ -131,11 +131,13 @@ class SimulationHistory:
         for snapshot in self.epoch_snapshots:
             value = getattr(snapshot, metric, None)
             if value is not None:
-                points.append(TimeSeriesPoint(
-                    epoch=snapshot.epoch,
-                    value=float(value),
-                    timestamp=snapshot.timestamp,
-                ))
+                points.append(
+                    TimeSeriesPoint(
+                        epoch=snapshot.epoch,
+                        value=float(value),
+                        timestamp=snapshot.timestamp,
+                    )
+                )
         return points
 
     def get_agent_time_series(
@@ -151,10 +153,12 @@ class SimulationHistory:
         for snapshot in self.agent_snapshots[agent_id]:
             value = getattr(snapshot, metric, None)
             if value is not None:
-                points.append(TimeSeriesPoint(
-                    epoch=snapshot.epoch,
-                    value=float(value),
-                ))
+                points.append(
+                    TimeSeriesPoint(
+                        epoch=snapshot.epoch,
+                        value=float(value),
+                    )
+                )
         return points
 
     def get_final_agent_states(self) -> Dict[str, AgentSnapshot]:
@@ -344,21 +348,15 @@ class MetricsAggregator:
             snapshot.ecosystem_threat_level = getattr(
                 security_report, "ecosystem_threat_level", 0.0
             )
-            snapshot.active_threats = getattr(
-                security_report, "active_threat_count", 0
-            )
-            snapshot.contagion_depth = getattr(
-                security_report, "contagion_depth", 0
-            )
+            snapshot.active_threats = getattr(security_report, "active_threat_count", 0)
+            snapshot.contagion_depth = getattr(security_report, "contagion_depth", 0)
 
         # Add collusion metrics
         if collusion_report:
             snapshot.ecosystem_collusion_risk = getattr(
                 collusion_report, "ecosystem_collusion_risk", 0.0
             )
-            snapshot.n_flagged_pairs = getattr(
-                collusion_report, "n_flagged_pairs", 0
-            )
+            snapshot.n_flagged_pairs = getattr(collusion_report, "n_flagged_pairs", 0)
 
         # Add capability metrics
         if capability_metrics:
@@ -368,9 +366,7 @@ class MetricsAggregator:
             snapshot.avg_synergy_score = getattr(
                 capability_metrics, "avg_synergy_score", 0.0
             )
-            snapshot.tasks_completed = getattr(
-                capability_metrics, "tasks_completed", 0
-            )
+            snapshot.tasks_completed = getattr(capability_metrics, "tasks_completed", 0)
 
         self._history.add_epoch_snapshot(snapshot)
 
@@ -421,7 +417,11 @@ class MetricsAggregator:
         values = sorted(values)
         n = len(values)
         cumulative = np.cumsum(values)
-        return (n + 1 - 2 * np.sum(cumulative) / cumulative[-1]) / n if cumulative[-1] != 0 else 0.0
+        return (
+            (n + 1 - 2 * np.sum(cumulative) / cumulative[-1]) / n
+            if cumulative[-1] != 0
+            else 0.0
+        )
 
 
 def compute_rolling_average(
@@ -437,7 +437,7 @@ def compute_rolling_average(
 
     for i in range(len(values)):
         start = max(0, i - window + 1)
-        rolling.append(float(np.mean(values[start:i + 1])))
+        rolling.append(float(np.mean(values[start : i + 1])))
 
     return [
         TimeSeriesPoint(epoch=points[i].epoch, value=rolling[i])
@@ -500,20 +500,22 @@ def aggregate_incoherence_scaling(
 
     result: List[Dict[str, Any]] = []
     for (horizon_tier, branching_tier), group in sorted(grouped.items()):
-        result.append({
-            "horizon_tier": horizon_tier,
-            "branching_tier": branching_tier,
-            "n_runs": len(group),
-            "mean_incoherence_index": float(
-                np.mean([g.get("incoherence_index", 0.0) for g in group])
-            ),
-            "mean_error_rate": float(
-                np.mean([g.get("error_rate", 0.0) for g in group])
-            ),
-            "mean_disagreement_rate": float(
-                np.mean([g.get("disagreement_rate", 0.0) for g in group])
-            ),
-        })
+        result.append(
+            {
+                "horizon_tier": horizon_tier,
+                "branching_tier": branching_tier,
+                "n_runs": len(group),
+                "mean_incoherence_index": float(
+                    np.mean([g.get("incoherence_index", 0.0) for g in group])
+                ),
+                "mean_error_rate": float(
+                    np.mean([g.get("error_rate", 0.0) for g in group])
+                ),
+                "mean_disagreement_rate": float(
+                    np.mean([g.get("disagreement_rate", 0.0) for g in group])
+                ),
+            }
+        )
 
     return result
 
@@ -542,7 +544,11 @@ def build_scaling_curve_points(
 
     return {
         "x_labels": [str(row.get(x_key, "")) for row in rows],
-        "incoherence_index": [float(row.get("mean_incoherence_index", 0.0)) for row in rows],
+        "incoherence_index": [
+            float(row.get("mean_incoherence_index", 0.0)) for row in rows
+        ],
         "error_rate": [float(row.get("mean_error_rate", 0.0)) for row in rows],
-        "disagreement_rate": [float(row.get("mean_disagreement_rate", 0.0)) for row in rows],
+        "disagreement_rate": [
+            float(row.get("mean_disagreement_rate", 0.0)) for row in rows
+        ],
     }

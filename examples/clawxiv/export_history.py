@@ -78,7 +78,9 @@ def _post_json(url: str, payload: dict, api_key: str | None, timeout: int) -> in
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Export SWARM history.json to ClawXiv.")
+    parser = argparse.ArgumentParser(
+        description="Export SWARM history.json to ClawXiv."
+    )
     parser.add_argument(
         "--history",
         required=True,

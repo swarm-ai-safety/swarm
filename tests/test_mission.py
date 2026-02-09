@@ -11,7 +11,9 @@ from swarm.env.mission import (
 from swarm.models.interaction import SoftInteraction
 
 
-def _make_interaction(interaction_id: str, p: float, accepted: bool = True) -> SoftInteraction:
+def _make_interaction(
+    interaction_id: str, p: float, accepted: bool = True
+) -> SoftInteraction:
     """Helper to create a test interaction."""
     return SoftInteraction(
         interaction_id=interaction_id,
@@ -48,7 +50,9 @@ class TestMissionEconomy:
     def test_propose_mission(self):
         economy = MissionEconomy()
         objectives = [
-            MissionObjective(description="High quality", target_metric="avg_p", target_value=0.7)
+            MissionObjective(
+                description="High quality", target_metric="avg_p", target_value=0.7
+            )
         ]
         mission = economy.propose_mission(
             coordinator_id="agent_1",
@@ -116,9 +120,7 @@ class TestMissionEconomy:
 
     def test_evaluate_mission_objectives_met(self):
         economy = MissionEconomy(MissionConfig(min_participants=1))
-        objectives = [
-            MissionObjective(target_metric="avg_p", target_value=0.7)
-        ]
+        objectives = [MissionObjective(target_metric="avg_p", target_value=0.7)]
         mission = economy.propose_mission("a1", "m1", objectives, 100.0, 10)
 
         interactions = [_make_interaction(f"i{i}", p=0.85) for i in range(5)]
@@ -131,9 +133,7 @@ class TestMissionEconomy:
 
     def test_evaluate_mission_objectives_not_met(self):
         economy = MissionEconomy(MissionConfig(min_participants=1))
-        objectives = [
-            MissionObjective(target_metric="avg_p", target_value=0.9)
-        ]
+        objectives = [MissionObjective(target_metric="avg_p", target_value=0.9)]
         mission = economy.propose_mission("a1", "m1", objectives, 100.0, 20)
 
         interactions = [_make_interaction(f"i{i}", p=0.5) for i in range(5)]
@@ -147,9 +147,7 @@ class TestMissionEconomy:
 
     def test_expired_mission_fails(self):
         economy = MissionEconomy(MissionConfig(min_participants=1))
-        objectives = [
-            MissionObjective(target_metric="avg_p", target_value=0.9)
-        ]
+        objectives = [MissionObjective(target_metric="avg_p", target_value=0.9)]
         mission = economy.propose_mission("a1", "m1", objectives, 100.0, 5)
 
         interactions = [_make_interaction(f"i{i}", p=0.5) for i in range(3)]
@@ -162,13 +160,13 @@ class TestMissionEconomy:
         assert result["status"] == "failed"
 
     def test_distribute_rewards_equal(self):
-        economy = MissionEconomy(MissionConfig(
-            min_participants=1,
-            reward_distribution="equal",
-        ))
-        objectives = [
-            MissionObjective(target_metric="avg_p", target_value=0.5)
-        ]
+        economy = MissionEconomy(
+            MissionConfig(
+                min_participants=1,
+                reward_distribution="equal",
+            )
+        )
+        objectives = [MissionObjective(target_metric="avg_p", target_value=0.5)]
         mission = economy.propose_mission("a1", "m1", objectives, 100.0, 10)
         economy.join_mission("a2", mission.mission_id)
 
@@ -187,13 +185,13 @@ class TestMissionEconomy:
         assert abs(sum(rewards.values()) - 100.0) < 0.01
 
     def test_distribute_rewards_proportional(self):
-        economy = MissionEconomy(MissionConfig(
-            min_participants=1,
-            reward_distribution="proportional",
-        ))
-        objectives = [
-            MissionObjective(target_metric="avg_p", target_value=0.5)
-        ]
+        economy = MissionEconomy(
+            MissionConfig(
+                min_participants=1,
+                reward_distribution="proportional",
+            )
+        )
+        objectives = [MissionObjective(target_metric="avg_p", target_value=0.5)]
         mission = economy.propose_mission("a1", "m1", objectives, 100.0, 10)
         economy.join_mission("a2", mission.mission_id)
 
@@ -215,13 +213,13 @@ class TestMissionEconomy:
         assert abs(sum(rewards.values()) - 100.0) < 0.01
 
     def test_distribute_rewards_shapley(self):
-        economy = MissionEconomy(MissionConfig(
-            min_participants=1,
-            reward_distribution="shapley",
-        ))
-        objectives = [
-            MissionObjective(target_metric="avg_p", target_value=0.5)
-        ]
+        economy = MissionEconomy(
+            MissionConfig(
+                min_participants=1,
+                reward_distribution="shapley",
+            )
+        )
+        objectives = [MissionObjective(target_metric="avg_p", target_value=0.5)]
         mission = economy.propose_mission("a1", "m1", objectives, 100.0, 10)
         economy.join_mission("a2", mission.mission_id)
 
@@ -240,9 +238,7 @@ class TestMissionEconomy:
 
     def test_no_reward_for_failed_mission(self):
         economy = MissionEconomy(MissionConfig(min_participants=1))
-        objectives = [
-            MissionObjective(target_metric="avg_p", target_value=0.9)
-        ]
+        objectives = [MissionObjective(target_metric="avg_p", target_value=0.9)]
         mission = economy.propose_mission("a1", "m1", objectives, 100.0, 5)
         interactions = [_make_interaction("i1", p=0.3)]
         economy.record_contribution("a1", mission.mission_id, interactions[0])
@@ -301,7 +297,9 @@ class TestMissionEconomy:
     def test_mission_serialization(self):
         economy = MissionEconomy(MissionConfig(min_participants=1))
         objectives = [
-            MissionObjective(description="Test", target_metric="avg_p", target_value=0.7)
+            MissionObjective(
+                description="Test", target_metric="avg_p", target_value=0.7
+            )
         ]
         mission = economy.propose_mission("a1", "Test", objectives, 100.0, 10)
         d = mission.to_dict()

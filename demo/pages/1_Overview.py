@@ -28,9 +28,11 @@ with col_run:
 
 # ── Run simulation ────────────────────────────────────────────────────────────
 
+
 @st.cache_data(show_spinner="Running baseline simulation...", max_entries=16)
 def _run_baseline(seed_val: int):
     from demo.utils.simulation import run_scenario
+
     scenario_path = str(PROJECT_ROOT / "scenarios" / "baseline.yaml")
     return run_scenario(scenario_path, seed=seed_val)
 
@@ -75,16 +77,20 @@ st.subheader("Agent Summary")
 col1, col2, col3 = st.columns(3)
 
 with col1:
-    st.plotly_chart(agent_reputation_bar(result["agent_states"], height=280),
-                    use_container_width=True)
+    st.plotly_chart(
+        agent_reputation_bar(result["agent_states"], height=280),
+        use_container_width=True,
+    )
 
 with col2:
-    st.plotly_chart(agent_payoff_bar(result["agent_states"], height=280),
-                    use_container_width=True)
+    st.plotly_chart(
+        agent_payoff_bar(result["agent_states"], height=280), use_container_width=True
+    )
 
 with col3:
-    st.plotly_chart(agent_type_pie(result["agent_states"], height=280),
-                    use_container_width=True)
+    st.plotly_chart(
+        agent_type_pie(result["agent_states"], height=280), use_container_width=True
+    )
 
 # ── Agent table ───────────────────────────────────────────────────────────────
 
@@ -108,12 +114,14 @@ with st.expander("Raw epoch metrics"):
         accepted = m.accepted_interactions
         total = m.total_interactions
         incoh = incoherence[i] if i < len(incoherence) else 0.0
-        rows.append({
-            "Epoch": i,
-            "Toxicity": round(m.toxicity_rate, 4),
-            "Quality Gap": round(m.quality_gap, 4),
-            "Incoherence": round(incoh, 4),
-            "Total Welfare": round(m.total_welfare, 2),
-            "Acceptance Rate": round(accepted / total, 3) if total > 0 else 0,
-        })
+        rows.append(
+            {
+                "Epoch": i,
+                "Toxicity": round(m.toxicity_rate, 4),
+                "Quality Gap": round(m.quality_gap, 4),
+                "Incoherence": round(incoh, 4),
+                "Total Welfare": round(m.total_welfare, 2),
+                "Acceptance Rate": round(accepted / total, 3) if total > 0 else 0,
+            }
+        )
     st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)

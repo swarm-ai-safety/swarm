@@ -38,9 +38,13 @@ class SecurityLever(GovernanceLever):
         # Initialize analyzer with config parameters
         self._analyzer = SecurityAnalyzer(
             injection_threshold=getattr(config, "security_injection_threshold", 0.3),
-            manipulation_threshold=getattr(config, "security_manipulation_threshold", 0.5),
+            manipulation_threshold=getattr(
+                config, "security_manipulation_threshold", 0.5
+            ),
             laundering_trust_gap=getattr(config, "security_laundering_trust_gap", 0.3),
-            contagion_velocity_threshold=getattr(config, "security_contagion_velocity", 2.0),
+            contagion_velocity_threshold=getattr(
+                config, "security_contagion_velocity", 2.0
+            ),
             min_chain_length=getattr(config, "security_min_chain_length", 3),
             seed=seed,
         )
@@ -109,19 +113,23 @@ class SecurityLever(GovernanceLever):
         resource_penalties: Dict[str, float] = {}
         agents_to_freeze: Set[str] = set()
 
-        quarantine_threshold = getattr(self.config, "security_quarantine_threshold", 0.7)
+        quarantine_threshold = getattr(
+            self.config, "security_quarantine_threshold", 0.7
+        )
 
         for agent_id, threat_score in self._latest_report.agent_threat_scores.items():
             if threat_score >= quarantine_threshold:
                 # Severe threat: quarantine (freeze) agent
                 agents_to_freeze.add(agent_id)
                 self._quarantined_agents.add(agent_id)
-                self._containment_actions.append({
-                    "action": "quarantine",
-                    "agent_id": agent_id,
-                    "epoch": epoch,
-                    "threat_score": threat_score,
-                })
+                self._containment_actions.append(
+                    {
+                        "action": "quarantine",
+                        "agent_id": agent_id,
+                        "epoch": epoch,
+                        "threat_score": threat_score,
+                    }
+                )
 
             if threat_score >= getattr(self.config, "security_penalty_threshold", 0.3):
                 # Apply penalty proportional to threat score
@@ -136,11 +144,13 @@ class SecurityLever(GovernanceLever):
         for chain in self._latest_report.contagion_chains:
             if chain.origin_agent in agents_to_freeze:
                 chain.contained = True
-                self._containment_actions.append({
-                    "action": "contain_chain",
-                    "chain_id": chain.chain_id,
-                    "epoch": epoch,
-                })
+                self._containment_actions.append(
+                    {
+                        "action": "contain_chain",
+                        "chain_id": chain.chain_id,
+                        "epoch": epoch,
+                    }
+                )
 
         # Optionally clear history after analysis
         if getattr(self.config, "security_clear_history_on_epoch", False):
@@ -282,10 +292,12 @@ class SecurityLever(GovernanceLever):
         """Release an agent from quarantine."""
         if agent_id in self._quarantined_agents:
             self._quarantined_agents.discard(agent_id)
-            self._containment_actions.append({
-                "action": "release",
-                "agent_id": agent_id,
-            })
+            self._containment_actions.append(
+                {
+                    "action": "release",
+                    "agent_id": agent_id,
+                }
+            )
             return True
         return False
 

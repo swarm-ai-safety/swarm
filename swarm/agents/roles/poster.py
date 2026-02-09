@@ -136,12 +136,14 @@ class PosterRole:
         parent_id: Optional[str] = None,
     ) -> None:
         """Record a posted piece of content."""
-        self._posted_content.append({
-            "post_id": post_id,
-            "content": content,
-            "is_reply": is_reply,
-            "parent_id": parent_id,
-        })
+        self._posted_content.append(
+            {
+                "post_id": post_id,
+                "content": content,
+                "is_reply": is_reply,
+                "parent_id": parent_id,
+            }
+        )
         self._steps_since_last_post = 0
         self._engagement_stats[post_id] = {
             "upvotes": 0,
@@ -206,7 +208,10 @@ class PosterRole:
             return None
 
         # Check if we should reply to something
-        if observation.visible_posts and random.random() < self._strategy.reply_priority:
+        if (
+            observation.visible_posts
+            and random.random() < self._strategy.reply_priority
+        ):
             for post in observation.visible_posts:
                 if self.should_reply(post):
                     content = self.generate_reply_content(

@@ -66,7 +66,9 @@ class LLMConfig:
     def __post_init__(self) -> None:
         """Validate configuration."""
         if not 0.0 <= self.temperature <= 1.0:
-            raise ValueError(f"temperature must be in [0.0, 1.0], got {self.temperature}")
+            raise ValueError(
+                f"temperature must be in [0.0, 1.0], got {self.temperature}"
+            )
 
         if self.max_tokens < 1:
             raise ValueError(f"max_tokens must be positive, got {self.max_tokens}")
@@ -75,7 +77,9 @@ class LLMConfig:
             raise ValueError(f"timeout must be positive, got {self.timeout}")
 
         if self.max_retries < 0:
-            raise ValueError(f"max_retries must be non-negative, got {self.max_retries}")
+            raise ValueError(
+                f"max_retries must be non-negative, got {self.max_retries}"
+            )
 
         # Validate provider-specific requirements
         if self.provider != LLMProvider.OLLAMA and not self.api_key:
@@ -113,23 +117,27 @@ class LLMUsageStats:
     estimated_cost_usd: float = 0.0
 
     # Cost per 1M tokens (approximate, as of 2024)
-    _COST_PER_1M_INPUT: dict = field(default_factory=lambda: {
-        "claude-sonnet-4-20250514": 3.0,
-        "claude-3-5-sonnet-20241022": 3.0,
-        "claude-3-haiku-20240307": 0.25,
-        "gpt-4o": 2.50,
-        "gpt-4o-mini": 0.15,
-        "gpt-4-turbo": 10.0,
-    })
+    _COST_PER_1M_INPUT: dict = field(
+        default_factory=lambda: {
+            "claude-sonnet-4-20250514": 3.0,
+            "claude-3-5-sonnet-20241022": 3.0,
+            "claude-3-haiku-20240307": 0.25,
+            "gpt-4o": 2.50,
+            "gpt-4o-mini": 0.15,
+            "gpt-4-turbo": 10.0,
+        }
+    )
 
-    _COST_PER_1M_OUTPUT: dict = field(default_factory=lambda: {
-        "claude-sonnet-4-20250514": 15.0,
-        "claude-3-5-sonnet-20241022": 15.0,
-        "claude-3-haiku-20240307": 1.25,
-        "gpt-4o": 10.0,
-        "gpt-4o-mini": 0.60,
-        "gpt-4-turbo": 30.0,
-    })
+    _COST_PER_1M_OUTPUT: dict = field(
+        default_factory=lambda: {
+            "claude-sonnet-4-20250514": 15.0,
+            "claude-3-5-sonnet-20241022": 15.0,
+            "claude-3-haiku-20240307": 1.25,
+            "gpt-4o": 10.0,
+            "gpt-4o-mini": 0.60,
+            "gpt-4-turbo": 30.0,
+        }
+    )
 
     def record_usage(
         self,
@@ -152,10 +160,9 @@ class LLMUsageStats:
         input_cost = self._COST_PER_1M_INPUT.get(model, 0.0)
         output_cost = self._COST_PER_1M_OUTPUT.get(model, 0.0)
 
-        self.estimated_cost_usd += (
-            (input_tokens / 1_000_000) * input_cost +
-            (output_tokens / 1_000_000) * output_cost
-        )
+        self.estimated_cost_usd += (input_tokens / 1_000_000) * input_cost + (
+            output_tokens / 1_000_000
+        ) * output_cost
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""

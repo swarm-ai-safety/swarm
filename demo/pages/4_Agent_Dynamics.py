@@ -26,7 +26,9 @@ n_adversarial = st.sidebar.slider("Adversarial", 0, 10, 1, key="dyn_adv")
 
 st.sidebar.header("Governance")
 tax_rate = st.sidebar.slider("Tax rate", 0.0, 0.5, 0.05, 0.01, key="dyn_tax")
-reputation_decay = st.sidebar.slider("Reputation decay", 0.8, 1.0, 0.95, 0.01, key="dyn_decay")
+reputation_decay = st.sidebar.slider(
+    "Reputation decay", 0.8, 1.0, 0.95, 0.01, key="dyn_decay"
+)
 circuit_breaker = st.sidebar.checkbox("Circuit breaker", key="dyn_cb")
 
 st.sidebar.header("Simulation")
@@ -39,6 +41,7 @@ run_btn = st.button("Run Simulation", type="primary")
 @st.cache_data(show_spinner="Running simulation...", max_entries=16)
 def _run(**kwargs):
     from demo.utils.simulation import run_custom
+
     return run_custom(**kwargs)
 
 
@@ -71,9 +74,14 @@ st.subheader("Reputation Trajectories")
 
 if history and hasattr(history, "agent_snapshots") and history.agent_snapshots:
     from demo.utils.charts import reputation_trajectories  # noqa: E402
-    st.plotly_chart(reputation_trajectories(history, height=450), use_container_width=True)
+
+    st.plotly_chart(
+        reputation_trajectories(history, height=450), use_container_width=True
+    )
 else:
-    st.warning("No trajectory data available. The aggregator may not have captured snapshots.")
+    st.warning(
+        "No trajectory data available. The aggregator may not have captured snapshots."
+    )
 
 # ── Per-agent payoff over time ────────────────────────────────────────────────
 
@@ -90,10 +98,15 @@ if history and hasattr(history, "agent_snapshots") and history.agent_snapshots:
         payoffs = [s.total_payoff for s in snapshots]
         agent_type = agent_id.split("_")[0]
         color = AGENT_COLORS.get(agent_type, "#999")
-        fig.add_trace(go.Scatter(
-            x=epochs, y=payoffs, mode="lines",
-            name=agent_id, line={"color": color},
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=epochs,
+                y=payoffs,
+                mode="lines",
+                name=agent_id,
+                line={"color": color},
+            )
+        )
 
     fig.update_layout(
         title="Cumulative Payoff Over Time",
@@ -118,29 +131,40 @@ if selected_agent and history and hasattr(history, "agent_snapshots"):
 
         rows = []
         for s in snapshots:
-            rows.append({
-                "Epoch": s.epoch,
-                "Reputation": round(s.reputation, 3),
-                "Resources": round(s.resources, 3),
-                "Total Payoff": round(s.total_payoff, 3),
-            })
+            rows.append(
+                {
+                    "Epoch": s.epoch,
+                    "Reputation": round(s.reputation, 3),
+                    "Resources": round(s.resources, 3),
+                    "Total Payoff": round(s.total_payoff, 3),
+                }
+            )
         df = pd.DataFrame(rows)
         st.dataframe(df, use_container_width=True, hide_index=True)
 
         # Mini sparkline
         import plotly.graph_objects as go
+
         fig = go.Figure()
-        fig.add_trace(go.Scatter(
-            x=df["Epoch"], y=df["Reputation"],
-            mode="lines+markers", name="Reputation",
-            line={"color": "#0d6efd"},
-        ))
-        fig.add_trace(go.Scatter(
-            x=df["Epoch"], y=df["Total Payoff"],
-            mode="lines+markers", name="Payoff",
-            line={"color": "#28a745"},
-            yaxis="y2",
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=df["Epoch"],
+                y=df["Reputation"],
+                mode="lines+markers",
+                name="Reputation",
+                line={"color": "#0d6efd"},
+            )
+        )
+        fig.add_trace(
+            go.Scatter(
+                x=df["Epoch"],
+                y=df["Total Payoff"],
+                mode="lines+markers",
+                name="Payoff",
+                line={"color": "#28a745"},
+                yaxis="y2",
+            )
+        )
         fig.update_layout(
             height=300,
             yaxis={"title": "Reputation", "side": "left"},

@@ -483,7 +483,8 @@ class ResearchWorkflow:
 
         # Check that no critical issues were found
         critical_limitations = [
-            lim for lim in state.analysis.limitations
+            lim
+            for lim in state.analysis.limitations
             if "critical" in lim.lower() or "severe" in lim.lower()
         ]
         return len(critical_limitations) == 0
@@ -623,8 +624,7 @@ class ResearchWorkflow:
                 )
 
         data["gate_results"] = [
-            {"gate_name": g.gate_name, "passed": g.passed}
-            for g in state.gate_results
+            {"gate_name": g.gate_name, "passed": g.passed} for g in state.gate_results
         ]
 
         os.makedirs(os.path.dirname(path) or ".", exist_ok=True)

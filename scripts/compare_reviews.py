@@ -75,16 +75,20 @@ def parse_prose_review(prose: str) -> Dict[str, Any]:
     }
 
     # Sentiment analysis for verdict
-    positive_signals = len(re.findall(
-        r"(excellent|well.written|strong|good|clear|impressive|thorough)",
-        prose,
-        re.IGNORECASE
-    ))
-    negative_signals = len(re.findall(
-        r"(weak|poor|unclear|confusing|missing|lacks|fails|concern)",
-        prose,
-        re.IGNORECASE
-    ))
+    positive_signals = len(
+        re.findall(
+            r"(excellent|well.written|strong|good|clear|impressive|thorough)",
+            prose,
+            re.IGNORECASE,
+        )
+    )
+    negative_signals = len(
+        re.findall(
+            r"(weak|poor|unclear|confusing|missing|lacks|fails|concern)",
+            prose,
+            re.IGNORECASE,
+        )
+    )
 
     if positive_signals > negative_signals * 2:
         result["verdict"] = "publish"
@@ -102,26 +106,32 @@ def parse_prose_review(prose: str) -> Dict[str, Any]:
             continue
 
         # Categorize sentence
-        is_positive = bool(re.search(
-            r"(strength|good|well|clear|strong|excellent|impressive|thorough|rigorous)",
-            sentence,
-            re.IGNORECASE
-        ))
-        is_negative = bool(re.search(
-            r"(weakness|weak|unclear|missing|lacks|fails|concern|problem|issue|confusing)",
-            sentence,
-            re.IGNORECASE
-        ))
-        is_suggestion = bool(re.search(
-            r"(should|could|recommend|suggest|consider|would benefit|needs?)",
-            sentence,
-            re.IGNORECASE
-        ))
-        is_required = bool(re.search(
-            r"(must|require|essential|critical|necessary)",
-            sentence,
-            re.IGNORECASE
-        ))
+        is_positive = bool(
+            re.search(
+                r"(strength|good|well|clear|strong|excellent|impressive|thorough|rigorous)",
+                sentence,
+                re.IGNORECASE,
+            )
+        )
+        is_negative = bool(
+            re.search(
+                r"(weakness|weak|unclear|missing|lacks|fails|concern|problem|issue|confusing)",
+                sentence,
+                re.IGNORECASE,
+            )
+        )
+        is_suggestion = bool(
+            re.search(
+                r"(should|could|recommend|suggest|consider|would benefit|needs?)",
+                sentence,
+                re.IGNORECASE,
+            )
+        )
+        is_required = bool(
+            re.search(
+                r"(must|require|essential|critical|necessary)", sentence, re.IGNORECASE
+            )
+        )
 
         if is_required:
             result["notes"]["required_changes"].append(sentence)
@@ -209,21 +219,29 @@ def compare_reviews(
         external_strengths=external_review.get("notes", {}).get("strengths", []),
         swarm_weaknesses=swarm_review.get("notes", {}).get("weaknesses", []),
         external_weaknesses=external_review.get("notes", {}).get("weaknesses", []),
-        swarm_required_changes=swarm_review.get("notes", {}).get("required_changes", []),
-        external_required_changes=external_review.get("notes", {}).get("required_changes", []),
+        swarm_required_changes=swarm_review.get("notes", {}).get(
+            "required_changes", []
+        ),
+        external_required_changes=external_review.get("notes", {}).get(
+            "required_changes", []
+        ),
     )
 
     # Extract topics from each review
-    swarm_topics = set(extract_topics(
-        comparison.swarm_strengths
-        + comparison.swarm_weaknesses
-        + comparison.swarm_required_changes
-    ))
-    external_topics = set(extract_topics(
-        comparison.external_strengths
-        + comparison.external_weaknesses
-        + comparison.external_required_changes
-    ))
+    swarm_topics = set(
+        extract_topics(
+            comparison.swarm_strengths
+            + comparison.swarm_weaknesses
+            + comparison.swarm_required_changes
+        )
+    )
+    external_topics = set(
+        extract_topics(
+            comparison.external_strengths
+            + comparison.external_weaknesses
+            + comparison.external_required_changes
+        )
+    )
 
     # Topic coverage analysis
     comparison.swarm_only_topics = list(swarm_topics - external_topics)
@@ -242,8 +260,12 @@ def compare_reviews(
             )
 
     # Check for overlapping concerns
-    swarm_concern_text = " ".join(comparison.swarm_weaknesses + comparison.swarm_required_changes).lower()
-    external_concern_text = " ".join(comparison.external_weaknesses + comparison.external_required_changes).lower()
+    swarm_concern_text = " ".join(
+        comparison.swarm_weaknesses + comparison.swarm_required_changes
+    ).lower()
+    external_concern_text = " ".join(
+        comparison.external_weaknesses + comparison.external_required_changes
+    ).lower()
 
     common_concerns = [
         ("reproducibility", r"reproduc|replica"),
@@ -260,9 +282,13 @@ def compare_reviews(
         if swarm_has and external_has:
             comparison.agreements.append(f"Both flag {concern_name} concerns")
         elif swarm_has and not external_has:
-            comparison.disagreements.append(f"SWARM flags {concern_name}, external does not")
+            comparison.disagreements.append(
+                f"SWARM flags {concern_name}, external does not"
+            )
         elif external_has and not swarm_has:
-            comparison.disagreements.append(f"External flags {concern_name}, SWARM does not")
+            comparison.disagreements.append(
+                f"External flags {concern_name}, SWARM does not"
+            )
 
     return comparison
 
@@ -298,9 +324,13 @@ def print_comparison(comparison: ReviewComparison) -> None:
     if comparison.swarm_only_topics or comparison.external_only_topics:
         print("COVERAGE DIFFERENCES:")
         if comparison.swarm_only_topics:
-            print(f"  SWARM covers (external misses): {', '.join(comparison.swarm_only_topics)}")
+            print(
+                f"  SWARM covers (external misses): {', '.join(comparison.swarm_only_topics)}"
+            )
         if comparison.external_only_topics:
-            print(f"  External covers (SWARM misses): {', '.join(comparison.external_only_topics)}")
+            print(
+                f"  External covers (SWARM misses): {', '.join(comparison.external_only_topics)}"
+            )
         print()
 
     # Strengths comparison
@@ -332,7 +362,9 @@ def print_comparison(comparison: ReviewComparison) -> None:
     print()
 
     # Required changes
-    total_required = len(comparison.swarm_required_changes) + len(comparison.external_required_changes)
+    total_required = len(comparison.swarm_required_changes) + len(
+        comparison.external_required_changes
+    )
     if total_required > 0:
         print("REQUIRED CHANGES:")
         for r in comparison.swarm_required_changes:
@@ -342,9 +374,13 @@ def print_comparison(comparison: ReviewComparison) -> None:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Compare SWARM review with external review")
+    parser = argparse.ArgumentParser(
+        description="Compare SWARM review with external review"
+    )
     parser.add_argument("swarm_review", help="Path to SWARM review JSON")
-    parser.add_argument("external_review", nargs="?", help="Path to external review (JSON or text)")
+    parser.add_argument(
+        "external_review", nargs="?", help="Path to external review (JSON or text)"
+    )
     parser.add_argument("--prose", help="External review as prose string")
     parser.add_argument("--output", "-o", help="Output comparison as JSON")
     args = parser.parse_args()
@@ -364,14 +400,18 @@ def main():
 
     if args.output:
         with open(args.output, "w") as f:
-            json.dump({
-                "swarm_verdict": comparison.swarm_verdict,
-                "external_verdict": comparison.external_verdict,
-                "agreements": comparison.agreements,
-                "disagreements": comparison.disagreements,
-                "swarm_only_topics": comparison.swarm_only_topics,
-                "external_only_topics": comparison.external_only_topics,
-            }, f, indent=2)
+            json.dump(
+                {
+                    "swarm_verdict": comparison.swarm_verdict,
+                    "external_verdict": comparison.external_verdict,
+                    "agreements": comparison.agreements,
+                    "disagreements": comparison.disagreements,
+                    "swarm_only_topics": comparison.swarm_only_topics,
+                    "external_only_topics": comparison.external_only_topics,
+                },
+                f,
+                indent=2,
+            )
         print(f"\nComparison saved to: {args.output}")
 
 

@@ -331,12 +331,14 @@ class TestDecidePostingAction:
         poster.set_strategy(ContentStrategy(reply_priority=1.0))
         obs = Observation(
             can_post=True,
-            visible_posts=[{
-                "post_id": "target123",
-                "content": "something interesting",
-                "net_votes": 10,
-                "reply_count": 5,
-            }],
+            visible_posts=[
+                {
+                    "post_id": "target123",
+                    "content": "something interesting",
+                    "net_votes": 10,
+                    "reply_count": 5,
+                }
+            ],
         )
         # reply_priority=1.0 => random < 1.0 always True,
         # should_reply => engagement >= 3, random < 1.0 => True
@@ -412,7 +414,11 @@ class TestHandlePostBounty:
             action_type=ActionType.POST_BOUNTY,
             agent_id="poster1",
             content="Do this task",
-            metadata={"reward_amount": 10.0, "min_reputation": 0.0, "deadline_epoch": 5},
+            metadata={
+                "reward_amount": 10.0,
+                "min_reputation": 0.0,
+                "deadline_epoch": 5,
+            },
         )
         result = handler.handle_post_bounty(action, state, enable_rate_limits=False)
         assert result is True
@@ -535,9 +541,7 @@ class TestHandleAcceptBid:
     def _setup_bid(self):
         handler, mkt, tp, events = _make_handler()
         state = _make_state("poster1", "bidder1", resources=100.0, reputation=1.0)
-        bounty = mkt.post_bounty(
-            poster_id="poster1", task_id="t1", reward_amount=10.0
-        )
+        bounty = mkt.post_bounty(poster_id="poster1", task_id="t1", reward_amount=10.0)
         bid = mkt.place_bid(
             bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0
         )
@@ -578,7 +582,9 @@ class TestHandleRejectBid:
         handler, mkt, tp, events = _make_handler()
         state = _make_state("poster1", "bidder1")
         bounty = mkt.post_bounty(poster_id="poster1", task_id="t1", reward_amount=10.0)
-        bid = mkt.place_bid(bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0)
+        bid = mkt.place_bid(
+            bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0
+        )
         action = Action(
             action_type=ActionType.REJECT_BID,
             agent_id="poster1",
@@ -608,7 +614,9 @@ class TestHandleWithdrawBid:
     def test_success(self):
         handler, mkt, tp, events = _make_handler()
         bounty = mkt.post_bounty(poster_id="poster1", task_id="t1", reward_amount=10.0)
-        bid = mkt.place_bid(bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0)
+        bid = mkt.place_bid(
+            bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0
+        )
         action = Action(
             action_type=ActionType.WITHDRAW_BID,
             agent_id="bidder1",
@@ -620,7 +628,9 @@ class TestHandleWithdrawBid:
     def test_failure_wrong_bidder(self):
         handler, mkt, tp, events = _make_handler()
         bounty = mkt.post_bounty(poster_id="poster1", task_id="t1", reward_amount=10.0)
-        bid = mkt.place_bid(bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0)
+        bid = mkt.place_bid(
+            bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0
+        )
         action = Action(
             action_type=ActionType.WITHDRAW_BID,
             agent_id="wrong_agent",
@@ -637,7 +647,9 @@ class TestHandleFileDispute:
         handler, mkt, tp, events = _make_handler()
         state = _make_state("poster1", "bidder1")
         bounty = mkt.post_bounty(poster_id="poster1", task_id="t1", reward_amount=10.0)
-        bid = mkt.place_bid(bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0)
+        bid = mkt.place_bid(
+            bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0
+        )
         escrow = mkt.accept_bid(
             bounty_id=bounty.bounty_id, bid_id=bid.bid_id, poster_id="poster1"
         )
@@ -717,7 +729,9 @@ class TestSettleTask:
         worker_before = state.get_agent("worker1").resources
 
         result = handler.settle_task(
-            task.task_id, True, state,
+            task.task_id,
+            True,
+            state,
             governance_engine=gov_engine,
             quality_score=0.8,
         )
@@ -776,9 +790,7 @@ class TestOnEpochEnd:
     def test_resolved_disputes(self):
         handler, mkt, tp, events = _make_handler()
         state = _make_state("poster1", "worker1", resources=100.0)
-        bounty = mkt.post_bounty(
-            poster_id="poster1", task_id="t1", reward_amount=10.0
-        )
+        bounty = mkt.post_bounty(poster_id="poster1", task_id="t1", reward_amount=10.0)
         bid = mkt.place_bid(
             bounty_id=bounty.bounty_id, bidder_id="worker1", bid_amount=8.0
         )
@@ -786,8 +798,10 @@ class TestOnEpochEnd:
             bounty_id=bounty.bounty_id, bid_id=bid.bid_id, poster_id="poster1"
         )
         dispute = mkt.file_dispute(
-            escrow_id=escrow.escrow_id, filed_by="poster1",
-            reason="bad work", current_epoch=0,
+            escrow_id=escrow.escrow_id,
+            filed_by="poster1",
+            reason="bad work",
+            current_epoch=0,
         )
         # Advance to epoch 2 (dispute_resolution_epochs=2)
         state.current_epoch = 2
@@ -796,7 +810,9 @@ class TestOnEpochEnd:
         resolved = mkt.get_dispute(dispute.dispute_id)
         assert resolved.status not in (DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW)
         # There should be a DISPUTE_RESOLVED event
-        dispute_events = [e for e in events if e.event_type == EventType.DISPUTE_RESOLVED]
+        dispute_events = [
+            e for e in events if e.event_type == EventType.DISPUTE_RESOLVED
+        ]
         assert len(dispute_events) == 1
 
     def test_no_expired_bounties(self):
@@ -839,21 +855,15 @@ class TestBuildObservationFields:
     def test_active_bids(self):
         handler, mkt, tp, events = _make_handler()
         state = _make_state("poster1", "bidder1", reputation=1.0)
-        bounty = mkt.post_bounty(
-            poster_id="poster1", task_id="t1", reward_amount=10.0
-        )
-        mkt.place_bid(
-            bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0
-        )
+        bounty = mkt.post_bounty(poster_id="poster1", task_id="t1", reward_amount=10.0)
+        mkt.place_bid(bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0)
         fields = handler.build_observation_fields("bidder1", state)
         assert len(fields["active_bids"]) == 1
 
     def test_active_escrows(self):
         handler, mkt, tp, events = _make_handler()
         state = _make_state("poster1", "worker1", reputation=1.0)
-        bounty = mkt.post_bounty(
-            poster_id="poster1", task_id="t1", reward_amount=10.0
-        )
+        bounty = mkt.post_bounty(poster_id="poster1", task_id="t1", reward_amount=10.0)
         bid = mkt.place_bid(
             bounty_id=bounty.bounty_id, bidder_id="worker1", bid_amount=8.0
         )
@@ -866,12 +876,8 @@ class TestBuildObservationFields:
     def test_pending_bid_decisions(self):
         handler, mkt, tp, events = _make_handler()
         state = _make_state("poster1", "bidder1", reputation=1.0)
-        bounty = mkt.post_bounty(
-            poster_id="poster1", task_id="t1", reward_amount=10.0
-        )
-        mkt.place_bid(
-            bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0
-        )
+        bounty = mkt.post_bounty(poster_id="poster1", task_id="t1", reward_amount=10.0)
+        mkt.place_bid(bounty_id=bounty.bounty_id, bidder_id="bidder1", bid_amount=8.0)
         fields = handler.build_observation_fields("poster1", state)
         assert len(fields["pending_bid_decisions"]) == 1
         assert fields["pending_bid_decisions"][0]["bounty_reward"] == 10.0

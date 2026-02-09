@@ -63,4 +63,3 @@ def test_replay_runner_applies_simulation_overrides(base_scenario):
     assert len(results) == 1
     # With 2 epochs x 1 step, this should remain a valid bounded run.
     assert results[0].total_interactions >= 0
-

@@ -42,18 +42,27 @@ class DiligentRecorderAgent(BaseAgent):
                 )
 
         # Verify pending promotions
-        if observation.memory_pending_promotions and self._rng.random() < self._verify_probability:
+        if (
+            observation.memory_pending_promotions
+            and self._rng.random() < self._verify_probability
+        ):
             entry = self._rng.choice(observation.memory_pending_promotions)
             if entry.get("author_id") != self.agent_id:
                 return self.create_verify_memory_action(entry["entry_id"])
 
         # Promote well-verified entries
         for entry in observation.memory_pending_promotions:
-            if len(entry.get("verified_by", [])) >= 2 and entry.get("quality_score", 0) >= 0.6:
+            if (
+                len(entry.get("verified_by", [])) >= 2
+                and entry.get("quality_score", 0) >= 0.6
+            ):
                 return self.create_promote_memory_action(entry["entry_id"])
 
         # Write new facts
-        if observation.memory_writes_remaining > 0 and self._rng.random() < self._write_probability:
+        if (
+            observation.memory_writes_remaining > 0
+            and self._rng.random() < self._write_probability
+        ):
             return self.create_write_memory_action(
                 f"Verified fact from agent {self.agent_id}: system observation at epoch {observation.current_epoch}"
             )
@@ -207,7 +216,10 @@ class CollusiveVerifierAgent(BaseAgent):
 
         # Promote partner's well-verified entries
         for entry in observation.memory_pending_promotions:
-            if entry.get("author_id") == self.partner_id and len(entry.get("verified_by", [])) >= 1:
+            if (
+                entry.get("author_id") == self.partner_id
+                and len(entry.get("verified_by", [])) >= 1
+            ):
                 return self.create_promote_memory_action(entry["entry_id"])
 
         # Write own entries for partner to verify

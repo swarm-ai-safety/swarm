@@ -49,7 +49,9 @@ class TimeHorizonBucket:
             return 0.0
         return self.total_duration / self.total_tasks
 
-    def record(self, success: bool, duration_minutes: float, quality: float = 1.0) -> None:
+    def record(
+        self, success: bool, duration_minutes: float, quality: float = 1.0
+    ) -> None:
         """Record a task outcome."""
         self.total_tasks += 1
         self.total_duration += duration_minutes
@@ -201,7 +203,7 @@ class AgentCapabilityProfile:
         """Expected output quality given task duration."""
         reliability = self.reliability_at_horizon(minutes)
         # Quality degrades faster than reliability
-        quality: float = float(reliability ** 1.2)
+        quality: float = float(reliability**1.2)
         return quality
 
     def compute_cost(self, minutes: int) -> float:
@@ -275,7 +277,9 @@ class ComputeConstraints:
         """Release allocated compute."""
         self.allocated = max(0, self.allocated - cost)
 
-    def max_concurrent_agents(self, profile: AgentCapabilityProfile, task_minutes: int) -> int:
+    def max_concurrent_agents(
+        self, profile: AgentCapabilityProfile, task_minutes: int
+    ) -> int:
         """Calculate max concurrent agents given constraints."""
         cost_per_agent = profile.compute_cost(task_minutes)
         if cost_per_agent <= 0:

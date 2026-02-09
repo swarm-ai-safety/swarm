@@ -31,8 +31,12 @@ class CollusionPenaltyLever(GovernanceLever):
         # Initialize detector with config parameters
         self._detector = CollusionDetector(
             frequency_threshold=getattr(config, "collusion_frequency_threshold", 2.0),
-            benefit_correlation_threshold=getattr(config, "collusion_correlation_threshold", 0.7),
-            min_interactions_for_analysis=getattr(config, "collusion_min_interactions", 3),
+            benefit_correlation_threshold=getattr(
+                config, "collusion_correlation_threshold", 0.7
+            ),
+            min_interactions_for_analysis=getattr(
+                config, "collusion_min_interactions", 3
+            ),
             collusion_score_threshold=getattr(config, "collusion_score_threshold", 0.5),
         )
 
@@ -90,7 +94,9 @@ class CollusionPenaltyLever(GovernanceLever):
             if risk_score >= self._detector.collusion_threshold:
                 # Apply penalty proportional to risk score
                 rep_penalty = -risk_score * penalty_multiplier
-                res_penalty = -risk_score * penalty_multiplier * 10  # Resources hit harder
+                res_penalty = (
+                    -risk_score * penalty_multiplier * 10
+                )  # Resources hit harder
 
                 reputation_penalties[agent_id] = rep_penalty
                 resource_penalties[agent_id] = res_penalty

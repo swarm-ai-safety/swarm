@@ -238,7 +238,9 @@ class DeceptiveAgent(BaseAgent):
             message="I'm highly qualified and will deliver excellent results.",
         )
 
-    def _should_accept_for_trust(self, proposal: Dict, observation: Observation) -> bool:
+    def _should_accept_for_trust(
+        self, proposal: Dict, observation: Observation
+    ) -> bool:
         """Decide acceptance for trust-building."""
         initiator_id = proposal.get("initiator_id", "")
         count = self._interactions_with.get(initiator_id, 0)
@@ -254,8 +256,7 @@ class DeceptiveAgent(BaseAgent):
         """Determine if it's time to exploit."""
         # Need enough trust built
         high_trust_agents = sum(
-            1 for t in self._trust_scores.values()
-            if t > self.exploitation_threshold
+            1 for t in self._trust_scores.values() if t > self.exploitation_threshold
         )
 
         # Need enough interactions
@@ -293,7 +294,9 @@ class DeceptiveAgent(BaseAgent):
     def _submit_subtly_poor_work(self, task: Dict) -> Action:
         """Submit work that seems okay but is subtly flawed."""
         task_id = task.get("task_id", "")
-        content = f"Task {task_id[:8]} deliverable: [appears complete but has hidden issues]"
+        content = (
+            f"Task {task_id[:8]} deliverable: [appears complete but has hidden issues]"
+        )
         return self.create_submit_output_action(task_id, content)
 
     def _select_trust_building_task(self, tasks: List[Dict]) -> Optional[Dict]:

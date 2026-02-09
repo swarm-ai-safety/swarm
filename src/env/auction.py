@@ -112,9 +112,7 @@ class AuctionResult:
     def to_dict(self) -> Dict:
         """Serialize result."""
         return {
-            "allocations": {
-                k: v.to_dict() for k, v in self.allocations.items()
-            },
+            "allocations": {k: v.to_dict() for k, v in self.allocations.items()},
             "clearing_prices": dict(self.clearing_prices),
             "rounds_to_converge": self.rounds_to_converge,
             "is_envy_free": self.is_envy_free,
@@ -202,31 +200,23 @@ class DworkinAuction:
                 break
 
         # Final allocation with clearing prices
-        allocations = self._compute_optimal_demands(
-            bids, prices, available_resources
-        )
+        allocations = self._compute_optimal_demands(bids, prices, available_resources)
 
         # Normalize allocations so total demand doesn't exceed supply
-        allocations = self._normalize_allocations(
-            allocations, available_resources
-        )
+        allocations = self._normalize_allocations(allocations, available_resources)
 
         # Compute utilities and prices paid
         for agent_id, alloc in allocations.items():
             bid = bids[agent_id]
             alloc.utility = sum(
-                bid.valuations.get(r, 0.0) * qty
-                for r, qty in alloc.resources.items()
+                bid.valuations.get(r, 0.0) * qty for r, qty in alloc.resources.items()
             )
             alloc.price_paid = sum(
-                prices.get(r, 0.0) * qty
-                for r, qty in alloc.resources.items()
+                prices.get(r, 0.0) * qty for r, qty in alloc.resources.items()
             )
 
         # Check envy-freeness
-        is_envy_free, violations = self._check_envy_free(
-            allocations, bids, prices
-        )
+        is_envy_free, violations = self._check_envy_free(allocations, bids, prices)
 
         total_utility = sum(a.utility for a in allocations.values())
 
@@ -335,8 +325,7 @@ class DworkinAuction:
                 other_alloc = allocations[j_id]
                 # Can I afford other's bundle?
                 other_cost = sum(
-                    prices.get(r, 0.0) * qty
-                    for r, qty in other_alloc.resources.items()
+                    prices.get(r, 0.0) * qty for r, qty in other_alloc.resources.items()
                 )
 
                 if other_cost > my_bid.budget + self.config.envy_tolerance:
@@ -350,11 +339,13 @@ class DworkinAuction:
 
                 gap = other_utility_for_me - my_utility
                 if gap > self.config.envy_tolerance:
-                    violations.append(EnvyViolation(
-                        envious_agent=i_id,
-                        envied_agent=j_id,
-                        utility_gap=gap,
-                    ))
+                    violations.append(
+                        EnvyViolation(
+                            envious_agent=i_id,
+                            envied_agent=j_id,
+                            utility_gap=gap,
+                        )
+                    )
 
         return len(violations) == 0, violations
 

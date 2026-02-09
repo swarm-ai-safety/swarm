@@ -16,7 +16,9 @@ from swarm.models.interaction import InteractionType, SoftInteraction
 def create_test_observation(**kwargs) -> Observation:
     """Create a test observation with defaults."""
     defaults = {
-        "agent_state": AgentState(agent_id="test_agent", reputation=0.5, resources=100.0),
+        "agent_state": AgentState(
+            agent_id="test_agent", reputation=0.5, resources=100.0
+        ),
         "current_epoch": 1,
         "current_step": 5,
         "can_post": True,
@@ -103,7 +105,10 @@ class TestBaseAgent:
 
         # First interaction with low p
         i1 = SoftInteraction(
-            initiator="agent_2", counterparty="agent_1", accepted=True, p=0.3,
+            initiator="agent_2",
+            counterparty="agent_1",
+            accepted=True,
+            p=0.3,
         )
         agent.update_from_outcome(i1, payoff=0.0)
         trust_after_bad = agent.compute_counterparty_trust("agent_2")
@@ -111,7 +116,10 @@ class TestBaseAgent:
         # Several good interactions should increase trust
         for _ in range(5):
             ix = SoftInteraction(
-                initiator="agent_2", counterparty="agent_1", accepted=True, p=0.9,
+                initiator="agent_2",
+                counterparty="agent_1",
+                accepted=True,
+                p=0.9,
             )
             agent.update_from_outcome(ix, payoff=1.0)
 
@@ -143,16 +151,21 @@ class TestHonestAgent:
         agent = HonestAgent(agent_id="honest_1")
 
         observation = create_test_observation(
-            pending_proposals=[{
-                "proposal_id": "prop_1",
-                "initiator_id": "agent_2",
-                "interaction_type": "collaboration",
-                "content": "Let's work together",
-            }]
+            pending_proposals=[
+                {
+                    "proposal_id": "prop_1",
+                    "initiator_id": "agent_2",
+                    "interaction_type": "collaboration",
+                    "content": "Let's work together",
+                }
+            ]
         )
 
         action = agent.act(observation)
-        assert action.action_type in (ActionType.ACCEPT_INTERACTION, ActionType.REJECT_INTERACTION)
+        assert action.action_type in (
+            ActionType.ACCEPT_INTERACTION,
+            ActionType.REJECT_INTERACTION,
+        )
 
     def test_honest_agent_accepts_trusted(self):
         """Test honest agent accepts from trusted counterparties."""
@@ -185,13 +198,15 @@ class TestHonestAgent:
         agent = HonestAgent(agent_id="honest_1")
 
         observation = create_test_observation(
-            available_tasks=[{
-                "task_id": "task_1",
-                "prompt": "Research task",
-                "bounty": 10.0,
-                "difficulty": "medium",
-                "min_reputation": 0.0,
-            }]
+            available_tasks=[
+                {
+                    "task_id": "task_1",
+                    "prompt": "Research task",
+                    "bounty": 10.0,
+                    "difficulty": "medium",
+                    "min_reputation": 0.0,
+                }
+            ]
         )
 
         # Agent might claim task
@@ -242,7 +257,9 @@ class TestOpportunisticAgent:
         actions = [agent.act(observation) for _ in range(10)]
 
         # Should sometimes propose interactions to rich agents
-        proposals = [a for a in actions if a.action_type == ActionType.PROPOSE_INTERACTION]
+        proposals = [
+            a for a in actions if a.action_type == ActionType.PROPOSE_INTERACTION
+        ]
         if proposals:
             # When proposing, should target rich agents
             rich_targets = [a for a in proposals if a.counterparty_id == "rich_agent"]
@@ -318,8 +335,18 @@ class TestAdversarialAgent:
 
         observation = create_test_observation(
             visible_agents=[
-                {"agent_id": "honest_1", "agent_type": "honest", "reputation": 1.0, "resources": 150.0},
-                {"agent_id": "honest_2", "agent_type": "honest", "reputation": 0.5, "resources": 80.0},
+                {
+                    "agent_id": "honest_1",
+                    "agent_type": "honest",
+                    "reputation": 1.0,
+                    "resources": 150.0,
+                },
+                {
+                    "agent_id": "honest_2",
+                    "agent_type": "honest",
+                    "reputation": 0.5,
+                    "resources": 80.0,
+                },
             ]
         )
 
@@ -336,7 +363,12 @@ class TestAdversarialAgent:
 
         observation = create_test_observation(
             visible_agents=[
-                {"agent_id": "adv_2", "agent_type": "adversarial", "reputation": 0.0, "resources": 100.0},
+                {
+                    "agent_id": "adv_2",
+                    "agent_type": "adversarial",
+                    "reputation": 0.0,
+                    "resources": 100.0,
+                },
             ]
         )
 

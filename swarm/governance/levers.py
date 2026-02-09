@@ -45,15 +45,21 @@ class LeverEffect:
             agents_to_unfreeze=self.agents_to_unfreeze | other.agents_to_unfreeze,
             reputation_deltas={
                 **self.reputation_deltas,
-                **{k: self.reputation_deltas.get(k, 0) + v
-                   for k, v in other.reputation_deltas.items()}
+                **{
+                    k: self.reputation_deltas.get(k, 0) + v
+                    for k, v in other.reputation_deltas.items()
+                },
             },
             resource_deltas={
                 **self.resource_deltas,
-                **{k: self.resource_deltas.get(k, 0) + v
-                   for k, v in other.resource_deltas.items()}
+                **{
+                    k: self.resource_deltas.get(k, 0) + v
+                    for k, v in other.resource_deltas.items()
+                },
             },
-            lever_name=f"{self.lever_name}+{other.lever_name}" if self.lever_name else other.lever_name,
+            lever_name=f"{self.lever_name}+{other.lever_name}"
+            if self.lever_name
+            else other.lever_name,
             details={**self.details, **other.details},
         )
 

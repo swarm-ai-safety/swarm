@@ -90,26 +90,28 @@ class SweepResult:
     def to_dict(self) -> Dict[str, Any]:
         """Convert to flat dictionary for CSV export."""
         result = dict(self.params)
-        result.update({
-            "run_index": self.run_index,
-            "seed": self.seed,
-            "total_interactions": self.total_interactions,
-            "accepted_interactions": self.accepted_interactions,
-            "avg_toxicity": self.avg_toxicity,
-            "avg_quality_gap": self.avg_quality_gap,
-            "total_welfare": self.total_welfare,
-            "welfare_per_epoch": self.welfare_per_epoch,
-            "n_agents": self.n_agents,
-            "n_frozen": self.n_frozen,
-            "avg_reputation": self.avg_reputation,
-            "avg_payoff": self.avg_payoff,
-            "min_payoff": self.min_payoff,
-            "max_payoff": self.max_payoff,
-            "honest_avg_payoff": self.honest_avg_payoff,
-            "opportunistic_avg_payoff": self.opportunistic_avg_payoff,
-            "deceptive_avg_payoff": self.deceptive_avg_payoff,
-            "adversarial_avg_payoff": self.adversarial_avg_payoff,
-        })
+        result.update(
+            {
+                "run_index": self.run_index,
+                "seed": self.seed,
+                "total_interactions": self.total_interactions,
+                "accepted_interactions": self.accepted_interactions,
+                "avg_toxicity": self.avg_toxicity,
+                "avg_quality_gap": self.avg_quality_gap,
+                "total_welfare": self.total_welfare,
+                "welfare_per_epoch": self.welfare_per_epoch,
+                "n_agents": self.n_agents,
+                "n_frozen": self.n_frozen,
+                "avg_reputation": self.avg_reputation,
+                "avg_payoff": self.avg_payoff,
+                "min_payoff": self.min_payoff,
+                "max_payoff": self.max_payoff,
+                "honest_avg_payoff": self.honest_avg_payoff,
+                "opportunistic_avg_payoff": self.opportunistic_avg_payoff,
+                "deceptive_avg_payoff": self.deceptive_avg_payoff,
+                "adversarial_avg_payoff": self.adversarial_avg_payoff,
+            }
+        )
         return result
 
 
@@ -128,17 +130,17 @@ def _apply_params(scenario: ScenarioConfig, params: Dict[str, Any]) -> ScenarioC
 
     for name, value in params.items():
         if name.startswith("governance."):
-            attr = name[len("governance."):]
+            attr = name[len("governance.") :]
             if config.governance_config is None:
                 config.governance_config = GovernanceConfig()
             setattr(config.governance_config, attr, value)
 
         elif name.startswith("payoff."):
-            attr = name[len("payoff."):]
+            attr = name[len("payoff.") :]
             setattr(config.payoff_config, attr, value)
 
         elif name.startswith("simulation."):
-            attr = name[len("simulation."):]
+            attr = name[len("simulation.") :]
             setattr(config, attr, value)
 
         elif name == "n_epochs":
@@ -168,8 +170,12 @@ def _extract_results(
     # Aggregate metrics
     total_interactions = sum(m.total_interactions for m in metrics_history)
     accepted_interactions = sum(m.accepted_interactions for m in metrics_history)
-    avg_toxicity = sum(m.toxicity_rate for m in metrics_history) / n_epochs if n_epochs else 0
-    avg_quality_gap = sum(m.quality_gap for m in metrics_history) / n_epochs if n_epochs else 0
+    avg_toxicity = (
+        sum(m.toxicity_rate for m in metrics_history) / n_epochs if n_epochs else 0
+    )
+    avg_quality_gap = (
+        sum(m.quality_gap for m in metrics_history) / n_epochs if n_epochs else 0
+    )
     total_welfare = sum(m.total_welfare for m in metrics_history)
     welfare_per_epoch = total_welfare / n_epochs if n_epochs else 0
 
@@ -274,7 +280,11 @@ class SweepRunner:
                 current_run += 1
 
                 # Calculate seed
-                seed = self.config.seed_base + current_run if self.config.seed_base else None
+                seed = (
+                    self.config.seed_base + current_run
+                    if self.config.seed_base
+                    else None
+                )
 
                 # Progress callback
                 if self.progress_callback:
@@ -295,6 +305,7 @@ class SweepRunner:
         """Run a single simulation with given parameters."""
         # Deep copy the base scenario
         import copy
+
         scenario = copy.deepcopy(self.config.base_scenario)
 
         # Apply parameter overrides
@@ -334,6 +345,7 @@ class SweepRunner:
 
         # Group by parameter combination
         from collections import defaultdict
+
         groups: Dict[tuple, List[SweepResult]] = defaultdict(list)
 
         for r in self.results:
@@ -352,7 +364,8 @@ class SweepRunner:
                 "mean_toxicity": sum(r.avg_toxicity for r in runs) / n_runs,
                 "mean_frozen": sum(r.n_frozen for r in runs) / n_runs,
                 "mean_honest_payoff": sum(r.honest_avg_payoff for r in runs) / n_runs,
-                "mean_adversarial_payoff": sum(r.adversarial_avg_payoff for r in runs) / n_runs,
+                "mean_adversarial_payoff": sum(r.adversarial_avg_payoff for r in runs)
+                / n_runs,
             }
             summaries.append(summary)
 

@@ -55,9 +55,7 @@ st_theta = st.floats(
 )
 
 # Rho (externality internalization) in [0, 1]
-st_rho = st.floats(
-    min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False
-)
+st_rho = st.floats(min_value=0.0, max_value=1.0, allow_nan=False, allow_infinity=False)
 
 
 # ---------------------------------------------------------------------------
@@ -91,9 +89,7 @@ class TestSigmoidProperties:
         assume(v1 < v2)
         p1 = calibrated_sigmoid(v1, k)
         p2 = calibrated_sigmoid(v2, k)
-        assert p1 <= p2, (
-            f"sigmoid({v1}, {k}) = {p1} > sigmoid({v2}, {k}) = {p2}"
-        )
+        assert p1 <= p2, f"sigmoid({v1}, {k}) = {p1} > sigmoid({v2}, {k}) = {p2}"
 
     @given(v_hat=st_v_hat, k=st_k)
     @settings(max_examples=500)
@@ -135,9 +131,7 @@ class TestSigmoidProperties:
     def test_sigmoid_derivative_non_negative(self, v_hat, k):
         """sigmoid_derivative(v_hat, k) is always non-negative."""
         deriv = sigmoid_derivative(v_hat, k)
-        assert deriv >= 0.0, (
-            f"sigmoid_derivative({v_hat}, {k}) = {deriv} is negative"
-        )
+        assert deriv >= 0.0, f"sigmoid_derivative({v_hat}, {k}) = {deriv} is negative"
 
     @given(v_hat=st_v_hat, k=st_k)
     @settings(max_examples=500)
@@ -361,9 +355,7 @@ class TestPayoffProperties:
         engine = SoftPayoffEngine()
         s1 = engine.expected_surplus(p1)
         s2 = engine.expected_surplus(p2)
-        assert s1 <= s2 + 1e-12, (
-            f"surplus({p1}) = {s1} > surplus({p2}) = {s2}"
-        )
+        assert s1 <= s2 + 1e-12, f"surplus({p1}) = {s1} > surplus({p2}) = {s2}"
 
     @given(p1=st_p, p2=st_p)
     @settings(max_examples=500)
@@ -373,9 +365,7 @@ class TestPayoffProperties:
         engine = SoftPayoffEngine()
         h1 = engine.expected_harm(p1)
         h2 = engine.expected_harm(p2)
-        assert h1 >= h2 - 1e-12, (
-            f"harm({p1}) = {h1} < harm({p2}) = {h2}"
-        )
+        assert h1 >= h2 - 1e-12, f"harm({p1}) = {h1} < harm({p2}) = {h2}"
 
     @given(p=st_p)
     @settings(max_examples=500)
@@ -423,9 +413,7 @@ class TestPayoffProperties:
         config = PayoffConfig(s_plus=s_plus, s_minus=s_minus, h=h)
         engine = SoftPayoffEngine(config)
         sbe_p = engine.social_break_even_p()
-        assert 0.0 <= sbe_p <= 1.0, (
-            f"social_break_even_p = {sbe_p} not in [0, 1]"
-        )
+        assert 0.0 <= sbe_p <= 1.0, f"social_break_even_p = {sbe_p} not in [0, 1]"
 
     @given(
         s_plus=st_positive_param,
@@ -439,9 +427,7 @@ class TestPayoffProperties:
         engine = SoftPayoffEngine(config)
         be_p = engine.break_even_p()
         sbe_p = engine.social_break_even_p()
-        assert sbe_p >= be_p - 1e-12, (
-            f"social_break_even={sbe_p} < break_even={be_p}"
-        )
+        assert sbe_p >= be_p - 1e-12, f"social_break_even={sbe_p} < break_even={be_p}"
 
     @given(
         p=st_p,
@@ -499,9 +485,7 @@ class TestPayoffProperties:
         """The transfer tau cancels out in total welfare (zero-sum transfer)."""
         config = PayoffConfig(theta=theta, rho_a=0.0, rho_b=0.0, w_rep=0.0)
         engine = SoftPayoffEngine(config)
-        interaction = SoftInteraction(
-            p=p, tau=tau, c_a=0.0, c_b=0.0, r_a=0.0, r_b=0.0
-        )
+        interaction = SoftInteraction(p=p, tau=tau, c_a=0.0, c_b=0.0, r_a=0.0, r_b=0.0)
         pi_a = engine.payoff_initiator(interaction)
         pi_b = engine.payoff_counterparty(interaction)
         surplus = engine.expected_surplus(p)
@@ -536,9 +520,7 @@ class TestPayoffProperties:
         assume(rho_a + rho_b <= 1.0)
         config = PayoffConfig(rho_a=rho_a, rho_b=rho_b, w_rep=0.0)
         engine = SoftPayoffEngine(config)
-        interaction = SoftInteraction(
-            p=p, tau=0.0, c_a=0.0, c_b=0.0, r_a=0.0, r_b=0.0
-        )
+        interaction = SoftInteraction(p=p, tau=0.0, c_a=0.0, c_b=0.0, r_a=0.0, r_b=0.0)
         welfare = engine.total_welfare(interaction)
         surplus = engine.expected_surplus(p)
         harm = engine.expected_harm(p)
@@ -594,9 +576,7 @@ class TestPayoffBreakdownProperties:
         ),
     )
     @settings(max_examples=500)
-    def test_breakdown_counterparty_total_matches_payoff(
-        self, p, theta, tau, c_a, c_b
-    ):
+    def test_breakdown_counterparty_total_matches_payoff(self, p, theta, tau, c_a, c_b):
         """Breakdown total should match the payoff computation for counterparty."""
         config = PayoffConfig(theta=theta)
         engine = SoftPayoffEngine(config)
@@ -631,26 +611,18 @@ class TestSoftMetricsProperties:
     """Property-based tests for SoftMetrics computations."""
 
     @given(
-        p_values=st.lists(
-            st_p, min_size=1, max_size=20
-        ),
+        p_values=st.lists(st_p, min_size=1, max_size=20),
     )
     @settings(max_examples=300)
     def test_toxicity_rate_in_unit_interval(self, p_values):
         """Toxicity rate is in [0, 1] for any set of accepted interactions."""
-        interactions = [
-            SoftInteraction(p=p, accepted=True) for p in p_values
-        ]
+        interactions = [SoftInteraction(p=p, accepted=True) for p in p_values]
         metrics = SoftMetrics()
         tox = metrics.toxicity_rate(interactions)
-        assert 0.0 <= tox <= 1.0 + 1e-12, (
-            f"toxicity = {tox} not in [0, 1]"
-        )
+        assert 0.0 <= tox <= 1.0 + 1e-12, f"toxicity = {tox} not in [0, 1]"
 
     @given(
-        p_values=st.lists(
-            st_p, min_size=1, max_size=20
-        ),
+        p_values=st.lists(st_p, min_size=1, max_size=20),
     )
     @settings(max_examples=300)
     def test_toxicity_rate_all_in_unit_interval(self, p_values):
@@ -658,14 +630,10 @@ class TestSoftMetricsProperties:
         interactions = [SoftInteraction(p=p) for p in p_values]
         metrics = SoftMetrics()
         tox = metrics.toxicity_rate_all(interactions)
-        assert 0.0 <= tox <= 1.0 + 1e-12, (
-            f"toxicity_all = {tox} not in [0, 1]"
-        )
+        assert 0.0 <= tox <= 1.0 + 1e-12, f"toxicity_all = {tox} not in [0, 1]"
 
     @given(
-        p_values=st.lists(
-            st_p, min_size=1, max_size=20
-        ),
+        p_values=st.lists(st_p, min_size=1, max_size=20),
     )
     @settings(max_examples=300)
     def test_toxicity_complements_average_quality(self, p_values):
@@ -697,9 +665,7 @@ class TestSoftMetricsProperties:
     @settings(max_examples=300)
     def test_quality_gap_positive_when_good_accepted(self, p_accepted, p_rejected):
         """Quality gap is positive when high-quality interactions are accepted."""
-        interactions = [
-            SoftInteraction(p=p, accepted=True) for p in p_accepted
-        ] + [
+        interactions = [SoftInteraction(p=p, accepted=True) for p in p_accepted] + [
             SoftInteraction(p=p, accepted=False) for p in p_rejected
         ]
         metrics = SoftMetrics()
@@ -726,9 +692,7 @@ class TestSoftMetricsProperties:
     @settings(max_examples=300)
     def test_quality_gap_negative_when_bad_accepted(self, p_accepted, p_rejected):
         """Quality gap is negative when low-quality interactions are accepted (adverse selection)."""
-        interactions = [
-            SoftInteraction(p=p, accepted=True) for p in p_accepted
-        ] + [
+        interactions = [SoftInteraction(p=p, accepted=True) for p in p_accepted] + [
             SoftInteraction(p=p, accepted=False) for p in p_rejected
         ]
         metrics = SoftMetrics()
@@ -738,9 +702,7 @@ class TestSoftMetricsProperties:
         )
 
     @given(
-        p_values=st.lists(
-            st_p, min_size=2, max_size=20
-        ),
+        p_values=st.lists(st_p, min_size=2, max_size=20),
     )
     @settings(max_examples=300)
     def test_quality_gap_bounded(self, p_values):
@@ -754,9 +716,7 @@ class TestSoftMetricsProperties:
         ]
         metrics = SoftMetrics()
         gap = metrics.quality_gap(interactions)
-        assert -1.0 <= gap <= 1.0 + 1e-12, (
-            f"quality_gap = {gap} not in [-1, 1]"
-        )
+        assert -1.0 <= gap <= 1.0 + 1e-12, f"quality_gap = {gap} not in [-1, 1]"
 
     def test_toxicity_rate_empty(self):
         """Toxicity rate of empty list is 0."""
@@ -785,9 +745,7 @@ class TestSoftMetricsProperties:
         interactions = [SoftInteraction(p=p) for p in p_values]
         metrics = SoftMetrics()
         avg = metrics.average_quality(interactions)
-        assert 0.0 <= avg <= 1.0 + 1e-12, (
-            f"average_quality = {avg} not in [0, 1]"
-        )
+        assert 0.0 <= avg <= 1.0 + 1e-12, f"average_quality = {avg} not in [0, 1]"
 
     @given(
         p_values=st.lists(st_p, min_size=2, max_size=20),
@@ -809,9 +767,7 @@ class TestSoftMetricsProperties:
         interactions = [SoftInteraction(p=p) for p in p_values]
         metrics = SoftMetrics()
         var = metrics.quality_variance(interactions)
-        assert var <= 0.25 + 1e-12, (
-            f"variance = {var} exceeds max possible 0.25"
-        )
+        assert var <= 0.25 + 1e-12, f"variance = {var} exceeds max possible 0.25"
 
     @given(
         p_values=st.lists(st_p, min_size=2, max_size=20),
@@ -842,9 +798,7 @@ class TestSoftMetricsProperties:
         interactions = [SoftInteraction(p=p) for p in p_values]
         metrics = SoftMetrics()
         frac = metrics.uncertain_fraction(interactions, band=0.2)
-        assert 0.0 <= frac <= 1.0 + 1e-12, (
-            f"uncertain_fraction = {frac} not in [0, 1]"
-        )
+        assert 0.0 <= frac <= 1.0 + 1e-12, f"uncertain_fraction = {frac} not in [0, 1]"
 
 
 # ---------------------------------------------------------------------------
@@ -902,9 +856,7 @@ class TestCrossModuleProperties:
         rho_b=st_rho,
     )
     @settings(max_examples=300)
-    def test_full_payoff_is_finite(
-        self, p, s_plus, s_minus, h, theta, rho_a, rho_b
-    ):
+    def test_full_payoff_is_finite(self, p, s_plus, s_minus, h, theta, rho_a, rho_b):
         """Full payoff computation produces finite results for any valid params."""
         config = PayoffConfig(
             s_plus=s_plus,

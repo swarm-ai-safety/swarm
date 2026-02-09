@@ -224,16 +224,18 @@ class PermeabilityModel:
         Returns:
             List of SpilloverEvent objects (both blocked and unblocked)
         """
-        perm = permeability if permeability is not None else self._state.effective_permeability
+        perm = (
+            permeability
+            if permeability is not None
+            else self._state.effective_permeability
+        )
         spillovers = []
 
         for interaction in interactions:
             if not interaction.accepted:
                 continue
 
-            contagion_prob = self.compute_contagion_probability(
-                interaction, perm
-            )
+            contagion_prob = self.compute_contagion_probability(interaction, perm)
 
             if self._rng.random() < contagion_prob:
                 # Potential spillover
@@ -241,9 +243,7 @@ class PermeabilityModel:
                 raw_harm = harm_level * self.config.spillover_amplification
 
                 # Try to block
-                allowed, _ = self.should_cross(
-                    perm, interaction.p, "outbound"
-                )
+                allowed, _ = self.should_cross(perm, interaction.p, "outbound")
 
                 spillover = SpilloverEvent(
                     source_interaction_id=interaction.interaction_id,
@@ -313,15 +313,15 @@ class PermeabilityModel:
             perm = i / n_samples
 
             # Benefit: flows that cross successfully
-            benefit = sum(
-                ix.p * perm for ix in interactions if ix.accepted
-            )
+            benefit = sum(ix.p * perm for ix in interactions if ix.accepted)
 
             # Cost: expected spillover harm
             harm = sum(
                 self.compute_contagion_probability(ix, perm)
-                * (1 - ix.p) * self.config.spillover_amplification
-                for ix in interactions if ix.accepted
+                * (1 - ix.p)
+                * self.config.spillover_amplification
+                for ix in interactions
+                if ix.accepted
             )
 
             score = benefit - external_harm_weight * harm

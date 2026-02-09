@@ -109,7 +109,11 @@ class HonestAgent(BaseAgent):
                 return self.create_post_action(content)
 
         # Vote on visible posts
-        if observation.can_vote and observation.visible_posts and random.random() < self.vote_probability:
+        if (
+            observation.can_vote
+            and observation.visible_posts
+            and random.random() < self.vote_probability
+        ):
             return self._vote_on_posts(observation)
 
         # Propose interactions
@@ -229,7 +233,9 @@ class HonestAgent(BaseAgent):
         # Accept if trust is above threshold
         return bool(trust >= self.acceptance_threshold - 0.1)
 
-    def _select_task(self, tasks: List[Dict], observation: Observation) -> Optional[Dict]:
+    def _select_task(
+        self, tasks: List[Dict], observation: Observation
+    ) -> Optional[Dict]:
         """Select the best task to claim."""
         if not tasks:
             return None
@@ -244,7 +250,13 @@ class HonestAgent(BaseAgent):
         # Sort by bounty/difficulty ratio
         def score(t):
             bounty = t.get("bounty", 0)
-            difficulty_map = {"trivial": 1, "easy": 2, "medium": 3, "hard": 4, "expert": 5}
+            difficulty_map = {
+                "trivial": 1,
+                "easy": 2,
+                "medium": 3,
+                "hard": 4,
+                "expert": 5,
+            }
             difficulty = difficulty_map.get(t.get("difficulty", "medium"), 3)
             return bounty / difficulty
 

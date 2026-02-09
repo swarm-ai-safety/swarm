@@ -1,4 +1,3 @@
-
 """Streamlit dashboard for distributional AGI safety sandbox."""
 
 import json
@@ -19,7 +18,8 @@ st.set_page_config(
 )
 
 # Custom CSS
-st.markdown("""
+st.markdown(
+    """
 <style>
     .metric-card {
         background-color: #f0f2f6;
@@ -39,7 +39,9 @@ st.markdown("""
     .agent-opportunistic { color: #ffc107; }
     .agent-adversarial { color: #dc3545; }
 </style>
-""", unsafe_allow_html=True)
+""",
+    unsafe_allow_html=True,
+)
 
 
 def main():
@@ -56,8 +58,10 @@ def main():
 
         status = "Running" if st.session_state.simulation_running else "Stopped"
         status_class = "running" if st.session_state.simulation_running else "stopped"
-        st.markdown(f"**Status:** <span class='status-{status_class}'>{status}</span>",
-                   unsafe_allow_html=True)
+        st.markdown(
+            f"**Status:** <span class='status-{status_class}'>{status}</span>",
+            unsafe_allow_html=True,
+        )
 
         # Load data options
         st.subheader("Data Source")
@@ -122,7 +126,7 @@ def main():
         st.metric(
             "Progress",
             f"{current_epoch}/{total_epochs}",
-            delta=f"{current_epoch/total_epochs:.0%}",
+            delta=f"{current_epoch / total_epochs:.0%}",
         )
 
     st.divider()
@@ -134,19 +138,35 @@ def main():
         st.subheader("📈 Metrics Over Time")
         metrics_df = pd.DataFrame(data.get("metric_history", []))
         if not metrics_df.empty:
-            fig = make_subplots(rows=2, cols=1, shared_xaxes=True,
-                              subplot_titles=("Toxicity Rate", "Quality Gap"))
-
-            fig.add_trace(
-                go.Scatter(x=metrics_df["epoch"], y=metrics_df["toxicity_rate"],
-                          mode="lines+markers", name="Toxicity", line={"color": "red"}),
-                row=1, col=1
+            fig = make_subplots(
+                rows=2,
+                cols=1,
+                shared_xaxes=True,
+                subplot_titles=("Toxicity Rate", "Quality Gap"),
             )
 
             fig.add_trace(
-                go.Scatter(x=metrics_df["epoch"], y=metrics_df["quality_gap"],
-                          mode="lines+markers", name="Quality Gap", line={"color": "blue"}),
-                row=2, col=1
+                go.Scatter(
+                    x=metrics_df["epoch"],
+                    y=metrics_df["toxicity_rate"],
+                    mode="lines+markers",
+                    name="Toxicity",
+                    line={"color": "red"},
+                ),
+                row=1,
+                col=1,
+            )
+
+            fig.add_trace(
+                go.Scatter(
+                    x=metrics_df["epoch"],
+                    y=metrics_df["quality_gap"],
+                    mode="lines+markers",
+                    name="Quality Gap",
+                    line={"color": "blue"},
+                ),
+                row=2,
+                col=1,
             )
 
             fig.update_layout(height=400, showlegend=False)
@@ -166,14 +186,17 @@ def main():
 
             # Agent type distribution
             type_counts = agent_df["agent_type"].value_counts()
-            fig = px.pie(values=type_counts.values, names=type_counts.index,
-                        color=type_counts.index,
-                        color_discrete_map={
-                            "honest": "#28a745",
-                            "opportunistic": "#ffc107",
-                            "adversarial": "#dc3545",
-                            "deceptive": "#6c757d",
-                        })
+            fig = px.pie(
+                values=type_counts.values,
+                names=type_counts.index,
+                color=type_counts.index,
+                color_discrete_map={
+                    "honest": "#28a745",
+                    "opportunistic": "#ffc107",
+                    "adversarial": "#dc3545",
+                    "deceptive": "#6c757d",
+                },
+            )
             fig.update_layout(height=400)
             st.plotly_chart(fig, use_container_width=True)
         else:
@@ -215,7 +238,9 @@ def main():
                     scatter_df,
                     x="toxicity_rate",
                     y="incoherence_index",
-                    color="governance_condition" if "governance_condition" in scatter_df.columns else None,
+                    color="governance_condition"
+                    if "governance_condition" in scatter_df.columns
+                    else None,
                     title="Toxicity vs Incoherence",
                 )
                 scatter.update_layout(height=320)
@@ -238,7 +263,9 @@ def main():
             name_filter = st.text_input("Filter by name:", "")
             if name_filter.strip():
                 agent_df = agent_df[
-                    agent_df["display_name"].str.contains(name_filter, case=False, na=False)
+                    agent_df["display_name"].str.contains(
+                        name_filter, case=False, na=False
+                    )
                 ]
 
             sort_by = st.selectbox(
@@ -264,13 +291,17 @@ def main():
             st.dataframe(styled_df, use_container_width=True)
 
             # Reputation bar chart
-            fig = px.bar(agent_df, x="display_name", y="reputation",
-                        color="agent_type",
-                        color_discrete_map={
-                            "honest": "#28a745",
-                            "opportunistic": "#ffc107",
-                            "adversarial": "#dc3545",
-                        })
+            fig = px.bar(
+                agent_df,
+                x="display_name",
+                y="reputation",
+                color="agent_type",
+                color_discrete_map={
+                    "honest": "#28a745",
+                    "opportunistic": "#ffc107",
+                    "adversarial": "#dc3545",
+                },
+            )
             fig.update_layout(height=300)
             st.plotly_chart(fig, use_container_width=True)
 
@@ -333,7 +364,9 @@ def main():
     if show_network:
         st.divider()
         st.subheader("🌐 Agent Network")
-        st.info("Network visualization requires additional setup. Install networkx and pyvis for full functionality.")
+        st.info(
+            "Network visualization requires additional setup. Install networkx and pyvis for full functionality."
+        )
 
     # Event log
     st.divider()
@@ -343,7 +376,9 @@ def main():
     if events:
         for event in events[-10:]:
             event_type = event.get("type", "unknown")
-            icon = {"interaction": "🤝", "governance": "⚖️", "boundary": "🔒"}.get(event_type, "📌")
+            icon = {"interaction": "🤝", "governance": "⚖️", "boundary": "🔒"}.get(
+                event_type, "📌"
+            )
             st.text(f"{icon} {event.get('description', 'Event occurred')}")
     else:
         st.info("No recent events")
@@ -366,34 +401,102 @@ def generate_demo_data():
     metric_history = []
 
     for epoch in epochs:
-        metric_history.append({
-            "epoch": epoch,
-            "step": 10,
-            "toxicity_rate": 0.1 + random.uniform(-0.05, 0.1) * (epoch / 25),
-            "quality_gap": -0.05 + random.uniform(-0.02, 0.02),
-            "avg_payoff": 5.0 + random.uniform(-1, 2),
-            "total_welfare": 800 + epoch * 2 + random.uniform(-20, 20),
-            "acceptance_rate": 0.7 + random.uniform(-0.1, 0.1),
-            "incoherence_index": 0.2 + random.uniform(-0.05, 0.15) * (epoch / 25),
-            "forecaster_risk": 0.25 + random.uniform(-0.04, 0.2) * (epoch / 25),
-            "governance_condition": "adaptive_on" if epoch > 12 else "static",
-        })
+        metric_history.append(
+            {
+                "epoch": epoch,
+                "step": 10,
+                "toxicity_rate": 0.1 + random.uniform(-0.05, 0.1) * (epoch / 25),
+                "quality_gap": -0.05 + random.uniform(-0.02, 0.02),
+                "avg_payoff": 5.0 + random.uniform(-1, 2),
+                "total_welfare": 800 + epoch * 2 + random.uniform(-20, 20),
+                "acceptance_rate": 0.7 + random.uniform(-0.1, 0.1),
+                "incoherence_index": 0.2 + random.uniform(-0.05, 0.15) * (epoch / 25),
+                "forecaster_risk": 0.25 + random.uniform(-0.04, 0.2) * (epoch / 25),
+                "governance_condition": "adaptive_on" if epoch > 12 else "static",
+            }
+        )
 
     agents = [
-        {"agent_id": "honest_1", "name": "Alice", "agent_type": "honest", "reputation": 12.5, "resources": 105.0, "interactions": 45, "payoff_total": 52.3, "is_frozen": False},
-        {"agent_id": "honest_2", "name": "Bob", "agent_type": "honest", "reputation": 11.2, "resources": 98.0, "interactions": 42, "payoff_total": 48.1, "is_frozen": False},
-        {"agent_id": "honest_3", "name": "Casey", "agent_type": "honest", "reputation": 10.8, "resources": 102.0, "interactions": 40, "payoff_total": 45.5, "is_frozen": False},
-        {"agent_id": "opp_1", "name": "Delta", "agent_type": "opportunistic", "reputation": 8.5, "resources": 115.0, "interactions": 38, "payoff_total": 55.2, "is_frozen": False},
-        {"agent_id": "opp_2", "name": "Echo", "agent_type": "opportunistic", "reputation": 7.2, "resources": 110.0, "interactions": 35, "payoff_total": 42.0, "is_frozen": False},
-        {"agent_id": "adv_1", "name": "Nyx", "agent_type": "adversarial", "reputation": 3.1, "resources": 85.0, "interactions": 25, "payoff_total": -15.3, "is_frozen": True},
+        {
+            "agent_id": "honest_1",
+            "name": "Alice",
+            "agent_type": "honest",
+            "reputation": 12.5,
+            "resources": 105.0,
+            "interactions": 45,
+            "payoff_total": 52.3,
+            "is_frozen": False,
+        },
+        {
+            "agent_id": "honest_2",
+            "name": "Bob",
+            "agent_type": "honest",
+            "reputation": 11.2,
+            "resources": 98.0,
+            "interactions": 42,
+            "payoff_total": 48.1,
+            "is_frozen": False,
+        },
+        {
+            "agent_id": "honest_3",
+            "name": "Casey",
+            "agent_type": "honest",
+            "reputation": 10.8,
+            "resources": 102.0,
+            "interactions": 40,
+            "payoff_total": 45.5,
+            "is_frozen": False,
+        },
+        {
+            "agent_id": "opp_1",
+            "name": "Delta",
+            "agent_type": "opportunistic",
+            "reputation": 8.5,
+            "resources": 115.0,
+            "interactions": 38,
+            "payoff_total": 55.2,
+            "is_frozen": False,
+        },
+        {
+            "agent_id": "opp_2",
+            "name": "Echo",
+            "agent_type": "opportunistic",
+            "reputation": 7.2,
+            "resources": 110.0,
+            "interactions": 35,
+            "payoff_total": 42.0,
+            "is_frozen": False,
+        },
+        {
+            "agent_id": "adv_1",
+            "name": "Nyx",
+            "agent_type": "adversarial",
+            "reputation": 3.1,
+            "resources": 85.0,
+            "interactions": 25,
+            "payoff_total": -15.3,
+            "is_frozen": True,
+        },
     ]
 
     recent_events = [
-        {"type": "interaction", "description": "honest_1 and honest_2 completed beneficial interaction"},
-        {"type": "governance", "description": "Audit conducted on opp_1, no violations found"},
-        {"type": "boundary", "description": "External API call from honest_3 to web_search"},
+        {
+            "type": "interaction",
+            "description": "honest_1 and honest_2 completed beneficial interaction",
+        },
+        {
+            "type": "governance",
+            "description": "Audit conducted on opp_1, no violations found",
+        },
+        {
+            "type": "boundary",
+            "description": "External API call from honest_3 to web_search",
+        },
         {"type": "governance", "description": "adv_1 frozen due to high toxicity"},
-        {"type": "interaction", "description": "opp_2 proposed interaction rejected by honest_1"},
+        {
+            "type": "interaction",
+            "description": "opp_2 proposed interaction rejected by honest_1",
+        },
     ]
 
     return {

@@ -75,10 +75,7 @@ class AdversarialAgent(BaseAgent):
         self._update_targets(observation)
 
         # Post bait bounties to waste others' resources
-        if (
-            observation.agent_state.resources > 10
-            and random.random() < 0.2
-        ):
+        if observation.agent_state.resources > 10 and random.random() < 0.2:
             return self._post_bait_bounty(observation)
 
         # File frivolous disputes on active escrows
@@ -234,7 +231,8 @@ class AdversarialAgent(BaseAgent):
         # Priority 1: Attack interaction with target
         if observation.can_interact:
             targets = [
-                a.get("agent_id") for a in observation.visible_agents
+                a.get("agent_id")
+                for a in observation.visible_agents
                 if a.get("agent_id") in self._target_list
             ]
 
@@ -312,10 +310,7 @@ class AdversarialAgent(BaseAgent):
         agents = observation.visible_agents
 
         # Prioritize targets
-        target_agents = [
-            a for a in agents
-            if a.get("agent_id") in self._target_list
-        ]
+        target_agents = [a for a in agents if a.get("agent_id") in self._target_list]
 
         if target_agents:
             target = random.choice(target_agents)

@@ -102,7 +102,10 @@ class AcceptanceRubric:
 
         # Criterion 3: Artifact resolution rate >= threshold
         if checks.artifact_resolution_rate is not None:
-            if checks.artifact_resolution_rate >= self.config.min_artifact_resolution_rate:
+            if (
+                checks.artifact_resolution_rate
+                >= self.config.min_artifact_resolution_rate
+            ):
                 passed.append("artifact_integrity")
             else:
                 failed.append("artifact_integrity")
@@ -136,7 +139,10 @@ class AcceptanceRubric:
 
         # Criterion 5: >= 1 documented failure mode
         if checks.documented_failure_modes_count is not None:
-            if checks.documented_failure_modes_count >= self.config.min_documented_failure_modes:
+            if (
+                checks.documented_failure_modes_count
+                >= self.config.min_documented_failure_modes
+            ):
                 passed.append("failure_mode_coverage")
             else:
                 failed.append("failure_mode_coverage")

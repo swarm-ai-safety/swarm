@@ -38,12 +38,18 @@ class TestHFNEngine:
     def test_submit_bid_and_ask(self):
         engine = HFNEngine(seed=42)
         bid = HFNOrder(
-            agent_id="buyer", order_type="bid",
-            resource_type="compute", quantity=10, price=5.0,
+            agent_id="buyer",
+            order_type="bid",
+            resource_type="compute",
+            quantity=10,
+            price=5.0,
         )
         ask = HFNOrder(
-            agent_id="seller", order_type="ask",
-            resource_type="compute", quantity=10, price=4.0,
+            agent_id="seller",
+            order_type="ask",
+            resource_type="compute",
+            quantity=10,
+            price=4.0,
         )
         assert engine.submit_order(bid) is True
         assert engine.submit_order(ask) is True
@@ -52,15 +58,21 @@ class TestHFNEngine:
         engine = HFNEngine(seed=42)
         # Zero quantity
         bad = HFNOrder(
-            agent_id="a", order_type="bid",
-            resource_type="x", quantity=0, price=5.0,
+            agent_id="a",
+            order_type="bid",
+            resource_type="x",
+            quantity=0,
+            price=5.0,
         )
         assert engine.submit_order(bad) is False
 
         # Zero price
         bad2 = HFNOrder(
-            agent_id="a", order_type="bid",
-            resource_type="x", quantity=10, price=0,
+            agent_id="a",
+            order_type="bid",
+            resource_type="x",
+            quantity=10,
+            price=0,
         )
         assert engine.submit_order(bad2) is False
 
@@ -68,8 +80,11 @@ class TestHFNEngine:
         engine = HFNEngine(HFNConfig(max_orders_per_tick=2), seed=42)
         for i in range(3):
             order = HFNOrder(
-                agent_id="a1", order_type="bid",
-                resource_type="x", quantity=1, price=1.0,
+                agent_id="a1",
+                order_type="bid",
+                resource_type="x",
+                quantity=1,
+                price=1.0,
             )
             result = engine.submit_order(order)
             if i < 2:
@@ -81,12 +96,18 @@ class TestHFNEngine:
         engine = HFNEngine(HFNConfig(batch_interval_ticks=1), seed=42)
 
         bid = HFNOrder(
-            agent_id="buyer", order_type="bid",
-            resource_type="compute", quantity=10, price=5.0,
+            agent_id="buyer",
+            order_type="bid",
+            resource_type="compute",
+            quantity=10,
+            price=5.0,
         )
         ask = HFNOrder(
-            agent_id="seller", order_type="ask",
-            resource_type="compute", quantity=10, price=4.0,
+            agent_id="seller",
+            order_type="ask",
+            resource_type="compute",
+            quantity=10,
+            price=4.0,
         )
         engine.submit_order(bid)
         engine.submit_order(ask)
@@ -99,12 +120,18 @@ class TestHFNEngine:
         engine = HFNEngine(HFNConfig(batch_interval_ticks=1), seed=42)
 
         bid = HFNOrder(
-            agent_id="buyer", order_type="bid",
-            resource_type="compute", quantity=10, price=3.0,
+            agent_id="buyer",
+            order_type="bid",
+            resource_type="compute",
+            quantity=10,
+            price=3.0,
         )
         ask = HFNOrder(
-            agent_id="seller", order_type="ask",
-            resource_type="compute", quantity=10, price=5.0,
+            agent_id="seller",
+            order_type="ask",
+            resource_type="compute",
+            quantity=10,
+            price=5.0,
         )
         engine.submit_order(bid)
         engine.submit_order(ask)
@@ -118,8 +145,11 @@ class TestHFNEngine:
         assert engine.is_halted is True
 
         order = HFNOrder(
-            agent_id="a1", order_type="bid",
-            resource_type="x", quantity=1, price=1.0,
+            agent_id="a1",
+            order_type="bid",
+            resource_type="x",
+            quantity=1,
+            price=1.0,
         )
         assert engine.submit_order(order) is False
 
@@ -136,15 +166,19 @@ class TestHFNEngine:
     def test_cancel_order(self):
         engine = HFNEngine(seed=42)
         bid = HFNOrder(
-            agent_id="a1", order_type="bid",
-            resource_type="compute", quantity=10, price=5.0,
+            agent_id="a1",
+            order_type="bid",
+            resource_type="compute",
+            quantity=10,
+            price=5.0,
         )
         engine.submit_order(bid)
         depth_before = engine.get_order_book_depth()
         assert depth_before["bids"] == 1
 
         cancel = HFNOrder(
-            agent_id="a1", order_type="cancel",
+            agent_id="a1",
+            order_type="cancel",
             resource_type="compute",
         )
         engine.submit_order(cancel)
@@ -166,12 +200,18 @@ class TestHFNEngine:
 
         for i in range(3):
             bid = HFNOrder(
-                agent_id=f"buyer_{i}", order_type="bid",
-                resource_type="x", quantity=1, price=10.0 + i,
+                agent_id=f"buyer_{i}",
+                order_type="bid",
+                resource_type="x",
+                quantity=1,
+                price=10.0 + i,
             )
             ask = HFNOrder(
-                agent_id=f"seller_{i}", order_type="ask",
-                resource_type="x", quantity=1, price=9.0 + i,
+                agent_id=f"seller_{i}",
+                order_type="ask",
+                resource_type="x",
+                quantity=1,
+                price=9.0 + i,
             )
             engine.submit_order(bid)
             engine.submit_order(ask)
@@ -181,8 +221,11 @@ class TestHFNEngine:
 
     def test_order_serialization(self):
         order = HFNOrder(
-            agent_id="a1", order_type="bid",
-            resource_type="compute", quantity=10, price=5.0,
+            agent_id="a1",
+            order_type="bid",
+            resource_type="compute",
+            quantity=10,
+            price=5.0,
         )
         d = order.to_dict()
         assert d["agent_id"] == "a1"
@@ -204,9 +247,7 @@ class TestFlashCrashDetector:
             assert crash is None
 
     def test_crash_detected_on_price_drop(self):
-        detector = FlashCrashDetector(
-            price_drop_threshold=0.1, window_ticks=10
-        )
+        detector = FlashCrashDetector(price_drop_threshold=0.1, window_ticks=10)
         # Stable prices
         for i in range(5):
             tick = HFNTick(tick_number=i, market_price=10.0)
@@ -221,9 +262,7 @@ class TestFlashCrashDetector:
         assert "a1" in crash.trigger_agent_ids
 
     def test_crash_recovery(self):
-        detector = FlashCrashDetector(
-            price_drop_threshold=0.1, window_ticks=20
-        )
+        detector = FlashCrashDetector(price_drop_threshold=0.1, window_ticks=20)
         # Stable
         for i in range(5):
             detector.update(HFNTick(tick_number=i, market_price=10.0))
@@ -254,9 +293,7 @@ class TestFlashCrashDetector:
         assert detector.get_volatility_index() > 0.0
 
     def test_crash_history(self):
-        detector = FlashCrashDetector(
-            price_drop_threshold=0.1, window_ticks=10
-        )
+        detector = FlashCrashDetector(price_drop_threshold=0.1, window_ticks=10)
         for i in range(5):
             detector.update(HFNTick(tick_number=i, market_price=10.0))
 
@@ -267,9 +304,7 @@ class TestFlashCrashDetector:
         assert history[0].price_drop_pct >= 0.1
 
     def test_severity_proportional_to_drop(self):
-        detector = FlashCrashDetector(
-            price_drop_threshold=0.1, window_ticks=10
-        )
+        detector = FlashCrashDetector(price_drop_threshold=0.1, window_ticks=10)
         for i in range(5):
             detector.update(HFNTick(tick_number=i, market_price=10.0))
 

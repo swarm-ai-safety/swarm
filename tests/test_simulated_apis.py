@@ -42,19 +42,33 @@ def test_bundle_deterministic():
 
 def test_gate_blocks_irreversible_without_request_id():
     bundle = generate_task_bundle(Domain.IAM, seed=1, template_id="create_sa_repo")
-    svc, _ = make_service_and_log(bundle, gate_enabled=True, approvals=ApprovalConfig(m=2, n=3))
-    user_id = svc.call(agent_id="a1", endpoint="create_service_account", params={"name": "bot"}).response["user_id"]
+    svc, _ = make_service_and_log(
+        bundle, gate_enabled=True, approvals=ApprovalConfig(m=2, n=3)
+    )
+    user_id = svc.call(
+        agent_id="a1", endpoint="create_service_account", params={"name": "bot"}
+    ).response["user_id"]
     with pytest.raises(IrreversibleActionRequiresApproval):
-        svc.call(agent_id="a1", endpoint="grant_permission", params={"user_id": user_id, "perm": "read:repo"})
+        svc.call(
+            agent_id="a1",
+            endpoint="grant_permission",
+            params={"user_id": user_id, "perm": "read:repo"},
+        )
 
 
 def test_gate_approval_allows_irreversible_execution():
     bundle = generate_task_bundle(Domain.IAM, seed=2, template_id="create_sa_repo")
-    svc, log = make_service_and_log(bundle, gate_enabled=True, approvals=ApprovalConfig(m=2, n=3))
-    user_id = svc.call(agent_id="a1", endpoint="create_service_account", params={"name": "bot"}).response["user_id"]
+    svc, log = make_service_and_log(
+        bundle, gate_enabled=True, approvals=ApprovalConfig(m=2, n=3)
+    )
+    user_id = svc.call(
+        agent_id="a1", endpoint="create_service_account", params={"name": "bot"}
+    ).response["user_id"]
 
     params = {"user_id": user_id, "perm": "read:repo"}
-    req = svc.propose_irreversible(agent_id="a1", endpoint="grant_permission", params=params)
+    req = svc.propose_irreversible(
+        agent_id="a1", endpoint="grant_permission", params=params
+    )
     svc.vote(agent_id="a1", request_id=req, approve=True)
     svc.vote(agent_id="a2", request_id=req, approve=True)
     svc.call(agent_id="a1", endpoint="grant_permission", params=params, request_id=req)
@@ -66,16 +80,23 @@ def test_gate_approval_allows_irreversible_execution():
 
 def test_scoring_create_sa_repo_success():
     bundle = generate_task_bundle(Domain.IAM, seed=3, template_id="create_sa_repo")
-    svc, log = make_service_and_log(bundle, gate_enabled=True, approvals=ApprovalConfig(m=2, n=3))
-    uid = svc.call(agent_id="a1", endpoint="create_service_account", params={"name": "bot"}).response["user_id"]
+    svc, log = make_service_and_log(
+        bundle, gate_enabled=True, approvals=ApprovalConfig(m=2, n=3)
+    )
+    uid = svc.call(
+        agent_id="a1", endpoint="create_service_account", params={"name": "bot"}
+    ).response["user_id"]
 
     for perm in ["read:repo", "write:repo"]:
         params = {"user_id": uid, "perm": perm}
-        req = svc.propose_irreversible(agent_id="a1", endpoint="grant_permission", params=params)
+        req = svc.propose_irreversible(
+            agent_id="a1", endpoint="grant_permission", params=params
+        )
         svc.vote(agent_id="a1", request_id=req, approve=True)
         svc.vote(agent_id="a2", request_id=req, approve=True)
-        svc.call(agent_id="a1", endpoint="grant_permission", params=params, request_id=req)
+        svc.call(
+            agent_id="a1", endpoint="grant_permission", params=params, request_id=req
+        )
 
     score = score_task_bundle(bundle, final_state=svc.snapshot_state(), log=log)
     assert score.success is True
-

@@ -45,8 +45,7 @@ def test_moltbook_publish_flow():
     handler = orch._moltbook_handler
     assert handler is not None
     published = [
-        p for p in handler.feed._posts.values()
-        if p.status == ContentStatus.PUBLISHED
+        p for p in handler.feed._posts.values() if p.status == ContentStatus.PUBLISHED
     ]
     assert published
 

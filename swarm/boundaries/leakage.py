@@ -148,8 +148,13 @@ class LeakageDetector:
                 ]
 
         self.sensitive_keywords = sensitive_keywords or {
-            "confidential", "secret", "private", "internal",
-            "restricted", "sensitive", "proprietary",
+            "confidential",
+            "secret",
+            "private",
+            "internal",
+            "restricted",
+            "sensitive",
+            "proprietary",
         }
 
         self.track_hashes = track_hashes
@@ -314,8 +319,12 @@ class LeakageDetector:
     def _record_event(self, event: LeakageEvent) -> None:
         """Record a leakage event."""
         self.events.append(event)
-        self.agent_event_counts[event.agent_id] = self.agent_event_counts.get(event.agent_id, 0) + 1
-        self.destination_event_counts[event.destination_id] = self.destination_event_counts.get(event.destination_id, 0) + 1
+        self.agent_event_counts[event.agent_id] = (
+            self.agent_event_counts.get(event.agent_id, 0) + 1
+        )
+        self.destination_event_counts[event.destination_id] = (
+            self.destination_event_counts.get(event.destination_id, 0) + 1
+        )
 
     def get_events(
         self,
@@ -367,8 +376,12 @@ class LeakageDetector:
                 unblocked += 1
 
         # Top agents and destinations
-        top_agents = sorted(self.agent_event_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-        top_destinations = sorted(self.destination_event_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        top_agents = sorted(
+            self.agent_event_counts.items(), key=lambda x: x[1], reverse=True
+        )[:5]
+        top_destinations = sorted(
+            self.destination_event_counts.items(), key=lambda x: x[1], reverse=True
+        )[:5]
 
         report = LeakageReport(
             total_events=len(self.events),
@@ -384,15 +397,21 @@ class LeakageDetector:
 
         # Generate recommendations
         if by_type.get("credential", 0) > 0:
-            report.add_recommendation("Implement credential rotation and avoid hardcoded secrets")
+            report.add_recommendation(
+                "Implement credential rotation and avoid hardcoded secrets"
+            )
         if by_type.get("pii", 0) > 0:
             report.add_recommendation("Review PII handling and implement data masking")
         if unblocked > blocked:
             report.add_recommendation("Consider stricter boundary policies")
         if max_severity >= 0.9:
-            report.add_recommendation("Investigate critical severity events immediately")
+            report.add_recommendation(
+                "Investigate critical severity events immediately"
+            )
         if top_agents and top_agents[0][1] > len(self.events) * 0.5:
-            report.add_recommendation(f"Review agent {top_agents[0][0]} for potential compromise")
+            report.add_recommendation(
+                f"Review agent {top_agents[0][0]} for potential compromise"
+            )
 
         return report
 

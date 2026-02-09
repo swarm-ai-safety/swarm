@@ -23,7 +23,9 @@ class CrossingDecision:
     conditions: Dict[str, Any] = field(default_factory=dict)  # any conditions attached
 
     @classmethod
-    def allow(cls, policy_name: str, reason: str = "Allowed by policy") -> "CrossingDecision":
+    def allow(
+        cls, policy_name: str, reason: str = "Allowed by policy"
+    ) -> "CrossingDecision":
         """Create an allow decision."""
         return cls(allowed=True, reason=reason, policy_name=policy_name)
 
@@ -176,9 +178,13 @@ class RateLimitPolicy(BoundaryPolicy):
     def _cleanup_old_entries(self, key: str, cutoff: datetime) -> None:
         """Remove entries older than cutoff."""
         if key in self._crossing_times:
-            self._crossing_times[key] = [t for t in self._crossing_times[key] if t > cutoff]
+            self._crossing_times[key] = [
+                t for t in self._crossing_times[key] if t > cutoff
+            ]
         if key in self._byte_counts:
-            self._byte_counts[key] = [(t, b) for t, b in self._byte_counts[key] if t > cutoff]
+            self._byte_counts[key] = [
+                (t, b) for t, b in self._byte_counts[key] if t > cutoff
+            ]
 
 
 class ContentFilterPolicy(BoundaryPolicy):
@@ -202,7 +208,9 @@ class ContentFilterPolicy(BoundaryPolicy):
             enabled: Whether policy is active
         """
         super().__init__(name, enabled)
-        self.blocked_patterns = [re.compile(p, re.IGNORECASE) for p in (blocked_patterns or [])]
+        self.blocked_patterns = [
+            re.compile(p, re.IGNORECASE) for p in (blocked_patterns or [])
+        ]
         self.blocked_keywords = blocked_keywords or set()
         self.max_content_length = max_content_length
 
@@ -300,7 +308,9 @@ class SensitivityPolicy(BoundaryPolicy):
             return CrossingDecision.allow(self.name, "Policy disabled")
 
         sensitivity = metadata.get("sensitivity", 0.0)
-        agent_clearance = self.agent_clearance_levels.get(agent_id, self.default_clearance)
+        agent_clearance = self.agent_clearance_levels.get(
+            agent_id, self.default_clearance
+        )
 
         # Check outbound sensitivity
         if direction == "outbound" and sensitivity > self.max_outbound_sensitivity:
@@ -326,12 +336,14 @@ class SensitivityPolicy(BoundaryPolicy):
         # was allowed-with-logging, but there is no automated review
         # mechanism so the data would pass through unblocked.
         if sensitivity > self.require_approval_above:
-            self.pending_approvals.append({
-                "agent_id": agent_id,
-                "direction": direction,
-                "sensitivity": sensitivity,
-                "timestamp": datetime.now(),
-            })
+            self.pending_approvals.append(
+                {
+                    "agent_id": agent_id,
+                    "direction": direction,
+                    "sensitivity": sensitivity,
+                    "timestamp": datetime.now(),
+                }
+            )
             decision = CrossingDecision.deny(
                 self.name,
                 f"Sensitivity {sensitivity:.2f} exceeds approval threshold "
@@ -393,7 +405,9 @@ class CompositePolicy(BoundaryPolicy):
 
         decisions = []
         for policy in self.policies:
-            decision = policy.evaluate(agent_id, direction, flow_type, content, metadata)
+            decision = policy.evaluate(
+                agent_id, direction, flow_type, content, metadata
+            )
             decisions.append(decision)
 
         allowed_count = sum(1 for d in decisions if d.allowed)
@@ -411,11 +425,15 @@ class CompositePolicy(BoundaryPolicy):
                     risk_score=max_risk,
                 )
             else:
-                decision = CrossingDecision.allow(self.name, f"Allowed by all {len(decisions)} policies")
+                decision = CrossingDecision.allow(
+                    self.name, f"Allowed by all {len(decisions)} policies"
+                )
         else:
             # Any can allow
             if allowed_count > 0:
-                decision = CrossingDecision.allow(self.name, f"Allowed by {allowed_count}/{len(decisions)} policies")
+                decision = CrossingDecision.allow(
+                    self.name, f"Allowed by {allowed_count}/{len(decisions)} policies"
+                )
             else:
                 reasons = [f"{d.policy_name}: {d.reason}" for d in denied]
                 max_risk = max(d.risk_score for d in denied)
@@ -470,7 +488,9 @@ class PolicyEngine:
         decisions = []
         for policy in self.policies:
             if policy.enabled:
-                decision = policy.evaluate(agent_id, direction, flow_type, content, metadata)
+                decision = policy.evaluate(
+                    agent_id, direction, flow_type, content, metadata
+                )
                 decisions.append(decision)
 
                 # Short-circuit on denial
@@ -494,19 +514,21 @@ class PolicyEngine:
         decision: CrossingDecision,
     ) -> None:
         """Record evaluation to history."""
-        self.evaluation_history.append({
-            "timestamp": datetime.now(),
-            "agent_id": agent_id,
-            "direction": direction,
-            "flow_type": flow_type,
-            "allowed": decision.allowed,
-            "policy": decision.policy_name,
-            "reason": decision.reason,
-            "risk_score": decision.risk_score,
-        })
+        self.evaluation_history.append(
+            {
+                "timestamp": datetime.now(),
+                "agent_id": agent_id,
+                "direction": direction,
+                "flow_type": flow_type,
+                "allowed": decision.allowed,
+                "policy": decision.policy_name,
+                "reason": decision.reason,
+                "risk_score": decision.risk_score,
+            }
+        )
 
         if len(self.evaluation_history) > self.max_history:
-            self.evaluation_history = self.evaluation_history[-self.max_history:]
+            self.evaluation_history = self.evaluation_history[-self.max_history :]
 
     def get_statistics(self) -> Dict[str, Any]:
         """Get policy evaluation statistics."""
@@ -530,26 +552,32 @@ class PolicyEngine:
     def create_default_policies(self) -> "PolicyEngine":
         """Create an engine with default policies."""
         # Rate limiting
-        self.add_policy(RateLimitPolicy(
-            max_crossings_per_minute=100,
-            max_bytes_per_minute=10_000_000,
-        ))
+        self.add_policy(
+            RateLimitPolicy(
+                max_crossings_per_minute=100,
+                max_bytes_per_minute=10_000_000,
+            )
+        )
 
         # Content filtering
-        self.add_policy(ContentFilterPolicy(
-            blocked_patterns=[
-                r"password\s*[:=]\s*\S+",  # Password patterns
-                r"api[_-]?key\s*[:=]\s*\S+",  # API key patterns
-                r"secret\s*[:=]\s*\S+",  # Secret patterns
-            ],
-            blocked_keywords={"rm -rf", "DROP TABLE", "exec(", "eval("},
-            max_content_length=1_000_000,
-        ))
+        self.add_policy(
+            ContentFilterPolicy(
+                blocked_patterns=[
+                    r"password\s*[:=]\s*\S+",  # Password patterns
+                    r"api[_-]?key\s*[:=]\s*\S+",  # API key patterns
+                    r"secret\s*[:=]\s*\S+",  # Secret patterns
+                ],
+                blocked_keywords={"rm -rf", "DROP TABLE", "exec(", "eval("},
+                max_content_length=1_000_000,
+            )
+        )
 
         # Sensitivity policy
-        self.add_policy(SensitivityPolicy(
-            max_outbound_sensitivity=0.6,
-            require_approval_above=0.8,
-        ))
+        self.add_policy(
+            SensitivityPolicy(
+                max_outbound_sensitivity=0.6,
+                require_approval_above=0.8,
+            )
+        )
 
         return self

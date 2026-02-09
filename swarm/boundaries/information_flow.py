@@ -159,9 +159,15 @@ class FlowTracker:
             self._total_bytes_in += flow.size_bytes // 2
             self._total_bytes_out += flow.size_bytes // 2
 
-        self._source_counts[flow.source_id] = self._source_counts.get(flow.source_id, 0) + 1
-        self._destination_counts[flow.destination_id] = self._destination_counts.get(flow.destination_id, 0) + 1
-        self._type_counts[flow.flow_type.value] = self._type_counts.get(flow.flow_type.value, 0) + 1
+        self._source_counts[flow.source_id] = (
+            self._source_counts.get(flow.source_id, 0) + 1
+        )
+        self._destination_counts[flow.destination_id] = (
+            self._destination_counts.get(flow.destination_id, 0) + 1
+        )
+        self._type_counts[flow.flow_type.value] = (
+            self._type_counts.get(flow.flow_type.value, 0) + 1
+        )
 
         # Store flow
         if flow.blocked:
@@ -171,9 +177,9 @@ class FlowTracker:
 
         # Trim history if needed
         if len(self.flows) > self.max_history:
-            self.flows = self.flows[-self.max_history:]
+            self.flows = self.flows[-self.max_history :]
         if len(self.blocked_flows) > self.max_history:
-            self.blocked_flows = self.blocked_flows[-self.max_history:]
+            self.blocked_flows = self.blocked_flows[-self.max_history :]
 
     def get_flows(
         self,
@@ -212,15 +218,21 @@ class FlowTracker:
         inbound = [f for f in all_flows if f.direction == FlowDirection.INBOUND]
         outbound = [f for f in all_flows if f.direction == FlowDirection.OUTBOUND]
         blocked = [f for f in all_flows if f.blocked]
-        sensitive = [f for f in all_flows if f.sensitivity_score >= self.sensitivity_threshold]
+        sensitive = [
+            f for f in all_flows if f.sensitivity_score >= self.sensitivity_threshold
+        ]
 
         sensitivities = [f.sensitivity_score for f in all_flows]
         pii_count = sum(1 for f in all_flows if f.contains_pii)
         cred_count = sum(1 for f in all_flows if f.contains_credentials)
 
         # Top sources/destinations
-        top_sources = sorted(self._source_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-        top_destinations = sorted(self._destination_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        top_sources = sorted(
+            self._source_counts.items(), key=lambda x: x[1], reverse=True
+        )[:5]
+        top_destinations = sorted(
+            self._destination_counts.items(), key=lambda x: x[1], reverse=True
+        )[:5]
 
         return FlowSummary(
             total_flows=len(all_flows),
@@ -252,7 +264,8 @@ class FlowTracker:
             "bytes_received": sum(f.size_bytes for f in as_dest),
             "avg_sensitivity_sent": (
                 sum(f.sensitivity_score for f in as_source) / len(as_source)
-                if as_source else 0.0
+                if as_source
+                else 0.0
             ),
             "blocked_attempts": sum(1 for f in as_source if f.blocked),
         }
@@ -265,42 +278,50 @@ class FlowTracker:
 
         # Check for excessive outbound data
         if self._total_bytes_out > self._total_bytes_in * 10:
-            anomalies.append({
-                "type": "excessive_outbound",
-                "severity": "high",
-                "description": "Outbound data significantly exceeds inbound",
-                "ratio": self._total_bytes_out / max(self._total_bytes_in, 1),
-            })
+            anomalies.append(
+                {
+                    "type": "excessive_outbound",
+                    "severity": "high",
+                    "description": "Outbound data significantly exceeds inbound",
+                    "ratio": self._total_bytes_out / max(self._total_bytes_in, 1),
+                }
+            )
 
         # Check for high sensitivity flows
         if summary.sensitive_flows > summary.total_flows * 0.3:
-            anomalies.append({
-                "type": "high_sensitivity_ratio",
-                "severity": "medium",
-                "description": "High proportion of sensitive data flows",
-                "ratio": summary.sensitive_flows / max(summary.total_flows, 1),
-            })
+            anomalies.append(
+                {
+                    "type": "high_sensitivity_ratio",
+                    "severity": "medium",
+                    "description": "High proportion of sensitive data flows",
+                    "ratio": summary.sensitive_flows / max(summary.total_flows, 1),
+                }
+            )
 
         # Check for credential exposure
         if summary.credential_exposure_count > 0:
-            anomalies.append({
-                "type": "credential_exposure",
-                "severity": "critical",
-                "description": "Credentials detected in flows",
-                "count": summary.credential_exposure_count,
-            })
+            anomalies.append(
+                {
+                    "type": "credential_exposure",
+                    "severity": "critical",
+                    "description": "Credentials detected in flows",
+                    "count": summary.credential_exposure_count,
+                }
+            )
 
         # Check for concentrated sources
         if summary.top_sources and len(summary.top_sources) > 0:
             top_source_count = summary.top_sources[0][1]
             if top_source_count > summary.total_flows * 0.5:
-                anomalies.append({
-                    "type": "concentrated_source",
-                    "severity": "low",
-                    "description": "Single source dominates flows",
-                    "source": summary.top_sources[0][0],
-                    "ratio": top_source_count / max(summary.total_flows, 1),
-                })
+                anomalies.append(
+                    {
+                        "type": "concentrated_source",
+                        "severity": "low",
+                        "description": "Single source dominates flows",
+                        "source": summary.top_sources[0][0],
+                        "ratio": top_source_count / max(summary.total_flows, 1),
+                    }
+                )
 
         return anomalies
 

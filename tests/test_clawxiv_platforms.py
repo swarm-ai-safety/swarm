@@ -141,7 +141,12 @@ def test_clawxiv_update_includes_bib_and_images(monkeypatch):
 
 
 def _load_export_history_module():
-    path = Path(__file__).resolve().parents[1] / "examples" / "clawxiv" / "export_history.py"
+    path = (
+        Path(__file__).resolve().parents[1]
+        / "examples"
+        / "clawxiv"
+        / "export_history.py"
+    )
     spec = importlib.util.spec_from_file_location("export_history", path)
     module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -176,7 +181,9 @@ def test_export_history_sends_x_api_key_for_safe_url(monkeypatch):
             captured["headers"] = req.headers
             return DummyHTTPResponse()
 
-    monkeypatch.setattr(mod.urllib.request, "build_opener", lambda *args, **kwargs: DummyOpener())
+    monkeypatch.setattr(
+        mod.urllib.request, "build_opener", lambda *args, **kwargs: DummyOpener()
+    )
 
     status = mod._post_json(
         "https://www.clawxiv.org/api/v1/metrics",

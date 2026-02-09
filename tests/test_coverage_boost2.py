@@ -23,6 +23,7 @@ pytestmark = pytest.mark.slow
 # Helper
 # ---------------------------------------------------------------------------
 
+
 def obs(**kwargs) -> Observation:
     """Create a test observation with sensible defaults."""
     defaults = {
@@ -49,6 +50,7 @@ def obs(**kwargs) -> Observation:
 # StrategyPerformance property tests
 # ===================================================================
 
+
 class TestStrategyPerformance:
     """Tests for StrategyPerformance dataclass properties."""
 
@@ -67,9 +69,7 @@ class TestStrategyPerformance:
         assert sp.detection_rate == 0.5  # prior
 
     def test_detection_rate_with_data(self):
-        sp = StrategyPerformance(
-            strategy=AttackStrategy.SYBIL, attempts=20, detected=5
-        )
+        sp = StrategyPerformance(strategy=AttackStrategy.SYBIL, attempts=20, detected=5)
         assert sp.detection_rate == pytest.approx(0.25)
 
     def test_evasion_rate(self):
@@ -106,9 +106,7 @@ class TestStrategyPerformance:
             total_payoff=10.0,
         )
         expected = (
-            0.3 * (8 / 10)
-            + 0.4 * (1.0 - 2 / 10)
-            + 0.3 * max(0, (10.0 / 10) / 5.0)
+            0.3 * (8 / 10) + 0.4 * (1.0 - 2 / 10) + 0.3 * max(0, (10.0 / 10) / 5.0)
         )
         assert sp.effectiveness_score == pytest.approx(expected)
 
@@ -127,6 +125,7 @@ class TestStrategyPerformance:
 # ===================================================================
 # AdversaryMemory tests
 # ===================================================================
+
 
 class TestAdversaryMemory:
     """Tests for AdversaryMemory.update_heat."""
@@ -175,6 +174,7 @@ class TestAdversaryMemory:
 # ===================================================================
 # AdaptiveAdversary tests
 # ===================================================================
+
 
 class TestAdaptiveAdversaryInit:
     """Tests for AdaptiveAdversary initialisation."""
@@ -248,9 +248,7 @@ class TestActDispatching:
 
     def _obs_not_laying_low(self):
         return obs(
-            agent_state=AgentState(
-                agent_id="adv", reputation=2.0, resources=200.0
-            )
+            agent_state=AgentState(agent_id="adv", reputation=2.0, resources=200.0)
         )
 
     def test_act_reputation_farming(self):
@@ -271,9 +269,7 @@ class TestActDispatching:
         aa.memory.potential_allies.add("ally1")
         aa.select_strategy = lambda: AttackStrategy.COLLUSION
         o = obs(
-            agent_state=AgentState(
-                agent_id="adv", reputation=2.0, resources=200.0
-            ),
+            agent_state=AgentState(agent_id="adv", reputation=2.0, resources=200.0),
             visible_agents=[{"agent_id": "ally1", "agent_type": "adversarial"}],
         )
         action = aa.act(o)
@@ -301,9 +297,7 @@ class TestActDispatching:
         aa = self._make_non_laying_low_adversary()
         aa.select_strategy = lambda: AttackStrategy.MIMICRY
         o = obs(
-            agent_state=AgentState(
-                agent_id="adv", reputation=2.0, resources=200.0
-            ),
+            agent_state=AgentState(agent_id="adv", reputation=2.0, resources=200.0),
             visible_agents=[{"agent_id": "h1", "agent_type": "honest"}],
         )
         actions = {aa.act(o).action_type for _ in range(50)}
@@ -350,9 +344,7 @@ class TestActDispatching:
         aa.memory.vulnerable_targets.add("victim1")
         aa.select_strategy = lambda: AttackStrategy.TIMING_ATTACK
         o = obs(
-            agent_state=AgentState(
-                agent_id="adv", reputation=5.0, resources=200.0
-            ),
+            agent_state=AgentState(agent_id="adv", reputation=5.0, resources=200.0),
             visible_agents=[{"agent_id": "victim1", "agent_type": "honest"}],
         )
         action = aa.act(o)
@@ -362,7 +354,9 @@ class TestActDispatching:
 
     def test_act_timing_attack_bad_timing(self):
         aa = self._make_non_laying_low_adversary()
-        aa.memory.epochs_since_detection = 2  # >= 2 so no lay_low, but <= 3 so bad timing
+        aa.memory.epochs_since_detection = (
+            2  # >= 2 so no lay_low, but <= 3 so bad timing
+        )
         aa.select_strategy = lambda: AttackStrategy.TIMING_ATTACK
         action = aa.act(self._obs_not_laying_low())
         # Falls to _act_reputation_farming (reputation < threshold => POST)
@@ -445,11 +439,7 @@ class TestUpdateMemory:
 
     def test_ecosystem_metrics_threshold_update(self):
         aa = AdaptiveAdversary(agent_id="adv")
-        o = obs(
-            ecosystem_metrics={
-                "governance": {"freeze_threshold_toxicity": 0.8}
-            }
-        )
+        o = obs(ecosystem_metrics={"governance": {"freeze_threshold_toxicity": 0.8}})
         aa._update_memory(o)
         assert aa.memory.estimated_toxicity_threshold == pytest.approx(0.8 * 0.9)
 
@@ -692,11 +682,7 @@ class TestActAdaptiveBlend:
         aa.memory.current_heat_level = 0.0
         aa.memory.epochs_since_detection = 10
         aa.attack_cooldown = 0
-        o = obs(
-            agent_state=AgentState(
-                agent_id="adv", reputation=2.0, resources=200.0
-            )
-        )
+        o = obs(agent_state=AgentState(agent_id="adv", reputation=2.0, resources=200.0))
         action = aa._act_adaptive_blend(o)
         assert action.action_type in set(ActionType)
 
@@ -837,9 +823,7 @@ class TestUpdateAdversaryOutcome:
     def test_success(self):
         aa = AdaptiveAdversary(agent_id="adv")
         aa.current_strategy = AttackStrategy.COLLUSION
-        aa.update_adversary_outcome(
-            payoff=3.0, penalty=0.0, detected=False
-        )
+        aa.update_adversary_outcome(payoff=3.0, penalty=0.0, detected=False)
         perf = aa.strategy_performance[AttackStrategy.COLLUSION]
         assert perf.attempts == 1
         assert perf.successes == 1
@@ -850,9 +834,7 @@ class TestUpdateAdversaryOutcome:
         aa = AdaptiveAdversary(agent_id="adv")
         initial_threshold = aa.memory.estimated_toxicity_threshold
         aa.current_strategy = AttackStrategy.SYBIL
-        aa.update_adversary_outcome(
-            payoff=-1.0, penalty=2.0, detected=True
-        )
+        aa.update_adversary_outcome(payoff=-1.0, penalty=2.0, detected=True)
         perf = aa.strategy_performance[AttackStrategy.SYBIL]
         assert perf.attempts == 1
         assert perf.successes == 0
@@ -937,6 +919,7 @@ class TestGetStrategyReport:
 # LLMAgent tests (no actual LLM calls)
 # ===================================================================
 
+
 def _make_llm_agent(provider=LLMProvider.ANTHROPIC, **kwargs):
     """Create an LLMAgent for testing without real API keys."""
     config = LLMConfig(provider=provider, api_key="fake-key", **kwargs)
@@ -961,7 +944,9 @@ class TestParseActionResponse:
 
     def test_raw_json(self):
         agent = _make_llm_agent()
-        response = 'Here is my action: {"action_type": "VOTE", "params": {"post_id": "p1"}}'
+        response = (
+            'Here is my action: {"action_type": "VOTE", "params": {"post_id": "p1"}}'
+        )
         result = agent._parse_action_response(response)
         assert result["action_type"] == "VOTE"
 
@@ -973,7 +958,7 @@ class TestParseActionResponse:
     def test_invalid_json_raises(self):
         agent = _make_llm_agent()
         with pytest.raises(ValueError, match="Invalid JSON"):
-            agent._parse_action_response('```json\n{bad json}\n```')
+            agent._parse_action_response("```json\n{bad json}\n```")
 
 
 class TestActionDictToAction:
@@ -986,82 +971,98 @@ class TestActionDictToAction:
 
     def test_post(self):
         agent = _make_llm_agent()
-        action = agent._action_dict_to_action({
-            "action_type": "POST",
-            "params": {"content": "hello world"},
-        })
+        action = agent._action_dict_to_action(
+            {
+                "action_type": "POST",
+                "params": {"content": "hello world"},
+            }
+        )
         assert action.action_type == ActionType.POST
         assert action.content == "hello world"
 
     def test_reply(self):
         agent = _make_llm_agent()
-        action = agent._action_dict_to_action({
-            "action_type": "REPLY",
-            "params": {"post_id": "p1", "content": "great post"},
-        })
+        action = agent._action_dict_to_action(
+            {
+                "action_type": "REPLY",
+                "params": {"post_id": "p1", "content": "great post"},
+            }
+        )
         assert action.action_type == ActionType.REPLY
         assert action.target_id == "p1"
         assert action.content == "great post"
 
     def test_vote(self):
         agent = _make_llm_agent()
-        action = agent._action_dict_to_action({
-            "action_type": "VOTE",
-            "params": {"post_id": "p1", "direction": -1},
-        })
+        action = agent._action_dict_to_action(
+            {
+                "action_type": "VOTE",
+                "params": {"post_id": "p1", "direction": -1},
+            }
+        )
         assert action.action_type == ActionType.VOTE
         assert action.vote_direction == -1
 
     def test_propose_interaction_valid_type(self):
         agent = _make_llm_agent()
-        action = agent._action_dict_to_action({
-            "action_type": "PROPOSE_INTERACTION",
-            "params": {
-                "counterparty_id": "agent2",
-                "interaction_type": "collaboration",
-                "content": "let's work",
-                "task_id": "t1",
-            },
-        })
+        action = agent._action_dict_to_action(
+            {
+                "action_type": "PROPOSE_INTERACTION",
+                "params": {
+                    "counterparty_id": "agent2",
+                    "interaction_type": "collaboration",
+                    "content": "let's work",
+                    "task_id": "t1",
+                },
+            }
+        )
         assert action.action_type == ActionType.PROPOSE_INTERACTION
         assert action.counterparty_id == "agent2"
         assert action.interaction_type == InteractionType.COLLABORATION
 
     def test_propose_interaction_invalid_type_fallback(self):
         agent = _make_llm_agent()
-        action = agent._action_dict_to_action({
-            "action_type": "PROPOSE_INTERACTION",
-            "params": {
-                "counterparty_id": "agent2",
-                "interaction_type": "nonexistent_type",
-            },
-        })
+        action = agent._action_dict_to_action(
+            {
+                "action_type": "PROPOSE_INTERACTION",
+                "params": {
+                    "counterparty_id": "agent2",
+                    "interaction_type": "nonexistent_type",
+                },
+            }
+        )
         assert action.action_type == ActionType.PROPOSE_INTERACTION
         assert action.interaction_type == InteractionType.COLLABORATION
 
     def test_claim_task(self):
         agent = _make_llm_agent()
-        action = agent._action_dict_to_action({
-            "action_type": "CLAIM_TASK",
-            "params": {"task_id": "t42"},
-        })
+        action = agent._action_dict_to_action(
+            {
+                "action_type": "CLAIM_TASK",
+                "params": {"task_id": "t42"},
+            }
+        )
         assert action.action_type == ActionType.CLAIM_TASK
         assert action.target_id == "t42"
 
     def test_submit_output(self):
         agent = _make_llm_agent()
-        action = agent._action_dict_to_action({
-            "action_type": "SUBMIT_OUTPUT",
-            "params": {"task_id": "t1", "content": "results"},
-        })
+        action = agent._action_dict_to_action(
+            {
+                "action_type": "SUBMIT_OUTPUT",
+                "params": {"task_id": "t1", "content": "results"},
+            }
+        )
         assert action.action_type == ActionType.SUBMIT_OUTPUT
         assert action.content == "results"
 
     def test_unknown_action_type(self):
         agent = _make_llm_agent()
-        action = agent._action_dict_to_action({
-            "action_type": "EXPLODE",
-        })
+        action = agent._action_dict_to_action(
+            {
+                "action_type": "EXPLODE",
+            }
+        )
         assert action.action_type == ActionType.NOOP
 
     def test_missing_action_type_defaults_noop(self):
@@ -1190,9 +1191,7 @@ class TestLLMAgentActStoresReasoning:
             '{"action_type": "POST", "params": {"content": "hi"}, '
             '"reasoning": "I want to contribute"}'
         )
-        with patch.object(
-            agent, "_call_llm_sync", return_value=(response_json, 10, 5)
-        ):
+        with patch.object(agent, "_call_llm_sync", return_value=(response_json, 10, 5)):
             action = agent.act(o)
             assert action.action_type == ActionType.POST
             memory = agent.get_memory()
@@ -1206,9 +1205,7 @@ class TestLLMAgentActStoresReasoning:
         agent = _make_llm_agent()
         o = obs()
         response_json = '{"action_type": "NOOP"}'
-        with patch.object(
-            agent, "_call_llm_sync", return_value=(response_json, 10, 5)
-        ):
+        with patch.object(agent, "_call_llm_sync", return_value=(response_json, 10, 5)):
             agent.act(o)
             memory = agent.get_memory()
             reasoning_entries = [
@@ -1228,17 +1225,11 @@ class TestLLMAgentAcceptStoresReasoning:
             interaction_type=InteractionType.COLLABORATION,
         )
         o = obs()
-        response_json = (
-            '{"accept": true, "reasoning": "Looks beneficial"}'
-        )
-        with patch.object(
-            agent, "_call_llm_sync", return_value=(response_json, 10, 5)
-        ):
+        response_json = '{"accept": true, "reasoning": "Looks beneficial"}'
+        with patch.object(agent, "_call_llm_sync", return_value=(response_json, 10, 5)):
             result = agent.accept_interaction(proposal, o)
             assert result is True
             memory = agent.get_memory()
-            accept_entries = [
-                m for m in memory if m.get("type") == "accept_decision"
-            ]
+            accept_entries = [m for m in memory if m.get("type") == "accept_decision"]
             assert len(accept_entries) == 1
             assert accept_entries[0]["reasoning"] == "Looks beneficial"

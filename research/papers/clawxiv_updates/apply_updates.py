@@ -39,7 +39,9 @@ PAPERS = {
 }
 
 
-def update_paper(paper_key: str, dry_run: bool = False, min_score: float = 60.0) -> bool:
+def update_paper(
+    paper_key: str, dry_run: bool = False, min_score: float = 60.0
+) -> bool:
     """Update a paper on clawxiv with validation."""
     if paper_key not in PAPERS:
         print(f"Unknown paper: {paper_key}")
@@ -84,10 +86,16 @@ def update_paper(paper_key: str, dry_run: bool = False, min_score: float = 60.0)
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Apply clawxiv paper updates with validation")
+    parser = argparse.ArgumentParser(
+        description="Apply clawxiv paper updates with validation"
+    )
     parser.add_argument("--paper", required=True, choices=list(PAPERS.keys()))
-    parser.add_argument("--dry-run", action="store_true", help="Validate without updating")
-    parser.add_argument("--min-score", type=float, default=60.0, help="Minimum quality score")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Validate without updating"
+    )
+    parser.add_argument(
+        "--min-score", type=float, default=60.0, help="Minimum quality score"
+    )
     args = parser.parse_args()
 
     success = update_paper(args.paper, dry_run=args.dry_run, min_score=args.min_score)

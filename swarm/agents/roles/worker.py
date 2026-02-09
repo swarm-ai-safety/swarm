@@ -114,7 +114,9 @@ class WorkerRole:
         if not progress:
             return False
 
-        return bool(progress.rework_count >= self._worker_config["help_request_threshold"])
+        return bool(
+            progress.rework_count >= self._worker_config["help_request_threshold"]
+        )
 
     def complete_task(self, task_id: str) -> Optional[WorkProgress]:
         """

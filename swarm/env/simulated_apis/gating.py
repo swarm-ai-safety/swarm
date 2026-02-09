@@ -36,9 +36,13 @@ class PendingRequest:
     proposed_by: str
     approvals: Set[str] = field(default_factory=set)
     denials: Set[str] = field(default_factory=set)
-    evidence: Dict[str, List[str]] = field(default_factory=dict)  # agent_id -> [prov_ids]
+    evidence: Dict[str, List[str]] = field(
+        default_factory=dict
+    )  # agent_id -> [prov_ids]
 
-    def vote(self, agent_id: str, approve: bool, evidence_ids: Optional[List[str]]) -> None:
+    def vote(
+        self, agent_id: str, approve: bool, evidence_ids: Optional[List[str]]
+    ) -> None:
         if approve:
             self.approvals.add(agent_id)
             self.denials.discard(agent_id)
@@ -52,7 +56,9 @@ class PendingRequest:
 class IrreversibleGate:
     """Tracks and enforces approvals for irreversible API calls."""
 
-    def __init__(self, config: Optional[ApprovalConfig] = None, *, enabled: bool = True):
+    def __init__(
+        self, config: Optional[ApprovalConfig] = None, *, enabled: bool = True
+    ):
         self.config = ApprovalConfig() if config is None else config
         self.config.validate()
         self.enabled = enabled
@@ -76,12 +82,18 @@ class IrreversibleGate:
             params=dict(params),
             proposed_by=agent_id,
         )
-        log.append(SimApiEvent(
-            event_type="irreversible_proposed",
-            agent_id=agent_id,
-            parent_event_hash=parent_event_hash,
-            payload={"request_id": request_id, "endpoint": endpoint, "params": params},
-        ))
+        log.append(
+            SimApiEvent(
+                event_type="irreversible_proposed",
+                agent_id=agent_id,
+                parent_event_hash=parent_event_hash,
+                payload={
+                    "request_id": request_id,
+                    "endpoint": endpoint,
+                    "params": params,
+                },
+            )
+        )
         return request_id
 
     def vote(
@@ -98,16 +110,18 @@ class IrreversibleGate:
         if req is None:
             raise KeyError(f"unknown request_id: {request_id}")
         req.vote(agent_id=agent_id, approve=approve, evidence_ids=evidence_ids)
-        log.append(SimApiEvent(
-            event_type="irreversible_vote",
-            agent_id=agent_id,
-            parent_event_hash=parent_event_hash,
-            payload={
-                "request_id": request_id,
-                "approve": approve,
-                "evidence_ids": list(evidence_ids or []),
-            },
-        ))
+        log.append(
+            SimApiEvent(
+                event_type="irreversible_vote",
+                agent_id=agent_id,
+                parent_event_hash=parent_event_hash,
+                payload={
+                    "request_id": request_id,
+                    "approve": approve,
+                    "evidence_ids": list(evidence_ids or []),
+                },
+            )
+        )
 
     def status(self, request_id: str) -> Tuple[int, int, int]:
         req = self._pending.get(request_id)
@@ -128,4 +142,3 @@ class IrreversibleGate:
             )
         req = self._pending.pop(request_id)
         return req
-

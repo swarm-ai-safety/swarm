@@ -31,6 +31,7 @@ from swarm.models.interaction import SoftInteraction
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_history_with_two_epochs() -> SimulationHistory:
     """Build a small SimulationHistory with two epochs and two agents."""
     history = SimulationHistory(
@@ -79,8 +80,8 @@ def _make_history_with_two_epochs() -> SimulationHistory:
 # Tests for TimeSeriesPoint
 # ---------------------------------------------------------------------------
 
-class TestTimeSeriesPoint:
 
+class TestTimeSeriesPoint:
     def test_fields_stored(self):
         ts = datetime(2025, 6, 1)
         pt = TimeSeriesPoint(epoch=3, value=1.5, timestamp=ts)
@@ -97,8 +98,8 @@ class TestTimeSeriesPoint:
 # Tests for AgentSnapshot
 # ---------------------------------------------------------------------------
 
-class TestAgentSnapshot:
 
+class TestAgentSnapshot:
     def test_defaults(self):
         snap = AgentSnapshot(agent_id="a1", epoch=0)
         assert snap.reputation == 0.0
@@ -130,8 +131,8 @@ class TestAgentSnapshot:
 # Tests for EpochSnapshot
 # ---------------------------------------------------------------------------
 
-class TestEpochSnapshot:
 
+class TestEpochSnapshot:
     def test_defaults(self):
         snap = EpochSnapshot(epoch=0)
         assert snap.total_interactions == 0
@@ -151,8 +152,8 @@ class TestEpochSnapshot:
 # Tests for SimulationHistory
 # ---------------------------------------------------------------------------
 
-class TestSimulationHistory:
 
+class TestSimulationHistory:
     def test_add_epoch_snapshot(self):
         h = SimulationHistory()
         s1 = EpochSnapshot(epoch=0, total_welfare=10.0)
@@ -223,8 +224,8 @@ class TestSimulationHistory:
 # Tests for MetricsAggregator
 # ---------------------------------------------------------------------------
 
-class TestMetricsAggregator:
 
+class TestMetricsAggregator:
     def test_full_lifecycle(self):
         """start -> record interactions -> record payoffs -> finalize epoch -> end."""
         agg = MetricsAggregator()
@@ -237,8 +238,12 @@ class TestMetricsAggregator:
         )
 
         # Record interactions
-        i1 = SoftInteraction(initiator="agent_a", counterparty="agent_b", p=0.9, accepted=True)
-        i2 = SoftInteraction(initiator="agent_b", counterparty="agent_a", p=0.3, accepted=False)
+        i1 = SoftInteraction(
+            initiator="agent_a", counterparty="agent_b", p=0.9, accepted=True
+        )
+        i2 = SoftInteraction(
+            initiator="agent_b", counterparty="agent_a", p=0.3, accepted=False
+        )
         agg.record_interaction(i1)
         agg.record_interaction(i2)
 
@@ -322,7 +327,9 @@ class TestMetricsAggregator:
     def test_finalize_epoch_with_network_metrics(self):
         agg = MetricsAggregator()
         agg.start_simulation("net-test", 1, 1, 1)
-        agent_states = {"a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)}
+        agent_states = {
+            "a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)
+        }
         snapshot = agg.finalize_epoch(
             epoch=0,
             agent_states=agent_states,
@@ -341,7 +348,9 @@ class TestMetricsAggregator:
     def test_finalize_epoch_no_interactions(self):
         agg = MetricsAggregator()
         agg.start_simulation("empty-test", 1, 1, 1)
-        agent_states = {"a": SimpleNamespace(name="agent", reputation=0.0, resources=100.0)}
+        agent_states = {
+            "a": SimpleNamespace(name="agent", reputation=0.0, resources=100.0)
+        }
         snapshot = agg.finalize_epoch(epoch=0, agent_states=agent_states)
         assert snapshot.total_interactions == 0
         assert snapshot.avg_p == 0.5  # default when no interactions
@@ -353,12 +362,17 @@ class TestMetricsAggregator:
 
         for ep in range(2):
             i = SoftInteraction(
-                initiator="a", counterparty="b", p=0.5 + ep * 0.2, accepted=True,
+                initiator="a",
+                counterparty="b",
+                p=0.5 + ep * 0.2,
+                accepted=True,
             )
             agg.record_interaction(i)
             agg.record_payoff("a", 5.0 + ep)
             agent_states = {
-                "a": SimpleNamespace(name="agent", reputation=0.5 + ep * 0.1, resources=100.0),
+                "a": SimpleNamespace(
+                    name="agent", reputation=0.5 + ep * 0.1, resources=100.0
+                ),
                 "b": SimpleNamespace(name="agent", reputation=0.5, resources=100.0),
             }
             agg.finalize_epoch(epoch=ep, agent_states=agent_states)
@@ -398,8 +412,8 @@ class TestMetricsAggregator:
 # Tests for Gini coefficient
 # ---------------------------------------------------------------------------
 
-class TestGini:
 
+class TestGini:
     def test_equal_values_give_zero(self):
         agg = MetricsAggregator()
         result = agg._compute_gini([10.0, 10.0, 10.0, 10.0])
@@ -429,8 +443,8 @@ class TestGini:
 # Tests for compute_rolling_average
 # ---------------------------------------------------------------------------
 
-class TestComputeRollingAverage:
 
+class TestComputeRollingAverage:
     def test_returns_smoothed_values(self):
         points = [TimeSeriesPoint(epoch=i, value=float(i)) for i in range(10)]
         smoothed = compute_rolling_average(points, window=3)
@@ -445,7 +459,10 @@ class TestComputeRollingAverage:
         assert smoothed[3].value == pytest.approx(2.0)
 
     def test_short_series_returned_as_is(self):
-        points = [TimeSeriesPoint(epoch=0, value=5.0), TimeSeriesPoint(epoch=1, value=10.0)]
+        points = [
+            TimeSeriesPoint(epoch=0, value=5.0),
+            TimeSeriesPoint(epoch=1, value=10.0),
+        ]
         result = compute_rolling_average(points, window=5)
         assert len(result) == 2
         assert result[0].value == pytest.approx(5.0)
@@ -472,8 +489,8 @@ class TestComputeRollingAverage:
 # Tests for compute_trend
 # ---------------------------------------------------------------------------
 
-class TestComputeTrend:
 
+class TestComputeTrend:
     def test_positive_slope_for_increasing(self):
         points = [TimeSeriesPoint(epoch=i, value=float(i) * 2) for i in range(10)]
         slope, r_sq = compute_trend(points)
@@ -505,7 +522,10 @@ class TestComputeTrend:
         assert r_sq == 0.0
 
     def test_two_points_linear(self):
-        points = [TimeSeriesPoint(epoch=0, value=0.0), TimeSeriesPoint(epoch=1, value=10.0)]
+        points = [
+            TimeSeriesPoint(epoch=0, value=0.0),
+            TimeSeriesPoint(epoch=1, value=10.0),
+        ]
         slope, r_sq = compute_trend(points)
         assert slope == pytest.approx(10.0)
         assert r_sq == pytest.approx(1.0)
@@ -515,8 +535,8 @@ class TestComputeTrend:
 # Tests for export: history_to_epoch_records / history_to_agent_records
 # ---------------------------------------------------------------------------
 
-class TestHistoryToRecords:
 
+class TestHistoryToRecords:
     def test_epoch_records_structure(self):
         h = _make_history_with_two_epochs()
         records = history_to_epoch_records(h)
@@ -551,8 +571,8 @@ class TestHistoryToRecords:
 # Tests for JSON export/import round-trip
 # ---------------------------------------------------------------------------
 
-class TestJsonExportImport:
 
+class TestJsonExportImport:
     def test_round_trip(self, tmp_path):
         h = _make_history_with_two_epochs()
         out_path = tmp_path / "history.json"
@@ -568,7 +588,9 @@ class TestJsonExportImport:
 
         # Epoch snapshots preserved
         assert len(loaded.epoch_snapshots) == len(h.epoch_snapshots)
-        for orig, loaded_snap in zip(h.epoch_snapshots, loaded.epoch_snapshots, strict=False):
+        for orig, loaded_snap in zip(
+            h.epoch_snapshots, loaded.epoch_snapshots, strict=False
+        ):
             assert loaded_snap.epoch == orig.epoch
             assert loaded_snap.total_interactions == orig.total_interactions
             assert loaded_snap.toxicity_rate == pytest.approx(orig.toxicity_rate)
@@ -578,7 +600,9 @@ class TestJsonExportImport:
         # Agent snapshots preserved
         assert set(loaded.agent_snapshots.keys()) == set(h.agent_snapshots.keys())
         for agent_id in h.agent_snapshots:
-            assert len(loaded.agent_snapshots[agent_id]) == len(h.agent_snapshots[agent_id])
+            assert len(loaded.agent_snapshots[agent_id]) == len(
+                h.agent_snapshots[agent_id]
+            )
 
     def test_json_file_is_valid_json(self, tmp_path):
         h = _make_history_with_two_epochs()
@@ -627,8 +651,8 @@ class TestJsonExportImport:
 # Tests for CSV export/import (requires pandas)
 # ---------------------------------------------------------------------------
 
-class TestCsvExportImport:
 
+class TestCsvExportImport:
     def test_csv_round_trip(self, tmp_path):
         pytest.importorskip("pandas")
         from swarm.analysis.export import export_to_csv, load_from_csv
@@ -683,8 +707,8 @@ class TestCsvExportImport:
 # Tests for generate_summary_report
 # ---------------------------------------------------------------------------
 
-class TestGenerateSummaryReport:
 
+class TestGenerateSummaryReport:
     def test_report_contains_key_strings(self):
         h = _make_history_with_two_epochs()
         report = generate_summary_report(h)
@@ -711,18 +735,29 @@ class TestGenerateSummaryReport:
             started_at=datetime(2025, 1, 1),
             ended_at=datetime(2025, 1, 2),
         )
-        h.add_epoch_snapshot(EpochSnapshot(
-            epoch=0,
-            timestamp=datetime(2025, 1, 1),
-            total_interactions=5,
-            accepted_interactions=5,
-        ))
-        h.add_agent_snapshot(AgentSnapshot(
-            agent_id="frozen_agent", epoch=0, is_frozen=True,
-        ))
-        h.add_agent_snapshot(AgentSnapshot(
-            agent_id="normal_agent", epoch=0, is_frozen=False, is_quarantined=False,
-        ))
+        h.add_epoch_snapshot(
+            EpochSnapshot(
+                epoch=0,
+                timestamp=datetime(2025, 1, 1),
+                total_interactions=5,
+                accepted_interactions=5,
+            )
+        )
+        h.add_agent_snapshot(
+            AgentSnapshot(
+                agent_id="frozen_agent",
+                epoch=0,
+                is_frozen=True,
+            )
+        )
+        h.add_agent_snapshot(
+            AgentSnapshot(
+                agent_id="normal_agent",
+                epoch=0,
+                is_frozen=False,
+                is_quarantined=False,
+            )
+        )
         report = generate_summary_report(h)
         assert "FROZEN" in report
         assert "active" in report
@@ -738,18 +773,22 @@ class TestGenerateSummaryReport:
 # Tests for MetricsAggregator with security/collusion/capability reports
 # ---------------------------------------------------------------------------
 
-class TestMetricsAggregatorOptionalReports:
 
+class TestMetricsAggregatorOptionalReports:
     def test_security_report(self):
         agg = MetricsAggregator()
         agg.start_simulation("sec-test", 1, 1, 1)
-        agent_states = {"a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)}
+        agent_states = {
+            "a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)
+        }
         sec = SimpleNamespace(
             ecosystem_threat_level=0.7,
             active_threat_count=3,
             contagion_depth=2,
         )
-        snapshot = agg.finalize_epoch(epoch=0, agent_states=agent_states, security_report=sec)
+        snapshot = agg.finalize_epoch(
+            epoch=0, agent_states=agent_states, security_report=sec
+        )
         assert snapshot.ecosystem_threat_level == pytest.approx(0.7)
         assert snapshot.active_threats == 3
         assert snapshot.contagion_depth == 2
@@ -757,32 +796,39 @@ class TestMetricsAggregatorOptionalReports:
     def test_collusion_report(self):
         agg = MetricsAggregator()
         agg.start_simulation("col-test", 1, 1, 1)
-        agent_states = {"a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)}
+        agent_states = {
+            "a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)
+        }
         col = SimpleNamespace(
             ecosystem_collusion_risk=0.4,
             n_flagged_pairs=5,
         )
-        snapshot = agg.finalize_epoch(epoch=0, agent_states=agent_states, collusion_report=col)
+        snapshot = agg.finalize_epoch(
+            epoch=0, agent_states=agent_states, collusion_report=col
+        )
         assert snapshot.ecosystem_collusion_risk == pytest.approx(0.4)
         assert snapshot.n_flagged_pairs == 5
 
     def test_capability_metrics(self):
         agg = MetricsAggregator()
         agg.start_simulation("cap-test", 1, 1, 1)
-        agent_states = {"a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)}
+        agent_states = {
+            "a": SimpleNamespace(name="agent", reputation=0.5, resources=100.0)
+        }
         cap = SimpleNamespace(
             avg_coordination_score=0.8,
             avg_synergy_score=0.6,
             tasks_completed=12,
         )
-        snapshot = agg.finalize_epoch(epoch=0, agent_states=agent_states, capability_metrics=cap)
+        snapshot = agg.finalize_epoch(
+            epoch=0, agent_states=agent_states, capability_metrics=cap
+        )
         assert snapshot.avg_coordination_score == pytest.approx(0.8)
         assert snapshot.avg_synergy_score == pytest.approx(0.6)
         assert snapshot.tasks_completed == 12
 
 
 class TestIncoherenceScalingAggregation:
-
     def test_aggregate_incoherence_scaling_groups_rows(self):
         rows = [
             {
@@ -822,8 +868,13 @@ class TestIncoherenceScalingAggregation:
                 "mean_disagreement_rate": 0.1,
             },
         ]
-        points = build_scaling_curve_points(aggregated_rows, x_axis="horizon", fixed_tier="low")
-        assert points["x_labels"] == ["medium", "short"] or points["x_labels"] == ["short", "medium"]
+        points = build_scaling_curve_points(
+            aggregated_rows, x_axis="horizon", fixed_tier="low"
+        )
+        assert points["x_labels"] == ["medium", "short"] or points["x_labels"] == [
+            "short",
+            "medium",
+        ]
         assert len(points["incoherence_index"]) == 2
 
     def test_create_incoherence_scaling_data(self):

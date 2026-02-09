@@ -39,33 +39,23 @@ class TestDiversityConfig:
             GovernanceConfig(diversity_entropy_min=-1.0)
 
     def test_invalid_adversarial_fraction_min(self):
-        with pytest.raises(
-            ValidationError, match="diversity_adversarial_fraction_min"
-        ):
+        with pytest.raises(ValidationError, match="diversity_adversarial_fraction_min"):
             GovernanceConfig(diversity_adversarial_fraction_min=1.5)
 
     def test_invalid_disagreement_tau(self):
-        with pytest.raises(
-            ValidationError, match="diversity_disagreement_tau"
-        ):
+        with pytest.raises(ValidationError, match="diversity_disagreement_tau"):
             GovernanceConfig(diversity_disagreement_tau=-0.1)
 
     def test_invalid_error_threshold_p(self):
-        with pytest.raises(
-            ValidationError, match="diversity_error_threshold_p"
-        ):
+        with pytest.raises(ValidationError, match="diversity_error_threshold_p"):
             GovernanceConfig(diversity_error_threshold_p=2.0)
 
     def test_invalid_correlation_penalty_rate(self):
-        with pytest.raises(
-            ValidationError, match="diversity_correlation_penalty_rate"
-        ):
+        with pytest.raises(ValidationError, match="diversity_correlation_penalty_rate"):
             GovernanceConfig(diversity_correlation_penalty_rate=-0.1)
 
     def test_invalid_entropy_penalty_rate(self):
-        with pytest.raises(
-            ValidationError, match="diversity_entropy_penalty_rate"
-        ):
+        with pytest.raises(ValidationError, match="diversity_entropy_penalty_rate"):
             GovernanceConfig(diversity_entropy_penalty_rate=-1.0)
 
     def test_invalid_audit_cost(self):
@@ -73,9 +63,7 @@ class TestDiversityConfig:
             GovernanceConfig(diversity_audit_cost=-1.0)
 
     def test_invalid_correlation_window(self):
-        with pytest.raises(
-            ValidationError, match="diversity_correlation_window"
-        ):
+        with pytest.raises(ValidationError, match="diversity_correlation_window"):
             GovernanceConfig(diversity_correlation_window=0)
 
 
@@ -122,9 +110,7 @@ class TestShannonEntropy:
         assert entropy == pytest.approx(0.0)
 
     def test_uniform_binary_max_entropy(self):
-        entropy = DiversityDefenseLever.compute_shannon_entropy(
-            {"a": 0.5, "b": 0.5}
-        )
+        entropy = DiversityDefenseLever.compute_shannon_entropy({"a": 0.5, "b": 0.5})
         assert entropy == pytest.approx(math.log(2))
 
     def test_uniform_four_types(self):
@@ -364,9 +350,7 @@ class TestDiversityLeverErrorTracking:
         state = _make_diverse_state()
 
         for i in range(10):
-            interaction = SoftInteraction(
-                initiator="h1", p=0.3 if i % 2 == 0 else 0.8
-            )
+            interaction = SoftInteraction(initiator="h1", p=0.3 if i % 2 == 0 else 0.8)
             lever.on_interaction(interaction, state)
 
         history = lever.get_error_history()
@@ -387,12 +371,8 @@ class TestDiversityLeverDisagreementAudit:
 
         # First, seed diverse error patterns so disagreement is high
         # Agent h1 gets error, h2 no error → disagreement = 0.5
-        lever.on_interaction(
-            SoftInteraction(initiator="h1", p=0.3), state
-        )
-        effect = lever.on_interaction(
-            SoftInteraction(initiator="h2", p=0.8), state
-        )
+        lever.on_interaction(SoftInteraction(initiator="h1", p=0.3), state)
+        effect = lever.on_interaction(SoftInteraction(initiator="h2", p=0.8), state)
 
         # Disagreement rate should be 0.5 (1 error, 1 non-error)
         assert effect.details["disagreement_rate"] == pytest.approx(0.5)
@@ -409,12 +389,8 @@ class TestDiversityLeverDisagreementAudit:
         state = _make_diverse_state()
 
         # All agents make the same decision (all errors)
-        lever.on_interaction(
-            SoftInteraction(initiator="h1", p=0.3), state
-        )
-        effect = lever.on_interaction(
-            SoftInteraction(initiator="h2", p=0.3), state
-        )
+        lever.on_interaction(SoftInteraction(initiator="h1", p=0.3), state)
+        effect = lever.on_interaction(SoftInteraction(initiator="h2", p=0.3), state)
 
         assert effect.details["audit_triggered"] is False
         assert effect.cost_a == 0.0
@@ -598,9 +574,7 @@ class TestDiversityLeverClearHistory:
         lever = DiversityDefenseLever(config)
         state = _make_diverse_state()
 
-        lever.on_interaction(
-            SoftInteraction(initiator="h1", p=0.3), state
-        )
+        lever.on_interaction(SoftInteraction(initiator="h1", p=0.3), state)
         lever.on_epoch_start(state, epoch=1)
 
         assert lever.get_metrics() is not None
@@ -647,9 +621,7 @@ class TestDiversityLeverSecurity:
         state = _make_diverse_state()
 
         for i in range(1000):
-            lever.on_interaction(
-                SoftInteraction(initiator=f"fake_{i}", p=0.3), state
-            )
+            lever.on_interaction(SoftInteraction(initiator=f"fake_{i}", p=0.3), state)
 
         assert len(lever.get_error_history()) == 0
 
@@ -662,9 +634,7 @@ class TestDiversityLeverSecurity:
         lever = DiversityDefenseLever(config)
         state = _make_diverse_state()
 
-        lever.on_interaction(
-            SoftInteraction(initiator="h1", p=0.3), state
-        )
+        lever.on_interaction(SoftInteraction(initiator="h1", p=0.3), state)
 
         history = lever.get_error_history()
         history["h1"].append(999)
@@ -685,9 +655,7 @@ class TestDiversityLeverSecurity:
         state = _make_diverse_state()
 
         # Record error for h1
-        lever.on_interaction(
-            SoftInteraction(initiator="h1", p=0.3), state
-        )
+        lever.on_interaction(SoftInteraction(initiator="h1", p=0.3), state)
         assert "h1" in lever.get_error_history()
 
         # Remove h1 from environment
@@ -793,12 +761,8 @@ class TestDiversityBeatsScaling:
         """If rho ~ 0, Var(S) ~ N * p(1-p); risk grows linearly."""
         p = 0.3
         # Compare: 100 agents with rho=0.01 vs 10 agents with rho=0.8
-        risk_100_diverse = DiversityDefenseLever.compute_risk_surrogate(
-            p, 0.01, 100
-        )
-        risk_10_homo = DiversityDefenseLever.compute_risk_surrogate(
-            p, 0.8, 10
-        )
+        risk_100_diverse = DiversityDefenseLever.compute_risk_surrogate(p, 0.01, 100)
+        risk_10_homo = DiversityDefenseLever.compute_risk_surrogate(p, 0.8, 10)
         # 100 diverse agents should have lower risk than 10 homogeneous ones
         assert risk_100_diverse < risk_10_homo
 
@@ -837,8 +801,11 @@ class TestRhoBarNormalization:
         for name in ["h1", "h2", "idle1", "idle2", "idle3"]:
             state_big.add_agent(name, agent_type=AgentType.HONEST)
         lever_big._agent_types = {
-            "h1": "honest", "h2": "honest",
-            "idle1": "idle", "idle2": "idle", "idle3": "idle",
+            "h1": "honest",
+            "h2": "honest",
+            "idle1": "idle",
+            "idle2": "idle",
+            "idle3": "idle",
         }
         # Only h1/h2 have history — same as scenario 1
         for _ in range(20):

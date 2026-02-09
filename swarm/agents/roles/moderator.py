@@ -60,12 +60,14 @@ class ModeratorRole:
         reporter_id: str,
     ) -> None:
         """Flag content for moderation review."""
-        self._flagged_content.append({
-            "post_id": post_id,
-            "reason": reason,
-            "reporter_id": reporter_id,
-            "flag_count": 1,
-        })
+        self._flagged_content.append(
+            {
+                "post_id": post_id,
+                "reason": reason,
+                "reporter_id": reporter_id,
+                "flag_count": 1,
+            }
+        )
 
     def review_content(
         self,
@@ -113,7 +115,10 @@ class ModeratorRole:
             self._warned_agents[author_id] = self._warned_agents.get(author_id, 0) + 1
 
             # Check if should freeze
-            if self._warned_agents[author_id] >= self._moderator_config["warn_before_freeze"]:
+            if (
+                self._warned_agents[author_id]
+                >= self._moderator_config["warn_before_freeze"]
+            ):
                 self._freeze_agent(author_id)
 
         return action
@@ -181,7 +186,10 @@ class ModeratorRole:
         actions = []
 
         for flagged in self._flagged_content:
-            if flagged.get("flag_count", 0) >= self._moderator_config["auto_hide_threshold"]:
+            if (
+                flagged.get("flag_count", 0)
+                >= self._moderator_config["auto_hide_threshold"]
+            ):
                 action = ModerationAction(
                     action_id=f"auto_hide_{flagged['post_id']}",
                     target_type="post",
@@ -200,7 +208,9 @@ class ModeratorRole:
         """Get moderation statistics."""
         action_counts: Dict[str, int] = {}
         for action in self._moderation_history:
-            action_counts[action.action_type] = action_counts.get(action.action_type, 0) + 1
+            action_counts[action.action_type] = (
+                action_counts.get(action.action_type, 0) + 1
+            )
 
         return {
             "total_actions": len(self._moderation_history),

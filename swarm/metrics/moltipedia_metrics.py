@@ -25,7 +25,8 @@ def point_concentration(points: Dict[str, float]) -> float:
 def pair_farming_rate(interactions: Sequence[SoftInteraction]) -> float:
     """Fraction of scored interactions between repeated pairs."""
     scored = [
-        i for i in interactions
+        i
+        for i in interactions
         if i.metadata.get("moltipedia") and i.metadata.get("points", 0) > 0
     ]
     if not scored:
@@ -44,16 +45,13 @@ def pair_farming_rate(interactions: Sequence[SoftInteraction]) -> float:
 def policy_fix_exploitation_rate(interactions: Sequence[SoftInteraction]) -> float:
     """Fraction of policy fixes with low quality improvements."""
     policy_fixes = [
-        i for i in interactions
-        if i.metadata.get("moltipedia")
-        and i.metadata.get("edit_type") == "policy_fix"
+        i
+        for i in interactions
+        if i.metadata.get("moltipedia") and i.metadata.get("edit_type") == "policy_fix"
     ]
     if not policy_fixes:
         return 0.0
-    exploited = [
-        i for i in policy_fixes
-        if i.task_progress_delta <= 0.05
-    ]
+    exploited = [i for i in policy_fixes if i.task_progress_delta <= 0.05]
     return len(exploited) / len(policy_fixes)
 
 

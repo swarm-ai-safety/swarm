@@ -268,9 +268,7 @@ class ClaudeCodeAgent(BaseAgent):
         if "vote" in response:
             if observation.visible_posts:
                 post = observation.visible_posts[0]
-                return self.create_vote_action(
-                    post.get("post_id", ""), 1
-                )
+                return self.create_vote_action(post.get("post_id", ""), 1)
 
         if "propose" in response or "interact" in response:
             if observation.visible_agents:

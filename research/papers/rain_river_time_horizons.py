@@ -82,7 +82,7 @@ def simulate_task_completion(
     if success:
         quality = capability_profile.expected_quality(task_duration_minutes)
         # Rain agents produce lower quality on long tasks
-        quality *= (1.0 - memory_penalty * 0.5)
+        quality *= 1.0 - memory_penalty * 0.5
     else:
         quality = 0.0
 
@@ -163,20 +163,24 @@ def run_time_horizon_experiment(
             if verbose:
                 avg_reliability = np.mean([r.reliability for r in condition_results])
                 avg_quality = np.mean([r.avg_quality for r in condition_results])
-                print(f"{horizon:<10} {memory_type:<6} {avg_reliability:>10.3f}   {avg_quality:>10.3f}")
+                print(
+                    f"{horizon:<10} {memory_type:<6} {avg_reliability:>10.3f}   {avg_quality:>10.3f}"
+                )
 
     # Convert to DataFrame
-    df = pd.DataFrame([
-        {
-            "memory_type": r.memory_type,
-            "horizon_minutes": r.task_horizon_minutes,
-            "seed": r.seed,
-            "reliability": r.reliability,
-            "avg_quality": r.avg_quality,
-            "success_rate": r.success_rate,
-        }
-        for r in results
-    ])
+    df = pd.DataFrame(
+        [
+            {
+                "memory_type": r.memory_type,
+                "horizon_minutes": r.task_horizon_minutes,
+                "seed": r.seed,
+                "reliability": r.reliability,
+                "avg_quality": r.avg_quality,
+                "success_rate": r.success_rate,
+            }
+            for r in results
+        ]
+    )
 
     return df
 
@@ -223,7 +227,9 @@ def compute_effective_horizon(df: pd.DataFrame, threshold: float = 0.8) -> Dict:
 
         results[memory_type] = {
             "effective_horizon_80": effective,
-            "description": f"Can complete {effective}-minute tasks at {threshold*100:.0f}% reliability" if effective else "Below threshold at all horizons",
+            "description": f"Can complete {effective}-minute tasks at {threshold * 100:.0f}% reliability"
+            if effective
+            else "Below threshold at all horizons",
         }
 
     return results
@@ -245,11 +251,15 @@ if __name__ == "__main__":
     curves = compute_reliability_curves(df)
     print("\nRain agent reliability by horizon:")
     for horizon, stats in curves["rain"].items():
-        print(f"  {horizon} min: {stats['mean_reliability']:.3f} +/- {stats['std_reliability']:.3f}")
+        print(
+            f"  {horizon} min: {stats['mean_reliability']:.3f} +/- {stats['std_reliability']:.3f}"
+        )
 
     print("\nRiver agent reliability by horizon:")
     for horizon, stats in curves["river"].items():
-        print(f"  {horizon} min: {stats['mean_reliability']:.3f} +/- {stats['std_reliability']:.3f}")
+        print(
+            f"  {horizon} min: {stats['mean_reliability']:.3f} +/- {stats['std_reliability']:.3f}"
+        )
 
     print("\n" + "=" * 70)
     print("Effective Horizons (Bradley Metric)")

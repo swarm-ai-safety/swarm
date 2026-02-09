@@ -288,7 +288,8 @@ class Marketplace:
         # Check max bids
         existing_bids = self._bids_by_bounty.get(bounty_id, [])
         active_bids = [
-            bid_id for bid_id in existing_bids
+            bid_id
+            for bid_id in existing_bids
             if self._bids[bid_id].status == BidStatus.PENDING
         ]
         if len(active_bids) >= self.config.max_bids_per_bounty:
@@ -563,7 +564,9 @@ class Marketplace:
 
         bounty = self._bounties.get(escrow.bounty_id)
         if bounty:
-            bounty.status = BountyStatus.COMPLETED if worker_share > 0.5 else BountyStatus.FAILED
+            bounty.status = (
+                BountyStatus.COMPLETED if worker_share > 0.5 else BountyStatus.FAILED
+            )
 
         return {
             "dispute_id": dispute_id,
@@ -608,9 +611,7 @@ class Marketplace:
     def get_agent_bounties(self, agent_id: str) -> List[Bounty]:
         """Get all bounties posted by an agent."""
         bounty_ids = self._bounties_by_agent.get(agent_id, [])
-        return [
-            self._bounties[bid] for bid in bounty_ids if bid in self._bounties
-        ]
+        return [self._bounties[bid] for bid in bounty_ids if bid in self._bounties]
 
     def get_agent_bids(self, agent_id: str) -> List[Bid]:
         """Get all bids placed by an agent."""
@@ -620,9 +621,7 @@ class Marketplace:
     def get_agent_escrows(self, agent_id: str) -> List[Escrow]:
         """Get all escrows involving an agent."""
         escrow_ids = self._escrows_by_agent.get(agent_id, [])
-        return [
-            self._escrows[eid] for eid in escrow_ids if eid in self._escrows
-        ]
+        return [self._escrows[eid] for eid in escrow_ids if eid in self._escrows]
 
     def expire_bounties(self, current_epoch: int) -> List[str]:
         """
@@ -659,7 +658,10 @@ class Marketplace:
         for dispute in self._disputes.values():
             if dispute.status not in (DisputeStatus.OPEN, DisputeStatus.UNDER_REVIEW):
                 continue
-            if current_epoch - dispute.filed_epoch >= self.config.dispute_resolution_epochs:
+            if (
+                current_epoch - dispute.filed_epoch
+                >= self.config.dispute_resolution_epochs
+            ):
                 self.resolve_dispute(
                     dispute.dispute_id, self.config.dispute_default_split
                 )

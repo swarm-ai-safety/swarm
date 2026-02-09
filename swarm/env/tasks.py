@@ -233,7 +233,9 @@ class Task:
             "collaborators": list(self.collaborators),
             "steps_used": self.steps_used,
             "outputs_count": len(self.outputs),
-            "completed_at": self.completed_at.isoformat() if self.completed_at else None,
+            "completed_at": self.completed_at.isoformat()
+            if self.completed_at
+            else None,
             "final_quality": self.final_quality,
             "metadata": self.metadata,
         }
@@ -373,10 +375,7 @@ class TaskPool:
             List of claimable tasks sorted by bounty
         """
         open_tasks = self.get_open_tasks(current_epoch)
-        claimable = [
-            t for t in open_tasks
-            if t.min_reputation <= agent_reputation
-        ]
+        claimable = [t for t in open_tasks if t.min_reputation <= agent_reputation]
 
         # Sort by bounty (highest first)
         claimable.sort(key=lambda t: t.bounty, reverse=True)
@@ -390,10 +389,13 @@ class TaskPool:
             status_counts[status] = status_counts.get(status, 0) + 1
 
         total_bounty = sum(t.bounty for t in self._tasks.values())
-        completed = [t for t in self._tasks.values() if t.status == TaskStatus.COMPLETED]
+        completed = [
+            t for t in self._tasks.values() if t.status == TaskStatus.COMPLETED
+        ]
         avg_quality = (
             sum(t.final_quality or 0 for t in completed) / len(completed)
-            if completed else 0.0
+            if completed
+            else 0.0
         )
 
         return {
@@ -415,7 +417,11 @@ class TaskPool:
         expired = []
         for task in self._tasks.values():
             if task.deadline_epoch and current_epoch >= task.deadline_epoch:
-                if task.status in (TaskStatus.OPEN, TaskStatus.CLAIMED, TaskStatus.IN_PROGRESS):
+                if task.status in (
+                    TaskStatus.OPEN,
+                    TaskStatus.CLAIMED,
+                    TaskStatus.IN_PROGRESS,
+                ):
                     task.expire()
                     expired.append(task.task_id)
                     self._open_tasks.discard(task.task_id)

@@ -37,19 +37,28 @@ col1, col2 = st.columns(2)
 
 with col1:
     tax_rate = st.slider("Transaction tax rate", 0.0, 0.5, 0.0, 0.01)
-    reputation_decay = st.slider("Reputation decay", 0.8, 1.0, 1.0, 0.01,
-                                  help="1.0 = no decay, lower = faster decay")
+    reputation_decay = st.slider(
+        "Reputation decay",
+        0.8,
+        1.0,
+        1.0,
+        0.01,
+        help="1.0 = no decay, lower = faster decay",
+    )
     staking_enabled = st.checkbox("Enable staking")
-    min_stake = st.slider("Minimum stake", 0.0, 5.0, 0.0, 0.1,
-                           disabled=not staking_enabled)
+    min_stake = st.slider(
+        "Minimum stake", 0.0, 5.0, 0.0, 0.1, disabled=not staking_enabled
+    )
 
 with col2:
     circuit_breaker = st.checkbox("Enable circuit breaker")
-    freeze_threshold = st.slider("Freeze toxicity threshold", 0.3, 1.0, 0.7, 0.05,
-                                  disabled=not circuit_breaker)
+    freeze_threshold = st.slider(
+        "Freeze toxicity threshold", 0.3, 1.0, 0.7, 0.05, disabled=not circuit_breaker
+    )
     audit_enabled = st.checkbox("Enable random audit")
-    audit_prob = st.slider("Audit probability", 0.0, 0.5, 0.1, 0.01,
-                            disabled=not audit_enabled)
+    audit_prob = st.slider(
+        "Audit probability", 0.0, 0.5, 0.1, 0.01, disabled=not audit_enabled
+    )
 
 # ── Run single ────────────────────────────────────────────────────────────────
 
@@ -59,6 +68,7 @@ run_btn = st.button("Run Simulation", type="primary")
 @st.cache_data(show_spinner="Running custom simulation...", max_entries=32)
 def _run_custom(**kwargs):
     from demo.utils.simulation import run_custom
+
     return run_custom(**kwargs)
 
 
@@ -120,22 +130,30 @@ st.plotly_chart(
 
 c1, c2, c3 = st.columns(3)
 with c1:
-    st.plotly_chart(agent_reputation_bar(result["agent_states"], height=280),
-                    use_container_width=True)
+    st.plotly_chart(
+        agent_reputation_bar(result["agent_states"], height=280),
+        use_container_width=True,
+    )
 with c2:
-    st.plotly_chart(agent_payoff_bar(result["agent_states"], height=280),
-                    use_container_width=True)
+    st.plotly_chart(
+        agent_payoff_bar(result["agent_states"], height=280), use_container_width=True
+    )
 with c3:
-    st.plotly_chart(agent_type_pie(result["agent_states"], height=280),
-                    use_container_width=True)
+    st.plotly_chart(
+        agent_type_pie(result["agent_states"], height=280), use_container_width=True
+    )
 
 # ── Parameter sweep ───────────────────────────────────────────────────────────
 
 st.markdown("---")
 st.subheader("Quick Parameter Sweep")
-st.markdown("Sweep one parameter across a range to see its impact on toxicity and welfare.")
+st.markdown(
+    "Sweep one parameter across a range to see its impact on toxicity and welfare."
+)
 
-sweep_param = st.selectbox("Parameter to sweep", ["tax_rate", "reputation_decay", "audit_probability"])
+sweep_param = st.selectbox(
+    "Parameter to sweep", ["tax_rate", "reputation_decay", "audit_probability"]
+)
 
 sweep_ranges = {
     "tax_rate": (0.0, 0.5, 0.05),
@@ -168,6 +186,7 @@ if sweep_btn:
         }
 
     import numpy as np
+
     sweep_values = np.arange(low, high + step / 2, step).tolist()
     sweep_results = []
 
@@ -180,11 +199,13 @@ if sweep_btn:
             p["audit_enabled"] = True
         res = _run_custom(**p)
         last = res["epoch_metrics"][-1] if res["epoch_metrics"] else None
-        sweep_results.append({
-            sweep_param: round(val, 4),
-            "toxicity": last.toxicity_rate if last else 0,
-            "welfare": last.total_welfare if last else 0,
-        })
+        sweep_results.append(
+            {
+                sweep_param: round(val, 4),
+                "toxicity": last.toxicity_rate if last else 0,
+                "welfare": last.total_welfare if last else 0,
+            }
+        )
         progress.progress((i + 1) / len(sweep_values))
 
     progress.empty()
@@ -204,5 +225,8 @@ if sweep_data:
     )
 
     import pandas as pd
+
     with st.expander("Sweep data"):
-        st.dataframe(pd.DataFrame(sweep_data), use_container_width=True, hide_index=True)
+        st.dataframe(
+            pd.DataFrame(sweep_data), use_container_width=True, hide_index=True
+        )

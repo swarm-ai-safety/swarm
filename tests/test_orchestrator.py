@@ -32,10 +32,14 @@ class _AlternatingAgent(BaseAgent):
     def act(self, observation: Observation) -> Action:
         self._counter += 1
         if self._counter % 2 == 0:
-            return Action(action_type=ActionType.REPLY, agent_id=self.agent_id, content="b")
+            return Action(
+                action_type=ActionType.REPLY, agent_id=self.agent_id, content="b"
+            )
         return Action(action_type=ActionType.POST, agent_id=self.agent_id, content="a")
 
-    def accept_interaction(self, proposal: InteractionProposal, observation: Observation) -> bool:
+    def accept_interaction(
+        self, proposal: InteractionProposal, observation: Observation
+    ) -> bool:
         return False
 
     def propose_interaction(
@@ -354,11 +358,13 @@ class TestOrchestratorCallbacks:
         interaction_data = []
 
         def callback(interaction, payoff_init, payoff_counter):
-            interaction_data.append({
-                "p": interaction.p,
-                "accepted": interaction.accepted,
-                "payoff_init": payoff_init,
-            })
+            interaction_data.append(
+                {
+                    "p": interaction.p,
+                    "accepted": interaction.accepted,
+                    "payoff_init": payoff_init,
+                }
+            )
 
         orchestrator.on_interaction_complete(callback)
         orchestrator.run()

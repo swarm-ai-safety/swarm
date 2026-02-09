@@ -144,7 +144,7 @@ class CapabilityAnalyzer:
             profile_a = self._agent_profiles.get(agent_a)
             if profile_a:
                 profile_a.collaboration_count += 1
-                for agent_b in agents[i + 1:]:
+                for agent_b in agents[i + 1 :]:
                     profile_a.unique_collaborators.add(agent_b)
                     profile_b = self._agent_profiles.get(agent_b)
                     if profile_b:
@@ -166,15 +166,15 @@ class CapabilityAnalyzer:
             metrics.avg_final_quality = float(np.mean(qualities))
 
         # Coordination metrics (from task-level scores)
-        metrics.avg_coordination_score = float(np.mean([
-            t.coordination_score for t in self._completed_tasks
-        ]))
-        metrics.avg_synergy_score = float(np.mean([
-            t.synergy_score for t in self._completed_tasks
-        ]))
-        metrics.avg_information_flow = float(np.mean([
-            t.information_flow_score for t in self._completed_tasks
-        ]))
+        metrics.avg_coordination_score = float(
+            np.mean([t.coordination_score for t in self._completed_tasks])
+        )
+        metrics.avg_synergy_score = float(
+            np.mean([t.synergy_score for t in self._completed_tasks])
+        )
+        metrics.avg_information_flow = float(
+            np.mean([t.information_flow_score for t in self._completed_tasks])
+        )
 
         # Team formation metrics
         team_sizes = [len(t.participating_agents) for t in self._completed_tasks]
@@ -189,7 +189,9 @@ class CapabilityAnalyzer:
                 if profile:
                     team_caps.update(profile.capabilities)
             if task.required_capabilities:
-                coverage = len(team_caps & task.required_capabilities) / len(task.required_capabilities)
+                coverage = len(team_caps & task.required_capabilities) / len(
+                    task.required_capabilities
+                )
                 coverage_scores.append(coverage)
         if coverage_scores:
             metrics.capability_coverage = float(np.mean(coverage_scores))
@@ -281,7 +283,9 @@ class CapabilityAnalyzer:
                 max_entropy = np.log2(len(scores))
                 if max_entropy > 0:
                     normalized_entropy = entropy / max_entropy
-                    entropies.append(1.0 - normalized_entropy)  # Invert: 1 = specialized
+                    entropies.append(
+                        1.0 - normalized_entropy
+                    )  # Invert: 1 = specialized
 
         return np.mean(entropies) if entropies else 0.0
 
@@ -312,7 +316,7 @@ class CapabilityAnalyzer:
             # Compute pairwise overlap
             overlaps = []
             for i, caps_a in enumerate(cap_sets):
-                for caps_b in cap_sets[i + 1:]:
+                for caps_b in cap_sets[i + 1 :]:
                     if caps_a or caps_b:
                         intersection = len(caps_a & caps_b)
                         union = len(caps_a | caps_b)
@@ -376,13 +380,13 @@ def compute_collective_intelligence_score(
     }
 
     score = (
-        weights["quality"] * metrics.avg_final_quality +
-        weights["coordination"] * metrics.avg_coordination_score +
-        weights["synergy"] * metrics.avg_synergy_score +
-        weights["info_flow"] * metrics.avg_information_flow +
-        weights["efficiency"] * min(1.0, metrics.task_efficiency * 10) +  # Normalize
-        weights["complementarity"] * metrics.complementarity_score +
-        weights["transfer"] * metrics.knowledge_transfer
+        weights["quality"] * metrics.avg_final_quality
+        + weights["coordination"] * metrics.avg_coordination_score
+        + weights["synergy"] * metrics.avg_synergy_score
+        + weights["info_flow"] * metrics.avg_information_flow
+        + weights["efficiency"] * min(1.0, metrics.task_efficiency * 10)  # Normalize
+        + weights["complementarity"] * metrics.complementarity_score
+        + weights["transfer"] * metrics.knowledge_transfer
     )
 
     return float(score)

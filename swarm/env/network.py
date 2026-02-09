@@ -52,15 +52,21 @@ class NetworkConfig(BaseModel):
     def _check_values(self) -> None:
         """Validate configuration parameters."""
         if not 0 <= self.edge_probability <= 1:
-            raise ValueError(f"edge_probability must be in [0, 1], got {self.edge_probability}")
+            raise ValueError(
+                f"edge_probability must be in [0, 1], got {self.edge_probability}"
+            )
         if not 0 <= self.rewire_probability <= 1:
-            raise ValueError(f"rewire_probability must be in [0, 1], got {self.rewire_probability}")
+            raise ValueError(
+                f"rewire_probability must be in [0, 1], got {self.rewire_probability}"
+            )
         if self.k_neighbors < 2:
             raise ValueError(f"k_neighbors must be >= 2, got {self.k_neighbors}")
         if self.m_edges < 1:
             raise ValueError(f"m_edges must be >= 1, got {self.m_edges}")
         if not 0 <= self.edge_decay_rate <= 1:
-            raise ValueError(f"edge_decay_rate must be in [0, 1], got {self.edge_decay_rate}")
+            raise ValueError(
+                f"edge_decay_rate must be in [0, 1], got {self.edge_decay_rate}"
+            )
 
 
 class AgentNetwork:
@@ -186,7 +192,8 @@ class AgentNetwork:
 
                     # Add new random edge (avoid self-loops and existing edges)
                     candidates = [
-                        aid for aid in self._agent_ids
+                        aid
+                        for aid in self._agent_ids
                         if aid != a and aid not in self._adjacency[a]
                     ]
                     if candidates:
@@ -401,7 +408,7 @@ class AgentNetwork:
         # Count edges between neighbors
         edges_between = 0
         for i, n1 in enumerate(neighbors):
-            for n2 in neighbors[i + 1:]:
+            for n2 in neighbors[i + 1 :]:
                 if self.has_edge(n1, n2):
                     edges_between += 1
 
@@ -469,7 +476,7 @@ class AgentNetwork:
         count = 0
 
         for i, a in enumerate(self._agent_ids):
-            for b in self._agent_ids[i + 1:]:
+            for b in self._agent_ids[i + 1 :]:
                 path = self.shortest_path(a, b)
                 if path > 0:
                     total += path

@@ -143,7 +143,9 @@ class Feed:
         self._posts_by_author: Dict[str, List[str]] = {}  # author_id -> [post_id]
         self._replies_by_parent: Dict[str, List[str]] = {}  # parent_id -> [post_id]
         self._votes_by_post: Dict[str, List[str]] = {}  # post_id -> [vote_id]
-        self._votes_by_voter: Dict[str, Dict[str, str]] = {}  # voter_id -> {post_id: vote_id}
+        self._votes_by_voter: Dict[
+            str, Dict[str, str]
+        ] = {}  # voter_id -> {post_id: vote_id}
 
     def create_post(
         self,

@@ -11,7 +11,9 @@ import streamlit as st  # noqa: E402
 
 st.set_page_config(page_title="Scenario Explorer", page_icon="🗂️", layout="wide")
 st.title("Scenario Explorer")
-st.markdown("Select one or more pre-built scenarios, run them, and compare results side by side.")
+st.markdown(
+    "Select one or more pre-built scenarios, run them, and compare results side by side."
+)
 
 # ── Load available scenarios ──────────────────────────────────────────────────
 
@@ -31,16 +33,20 @@ selected_ids = st.multiselect(
 
 col_seed, col_run = st.columns([2, 1])
 with col_seed:
-    seed = st.number_input("Random seed", value=42, min_value=0, step=1, key="explorer_seed")
+    seed = st.number_input(
+        "Random seed", value=42, min_value=0, step=1, key="explorer_seed"
+    )
 with col_run:
     st.write("")
     run_btn = st.button("Run Selected", type="primary", use_container_width=True)
 
 # ── Run ───────────────────────────────────────────────────────────────────────
 
+
 @st.cache_data(show_spinner="Running scenario...", max_entries=20)
 def _run(path: str, seed_val: int):
     from demo.utils.simulation import run_scenario
+
     return run_scenario(path, seed=seed_val)
 
 
@@ -91,11 +97,15 @@ for tab, (_sid, result) in zip(tabs, results.items(), strict=False):
 
         c1, c2 = st.columns(2)
         with c1:
-            st.plotly_chart(agent_reputation_bar(result["agent_states"], height=280),
-                            use_container_width=True)
+            st.plotly_chart(
+                agent_reputation_bar(result["agent_states"], height=280),
+                use_container_width=True,
+            )
         with c2:
-            st.plotly_chart(agent_payoff_bar(result["agent_states"], height=280),
-                            use_container_width=True)
+            st.plotly_chart(
+                agent_payoff_bar(result["agent_states"], height=280),
+                use_container_width=True,
+            )
 
 # ── Cross-scenario comparison ─────────────────────────────────────────────────
 

@@ -101,12 +101,14 @@ class MemoryHandler:
     def on_epoch_start(self, state: EnvState) -> None:
         """Epoch start: rebuild hot cache, reset tracking."""
         self.store.on_epoch_start()
-        self._emit_event(Event(
-            event_type=EventType.MEMORY_CACHE_REBUILT,
-            payload={"cache_size": len(self.store.hot_cache)},
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.MEMORY_CACHE_REBUILT,
+                payload={"cache_size": len(self.store.hot_cache)},
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
     def maybe_compaction(self, agent_id: str, state: EnvState) -> int:
         """Randomly trigger compaction for an agent. Returns entries lost."""
@@ -114,13 +116,15 @@ class MemoryHandler:
             return 0
         lost = self.store.simulate_compaction(agent_id)
         if lost > 0:
-            self._emit_event(Event(
-                event_type=EventType.MEMORY_COMPACTION,
-                agent_id=agent_id,
-                payload={"entries_lost": lost},
-                epoch=state.current_epoch,
-                step=state.current_step,
-            ))
+            self._emit_event(
+                Event(
+                    event_type=EventType.MEMORY_COMPACTION,
+                    agent_id=agent_id,
+                    payload={"entries_lost": lost},
+                    epoch=state.current_epoch,
+                    step=state.current_step,
+                )
+            )
         return lost
 
     # ------------------------------------------------------------------
@@ -164,17 +168,19 @@ class MemoryHandler:
         outcome = self._write_outcome(quality, is_poisoned, agent_type)
         observables = self.observable_generator.generate(outcome)
 
-        self._emit_event(Event(
-            event_type=EventType.MEMORY_WRITTEN,
-            agent_id=action.agent_id,
-            payload={
-                "entry_id": entry.entry_id,
-                "tier": entry.tier.value,
-                "quality": quality,
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.MEMORY_WRITTEN,
+                agent_id=action.agent_id,
+                payload={
+                    "entry_id": entry.entry_id,
+                    "tier": entry.tier.value,
+                    "quality": quality,
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return MemoryActionResult(
             success=True,
@@ -214,22 +220,26 @@ class MemoryHandler:
         )
         observables = self.observable_generator.generate(outcome)
 
-        self._emit_event(Event(
-            event_type=EventType.MEMORY_PROMOTED,
-            agent_id=action.agent_id,
-            payload={
-                "entry_id": entry.entry_id,
-                "source_tier": meta["source_tier"],
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.MEMORY_PROMOTED,
+                agent_id=action.agent_id,
+                payload={
+                    "entry_id": entry.entry_id,
+                    "source_tier": meta["source_tier"],
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return MemoryActionResult(
             success=True,
             observables=observables,
             initiator_id=action.agent_id,
-            counterparty_id=entry.author_id if entry.author_id != action.agent_id else "memory_system",
+            counterparty_id=entry.author_id
+            if entry.author_id != action.agent_id
+            else "memory_system",
             metadata=meta,
         )
 
@@ -249,22 +259,26 @@ class MemoryHandler:
         )
         observables = self.observable_generator.generate(outcome)
 
-        self._emit_event(Event(
-            event_type=EventType.MEMORY_VERIFIED,
-            agent_id=action.agent_id,
-            payload={
-                "entry_id": entry.entry_id,
-                "verifier_count": len(entry.verified_by),
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.MEMORY_VERIFIED,
+                agent_id=action.agent_id,
+                payload={
+                    "entry_id": entry.entry_id,
+                    "verifier_count": len(entry.verified_by),
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return MemoryActionResult(
             success=True,
             observables=observables,
             initiator_id=action.agent_id,
-            counterparty_id=entry.author_id if entry.author_id != action.agent_id else "memory_system",
+            counterparty_id=entry.author_id
+            if entry.author_id != action.agent_id
+            else "memory_system",
             metadata={
                 "memory_verification": True,
                 "entry_id": entry.entry_id,
@@ -319,23 +333,27 @@ class MemoryHandler:
 
         observables = self.observable_generator.generate(outcome)
 
-        self._emit_event(Event(
-            event_type=EventType.MEMORY_CHALLENGED,
-            agent_id=action.agent_id,
-            payload={
-                "entry_id": entry.entry_id,
-                "is_poisoned": entry.is_poisoned,
-                "reverted": entry.is_poisoned,
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.MEMORY_CHALLENGED,
+                agent_id=action.agent_id,
+                payload={
+                    "entry_id": entry.entry_id,
+                    "is_poisoned": entry.is_poisoned,
+                    "reverted": entry.is_poisoned,
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return MemoryActionResult(
             success=True,
             observables=observables,
             initiator_id=action.agent_id,
-            counterparty_id=entry.author_id if entry.author_id != action.agent_id else "memory_system",
+            counterparty_id=entry.author_id
+            if entry.author_id != action.agent_id
+            else "memory_system",
             metadata={
                 "memory_challenge": True,
                 "entry_id": entry.entry_id,

@@ -80,14 +80,16 @@ class WikiPage:
         self.quality_score = max(0.0, min(1.0, self.quality_score + delta_quality))
         self.policy_violations = list(policy_violations)
         self.last_editor = editor_id
-        self.edit_history.append(WikiEdit(
-            editor_id=editor_id,
-            edit_type=edit_type,
-            delta_quality=delta_quality,
-            epoch=epoch,
-            step=step,
-            note=note,
-        ))
+        self.edit_history.append(
+            WikiEdit(
+                editor_id=editor_id,
+                edit_type=edit_type,
+                delta_quality=delta_quality,
+                epoch=epoch,
+                step=step,
+                note=note,
+            )
+        )
 
     def to_dict(self) -> Dict:
         """Serialize the page."""
@@ -153,7 +155,8 @@ class WikiTaskPool:
     def get_contested_pages(self, limit: int, current_step: int) -> List[WikiPage]:
         """Get contested pages that are off cooldown."""
         pages = [
-            p for p in self._pages.values()
+            p
+            for p in self._pages.values()
             if p.status == PageStatus.CONTESTED and p.cooldown_until <= current_step
         ]
         self._rng.shuffle(pages)
@@ -162,7 +165,8 @@ class WikiTaskPool:
     def get_random_pages(self, limit: int, current_step: int) -> List[WikiPage]:
         """Get random pages that are off cooldown and not locked."""
         pages = [
-            p for p in self._pages.values()
+            p
+            for p in self._pages.values()
             if p.status != PageStatus.LOCKED and p.cooldown_until <= current_step
         ]
         self._rng.shuffle(pages)
@@ -179,7 +183,8 @@ class WikiTaskPool:
             return []
         query_l = query.lower()
         hits = [
-            p for p in self._pages.values()
+            p
+            for p in self._pages.values()
             if p.cooldown_until <= current_step
             and (query_l in p.title.lower() or query_l in p.content.lower())
         ]
@@ -189,7 +194,8 @@ class WikiTaskPool:
     def get_low_quality_pages(self, limit: int, current_step: int) -> List[WikiPage]:
         """Get low-quality or policy-violating pages."""
         pages = [
-            p for p in self._pages.values()
+            p
+            for p in self._pages.values()
             if p.cooldown_until <= current_step
             and (p.quality_score < 0.5 or p.policy_violations)
         ]

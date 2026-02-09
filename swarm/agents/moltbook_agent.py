@@ -39,10 +39,15 @@ class BaseMoltbookAgent(BaseAgent):
         self.challenge_skill = challenge_skill
         self._rng = random.Random(self.config.get("seed"))
 
-    def _pending_verification_action(self, observation: Observation) -> Optional[Action]:
+    def _pending_verification_action(
+        self, observation: Observation
+    ) -> Optional[Action]:
         for pending in observation.moltbook_pending_posts:
             created_at = pending.get("created_at_step", 0)
-            if observation.current_step - created_at < self.challenge_skill.latency_steps:
+            if (
+                observation.current_step - created_at
+                < self.challenge_skill.latency_steps
+            ):
                 continue
             challenge = pending.get("challenge", {})
             answer = self._solve_challenge(challenge)
@@ -89,7 +94,9 @@ class DiligentMoltbookAgent(BaseMoltbookAgent):
         super().__init__(
             agent_id=agent_id,
             agent_type=AgentType.HONEST,
-            challenge_skill=ChallengeSkill(parse_accuracy=0.95, solve_accuracy=0.99, latency_steps=0),
+            challenge_skill=ChallengeSkill(
+                parse_accuracy=0.95, solve_accuracy=0.99, latency_steps=0
+            ),
             roles=roles,
             config=config,
             name=name,
@@ -125,7 +132,9 @@ class SpamBotAgent(BaseMoltbookAgent):
         super().__init__(
             agent_id=agent_id,
             agent_type=AgentType.ADVERSARIAL,
-            challenge_skill=ChallengeSkill(parse_accuracy=0.98, solve_accuracy=0.99, latency_steps=0),
+            challenge_skill=ChallengeSkill(
+                parse_accuracy=0.98, solve_accuracy=0.99, latency_steps=0
+            ),
             roles=roles,
             config=config,
             name=name,
@@ -159,7 +168,9 @@ class HumanPretenderAgent(BaseMoltbookAgent):
         super().__init__(
             agent_id=agent_id,
             agent_type=AgentType.OPPORTUNISTIC,
-            challenge_skill=ChallengeSkill(parse_accuracy=0.5, solve_accuracy=0.85, latency_steps=1),
+            challenge_skill=ChallengeSkill(
+                parse_accuracy=0.5, solve_accuracy=0.85, latency_steps=1
+            ),
             roles=roles,
             config=config,
             name=name,
@@ -193,7 +204,9 @@ class CollusiveVoterAgent(BaseMoltbookAgent):
         super().__init__(
             agent_id=agent_id,
             agent_type=AgentType.DECEPTIVE,
-            challenge_skill=ChallengeSkill(parse_accuracy=0.9, solve_accuracy=0.95, latency_steps=0),
+            challenge_skill=ChallengeSkill(
+                parse_accuracy=0.9, solve_accuracy=0.95, latency_steps=0
+            ),
             roles=roles,
             config=config,
             name=name,

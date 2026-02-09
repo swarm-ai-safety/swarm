@@ -134,15 +134,25 @@ def run_single_simulation(
     total_weight = sum(weights)
 
     if total_weight > 0:
-        toxicity = sum(m.toxicity_rate * w for m, w in zip(epoch_metrics, weights)) / total_weight
-        quality_gap = sum(m.quality_gap * w for m, w in zip(epoch_metrics, weights)) / total_weight
-        avg_payoff = sum(m.avg_payoff * w for m, w in zip(epoch_metrics, weights)) / total_weight
+        toxicity = (
+            sum(m.toxicity_rate * w for m, w in zip(epoch_metrics, weights))
+            / total_weight
+        )
+        quality_gap = (
+            sum(m.quality_gap * w for m, w in zip(epoch_metrics, weights))
+            / total_weight
+        )
+        avg_payoff = (
+            sum(m.avg_payoff * w for m, w in zip(epoch_metrics, weights)) / total_weight
+        )
     else:
         toxicity = 0.0
         quality_gap = 0.0
         avg_payoff = 0.0
 
-    acceptance_rate = total_accepted / total_interactions if total_interactions > 0 else 0.0
+    acceptance_rate = (
+        total_accepted / total_interactions if total_interactions > 0 else 0.0
+    )
 
     return ExperimentResult(
         memory_level=memory_level,
@@ -212,9 +222,13 @@ def run_experiment_1_memory_x_composition(
                 std_welfare = np.std([r.total_welfare for r in condition_results])
                 avg_toxicity = np.mean([r.toxicity for r in condition_results])
 
-                memory_label = "Rain" if memory_level == 0.0 else \
-                              "River" if memory_level == 1.0 else \
-                              f"{memory_level:.0%}"
+                memory_label = (
+                    "Rain"
+                    if memory_level == 0.0
+                    else "River"
+                    if memory_level == 1.0
+                    else f"{memory_level:.0%}"
+                )
                 print(
                     f"Memory={memory_label:>6}, Honest={honest_fraction:.0%}: "
                     f"Welfare={avg_welfare:>7.1f} +/- {std_welfare:>5.1f}, "
@@ -222,21 +236,23 @@ def run_experiment_1_memory_x_composition(
                 )
 
     # Convert to DataFrame
-    df = pd.DataFrame([
-        {
-            "memory": r.memory_level,
-            "honest_fraction": r.honest_fraction,
-            "seed": r.seed,
-            "n_interactions": r.n_interactions,
-            "toxicity": r.toxicity,
-            "quality_gap": r.quality_gap,
-            "welfare": r.total_welfare,
-            "avg_initiator_payoff": r.avg_initiator_payoff,
-            "avg_counterparty_payoff": r.avg_counterparty_payoff,
-            "acceptance_rate": r.acceptance_rate,
-        }
-        for r in results
-    ])
+    df = pd.DataFrame(
+        [
+            {
+                "memory": r.memory_level,
+                "honest_fraction": r.honest_fraction,
+                "seed": r.seed,
+                "n_interactions": r.n_interactions,
+                "toxicity": r.toxicity,
+                "quality_gap": r.quality_gap,
+                "welfare": r.total_welfare,
+                "avg_initiator_payoff": r.avg_initiator_payoff,
+                "avg_counterparty_payoff": r.avg_counterparty_payoff,
+                "acceptance_rate": r.acceptance_rate,
+            }
+            for r in results
+        ]
+    )
 
     return df
 
@@ -313,7 +329,7 @@ def run_experiment_2_rain_vs_river_comparison(
     if verbose:
         print(f"Rain Welfare:  {rain_mean:.1f} +/- {rain_std:.1f}")
         print(f"River Welfare: {river_mean:.1f} +/- {river_std:.1f}")
-        print(f"Welfare Gap:   {welfare_gap*100:.1f}%")
+        print(f"Welfare Gap:   {welfare_gap * 100:.1f}%")
         print(f"Effect Size:   d = {cohens_d:.2f}")
         print(f"Rain Toxicity:  {results['rain_toxicity_mean']:.3f}")
         print(f"River Toxicity: {results['river_toxicity_mean']:.3f}")
@@ -394,7 +410,9 @@ def run_all_experiments(n_seeds: int = 30, verbose: bool = True) -> Dict:
         df = results["experiment_1_df"]
         for memory in [0.0, 1.0]:
             for honest in [0.4, 1.0]:
-                subset = df[(df["memory"] == memory) & (df["honest_fraction"] == honest)]
+                subset = df[
+                    (df["memory"] == memory) & (df["honest_fraction"] == honest)
+                ]
                 welfare_ci = compute_confidence_intervals(subset["welfare"].tolist())
                 memory_label = "Rain" if memory == 0.0 else "River"
                 print(
@@ -420,7 +438,9 @@ if __name__ == "__main__":
     print("=" * 60)
 
     exp2 = results["experiment_2"]
-    print(f"- River agents achieve {exp2['welfare_gap_percentage']:.1f}% higher welfare than rain agents")
+    print(
+        f"- River agents achieve {exp2['welfare_gap_percentage']:.1f}% higher welfare than rain agents"
+    )
     print(f"- Effect size: Cohen's d = {exp2['cohens_d']:.2f}")
     print(f"- Rain toxicity: {exp2['rain_toxicity_mean']:.3f}")
     print(f"- River toxicity: {exp2['river_toxicity_mean']:.3f}")

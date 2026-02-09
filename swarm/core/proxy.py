@@ -27,8 +27,12 @@ class ProxyWeights(BaseModel):
 
     def normalize(self) -> "ProxyWeights":
         """Return normalized weights that sum to 1."""
-        total = abs(self.task_progress) + abs(self.rework_penalty) + \
-                abs(self.verifier_penalty) + abs(self.engagement_signal)
+        total = (
+            abs(self.task_progress)
+            + abs(self.rework_penalty)
+            + abs(self.verifier_penalty)
+            + abs(self.engagement_signal)
+        )
 
         if total == 0:
             return ProxyWeights(
@@ -59,9 +63,9 @@ class ProxyObservables(BaseModel):
     """
 
     task_progress_delta: float = 0.0  # [-1, +1] normalized progress
-    rework_count: int = 0             # number of rework cycles
-    verifier_rejections: int = 0      # number of verifier rejections
-    tool_misuse_flags: int = 0        # number of tool misuse flags
+    rework_count: int = 0  # number of rework cycles
+    verifier_rejections: int = 0  # number of verifier rejections
+    tool_misuse_flags: int = 0  # number of tool misuse flags
     counterparty_engagement_delta: float = 0.0  # [-1, +1] engagement change
 
     model_config = {"frozen": False}
@@ -125,7 +129,7 @@ class ProxyComputer:
             return 1.0  # No rework = positive signal
 
         # Exponential decay towards -1
-        decay_factor = self.rework_decay ** count
+        decay_factor = self.rework_decay**count
         return 2.0 * decay_factor - 1.0
 
     def _compute_rejection_signal(self, count: int) -> float:
@@ -137,7 +141,7 @@ class ProxyComputer:
         if count == 0:
             return 1.0
 
-        decay_factor = self.rejection_decay ** count
+        decay_factor = self.rejection_decay**count
         return 2.0 * decay_factor - 1.0
 
     def _compute_misuse_signal(self, count: int) -> float:
@@ -149,7 +153,7 @@ class ProxyComputer:
         if count == 0:
             return 1.0
 
-        decay_factor = self.misuse_decay ** count
+        decay_factor = self.misuse_decay**count
         return 2.0 * decay_factor - 1.0
 
     def _normalize_engagement(self, delta: float) -> float:
@@ -169,7 +173,9 @@ class ProxyComputer:
         # Compute individual signals
         progress_signal = self._normalize_progress(observables.task_progress_delta)
         rework_signal = self._compute_rework_signal(observables.rework_count)
-        rejection_signal = self._compute_rejection_signal(observables.verifier_rejections)
+        rejection_signal = self._compute_rejection_signal(
+            observables.verifier_rejections
+        )
         misuse_signal = self._compute_misuse_signal(observables.tool_misuse_flags)
         engagement_signal = self._normalize_engagement(
             observables.counterparty_engagement_delta
@@ -180,10 +186,10 @@ class ProxyComputer:
 
         # Weighted combination
         v_hat = (
-            self.weights.task_progress * progress_signal +
-            self.weights.rework_penalty * rework_signal +
-            self.weights.verifier_penalty * verifier_signal +
-            self.weights.engagement_signal * engagement_signal
+            self.weights.task_progress * progress_signal
+            + self.weights.rework_penalty * rework_signal
+            + self.weights.verifier_penalty * verifier_signal
+            + self.weights.engagement_signal * engagement_signal
         )
 
         # Clamp to [-1, +1]

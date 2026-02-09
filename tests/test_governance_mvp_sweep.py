@@ -24,9 +24,7 @@ class TestTransparencyLever:
         lever = TransparencyLever(config)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.2, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.2, accepted=True)
 
         effect = lever.on_interaction(interaction, state)
         assert len(effect.reputation_deltas) == 0
@@ -41,9 +39,7 @@ class TestTransparencyLever:
         lever = TransparencyLever(config)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.8, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.8, accepted=True)
 
         effect = lever.on_interaction(interaction, state)
 
@@ -61,9 +57,7 @@ class TestTransparencyLever:
         lever = TransparencyLever(config)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.2, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.2, accepted=True)
 
         effect = lever.on_interaction(interaction, state)
 
@@ -80,9 +74,7 @@ class TestTransparencyLever:
         lever = TransparencyLever(config)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.2, accepted=False
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.2, accepted=False)
 
         effect = lever.on_interaction(interaction, state)
         assert len(effect.reputation_deltas) == 0
@@ -97,9 +89,7 @@ class TestTransparencyLever:
         lever = TransparencyLever(config)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.5, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.5, accepted=True)
 
         effect = lever.on_interaction(interaction, state)
         assert effect.reputation_deltas.get("agent_1", 0.0) == pytest.approx(0.0)
@@ -107,9 +97,7 @@ class TestTransparencyLever:
     def test_higher_rate_stronger_effect(self):
         """Higher bonus rate should produce stronger reputation delta."""
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.8, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.8, accepted=True)
 
         config_low = GovernanceConfig(
             transparency_enabled=True,
@@ -126,9 +114,8 @@ class TestTransparencyLever:
         effect_low = lever_low.on_interaction(interaction, state)
         effect_high = lever_high.on_interaction(interaction, state)
 
-        assert (
-            abs(effect_high.reputation_deltas["agent_1"])
-            > abs(effect_low.reputation_deltas["agent_1"])
+        assert abs(effect_high.reputation_deltas["agent_1"]) > abs(
+            effect_low.reputation_deltas["agent_1"]
         )
 
 
@@ -144,9 +131,7 @@ class TestModeratorLever:
         lever = ModeratorLever(config, seed=42)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.1, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.1, accepted=True)
 
         effect = lever.on_interaction(interaction, state)
         assert effect.cost_a == 0.0
@@ -163,9 +148,7 @@ class TestModeratorLever:
         lever = ModeratorLever(config, seed=42)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.2, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.2, accepted=True)
 
         effect = lever.on_interaction(interaction, state)
 
@@ -185,9 +168,7 @@ class TestModeratorLever:
         lever = ModeratorLever(config, seed=42)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.7, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.7, accepted=True)
 
         effect = lever.on_interaction(interaction, state)
 
@@ -207,9 +188,7 @@ class TestModeratorLever:
         lever = ModeratorLever(config, seed=42)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.3, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.3, accepted=True)
 
         effect = lever.on_interaction(interaction, state)
 
@@ -232,9 +211,7 @@ class TestModeratorLever:
         n_trials = 100
 
         for _ in range(n_trials):
-            interaction = SoftInteraction(
-                initiator="agent_1", p=0.3, accepted=True
-            )
+            interaction = SoftInteraction(initiator="agent_1", p=0.3, accepted=True)
             effect = lever.on_interaction(interaction, state)
             if effect.details.get("reviewed", False):
                 review_count += 1
@@ -251,9 +228,7 @@ class TestModeratorLever:
         lever = ModeratorLever(config, seed=42)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.1, accepted=False
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.1, accepted=False)
 
         effect = lever.on_interaction(interaction, state)
         assert effect.cost_a == 0.0
@@ -326,9 +301,7 @@ class TestNewLeversInEngine:
         engine = GovernanceEngine(config)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.8, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.8, accepted=True)
 
         effect = engine.apply_interaction(interaction, state)
 
@@ -345,9 +318,7 @@ class TestNewLeversInEngine:
         engine = GovernanceEngine(config, seed=42)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.2, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.2, accepted=True)
 
         effect = engine.apply_interaction(interaction, state)
 
@@ -366,9 +337,7 @@ class TestNewLeversInEngine:
         engine = GovernanceEngine(config, seed=42)
 
         state = EnvState()
-        interaction = SoftInteraction(
-            initiator="agent_1", p=0.3, accepted=True
-        )
+        interaction = SoftInteraction(initiator="agent_1", p=0.3, accepted=True)
 
         effect = engine.apply_interaction(interaction, state)
 

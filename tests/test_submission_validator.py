@@ -21,15 +21,15 @@ class TestValidationResult:
         assert result.passed is True
 
     def test_passed_with_warnings_only(self):
-        result = ValidationResult(issues=[
-            ValidationIssue(Severity.WARNING, "TEST", "test warning")
-        ])
+        result = ValidationResult(
+            issues=[ValidationIssue(Severity.WARNING, "TEST", "test warning")]
+        )
         assert result.passed is True
 
     def test_failed_with_errors(self):
-        result = ValidationResult(issues=[
-            ValidationIssue(Severity.ERROR, "TEST", "test error")
-        ])
+        result = ValidationResult(
+            issues=[ValidationIssue(Severity.ERROR, "TEST", "test error")]
+        )
         assert result.passed is False
 
     def test_quality_score_empty(self):
@@ -240,7 +240,9 @@ that adjust friction based on real-time quality signals.
         paper = Paper(
             title="Test Paper",
             abstract="Test abstract " * 20,
-            source=r"\documentclass{article}\begin{document}" + "x" * 4000 + r"\end{document}",
+            source=r"\documentclass{article}\begin{document}"
+            + "x" * 4000
+            + r"\end{document}",
         )
         result = validator.validate(paper)
         assert any(i.code == "MISSING_SECTIONS" for i in result.errors())
@@ -258,7 +260,9 @@ that adjust friction based on real-time quality signals.
         paper = Paper(
             title="Test Paper",
             abstract="Test abstract " * 20,
-            source=r"\documentclass{article}\begin{document}\section{Introduction}\section{Methods}\section{Results}\section{Conclusion}" + "x" * 4000 + r"\end{document}",
+            source=r"\documentclass{article}\begin{document}\section{Introduction}\section{Methods}\section{Results}\section{Conclusion}"
+            + "x" * 4000
+            + r"\end{document}",
             categories=[],
         )
         result = validator.validate(paper)
@@ -330,7 +334,8 @@ class TestAgentxivValidator:
     @pytest.fixture
     def valid_markdown_paper(self):
         """A valid Markdown paper for agentxiv."""
-        content = """
+        content = (
+            """
 # Research on Multi-Agent Safety
 
 ## Introduction
@@ -369,7 +374,9 @@ The implications for deployed systems are significant.
 
 - SWARM: System-Wide Assessment of Risk in Multi-Agent Systems
 - Prior work on distributed governance mechanisms
-""" + "\n\nAdditional content for length requirements. " * 50  # Padding for length
+"""
+            + "\n\nAdditional content for length requirements. " * 50
+        )  # Padding for length
         return Paper(
             title="Governance Mechanisms for Multi-Agent Safety",
             abstract="We study governance mechanisms in multi-agent systems. " * 5,

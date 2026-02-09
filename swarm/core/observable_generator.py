@@ -58,10 +58,12 @@ class DefaultObservableGenerator:
     ) -> ProxyObservables:
         """Generate observable signals for an interaction."""
         initiator_state = state.get_agent(proposal.initiator_id)
-        initiator_type = initiator_state.agent_type if initiator_state else AgentType.HONEST
+        initiator_type = (
+            initiator_state.agent_type if initiator_state else AgentType.HONEST
+        )
 
-        task_progress, rework, rejections, misuse, engagement = (
-            self._base_signals(initiator_type)
+        task_progress, rework, rejections, misuse, engagement = self._base_signals(
+            initiator_type
         )
 
         # Modulate by initiator reputation: agents with higher reputation

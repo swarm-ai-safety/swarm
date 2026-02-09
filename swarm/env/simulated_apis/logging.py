@@ -16,7 +16,9 @@ def _utc_now_iso() -> str:
 
 def _stable_json_dumps(payload: Dict[str, Any]) -> str:
     # Stable hashing for provenance: sorted keys, no whitespace.
-    return json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return json.dumps(
+        payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    )
 
 
 def compute_event_hash(payload: Dict[str, Any]) -> str:
@@ -96,4 +98,3 @@ class SimApiEpisodeLog:
         with open(path, "w", encoding="utf-8") as f:
             for e in self._events:
                 f.write(_stable_json_dumps(e.to_dict()) + "\n")
-

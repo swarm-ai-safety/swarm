@@ -148,8 +148,7 @@ def generate_mixed_batch(
 
     benign = generate_benign_batch(benign_count, seed=seed)
     toxic = generate_toxic_batch(
-        toxic_count,
-        seed=seed + 1000 if seed is not None else None
+        toxic_count, seed=seed + 1000 if seed is not None else None
     )
 
     # Interleave and shuffle
@@ -229,7 +228,8 @@ def generate_adversarial_scenario(
 
         interaction = SoftInteraction(
             interaction_id=str(uuid.uuid4()),
-            timestamp=base_time + timedelta(
+            timestamp=base_time
+            + timedelta(
                 seconds=burst_start + i * 0.5  # Rapid fire
             ),
             initiator=f"adversary_{random.randint(1, 3)}",
@@ -329,6 +329,7 @@ def generate_from_observables(
         proxy_computer = ProxyComputer()
 
     if acceptance_rule is None:
+
         def acceptance_rule(p: float) -> bool:
             return p > 0.5
 

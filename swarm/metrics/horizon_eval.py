@@ -38,6 +38,7 @@ from swarm.models.interaction import SoftInteraction
 # Configuration
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class HorizonEvalConfig:
     """Configuration for multi-agent horizon evaluation.
@@ -69,6 +70,7 @@ class HorizonEvalConfig:
 # ---------------------------------------------------------------------------
 # Result containers
 # ---------------------------------------------------------------------------
+
 
 @dataclass
 class HorizonEvalResult:
@@ -124,6 +126,7 @@ class HorizonEvalResult:
 # ---------------------------------------------------------------------------
 # Main evaluator
 # ---------------------------------------------------------------------------
+
 
 class SystemHorizonEvaluator:
     """Evaluate emergent horizon properties of a multi-agent system.
@@ -203,7 +206,8 @@ class SystemHorizonEvaluator:
 
         # ---- Variance dominance ----
         vdi, hot_mess_count = self._variance_dominance(
-            payoff_series, interactions_by_epoch,
+            payoff_series,
+            interactions_by_epoch,
         )
 
         # ---- Chaining ----
@@ -234,7 +238,8 @@ class SystemHorizonEvaluator:
     # ------------------------------------------------------------------
 
     def _quality_series(
-        self, by_epoch: Sequence[List[SoftInteraction]],
+        self,
+        by_epoch: Sequence[List[SoftInteraction]],
     ) -> List[float]:
         """Mean quality (E[p]) per epoch."""
         series: List[float] = []
@@ -246,7 +251,8 @@ class SystemHorizonEvaluator:
         return series
 
     def _payoff_series(
-        self, by_epoch: Sequence[List[SoftInteraction]],
+        self,
+        by_epoch: Sequence[List[SoftInteraction]],
     ) -> List[float]:
         """Mean total welfare per epoch (accepted interactions only)."""
         series: List[float] = []
@@ -260,7 +266,8 @@ class SystemHorizonEvaluator:
         return series
 
     def _harm_series(
-        self, by_epoch: Sequence[List[SoftInteraction]],
+        self,
+        by_epoch: Sequence[List[SoftInteraction]],
     ) -> List[float]:
         """Total expected harm per epoch (accepted interactions)."""
         series: List[float] = []
@@ -271,7 +278,8 @@ class SystemHorizonEvaluator:
         return series
 
     def _quality_gap_series(
-        self, by_epoch: Sequence[List[SoftInteraction]],
+        self,
+        by_epoch: Sequence[List[SoftInteraction]],
     ) -> List[float]:
         """Quality gap (E[p|accepted] - E[p|rejected]) per epoch."""
         series: List[float] = []
@@ -279,10 +287,9 @@ class SystemHorizonEvaluator:
             accepted = [i for i in epoch if i.accepted]
             rejected = [i for i in epoch if not i.accepted]
             if accepted and rejected:
-                gap = (
-                    sum(i.p for i in accepted) / len(accepted)
-                    - sum(i.p for i in rejected) / len(rejected)
-                )
+                gap = sum(i.p for i in accepted) / len(accepted) - sum(
+                    i.p for i in rejected
+                ) / len(rejected)
                 series.append(gap)
             else:
                 series.append(0.0)
@@ -313,7 +320,7 @@ class SystemHorizonEvaluator:
 
         acf: List[float] = []
         for lag in range(1, min(max_lag, n - 1) + 1):
-            cov = float(np.mean((arr[:n - lag] - mean) * (arr[lag:] - mean)))
+            cov = float(np.mean((arr[: n - lag] - mean) * (arr[lag:] - mean)))
             acf.append(cov / var)
         return acf
 
@@ -340,7 +347,7 @@ class SystemHorizonEvaluator:
         for k, r in enumerate(acf):
             if r <= 0:
                 break
-            total += (gamma ** k) * r
+            total += (gamma**k) * r
         return total
 
     def _horizon_amplification(self, effective_horizon: float) -> float:
@@ -371,7 +378,8 @@ class SystemHorizonEvaluator:
     # ------------------------------------------------------------------
 
     def _adverse_selection_drift(
-        self, quality_gap_series: List[float],
+        self,
+        quality_gap_series: List[float],
     ) -> Tuple[float, str]:
         """Detect systematic worsening of adverse selection over time.
 
@@ -496,7 +504,8 @@ class SystemHorizonEvaluator:
                 # Follow handoffs
                 while current_cp in initiated_by:
                     next_interactions = [
-                        x for x in initiated_by[current_cp]
+                        x
+                        for x in initiated_by[current_cp]
                         if x.interaction_id not in visited_ids
                     ]
                     if not next_interactions:
@@ -539,6 +548,7 @@ class SystemHorizonEvaluator:
 # Convenience: analyse a flat list with epoch boundaries
 # ---------------------------------------------------------------------------
 
+
 def group_by_epoch(
     interactions: List[SoftInteraction],
     n_epochs: int,
@@ -551,9 +561,7 @@ def group_by_epoch(
     """
     # Try metadata-based grouping first
     grouped: Dict[int, List[SoftInteraction]] = {e: [] for e in range(n_epochs)}
-    has_epoch_meta = all(
-        isinstance(i.metadata.get("epoch"), int) for i in interactions
-    )
+    has_epoch_meta = all(isinstance(i.metadata.get("epoch"), int) for i in interactions)
 
     if has_epoch_meta and interactions:
         for inter in interactions:

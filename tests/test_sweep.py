@@ -175,7 +175,9 @@ class TestSweepRunner:
         config = SweepConfig(
             base_scenario=base_scenario,
             parameters=[
-                SweepParameter(name="governance.transaction_tax_rate", values=[0.0, 0.1]),
+                SweepParameter(
+                    name="governance.transaction_tax_rate", values=[0.0, 0.1]
+                ),
             ],
             runs_per_config=1,
         )
@@ -198,7 +200,9 @@ class TestSweepRunner:
         config = SweepConfig(
             base_scenario=base_scenario,
             parameters=[
-                SweepParameter(name="governance.transaction_tax_rate", values=[0.0, 0.1]),
+                SweepParameter(
+                    name="governance.transaction_tax_rate", values=[0.0, 0.1]
+                ),
             ],
             runs_per_config=1,
         )
@@ -213,6 +217,7 @@ class TestSweepRunner:
 
             # Read and verify
             import csv
+
             with open(path) as f:
                 reader = csv.DictReader(f)
                 rows = list(reader)
@@ -234,7 +239,9 @@ class TestSweepRunner:
         config = SweepConfig(
             base_scenario=base_scenario,
             parameters=[
-                SweepParameter(name="governance.transaction_tax_rate", values=[0.0, 0.1]),
+                SweepParameter(
+                    name="governance.transaction_tax_rate", values=[0.0, 0.1]
+                ),
             ],
             runs_per_config=2,
         )
@@ -274,7 +281,9 @@ class TestParameterApplication:
             parameters=[
                 SweepParameter(name="governance.transaction_tax_rate", values=[0.15]),
                 SweepParameter(name="governance.staking_enabled", values=[True]),
-                SweepParameter(name="governance.circuit_breaker_enabled", values=[True]),
+                SweepParameter(
+                    name="governance.circuit_breaker_enabled", values=[True]
+                ),
             ],
             runs_per_config=1,
         )

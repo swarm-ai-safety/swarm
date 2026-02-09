@@ -28,13 +28,15 @@ def progress(current: int, total: int, params: dict) -> None:
 def main():
     parser = argparse.ArgumentParser(description="Run parameter sweep")
     parser.add_argument(
-        "--output", "-o",
+        "--output",
+        "-o",
         type=Path,
         default=Path("logs/sweep_results.csv"),
         help="Output CSV path",
     )
     parser.add_argument(
-        "--scenario", "-s",
+        "--scenario",
+        "-s",
         type=Path,
         default=Path("scenarios/baseline.yaml"),
         help="Base scenario file",
@@ -96,7 +98,9 @@ def main():
     print()
 
     # Print table
-    print(f"{'Tax Rate':<10} {'Circuit':<10} {'Welfare':<12} {'Toxicity':<12} {'Frozen':<8} {'Honest':<12} {'Adversarial':<12}")
+    print(
+        f"{'Tax Rate':<10} {'Circuit':<10} {'Welfare':<12} {'Toxicity':<12} {'Frozen':<8} {'Honest':<12} {'Adversarial':<12}"
+    )
     print("-" * 86)
 
     for s in summary["summaries"]:

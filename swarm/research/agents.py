@@ -288,17 +288,23 @@ class LiteratureAgent(ResearchAgent):
 
         # Exact token overlap
         title_token_overlap = len(query_terms & title_terms) / max(len(query_terms), 1)
-        abstract_token_overlap = len(query_terms & abstract_terms) / max(len(query_terms), 1)
+        abstract_token_overlap = len(query_terms & abstract_terms) / max(
+            len(query_terms), 1
+        )
 
         # Substring matching for multi-word and hyphenated terms
         # Check if query fragments (bigrams) appear as substrings
         query_words = query_lower.split()
         bigrams = [
-            f"{query_words[i]} {query_words[i+1]}"
+            f"{query_words[i]} {query_words[i + 1]}"
             for i in range(len(query_words) - 1)
         ]
-        bigram_hits_title = sum(1 for bg in bigrams if bg in title_lower) / max(len(bigrams), 1)
-        bigram_hits_abstract = sum(1 for bg in bigrams if bg in abstract_lower) / max(len(bigrams), 1)
+        bigram_hits_title = sum(1 for bg in bigrams if bg in title_lower) / max(
+            len(bigrams), 1
+        )
+        bigram_hits_abstract = sum(1 for bg in bigrams if bg in abstract_lower) / max(
+            len(bigrams), 1
+        )
 
         # Weighted combination
         token_score = 0.6 * title_token_overlap + 0.4 * abstract_token_overlap
@@ -314,7 +320,7 @@ class LiteratureAgent(ResearchAgent):
             # Look for "future work", "open question", etc.
             if "future" in source.abstract.lower() or "open" in source.abstract.lower():
                 follow_ups.append(f"Extensions of {source.title[:50]}")
-        return follow_ups[:self.breadth]
+        return follow_ups[: self.breadth]
 
     def _identify_gaps(self, sources: list[Source]) -> list[str]:
         """Identify research gaps from literature."""
@@ -324,14 +330,23 @@ class LiteratureAgent(ResearchAgent):
             gaps.append("Limited prior work in this area")
 
         # Check for recency
-        recent = [s for s in sources if (datetime.now(timezone.utc) - s.date).days < 180]
+        recent = [
+            s for s in sources if (datetime.now(timezone.utc) - s.date).days < 180
+        ]
         if len(recent) < len(sources) * 0.2:
             gaps.append("Most work is not recent; field may need updating")
 
         # Check for empirical vs theoretical
-        empirical_keywords = ["experiment", "empirical", "data", "simulation", "results"]
+        empirical_keywords = [
+            "experiment",
+            "empirical",
+            "data",
+            "simulation",
+            "results",
+        ]
         empirical_count = sum(
-            1 for s in sources
+            1
+            for s in sources
             if any(k in s.abstract.lower() for k in empirical_keywords)
         )
         if empirical_count < len(sources) * 0.3:
@@ -438,12 +453,14 @@ class ExperimentAgent(ResearchAgent):
         if self.breadth == 1:
             # Single configuration: use middle values
             params = {k: v[len(v) // 2] for k, v in parameter_space.items()}
-            configs.append(ExperimentConfig(
-                name="single_config",
-                parameters=params,
-                trials=trials,
-                rounds=rounds,
-            ))
+            configs.append(
+                ExperimentConfig(
+                    name="single_config",
+                    parameters=params,
+                    trials=trials,
+                    rounds=rounds,
+                )
+            )
         else:
             # Grid sample based on breadth
             from itertools import product
@@ -452,18 +469,20 @@ class ExperimentAgent(ResearchAgent):
             sampled_space = {}
             for key, values in parameter_space.items():
                 step = max(1, len(values) // self.breadth)
-                sampled_space[key] = values[::step][:self.breadth]
+                sampled_space[key] = values[::step][: self.breadth]
 
             # Generate combinations
             keys = list(sampled_space.keys())
             for i, combo in enumerate(product(*sampled_space.values())):
                 params = dict(zip(keys, combo, strict=True))
-                configs.append(ExperimentConfig(
-                    name=f"config_{i}",
-                    parameters=params,
-                    trials=trials,
-                    rounds=rounds,
-                ))
+                configs.append(
+                    ExperimentConfig(
+                        name=f"config_{i}",
+                        parameters=params,
+                        trials=trials,
+                        rounds=rounds,
+                    )
+                )
 
         return configs
 
@@ -540,13 +559,15 @@ class AnalysisAgent(ResearchAgent):
             ci = self._compute_ci(values)
 
             mean_val: float = float(mean)
-            claims.append(Claim(
-                statement=f"Mean {metric}: {mean_val:.3f} (SD: {std:.3f})",
-                metric=metric,
-                value=mean_val,
-                confidence_interval=ci,
-                is_primary=True,
-            ))
+            claims.append(
+                Claim(
+                    statement=f"Mean {metric}: {mean_val:.3f} (SD: {std:.3f})",
+                    metric=metric,
+                    value=mean_val,
+                    confidence_interval=ci,
+                    is_primary=True,
+                )
+            )
 
         if self.depth >= 2:
             # Layer 2: Inferential statistics
@@ -577,7 +598,9 @@ class AnalysisAgent(ResearchAgent):
             limitations=limitations,
         )
 
-    def _compute_ci(self, values: list[float], confidence: float = 0.95) -> tuple[float, float]:
+    def _compute_ci(
+        self, values: list[float], confidence: float = 0.95
+    ) -> tuple[float, float]:
         """Compute confidence interval."""
         if len(values) < 2:
             return (0.0, 0.0)
@@ -601,12 +624,18 @@ class AnalysisAgent(ResearchAgent):
             for param_name, param_value in result.config.parameters.items():
                 for metric, value in result.metrics.items():
                     key = f"{param_name}_{metric}"
-                    param_groups.setdefault(key, {}).setdefault(param_value, []).append(value)
+                    param_groups.setdefault(key, {}).setdefault(param_value, []).append(
+                        value
+                    )
 
         # Run t-tests between groups
         for key, groups in param_groups.items():
             values_list = list(groups.values())
-            if len(values_list) >= 2 and len(values_list[0]) >= 2 and len(values_list[1]) >= 2:
+            if (
+                len(values_list) >= 2
+                and len(values_list[0]) >= 2
+                and len(values_list[1]) >= 2
+            ):
                 stats_mod = _require_stats()
                 t_stat, p_value = stats_mod.ttest_ind(values_list[0], values_list[1])
 
@@ -635,9 +664,13 @@ class AnalysisAgent(ResearchAgent):
         param_metric_groups: dict[str, dict[Any, dict[str, list[float]]]] = {}
         for result in results.results:
             for param_name, param_value in result.config.parameters.items():
-                param_metric_groups.setdefault(param_name, {}).setdefault(param_value, {})
+                param_metric_groups.setdefault(param_name, {}).setdefault(
+                    param_value, {}
+                )
                 for metric, value in result.metrics.items():
-                    param_metric_groups[param_name][param_value].setdefault(metric, []).append(value)
+                    param_metric_groups[param_name][param_value].setdefault(
+                        metric, []
+                    ).append(value)
 
         # For each metric, find the parameter that produces the largest effect
         for metric in metrics_data:
@@ -655,7 +688,10 @@ class AnalysisAgent(ResearchAgent):
                     g2 = group_values[-1]
                     if len(g1) >= 2 and len(g2) >= 2:
                         pooled_std = np.sqrt(
-                            ((len(g1) - 1) * np.var(g1, ddof=1) + (len(g2) - 1) * np.var(g2, ddof=1))
+                            (
+                                (len(g1) - 1) * np.var(g1, ddof=1)
+                                + (len(g2) - 1) * np.var(g2, ddof=1)
+                            )
                             / (len(g1) + len(g2) - 2)
                         )
                         if pooled_std > 0:
@@ -677,7 +713,7 @@ class AnalysisAgent(ResearchAgent):
         metrics = list(metrics_data.keys())
 
         for i, m1 in enumerate(metrics):
-            for m2 in metrics[i + 1:]:
+            for m2 in metrics[i + 1 :]:
                 v1 = metrics_data[m1]
                 v2 = metrics_data[m2]
                 if len(v1) == len(v2) and len(v1) >= 3:
@@ -697,12 +733,14 @@ class AnalysisAgent(ResearchAgent):
 
         # Simple comparison based on source count
         if literature.source_count > 10:
-            claims.append(Claim(
-                statement="Results are consistent with substantial prior literature",
-                metric="literature_support",
-                value=literature.source_count,
-                confidence_interval=(0, 0),
-            ))
+            claims.append(
+                Claim(
+                    statement="Results are consistent with substantial prior literature",
+                    metric="literature_support",
+                    value=literature.source_count,
+                    confidence_interval=(0, 0),
+                )
+            )
 
         return claims
 
@@ -720,9 +758,13 @@ class AnalysisAgent(ResearchAgent):
         if results.parameter_coverage < 0.5:
             limitations.append("Parameter space not fully explored")
 
-        small_effects = [c for c in claims if c.effect_size and abs(c.effect_size) < 0.3]
+        small_effects = [
+            c for c in claims if c.effect_size and abs(c.effect_size) < 0.3
+        ]
         if small_effects:
-            limitations.append("Some effects are small and may not be practically significant")
+            limitations.append(
+                "Some effects are small and may not be practically significant"
+            )
 
         return limitations
 
@@ -786,7 +828,9 @@ class WritingAgent(ResearchAgent):
         if hypothesis.lower().startswith(("novel ", "empirical ", "extension ")):
             problem = f"{hypothesis} remains an open challenge."
         else:
-            problem = f"Understanding whether {hypothesis.lower()} remains an open challenge."
+            problem = (
+                f"Understanding whether {hypothesis.lower()} remains an open challenge."
+            )
 
         # Sentence 2: Method
         method = "We conduct systematic simulations using the SWARM framework."
@@ -846,7 +890,9 @@ class WritingAgent(ResearchAgent):
 
         # Methods
         sections.append(r"\section{Methods}")
-        sections.append(f"We ran {results.total_trials} trials across {len(results.configs)} configurations.")
+        sections.append(
+            f"We ran {results.total_trials} trials across {len(results.configs)} configurations."
+        )
         sections.append(f"Parameter coverage: {results.parameter_coverage:.1%}.")
         sections.append("")
 
@@ -871,7 +917,9 @@ class WritingAgent(ResearchAgent):
         if self.depth >= 3 and analysis.effect_sizes:
             sections.append(r"\subsection{Effect Sizes}")
             for metric, es in analysis.effect_sizes.items():
-                size_label = "small" if abs(es) < 0.5 else "medium" if abs(es) < 0.8 else "large"
+                size_label = (
+                    "small" if abs(es) < 0.5 else "medium" if abs(es) < 0.8 else "large"
+                )
                 sections.append(f"{metric}: Cohen's d = {es:.3f} ({size_label})")
             sections.append("")
 
@@ -889,7 +937,9 @@ class WritingAgent(ResearchAgent):
         # Reproducibility (depth >= 3)
         if self.depth >= 3:
             sections.append(r"\section*{Reproducibility}")
-            sections.append("Code and configurations available at: github.com/swarm-ai-safety/swarm")
+            sections.append(
+                "Code and configurations available at: github.com/swarm-ai-safety/swarm"
+            )
             sections.append("")
 
         sections.append(r"\end{document}")
@@ -929,7 +979,9 @@ class ReviewAgent(ResearchAgent):
         critiques.extend(self._check_completeness(paper, analysis))
 
         # Determine recommendation
-        high_severity = len([c for c in critiques if c.severity in ("high", "critical")])
+        high_severity = len(
+            [c for c in critiques if c.severity in ("high", "critical")]
+        )
         medium_severity = len([c for c in critiques if c.severity == "medium"])
 
         if high_severity > 0:
@@ -953,31 +1005,39 @@ class ReviewAgent(ResearchAgent):
         p_values = [c.p_value for c in analysis.claims if c.p_value]
         marginal = [p for p in p_values if 0.04 < p < 0.06]
         if len(marginal) > len(p_values) * 0.3:
-            critiques.append(Critique(
-                severity="high",
-                category="statistics",
-                issue="Multiple p-values near 0.05 threshold suggests potential p-hacking",
-                suggestion="Pre-register hypotheses or use stricter threshold",
-            ))
+            critiques.append(
+                Critique(
+                    severity="high",
+                    category="statistics",
+                    issue="Multiple p-values near 0.05 threshold suggests potential p-hacking",
+                    suggestion="Pre-register hypotheses or use stricter threshold",
+                )
+            )
 
         # Check effect sizes
-        small_effects = [c for c in analysis.claims if c.effect_size and abs(c.effect_size) < 0.2]
+        small_effects = [
+            c for c in analysis.claims if c.effect_size and abs(c.effect_size) < 0.2
+        ]
         if len(small_effects) > len(analysis.claims) * 0.5:
-            critiques.append(Critique(
-                severity="medium",
-                category="statistics",
-                issue="Many small effect sizes - practical significance unclear",
-                suggestion="Discuss practical implications of small effects",
-            ))
+            critiques.append(
+                Critique(
+                    severity="medium",
+                    category="statistics",
+                    issue="Many small effect sizes - practical significance unclear",
+                    suggestion="Discuss practical implications of small effects",
+                )
+            )
 
         # Check CI coverage
         if not analysis.all_claims_have_ci:
-            critiques.append(Critique(
-                severity="high",
-                category="statistics",
-                issue="Not all claims have confidence intervals",
-                suggestion="Add 95% CI for all reported statistics",
-            ))
+            critiques.append(
+                Critique(
+                    severity="high",
+                    category="statistics",
+                    issue="Not all claims have confidence intervals",
+                    suggestion="Add 95% CI for all reported statistics",
+                )
+            )
 
         return critiques
 
@@ -986,13 +1046,18 @@ class ReviewAgent(ResearchAgent):
         critiques = []
 
         # Check for reproducibility info
-        if "seed" not in paper.source.lower() and "reproducib" not in paper.source.lower():
-            critiques.append(Critique(
-                severity="medium",
-                category="methodology",
-                issue="No mention of random seeds or reproducibility",
-                suggestion="Document random seeds and provide reproduction instructions",
-            ))
+        if (
+            "seed" not in paper.source.lower()
+            and "reproducib" not in paper.source.lower()
+        ):
+            critiques.append(
+                Critique(
+                    severity="medium",
+                    category="methodology",
+                    issue="No mention of random seeds or reproducibility",
+                    suggestion="Document random seeds and provide reproduction instructions",
+                )
+            )
 
         return critiques
 
@@ -1006,12 +1071,14 @@ class ReviewAgent(ResearchAgent):
 
         for num in abstract_numbers:
             if num not in " ".join(claim_values) and float(num) > 1:
-                critiques.append(Critique(
-                    severity="low",
-                    category="claims",
-                    issue=f"Number {num} in abstract may not match analysis",
-                    suggestion="Verify all numbers trace to analysis",
-                ))
+                critiques.append(
+                    Critique(
+                        severity="low",
+                        category="claims",
+                        issue=f"Number {num} in abstract may not match analysis",
+                        suggestion="Verify all numbers trace to analysis",
+                    )
+                )
                 break  # Only flag once
 
         return critiques
@@ -1021,20 +1088,24 @@ class ReviewAgent(ResearchAgent):
         critiques = []
 
         if not analysis.limitations:
-            critiques.append(Critique(
-                severity="medium",
-                category="completeness",
-                issue="No limitations discussed",
-                suggestion="Add limitations section",
-            ))
+            critiques.append(
+                Critique(
+                    severity="medium",
+                    category="completeness",
+                    issue="No limitations discussed",
+                    suggestion="Add limitations section",
+                )
+            )
 
         if "future" not in paper.source.lower():
-            critiques.append(Critique(
-                severity="low",
-                category="completeness",
-                issue="No future work discussed",
-                suggestion="Add future directions",
-            ))
+            critiques.append(
+                Critique(
+                    severity="low",
+                    category="completeness",
+                    issue="No future work discussed",
+                    suggestion="Add future directions",
+                )
+            )
 
         return critiques
 
@@ -1064,22 +1135,26 @@ class CritiqueAgent(ResearchAgent):
         alternatives = self._generate_alternatives(hypothesis)
         for alt in alternatives:
             if self._consistent_with_data(alt, results, analysis):
-                critiques.append(Critique(
-                    severity="medium",
-                    category="methodology",
-                    issue=f"Alternative explanation consistent with data: {alt}",
-                    suggestion="Run additional experiments to distinguish hypotheses",
-                ))
+                critiques.append(
+                    Critique(
+                        severity="medium",
+                        category="methodology",
+                        issue=f"Alternative explanation consistent with data: {alt}",
+                        suggestion="Run additional experiments to distinguish hypotheses",
+                    )
+                )
 
         # Look for confounds
         confounds = self._identify_confounds(results)
         for confound in confounds:
-            critiques.append(Critique(
-                severity="medium",
-                category="methodology",
-                issue=f"Potential confound: {confound}",
-                suggestion="Control for this variable or discuss as limitation",
-            ))
+            critiques.append(
+                Critique(
+                    severity="medium",
+                    category="methodology",
+                    issue=f"Potential confound: {confound}",
+                    suggestion="Control for this variable or discuss as limitation",
+                )
+            )
 
         # Check boundary conditions
         boundary_issues = self._check_boundaries(results, analysis)
@@ -1142,12 +1217,14 @@ class CritiqueAgent(ResearchAgent):
         for claim in analysis.claims:
             if claim.value < 0 or claim.value > 1:
                 if "toxicity" in claim.metric or "probability" in claim.metric:
-                    critiques.append(Critique(
-                        severity="high",
-                        category="methodology",
-                        issue=f"{claim.metric} out of expected [0,1] range",
-                        suggestion="Verify metric computation",
-                    ))
+                    critiques.append(
+                        Critique(
+                            severity="high",
+                            category="methodology",
+                            issue=f"{claim.metric} out of expected [0,1] range",
+                            suggestion="Verify metric computation",
+                        )
+                    )
 
         return critiques
 

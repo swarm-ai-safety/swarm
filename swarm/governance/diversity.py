@@ -41,9 +41,7 @@ class DiversityMetrics:
     mean_correlation: float = 0.0
 
     # Per-type-pair correlation matrix rho_{k,l}
-    type_correlation_matrix: Dict[Tuple[str, str], float] = field(
-        default_factory=dict
-    )
+    type_correlation_matrix: Dict[Tuple[str, str], float] = field(default_factory=dict)
 
     # Shannon entropy of the population mix
     entropy: float = 0.0
@@ -221,9 +219,7 @@ class DiversityDefenseLever(GovernanceLever):
                         )
                         pair_corrs.append(rho)
                 type_corr[(tk, tl)] = (
-                    sum(pair_corrs) / len(pair_corrs)
-                    if pair_corrs
-                    else 0.0
+                    sum(pair_corrs) / len(pair_corrs) if pair_corrs else 0.0
                 )
 
         # Mix-weighted mean: rho_bar = sum_k,l x_k x_l rho_{k,l}
@@ -231,14 +227,10 @@ class DiversityDefenseLever(GovernanceLever):
         # error records don't dilute the correlation estimate.
         mix = self.compute_population_mix(self._agent_types)
         types_with_history = set(types)
-        active_total = sum(
-            w for t, w in mix.items() if t in types_with_history
-        )
+        active_total = sum(w for t, w in mix.items() if t in types_with_history)
         if active_total > 0.0:
             mix = {
-                t: w / active_total
-                for t, w in mix.items()
-                if t in types_with_history
+                t: w / active_total for t, w in mix.items() if t in types_with_history
             }
         rho_bar = 0.0
         for (tk, tl), rho_kl in type_corr.items():
@@ -270,11 +262,7 @@ class DiversityDefenseLever(GovernanceLever):
         """
         if n_agents < 1:
             return 0.0
-        return (
-            mean_error
-            * (1 - mean_error)
-            * (1 + (n_agents - 1) * mean_correlation)
-        )
+        return mean_error * (1 - mean_error) * (1 + (n_agents - 1) * mean_correlation)
 
     @staticmethod
     def compute_disagreement_rate(
@@ -311,9 +299,7 @@ class DiversityDefenseLever(GovernanceLever):
 
     def _prune_stale_agents(self, state: EnvState) -> None:
         """Remove error history for agents no longer in the environment."""
-        stale = [
-            aid for aid in self._error_history if aid not in state.agents
-        ]
+        stale = [aid for aid in self._error_history if aid not in state.agents]
         for aid in stale:
             del self._error_history[aid]
 
@@ -326,9 +312,7 @@ class DiversityDefenseLever(GovernanceLever):
         entropy = self.compute_shannon_entropy(mix)
 
         adversarial_types = {AgentType.ADVERSARIAL.value}
-        adv_fraction = sum(
-            mix.get(t, 0.0) for t in adversarial_types
-        )
+        adv_fraction = sum(mix.get(t, 0.0) for t in adversarial_types)
 
         window = self.config.diversity_correlation_window
         type_corr, rho_bar = self.compute_type_correlations(window)
@@ -351,12 +335,8 @@ class DiversityDefenseLever(GovernanceLever):
             entropy=entropy,
             adversarial_fraction=adv_fraction,
             risk_surrogate=risk,
-            correlation_cap_satisfied=(
-                rho_bar <= self.config.diversity_rho_max
-            ),
-            entropy_floor_satisfied=(
-                entropy >= self.config.diversity_entropy_min
-            ),
+            correlation_cap_satisfied=(rho_bar <= self.config.diversity_rho_max),
+            entropy_floor_satisfied=(entropy >= self.config.diversity_entropy_min),
             adversarial_fraction_satisfied=(
                 adv_fraction >= self.config.diversity_adversarial_fraction_min
             ),
@@ -481,9 +461,7 @@ class DiversityDefenseLever(GovernanceLever):
         # Trim to window
         window = self.config.diversity_correlation_window
         if len(self._error_history[agent_id]) > window:
-            self._error_history[agent_id] = (
-                self._error_history[agent_id][-window:]
-            )
+            self._error_history[agent_id] = self._error_history[agent_id][-window:]
 
         # Rule 4: Disagreement-triggered audit
         # Collect most recent decisions from all agents with history

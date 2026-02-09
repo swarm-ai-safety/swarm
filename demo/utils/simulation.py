@@ -46,12 +46,14 @@ def list_scenarios() -> List[Dict[str, str]]:
         if _requires_llm(data):
             continue
 
-        scenarios.append({
-            "id": data.get("scenario_id", yaml_file.stem),
-            "description": data.get("description", ""),
-            "path": str(yaml_file),
-            "filename": yaml_file.name,
-        })
+        scenarios.append(
+            {
+                "id": data.get("scenario_id", yaml_file.stem),
+                "description": data.get("description", ""),
+                "path": str(yaml_file),
+                "filename": yaml_file.name,
+            }
+        )
     return scenarios
 
 
@@ -78,6 +80,7 @@ def run_scenario(scenario_path: str, seed: Optional[int] = None) -> Dict[str, An
 
     # Reject scenarios that require LLM API keys
     import yaml
+
     with open(resolved) as f:
         raw = yaml.safe_load(f)
     if _requires_llm(raw):
@@ -114,8 +117,7 @@ def run_scenario(scenario_path: str, seed: Optional[int] = None) -> Dict[str, An
     # Wire up epoch finalization
     def on_epoch(epoch_metrics):
         agent_states = {
-            aid: orchestrator.state.get_agent(aid)
-            for aid in orchestrator._agents
+            aid: orchestrator.state.get_agent(aid) for aid in orchestrator._agents
         }
         aggregator.finalize_epoch(
             epoch=orchestrator.state.current_epoch - 1,
@@ -140,14 +142,17 @@ def run_scenario(scenario_path: str, seed: Optional[int] = None) -> Dict[str, An
     for agent_id, _agent in orchestrator._agents.items():
         state = orchestrator.state.get_agent(agent_id)
         if state:
-            agent_states.append({
-                "agent_id": agent_id,
-                "agent_type": state.agent_type.value,
-                "reputation": round(state.reputation, 2),
-                "resources": round(state.resources, 2),
-                "interactions": state.interactions_initiated + state.interactions_received,
-                "total_payoff": round(state.total_payoff, 2),
-            })
+            agent_states.append(
+                {
+                    "agent_id": agent_id,
+                    "agent_type": state.agent_type.value,
+                    "reputation": round(state.reputation, 2),
+                    "resources": round(state.resources, 2),
+                    "interactions": state.interactions_initiated
+                    + state.interactions_received,
+                    "total_payoff": round(state.total_payoff, 2),
+                }
+            )
 
     return {
         "scenario_id": scenario.scenario_id,
@@ -189,15 +194,23 @@ def run_custom(
     # Validate bounds to prevent resource exhaustion
     total_agents = n_honest + n_opportunistic + n_deceptive + n_adversarial
     if total_agents > MAX_TOTAL_AGENTS:
-        raise ValueError(f"Total agents ({total_agents}) exceeds max ({MAX_TOTAL_AGENTS})")
+        raise ValueError(
+            f"Total agents ({total_agents}) exceeds max ({MAX_TOTAL_AGENTS})"
+        )
     if total_agents < 1:
         raise ValueError("Must have at least 1 agent")
     if n_epochs > MAX_EPOCHS:
         raise ValueError(f"n_epochs ({n_epochs}) exceeds max ({MAX_EPOCHS})")
     if steps_per_epoch > MAX_STEPS_PER_EPOCH:
-        raise ValueError(f"steps_per_epoch ({steps_per_epoch}) exceeds max ({MAX_STEPS_PER_EPOCH})")
-    for name, val in [("n_honest", n_honest), ("n_opportunistic", n_opportunistic),
-                       ("n_deceptive", n_deceptive), ("n_adversarial", n_adversarial)]:
+        raise ValueError(
+            f"steps_per_epoch ({steps_per_epoch}) exceeds max ({MAX_STEPS_PER_EPOCH})"
+        )
+    for name, val in [
+        ("n_honest", n_honest),
+        ("n_opportunistic", n_opportunistic),
+        ("n_deceptive", n_deceptive),
+        ("n_adversarial", n_adversarial),
+    ]:
         if val > MAX_AGENTS_PER_TYPE:
             raise ValueError(f"{name} ({val}) exceeds max ({MAX_AGENTS_PER_TYPE})")
 
@@ -236,7 +249,7 @@ def run_custom(
 
     for agent_class, type_name, count in agent_specs:
         for i in range(count):
-            orchestrator.register_agent(agent_class(agent_id=f"{type_name}_{i+1}"))
+            orchestrator.register_agent(agent_class(agent_id=f"{type_name}_{i + 1}"))
 
     # Attach aggregator
     aggregator = MetricsAggregator()
@@ -257,8 +270,7 @@ def run_custom(
 
     def on_epoch(epoch_metrics):
         agent_states = {
-            aid: orchestrator.state.get_agent(aid)
-            for aid in orchestrator._agents
+            aid: orchestrator.state.get_agent(aid) for aid in orchestrator._agents
         }
         aggregator.finalize_epoch(
             epoch=orchestrator.state.current_epoch - 1,
@@ -282,14 +294,17 @@ def run_custom(
     for agent_id, _agent in orchestrator._agents.items():
         state = orchestrator.state.get_agent(agent_id)
         if state:
-            agent_states.append({
-                "agent_id": agent_id,
-                "agent_type": state.agent_type.value,
-                "reputation": round(state.reputation, 2),
-                "resources": round(state.resources, 2),
-                "interactions": state.interactions_initiated + state.interactions_received,
-                "total_payoff": round(state.total_payoff, 2),
-            })
+            agent_states.append(
+                {
+                    "agent_id": agent_id,
+                    "agent_type": state.agent_type.value,
+                    "reputation": round(state.reputation, 2),
+                    "resources": round(state.resources, 2),
+                    "interactions": state.interactions_initiated
+                    + state.interactions_received,
+                    "total_payoff": round(state.total_payoff, 2),
+                }
+            )
 
     return {
         "scenario_id": "custom",

@@ -16,26 +16,34 @@ class TestVerifiableCredential:
 
     def test_valid_credential(self):
         cred = VerifiableCredential(
-            issued_epoch=0, expires_epoch=10, revoked=False,
+            issued_epoch=0,
+            expires_epoch=10,
+            revoked=False,
         )
         assert cred.is_valid(5) is True
 
     def test_expired_credential(self):
         cred = VerifiableCredential(
-            issued_epoch=0, expires_epoch=10, revoked=False,
+            issued_epoch=0,
+            expires_epoch=10,
+            revoked=False,
         )
         assert cred.is_valid(10) is False
         assert cred.is_valid(15) is False
 
     def test_revoked_credential(self):
         cred = VerifiableCredential(
-            issued_epoch=0, expires_epoch=10, revoked=True,
+            issued_epoch=0,
+            expires_epoch=10,
+            revoked=True,
         )
         assert cred.is_valid(5) is False
 
     def test_no_expiry_always_valid(self):
         cred = VerifiableCredential(
-            issued_epoch=0, expires_epoch=None, revoked=False,
+            issued_epoch=0,
+            expires_epoch=None,
+            revoked=False,
         )
         assert cred.is_valid(1000) is True
 
@@ -61,20 +69,26 @@ class TestAgentIdentity:
 
     def test_has_credential(self):
         cred = VerifiableCredential(
-            claim_type="audit_pass", issued_epoch=0, expires_epoch=10,
+            claim_type="audit_pass",
+            issued_epoch=0,
+            expires_epoch=10,
         )
         identity = AgentIdentity(
-            agent_id="a1", credentials=[cred],
+            agent_id="a1",
+            credentials=[cred],
         )
         assert identity.has_credential("audit_pass", current_epoch=5) is True
         assert identity.has_credential("reputation_history", current_epoch=5) is False
 
     def test_has_credential_expired(self):
         cred = VerifiableCredential(
-            claim_type="audit_pass", issued_epoch=0, expires_epoch=5,
+            claim_type="audit_pass",
+            issued_epoch=0,
+            expires_epoch=5,
         )
         identity = AgentIdentity(
-            agent_id="a1", credentials=[cred],
+            agent_id="a1",
+            credentials=[cred],
         )
         assert identity.has_credential("audit_pass", current_epoch=10) is False
 
@@ -86,7 +100,8 @@ class TestAgentIdentity:
             expires_epoch=10,
         )
         identity = AgentIdentity(
-            agent_id="a1", credentials=[cred],
+            agent_id="a1",
+            credentials=[cred],
         )
         val = identity.get_credential_value("reputation_history", current_epoch=5)
         assert val == {"reputation": 0.8}
@@ -124,7 +139,9 @@ class TestAgentIdentity:
             for i in range(10)
         ]
         identity = AgentIdentity(
-            agent_id="a1", credentials=creds, proof_of_personhood=True,
+            agent_id="a1",
+            credentials=creds,
+            proof_of_personhood=True,
         )
         score = identity.compute_trust_score()
         assert score == 1.0
@@ -232,17 +249,13 @@ class TestIdentityRegistry:
         assert registry.create_identity("a1") is None
 
     def test_max_identities_per_entity(self):
-        registry = IdentityRegistry(
-            IdentityConfig(max_identities_per_entity=2)
-        )
+        registry = IdentityRegistry(IdentityConfig(max_identities_per_entity=2))
         assert registry.create_identity("a1", entity_id="entity_1") is not None
         assert registry.create_identity("a2", entity_id="entity_1") is not None
         assert registry.create_identity("a3", entity_id="entity_1") is None
 
     def test_pop_required(self):
-        registry = IdentityRegistry(
-            IdentityConfig(proof_of_personhood_required=True)
-        )
+        registry = IdentityRegistry(IdentityConfig(proof_of_personhood_required=True))
         assert registry.create_identity("a1", proof_of_personhood=False) is None
         assert registry.create_identity("a1", proof_of_personhood=True) is not None
 
@@ -258,9 +271,7 @@ class TestIdentityRegistry:
         assert registry.get_identity("nonexistent") is None
 
     def test_sybil_detection_identical_patterns(self):
-        registry = IdentityRegistry(
-            IdentityConfig(behavioral_similarity_threshold=0.7)
-        )
+        registry = IdentityRegistry(IdentityConfig(behavioral_similarity_threshold=0.7))
         patterns = {
             "a1": {"target_1": 10, "target_2": 5, "target_3": 3},
             "a2": {"target_1": 10, "target_2": 5, "target_3": 3},  # Identical
@@ -271,9 +282,7 @@ class TestIdentityRegistry:
         assert {"a1", "a2"} == clusters[0]
 
     def test_sybil_detection_no_clusters(self):
-        registry = IdentityRegistry(
-            IdentityConfig(behavioral_similarity_threshold=0.9)
-        )
+        registry = IdentityRegistry(IdentityConfig(behavioral_similarity_threshold=0.9))
         patterns = {
             "a1": {"target_1": 10},
             "a2": {"target_2": 10},
@@ -283,9 +292,7 @@ class TestIdentityRegistry:
         assert len(clusters) == 0
 
     def test_sybil_detection_disabled(self):
-        registry = IdentityRegistry(
-            IdentityConfig(sybil_detection_enabled=False)
-        )
+        registry = IdentityRegistry(IdentityConfig(sybil_detection_enabled=False))
         patterns = {
             "a1": {"target_1": 10},
             "a2": {"target_1": 10},

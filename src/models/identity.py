@@ -104,9 +104,7 @@ class AgentIdentity:
         if self.proof_of_personhood:
             score += 0.2
 
-        valid_creds = sum(
-            1 for c in self.credentials if c.is_valid(current_epoch)
-        )
+        valid_creds = sum(1 for c in self.credentials if c.is_valid(current_epoch))
         score += min(0.5, valid_creds * 0.1)
 
         self.trust_score = min(1.0, score)
@@ -132,8 +130,7 @@ class AgentIdentity:
             identity_cost=data.get("identity_cost", 0.0),
             creation_epoch=data.get("creation_epoch", 0),
             credentials=[
-                VerifiableCredential.from_dict(c)
-                for c in data.get("credentials", [])
+                VerifiableCredential.from_dict(c) for c in data.get("credentials", [])
             ],
             proof_of_personhood=data.get("proof_of_personhood", False),
             linked_identities=set(data.get("linked_identities", [])),
@@ -192,9 +189,7 @@ class CredentialIssuer:
         self._issued[cred.credential_id] = cred
         return cred
 
-    def verify_credential(
-        self, credential_id: str, current_epoch: int
-    ) -> bool:
+    def verify_credential(self, credential_id: str, current_epoch: int) -> bool:
         """Verify that a credential is valid and not revoked."""
         cred = self._issued.get(credential_id)
         if not cred:
@@ -411,7 +406,5 @@ class IdentityRegistry:
         """Fraction of identities with Proof-of-Personhood."""
         if not self._identities:
             return 0.0
-        verified = sum(
-            1 for i in self._identities.values() if i.proof_of_personhood
-        )
+        verified = sum(1 for i in self._identities.values() if i.proof_of_personhood)
         return verified / len(self._identities)

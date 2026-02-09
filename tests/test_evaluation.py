@@ -32,6 +32,7 @@ from swarm.evaluation.schema import REVIEW_SCHEMA, validate_review
 # Fixtures
 # ============================================================================
 
+
 @pytest.fixture
 def sample_submission():
     """A well-formed submission for testing."""
@@ -57,7 +58,10 @@ def passing_submission_data():
             {"name": "buyer", "incentive": "minimize cost", "policy": "threshold"},
             {"name": "seller", "incentive": "maximize revenue", "policy": "adaptive"},
         ],
-        "interaction_rules": {"type": "adaptive", "description": "bilateral negotiation"},
+        "interaction_rules": {
+            "type": "adaptive",
+            "description": "bilateral negotiation",
+        },
         "multi_agent_dependency": True,
         "interaction_depth": 12.5,
         # Reproducibility
@@ -78,12 +82,18 @@ def passing_submission_data():
         "topology_outcomes": {"ring": 0.80, "star": 0.85, "full": 0.90},
         # Failure modes
         "failure_modes": [
-            {"description": "Effect disappears below 3 agents", "parameter_regime": "n < 3"},
+            {
+                "description": "Effect disappears below 3 agents",
+                "parameter_regime": "n < 3",
+            },
             {"description": "Convergence fails with adversarial majority"},
         ],
         "falsification_attempts": [
             {"description": "Randomized agent ordering", "result": "effect persists"},
-            {"description": "Removed communication channel", "result": "effect disappears"},
+            {
+                "description": "Removed communication channel",
+                "result": "effect disappears",
+            },
         ],
         "adversarial_cases_explored": True,
     }
@@ -113,6 +123,7 @@ def failing_submission_data():
 # ============================================================================
 # Model Tests
 # ============================================================================
+
 
 class TestModels:
     """Tests for evaluation data models."""
@@ -202,6 +213,7 @@ class TestModels:
 # Schema Validation Tests
 # ============================================================================
 
+
 class TestSchemaValidation:
     """Tests for JSON schema validation."""
 
@@ -280,20 +292,23 @@ class TestSchemaValidation:
 # Experimental Validity Evaluator Tests
 # ============================================================================
 
+
 class TestExperimentalValidityEvaluator:
     """Tests for experimental validity evaluation."""
 
     def test_full_pass(self):
         evaluator = ExperimentalValidityEvaluator()
-        result = evaluator.evaluate({
-            "agent_roles": [
-                {"name": "a", "incentive": "i", "policy": "p"},
-                {"name": "b", "incentive": "i", "policy": "p"},
-            ],
-            "interaction_rules": {"type": "fixed", "description": "turn-based"},
-            "multi_agent_dependency": True,
-            "interaction_depth": 10.0,
-        })
+        result = evaluator.evaluate(
+            {
+                "agent_roles": [
+                    {"name": "a", "incentive": "i", "policy": "p"},
+                    {"name": "b", "incentive": "i", "policy": "p"},
+                ],
+                "interaction_rules": {"type": "fixed", "description": "turn-based"},
+                "multi_agent_dependency": True,
+                "interaction_depth": 10.0,
+            }
+        )
         assert result.score == 1.0
         assert result.checks["design_consistency"] == "pass"
         assert len(result.strengths) == 4
@@ -301,35 +316,41 @@ class TestExperimentalValidityEvaluator:
 
     def test_missing_roles(self):
         evaluator = ExperimentalValidityEvaluator()
-        result = evaluator.evaluate({
-            "agent_roles": [],
-            "interaction_rules": {"type": "adaptive", "description": "x"},
-            "multi_agent_dependency": True,
-            "interaction_depth": 5.0,
-        })
+        result = evaluator.evaluate(
+            {
+                "agent_roles": [],
+                "interaction_rules": {"type": "adaptive", "description": "x"},
+                "multi_agent_dependency": True,
+                "interaction_depth": 5.0,
+            }
+        )
         assert result.score == 0.75
         assert result.checks["design_consistency"] == "pass"
         assert any("agent roles" in c.lower() for c in result.required_changes)
 
     def test_full_fail(self):
         evaluator = ExperimentalValidityEvaluator()
-        result = evaluator.evaluate({
-            "agent_roles": [],
-            "interaction_rules": {},
-            "multi_agent_dependency": False,
-            "interaction_depth": 0,
-        })
+        result = evaluator.evaluate(
+            {
+                "agent_roles": [],
+                "interaction_rules": {},
+                "multi_agent_dependency": False,
+                "interaction_depth": 0,
+            }
+        )
         assert result.score == 0.0
         assert result.checks["design_consistency"] == "fail"
 
     def test_incomplete_agent_roles(self):
         evaluator = ExperimentalValidityEvaluator()
-        result = evaluator.evaluate({
-            "agent_roles": [{"name": "a"}],  # missing incentive and policy
-            "interaction_rules": {"type": "fixed", "description": "x"},
-            "multi_agent_dependency": True,
-            "interaction_depth": 3.0,
-        })
+        result = evaluator.evaluate(
+            {
+                "agent_roles": [{"name": "a"}],  # missing incentive and policy
+                "interaction_rules": {"type": "fixed", "description": "x"},
+                "multi_agent_dependency": True,
+                "interaction_depth": 3.0,
+            }
+        )
         # Roles incomplete, but other 3 pass -> 0.75
         assert result.score == 0.75
         assert any("missing" in w.lower() for w in result.weaknesses)
@@ -339,51 +360,60 @@ class TestExperimentalValidityEvaluator:
 # Reproducibility Evaluator Tests
 # ============================================================================
 
+
 class TestReproducibilityEvaluator:
     """Tests for reproducibility evaluation."""
 
     def test_full_pass(self):
         evaluator = ReproducibilityEvaluator()
-        result = evaluator.evaluate({
-            "entrypoint": "python run.py",
-            "random_seed_logged": True,
-            "replay_results": [1.0, 1.0, 1.0, 1.0, 1.0],
-            "reference_result": 1.0,
-            "tolerance": 0.01,
-        })
+        result = evaluator.evaluate(
+            {
+                "entrypoint": "python run.py",
+                "random_seed_logged": True,
+                "replay_results": [1.0, 1.0, 1.0, 1.0, 1.0],
+                "reference_result": 1.0,
+                "tolerance": 0.01,
+            }
+        )
         assert result.score == 1.0
         assert result.checks["replay_success_rate"] == 1.0
 
     def test_low_replay_rate(self):
         evaluator = ReproducibilityEvaluator()
-        result = evaluator.evaluate({
-            "entrypoint": "python run.py",
-            "random_seed_logged": True,
-            "replay_results": [1.0, 0.5, 0.3, 0.2, 0.1],
-            "reference_result": 1.0,
-            "tolerance": 0.05,
-        })
+        result = evaluator.evaluate(
+            {
+                "entrypoint": "python run.py",
+                "random_seed_logged": True,
+                "replay_results": [1.0, 0.5, 0.3, 0.2, 0.1],
+                "reference_result": 1.0,
+                "tolerance": 0.05,
+            }
+        )
         assert result.checks["replay_success_rate"] == 0.2
         assert result.score < 0.8
         assert any("80%" in c for c in result.required_changes)
 
     def test_no_entrypoint(self):
         evaluator = ReproducibilityEvaluator()
-        result = evaluator.evaluate({
-            "entrypoint": None,
-            "random_seed_logged": False,
-            "replay_results": [],
-        })
+        result = evaluator.evaluate(
+            {
+                "entrypoint": None,
+                "random_seed_logged": False,
+                "replay_results": [],
+            }
+        )
         assert result.score == 0.0
 
     def test_no_replay_results(self):
         evaluator = ReproducibilityEvaluator()
-        result = evaluator.evaluate({
-            "entrypoint": "python run.py",
-            "random_seed_logged": True,
-            "replay_results": [],
-            "reference_result": None,
-        })
+        result = evaluator.evaluate(
+            {
+                "entrypoint": "python run.py",
+                "random_seed_logged": True,
+                "replay_results": [],
+                "reference_result": None,
+            }
+        )
         # entrypoint=1, seed=1, replay=0 -> 2/3
         assert abs(result.score - 2 / 3) < 0.01
 
@@ -392,18 +422,21 @@ class TestReproducibilityEvaluator:
 # Artifact Integrity Evaluator Tests
 # ============================================================================
 
+
 class TestArtifactIntegrityEvaluator:
     """Tests for artifact integrity evaluation."""
 
     def test_all_resolved_with_resolver(self):
         evaluator = ArtifactIntegrityEvaluator()
-        result = evaluator.evaluate({
-            "artifacts": [
-                {"label": "data", "url": "https://example.com/data.csv"},
-                {"label": "model", "url": "https://example.com/model.bin"},
-            ],
-            "resolver": lambda url: True,
-        })
+        result = evaluator.evaluate(
+            {
+                "artifacts": [
+                    {"label": "data", "url": "https://example.com/data.csv"},
+                    {"label": "model", "url": "https://example.com/model.bin"},
+                ],
+                "resolver": lambda url: True,
+            }
+        )
         assert result.checks["artifact_resolution_rate"] == 1.0
         assert result.score > 0.9
 
@@ -415,13 +448,15 @@ class TestArtifactIntegrityEvaluator:
             call_count["n"] += 1
             return call_count["n"] <= 1  # Only first resolves
 
-        result = evaluator.evaluate({
-            "artifacts": [
-                {"label": "data", "url": "a"},
-                {"label": "model", "url": "b"},
-            ],
-            "resolver": partial_resolver,
-        })
+        result = evaluator.evaluate(
+            {
+                "artifacts": [
+                    {"label": "data", "url": "a"},
+                    {"label": "model", "url": "b"},
+                ],
+                "resolver": partial_resolver,
+            }
+        )
         assert result.checks["artifact_resolution_rate"] == 0.5
         assert any("Unresolved" in w for w in result.weaknesses)
 
@@ -430,25 +465,29 @@ class TestArtifactIntegrityEvaluator:
         content = b"test content"
         correct_hash = hashlib.sha256(content).hexdigest()
 
-        result = evaluator.evaluate({
-            "artifacts": [
-                {"label": "data", "url": "test", "sha256": correct_hash},
-            ],
-            "resolver": lambda url: True,
-            "file_resolver": lambda url: content,
-        })
+        result = evaluator.evaluate(
+            {
+                "artifacts": [
+                    {"label": "data", "url": "test", "sha256": correct_hash},
+                ],
+                "resolver": lambda url: True,
+                "file_resolver": lambda url: content,
+            }
+        )
         assert result.checks["artifact_hash_match_rate"] == 1.0
         assert any("verified" in s.lower() for s in result.strengths)
 
     def test_hash_mismatch(self):
         evaluator = ArtifactIntegrityEvaluator()
-        result = evaluator.evaluate({
-            "artifacts": [
-                {"label": "data", "url": "test", "sha256": "wrong_hash"},
-            ],
-            "resolver": lambda url: True,
-            "file_resolver": lambda url: b"actual content",
-        })
+        result = evaluator.evaluate(
+            {
+                "artifacts": [
+                    {"label": "data", "url": "test", "sha256": "wrong_hash"},
+                ],
+                "resolver": lambda url: True,
+                "file_resolver": lambda url: b"actual content",
+            }
+        )
         assert result.checks["artifact_hash_match_rate"] == 0.0
         assert any("mismatch" in w.lower() for w in result.weaknesses)
 
@@ -465,11 +504,13 @@ class TestArtifactIntegrityEvaluator:
             path = f.name
         try:
             file_hash = hashlib.sha256(b"hello").hexdigest()
-            result = evaluator.evaluate({
-                "artifacts": [
-                    {"label": "local", "url": path, "sha256": file_hash},
-                ],
-            })
+            result = evaluator.evaluate(
+                {
+                    "artifacts": [
+                        {"label": "local", "url": path, "sha256": file_hash},
+                    ],
+                }
+            )
             assert result.checks["artifact_resolution_rate"] == 1.0
             assert result.checks["artifact_hash_match_rate"] == 1.0
         finally:
@@ -480,16 +521,19 @@ class TestArtifactIntegrityEvaluator:
 # Emergence Detection Evaluator Tests
 # ============================================================================
 
+
 class TestEmergenceDetectionEvaluator:
     """Tests for emergence detection evaluation."""
 
     def test_positive_emergence(self):
         evaluator = EmergenceDetectionEvaluator()
-        result = evaluator.evaluate({
-            "multi_agent_outcome": 0.9,
-            "single_agent_outcomes": [0.5, 0.6, 0.55],
-            "topology_outcomes": {"ring": 0.8, "star": 0.9, "full": 0.95},
-        })
+        result = evaluator.evaluate(
+            {
+                "multi_agent_outcome": 0.9,
+                "single_agent_outcomes": [0.5, 0.6, 0.55],
+                "topology_outcomes": {"ring": 0.8, "star": 0.9, "full": 0.95},
+            }
+        )
         assert result.checks["emergence_delta"] == pytest.approx(0.3)
         assert result.checks["emergence_delta"] > 0
         assert result.score > 0
@@ -497,11 +541,13 @@ class TestEmergenceDetectionEvaluator:
     def test_no_emergence(self):
         """Test that negative emergence is treated as a valid finding, not a failure."""
         evaluator = EmergenceDetectionEvaluator()
-        result = evaluator.evaluate({
-            "multi_agent_outcome": 0.5,
-            "single_agent_outcomes": [0.5, 0.6],
-            "topology_outcomes": {"ring": 0.5, "star": 0.5},
-        })
+        result = evaluator.evaluate(
+            {
+                "multi_agent_outcome": 0.5,
+                "single_agent_outcomes": [0.5, 0.6],
+                "topology_outcomes": {"ring": 0.5, "star": 0.5},
+            }
+        )
         assert result.checks["emergence_delta"] < 0
         assert result.checks["emergence_test_conducted"] is True
         assert result.checks["emergence_result_type"] == "negative"
@@ -513,11 +559,13 @@ class TestEmergenceDetectionEvaluator:
     def test_zero_emergence(self):
         """Test that null emergence is treated as a valid finding."""
         evaluator = EmergenceDetectionEvaluator()
-        result = evaluator.evaluate({
-            "multi_agent_outcome": 0.6,
-            "single_agent_outcomes": [0.6],
-            "topology_outcomes": {"ring": 0.6, "star": 0.6},
-        })
+        result = evaluator.evaluate(
+            {
+                "multi_agent_outcome": 0.6,
+                "single_agent_outcomes": [0.6],
+                "topology_outcomes": {"ring": 0.6, "star": 0.6},
+            }
+        )
         assert result.checks["emergence_delta"] == 0
         assert result.checks["emergence_test_conducted"] is True
         assert result.checks["emergence_result_type"] == "null"
@@ -527,20 +575,24 @@ class TestEmergenceDetectionEvaluator:
 
     def test_missing_data(self):
         evaluator = EmergenceDetectionEvaluator()
-        result = evaluator.evaluate({
-            "multi_agent_outcome": None,
-            "single_agent_outcomes": [],
-        })
+        result = evaluator.evaluate(
+            {
+                "multi_agent_outcome": None,
+                "single_agent_outcomes": [],
+            }
+        )
         assert result.score == 0.0
         assert any("required" in c.lower() for c in result.required_changes)
 
     def test_topology_sensitivity(self):
         evaluator = EmergenceDetectionEvaluator()
-        result = evaluator.evaluate({
-            "multi_agent_outcome": 1.0,
-            "single_agent_outcomes": [0.5],
-            "topology_outcomes": {"ring": 0.5, "star": 1.0, "full": 1.5},
-        })
+        result = evaluator.evaluate(
+            {
+                "multi_agent_outcome": 1.0,
+                "single_agent_outcomes": [0.5],
+                "topology_outcomes": {"ring": 0.5, "star": 1.0, "full": 1.5},
+            }
+        )
         assert result.checks["topology_sensitivity"] > 0
         assert any("sensitivity" in s.lower() for s in result.strengths)
 
@@ -549,61 +601,71 @@ class TestEmergenceDetectionEvaluator:
 # Failure Mode Evaluator Tests
 # ============================================================================
 
+
 class TestFailureModeEvaluator:
     """Tests for failure mode evaluation."""
 
     def test_good_coverage(self):
         evaluator = FailureModeEvaluator()
-        result = evaluator.evaluate({
-            "failure_modes": [
-                {"description": "breaks below 3 agents"},
-                {"description": "convergence fails with adversaries"},
-            ],
-            "falsification_attempts": [
-                {"description": "randomize ordering", "result": "persists"},
-            ],
-            "adversarial_cases_explored": True,
-        })
+        result = evaluator.evaluate(
+            {
+                "failure_modes": [
+                    {"description": "breaks below 3 agents"},
+                    {"description": "convergence fails with adversaries"},
+                ],
+                "falsification_attempts": [
+                    {"description": "randomize ordering", "result": "persists"},
+                ],
+                "adversarial_cases_explored": True,
+            }
+        )
         assert result.score > 0.5
         assert result.checks["documented_failure_modes_count"] == 2
         assert result.checks["falsification_attempts_count"] == 1
 
     def test_no_failure_modes(self):
         evaluator = FailureModeEvaluator()
-        result = evaluator.evaluate({
-            "failure_modes": [],
-            "falsification_attempts": [],
-            "adversarial_cases_explored": False,
-        })
+        result = evaluator.evaluate(
+            {
+                "failure_modes": [],
+                "falsification_attempts": [],
+                "adversarial_cases_explored": False,
+            }
+        )
         assert result.score == 0.0
         assert result.checks["documented_failure_modes_count"] == 0
         assert any("At least one" in c for c in result.required_changes)
 
     def test_single_failure_mode(self):
         evaluator = FailureModeEvaluator()
-        result = evaluator.evaluate({
-            "failure_modes": [{"description": "fails at scale"}],
-            "falsification_attempts": [],
-            "adversarial_cases_explored": False,
-        })
+        result = evaluator.evaluate(
+            {
+                "failure_modes": [{"description": "fails at scale"}],
+                "falsification_attempts": [],
+                "adversarial_cases_explored": False,
+            }
+        )
         assert result.checks["documented_failure_modes_count"] == 1
         assert result.score > 0
 
     def test_many_falsification_attempts(self):
         evaluator = FailureModeEvaluator()
-        result = evaluator.evaluate({
-            "failure_modes": [{"description": "known failure"}],
-            "falsification_attempts": [
-                {"description": f"attempt {i}", "result": "ok"} for i in range(5)
-            ],
-            "adversarial_cases_explored": True,
-        })
+        result = evaluator.evaluate(
+            {
+                "failure_modes": [{"description": "known failure"}],
+                "falsification_attempts": [
+                    {"description": f"attempt {i}", "result": "ok"} for i in range(5)
+                ],
+                "adversarial_cases_explored": True,
+            }
+        )
         assert result.score > 0.8
 
 
 # ============================================================================
 # Rubric Tests
 # ============================================================================
+
 
 class TestAcceptanceRubric:
     """Tests for the acceptance rubric engine."""
@@ -737,6 +799,7 @@ class TestAcceptanceRubric:
 # Pipeline Tests
 # ============================================================================
 
+
 class TestReviewPipeline:
     """Tests for the review pipeline orchestrator."""
 
@@ -756,7 +819,9 @@ class TestReviewPipeline:
         assert result.verdict == Verdict.REJECT
         assert len(result.notes.required_changes) > 0
 
-    def test_pipeline_to_dict_validates(self, sample_submission, passing_submission_data):
+    def test_pipeline_to_dict_validates(
+        self, sample_submission, passing_submission_data
+    ):
         pipeline = ReviewPipeline()
         result = pipeline.run(sample_submission, passing_submission_data)
         doc = result.to_dict()
@@ -812,7 +877,11 @@ class TestReviewPipeline:
             "replay_results": [1.0],
             "reference_result": 1.0,
             "artifacts": [
-                {"label": "results", "url": "file:///data/results.json", "sha256": "abc"},
+                {
+                    "label": "results",
+                    "url": "file:///data/results.json",
+                    "sha256": "abc",
+                },
             ],
             "resolver": lambda url: True,
             "multi_agent_outcome": 0.9,
@@ -830,6 +899,7 @@ class TestReviewPipeline:
 # ============================================================================
 # Integration Tests
 # ============================================================================
+
 
 class TestIntegration:
     """End-to-end integration tests."""
@@ -879,4 +949,7 @@ class TestIntegration:
 
         # Check key fields survived
         assert restored["submission"]["title"] == sample_submission.title
-        assert restored["scores"]["experimental_validity"] == doc["scores"]["experimental_validity"]
+        assert (
+            restored["scores"]["experimental_validity"]
+            == doc["scores"]["experimental_validity"]
+        )

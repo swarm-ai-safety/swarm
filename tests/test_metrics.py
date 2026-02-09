@@ -59,7 +59,11 @@ class TestToxicityRate:
         """Toxicity should be in [0, 1]."""
         metrics = SoftMetrics()
 
-        for batch_gen in [generate_benign_batch, generate_toxic_batch, generate_mixed_batch]:
+        for batch_gen in [
+            generate_benign_batch,
+            generate_toxic_batch,
+            generate_mixed_batch,
+        ]:
             interactions = batch_gen(count=50, seed=42)
             toxicity = metrics.toxicity_rate(interactions)
             assert 0.0 <= toxicity <= 1.0
@@ -146,8 +150,7 @@ class TestSpread:
 
         # All interactions accepted
         interactions = [
-            SoftInteraction(p=p, accepted=True)
-            for p in [0.2, 0.4, 0.6, 0.8]
+            SoftInteraction(p=p, accepted=True) for p in [0.2, 0.4, 0.6, 0.8]
         ]
 
         spread = metrics.spread(interactions)
@@ -223,8 +226,8 @@ class TestParticipationByQuality:
 
         result = metrics.participation_by_quality(interactions, threshold=0.5)
 
-        assert result["high_quality_acceptance"] == pytest.approx(2/3)
-        assert result["low_quality_acceptance"] == pytest.approx(1/2)
+        assert result["high_quality_acceptance"] == pytest.approx(2 / 3)
+        assert result["low_quality_acceptance"] == pytest.approx(1 / 2)
         assert result["high_quality_count"] == 3
         assert result["low_quality_count"] == 2
 
@@ -239,8 +242,8 @@ class TestUncertainty:
         interactions = [
             SoftInteraction(p=0.45),  # Uncertain
             SoftInteraction(p=0.55),  # Uncertain
-            SoftInteraction(p=0.2),   # Not uncertain
-            SoftInteraction(p=0.8),   # Not uncertain
+            SoftInteraction(p=0.2),  # Not uncertain
+            SoftInteraction(p=0.8),  # Not uncertain
         ]
 
         uncertain = metrics.flag_uncertain(interactions, band=0.1)
@@ -376,7 +379,10 @@ class TestWelfareMetrics:
         welfare_benign = metrics.welfare_metrics(benign)
         welfare_toxic = metrics.welfare_metrics(toxic)
 
-        assert welfare_benign["avg_initiator_payoff"] > welfare_toxic["avg_initiator_payoff"]
+        assert (
+            welfare_benign["avg_initiator_payoff"]
+            > welfare_toxic["avg_initiator_payoff"]
+        )
 
 
 class TestCalibrationMetrics:
@@ -515,6 +521,7 @@ class TestInformationMetrics:
         metrics = SoftMetrics()
 
         import math
+
         interactions = [
             SoftInteraction(p=0.5, ground_truth=1),
             SoftInteraction(p=0.5, ground_truth=-1),
@@ -609,6 +616,7 @@ class TestVarianceMetrics:
         std = metrics.quality_std(interactions)
 
         import math
+
         assert std == pytest.approx(math.sqrt(variance))
 
     def test_payoff_variance_increases_with_spread(self):
@@ -616,9 +624,9 @@ class TestVarianceMetrics:
         metrics = SoftMetrics()
 
         # Narrow spread
-        narrow = [SoftInteraction(p=0.49 + i*0.02) for i in range(5)]
+        narrow = [SoftInteraction(p=0.49 + i * 0.02) for i in range(5)]
         # Wide spread
-        wide = [SoftInteraction(p=0.1 + i*0.2) for i in range(5)]
+        wide = [SoftInteraction(p=0.1 + i * 0.2) for i in range(5)]
 
         var_narrow = metrics.payoff_variance_initiator(narrow)
         var_wide = metrics.payoff_variance_initiator(wide)

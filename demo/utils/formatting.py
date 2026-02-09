@@ -92,22 +92,31 @@ def format_epoch_metrics_kpis(
     accepted = last.accepted_interactions
     total = last.total_interactions
     acc_rate = accepted / total if total > 0 else 0
-    incoherence = (
-        incoherence_series[-1]
-        if incoherence_series
-        else 0.0
-    )
+    incoherence = incoherence_series[-1] if incoherence_series else 0.0
 
-    tox_style = "success" if toxicity < 0.2 else ("warning" if toxicity < 0.4 else "danger")
+    tox_style = (
+        "success" if toxicity < 0.2 else ("warning" if toxicity < 0.4 else "danger")
+    )
     qg_style = "success" if quality_gap > 0 else "danger"
-    incoh_style = "success" if incoherence < 0.3 else ("warning" if incoherence < 0.6 else "danger")
+    incoh_style = (
+        "success"
+        if incoherence < 0.3
+        else ("warning" if incoherence < 0.6 else "danger")
+    )
 
     cards = [
         kpi_card("Toxicity Rate", f"{toxicity:.3f}", tox_style, "lower is better"),
-        kpi_card("Quality Gap", f"{quality_gap:.3f}", qg_style, "positive = good selection"),
+        kpi_card(
+            "Quality Gap", f"{quality_gap:.3f}", qg_style, "positive = good selection"
+        ),
         kpi_card("Incoherence", f"{incoherence:.3f}", incoh_style, "lower is better"),
         kpi_card("Total Welfare", f"{welfare:.1f}", "info"),
-        kpi_card("Acceptance Rate", f"{acc_rate:.1%}", "info", f"{accepted}/{total} interactions"),
+        kpi_card(
+            "Acceptance Rate",
+            f"{acc_rate:.1%}",
+            "info",
+            f"{accepted}/{total} interactions",
+        ),
     ]
     return kpi_card_css() + kpi_row(cards)
 
@@ -124,10 +133,10 @@ def agent_type_badge(agent_type: str) -> str:
 
 def scenario_description_card(result: Dict[str, Any]) -> str:
     """Render a description card for a scenario result."""
-    sid = _esc(str(result.get('scenario_id', 'Unknown')))
-    desc = _esc(str(result.get('description', '')))
-    n_agents = _esc(str(result.get('n_agents', '?')))
-    n_epochs = _esc(str(result.get('n_epochs', '?')))
+    sid = _esc(str(result.get("scenario_id", "Unknown")))
+    desc = _esc(str(result.get("description", "")))
+    n_agents = _esc(str(result.get("n_agents", "?")))
+    n_epochs = _esc(str(result.get("n_epochs", "?")))
     return f"""
     <div style="background:#f0f4f8;padding:1rem;border-radius:8px;margin-bottom:1rem;">
         <strong>{sid}</strong>

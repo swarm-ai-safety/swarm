@@ -104,9 +104,11 @@ class EventLog:
             if interaction_id and event.interaction_id != interaction_id:
                 continue
             if agent_id:
-                if event.agent_id != agent_id and \
-                   event.initiator_id != agent_id and \
-                   event.counterparty_id != agent_id:
+                if (
+                    event.agent_id != agent_id
+                    and event.initiator_id != agent_id
+                    and event.counterparty_id != agent_id
+                ):
                     continue
 
             yield event
@@ -152,13 +154,15 @@ class EventLog:
                 iid = event.interaction_id
                 if iid and iid in interactions:
                     components = event.payload.get("components", {})
-                    interactions[iid].update({
-                        "tau": components.get("tau", 0.0),
-                        "c_a": components.get("c_a", 0.0),
-                        "c_b": components.get("c_b", 0.0),
-                        "r_a": components.get("r_a", 0.0),
-                        "r_b": components.get("r_b", 0.0),
-                    })
+                    interactions[iid].update(
+                        {
+                            "tau": components.get("tau", 0.0),
+                            "c_a": components.get("c_a", 0.0),
+                            "c_b": components.get("c_b", 0.0),
+                            "r_a": components.get("r_a", 0.0),
+                            "r_b": components.get("r_b", 0.0),
+                        }
+                    )
 
         # Convert to SoftInteraction objects
         result = []

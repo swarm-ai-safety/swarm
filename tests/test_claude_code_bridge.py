@@ -283,12 +283,8 @@ class TestGovernancePolicy:
         assert budget.tool_calls_used == 0
 
     def test_budget_tracks_approvals_and_denials(self):
-        req_allowed = PermissionRequest(
-            agent_id="restricted_agent", tool_name="Read"
-        )
-        req_denied = PermissionRequest(
-            agent_id="restricted_agent", tool_name="Bash"
-        )
+        req_allowed = PermissionRequest(agent_id="restricted_agent", tool_name="Read")
+        req_denied = PermissionRequest(agent_id="restricted_agent", tool_name="Bash")
 
         self.policy.evaluate_permission(req_allowed)
         self.policy.evaluate_permission(req_denied)
@@ -368,9 +364,7 @@ class TestObservableExtraction:
 
         bridge = ClaudeCodeBridge.__new__(ClaudeCodeBridge)
         bridge._config = BridgeConfig()
-        bridge._policy = GovernancePolicy(
-            tool_allowlist={"restricted": ["Read"]}
-        )
+        bridge._policy = GovernancePolicy(tool_allowlist={"restricted": ["Read"]})
         bridge._agent_states = {}
 
         msg = MessageEvent(
@@ -410,7 +404,9 @@ class TestObservableExtraction:
         obs_no = bridge._extract_observables(no_tools, "a1")
         obs_yes = bridge._extract_observables(with_tools, "a1")
 
-        assert obs_yes.counterparty_engagement_delta > obs_no.counterparty_engagement_delta
+        assert (
+            obs_yes.counterparty_engagement_delta > obs_no.counterparty_engagement_delta
+        )
 
     def test_empty_response_negative_progress(self):
         """Empty responses should produce negative progress."""
@@ -446,10 +442,14 @@ class TestBridgeInteractionRecording:
         bridge = ClaudeCodeBridge.__new__(ClaudeCodeBridge)
         bridge._config = BridgeConfig()
         bridge._bridge_events = []
-        bridge._client = type("MockClient", (), {
-            "_dispatch_event": lambda self, e: None,
-            "_event_listeners": {},
-        })()
+        bridge._client = type(
+            "MockClient",
+            (),
+            {
+                "_dispatch_event": lambda self, e: None,
+                "_event_listeners": {},
+            },
+        )()
 
         event = BridgeEvent(
             event_type=BridgeEventType.AGENT_SPAWNED,

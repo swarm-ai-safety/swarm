@@ -78,9 +78,7 @@ class AgentState:
 
         # Update running average
         n = self.interactions_initiated
-        self.average_p_initiated = (
-            (self.average_p_initiated * (n - 1) + p) / n
-        )
+        self.average_p_initiated = (self.average_p_initiated * (n - 1) + p) / n
 
     def record_received(self, accepted: bool, p: float) -> None:
         """Record a received interaction."""
@@ -88,9 +86,7 @@ class AgentState:
 
         # Update running average
         n = self.interactions_received
-        self.average_p_received = (
-            (self.average_p_received * (n - 1) + p) / n
-        )
+        self.average_p_received = (self.average_p_received * (n - 1) + p) / n
 
     def acceptance_rate(self) -> float:
         """Fraction of initiated interactions that were accepted."""

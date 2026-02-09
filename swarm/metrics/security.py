@@ -183,8 +183,12 @@ class SecurityAnalyzer:
         # State tracking
         self._interaction_history: List[SoftInteraction] = []
         self._agent_trust_scores: Dict[str, float] = {}
-        self._content_hashes: Dict[str, List[str]] = defaultdict(list)  # hash -> agent_ids
-        self._propagation_graph: Dict[str, Set[str]] = defaultdict(set)  # content -> recipients
+        self._content_hashes: Dict[str, List[str]] = defaultdict(
+            list
+        )  # hash -> agent_ids
+        self._propagation_graph: Dict[str, Set[str]] = defaultdict(
+            set
+        )  # content -> recipients
 
     def set_agent_trust_scores(self, trust_scores: Dict[str, float]) -> None:
         """Set trust/reputation scores for agents."""
@@ -226,11 +230,10 @@ class SecurityAnalyzer:
             return SecurityReport()
 
         if agent_ids is None:
-            agent_ids = list({
-                i.initiator for i in interactions
-            } | {
-                i.counterparty for i in interactions
-            })
+            agent_ids = list(
+                {i.initiator for i in interactions}
+                | {i.counterparty for i in interactions}
+            )
 
         report = SecurityReport()
 
@@ -243,11 +246,11 @@ class SecurityAnalyzer:
 
         # Aggregate indicators
         all_indicators = (
-            injection_indicators +
-            exfil_indicators +
-            [self._pattern_to_indicator(m) for m in manipulation_patterns] +
-            [self._laundering_to_indicator(lp) for lp in laundering_paths] +
-            [self._contagion_to_indicator(c) for c in contagion_chains]
+            injection_indicators
+            + exfil_indicators
+            + [self._pattern_to_indicator(m) for m in manipulation_patterns]
+            + [self._laundering_to_indicator(lp) for lp in laundering_paths]
+            + [self._contagion_to_indicator(c) for c in contagion_chains]
         )
 
         report.threat_indicators = all_indicators
@@ -257,9 +260,13 @@ class SecurityAnalyzer:
 
         # Compute rates
         n_interactions = len(interactions)
-        report.prompt_injection_rate = len(injection_indicators) / n_interactions if n_interactions > 0 else 0.0
+        report.prompt_injection_rate = (
+            len(injection_indicators) / n_interactions if n_interactions > 0 else 0.0
+        )
         report.manipulation_rate = len(manipulation_patterns) / max(1, len(agent_ids))
-        report.laundering_rate = len(laundering_paths) / n_interactions if n_interactions > 0 else 0.0
+        report.laundering_rate = (
+            len(laundering_paths) / n_interactions if n_interactions > 0 else 0.0
+        )
         report.contagion_depth = max((c.depth for c in contagion_chains), default=0)
         report.exfiltration_attempts = len(exfil_indicators)
 
@@ -268,7 +275,8 @@ class SecurityAnalyzer:
             all_indicators, agent_ids
         )
         report.agents_flagged = {
-            agent_id for agent_id, score in report.agent_threat_scores.items()
+            agent_id
+            for agent_id, score in report.agent_threat_scores.items()
             if score >= self.manipulation_threshold
         }
 
@@ -291,16 +299,18 @@ class SecurityAnalyzer:
             injection_score = self._compute_injection_score(interaction)
 
             if injection_score >= self.injection_threshold:
-                indicators.append(ThreatIndicator(
-                    threat_type=ThreatType.PROMPT_INJECTION,
-                    severity=injection_score,
-                    source_agent=interaction.initiator,
-                    target_agents={interaction.counterparty},
-                    interaction_ids=[interaction.interaction_id],
-                    description="Potential prompt injection pattern detected",
-                    confidence=min(0.9, injection_score + 0.2),
-                    timestamp=interaction.timestamp.isoformat(),
-                ))
+                indicators.append(
+                    ThreatIndicator(
+                        threat_type=ThreatType.PROMPT_INJECTION,
+                        severity=injection_score,
+                        source_agent=interaction.initiator,
+                        target_agents={interaction.counterparty},
+                        interaction_ids=[interaction.interaction_id],
+                        description="Potential prompt injection pattern detected",
+                        confidence=min(0.9, injection_score + 0.2),
+                        timestamp=interaction.timestamp.isoformat(),
+                    )
+                )
 
         return indicators
 
@@ -391,7 +401,9 @@ class SecurityAnalyzer:
             return None
 
         success_rate = successful / len(init_interactions)
-        most_common_technique = max(set(techniques), key=techniques.count) if techniques else ""
+        most_common_technique = (
+            max(set(techniques), key=techniques.count) if techniques else ""
+        )
 
         return ManipulationPattern(
             manipulator=initiator,
@@ -416,7 +428,9 @@ class SecurityAnalyzer:
         paths = []
 
         # Build interaction graph
-        edges: Dict[str, Dict[str, List[SoftInteraction]]] = defaultdict(lambda: defaultdict(list))
+        edges: Dict[str, Dict[str, List[SoftInteraction]]] = defaultdict(
+            lambda: defaultdict(list)
+        )
         for i in interactions:
             if i.accepted:
                 edges[i.initiator][i.counterparty].append(i)
@@ -442,18 +456,19 @@ class SecurityAnalyzer:
                     if next_trust > start_trust + self.laundering_trust_gap:
                         new_path = path + [next_agent]
                         if len(new_path) >= self.min_chain_length:
-                            paths.append(LaunderingPath(
-                                source=source,
-                                destination=next_agent,
-                                intermediaries=new_path[1:-1],
-                                trust_at_origin=start_trust,
-                                trust_at_destination=next_trust,
-                                trust_gain=next_trust - start_trust,
-                                interaction_ids=[
-                                    i.interaction_id
-                                    for i in agent_interactions
-                                ],
-                            ))
+                            paths.append(
+                                LaunderingPath(
+                                    source=source,
+                                    destination=next_agent,
+                                    intermediaries=new_path[1:-1],
+                                    trust_at_origin=start_trust,
+                                    trust_at_destination=next_trust,
+                                    trust_gain=next_trust - start_trust,
+                                    interaction_ids=[
+                                        i.interaction_id for i in agent_interactions
+                                    ],
+                                )
+                            )
 
                     visited.add(next_agent)
                     queue.append((next_agent, path + [next_agent], start_trust))
@@ -490,8 +505,11 @@ class SecurityAnalyzer:
 
                 # Check if this agent subsequently "spreads"
                 subsequent = [
-                    i for i in sorted_ints[idx + 1:]
-                    if i.initiator == interaction.counterparty and i.accepted and i.p < 0.3
+                    i
+                    for i in sorted_ints[idx + 1 :]
+                    if i.initiator == interaction.counterparty
+                    and i.accepted
+                    and i.p < 0.3
                 ]
 
                 if len(subsequent) >= 2:
@@ -509,19 +527,23 @@ class SecurityAnalyzer:
                         time_span = (
                             subsequent[-1].timestamp - interaction.timestamp
                         ).total_seconds()
-                        velocity = len(chain_ints) / (time_span / 60.0 + 0.01)  # per minute
+                        velocity = len(chain_ints) / (
+                            time_span / 60.0 + 0.01
+                        )  # per minute
 
                         if velocity >= self.contagion_velocity_threshold:
-                            chains.append(ContagionChain(
-                                chain_id=f"chain_{len(chains)}",
-                                origin_agent=interaction.initiator,
-                                propagation_path=chain_agents,
-                                interaction_ids=chain_ints,
-                                depth=len(chain_agents) - 1,
-                                spread=len(set(chain_agents)),
-                                velocity=velocity,
-                                contained=False,
-                            ))
+                            chains.append(
+                                ContagionChain(
+                                    chain_id=f"chain_{len(chains)}",
+                                    origin_agent=interaction.initiator,
+                                    propagation_path=chain_agents,
+                                    interaction_ids=chain_ints,
+                                    depth=len(chain_agents) - 1,
+                                    spread=len(set(chain_agents)),
+                                    velocity=velocity,
+                                    contained=False,
+                                )
+                            )
 
         # Deduplicate overlapping chains
         return self._deduplicate_chains(chains)
@@ -557,16 +579,18 @@ class SecurityAnalyzer:
         for interaction in interactions:
             # Check for suspicious patterns in tool misuse
             if interaction.tool_misuse_flags >= 2:
-                indicators.append(ThreatIndicator(
-                    threat_type=ThreatType.EXFILTRATION,
-                    severity=min(1.0, 0.3 * interaction.tool_misuse_flags),
-                    source_agent=interaction.initiator,
-                    target_agents={interaction.counterparty},
-                    interaction_ids=[interaction.interaction_id],
-                    description="Potential exfiltration via tool misuse",
-                    confidence=0.6,
-                    timestamp=interaction.timestamp.isoformat(),
-                ))
+                indicators.append(
+                    ThreatIndicator(
+                        threat_type=ThreatType.EXFILTRATION,
+                        severity=min(1.0, 0.3 * interaction.tool_misuse_flags),
+                        source_agent=interaction.initiator,
+                        target_agents={interaction.counterparty},
+                        interaction_ids=[interaction.interaction_id],
+                        description="Potential exfiltration via tool misuse",
+                        confidence=0.6,
+                        timestamp=interaction.timestamp.isoformat(),
+                    )
+                )
 
         return indicators
 
@@ -649,10 +673,10 @@ class SecurityAnalyzer:
 
         # Weighted combination
         threat_level = (
-            0.25 * threat_density +
-            0.25 * flagged_fraction +
-            0.30 * contagion_severity +
-            0.20 * manipulation_severity
+            0.25 * threat_density
+            + 0.25 * flagged_fraction
+            + 0.30 * contagion_severity
+            + 0.20 * manipulation_severity
         )
 
         return float(min(1.0, threat_level))

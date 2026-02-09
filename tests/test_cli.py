@@ -28,7 +28,9 @@ class TestListSubcommand:
 
     def test_list_shows_scenario_files(self, monkeypatch, capsys):
         """list should display YAML files from the given directory."""
-        monkeypatch.setattr(sys, "argv", ["python -m src", "list", "--dir", "scenarios"])
+        monkeypatch.setattr(
+            sys, "argv", ["python -m src", "list", "--dir", "scenarios"]
+        )
         rc = main()
         assert rc == 0
         captured = capsys.readouterr()
@@ -50,9 +52,7 @@ class TestRunSubcommand:
 
     def test_run_nonexistent_scenario_returns_one(self, monkeypatch, capsys):
         """run with a nonexistent scenario file should return 1."""
-        monkeypatch.setattr(
-            sys, "argv", ["python -m src", "run", "no_such_file.yaml"]
-        )
+        monkeypatch.setattr(sys, "argv", ["python -m src", "run", "no_such_file.yaml"])
         rc = main()
         assert rc == 1
         captured = capsys.readouterr()
@@ -75,7 +75,17 @@ class TestRunSubcommand:
         monkeypatch.setattr(
             sys,
             "argv",
-            ["python -m src", "run", BASELINE_SCENARIO, "--seed", "99", "--epochs", "2", "--steps", "2"],
+            [
+                "python -m src",
+                "run",
+                BASELINE_SCENARIO,
+                "--seed",
+                "99",
+                "--epochs",
+                "2",
+                "--steps",
+                "2",
+            ],
         )
         rc = main()
         assert rc == 0
@@ -84,7 +94,17 @@ class TestRunSubcommand:
         monkeypatch.setattr(
             sys,
             "argv",
-            ["python -m src", "run", BASELINE_SCENARIO, "--seed", "99", "--epochs", "2", "--steps", "2"],
+            [
+                "python -m src",
+                "run",
+                BASELINE_SCENARIO,
+                "--seed",
+                "99",
+                "--epochs",
+                "2",
+                "--steps",
+                "2",
+            ],
         )
         rc = main()
         assert rc == 0
@@ -99,7 +119,17 @@ class TestRunSubcommand:
         monkeypatch.setattr(
             sys,
             "argv",
-            ["python -m src", "run", BASELINE_SCENARIO, "--seed", "42", "--epochs", "2", "--steps", "2"],
+            [
+                "python -m src",
+                "run",
+                BASELINE_SCENARIO,
+                "--seed",
+                "42",
+                "--epochs",
+                "2",
+                "--steps",
+                "2",
+            ],
         )
         rc = main()
         assert rc == 0
@@ -132,7 +162,14 @@ class TestRunSubcommand:
         monkeypatch.setattr(
             sys,
             "argv",
-            ["python -m src", "run", BASELINE_SCENARIO, "-q", "--export-json", str(json_path)]
+            [
+                "python -m src",
+                "run",
+                BASELINE_SCENARIO,
+                "-q",
+                "--export-json",
+                str(json_path),
+            ]
             + FAST_FLAGS,
         )
         rc = main()
@@ -142,6 +179,7 @@ class TestRunSubcommand:
         assert len(content) > 0
         # Should be valid JSON
         import json
+
         data = json.loads(content)
         assert "simulation_id" in data
 
@@ -154,7 +192,14 @@ class TestRunSubcommand:
         monkeypatch.setattr(
             sys,
             "argv",
-            ["python -m src", "run", BASELINE_SCENARIO, "-q", "--export-csv", str(csv_dir)]
+            [
+                "python -m src",
+                "run",
+                BASELINE_SCENARIO,
+                "-q",
+                "--export-csv",
+                str(csv_dir),
+            ]
             + FAST_FLAGS,
         )
         rc = main()
@@ -171,7 +216,14 @@ class TestRunSubcommand:
         monkeypatch.setattr(
             sys,
             "argv",
-            ["python -m src", "run", BASELINE_SCENARIO, "-q", "--prompt-audit", str(audit_path)]
+            [
+                "python -m src",
+                "run",
+                BASELINE_SCENARIO,
+                "-q",
+                "--prompt-audit",
+                str(audit_path),
+            ]
             + FAST_FLAGS,
         )
         rc = main()

@@ -198,7 +198,8 @@ class CompositeTask:
     def get_available_subtasks(self) -> List[Subtask]:
         """Get subtasks that are available (dependencies met)."""
         completed = {
-            st.subtask_id for st in self.subtasks
+            st.subtask_id
+            for st in self.subtasks
             if st.status == SubtaskStatus.COMPLETED
         }
 
@@ -224,7 +225,10 @@ class CompositeTask:
     def join_task(self, agent_id: str) -> bool:
         """Have an agent join the composite task."""
         # Allow joining while OPEN or IN_PROGRESS (up to max_agents)
-        if self.status not in (CompositeTaskStatus.OPEN, CompositeTaskStatus.IN_PROGRESS):
+        if self.status not in (
+            CompositeTaskStatus.OPEN,
+            CompositeTaskStatus.IN_PROGRESS,
+        ):
             return False
         if len(self.participating_agents) >= self.max_agents:
             return False
@@ -295,15 +299,19 @@ class CompositeTask:
         total_weight = sum(st.bounty_share for st in self.subtasks)
         if total_weight > 0:
             weighted_quality = sum(
-                (st.quality_score or 0) * st.bounty_share
-                for st in self.subtasks
+                (st.quality_score or 0) * st.bounty_share for st in self.subtasks
             )
             self.final_quality = weighted_quality / total_weight
         else:
-            self.final_quality = float(np.mean([
-                st.quality_score for st in self.subtasks
-                if st.quality_score is not None
-            ]))
+            self.final_quality = float(
+                np.mean(
+                    [
+                        st.quality_score
+                        for st in self.subtasks
+                        if st.quality_score is not None
+                    ]
+                )
+            )
 
         # Compute emergent capability metrics
         self._compute_emergent_metrics()
@@ -333,7 +341,11 @@ class CompositeTask:
         # Higher quality with more agents = synergy
         if self.final_quality:
             expected_baseline = 0.5  # Expected quality for solo work
-            synergy = (self.final_quality - expected_baseline) * total_agents / max(1, len(self.subtasks))
+            synergy = (
+                (self.final_quality - expected_baseline)
+                * total_agents
+                / max(1, len(self.subtasks))
+            )
             self.synergy_score = max(0.0, min(1.0, synergy + 0.5))
 
         # Information flow: Did dependent tasks benefit from predecessors?
@@ -352,7 +364,9 @@ class CompositeTask:
                     dependent_qualities.append(improvement)
 
         if dependent_qualities:
-            self.information_flow_score = float(max(0.0, min(1.0, float(np.mean(dependent_qualities)) + 0.5)))
+            self.information_flow_score = float(
+                max(0.0, min(1.0, float(np.mean(dependent_qualities)) + 0.5))
+            )
 
     def fail_task(self, reason: str = "") -> None:
         """Mark composite task as failed."""
@@ -369,7 +383,9 @@ class CompositeTask:
         """Get fraction of subtasks completed."""
         if not self.subtasks:
             return 0.0
-        completed = sum(1 for st in self.subtasks if st.status == SubtaskStatus.COMPLETED)
+        completed = sum(
+            1 for st in self.subtasks if st.status == SubtaskStatus.COMPLETED
+        )
         return completed / len(self.subtasks)
 
     def compute_payouts(self) -> Dict[str, float]:
@@ -447,7 +463,8 @@ class CompositeTaskPool:
         return [
             self._tasks[tid]
             for tid in self._open_tasks
-            if tid in self._tasks and self._tasks[tid].status == CompositeTaskStatus.OPEN
+            if tid in self._tasks
+            and self._tasks[tid].status == CompositeTaskStatus.OPEN
         ]
 
     def get_joinable_tasks(
@@ -458,7 +475,10 @@ class CompositeTaskPool:
         joinable = []
         # Include both OPEN and IN_PROGRESS tasks (agents can join up to max_agents)
         for task in self._tasks.values():
-            if task.status not in (CompositeTaskStatus.OPEN, CompositeTaskStatus.IN_PROGRESS):
+            if task.status not in (
+                CompositeTaskStatus.OPEN,
+                CompositeTaskStatus.IN_PROGRESS,
+            ):
                 continue
             if len(task.participating_agents) >= task.max_agents:
                 continue
@@ -472,7 +492,10 @@ class CompositeTaskPool:
         expired = []
         for task in self._tasks.values():
             if task.deadline_epoch and current_epoch >= task.deadline_epoch:
-                if task.status in (CompositeTaskStatus.OPEN, CompositeTaskStatus.IN_PROGRESS):
+                if task.status in (
+                    CompositeTaskStatus.OPEN,
+                    CompositeTaskStatus.IN_PROGRESS,
+                ):
                     task.expire()
                     expired.append(task.task_id)
                     self._open_tasks.discard(task.task_id)
@@ -485,15 +508,25 @@ class CompositeTaskPool:
             status = task.status.value
             status_counts[status] = status_counts.get(status, 0) + 1
 
-        completed = [t for t in self._tasks.values() if t.status == CompositeTaskStatus.COMPLETED]
+        completed = [
+            t for t in self._tasks.values() if t.status == CompositeTaskStatus.COMPLETED
+        ]
 
         return {
             "total_tasks": len(self._tasks),
             "open_tasks": len(self._open_tasks),
             "status_counts": status_counts,
-            "avg_coordination_score": np.mean([t.coordination_score for t in completed]) if completed else 0.0,
-            "avg_synergy_score": np.mean([t.synergy_score for t in completed]) if completed else 0.0,
-            "avg_information_flow": np.mean([t.information_flow_score for t in completed]) if completed else 0.0,
+            "avg_coordination_score": np.mean([t.coordination_score for t in completed])
+            if completed
+            else 0.0,
+            "avg_synergy_score": np.mean([t.synergy_score for t in completed])
+            if completed
+            else 0.0,
+            "avg_information_flow": np.mean(
+                [t.information_flow_score for t in completed]
+            )
+            if completed
+            else 0.0,
         }
 
 
@@ -661,7 +694,10 @@ def create_planning_coordination_task(
     review = Subtask(
         name="Plan Review",
         description="Review and finalize the plan",
-        required_capabilities={CapabilityType.VERIFICATION, CapabilityType.COORDINATION},
+        required_capabilities={
+            CapabilityType.VERIFICATION,
+            CapabilityType.COORDINATION,
+        },
         dependencies={breakdown.subtask_id},
         bounty_share=0.15,
         estimated_steps=4,

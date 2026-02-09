@@ -130,7 +130,9 @@ def test_train_predict_api_on_replay_dataset():
             row = combine_feature_dicts(
                 extract_structural_features(
                     horizon_length=scenario.orchestrator_config.steps_per_epoch,
-                    agent_count=sum(spec_item.get("count", 1) for spec_item in scenario.agent_specs),
+                    agent_count=sum(
+                        spec_item.get("count", 1) for spec_item in scenario.agent_specs
+                    ),
                     action_space_size=6,
                     adversarial_fraction=(
                         sum(
@@ -138,14 +140,20 @@ def test_train_predict_api_on_replay_dataset():
                             for spec_item in scenario.agent_specs
                             if spec_item.get("type") in {"deceptive", "adversarial"}
                         )
-                        / max(1, sum(spec_item.get("count", 1) for spec_item in scenario.agent_specs))
+                        / max(
+                            1,
+                            sum(
+                                spec_item.get("count", 1)
+                                for spec_item in scenario.agent_specs
+                            ),
+                        )
                     ),
                 ),
                 {
                     "behavioral_uncertainty_mean": result.avg_toxicity,
-                    "behavioral_acceptance_rate": 1.0 if result.total_interactions == 0 else (
-                        result.accepted_interactions / result.total_interactions
-                    ),
+                    "behavioral_acceptance_rate": 1.0
+                    if result.total_interactions == 0
+                    else (result.accepted_interactions / result.total_interactions),
                 },
             )
             rows.append(row)

@@ -81,9 +81,9 @@ class ReviewPipeline:
             "experimental_validity"
         ].evaluate(submission_data)
 
-        axis_results["reproducibility"] = self._evaluators[
-            "reproducibility"
-        ].evaluate(submission_data)
+        axis_results["reproducibility"] = self._evaluators["reproducibility"].evaluate(
+            submission_data
+        )
 
         if not self.config.skip_artifact_integrity:
             axis_results["artifact_integrity"] = self._evaluators[
@@ -95,9 +95,9 @@ class ReviewPipeline:
                 "emergence_detection"
             ].evaluate(submission_data)
 
-        axis_results["failure_modes"] = self._evaluators[
-            "failure_modes"
-        ].evaluate(submission_data)
+        axis_results["failure_modes"] = self._evaluators["failure_modes"].evaluate(
+            submission_data
+        )
 
         # Merge into scores and checks
         scores = self._build_scores(axis_results)
@@ -123,9 +123,7 @@ class ReviewPipeline:
             notes=notes,
         )
 
-    def _build_scores(
-        self, axis_results: Dict[str, EvaluationResult]
-    ) -> Scores:
+    def _build_scores(self, axis_results: Dict[str, EvaluationResult]) -> Scores:
         """Extract normalized scores from evaluator results."""
         return Scores(
             experimental_validity=axis_results.get(
@@ -145,9 +143,7 @@ class ReviewPipeline:
             ).score,
         )
 
-    def _build_checks(
-        self, axis_results: Dict[str, EvaluationResult]
-    ) -> Checks:
+    def _build_checks(self, axis_results: Dict[str, EvaluationResult]) -> Checks:
         """Merge raw checks from all evaluators."""
         merged: Dict[str, Any] = {}
         for result in axis_results.values():
@@ -160,17 +156,11 @@ class ReviewPipeline:
             artifact_hash_match_rate=merged.get("artifact_hash_match_rate"),
             emergence_delta=merged.get("emergence_delta"),
             topology_sensitivity=merged.get("topology_sensitivity"),
-            falsification_attempts_count=merged.get(
-                "falsification_attempts_count"
-            ),
-            documented_failure_modes_count=merged.get(
-                "documented_failure_modes_count"
-            ),
+            falsification_attempts_count=merged.get("falsification_attempts_count"),
+            documented_failure_modes_count=merged.get("documented_failure_modes_count"),
         )
 
-    def _build_notes(
-        self, axis_results: Dict[str, EvaluationResult]
-    ) -> Notes:
+    def _build_notes(self, axis_results: Dict[str, EvaluationResult]) -> Notes:
         """Aggregate notes from all evaluators."""
         all_strengths: List[str] = []
         all_weaknesses: List[str] = []

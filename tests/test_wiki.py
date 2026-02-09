@@ -16,7 +16,9 @@ def test_wiki_task_pool_seed_and_retrieve():
 
 
 def test_wiki_page_apply_edit_updates_state():
-    page = WikiPage(title="Test", content="Base", status=PageStatus.DRAFT, quality_score=0.3)
+    page = WikiPage(
+        title="Test", content="Base", status=PageStatus.DRAFT, quality_score=0.3
+    )
     page.apply_edit(
         editor_id="agent_1",
         new_content="Updated",

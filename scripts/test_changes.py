@@ -91,9 +91,7 @@ def _has_cov_flag(args: list[str]) -> bool:
 
 
 def _has_cov_config_flag(args: list[str]) -> bool:
-    return any(
-        arg == "--cov-config" or arg.startswith("--cov-config=") for arg in args
-    )
+    return any(arg == "--cov-config" or arg.startswith("--cov-config=") for arg in args)
 
 
 def _extract_coverage_report_settings(pyproject_path: Path) -> dict[str, object]:
@@ -183,8 +181,10 @@ def main() -> int:
         flag in pytest_args for flag in ("--testmon", "--testmon-noselect")
     )
     temp_cov_config: Path | None = None
-    if uses_testmon and _has_cov_flag(pytest_args) and not _has_cov_config_flag(
-        pytest_args
+    if (
+        uses_testmon
+        and _has_cov_flag(pytest_args)
+        and not _has_cov_config_flag(pytest_args)
     ):
         temp_cov_config = _write_cov_config_without_branch(Path("pyproject.toml"))
         pytest_args.extend(["--cov-config", str(temp_cov_config)])

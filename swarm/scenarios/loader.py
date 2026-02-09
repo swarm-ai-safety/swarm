@@ -72,6 +72,7 @@ def _get_llm_classes():
     if _LLM_AGENT_CLASS is None:
         from swarm.agents.llm_agent import LLMAgent
         from swarm.agents.llm_config import LLMConfig, LLMProvider, PersonaType
+
         _LLM_AGENT_CLASS = LLMAgent
         _LLM_CONFIG_CLASSES = {
             "LLMConfig": LLMConfig,
@@ -121,47 +122,47 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
 
     config = GovernanceConfig(
         # Transaction tax
-        transaction_tax_rate=data.get("transaction_tax_rate", data.get("transaction_tax", 0.0)),
+        transaction_tax_rate=data.get(
+            "transaction_tax_rate", data.get("transaction_tax", 0.0)
+        ),
         transaction_tax_split=data.get("transaction_tax_split", 0.5),
-
         # Reputation
-        reputation_decay_rate=data.get("reputation_decay_rate", data.get("reputation_decay", 1.0)),
-
+        reputation_decay_rate=data.get(
+            "reputation_decay_rate", data.get("reputation_decay", 1.0)
+        ),
         # Vote normalization
         vote_normalization_enabled=data.get("vote_normalization_enabled", False),
         max_vote_weight_per_agent=data.get("max_vote_weight_per_agent", 10.0),
-
         # Bandwidth
         bandwidth_cap=data.get("bandwidth_cap", 10),
-
         # Staking
         staking_enabled=data.get("staking_enabled", False),
         min_stake_to_participate=data.get("min_stake_to_participate", 0.0),
         stake_slash_rate=data.get("stake_slash_rate", 0.1),
-
         # Circuit breaker
         circuit_breaker_enabled=data.get("circuit_breaker_enabled", False),
         freeze_threshold_toxicity=data.get("freeze_threshold_toxicity", 0.7),
         freeze_threshold_violations=data.get("freeze_threshold_violations", 3),
         freeze_duration_epochs=data.get("freeze_duration_epochs", 2),
-
         # Random audit
         audit_enabled=data.get("audit_enabled", False),
         audit_probability=data.get("audit_probability", 0.1),
         audit_penalty_multiplier=data.get("audit_penalty_multiplier", 2.0),
         audit_threshold_p=data.get("audit_threshold_p", 0.5),
-
         # Collusion detection
         collusion_detection_enabled=data.get("collusion_detection_enabled", False),
         collusion_frequency_threshold=data.get("collusion_frequency_threshold", 2.0),
-        collusion_correlation_threshold=data.get("collusion_correlation_threshold", 0.7),
+        collusion_correlation_threshold=data.get(
+            "collusion_correlation_threshold", 0.7
+        ),
         collusion_min_interactions=data.get("collusion_min_interactions", 3),
         collusion_score_threshold=data.get("collusion_score_threshold", 0.5),
         collusion_penalty_multiplier=data.get("collusion_penalty_multiplier", 1.0),
         collusion_realtime_penalty=data.get("collusion_realtime_penalty", False),
         collusion_realtime_rate=data.get("collusion_realtime_rate", 0.1),
-        collusion_clear_history_on_epoch=data.get("collusion_clear_history_on_epoch", False),
-
+        collusion_clear_history_on_epoch=data.get(
+            "collusion_clear_history_on_epoch", False
+        ),
         # Variance-aware governance
         self_ensemble_enabled=data.get("self_ensemble_enabled", False),
         self_ensemble_samples=data.get("self_ensemble_samples", 5),
@@ -171,18 +172,23 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         decomposition_horizon_threshold=data.get("decomposition_horizon_threshold", 10),
         incoherence_friction_enabled=data.get("incoherence_friction_enabled", False),
         incoherence_friction_rate=data.get("incoherence_friction_rate", 0.05),
-
         # Adaptive governance loop
         adaptive_governance_enabled=data.get("adaptive_governance_enabled", False),
         adaptive_incoherence_threshold=data.get("adaptive_incoherence_threshold", 0.5),
-        adaptive_use_behavioral_features=data.get("adaptive_use_behavioral_features", False),
+        adaptive_use_behavioral_features=data.get(
+            "adaptive_use_behavioral_features", False
+        ),
         # Moltipedia governance
         moltipedia_pair_cap_enabled=data.get("moltipedia_pair_cap_enabled", False),
         moltipedia_pair_cap_max=data.get("moltipedia_pair_cap_max", 2),
-        moltipedia_page_cooldown_enabled=data.get("moltipedia_page_cooldown_enabled", False),
+        moltipedia_page_cooldown_enabled=data.get(
+            "moltipedia_page_cooldown_enabled", False
+        ),
         moltipedia_page_cooldown_steps=data.get("moltipedia_page_cooldown_steps", 3),
         moltipedia_daily_cap_enabled=data.get("moltipedia_daily_cap_enabled", False),
-        moltipedia_daily_policy_fix_cap=data.get("moltipedia_daily_policy_fix_cap", 24.0),
+        moltipedia_daily_policy_fix_cap=data.get(
+            "moltipedia_daily_policy_fix_cap", 24.0
+        ),
         moltipedia_no_self_fix=data.get("moltipedia_no_self_fix", False),
         # Moltbook governance
         moltbook_rate_limit_enabled=data.get("moltbook_rate_limit_enabled", False),
@@ -196,13 +202,23 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         # Memory tier governance
         memory_promotion_gate_enabled=data.get("memory_promotion_gate_enabled", False),
         memory_promotion_min_quality=data.get("memory_promotion_min_quality", 0.5),
-        memory_promotion_min_verifications=data.get("memory_promotion_min_verifications", 1),
-        memory_write_rate_limit_enabled=data.get("memory_write_rate_limit_enabled", False),
-        memory_write_rate_limit_per_epoch=data.get("memory_write_rate_limit_per_epoch", 20),
-        memory_cross_verification_enabled=data.get("memory_cross_verification_enabled", False),
+        memory_promotion_min_verifications=data.get(
+            "memory_promotion_min_verifications", 1
+        ),
+        memory_write_rate_limit_enabled=data.get(
+            "memory_write_rate_limit_enabled", False
+        ),
+        memory_write_rate_limit_per_epoch=data.get(
+            "memory_write_rate_limit_per_epoch", 20
+        ),
+        memory_cross_verification_enabled=data.get(
+            "memory_cross_verification_enabled", False
+        ),
         memory_cross_verification_k=data.get("memory_cross_verification_k", 2),
         memory_provenance_enabled=data.get("memory_provenance_enabled", False),
-        memory_provenance_revert_penalty=data.get("memory_provenance_revert_penalty", 0.1),
+        memory_provenance_revert_penalty=data.get(
+            "memory_provenance_revert_penalty", 0.1
+        ),
     )
     # Pydantic auto-validates
     return config
@@ -287,10 +303,16 @@ def parse_network_config(data: Dict[str, Any]) -> Optional[NetworkConfig]:
     config = NetworkConfig(
         topology=topology,
         # Erdős-Rényi
-        edge_probability=params.get("edge_probability", data.get("edge_probability", 0.5)),
+        edge_probability=params.get(
+            "edge_probability", data.get("edge_probability", 0.5)
+        ),
         # Small-world
-        k_neighbors=params.get("k", params.get("k_neighbors", data.get("k_neighbors", 4))),
-        rewire_probability=params.get("p", params.get("rewire_probability", data.get("rewire_probability", 0.1))),
+        k_neighbors=params.get(
+            "k", params.get("k_neighbors", data.get("k_neighbors", 4))
+        ),
+        rewire_probability=params.get(
+            "p", params.get("rewire_probability", data.get("rewire_probability", 0.1))
+        ),
         # Scale-free
         m_edges=params.get("m", params.get("m_edges", data.get("m_edges", 2))),
         # Dynamic network
@@ -454,7 +476,9 @@ def load_scenario(path: Path) -> ScenarioConfig:
         steps_per_epoch=sim_data.get("steps_per_epoch", 10),
         seed=sim_data.get("seed"),
         scenario_id=data.get("scenario_id"),
-        observation_noise_probability=sim_data.get("observation_noise_probability", 0.0),
+        observation_noise_probability=sim_data.get(
+            "observation_noise_probability", 0.0
+        ),
         observation_noise_std=sim_data.get("observation_noise_std", 0.0),
         payoff_config=payoff_config,
         governance_config=governance_config,
@@ -463,7 +487,9 @@ def load_scenario(path: Path) -> ScenarioConfig:
         moltipedia_config=moltipedia_config,
         moltbook_config=moltbook_config,
         memory_tier_config=memory_tier_config,
-        log_path=Path(outputs_data["event_log"]) if outputs_data.get("event_log") else None,
+        log_path=Path(outputs_data["event_log"])
+        if outputs_data.get("event_log")
+        else None,
         log_events=bool(outputs_data.get("event_log")),
     )
 
@@ -475,8 +501,12 @@ def load_scenario(path: Path) -> ScenarioConfig:
         rate_limits=rate_limits,
         agent_specs=data.get("agents", []),
         success_criteria=data.get("success_criteria", {}),
-        event_log_path=Path(outputs_data["event_log"]) if outputs_data.get("event_log") else None,
-        metrics_csv_path=Path(outputs_data["metrics_csv"]) if outputs_data.get("metrics_csv") else None,
+        event_log_path=Path(outputs_data["event_log"])
+        if outputs_data.get("event_log")
+        else None,
+        metrics_csv_path=Path(outputs_data["metrics_csv"])
+        if outputs_data.get("metrics_csv")
+        else None,
     )
 
 
@@ -525,7 +555,9 @@ def parse_llm_config(data: Dict[str, Any]) -> Any:
         prompt_audit_include_system_prompt=data.get(
             "prompt_audit_include_system_prompt", False
         ),
-        prompt_audit_hash_system_prompt=data.get("prompt_audit_hash_system_prompt", True),
+        prompt_audit_hash_system_prompt=data.get(
+            "prompt_audit_hash_system_prompt", True
+        ),
         prompt_audit_max_chars=data.get("prompt_audit_max_chars", 20_000),
     )
 
@@ -562,7 +594,9 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
                 counters["llm"] = counters.get("llm", 0) + 1
                 agent_id = f"llm_{counters['llm']}"
                 agent_name = (
-                    f"{base_name}_{counters['llm']}" if base_name and count > 1 else base_name
+                    f"{base_name}_{counters['llm']}"
+                    if base_name and count > 1
+                    else base_name
                 )
 
                 agent = LLMAgent(
@@ -581,7 +615,9 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
                 counters[agent_type] = counters.get(agent_type, 0) + 1
                 agent_id = f"{agent_type}_{counters[agent_type]}"
                 agent_name = (
-                    f"{base_name}_{counters[agent_type]}" if base_name and count > 1 else base_name
+                    f"{base_name}_{counters[agent_type]}"
+                    if base_name and count > 1
+                    else base_name
                 )
 
                 # Create agent with optional config

@@ -191,9 +191,7 @@ class TestAdversarialHeavyEcosystem:
             orch.register_agent(HonestAgent(agent_id=f"honest_{i}"))
         return orch.run()
 
-    def test_adversarial_has_higher_toxicity(
-        self, adversarial_metrics, honest_metrics
-    ):
+    def test_adversarial_has_higher_toxicity(self, adversarial_metrics, honest_metrics):
         adv_tox = _avg([m.toxicity_rate for m in adversarial_metrics])
         hon_tox = _avg([m.toxicity_rate for m in honest_metrics])
         assert adv_tox > hon_tox, (
@@ -267,9 +265,7 @@ class TestCallbackIntegration:
             orch.register_agent(HonestAgent(agent_id=f"h_{i}"))
 
         interactions_logged: list[float] = []
-        orch.on_interaction_complete(
-            lambda ix, pa, pb: interactions_logged.append(pa)
-        )
+        orch.on_interaction_complete(lambda ix, pa, pb: interactions_logged.append(pa))
 
         orch.run()
         assert len(interactions_logged) > 0, "No interaction callbacks fired"

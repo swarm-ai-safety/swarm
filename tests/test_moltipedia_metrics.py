@@ -43,11 +43,13 @@ class TestPairFarmingRate:
     def test_no_repeated_pairs(self):
         interactions = [
             SoftInteraction(
-                initiator="a", counterparty="b",
+                initiator="a",
+                counterparty="b",
                 metadata={"moltipedia": True, "points": 1},
             ),
             SoftInteraction(
-                initiator="c", counterparty="d",
+                initiator="c",
+                counterparty="d",
                 metadata={"moltipedia": True, "points": 2},
             ),
         ]
@@ -56,15 +58,18 @@ class TestPairFarmingRate:
     def test_repeated_pairs(self):
         interactions = [
             SoftInteraction(
-                initiator="a", counterparty="b",
+                initiator="a",
+                counterparty="b",
                 metadata={"moltipedia": True, "points": 1},
             ),
             SoftInteraction(
-                initiator="a", counterparty="b",
+                initiator="a",
+                counterparty="b",
                 metadata={"moltipedia": True, "points": 2},
             ),
             SoftInteraction(
-                initiator="c", counterparty="d",
+                initiator="c",
+                counterparty="d",
                 metadata={"moltipedia": True, "points": 3},
             ),
         ]
@@ -75,11 +80,13 @@ class TestPairFarmingRate:
     def test_reversed_pair_order(self):
         interactions = [
             SoftInteraction(
-                initiator="b", counterparty="a",
+                initiator="b",
+                counterparty="a",
                 metadata={"moltipedia": True, "points": 1},
             ),
             SoftInteraction(
-                initiator="a", counterparty="b",
+                initiator="a",
+                counterparty="b",
                 metadata={"moltipedia": True, "points": 2},
             ),
         ]

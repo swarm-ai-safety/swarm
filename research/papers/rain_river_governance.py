@@ -118,9 +118,7 @@ def run_governance_simulation(
         )
 
     for i in range(n_agents - n_honest):
-        orchestrator.register_agent(
-            AdversarialAgent(agent_id=f"adversary_{i}")
-        )
+        orchestrator.register_agent(AdversarialAgent(agent_id=f"adversary_{i}"))
 
     # Run simulation
     orchestrator.run()
@@ -149,7 +147,8 @@ def run_governance_simulation(
 
     # Count frozen agents
     n_frozen = sum(
-        1 for agent_id in orchestrator._agents.keys()
+        1
+        for agent_id in orchestrator._agents.keys()
         if orchestrator.state.is_frozen(agent_id)
     )
 
@@ -215,22 +214,24 @@ def run_governance_experiment(
                 )
 
     # Convert to DataFrame
-    df = pd.DataFrame([
-        {
-            "governance": r.governance_name,
-            "memory_type": r.memory_type,
-            "seed": r.seed,
-            "n_interactions": r.n_interactions,
-            "toxicity": r.toxicity,
-            "quality_gap": r.quality_gap,
-            "welfare": r.total_welfare,
-            "avg_payoff": r.avg_payoff,
-            "acceptance_rate": r.acceptance_rate,
-            "n_frozen": r.n_frozen,
-            "governance_costs": r.governance_costs,
-        }
-        for r in results
-    ])
+    df = pd.DataFrame(
+        [
+            {
+                "governance": r.governance_name,
+                "memory_type": r.memory_type,
+                "seed": r.seed,
+                "n_interactions": r.n_interactions,
+                "toxicity": r.toxicity,
+                "quality_gap": r.quality_gap,
+                "welfare": r.total_welfare,
+                "avg_payoff": r.avg_payoff,
+                "acceptance_rate": r.acceptance_rate,
+                "n_frozen": r.n_frozen,
+                "governance_costs": r.governance_costs,
+            }
+            for r in results
+        ]
+    )
 
     return df
 
@@ -252,11 +253,19 @@ def analyze_differential_effects(df: pd.DataFrame, verbose: bool = True) -> Dict
         river_welfare = river_data["welfare"].mean()
 
         # Differential effect: how much more does this governance help river vs rain?
-        baseline_rain = df[(df["governance"] == "baseline") & (df["memory_type"] == "rain")]["welfare"].mean()
-        baseline_river = df[(df["governance"] == "baseline") & (df["memory_type"] == "river")]["welfare"].mean()
+        baseline_rain = df[
+            (df["governance"] == "baseline") & (df["memory_type"] == "rain")
+        ]["welfare"].mean()
+        baseline_river = df[
+            (df["governance"] == "baseline") & (df["memory_type"] == "river")
+        ]["welfare"].mean()
 
-        rain_improvement = (rain_welfare - baseline_rain) / baseline_rain if baseline_rain else 0
-        river_improvement = (river_welfare - baseline_river) / baseline_river if baseline_river else 0
+        rain_improvement = (
+            (rain_welfare - baseline_rain) / baseline_rain if baseline_rain else 0
+        )
+        river_improvement = (
+            (river_welfare - baseline_river) / baseline_river if baseline_river else 0
+        )
 
         differential = river_improvement - rain_improvement
 
@@ -272,9 +281,9 @@ def analyze_differential_effects(df: pd.DataFrame, verbose: bool = True) -> Dict
 
         if verbose and gov_name != "baseline":
             print(f"\n{gov_name}:")
-            print(f"  Rain improvement:  {rain_improvement*100:+.1f}%")
-            print(f"  River improvement: {river_improvement*100:+.1f}%")
-            print(f"  Differential:      {differential*100:+.1f}% (+ favors river)")
+            print(f"  Rain improvement:  {rain_improvement * 100:+.1f}%")
+            print(f"  River improvement: {river_improvement * 100:+.1f}%")
+            print(f"  Differential:      {differential * 100:+.1f}% (+ favors river)")
 
     return results
 
@@ -297,6 +306,10 @@ if __name__ == "__main__":
     print("\n" + "=" * 70)
     print("Key Findings")
     print("=" * 70)
-    print("- Circuit breakers may differentially harm rain agents (can't rebuild reputation)")
-    print("- Collusion detection is more effective against river adversaries (pattern memory)")
+    print(
+        "- Circuit breakers may differentially harm rain agents (can't rebuild reputation)"
+    )
+    print(
+        "- Collusion detection is more effective against river adversaries (pattern memory)"
+    )
     print("- Transaction taxes affect both equally")

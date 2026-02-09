@@ -89,7 +89,9 @@ class QualityGate:
                     passed, value = result
                 else:
                     value = result
-                    passed = value >= threshold if threshold is not None else bool(value)
+                    passed = (
+                        value >= threshold if threshold is not None else bool(value)
+                    )
 
                 status = GateStatus.PASSED if passed else GateStatus.FAILED
                 if not passed:

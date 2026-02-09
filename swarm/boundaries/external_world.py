@@ -50,7 +50,9 @@ class ExternalService(ExternalEntity):
         super().__post_init__()
         self.entity_type = ExternalEntityType.SERVICE
 
-    def call(self, request: Dict[str, Any], rng: Optional[random.Random] = None) -> Dict[str, Any]:
+    def call(
+        self, request: Dict[str, Any], rng: Optional[random.Random] = None
+    ) -> Dict[str, Any]:
         """Simulate a service call."""
         rng = rng or random.Random()
 
@@ -257,56 +259,66 @@ class ExternalWorld:
     def create_default_world(self) -> "ExternalWorld":
         """Create a world with default external entities."""
         # Add some default services
-        self.add_entity(ExternalService(
-            entity_id="web_search",
-            name="Web Search API",
-            endpoint="https://api.search.example.com",
-            trust_level=0.7,
-            rate_limit=50,
-            latency_ms=100,
-            reliability=0.98,
-        ))
+        self.add_entity(
+            ExternalService(
+                entity_id="web_search",
+                name="Web Search API",
+                endpoint="https://api.search.example.com",
+                trust_level=0.7,
+                rate_limit=50,
+                latency_ms=100,
+                reliability=0.98,
+            )
+        )
 
-        self.add_entity(ExternalService(
-            entity_id="code_repo",
-            name="Code Repository API",
-            endpoint="https://api.code.example.com",
-            trust_level=0.8,
-            rate_limit=100,
-            latency_ms=50,
-            reliability=0.99,
-            requires_auth=True,
-        ))
+        self.add_entity(
+            ExternalService(
+                entity_id="code_repo",
+                name="Code Repository API",
+                endpoint="https://api.code.example.com",
+                trust_level=0.8,
+                rate_limit=100,
+                latency_ms=50,
+                reliability=0.99,
+                requires_auth=True,
+            )
+        )
 
-        self.add_entity(ExternalService(
-            entity_id="external_llm",
-            name="External LLM API",
-            endpoint="https://api.llm.example.com",
-            trust_level=0.5,
-            rate_limit=20,
-            latency_ms=500,
-            reliability=0.95,
-            sensitive_data=True,
-        ))
+        self.add_entity(
+            ExternalService(
+                entity_id="external_llm",
+                name="External LLM API",
+                endpoint="https://api.llm.example.com",
+                trust_level=0.5,
+                rate_limit=20,
+                latency_ms=500,
+                reliability=0.95,
+                sensitive_data=True,
+            )
+        )
 
         # Add some data sources
-        self.add_entity(ExternalDataSource(
-            entity_id="public_data",
-            name="Public Dataset",
-            data_type="structured",
-            trust_level=0.9,
-            sensitivity_level=0.0,
-            size_bytes=1_000_000,
-        ))
+        self.add_entity(
+            ExternalDataSource(
+                entity_id="public_data",
+                name="Public Dataset",
+                data_type="structured",
+                trust_level=0.9,
+                sensitivity_level=0.0,
+                size_bytes=1_000_000,
+            )
+        )
 
-        self.add_entity(ExternalDataSource(
-            entity_id="private_data",
-            name="Private Database",
-            data_type="structured",
-            trust_level=0.6,
-            sensitivity_level=0.8,
-            size_bytes=10_000_000,
-            access_cost=0.01,
-        ))
+        self.add_entity(
+            ExternalDataSource(
+                entity_id="private_data",
+                name="Private Database",
+                data_type="structured",
+                trust_level=0.6,
+                sensitivity_level=0.8,
+                size_bytes=10_000_000,
+                access_cost=0.01,
+            )
+        )
 
         return self

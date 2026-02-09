@@ -150,9 +150,7 @@ class TestAgentCapabilityProfile:
         assert r60 > r480
 
     def test_reliability_clamped(self):
-        p = AgentCapabilityProfile(
-            base_reliability_10min=0.1, horizon_decay_rate=0.5
-        )
+        p = AgentCapabilityProfile(base_reliability_10min=0.1, horizon_decay_rate=0.5)
         result = p.reliability_at_horizon(100000)
         assert result >= 0.0
 
@@ -160,7 +158,7 @@ class TestAgentCapabilityProfile:
         p = AgentCapabilityProfile()
         q = p.expected_quality(10)
         r = p.reliability_at_horizon(10)
-        assert q == pytest.approx(r ** 1.2)
+        assert q == pytest.approx(r**1.2)
 
     def test_compute_cost(self):
         p = AgentCapabilityProfile(compute_cost_per_minute=2.0)

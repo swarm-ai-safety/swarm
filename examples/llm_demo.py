@@ -98,8 +98,10 @@ def create_demo_orchestrator(
 
         # For dry-run, mock the API calls
         if dry_run:
+
             async def mock_call(*args, **kwargs):
                 return ('{"action_type": "NOOP", "reasoning": "Dry run"}', 50, 20)
+
             agent._call_llm_async = mock_call
 
         orchestrator.register_agent(agent)
@@ -149,7 +151,7 @@ async def run_demo(
     print(f"Registered {len(orchestrator._agents)} agents:")
     for agent_id, agent in orchestrator._agents.items():
         agent_type = type(agent).__name__
-        if hasattr(agent, 'llm_config'):
+        if hasattr(agent, "llm_config"):
             print(f"  - {agent_id}: {agent_type} ({agent.llm_config.persona.value})")
         else:
             print(f"  - {agent_id}: {agent_type}")
@@ -187,7 +189,7 @@ async def run_demo(
         print(f"  Input tokens: {stats['total_input_tokens']}")
         print(f"  Output tokens: {stats['total_output_tokens']}")
         print(f"  Estimated cost: ${stats['estimated_cost_usd']:.4f}")
-        total_cost += stats['estimated_cost_usd']
+        total_cost += stats["estimated_cost_usd"]
 
     print(f"\nTotal estimated cost: ${total_cost:.4f}")
 
@@ -226,11 +228,13 @@ def main():
     args = parser.parse_args()
 
     # Run async demo
-    asyncio.run(run_demo(
-        provider=args.provider,
-        model=args.model,
-        dry_run=args.dry_run,
-    ))
+    asyncio.run(
+        run_demo(
+            provider=args.provider,
+            model=args.model,
+            dry_run=args.dry_run,
+        )
+    )
 
 
 if __name__ == "__main__":

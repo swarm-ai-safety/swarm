@@ -170,13 +170,27 @@ def generate_variance_dominated_epochs(
         for _ in range(interactions_per_epoch):
             # Bimodal: half excellent, half terrible
             if rng.random() < 0.5:
-                p = max(0.01, min(0.99, rng.gauss(
-                    mean_quality + quality_spread, 0.05,
-                )))
+                p = max(
+                    0.01,
+                    min(
+                        0.99,
+                        rng.gauss(
+                            mean_quality + quality_spread,
+                            0.05,
+                        ),
+                    ),
+                )
             else:
-                p = max(0.01, min(0.99, rng.gauss(
-                    mean_quality - quality_spread, 0.05,
-                )))
+                p = max(
+                    0.01,
+                    min(
+                        0.99,
+                        rng.gauss(
+                            mean_quality - quality_spread,
+                            0.05,
+                        ),
+                    ),
+                )
             init = rng.choice(agents)
             cp = rng.choice([a for a in agents if a != init])
             accepted = rng.random() < acceptance_rate
@@ -221,13 +235,15 @@ def generate_chained_handoff_epochs(
             for hop in range(chain_length):
                 p = min(0.99, base_quality + hop * quality_boost_per_hop)
                 p = max(0.01, min(0.99, rng.gauss(p, 0.03)))
-                epoch_data.append(_make_interaction(
-                    p=p,
-                    accepted=True,
-                    initiator=chain_agents[hop],
-                    counterparty=chain_agents[hop + 1],
-                    epoch=epoch,
-                ))
+                epoch_data.append(
+                    _make_interaction(
+                        p=p,
+                        accepted=True,
+                        initiator=chain_agents[hop],
+                        counterparty=chain_agents[hop + 1],
+                        epoch=epoch,
+                    )
+                )
 
         # Background noise (non-chained)
         for _ in range(10):
@@ -261,7 +277,7 @@ def generate_accelerating_harm_epochs(
     for epoch in range(n_epochs):
         frac = epoch / max(1, n_epochs - 1)
         # Quadratic decay: quality drops slowly at first, then rapidly
-        epoch_quality = 0.85 - 0.55 * (frac ** 2)
+        epoch_quality = 0.85 - 0.55 * (frac**2)
 
         epoch_data: List[SoftInteraction] = []
         for _ in range(interactions_per_epoch):

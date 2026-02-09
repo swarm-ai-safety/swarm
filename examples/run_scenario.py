@@ -75,12 +75,16 @@ def main():
     print(f"\nRegistered {len(orchestrator.get_all_agents())} agents:")
     for agent in orchestrator.get_all_agents():
         state = orchestrator.state.get_agent(agent.agent_id)
-        print(f"  - {agent.agent_id} ({agent.agent_type.value}): resources={state.resources:.0f}")
+        print(
+            f"  - {agent.agent_id} ({agent.agent_type.value}): resources={state.resources:.0f}"
+        )
     print()
 
     # Run simulation
     config = scenario.orchestrator_config
-    print(f"Running simulation: {config.n_epochs} epochs x {config.steps_per_epoch} steps")
+    print(
+        f"Running simulation: {config.n_epochs} epochs x {config.steps_per_epoch} steps"
+    )
     print("-" * 60)
 
     metrics_history = orchestrator.run()
@@ -88,7 +92,9 @@ def main():
     print()
     print("Epoch-by-Epoch Metrics:")
     print("-" * 60)
-    print(f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} {'Welfare':<10}")
+    print(
+        f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} {'Welfare':<10}"
+    )
     print("-" * 60)
 
     for m in metrics_history:
@@ -106,7 +112,11 @@ def main():
     # Summary
     total_interactions = sum(m.total_interactions for m in metrics_history)
     total_accepted = sum(m.accepted_interactions for m in metrics_history)
-    avg_toxicity = sum(m.toxicity_rate for m in metrics_history) / len(metrics_history) if metrics_history else 0
+    avg_toxicity = (
+        sum(m.toxicity_rate for m in metrics_history) / len(metrics_history)
+        if metrics_history
+        else 0
+    )
     total_welfare = sum(m.total_welfare for m in metrics_history)
 
     print("Summary Statistics:")
@@ -143,7 +153,9 @@ def main():
         if "min_epochs" in criteria:
             passed = len(metrics_history) >= criteria["min_epochs"]
             status = "[PASS]" if passed else "[FAIL]"
-            print(f"  {status} Epochs: {len(metrics_history)} >= {criteria['min_epochs']}")
+            print(
+                f"  {status} Epochs: {len(metrics_history)} >= {criteria['min_epochs']}"
+            )
             success = success and passed
 
         if "min_agents" in criteria:
@@ -156,7 +168,9 @@ def main():
         if "toxicity_threshold" in criteria:
             passed = avg_toxicity <= criteria["toxicity_threshold"]
             status = "[PASS]" if passed else "[FAIL]"
-            print(f"  {status} Toxicity: {avg_toxicity:.4f} <= {criteria['toxicity_threshold']}")
+            print(
+                f"  {status} Toxicity: {avg_toxicity:.4f} <= {criteria['toxicity_threshold']}"
+            )
             success = success and passed
 
         print()

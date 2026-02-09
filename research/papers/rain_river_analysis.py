@@ -42,10 +42,9 @@ def compute_confidence_interval(
         return {"mean": 0.0, "lower": 0.0, "upper": 0.0, "std": 0.0, "se": 0.0}
 
     # Bootstrap
-    bootstrap_means = np.array([
-        rng.choice(data, size=n, replace=True).mean()
-        for _ in range(n_bootstrap)
-    ])
+    bootstrap_means = np.array(
+        [rng.choice(data, size=n, replace=True).mean() for _ in range(n_bootstrap)]
+    )
 
     alpha = 1 - confidence
     lower = np.percentile(bootstrap_means, 100 * alpha / 2)
@@ -85,9 +84,7 @@ def compute_effect_size(
     std1, std2 = g1.std(ddof=1), g2.std(ddof=1)
 
     # Pooled standard deviation
-    pooled_std = np.sqrt(
-        ((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2)
-    )
+    pooled_std = np.sqrt(((n1 - 1) * std1**2 + (n2 - 1) * std2**2) / (n1 + n2 - 2))
 
     if pooled_std == 0:
         return {"cohen_d": 0.0, "interpretation": "no variance"}
@@ -143,8 +140,10 @@ def run_anova(
 
     if len(factors) == 1:
         # One-way ANOVA
-        groups = [df[df[factors[0]] == level][dependent].values
-                  for level in df[factors[0]].unique()]
+        groups = [
+            df[df[factors[0]] == level][dependent].values
+            for level in df[factors[0]].unique()
+        ]
         groups = [g for g in groups if len(g) > 0]
 
         if len(groups) < 2:
@@ -171,8 +170,10 @@ def run_anova(
 
         # Main effects
         for factor in factors:
-            groups = [df[df[factor] == level][dependent].values
-                      for level in df[factor].unique()]
+            groups = [
+                df[df[factor] == level][dependent].values
+                for level in df[factor].unique()
+            ]
             groups = [g for g in groups if len(g) > 0]
 
             if len(groups) >= 2:
@@ -232,7 +233,7 @@ def pairwise_comparisons(
     results = []
 
     for i, level1 in enumerate(levels):
-        for level2 in levels[i + 1:]:
+        for level2 in levels[i + 1 :]:
             group1 = df[df[factor] == level1][dependent].values
             group2 = df[df[factor] == level2][dependent].values
 
@@ -249,20 +250,22 @@ def pairwise_comparisons(
 
             effect = compute_effect_size(group1.tolist(), group2.tolist())
 
-            results.append({
-                "comparison": f"{level1} vs {level2}",
-                "level1": level1,
-                "level2": level2,
-                "mean1": group1.mean(),
-                "mean2": group2.mean(),
-                "difference": group2.mean() - group1.mean(),
-                "t_statistic": t_stat,
-                "p_value": p_value,
-                "adjusted_p": adjusted_p,
-                "significant_05": adjusted_p < 0.05,
-                "cohen_d": effect["cohen_d"],
-                "effect_interpretation": effect["interpretation"],
-            })
+            results.append(
+                {
+                    "comparison": f"{level1} vs {level2}",
+                    "level1": level1,
+                    "level2": level2,
+                    "mean1": group1.mean(),
+                    "mean2": group2.mean(),
+                    "difference": group2.mean() - group1.mean(),
+                    "t_statistic": t_stat,
+                    "p_value": p_value,
+                    "adjusted_p": adjusted_p,
+                    "significant_05": adjusted_p < 0.05,
+                    "cohen_d": effect["cohen_d"],
+                    "effect_interpretation": effect["interpretation"],
+                }
+            )
 
     return results
 
@@ -383,5 +386,9 @@ if __name__ == "__main__":
     rain_ci = compute_confidence_interval(rain_welfare)
     river_ci = compute_confidence_interval(river_welfare)
 
-    print(f"Rain:  {rain_ci['mean']:.1f} [{rain_ci['lower']:.1f}, {rain_ci['upper']:.1f}]")
-    print(f"River: {river_ci['mean']:.1f} [{river_ci['lower']:.1f}, {river_ci['upper']:.1f}]")
+    print(
+        f"Rain:  {rain_ci['mean']:.1f} [{rain_ci['lower']:.1f}, {rain_ci['upper']:.1f}]"
+    )
+    print(
+        f"River: {river_ci['mean']:.1f} [{river_ci['lower']:.1f}, {river_ci['upper']:.1f}]"
+    )

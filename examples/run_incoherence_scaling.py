@@ -29,8 +29,8 @@ def _proxy_incoherence_from_toxicity(toxicity_values: List[float]) -> Dict[str, 
         return {"incoherence_index": 0.0, "error_rate": 0.0, "disagreement_rate": 0.0}
 
     mean_toxicity = sum(toxicity_values) / len(toxicity_values)
-    disagreement = (
-        sum(abs(value - mean_toxicity) for value in toxicity_values) / len(toxicity_values)
+    disagreement = sum(abs(value - mean_toxicity) for value in toxicity_values) / len(
+        toxicity_values
     )
     error = mean_toxicity
     incoherence = min(1.0, disagreement / (error + 1e-8)) if error > 0 else 0.0
@@ -45,7 +45,9 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Run incoherence scaling sweeps.")
     parser.add_argument("--replay-k", type=int, default=8)
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--output-dir", type=Path, default=Path("logs/incoherence_scaling"))
+    parser.add_argument(
+        "--output-dir", type=Path, default=Path("logs/incoherence_scaling")
+    )
     args = parser.parse_args()
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -64,29 +66,35 @@ def main() -> None:
         proxy = _proxy_incoherence_from_toxicity(toxicity_values)
 
         for result in results:
-            replay_rows.append({
-                "horizon_tier": horizon_tier,
-                "branching_tier": branching_tier,
-                "replay_index": result.replay_index,
-                "seed": result.seed,
-                "total_interactions": result.total_interactions,
-                "avg_toxicity": result.avg_toxicity,
-                "avg_quality_gap": result.avg_quality_gap,
-                "total_welfare": result.total_welfare,
-                "incoherence_index": proxy["incoherence_index"],
-                "error_rate": proxy["error_rate"],
-                "disagreement_rate": proxy["disagreement_rate"],
-            })
+            replay_rows.append(
+                {
+                    "horizon_tier": horizon_tier,
+                    "branching_tier": branching_tier,
+                    "replay_index": result.replay_index,
+                    "seed": result.seed,
+                    "total_interactions": result.total_interactions,
+                    "avg_toxicity": result.avg_toxicity,
+                    "avg_quality_gap": result.avg_quality_gap,
+                    "total_welfare": result.total_welfare,
+                    "incoherence_index": proxy["incoherence_index"],
+                    "error_rate": proxy["error_rate"],
+                    "disagreement_rate": proxy["disagreement_rate"],
+                }
+            )
 
-        summary_rows.extend(aggregate_incoherence_scaling([
-            {
-                "horizon_tier": horizon_tier,
-                "branching_tier": branching_tier,
-                "incoherence_index": proxy["incoherence_index"],
-                "error_rate": proxy["error_rate"],
-                "disagreement_rate": proxy["disagreement_rate"],
-            }
-        ]))
+        summary_rows.extend(
+            aggregate_incoherence_scaling(
+                [
+                    {
+                        "horizon_tier": horizon_tier,
+                        "branching_tier": branching_tier,
+                        "incoherence_index": proxy["incoherence_index"],
+                        "error_rate": proxy["error_rate"],
+                        "disagreement_rate": proxy["disagreement_rate"],
+                    }
+                ]
+            )
+        )
 
     replay_csv = args.output_dir / "incoherence_scaling_replays.csv"
     summary_csv = args.output_dir / "incoherence_scaling_summary.csv"
@@ -107,4 +115,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

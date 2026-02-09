@@ -14,4 +14,3 @@ class Domain(str, Enum):
 class Split(str, Enum):
     TUNING = "tuning"
     HELD_OUT = "held_out"
-

@@ -29,15 +29,21 @@ class DiligentEditorAgent(BaseAgent):
     def act(self, observation: Observation) -> Action:
         if observation.contested_pages:
             page = observation.contested_pages[0]
-            return self.create_edit_page_action(page["page_id"], content=self._improve_content(page))
+            return self.create_edit_page_action(
+                page["page_id"], content=self._improve_content(page)
+            )
 
         if observation.search_results:
             page = observation.search_results[0]
-            return self.create_edit_page_action(page["page_id"], content=self._improve_content(page))
+            return self.create_edit_page_action(
+                page["page_id"], content=self._improve_content(page)
+            )
 
         if observation.random_pages:
             page = observation.random_pages[0]
-            return self.create_edit_page_action(page["page_id"], content=self._improve_content(page))
+            return self.create_edit_page_action(
+                page["page_id"], content=self._improve_content(page)
+            )
 
         if random.random() < self.create_probability:
             return self.create_page_action(
@@ -80,11 +86,15 @@ class PointFarmerAgent(BaseAgent):
     def act(self, observation: Observation) -> Action:
         if observation.search_results:
             page = observation.search_results[0]
-            return self.create_edit_page_action(page["page_id"], content=self._quick_fix(page))
+            return self.create_edit_page_action(
+                page["page_id"], content=self._quick_fix(page)
+            )
 
         if observation.random_pages and random.random() < 0.6:
             page = observation.random_pages[0]
-            return self.create_edit_page_action(page["page_id"], content=self._quick_fix(page))
+            return self.create_edit_page_action(
+                page["page_id"], content=self._quick_fix(page)
+            )
 
         if random.random() < self.stub_probability:
             return self.create_page_action(
@@ -127,11 +137,15 @@ class CollusiveEditorAgent(BaseAgent):
     def act(self, observation: Observation) -> Action:
         target = self._find_partner_page(observation)
         if target:
-            return self.create_edit_page_action(target["page_id"], content=self._polish(target))
+            return self.create_edit_page_action(
+                target["page_id"], content=self._polish(target)
+            )
 
         if observation.random_pages:
             page = observation.random_pages[0]
-            return self.create_edit_page_action(page["page_id"], content=self._polish(page))
+            return self.create_edit_page_action(
+                page["page_id"], content=self._polish(page)
+            )
 
         return self.create_page_action(
             title=f"Partner Seed {self.agent_id}",
@@ -149,7 +163,11 @@ class CollusiveEditorAgent(BaseAgent):
     def _find_partner_page(self, observation: Observation) -> Optional[Dict]:
         if not self.partner_id:
             return None
-        for page in observation.contested_pages + observation.search_results + observation.random_pages:
+        for page in (
+            observation.contested_pages
+            + observation.search_results
+            + observation.random_pages
+        ):
             if page.get("created_by") == self.partner_id:
                 return page
         return None
@@ -178,10 +196,16 @@ class VandalAgent(BaseAgent):
         )
 
     def act(self, observation: Observation) -> Action:
-        candidates = observation.random_pages or observation.search_results or observation.contested_pages
+        candidates = (
+            observation.random_pages
+            or observation.search_results
+            or observation.contested_pages
+        )
         if candidates:
             page = candidates[0]
-            return self.create_edit_page_action(page["page_id"], content=self._vandalize(page))
+            return self.create_edit_page_action(
+                page["page_id"], content=self._vandalize(page)
+            )
         return self.create_noop_action()
 
     def accept_interaction(self, proposal, observation) -> bool:

@@ -133,6 +133,7 @@ class LLMAgent(BaseAgent):
         if self._anthropic_client is None:
             try:
                 import anthropic
+
                 self._anthropic_client = anthropic.Anthropic(
                     api_key=self._api_key,
                     timeout=self.llm_config.timeout,
@@ -149,6 +150,7 @@ class LLMAgent(BaseAgent):
         if self._openai_client is None:
             try:
                 import openai
+
                 self._openai_client = openai.OpenAI(
                     api_key=self._api_key,
                     timeout=self.llm_config.timeout,
@@ -195,12 +197,10 @@ class LLMAgent(BaseAgent):
             except Exception as e:
                 last_error = e
                 retries += 1
-                logger.warning(
-                    f"LLM call failed (attempt {attempt + 1}): {e}"
-                )
+                logger.warning(f"LLM call failed (attempt {attempt + 1}): {e}")
 
                 if attempt < self.llm_config.max_retries:
-                    delay = self.llm_config.retry_base_delay * (2 ** attempt)
+                    delay = self.llm_config.retry_base_delay * (2**attempt)
                     await asyncio.sleep(delay)
 
         # All retries exhausted
@@ -231,7 +231,7 @@ class LLMAgent(BaseAgent):
                 temperature=self.llm_config.temperature,
                 system=system_prompt,
                 messages=[{"role": "user", "content": user_prompt}],
-            )
+            ),
         )
 
         text = response.content[0].text
@@ -267,7 +267,7 @@ class LLMAgent(BaseAgent):
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt},
                 ],
-            )
+            ),
         )
 
         text = response.choices[0].message.content
@@ -293,8 +293,7 @@ class LLMAgent(BaseAgent):
             import httpx
         except ImportError as err:
             raise ImportError(
-                "httpx package not installed. "
-                "Install with: python -m pip install httpx"
+                "httpx package not installed. Install with: python -m pip install httpx"
             ) from err
 
         base_url = self.llm_config.base_url or "http://localhost:11434"
@@ -348,10 +347,10 @@ class LLMAgent(BaseAgent):
             if loop.is_running():
                 # We're in an async context, create a new task
                 import concurrent.futures
+
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     future = executor.submit(
-                        asyncio.run,
-                        self._call_llm_async(system_prompt, user_prompt)
+                        asyncio.run, self._call_llm_async(system_prompt, user_prompt)
                     )
                     return future.result()
             else:
@@ -360,9 +359,7 @@ class LLMAgent(BaseAgent):
                 )
         except RuntimeError:
             # No event loop, create one
-            return asyncio.run(
-                self._call_llm_async(system_prompt, user_prompt)
-            )
+            return asyncio.run(self._call_llm_async(system_prompt, user_prompt))
 
     def _parse_action_response(self, response: str) -> Dict[str, Any]:
         """
@@ -376,12 +373,12 @@ class LLMAgent(BaseAgent):
         """
         # Try to extract JSON from response
         # Handle markdown code blocks
-        json_match = re.search(r'```(?:json)?\s*([\s\S]*?)```', response)
+        json_match = re.search(r"```(?:json)?\s*([\s\S]*?)```", response)
         if json_match:
             json_str = json_match.group(1).strip()
         else:
             # Try to find raw JSON
-            json_match = re.search(r'\{[\s\S]*\}', response)
+            json_match = re.search(r"\{[\s\S]*\}", response)
             if json_match:
                 json_str = json_match.group(0)
             else:
@@ -409,16 +406,16 @@ class LLMAgent(BaseAgent):
         try:
             action_type = ActionType[action_type_str]
         except KeyError:
-            logger.warning(f"Unknown action type: {action_type_str}, defaulting to NOOP")
+            logger.warning(
+                f"Unknown action type: {action_type_str}, defaulting to NOOP"
+            )
             return self.create_noop_action()
 
         if action_type == ActionType.NOOP:
             return self.create_noop_action()
 
         elif action_type == ActionType.POST:
-            return self.create_post_action(
-                content=params.get("content", "")
-            )
+            return self.create_post_action(content=params.get("content", ""))
 
         elif action_type == ActionType.REPLY:
             return self.create_reply_action(
@@ -447,9 +444,7 @@ class LLMAgent(BaseAgent):
             )
 
         elif action_type == ActionType.CLAIM_TASK:
-            return self.create_claim_task_action(
-                task_id=params.get("task_id", "")
-            )
+            return self.create_claim_task_action(task_id=params.get("task_id", ""))
 
         elif action_type == ActionType.SUBMIT_OUTPUT:
             return self.create_submit_output_action(
@@ -484,7 +479,9 @@ class LLMAgent(BaseAgent):
                 memory=self.get_memory(limit=10),
             )
 
-            response, input_tokens, output_tokens = self._call_llm_sync(system_prompt, user_prompt)
+            response, input_tokens, output_tokens = self._call_llm_sync(
+                system_prompt, user_prompt
+            )
             self._audit_llm_exchange(
                 kind="act",
                 observation=observation,
@@ -499,11 +496,13 @@ class LLMAgent(BaseAgent):
 
             # Store reasoning in memory
             if action_dict.get("reasoning"):
-                self.remember({
-                    "type": "action_reasoning",
-                    "action_type": action_dict.get("action_type"),
-                    "reasoning": action_dict["reasoning"],
-                })
+                self.remember(
+                    {
+                        "type": "action_reasoning",
+                        "action_type": action_dict.get("action_type"),
+                        "reasoning": action_dict["reasoning"],
+                    }
+                )
 
             return self._action_dict_to_action(action_dict)
 
@@ -541,7 +540,9 @@ class LLMAgent(BaseAgent):
                 memory=self.get_memory(limit=10),
             )
 
-            response, input_tokens, output_tokens = await self._call_llm_async(system_prompt, user_prompt)
+            response, input_tokens, output_tokens = await self._call_llm_async(
+                system_prompt, user_prompt
+            )
             self._audit_llm_exchange(
                 kind="act",
                 observation=observation,
@@ -556,11 +557,13 @@ class LLMAgent(BaseAgent):
 
             # Store reasoning in memory
             if action_dict.get("reasoning"):
-                self.remember({
-                    "type": "action_reasoning",
-                    "action_type": action_dict.get("action_type"),
-                    "reasoning": action_dict["reasoning"],
-                })
+                self.remember(
+                    {
+                        "type": "action_reasoning",
+                        "action_type": action_dict.get("action_type"),
+                        "reasoning": action_dict["reasoning"],
+                    }
+                )
 
             return self._action_dict_to_action(action_dict)
 
@@ -612,7 +615,9 @@ class LLMAgent(BaseAgent):
                 memory=self.get_memory(limit=10),
             )
 
-            response, input_tokens, output_tokens = self._call_llm_sync(system_prompt, user_prompt)
+            response, input_tokens, output_tokens = self._call_llm_sync(
+                system_prompt, user_prompt
+            )
             self._audit_llm_exchange(
                 kind="accept",
                 observation=observation,
@@ -621,20 +626,25 @@ class LLMAgent(BaseAgent):
                 response_text=response,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
-                extra={"proposal_id": proposal.proposal_id, "initiator_id": proposal.initiator_id},
+                extra={
+                    "proposal_id": proposal.proposal_id,
+                    "initiator_id": proposal.initiator_id,
+                },
             )
 
             decision_dict = self._parse_action_response(response)
 
             # Store reasoning
             if decision_dict.get("reasoning"):
-                self.remember({
-                    "type": "accept_decision",
-                    "proposal_id": proposal.proposal_id,
-                    "initiator_id": proposal.initiator_id,
-                    "accepted": decision_dict.get("accept", False),
-                    "reasoning": decision_dict["reasoning"],
-                })
+                self.remember(
+                    {
+                        "type": "accept_decision",
+                        "proposal_id": proposal.proposal_id,
+                        "initiator_id": proposal.initiator_id,
+                        "accepted": decision_dict.get("accept", False),
+                        "reasoning": decision_dict["reasoning"],
+                    }
+                )
 
             return bool(decision_dict.get("accept", False))
 
@@ -648,7 +658,10 @@ class LLMAgent(BaseAgent):
                 input_tokens=None,
                 output_tokens=None,
                 error=str(e),
-                extra={"proposal_id": proposal.proposal_id, "initiator_id": proposal.initiator_id},
+                extra={
+                    "proposal_id": proposal.proposal_id,
+                    "initiator_id": proposal.initiator_id,
+                },
             )
             logger.error(f"LLM accept_interaction failed: {e}, defaulting to False")
             return False
@@ -687,7 +700,9 @@ class LLMAgent(BaseAgent):
                 memory=self.get_memory(limit=10),
             )
 
-            response, input_tokens, output_tokens = await self._call_llm_async(system_prompt, user_prompt)
+            response, input_tokens, output_tokens = await self._call_llm_async(
+                system_prompt, user_prompt
+            )
             self._audit_llm_exchange(
                 kind="accept",
                 observation=observation,
@@ -696,20 +711,25 @@ class LLMAgent(BaseAgent):
                 response_text=response,
                 input_tokens=input_tokens,
                 output_tokens=output_tokens,
-                extra={"proposal_id": proposal.proposal_id, "initiator_id": proposal.initiator_id},
+                extra={
+                    "proposal_id": proposal.proposal_id,
+                    "initiator_id": proposal.initiator_id,
+                },
             )
 
             decision_dict = self._parse_action_response(response)
 
             # Store reasoning
             if decision_dict.get("reasoning"):
-                self.remember({
-                    "type": "accept_decision",
-                    "proposal_id": proposal.proposal_id,
-                    "initiator_id": proposal.initiator_id,
-                    "accepted": decision_dict.get("accept", False),
-                    "reasoning": decision_dict["reasoning"],
-                })
+                self.remember(
+                    {
+                        "type": "accept_decision",
+                        "proposal_id": proposal.proposal_id,
+                        "initiator_id": proposal.initiator_id,
+                        "accepted": decision_dict.get("accept", False),
+                        "reasoning": decision_dict["reasoning"],
+                    }
+                )
 
             return bool(decision_dict.get("accept", False))
 
@@ -723,7 +743,10 @@ class LLMAgent(BaseAgent):
                 input_tokens=None,
                 output_tokens=None,
                 error=str(e),
-                extra={"proposal_id": proposal.proposal_id, "initiator_id": proposal.initiator_id},
+                extra={
+                    "proposal_id": proposal.proposal_id,
+                    "initiator_id": proposal.initiator_id,
+                },
             )
             logger.error(f"LLM accept_interaction failed: {e}, defaulting to False")
             return False

@@ -87,6 +87,7 @@ class TestExternalService:
     def test_service_call_success(self):
         """Test successful service call."""
         import random
+
         service = ExternalService(
             entity_id="test_api",
             name="Test API",
@@ -100,6 +101,7 @@ class TestExternalService:
     def test_service_call_failure(self):
         """Test service call failure due to reliability."""
         import random
+
         service = ExternalService(
             entity_id="unreliable_api",
             name="Unreliable API",
@@ -159,12 +161,8 @@ class TestExternalWorld:
     def test_list_entities_by_type(self):
         """Test listing entities by type."""
         world = ExternalWorld()
-        world.add_entity(ExternalService(
-            entity_id="service1", name="Service 1"
-        ))
-        world.add_entity(ExternalDataSource(
-            entity_id="data1", name="Data 1"
-        ))
+        world.add_entity(ExternalService(entity_id="service1", name="Service 1"))
+        world.add_entity(ExternalDataSource(entity_id="data1", name="Data 1"))
 
         services = world.list_entities(entity_type=ExternalEntityType.SERVICE)
         assert len(services) == 1
@@ -173,18 +171,22 @@ class TestExternalWorld:
     def test_list_entities_by_trust(self):
         """Test listing entities by minimum trust."""
         world = ExternalWorld()
-        world.add_entity(ExternalEntity(
-            entity_id="trusted",
-            name="Trusted",
-            entity_type=ExternalEntityType.SERVICE,
-            trust_level=0.9,
-        ))
-        world.add_entity(ExternalEntity(
-            entity_id="untrusted",
-            name="Untrusted",
-            entity_type=ExternalEntityType.SERVICE,
-            trust_level=0.2,
-        ))
+        world.add_entity(
+            ExternalEntity(
+                entity_id="trusted",
+                name="Trusted",
+                entity_type=ExternalEntityType.SERVICE,
+                trust_level=0.9,
+            )
+        )
+        world.add_entity(
+            ExternalEntity(
+                entity_id="untrusted",
+                name="Untrusted",
+                entity_type=ExternalEntityType.SERVICE,
+                trust_level=0.2,
+            )
+        )
 
         trusted = world.list_entities(min_trust=0.5)
         assert len(trusted) == 1
@@ -193,11 +195,13 @@ class TestExternalWorld:
     def test_interact_with_service(self):
         """Test interacting with an external service."""
         world = ExternalWorld()
-        world.add_entity(ExternalService(
-            entity_id="api",
-            name="API",
-            reliability=1.0,
-        ))
+        world.add_entity(
+            ExternalService(
+                entity_id="api",
+                name="API",
+                reliability=1.0,
+            )
+        )
 
         result = world.interact(
             agent_id="agent_1",
@@ -223,9 +227,7 @@ class TestExternalWorld:
     def test_interaction_stats(self):
         """Test getting interaction statistics."""
         world = ExternalWorld()
-        world.add_entity(ExternalService(
-            entity_id="api", name="API", reliability=1.0
-        ))
+        world.add_entity(ExternalService(entity_id="api", name="API", reliability=1.0))
 
         world.interact("agent_1", "api", "call")
         world.interact("agent_1", "api", "call")
@@ -290,20 +292,24 @@ class TestFlowTracker:
         """Test filtering flows."""
         tracker = FlowTracker()
 
-        tracker.record_flow(InformationFlow.create(
-            direction=FlowDirection.OUTBOUND,
-            flow_type=FlowType.QUERY,
-            source_id="agent_1",
-            destination_id="api",
-            content="query",
-        ))
-        tracker.record_flow(InformationFlow.create(
-            direction=FlowDirection.INBOUND,
-            flow_type=FlowType.RESPONSE,
-            source_id="api",
-            destination_id="agent_1",
-            content="response",
-        ))
+        tracker.record_flow(
+            InformationFlow.create(
+                direction=FlowDirection.OUTBOUND,
+                flow_type=FlowType.QUERY,
+                source_id="agent_1",
+                destination_id="api",
+                content="query",
+            )
+        )
+        tracker.record_flow(
+            InformationFlow.create(
+                direction=FlowDirection.INBOUND,
+                flow_type=FlowType.RESPONSE,
+                source_id="api",
+                destination_id="agent_1",
+                content="response",
+            )
+        )
 
         outbound = tracker.get_flows(direction=FlowDirection.OUTBOUND)
         assert len(outbound) == 1
@@ -314,14 +320,16 @@ class TestFlowTracker:
         tracker = FlowTracker()
 
         for i in range(5):
-            tracker.record_flow(InformationFlow.create(
-                direction=FlowDirection.OUTBOUND,
-                flow_type=FlowType.DATA,
-                source_id=f"agent_{i % 2}",
-                destination_id="external",
-                content=f"data {i}",
-                sensitivity_score=i * 0.1,
-            ))
+            tracker.record_flow(
+                InformationFlow.create(
+                    direction=FlowDirection.OUTBOUND,
+                    flow_type=FlowType.DATA,
+                    source_id=f"agent_{i % 2}",
+                    destination_id="external",
+                    content=f"data {i}",
+                    sensitivity_score=i * 0.1,
+                )
+            )
 
         summary = tracker.get_summary()
 
@@ -334,20 +342,24 @@ class TestFlowTracker:
         """Test getting flows for specific agent."""
         tracker = FlowTracker()
 
-        tracker.record_flow(InformationFlow.create(
-            direction=FlowDirection.OUTBOUND,
-            flow_type=FlowType.QUERY,
-            source_id="agent_1",
-            destination_id="api",
-            content="query",
-        ))
-        tracker.record_flow(InformationFlow.create(
-            direction=FlowDirection.INBOUND,
-            flow_type=FlowType.RESPONSE,
-            source_id="api",
-            destination_id="agent_1",
-            content="response",
-        ))
+        tracker.record_flow(
+            InformationFlow.create(
+                direction=FlowDirection.OUTBOUND,
+                flow_type=FlowType.QUERY,
+                source_id="agent_1",
+                destination_id="api",
+                content="query",
+            )
+        )
+        tracker.record_flow(
+            InformationFlow.create(
+                direction=FlowDirection.INBOUND,
+                flow_type=FlowType.RESPONSE,
+                source_id="api",
+                destination_id="agent_1",
+                content="response",
+            )
+        )
 
         agent_flows = tracker.get_agent_flows("agent_1")
 
@@ -360,13 +372,15 @@ class TestFlowTracker:
 
         # Create excessive outbound flow
         for _i in range(10):
-            tracker.record_flow(InformationFlow.create(
-                direction=FlowDirection.OUTBOUND,
-                flow_type=FlowType.DATA,
-                source_id="agent_1",
-                destination_id="external",
-                content="x" * 10000,  # Large content
-            ))
+            tracker.record_flow(
+                InformationFlow.create(
+                    direction=FlowDirection.OUTBOUND,
+                    flow_type=FlowType.DATA,
+                    source_id="agent_1",
+                    destination_id="external",
+                    content="x" * 10000,  # Large content
+                )
+            )
 
         anomalies = tracker.detect_anomalies()
         # Should detect concentrated source

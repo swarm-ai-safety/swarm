@@ -16,9 +16,9 @@ from typing import Dict, List, Optional
 class MemoryTier(Enum):
     """Memory tier (progressive enrichment)."""
 
-    EPHEMERAL = "ephemeral"      # Tier 1: daily logs
-    STRUCTURED = "structured"    # Tier 2: wiki-linked notes
-    GRAPH = "graph"              # Tier 3: knowledge graph
+    EPHEMERAL = "ephemeral"  # Tier 1: daily logs
+    STRUCTURED = "structured"  # Tier 2: wiki-linked notes
+    GRAPH = "graph"  # Tier 3: knowledge graph
 
 
 class MemoryEntryStatus(Enum):
@@ -275,11 +275,13 @@ class MemoryStore:
     def rebuild_hot_cache(self) -> List[MemoryEntry]:
         """Rebuild hot cache from top Tier 3 entries by quality + read count."""
         graph_entries = [
-            e for e in self._entries.values()
+            e
+            for e in self._entries.values()
             if e.tier == MemoryTier.GRAPH and e.status == MemoryEntryStatus.ACTIVE
         ]
         graph_entries.sort(
-            key=lambda e: (e.quality_score, e.read_count), reverse=True,
+            key=lambda e: (e.quality_score, e.read_count),
+            reverse=True,
         )
         self._hot_cache = graph_entries[: self._hot_cache_size]
         return list(self._hot_cache)
@@ -298,7 +300,8 @@ class MemoryStore:
         Returns the number of entries lost.
         """
         to_remove = [
-            eid for eid, e in self._entries.items()
+            eid
+            for eid, e in self._entries.items()
             if e.author_id == agent_id
             and e.tier == MemoryTier.EPHEMERAL
             and e.status == MemoryEntryStatus.ACTIVE
@@ -333,14 +336,19 @@ class MemoryStore:
     def get_pending_promotions(self) -> List[MemoryEntry]:
         """Entries at Tier 1/2 with enough verifications for promotion consideration."""
         return [
-            e for e in self._entries.values()
+            e
+            for e in self._entries.values()
             if e.status == MemoryEntryStatus.ACTIVE
             and e.tier in (MemoryTier.EPHEMERAL, MemoryTier.STRUCTURED)
             and len(e.verified_by) > 0
         ]
 
     def get_challenged_entries(self) -> List[MemoryEntry]:
-        return [e for e in self._entries.values() if e.status == MemoryEntryStatus.CHALLENGED]
+        return [
+            e
+            for e in self._entries.values()
+            if e.status == MemoryEntryStatus.CHALLENGED
+        ]
 
     def all_entries(self) -> List[MemoryEntry]:
         return list(self._entries.values())

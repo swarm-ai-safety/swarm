@@ -145,16 +145,16 @@ class CollusionDetector:
 
         # Discover agents from interactions if not provided
         if agent_ids is None:
-            agent_ids = list({
-                i.initiator for i in interactions
-            } | {
-                i.counterparty for i in interactions
-            })
+            agent_ids = list(
+                {i.initiator for i in interactions}
+                | {i.counterparty for i in interactions}
+            )
         else:
             # Filter out interactions involving non-agent entities
             agent_set = set(agent_ids)
             interactions = [
-                i for i in interactions
+                i
+                for i in interactions
                 if i.initiator in agent_set and i.counterparty in agent_set
             ]
             if not interactions:
@@ -172,7 +172,8 @@ class CollusionDetector:
 
         # Identify suspicious pairs
         suspicious_pairs = [
-            m for m in pair_metrics.values()
+            m
+            for m in pair_metrics.values()
             if m.collusion_score >= self.collusion_threshold
         ]
         suspicious_pairs.sort(key=lambda x: x.collusion_score, reverse=True)
@@ -194,8 +195,14 @@ class CollusionDetector:
             ecosystem_collusion_risk=ecosystem_risk,
             suspicious_pairs=suspicious_pairs,
             suspicious_groups=suspicious_groups,
-            avg_pair_collusion_score=float(np.mean([m.collusion_score for m in pair_metrics.values()])) if pair_metrics else 0.0,
-            max_pair_collusion_score=max((m.collusion_score for m in pair_metrics.values()), default=0.0),
+            avg_pair_collusion_score=float(
+                np.mean([m.collusion_score for m in pair_metrics.values()])
+            )
+            if pair_metrics
+            else 0.0,
+            max_pair_collusion_score=max(
+                (m.collusion_score for m in pair_metrics.values()), default=0.0
+            ),
             n_flagged_pairs=len(suspicious_pairs),
             n_flagged_groups=len(suspicious_groups),
             agent_collusion_risk=agent_risk,
@@ -267,11 +274,13 @@ class CollusionDetector:
         timestamps = sorted(i.timestamp for i in pair_interactions)
         if len(timestamps) >= 2:
             deltas = [
-                (timestamps[i+1] - timestamps[i]).total_seconds()
+                (timestamps[i + 1] - timestamps[i]).total_seconds()
                 for i in range(len(timestamps) - 1)
             ]
             avg_time = float(np.mean(deltas))
-            burstiness = float(np.std(deltas) / np.mean(deltas)) if np.mean(deltas) > 0 else 0.0
+            burstiness = (
+                float(np.std(deltas) / np.mean(deltas)) if np.mean(deltas) > 0 else 0.0
+            )
         else:
             avg_time = 0.0
             burstiness = 0.0
@@ -328,7 +337,11 @@ class CollusionDetector:
         # Component scores (0-1 range)
 
         # High frequency is suspicious
-        freq_score = min(1.0, max(0.0, frequency_zscore / self.frequency_threshold)) if frequency_zscore > 0 else 0.0
+        freq_score = (
+            min(1.0, max(0.0, frequency_zscore / self.frequency_threshold))
+            if frequency_zscore > 0
+            else 0.0
+        )
 
         # High benefit correlation is suspicious (both consistently gain)
         corr_score = max(0.0, benefit_correlation)
@@ -337,7 +350,9 @@ class CollusionDetector:
         accept_score = max(0.0, (mutual_acceptance_rate - 0.5) * 2)
 
         # Low quality (low p) interactions that are still accepted is suspicious
-        quality_score = max(0.0, (0.5 - avg_p) * 2) if mutual_acceptance_rate > 0.5 else 0.0
+        quality_score = (
+            max(0.0, (0.5 - avg_p) * 2) if mutual_acceptance_rate > 0.5 else 0.0
+        )
 
         # Weight and combine
         weights = {
@@ -348,10 +363,10 @@ class CollusionDetector:
         }
 
         score = (
-            weights["frequency"] * freq_score +
-            weights["correlation"] * corr_score +
-            weights["acceptance"] * accept_score +
-            weights["quality"] * quality_score
+            weights["frequency"] * freq_score
+            + weights["correlation"] * corr_score
+            + weights["acceptance"] * accept_score
+            + weights["quality"] * quality_score
         )
 
         # Confidence adjustment based on sample size
@@ -442,11 +457,11 @@ class CollusionDetector:
         internal_bias = max(0.0, internal_rate - 0.5) * 2
         quality_asymmetry = float(max(0.0, avg_internal_p - avg_external_p))
 
-        collusion_score = (internal_bias * 0.4 + quality_asymmetry * 0.6)
+        collusion_score = internal_bias * 0.4 + quality_asymmetry * 0.6
 
         # Adjust for group size (larger groups are more concerning)
         size_factor = min(1.0, len(members) / 5.0)
-        collusion_score *= (0.5 + 0.5 * size_factor)
+        collusion_score *= 0.5 + 0.5 * size_factor
 
         return GroupMetrics(
             members=members,
@@ -491,11 +506,14 @@ class CollusionDetector:
 
         # Component 1: Fraction of pairs that are suspicious
         n_suspicious_pairs = sum(
-            1 for m in pair_metrics.values()
+            1
+            for m in pair_metrics.values()
             if m.collusion_score >= self.collusion_threshold
         )
         n_possible_pairs = n_agents * (n_agents - 1) / 2
-        pair_fraction = n_suspicious_pairs / n_possible_pairs if n_possible_pairs > 0 else 0.0
+        pair_fraction = (
+            n_suspicious_pairs / n_possible_pairs if n_possible_pairs > 0 else 0.0
+        )
 
         # Component 2: Fraction of agents in suspicious groups
         agents_in_groups: Set[str] = set()
@@ -508,9 +526,7 @@ class CollusionDetector:
 
         # Weighted combination
         ecosystem_risk = (
-            0.3 * pair_fraction +
-            0.3 * group_fraction +
-            0.4 * max_group_score
+            0.3 * pair_fraction + 0.3 * group_fraction + 0.4 * max_group_score
         )
 
         return float(min(1.0, ecosystem_risk))
@@ -551,7 +567,7 @@ def detect_vote_coordination(
     suspicious_pairs = []
 
     for i, voter_a in enumerate(voters_list):
-        for voter_b in voters_list[i+1:]:
+        for voter_b in voters_list[i + 1 :]:
             # Find targets they both voted on
             common_targets = []
             for target, votes_dict in target_votes.items():
@@ -563,7 +579,8 @@ def detect_vote_coordination(
 
             # Compute alignment
             agreements = sum(
-                1 for t in common_targets
+                1
+                for t in common_targets
                 if target_votes[t][voter_a] == target_votes[t][voter_b]
             )
             alignment = agreements / len(common_targets)
@@ -620,6 +637,8 @@ def temporal_clustering_score(
         # High mean cluster count = high clustering
         avg_cluster = np.mean(cluster_counts)
         # Normalize by total count
-        scores[agent] = float((avg_cluster - 1) / (len(times) - 1)) if len(times) > 1 else 0.0
+        scores[agent] = (
+            float((avg_cluster - 1) / (len(times) - 1)) if len(times) > 1 else 0.0
+        )
 
     return scores

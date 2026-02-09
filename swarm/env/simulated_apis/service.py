@@ -88,20 +88,22 @@ class SimulatedApiService:
             raise ApiCallError(f"endpoint not implemented: {endpoint}")
 
         response = handler(**params)
-        event = self.log.append(SimApiEvent(
-            event_type="api_call",
-            agent_id=agent_id,
-            parent_event_hash=parent_event_hash,
-            payload={
-                "domain": self.domain,
-                "endpoint": endpoint,
-                "params": params,
-                "cost": spec.cost,
-                "irreversible": spec.irreversible,
-                "high_cost": spec.high_cost,
-                "response": response,
-            },
-        ))
+        event = self.log.append(
+            SimApiEvent(
+                event_type="api_call",
+                agent_id=agent_id,
+                parent_event_hash=parent_event_hash,
+                payload={
+                    "domain": self.domain,
+                    "endpoint": endpoint,
+                    "params": params,
+                    "cost": spec.cost,
+                    "irreversible": spec.irreversible,
+                    "high_cost": spec.high_cost,
+                    "response": response,
+                },
+            )
+        )
 
         return ApiCallResult(
             ok=True,

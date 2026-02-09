@@ -74,9 +74,7 @@ class Mission:
             "deadline_epoch": self.deadline_epoch,
             "status": self.status.value,
             "created_epoch": self.created_epoch,
-            "contribution_counts": {
-                k: len(v) for k, v in self.contributions.items()
-            },
+            "contribution_counts": {k: len(v) for k, v in self.contributions.items()},
         }
 
 
@@ -147,7 +145,8 @@ class MissionEconomy:
             The created Mission, or None if max active missions reached
         """
         active_count = sum(
-            1 for m in self._missions.values()
+            1
+            for m in self._missions.values()
             if m.status in (MissionStatus.PROPOSED, MissionStatus.ACTIVE)
         )
         if active_count >= self.config.max_active_missions:
@@ -249,30 +248,38 @@ class MissionEconomy:
         for ids in mission.contributions.values():
             contributed_ids.update(ids)
 
-        contributed = [
-            i for i in interactions if i.interaction_id in contributed_ids
-        ]
+        contributed = [i for i in interactions if i.interaction_id in contributed_ids]
 
         # Evaluate each objective
         objective_scores: List[Dict[str, Any]] = []
         for obj in mission.objectives:
             score = self._evaluate_objective(obj, contributed)
-            objective_scores.append({
-                "objective_id": obj.objective_id,
-                "target_metric": obj.target_metric,
-                "target_value": obj.target_value,
-                "actual_value": score,
-                "met": score >= obj.target_value,
-                "weight": obj.weight,
-            })
+            objective_scores.append(
+                {
+                    "objective_id": obj.objective_id,
+                    "target_metric": obj.target_metric,
+                    "target_value": obj.target_value,
+                    "actual_value": score,
+                    "met": score >= obj.target_value,
+                    "weight": obj.weight,
+                }
+            )
 
         # Compute overall mission score (weighted average of objective completion)
         total_weight = sum(o["weight"] for o in objective_scores)
         if total_weight > 0:
-            mission_score = sum(
-                o["weight"] * (1.0 if o["met"] else o["actual_value"] / max(o["target_value"], 1e-10))
-                for o in objective_scores
-            ) / total_weight
+            mission_score = (
+                sum(
+                    o["weight"]
+                    * (
+                        1.0
+                        if o["met"]
+                        else o["actual_value"] / max(o["target_value"], 1e-10)
+                    )
+                    for o in objective_scores
+                )
+                / total_weight
+            )
         else:
             mission_score = 0.0
 
@@ -284,7 +291,9 @@ class MissionEconomy:
         if all_met:
             mission.status = MissionStatus.SUCCEEDED
         elif expired:
-            mission.status = MissionStatus.FAILED if not all_met else MissionStatus.SUCCEEDED
+            mission.status = (
+                MissionStatus.FAILED if not all_met else MissionStatus.SUCCEEDED
+            )
         # If not expired and not all met, mission stays active
 
         return {
@@ -328,9 +337,7 @@ class MissionEconomy:
 
     def _distribute_equal(self, mission: Mission) -> Dict[str, float]:
         """Equal split among all contributors."""
-        contributors = [
-            a for a, contribs in mission.contributions.items() if contribs
-        ]
+        contributors = [a for a, contribs in mission.contributions.items() if contribs]
         if not contributors:
             return {}
         share = mission.reward_pool / len(contributors)
@@ -347,9 +354,7 @@ class MissionEconomy:
 
         for agent_id, contrib_ids in mission.contributions.items():
             contribs = [
-                interaction_map[cid]
-                for cid in contrib_ids
-                if cid in interaction_map
+                interaction_map[cid] for cid in contrib_ids if cid in interaction_map
             ]
             if contribs:
                 # Score = count * average_p (quality-weighted contribution)
@@ -381,9 +386,7 @@ class MissionEconomy:
         average marginal quality improvement they bring.
         """
         interaction_map = {i.interaction_id: i for i in interactions}
-        contributors = [
-            a for a, contribs in mission.contributions.items() if contribs
-        ]
+        contributors = [a for a, contribs in mission.contributions.items() if contribs]
 
         if not contributors:
             return {}
@@ -394,13 +397,10 @@ class MissionEconomy:
             all_contrib_ids.update(ids)
 
         all_contribs = [
-            interaction_map[cid]
-            for cid in all_contrib_ids
-            if cid in interaction_map
+            interaction_map[cid] for cid in all_contrib_ids if cid in interaction_map
         ]
         full_avg_p = (
-            sum(c.p for c in all_contribs) / len(all_contribs)
-            if all_contribs else 0.0
+            sum(c.p for c in all_contribs) / len(all_contribs) if all_contribs else 0.0
         )
 
         marginal_values: Dict[str, float] = {}
@@ -408,17 +408,18 @@ class MissionEconomy:
             # What's the average p without this agent?
             without_ids = all_contrib_ids - set(mission.contributions.get(agent_id, []))
             without_contribs = [
-                interaction_map[cid]
-                for cid in without_ids
-                if cid in interaction_map
+                interaction_map[cid] for cid in without_ids if cid in interaction_map
             ]
             without_avg_p = (
                 sum(c.p for c in without_contribs) / len(without_contribs)
-                if without_contribs else 0.0
+                if without_contribs
+                else 0.0
             )
             # Marginal value = improvement in avg quality + contribution volume
             quality_delta = max(0, full_avg_p - without_avg_p)
-            volume_share = len(mission.contributions[agent_id]) / max(len(all_contrib_ids), 1)
+            volume_share = len(mission.contributions[agent_id]) / max(
+                len(all_contrib_ids), 1
+            )
             marginal_values[agent_id] = quality_delta + volume_share
 
         total_marginal = sum(marginal_values.values())
@@ -465,7 +466,8 @@ class MissionEconomy:
     def get_active_missions(self) -> List[Mission]:
         """Get all active missions."""
         return [
-            m for m in self._missions.values()
+            m
+            for m in self._missions.values()
             if m.status in (MissionStatus.PROPOSED, MissionStatus.ACTIVE)
         ]
 
@@ -489,9 +491,7 @@ class MissionEconomy:
         if not mission or not mission.contributions:
             return 0.0
 
-        counts = sorted(
-            len(v) for v in mission.contributions.values()
-        )
+        counts = sorted(len(v) for v in mission.contributions.values())
         # Include participants who contributed nothing
         for _ in range(len(mission.participants) - len(mission.contributions)):
             counts.insert(0, 0)

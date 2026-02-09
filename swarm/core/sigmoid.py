@@ -80,7 +80,9 @@ def sigmoid_bounds(k: float = 2.0) -> Tuple[float, float]:
     return p_min, p_max
 
 
-def effective_uncertainty_band(k: float = 2.0, threshold: float = 0.1) -> Tuple[float, float]:
+def effective_uncertainty_band(
+    k: float = 2.0, threshold: float = 0.1
+) -> Tuple[float, float]:
     """
     Compute the v_hat range where p is within threshold of 0.5.
 

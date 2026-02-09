@@ -283,8 +283,12 @@ def load_from_json(
 
     history = SimulationHistory(
         simulation_id=data.get("simulation_id", ""),
-        started_at=datetime.fromisoformat(data["started_at"]) if data.get("started_at") else None,
-        ended_at=datetime.fromisoformat(data["ended_at"]) if data.get("ended_at") else None,
+        started_at=datetime.fromisoformat(data["started_at"])
+        if data.get("started_at")
+        else None,
+        ended_at=datetime.fromisoformat(data["ended_at"])
+        if data.get("ended_at")
+        else None,
         n_epochs=data.get("n_epochs", 0),
         steps_per_epoch=data.get("steps_per_epoch", 0),
         n_agents=data.get("n_agents", 0),
@@ -295,7 +299,9 @@ def load_from_json(
     for record in data.get("epoch_snapshots", []):
         snapshot = EpochSnapshot(
             epoch=record["epoch"],
-            timestamp=datetime.fromisoformat(record["timestamp"]) if record.get("timestamp") else datetime.now(),
+            timestamp=datetime.fromisoformat(record["timestamp"])
+            if record.get("timestamp")
+            else datetime.now(),
             total_interactions=record.get("total_interactions", 0),
             accepted_interactions=record.get("accepted_interactions", 0),
             rejected_interactions=record.get("rejected_interactions", 0),
@@ -378,7 +384,11 @@ def load_from_csv(
 
     # Infer metadata from data
     if len(epochs_df) > 0:
-        history.simulation_id = epochs_df["simulation_id"].iloc[0] if "simulation_id" in epochs_df.columns else ""
+        history.simulation_id = (
+            epochs_df["simulation_id"].iloc[0]
+            if "simulation_id" in epochs_df.columns
+            else ""
+        )
         history.n_epochs = len(epochs_df)
 
     # Load epoch snapshots
@@ -454,47 +464,58 @@ def generate_summary_report(
         final = history.epoch_snapshots[-1]
         first = history.epoch_snapshots[0]
 
-        lines.extend([
-            "Final Metrics:",
-            f"  Toxicity Rate: {final.toxicity_rate:.4f}",
-            f"  Quality Gap: {final.quality_gap:.4f}",
-            f"  Total Welfare: {final.total_welfare:.2f}",
-            f"  Avg Payoff: {final.avg_payoff:.2f}",
-            f"  Gini Coefficient: {final.gini_coefficient:.4f}",
-            f"  Ecosystem Threat Level: {final.ecosystem_threat_level:.4f}",
-            f"  Collusion Risk: {final.ecosystem_collusion_risk:.4f}",
-            "",
-            "Changes from Start to End:",
-            f"  Toxicity: {first.toxicity_rate:.4f} -> {final.toxicity_rate:.4f}",
-            f"  Welfare: {first.total_welfare:.2f} -> {final.total_welfare:.2f}",
-            f"  Avg Reputation: {first.avg_reputation:.2f} -> {final.avg_reputation:.2f}",
-            "",
-        ])
+        lines.extend(
+            [
+                "Final Metrics:",
+                f"  Toxicity Rate: {final.toxicity_rate:.4f}",
+                f"  Quality Gap: {final.quality_gap:.4f}",
+                f"  Total Welfare: {final.total_welfare:.2f}",
+                f"  Avg Payoff: {final.avg_payoff:.2f}",
+                f"  Gini Coefficient: {final.gini_coefficient:.4f}",
+                f"  Ecosystem Threat Level: {final.ecosystem_threat_level:.4f}",
+                f"  Collusion Risk: {final.ecosystem_collusion_risk:.4f}",
+                "",
+                "Changes from Start to End:",
+                f"  Toxicity: {first.toxicity_rate:.4f} -> {final.toxicity_rate:.4f}",
+                f"  Welfare: {first.total_welfare:.2f} -> {final.total_welfare:.2f}",
+                f"  Avg Reputation: {first.avg_reputation:.2f} -> {final.avg_reputation:.2f}",
+                "",
+            ]
+        )
 
         # Aggregate stats
         total_interactions = sum(s.total_interactions for s in history.epoch_snapshots)
         total_accepted = sum(s.accepted_interactions for s in history.epoch_snapshots)
-        acceptance_rate = total_accepted / total_interactions if total_interactions > 0 else 0
+        acceptance_rate = (
+            total_accepted / total_interactions if total_interactions > 0 else 0
+        )
 
         import numpy as np
+
         toxicity_values = [s.toxicity_rate for s in history.epoch_snapshots]
         welfare_values = [s.total_welfare for s in history.epoch_snapshots]
 
-        lines.extend([
-            "Aggregate Statistics:",
-            f"  Total Interactions: {total_interactions}",
-            f"  Acceptance Rate: {acceptance_rate:.2%}",
-            f"  Avg Toxicity: {np.mean(toxicity_values):.4f} (std: {np.std(toxicity_values):.4f})",
-            f"  Avg Welfare: {np.mean(welfare_values):.2f} (std: {np.std(welfare_values):.2f})",
-            "",
-        ])
+        lines.extend(
+            [
+                "Aggregate Statistics:",
+                f"  Total Interactions: {total_interactions}",
+                f"  Acceptance Rate: {acceptance_rate:.2%}",
+                f"  Avg Toxicity: {np.mean(toxicity_values):.4f} (std: {np.std(toxicity_values):.4f})",
+                f"  Avg Welfare: {np.mean(welfare_values):.2f} (std: {np.std(welfare_values):.2f})",
+                "",
+            ]
+        )
 
     # Agent summary
     final_states = history.get_final_agent_states()
     if final_states:
         lines.append("Agent Summary:")
         for agent_id, state in sorted(final_states.items()):
-            status = "FROZEN" if state.is_frozen else ("QUARANTINED" if state.is_quarantined else "active")
+            status = (
+                "FROZEN"
+                if state.is_frozen
+                else ("QUARANTINED" if state.is_quarantined else "active")
+            )
             lines.append(
                 f"  {agent_id}: rep={state.reputation:.2f}, "
                 f"payoff={state.total_payoff:.2f}, "

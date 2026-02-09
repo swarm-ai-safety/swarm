@@ -129,8 +129,8 @@ class GovernancePolicy:
 
         # Circuit breaker check
         if self.config.circuit_breaker_enabled:
-            denial_rate = (
-                budget.denied_permissions / max(budget.approved_permissions, 1)
+            denial_rate = budget.denied_permissions / max(
+                budget.approved_permissions, 1
             )
             if denial_rate > self.config.freeze_threshold_toxicity:
                 budget.plans_denied += 1

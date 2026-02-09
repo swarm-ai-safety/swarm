@@ -55,16 +55,10 @@ class Scores(BaseModel):
 class Checks(BaseModel):
     """Raw check values from evaluators."""
 
-    design_consistency: Optional[str] = Field(
-        default=None, pattern=r"^(pass|fail)$"
-    )
+    design_consistency: Optional[str] = Field(default=None, pattern=r"^(pass|fail)$")
     replay_success_rate: Optional[float] = Field(default=None, ge=0.0, le=1.0)
-    artifact_resolution_rate: Optional[float] = Field(
-        default=None, ge=0.0, le=1.0
-    )
-    artifact_hash_match_rate: Optional[float] = Field(
-        default=None, ge=0.0, le=1.0
-    )
+    artifact_resolution_rate: Optional[float] = Field(default=None, ge=0.0, le=1.0)
+    artifact_hash_match_rate: Optional[float] = Field(default=None, ge=0.0, le=1.0)
     # Emergence detection: separate test quality from result
     emergence_test_conducted: Optional[bool] = Field(
         default=None,
@@ -111,9 +105,7 @@ class ReviewResult(BaseModel):
     """Complete review result conforming to the SWARM review schema v1."""
 
     schema_version: str = Field(default="v1", pattern=r"^v\d+$")
-    timestamp_utc: datetime = Field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    timestamp_utc: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     submission: Submission
     verdict: Verdict
     scores: Scores = Field(default_factory=Scores)
@@ -126,9 +118,7 @@ class ReviewResult(BaseModel):
         """Ensure verdict is consistent with scores."""
         if self.verdict == Verdict.PUBLISH:
             if self.checks.design_consistency == "fail":
-                raise ValueError(
-                    "Cannot publish with design_consistency='fail'"
-                )
+                raise ValueError("Cannot publish with design_consistency='fail'")
         return self
 
     def to_dict(self) -> dict:

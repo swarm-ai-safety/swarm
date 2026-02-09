@@ -46,46 +46,54 @@ def _make_interaction_events(
     events = []
 
     # Proposed
-    events.append(Event(
-        event_type=EventType.INTERACTION_PROPOSED,
-        interaction_id=interaction_id,
-        initiator_id=initiator,
-        counterparty_id=counterparty,
-        payload={"interaction_type": "reply", "v_hat": v_hat, "p": p},
-        timestamp=base,
-    ))
+    events.append(
+        Event(
+            event_type=EventType.INTERACTION_PROPOSED,
+            interaction_id=interaction_id,
+            initiator_id=initiator,
+            counterparty_id=counterparty,
+            payload={"interaction_type": "reply", "v_hat": v_hat, "p": p},
+            timestamp=base,
+        )
+    )
 
     # Accepted or rejected
     if accepted:
-        events.append(Event(
-            event_type=EventType.INTERACTION_ACCEPTED,
-            interaction_id=interaction_id,
-            timestamp=base + timedelta(seconds=1),
-        ))
+        events.append(
+            Event(
+                event_type=EventType.INTERACTION_ACCEPTED,
+                interaction_id=interaction_id,
+                timestamp=base + timedelta(seconds=1),
+            )
+        )
     else:
-        events.append(Event(
-            event_type=EventType.INTERACTION_REJECTED,
-            interaction_id=interaction_id,
-            timestamp=base + timedelta(seconds=1),
-        ))
+        events.append(
+            Event(
+                event_type=EventType.INTERACTION_REJECTED,
+                interaction_id=interaction_id,
+                timestamp=base + timedelta(seconds=1),
+            )
+        )
 
     # Payoff
-    events.append(Event(
-        event_type=EventType.PAYOFF_COMPUTED,
-        interaction_id=interaction_id,
-        initiator_id=initiator,
-        counterparty_id=counterparty,
-        payload={
-            "components": {
-                "tau": 1.0,
-                "c_a": 0.1,
-                "c_b": 0.05,
-                "r_a": 0.2,
-                "r_b": 0.15,
-            }
-        },
-        timestamp=base + timedelta(seconds=2),
-    ))
+    events.append(
+        Event(
+            event_type=EventType.PAYOFF_COMPUTED,
+            interaction_id=interaction_id,
+            initiator_id=initiator,
+            counterparty_id=counterparty,
+            payload={
+                "components": {
+                    "tau": 1.0,
+                    "c_a": 0.1,
+                    "c_b": 0.05,
+                    "r_a": 0.2,
+                    "r_b": 0.15,
+                }
+            },
+            timestamp=base + timedelta(seconds=2),
+        )
+    )
 
     return events
 
@@ -147,10 +155,12 @@ class TestReplay:
         log = EventLog(tmp_path / "log.jsonl")
         base = datetime(2024, 1, 1)
         for i in range(5):
-            log.append(_make_event(
-                event_type=EventType.INTERACTION_PROPOSED,
-                timestamp=base + timedelta(seconds=i),
-            ))
+            log.append(
+                _make_event(
+                    event_type=EventType.INTERACTION_PROPOSED,
+                    timestamp=base + timedelta(seconds=i),
+                )
+            )
 
         events = list(log.replay())
         assert len(events) == 5
@@ -223,9 +233,11 @@ class TestReplayFiltered:
         log.append(_make_event(event_type=EventType.PAYOFF_COMPUTED))
         log.append(_make_event(event_type=EventType.INTERACTION_ACCEPTED))
 
-        result = list(log.replay_filtered(
-            event_types=[EventType.PAYOFF_COMPUTED],
-        ))
+        result = list(
+            log.replay_filtered(
+                event_types=[EventType.PAYOFF_COMPUTED],
+            )
+        )
         assert len(result) == 1
         assert result[0].event_type == EventType.PAYOFF_COMPUTED
 
@@ -236,10 +248,12 @@ class TestReplayFiltered:
         for i in range(5):
             log.append(_make_event(timestamp=base + timedelta(hours=i)))
 
-        result = list(log.replay_filtered(
-            start_time=base + timedelta(hours=1),
-            end_time=base + timedelta(hours=3),
-        ))
+        result = list(
+            log.replay_filtered(
+                start_time=base + timedelta(hours=1),
+                end_time=base + timedelta(hours=3),
+            )
+        )
         assert len(result) == 3  # hours 1, 2, 3
 
     def test_filter_by_interaction_id(self, tmp_path):
@@ -267,26 +281,34 @@ class TestReplayFiltered:
         """Multiple filters applied together."""
         log = EventLog(tmp_path / "log.jsonl")
         base = datetime(2024, 1, 1)
-        log.append(_make_event(
-            event_type=EventType.PAYOFF_COMPUTED,
-            agent_id="agent_X",
-            timestamp=base,
-        ))
-        log.append(_make_event(
-            event_type=EventType.PAYOFF_COMPUTED,
-            agent_id="agent_Y",
-            timestamp=base + timedelta(hours=1),
-        ))
-        log.append(_make_event(
-            event_type=EventType.INTERACTION_PROPOSED,
-            agent_id="agent_X",
-            timestamp=base + timedelta(hours=2),
-        ))
+        log.append(
+            _make_event(
+                event_type=EventType.PAYOFF_COMPUTED,
+                agent_id="agent_X",
+                timestamp=base,
+            )
+        )
+        log.append(
+            _make_event(
+                event_type=EventType.PAYOFF_COMPUTED,
+                agent_id="agent_Y",
+                timestamp=base + timedelta(hours=1),
+            )
+        )
+        log.append(
+            _make_event(
+                event_type=EventType.INTERACTION_PROPOSED,
+                agent_id="agent_X",
+                timestamp=base + timedelta(hours=2),
+            )
+        )
 
-        result = list(log.replay_filtered(
-            event_types=[EventType.PAYOFF_COMPUTED],
-            agent_id="agent_X",
-        ))
+        result = list(
+            log.replay_filtered(
+                event_types=[EventType.PAYOFF_COMPUTED],
+                agent_id="agent_X",
+            )
+        )
         assert len(result) == 1
 
 
@@ -302,7 +324,12 @@ class TestToInteractions:
         """Should reconstruct accepted SoftInteraction from event stream."""
         log = EventLog(tmp_path / "log.jsonl")
         events = _make_interaction_events(
-            "iid-1", "alice", "bob", accepted=True, p=0.8, v_hat=0.5,
+            "iid-1",
+            "alice",
+            "bob",
+            accepted=True,
+            p=0.8,
+            v_hat=0.5,
         )
         log.append_many(events)
 
@@ -327,7 +354,10 @@ class TestToInteractions:
         """Should reconstruct rejected interaction."""
         log = EventLog(tmp_path / "log.jsonl")
         events = _make_interaction_events(
-            "iid-2", "carol", "dave", accepted=False,
+            "iid-2",
+            "carol",
+            "dave",
+            accepted=False,
         )
         log.append_many(events)
 
@@ -341,7 +371,9 @@ class TestToInteractions:
         base = datetime(2024, 1, 1)
         for i in range(3):
             events = _make_interaction_events(
-                f"iid-{i}", f"agent_{i}", f"agent_{i+1}",
+                f"iid-{i}",
+                f"agent_{i}",
+                f"agent_{i + 1}",
                 base_time=base + timedelta(minutes=i),
             )
             log.append_many(events)
@@ -360,13 +392,15 @@ class TestToInteractions:
     def test_partial_event_stream(self, tmp_path):
         """Interaction with only PROPOSED event still reconstructed."""
         log = EventLog(tmp_path / "log.jsonl")
-        log.append(Event(
-            event_type=EventType.INTERACTION_PROPOSED,
-            interaction_id="iid-partial",
-            initiator_id="a",
-            counterparty_id="b",
-            payload={"interaction_type": "reply", "p": 0.6},
-        ))
+        log.append(
+            Event(
+                event_type=EventType.INTERACTION_PROPOSED,
+                interaction_id="iid-partial",
+                initiator_id="a",
+                counterparty_id="b",
+                payload={"interaction_type": "reply", "p": 0.6},
+            )
+        )
 
         interactions = log.to_interactions()
         assert len(interactions) == 1

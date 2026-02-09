@@ -98,7 +98,11 @@ class OpportunisticAgent(BaseAgent):
             return self.create_post_action(content)
 
         # Strategic voting (vote with majority)
-        if observation.can_vote and observation.visible_posts and random.random() < self.vote_probability:
+        if (
+            observation.can_vote
+            and observation.visible_posts
+            and random.random() < self.vote_probability
+        ):
             return self._strategic_vote(observation)
 
         # Propose interactions to extractable targets
@@ -126,8 +130,10 @@ class OpportunisticAgent(BaseAgent):
 
         # Check historical payoff
         history = [
-            i for i in self._interaction_history
-            if i.initiator == proposal.initiator_id or i.counterparty == proposal.initiator_id
+            i
+            for i in self._interaction_history
+            if i.initiator == proposal.initiator_id
+            or i.counterparty == proposal.initiator_id
         ]
 
         if history:
@@ -230,7 +236,13 @@ class OpportunisticAgent(BaseAgent):
 
         def roi_score(task):
             bounty = task.get("bounty", 0)
-            difficulty_map = {"trivial": 0.5, "easy": 1, "medium": 2, "hard": 4, "expert": 8}
+            difficulty_map = {
+                "trivial": 0.5,
+                "easy": 1,
+                "medium": 2,
+                "hard": 4,
+                "expert": 8,
+            }
             difficulty = difficulty_map.get(task.get("difficulty", "medium"), 2)
             # High bounty, low difficulty = high ROI
             return bounty / difficulty if difficulty > 0 else bounty

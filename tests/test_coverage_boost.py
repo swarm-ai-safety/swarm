@@ -96,9 +96,7 @@ class TestDeceptiveActPaths:
         """Facade mode should work on active tasks."""
         random.seed(42)
         agent = DeceptiveAgent(agent_id="d1")
-        observation = obs(
-            active_tasks=[{"task_id": "t1", "status": "in_progress"}]
-        )
+        observation = obs(active_tasks=[{"task_id": "t1", "status": "in_progress"}])
         action = agent.act(observation)
         assert action.action_type == ActionType.SUBMIT_OUTPUT
 
@@ -226,9 +224,7 @@ class TestDeceptiveExploitation:
         """Should not target itself."""
         agent = DeceptiveAgent(agent_id="d1")
         agent._trust_scores = {"d1": 0.9}
-        observation = obs(
-            visible_agents=[{"agent_id": "d1", "resources": 200}]
-        )
+        observation = obs(visible_agents=[{"agent_id": "d1", "resources": 200}])
         targets = agent._find_exploitation_targets(observation)
         assert "d1" not in targets
 
@@ -236,9 +232,7 @@ class TestDeceptiveExploitation:
         """Should only target agents with resources > 50."""
         agent = DeceptiveAgent(agent_id="d1")
         agent._trust_scores = {"a1": 0.9}
-        observation = obs(
-            visible_agents=[{"agent_id": "a1", "resources": 10}]
-        )
+        observation = obs(visible_agents=[{"agent_id": "a1", "resources": 10}])
         targets = agent._find_exploitation_targets(observation)
         assert len(targets) == 0
 
@@ -330,8 +324,7 @@ class TestDeceptiveHelpers:
         observation = obs()
         # Run many times; most should accept in early phase
         accepts = sum(
-            agent._should_accept_for_trust(proposal, observation)
-            for _ in range(100)
+            agent._should_accept_for_trust(proposal, observation) for _ in range(100)
         )
         assert accepts > 70
 
@@ -343,8 +336,7 @@ class TestDeceptiveHelpers:
         proposal = {"initiator_id": "a1"}
         observation = obs()
         accepts = sum(
-            agent._should_accept_for_trust(proposal, observation)
-            for _ in range(100)
+            agent._should_accept_for_trust(proposal, observation) for _ in range(100)
         )
         assert accepts < 80
 
@@ -503,9 +495,7 @@ class TestOpportunisticActPaths:
     def test_act_posts_engagement_content(self):
         """Should post engagement-bait content."""
         random.seed(0)
-        agent = OpportunisticAgent(
-            agent_id="o1", config={"post_probability": 1.0}
-        )
+        agent = OpportunisticAgent(agent_id="o1", config={"post_probability": 1.0})
         observation = obs(can_claim_task=False)
         action = agent.act(observation)
         if action.action_type == ActionType.POST:
@@ -640,9 +630,7 @@ class TestOpportunisticHelpers:
     def test_strategic_vote_with_momentum(self):
         """Should vote with clear momentum."""
         agent = OpportunisticAgent(agent_id="o1")
-        observation = obs(
-            visible_posts=[{"post_id": "p1", "net_votes": 5}]
-        )
+        observation = obs(visible_posts=[{"post_id": "p1", "net_votes": 5}])
         action = agent._strategic_vote(observation)
         assert action.action_type == ActionType.VOTE
         assert action.vote_direction == 1
@@ -650,9 +638,7 @@ class TestOpportunisticHelpers:
     def test_strategic_vote_downvote_negative(self):
         """Should downvote posts with negative momentum."""
         agent = OpportunisticAgent(agent_id="o1")
-        observation = obs(
-            visible_posts=[{"post_id": "p1", "net_votes": -5}]
-        )
+        observation = obs(visible_posts=[{"post_id": "p1", "net_votes": -5}])
         action = agent._strategic_vote(observation)
         assert action.action_type == ActionType.VOTE
         assert action.vote_direction == -1
@@ -660,9 +646,7 @@ class TestOpportunisticHelpers:
     def test_strategic_vote_no_momentum(self):
         """Should upvote first post when no clear momentum."""
         agent = OpportunisticAgent(agent_id="o1")
-        observation = obs(
-            visible_posts=[{"post_id": "p1", "net_votes": 0}]
-        )
+        observation = obs(visible_posts=[{"post_id": "p1", "net_votes": 0}])
         action = agent._strategic_vote(observation)
         assert action.action_type == ActionType.VOTE
         assert action.vote_direction == 1
@@ -702,9 +686,7 @@ class TestOpportunisticHelpers:
         """Proposals from high-rep agents are profitable."""
         agent = OpportunisticAgent(agent_id="o1")
         proposal = {"initiator_id": "a1", "offered_transfer": 0}
-        observation = obs(
-            visible_agents=[{"agent_id": "a1", "reputation": 1.0}]
-        )
+        observation = obs(visible_agents=[{"agent_id": "a1", "reputation": 1.0}])
         assert agent._is_profitable_proposal(proposal, observation) is True
 
     def test_generate_engagement_content(self):
@@ -739,9 +721,7 @@ class TestHonestActPaths:
         """Should bid on available bounties."""
         random.seed(0)
         agent = HonestAgent(agent_id="h1")
-        observation = obs(
-            available_bounties=[{"bounty_id": "b1", "reward_amount": 50}]
-        )
+        observation = obs(available_bounties=[{"bounty_id": "b1", "reward_amount": 50}])
         actions = [agent.act(observation) for _ in range(20)]
         bid_actions = [a for a in actions if a.action_type == ActionType.PLACE_BID]
         assert len(bid_actions) > 0
@@ -767,9 +747,7 @@ class TestHonestActPaths:
     def test_act_works_on_active_task(self):
         """Should work on in-progress tasks."""
         agent = HonestAgent(agent_id="h1")
-        observation = obs(
-            active_tasks=[{"task_id": "t1_abc", "status": "in_progress"}]
-        )
+        observation = obs(active_tasks=[{"task_id": "t1_abc", "status": "in_progress"}])
         action = agent.act(observation)
         assert action.action_type == ActionType.SUBMIT_OUTPUT
 
@@ -779,7 +757,12 @@ class TestHonestActPaths:
         agent = HonestAgent(agent_id="h1")
         observation = obs(
             available_tasks=[
-                {"task_id": "t1", "bounty": 10, "difficulty": "medium", "min_reputation": 0},
+                {
+                    "task_id": "t1",
+                    "bounty": 10,
+                    "difficulty": "medium",
+                    "min_reputation": 0,
+                },
             ]
         )
         action = agent.act(observation)
@@ -917,7 +900,12 @@ class TestHonestHelpers:
             agent_state=AgentState(agent_id="h1", reputation=0.3, resources=100.0)
         )
         tasks = [
-            {"task_id": "t1", "bounty": 10, "difficulty": "easy", "min_reputation": 0.5},
+            {
+                "task_id": "t1",
+                "bounty": 10,
+                "difficulty": "easy",
+                "min_reputation": 0.5,
+            },
             {"task_id": "t2", "bounty": 5, "difficulty": "easy", "min_reputation": 0.0},
         ]
         selected = agent._select_task(tasks, observation)
@@ -991,9 +979,7 @@ class TestHonestHelpers:
         # Build trust with a2
         for _ in range(5):
             agent._interaction_history.append(
-                SoftInteraction(
-                    initiator="a2", counterparty="h1", p=0.9, accepted=True
-                )
+                SoftInteraction(initiator="a2", counterparty="h1", p=0.9, accepted=True)
             )
         observation = obs(
             visible_agents=[
@@ -1017,9 +1003,7 @@ class TestHonestHelpers:
         agent = HonestAgent(agent_id="h1")
         for _ in range(5):
             agent._interaction_history.append(
-                SoftInteraction(
-                    initiator="a1", counterparty="h1", p=0.9, accepted=True
-                )
+                SoftInteraction(initiator="a1", counterparty="h1", p=0.9, accepted=True)
             )
         proposal = {"initiator_id": "a1"}
         assert agent._should_accept_proposal(proposal, obs()) is True

@@ -101,7 +101,10 @@ class MoltbookRateLimitLever(GovernanceLever):
 
     def _can_comment(self, state: MoltbookRateLimitState, step: int) -> bool:
         cooldown = getattr(self.config, "moltbook_comment_cooldown_steps", 1)
-        if state.last_comment_step is not None and (step - state.last_comment_step) < cooldown:
+        if (
+            state.last_comment_step is not None
+            and (step - state.last_comment_step) < cooldown
+        ):
             return False
         cap = getattr(self.config, "moltbook_daily_comment_cap", 50)
         return state.daily_comment_count < cap
@@ -158,11 +161,18 @@ class ChallengeVerificationLever(GovernanceLever):
         )
 
     def on_interaction(self, interaction, state) -> LeverEffect:
-        status = interaction.metadata.get("moltbook_status") if interaction.metadata else None
+        status = (
+            interaction.metadata.get("moltbook_status")
+            if interaction.metadata
+            else None
+        )
         if status == "pending_verification":
             return LeverEffect(
                 lever_name=self.name,
                 cost_a=1.0,
-                details={"blocked": True, "post_id": interaction.metadata.get("post_id")},
+                details={
+                    "blocked": True,
+                    "post_id": interaction.metadata.get("post_id"),
+                },
             )
         return LeverEffect(lever_name=self.name)

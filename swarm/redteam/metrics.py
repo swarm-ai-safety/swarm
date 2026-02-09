@@ -134,8 +134,7 @@ def compute_evasion_rate(
 
     detected_ids = {d.get("action_id") for d in detections}
     undetected = sum(
-        1 for a in malicious_actions
-        if a.get("action_id") not in detected_ids
+        1 for a in malicious_actions if a.get("action_id") not in detected_ids
     )
 
     return undetected / len(malicious_actions)
@@ -155,10 +154,7 @@ def compute_detection_latency(
     Returns:
         Tuple of (mean_latency, min_latency, max_latency)
     """
-    action_epochs = {
-        a.get("action_id"): a.get("epoch", 0)
-        for a in malicious_actions
-    }
+    action_epochs = {a.get("action_id"): a.get("epoch", 0) for a in malicious_actions}
 
     latencies = []
     for detection in detections:
@@ -193,11 +189,13 @@ def compute_damage_before_detection(
         # Never detected - all damage counts
         return float(sum(a.get("damage", 0.0) for a in malicious_actions))
 
-    return float(sum(
-        a.get("damage", 0.0)
-        for a in malicious_actions
-        if a.get("epoch", 0) < first_detection_epoch
-    ))
+    return float(
+        sum(
+            a.get("damage", 0.0)
+            for a in malicious_actions
+            if a.get("epoch", 0) < first_detection_epoch
+        )
+    )
 
 
 @dataclass

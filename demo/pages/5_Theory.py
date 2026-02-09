@@ -104,7 +104,9 @@ st.latex(
 st.markdown(r"""
 **Quality gap** measures selection effects:
 """)
-st.latex(r"\text{QualityGap} = \mathbb{E}[p \mid \text{accepted}] - \mathbb{E}[p \mid \text{rejected}]")
+st.latex(
+    r"\text{QualityGap} = \mathbb{E}[p \mid \text{accepted}] - \mathbb{E}[p \mid \text{rejected}]"
+)
 st.markdown(r"""
 A **negative** quality gap signals **adverse selection** --- the ecosystem is preferentially
 accepting lower-quality interactions. This is the multi-agent analogue of Akerlof's
@@ -112,7 +114,9 @@ accepting lower-quality interactions. This is the multi-agent analogue of Akerlo
 
 **Total welfare** sums agent payoffs across accepted interactions:
 """)
-st.latex(r"W = \sum_{j \,\in\, \text{accepted}} \!\bigl(\pi_{a}^{(j)} + \pi_{b}^{(j)}\bigr)")
+st.latex(
+    r"W = \sum_{j \,\in\, \text{accepted}} \!\bigl(\pi_{a}^{(j)} + \pi_{b}^{(j)}\bigr)"
+)
 st.markdown(r"""
 Since transfers cancel in aggregate ($T_a + T_b = 0$), total welfare reduces to the
 sum of expected surpluses minus governance costs and internalized externalities.
@@ -173,7 +177,13 @@ Kyle [1], where agents with private information can strategically exploit it:
 """)
 
 agent_data = {
-    "Type": ["Honest", "Opportunistic", "Deceptive", "Adversarial", "Adaptive Adversary"],
+    "Type": [
+        "Honest",
+        "Opportunistic",
+        "Deceptive",
+        "Adversarial",
+        "Adaptive Adversary",
+    ],
     "Strategy": [
         "Always cooperates, high-quality interactions",
         "Cooperates when observed, exploits when possible",

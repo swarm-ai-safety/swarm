@@ -83,7 +83,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     # Print results
     if not args.quiet:
         print()
-        print(f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} {'Welfare':<10}")
+        print(
+            f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} {'Welfare':<10}"
+        )
         print("-" * 60)
         for m in metrics_history:
             print(
@@ -100,7 +102,9 @@ def cmd_run(args: argparse.Namespace) -> int:
     if metrics_history:
         total_interactions = sum(m.total_interactions for m in metrics_history)
         total_accepted = sum(m.accepted_interactions for m in metrics_history)
-        avg_toxicity = sum(m.toxicity_rate for m in metrics_history) / len(metrics_history)
+        avg_toxicity = sum(m.toxicity_rate for m in metrics_history) / len(
+            metrics_history
+        )
 
         if not args.quiet:
             print(f"Total interactions: {total_interactions}")
@@ -137,11 +141,13 @@ def cmd_run(args: argparse.Namespace) -> int:
 
         if args.export_json:
             from swarm.analysis.export import export_to_json
+
             path = export_to_json(history, args.export_json)
             print(f"Exported JSON: {path}")
 
         if args.export_csv:
             from swarm.analysis.export import export_to_csv
+
             paths = export_to_csv(history, args.export_csv, prefix=scenario.scenario_id)
             for kind, path in paths.items():
                 print(f"Exported CSV ({kind}): {path}")
@@ -179,7 +185,9 @@ def _check_criteria(criteria: dict, metrics_history: list) -> None:
     if "toxicity_threshold" in criteria:
         passed = avg_toxicity <= criteria["toxicity_threshold"]
         tag = "[PASS]" if passed else "[FAIL]"
-        print(f"  {tag} Toxicity: {avg_toxicity:.4f} <= {criteria['toxicity_threshold']}")
+        print(
+            f"  {tag} Toxicity: {avg_toxicity:.4f} <= {criteria['toxicity_threshold']}"
+        )
         all_passed = all_passed and passed
 
     print()
@@ -215,11 +223,21 @@ def main() -> int:
     # run
     run_parser = subparsers.add_parser("run", help="Run a simulation scenario")
     run_parser.add_argument("scenario", help="Path to YAML scenario file")
-    run_parser.add_argument("--seed", type=int, default=None, help="Override random seed")
-    run_parser.add_argument("--epochs", type=int, default=None, help="Override number of epochs")
-    run_parser.add_argument("--steps", type=int, default=None, help="Override steps per epoch")
-    run_parser.add_argument("--export-json", metavar="PATH", help="Export results to JSON file")
-    run_parser.add_argument("--export-csv", metavar="DIR", help="Export results to CSV directory")
+    run_parser.add_argument(
+        "--seed", type=int, default=None, help="Override random seed"
+    )
+    run_parser.add_argument(
+        "--epochs", type=int, default=None, help="Override number of epochs"
+    )
+    run_parser.add_argument(
+        "--steps", type=int, default=None, help="Override steps per epoch"
+    )
+    run_parser.add_argument(
+        "--export-json", metavar="PATH", help="Export results to JSON file"
+    )
+    run_parser.add_argument(
+        "--export-csv", metavar="DIR", help="Export results to CSV directory"
+    )
     run_parser.add_argument(
         "--prompt-audit",
         metavar="PATH",
@@ -230,11 +248,15 @@ def main() -> int:
         action="store_true",
         help="Include full system prompt text in the audit log (more sensitive)",
     )
-    run_parser.add_argument("-q", "--quiet", action="store_true", help="Suppress progress output")
+    run_parser.add_argument(
+        "-q", "--quiet", action="store_true", help="Suppress progress output"
+    )
 
     # list
     list_parser = subparsers.add_parser("list", help="List available scenarios")
-    list_parser.add_argument("--dir", default="scenarios", help="Scenarios directory (default: scenarios)")
+    list_parser.add_argument(
+        "--dir", default="scenarios", help="Scenarios directory (default: scenarios)"
+    )
 
     args = parser.parse_args()
 

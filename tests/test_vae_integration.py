@@ -30,6 +30,7 @@ pytestmark = pytest.mark.slow
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _make_interaction(
     initiator: str = "a1",
     counterparty: str = "a2",
@@ -523,25 +524,43 @@ class TestHFNPermeabilityIntegration:
 
         # Establish a normal market price
         for tick in range(5):
-            engine.submit_order(HFNOrder(
-                agent_id="buyer", order_type="bid",
-                resource_type="compute", quantity=1.0,
-                price=100.0, timestamp_ms=tick * 100.0, latency_ms=1.0,
-            ))
-            engine.submit_order(HFNOrder(
-                agent_id="seller", order_type="ask",
-                resource_type="compute", quantity=1.0,
-                price=100.0, timestamp_ms=tick * 100.0, latency_ms=1.0,
-            ))
+            engine.submit_order(
+                HFNOrder(
+                    agent_id="buyer",
+                    order_type="bid",
+                    resource_type="compute",
+                    quantity=1.0,
+                    price=100.0,
+                    timestamp_ms=tick * 100.0,
+                    latency_ms=1.0,
+                )
+            )
+            engine.submit_order(
+                HFNOrder(
+                    agent_id="seller",
+                    order_type="ask",
+                    resource_type="compute",
+                    quantity=1.0,
+                    price=100.0,
+                    timestamp_ms=tick * 100.0,
+                    latency_ms=1.0,
+                )
+            )
             engine.process_tick()
 
         # Now simulate a crash: many low-price asks
         for i in range(10):
-            engine.submit_order(HFNOrder(
-                agent_id=f"panic_seller_{i}", order_type="ask",
-                resource_type="compute", quantity=5.0,
-                price=10.0, timestamp_ms=600.0, latency_ms=1.0,
-            ))
+            engine.submit_order(
+                HFNOrder(
+                    agent_id=f"panic_seller_{i}",
+                    order_type="ask",
+                    resource_type="compute",
+                    quantity=5.0,
+                    price=10.0,
+                    timestamp_ms=600.0,
+                    latency_ms=1.0,
+                )
+            )
         engine.process_tick()
 
         # Compute volatility as threat level
@@ -565,11 +584,17 @@ class TestHFNPermeabilityIntegration:
         engine.halt(duration_ticks=10)
         assert engine.is_halted
 
-        accepted = engine.submit_order(HFNOrder(
-            agent_id="a1", order_type="bid",
-            resource_type="compute", quantity=1.0,
-            price=50.0, timestamp_ms=0.0, latency_ms=1.0,
-        ))
+        accepted = engine.submit_order(
+            HFNOrder(
+                agent_id="a1",
+                order_type="bid",
+                resource_type="compute",
+                quantity=1.0,
+                price=50.0,
+                timestamp_ms=0.0,
+                latency_ms=1.0,
+            )
+        )
         assert accepted is False
 
 
@@ -612,7 +637,10 @@ class TestIdentityMissionIntegration:
         cred = issuer.issue_credential(
             subject_id="worker",
             claim_type="task_completion",
-            claim_value={"mission_id": mission.mission_id, "score": result["mission_score"]},
+            claim_value={
+                "mission_id": mission.mission_id,
+                "score": result["mission_score"],
+            },
             current_epoch=5,
         )
         assert cred.claim_type == "task_completion"
@@ -694,14 +722,10 @@ class TestSybilMissionPipeline:
 
         # Filter rewards using sybil detection
         clean_rewards = {
-            agent: reward
-            for agent, reward in rewards.items()
-            if agent not in flagged
+            agent: reward for agent, reward in rewards.items() if agent not in flagged
         }
         sybil_rewards = {
-            agent: reward
-            for agent, reward in rewards.items()
-            if agent in flagged
+            agent: reward for agent, reward in rewards.items() if agent in flagged
         }
 
         # Honest agent should get rewards; sybils should be filtered out
@@ -758,7 +782,9 @@ class TestAuctionFairnessMetrics:
         )
 
         # Each agent should get what they value most
-        assert result.allocations["compute_lover"].resources.get("compute", 0) > \
-               result.allocations["data_lover"].resources.get("compute", 0)
-        assert result.allocations["data_lover"].resources.get("data", 0) > \
-               result.allocations["compute_lover"].resources.get("data", 0)
+        assert result.allocations["compute_lover"].resources.get(
+            "compute", 0
+        ) > result.allocations["data_lover"].resources.get("compute", 0)
+        assert result.allocations["data_lover"].resources.get(
+            "data", 0
+        ) > result.allocations["compute_lover"].resources.get("data", 0)

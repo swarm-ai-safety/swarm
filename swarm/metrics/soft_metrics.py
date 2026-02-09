@@ -61,9 +61,7 @@ class SoftMetrics:
 
         return sum(1 - i.p for i in interactions) / len(interactions)
 
-    def conditional_loss_initiator(
-        self, interactions: List[SoftInteraction]
-    ) -> float:
+    def conditional_loss_initiator(self, interactions: List[SoftInteraction]) -> float:
         """
         Compute conditional loss for initiator: E[π_a | accepted] - E[π_a]
 
@@ -147,10 +145,7 @@ class SoftMetrics:
         avg_p_all = sum(i.p for i in interactions) / len(interactions)
         avg_p_accepted = sum(i.p for i in accepted) / len(accepted)
 
-        scale = (
-            self.payoff_engine.config.s_plus +
-            self.payoff_engine.config.s_minus
-        )
+        scale = self.payoff_engine.config.s_plus + self.payoff_engine.config.s_minus
 
         return scale * (avg_p_all - avg_p_accepted)
 
@@ -301,7 +296,8 @@ class SoftMetrics:
             bin_end = (i + 1) * bin_width
 
             count = sum(
-                1 for interaction in interactions
+                1
+                for interaction in interactions
                 if bin_start <= interaction.p < bin_end
                 or (i == bins - 1 and interaction.p == 1.0)
             )
@@ -310,9 +306,7 @@ class SoftMetrics:
 
         return result
 
-    def welfare_metrics(
-        self, interactions: List[SoftInteraction]
-    ) -> dict:
+    def welfare_metrics(self, interactions: List[SoftInteraction]) -> dict:
         """
         Compute aggregate welfare metrics.
 
@@ -332,19 +326,19 @@ class SoftMetrics:
 
         accepted = [i for i in interactions if i.accepted]
 
-        total_welfare = sum(
-            self.payoff_engine.total_welfare(i) for i in accepted
-        )
-        total_social = sum(
-            self.payoff_engine.social_surplus(i) for i in accepted
-        )
+        total_welfare = sum(self.payoff_engine.total_welfare(i) for i in accepted)
+        total_social = sum(self.payoff_engine.social_surplus(i) for i in accepted)
         avg_init = (
             sum(self.payoff_engine.payoff_initiator(i) for i in accepted)
-            / len(accepted) if accepted else 0.0
+            / len(accepted)
+            if accepted
+            else 0.0
         )
         avg_counter = (
             sum(self.payoff_engine.payoff_counterparty(i) for i in accepted)
-            / len(accepted) if accepted else 0.0
+            / len(accepted)
+            if accepted
+            else 0.0
         )
 
         return {
@@ -358,9 +352,7 @@ class SoftMetrics:
     # Calibration Metrics
     # =========================================================================
 
-    def calibration_error(
-        self, interactions: List[SoftInteraction]
-    ) -> Optional[float]:
+    def calibration_error(self, interactions: List[SoftInteraction]) -> Optional[float]:
         """
         Compute calibration error: E[p] - empirical_positive_rate.
 
@@ -387,9 +379,7 @@ class SoftMetrics:
 
         return avg_p - empirical_rate
 
-    def brier_score(
-        self, interactions: List[SoftInteraction]
-    ) -> Optional[float]:
+    def brier_score(self, interactions: List[SoftInteraction]) -> Optional[float]:
         """
         Compute Brier score: E[(p - v)^2] where v = (ground_truth + 1) / 2.
 
@@ -481,9 +471,9 @@ class SoftMetrics:
 
             # Get interactions in this bin
             in_bin = [
-                i for i in with_truth
-                if bin_start <= i.p < bin_end
-                or (b == bins - 1 and i.p == 1.0)
+                i
+                for i in with_truth
+                if bin_start <= i.p < bin_end or (b == bins - 1 and i.p == 1.0)
             ]
 
             if not in_bin:
@@ -619,9 +609,7 @@ class SoftMetrics:
         """
         return math.sqrt(self.quality_variance(interactions, accepted_only))
 
-    def payoff_variance_initiator(
-        self, interactions: List[SoftInteraction]
-    ) -> float:
+    def payoff_variance_initiator(self, interactions: List[SoftInteraction]) -> float:
         """
         Compute variance of initiator payoffs: Var[π_a].
 
@@ -665,9 +653,7 @@ class SoftMetrics:
 
         return variance
 
-    def coefficient_of_variation(
-        self, interactions: List[SoftInteraction]
-    ) -> dict:
+    def coefficient_of_variation(self, interactions: List[SoftInteraction]) -> dict:
         """
         Compute coefficient of variation (CV = std/mean) for key metrics.
 

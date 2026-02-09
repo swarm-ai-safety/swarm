@@ -90,7 +90,9 @@ def error_rate(
     return errors / len(action_list)
 
 
-def incoherence_index(disagreement: float, error: float, epsilon: float = 1e-8) -> float:
+def incoherence_index(
+    disagreement: float, error: float, epsilon: float = 1e-8
+) -> float:
     """
     Compute incoherence index I = D / (E + epsilon), clipped to [0, 1].
 
@@ -170,9 +172,15 @@ def summarize_incoherence_by_agent_type(
         n = len(group)
         result[agent_type] = {
             "n": float(n),
-            "mean_incoherence_index": sum(float(r.get("incoherence_index", 0.0)) for r in group) / n,
+            "mean_incoherence_index": sum(
+                float(r.get("incoherence_index", 0.0)) for r in group
+            )
+            / n,
             "mean_error_rate": sum(float(r.get("error_rate", 0.0)) for r in group) / n,
-            "mean_disagreement_rate": sum(float(r.get("disagreement_rate", 0.0)) for r in group) / n,
+            "mean_disagreement_rate": sum(
+                float(r.get("disagreement_rate", 0.0)) for r in group
+            )
+            / n,
         }
     return result
 
@@ -218,7 +226,9 @@ def classify_dual_failure_modes(
     ratio = (
         coherent_adversarial / incoherent_benign
         if incoherent_benign > 0
-        else float("inf") if coherent_adversarial > 0 else 0.0
+        else float("inf")
+        if coherent_adversarial > 0
+        else 0.0
     )
     return DualFailureSummary(
         coherent_adversarial_incidents=coherent_adversarial,

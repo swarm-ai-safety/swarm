@@ -52,14 +52,12 @@ class TestModeratorInit:
 
 
 class TestModeratorCanModerate:
-
     def test_can_moderate_returns_true(self):
         mod = ModeratorRole()
         assert mod.can_moderate() is True
 
 
 class TestModeratorFlagContent:
-
     def test_flag_content_adds_entry(self):
         mod = ModeratorRole()
         mod.flag_content("post_1", "offensive", "reporter_1")
@@ -78,15 +76,18 @@ class TestModeratorFlagContent:
 
 
 class TestModeratorReviewContent:
-
     def test_review_clean_content_returns_none(self):
         mod = ModeratorRole()
-        result = mod.review_content("post_1", "This is a perfectly nice message.", "author_1")
+        result = mod.review_content(
+            "post_1", "This is a perfectly nice message.", "author_1"
+        )
         assert result is None
 
     def test_review_toxic_content_returns_moderation_action(self):
         mod = ModeratorRole()
-        result = mod.review_content("post_1", "I will attack and destroy you!!!!", "author_1")
+        result = mod.review_content(
+            "post_1", "I will attack and destroy you!!!!", "author_1"
+        )
         assert isinstance(result, ModerationAction)
         assert result.severity > 0
 
@@ -102,13 +103,14 @@ class TestModeratorReviewContent:
     def test_review_high_severity_hides(self):
         mod = ModeratorRole()
         # "attack" keyword=1, "attack" pattern=2 => severity=3 => high => hide
-        result = mod.review_content("post_1", "I will attack you right now do it", "author_1")
+        result = mod.review_content(
+            "post_1", "I will attack you right now do it", "author_1"
+        )
         assert result is not None
         assert result.action_type == "hide"
 
 
 class TestModeratorAssessSeverity:
-
     def test_clean_content_returns_zero(self):
         mod = ModeratorRole()
         assert mod._assess_severity("Hello, how are you today?") == 0
@@ -165,7 +167,6 @@ class TestModeratorAssessSeverity:
 
 
 class TestModeratorFreezeUnfreeze:
-
     def test_freeze_agent_adds_to_frozen(self):
         mod = ModeratorRole()
         mod._freeze_agent("agent_1")
@@ -201,7 +202,6 @@ class TestModeratorFreezeUnfreeze:
 
 
 class TestModeratorWarningCount:
-
     def test_get_warning_count_default_zero(self):
         mod = ModeratorRole()
         assert mod.get_warning_count("unknown_agent") == 0
@@ -214,7 +214,6 @@ class TestModeratorWarningCount:
 
 
 class TestModeratorWarnThenFreeze:
-
     def test_warn_then_freeze_flow(self):
         mod = ModeratorRole()
         # First warning (severity 2 = medium = warn)
@@ -229,16 +228,17 @@ class TestModeratorWarnThenFreeze:
 
 
 class TestModeratorProcessFlaggedContent:
-
     def test_auto_hides_content_at_threshold(self):
         mod = ModeratorRole()
         # Manually add flagged content with flag_count >= 3
-        mod._flagged_content.append({
-            "post_id": "post_1",
-            "reason": "offensive",
-            "reporter_id": "r1",
-            "flag_count": 3,
-        })
+        mod._flagged_content.append(
+            {
+                "post_id": "post_1",
+                "reason": "offensive",
+                "reporter_id": "r1",
+                "flag_count": 3,
+            }
+        )
         actions = mod.process_flagged_content()
         assert len(actions) == 1
         assert actions[0].action_type == "hide"
@@ -246,29 +246,32 @@ class TestModeratorProcessFlaggedContent:
 
     def test_does_not_hide_below_threshold(self):
         mod = ModeratorRole()
-        mod._flagged_content.append({
-            "post_id": "post_2",
-            "reason": "minor",
-            "reporter_id": "r1",
-            "flag_count": 2,
-        })
+        mod._flagged_content.append(
+            {
+                "post_id": "post_2",
+                "reason": "minor",
+                "reporter_id": "r1",
+                "flag_count": 2,
+            }
+        )
         actions = mod.process_flagged_content()
         assert len(actions) == 0
 
     def test_clears_flagged_content_after_processing(self):
         mod = ModeratorRole()
-        mod._flagged_content.append({
-            "post_id": "post_3",
-            "reason": "test",
-            "reporter_id": "r1",
-            "flag_count": 1,
-        })
+        mod._flagged_content.append(
+            {
+                "post_id": "post_3",
+                "reason": "test",
+                "reporter_id": "r1",
+                "flag_count": 1,
+            }
+        )
         mod.process_flagged_content()
         assert len(mod._flagged_content) == 0
 
 
 class TestModeratorStats:
-
     def test_get_moderation_stats_empty(self):
         mod = ModeratorRole()
         stats = mod.get_moderation_stats()
@@ -296,20 +299,31 @@ class TestModeratorStats:
 
 
 class TestModeratorDecideAction:
-
     def test_decide_moderation_action_clean_posts(self):
         mod = ModeratorRole()
-        obs = _obs(visible_posts=[
-            {"post_id": "p1", "content": "Hello world, nice day!", "author_id": "a1"},
-        ])
+        obs = _obs(
+            visible_posts=[
+                {
+                    "post_id": "p1",
+                    "content": "Hello world, nice day!",
+                    "author_id": "a1",
+                },
+            ]
+        )
         result = mod.decide_moderation_action(obs)
         assert result is None
 
     def test_decide_moderation_action_toxic_post_returns_action(self):
         mod = ModeratorRole()
-        obs = _obs(visible_posts=[
-            {"post_id": "p1", "content": "I will attack and destroy you!!!!", "author_id": "a1"},
-        ])
+        obs = _obs(
+            visible_posts=[
+                {
+                    "post_id": "p1",
+                    "content": "I will attack and destroy you!!!!",
+                    "author_id": "a1",
+                },
+            ]
+        )
         result = mod.decide_moderation_action(obs)
         assert isinstance(result, Action)
         assert result.target_id == "p1"
@@ -317,12 +331,14 @@ class TestModeratorDecideAction:
 
     def test_decide_moderation_action_processes_flagged_first(self):
         mod = ModeratorRole()
-        mod._flagged_content.append({
-            "post_id": "p_flag",
-            "reason": "bad",
-            "reporter_id": "r1",
-            "flag_count": 5,
-        })
+        mod._flagged_content.append(
+            {
+                "post_id": "p_flag",
+                "reason": "bad",
+                "reporter_id": "r1",
+                "flag_count": 5,
+            }
+        )
         obs = _obs(visible_posts=[])
         result = mod.decide_moderation_action(obs)
         # Flagged content processed, returns None to signal actions taken
@@ -337,14 +353,12 @@ class TestModeratorDecideAction:
 
 
 class TestPlannerInit:
-
     def test_can_plan_returns_true(self):
         planner = PlannerRole()
         assert planner.can_plan() is True
 
 
 class TestPlannerCreatePlan:
-
     def test_create_plan_returns_plan(self):
         planner = PlannerRole()
         plan = planner.create_plan("task_1", "research something", ["a1", "a2"])
@@ -367,7 +381,6 @@ class TestPlannerCreatePlan:
 
 
 class TestPlannerDecomposeTask:
-
     def test_decompose_research(self):
         planner = PlannerRole()
         steps = planner._decompose_task("research the topic")
@@ -394,7 +407,6 @@ class TestPlannerDecomposeTask:
 
 
 class TestPlannerAssignWork:
-
     def test_round_robin_assignment(self):
         planner = PlannerRole()
         steps = ["step1", "step2", "step3", "step4"]
@@ -419,7 +431,6 @@ class TestPlannerAssignWork:
 
 
 class TestPlannerGetNextStep:
-
     def test_get_next_step_returns_first_step(self):
         planner = PlannerRole()
         plan = planner.create_plan("t1", "research topic", ["a1"])
@@ -440,7 +451,6 @@ class TestPlannerGetNextStep:
 
 
 class TestPlannerAdvancePlan:
-
     def test_advance_plan_increments_step(self):
         planner = PlannerRole()
         plan = planner.create_plan("t1", "do something", ["a1"])
@@ -462,7 +472,6 @@ class TestPlannerAdvancePlan:
 
 
 class TestPlannerIsPlanComplete:
-
     def test_is_plan_complete_initially_false(self):
         planner = PlannerRole()
         plan = planner.create_plan("t1", "do something", ["a1"])
@@ -481,7 +490,6 @@ class TestPlannerIsPlanComplete:
 
 
 class TestPlannerGetPlanProgress:
-
     def test_progress_starts_at_zero(self):
         planner = PlannerRole()
         plan = planner.create_plan("t1", "do something", ["a1"])
@@ -507,7 +515,6 @@ class TestPlannerGetPlanProgress:
 
 
 class TestPlannerEdgeCases:
-
     def test_create_plan_empty_collaborators(self):
         planner = PlannerRole()
         plan = planner.create_plan("t1", "do something", [])
@@ -521,7 +528,6 @@ class TestPlannerEdgeCases:
 
 
 class TestPosterCanPost:
-
     def test_can_post_false_when_interval_not_met(self):
         poster = PosterRole()
         # steps_since_last_post starts at 0, min_post_interval is 2
@@ -535,7 +541,6 @@ class TestPosterCanPost:
 
 
 class TestPosterSetStrategy:
-
     def test_set_strategy_updates_strategy(self):
         poster = PosterRole()
         strategy = ContentStrategy(topics=["AI", "safety"], tone="helpful")
@@ -545,7 +550,6 @@ class TestPosterSetStrategy:
 
 
 class TestPosterGeneratePostContent:
-
     def test_generate_post_uses_strategy_topic(self):
         poster = PosterRole()
         poster.set_strategy(ContentStrategy(topics=["safety"], tone="neutral"))
@@ -561,7 +565,11 @@ class TestPosterGeneratePostContent:
         random.seed(42)
         content = poster.generate_post_content(obs)
         # One of the helpful templates should be used
-        helpful_phrases = ["helpful tip", "learned something useful", "share my insights"]
+        helpful_phrases = [
+            "helpful tip",
+            "learned something useful",
+            "share my insights",
+        ]
         assert any(phrase in content for phrase in helpful_phrases)
 
     def test_generate_post_provocative_tone(self):
@@ -570,7 +578,11 @@ class TestPosterGeneratePostContent:
         obs = _obs()
         random.seed(42)
         content = poster.generate_post_content(obs)
-        provocative_phrases = ["Unpopular opinion", "nobody's talking about", "change my mind"]
+        provocative_phrases = [
+            "Unpopular opinion",
+            "nobody's talking about",
+            "change my mind",
+        ]
         assert any(phrase in content for phrase in provocative_phrases)
 
     def test_generate_post_neutral_tone(self):
@@ -591,7 +603,6 @@ class TestPosterGeneratePostContent:
 
 
 class TestPosterGenerateReplyContent:
-
     def test_generate_reply_helpful_tone(self):
         poster = PosterRole()
         poster.set_strategy(ContentStrategy(tone="helpful"))
@@ -616,12 +627,15 @@ class TestPosterGenerateReplyContent:
         obs = _obs()
         random.seed(42)
         content = poster.generate_reply_content("parent text", obs)
-        neutral_replies = ["Interesting perspective", "I see your point", "Thanks for sharing"]
+        neutral_replies = [
+            "Interesting perspective",
+            "I see your point",
+            "Thanks for sharing",
+        ]
         assert any(phrase in content for phrase in neutral_replies)
 
 
 class TestPosterRecordPost:
-
     def test_record_post_adds_to_history(self):
         poster = PosterRole()
         poster.record_post("post_1", "Hello world")
@@ -648,7 +662,6 @@ class TestPosterRecordPost:
 
 
 class TestPosterUpdateEngagement:
-
     def test_update_engagement_updates_stats(self):
         poster = PosterRole()
         poster.record_post("post_1", "content")
@@ -664,7 +677,6 @@ class TestPosterUpdateEngagement:
 
 
 class TestPosterGetEngagementSummary:
-
     def test_engagement_summary_empty(self):
         poster = PosterRole()
         summary = poster.get_engagement_summary()
@@ -691,7 +703,6 @@ class TestPosterGetEngagementSummary:
 
 
 class TestPosterIncrementStep:
-
     def test_increment_step_increases_counter(self):
         poster = PosterRole()
         assert poster._steps_since_last_post == 0
@@ -707,7 +718,6 @@ class TestPosterIncrementStep:
 
 
 class TestVerifierCanVerify:
-
     def test_can_verify_true_when_below_max(self):
         verifier = VerifierRole()
         assert verifier.can_verify() is True
@@ -721,7 +731,6 @@ class TestVerifierCanVerify:
 
 
 class TestVerifierQueueVerification:
-
     def test_queue_verification_adds_to_pending(self):
         verifier = VerifierRole()
         verifier.queue_verification("out_1", "task_1", "some content", "sub_1")
@@ -734,7 +743,6 @@ class TestVerifierQueueVerification:
 
 
 class TestVerifierVerifyOutput:
-
     def test_short_content_gets_issues(self):
         verifier = VerifierRole()
         result = verifier.verify_output("o1", "short", ["req1"])
@@ -742,9 +750,14 @@ class TestVerifierVerifyOutput:
 
     def test_placeholder_content_gets_issue(self):
         verifier = VerifierRole()
-        long_content = "This is a TODO item that needs to be completed with more detail later on " * 5
+        long_content = (
+            "This is a TODO item that needs to be completed with more detail later on "
+            * 5
+        )
         result = verifier.verify_output("o1", long_content, [])
-        assert any("placeholder" in issue.lower() or "TODO" in issue for issue in result.issues)
+        assert any(
+            "placeholder" in issue.lower() or "TODO" in issue for issue in result.issues
+        )
 
     def test_good_content_can_be_approved(self):
         verifier = VerifierRole()
@@ -768,13 +781,15 @@ class TestVerifierVerifyOutput:
 
     def test_requirements_not_met_gets_issue(self):
         verifier = VerifierRole()
-        content = "A generic long content piece that does not address the specific topics " * 5
+        content = (
+            "A generic long content piece that does not address the specific topics "
+            * 5
+        )
         result = verifier.verify_output("o1", content, ["quantum", "entanglement"])
         assert any("requirements" in issue.lower() for issue in result.issues)
 
 
 class TestVerifierApprovalRate:
-
     def test_approval_rate_empty(self):
         verifier = VerifierRole()
         assert verifier.get_approval_rate() == 0.0
@@ -795,7 +810,6 @@ class TestVerifierApprovalRate:
 
 
 class TestVerifierAverageQuality:
-
     def test_average_quality_empty(self):
         verifier = VerifierRole()
         assert verifier.get_average_quality() == 0.0
@@ -812,11 +826,14 @@ class TestVerifierAverageQuality:
 
 
 class TestVerifierProcessPending:
-
     def test_process_pending_processes_all(self):
         verifier = VerifierRole()
-        verifier.queue_verification("o1", "t1", "some content here that is decent", "s1")
-        verifier.queue_verification("o2", "t2", "another piece of content to verify", "s2")
+        verifier.queue_verification(
+            "o1", "t1", "some content here that is decent", "s1"
+        )
+        verifier.queue_verification(
+            "o2", "t2", "another piece of content to verify", "s2"
+        )
         results = verifier.process_pending()
         assert len(results) == 2
         assert all(isinstance(r, VerificationResult) for r in results)
@@ -831,7 +848,6 @@ class TestVerifierProcessPending:
 
 
 class TestVerifierSetStrictness:
-
     def test_set_strictness_normal(self):
         verifier = VerifierRole()
         verifier.set_strictness(0.8)
@@ -849,7 +865,6 @@ class TestVerifierSetStrictness:
 
 
 class TestVerifierDecideAction:
-
     def test_decide_verification_action_with_pending(self):
         verifier = VerifierRole()
         verifier.queue_verification("o1", "t1", "content to verify here", "s1")
@@ -875,7 +890,6 @@ class TestVerifierDecideAction:
 
 
 class TestWorkerCanWork:
-
     def test_can_work_true_when_below_max(self):
         worker = WorkerRole()
         assert worker.can_work() is True
@@ -889,7 +903,6 @@ class TestWorkerCanWork:
 
 
 class TestWorkerAcceptWork:
-
     def test_accept_work_returns_true(self):
         worker = WorkerRole()
         assert worker.accept_work("t1", ["step1", "step2"]) is True
@@ -916,7 +929,6 @@ class TestWorkerAcceptWork:
 
 
 class TestWorkerExecuteStep:
-
     def test_execute_step_returns_output(self):
         worker = WorkerRole()
         worker.accept_work("t1", ["analyze data", "write report"])
@@ -943,7 +955,6 @@ class TestWorkerExecuteStep:
 
 
 class TestWorkerRecordRework:
-
     def test_record_rework_increments_count(self):
         worker = WorkerRole()
         worker.accept_work("t1", ["s1"])
@@ -972,7 +983,6 @@ class TestWorkerRecordRework:
 
 
 class TestWorkerNeedsHelp:
-
     def test_needs_help_false_initially(self):
         worker = WorkerRole()
         worker.accept_work("t1", ["s1"])
@@ -999,7 +1009,6 @@ class TestWorkerNeedsHelp:
 
 
 class TestWorkerCompleteTask:
-
     def test_complete_task_removes_from_queue(self):
         worker = WorkerRole()
         worker.accept_work("t1", ["s1"])
@@ -1027,7 +1036,6 @@ class TestWorkerCompleteTask:
 
 
 class TestWorkerGetWorkStatus:
-
     def test_get_work_status_found(self):
         worker = WorkerRole()
         worker.accept_work("t1", ["step_a", "step_b", "step_c"])
@@ -1055,7 +1063,6 @@ class TestWorkerGetWorkStatus:
 
 
 class TestWorkerGetCompletionRate:
-
     def test_completion_rate_zero_when_empty(self):
         worker = WorkerRole()
         assert worker.get_completion_rate() == 0.0

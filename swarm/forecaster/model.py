@@ -14,8 +14,12 @@ def _sigmoid(value: np.ndarray) -> np.ndarray:
 
 def _auc_roc(y_true: Sequence[int], y_score: Sequence[float]) -> float:
     """Compute AUC-ROC from scores; returns 0.5 if undefined."""
-    positives = [score for label, score in zip(y_true, y_score, strict=False) if label == 1]
-    negatives = [score for label, score in zip(y_true, y_score, strict=False) if label == 0]
+    positives = [
+        score for label, score in zip(y_true, y_score, strict=False) if label == 1
+    ]
+    negatives = [
+        score for label, score in zip(y_true, y_score, strict=False) if label == 0
+    ]
     if not positives or not negatives:
         return 0.5
 
@@ -47,7 +51,9 @@ def _expected_calibration_error(
     for idx in range(bins):
         left = edges[idx]
         right = edges[idx + 1]
-        mask = (y_prob_arr >= left) & (y_prob_arr < right if idx < bins - 1 else y_prob_arr <= right)
+        mask = (y_prob_arr >= left) & (
+            y_prob_arr < right if idx < bins - 1 else y_prob_arr <= right
+        )
         if not np.any(mask):
             continue
         acc = np.mean(y_true_arr[mask])
@@ -147,9 +153,10 @@ class IncoherenceForecaster:
         return np.array([self._row_to_vector(row) for row in rows], dtype=float)
 
     def _row_to_vector(self, row: Mapping[str, float]) -> np.ndarray:
-        return np.array([float(row.get(name, 0.0)) for name in self.feature_names], dtype=float)
+        return np.array(
+            [float(row.get(name, 0.0)) for name in self.feature_names], dtype=float
+        )
 
     def _ensure_fitted(self) -> None:
         if self._weights is None or not self.feature_names:
             raise ValueError("Forecaster must be fit before prediction")
-

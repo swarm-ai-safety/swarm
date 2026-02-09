@@ -83,17 +83,19 @@ class MarketplaceHandler:
         agent_state.update_resources(-reward_amount)
         rate_limit.record_bounty()
 
-        self._emit_event(Event(
-            event_type=EventType.BOUNTY_POSTED,
-            agent_id=agent_id,
-            payload={
-                "bounty_id": bounty.bounty_id,
-                "task_id": task.task_id,
-                "reward_amount": reward_amount,
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.BOUNTY_POSTED,
+                agent_id=agent_id,
+                payload={
+                    "bounty_id": bounty.bounty_id,
+                    "task_id": task.task_id,
+                    "reward_amount": reward_amount,
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return True
 
@@ -126,17 +128,19 @@ class MarketplaceHandler:
 
         rate_limit.record_bid()
 
-        self._emit_event(Event(
-            event_type=EventType.BID_PLACED,
-            agent_id=agent_id,
-            payload={
-                "bid_id": bid.bid_id,
-                "bounty_id": bounty_id,
-                "bid_amount": bid_amount,
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.BID_PLACED,
+                agent_id=agent_id,
+                payload={
+                    "bid_id": bid.bid_id,
+                    "bounty_id": bounty_id,
+                    "bid_amount": bid_amount,
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return True
 
@@ -165,19 +169,21 @@ class MarketplaceHandler:
                     agent_reputation=worker_state.reputation,
                 )
 
-        self._emit_event(Event(
-            event_type=EventType.ESCROW_CREATED,
-            agent_id=agent_id,
-            payload={
-                "escrow_id": escrow.escrow_id,
-                "bounty_id": bounty_id,
-                "bid_id": bid_id,
-                "worker_id": escrow.worker_id,
-                "amount": escrow.amount,
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.ESCROW_CREATED,
+                agent_id=agent_id,
+                payload={
+                    "escrow_id": escrow.escrow_id,
+                    "bounty_id": bounty_id,
+                    "bid_id": bid_id,
+                    "worker_id": escrow.worker_id,
+                    "amount": escrow.amount,
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return True
 
@@ -189,13 +195,15 @@ class MarketplaceHandler:
         )
 
         if success:
-            self._emit_event(Event(
-                event_type=EventType.BID_REJECTED,
-                agent_id=action.agent_id,
-                payload={"bid_id": action.target_id},
-                epoch=state.current_epoch,
-                step=state.current_step,
-            ))
+            self._emit_event(
+                Event(
+                    event_type=EventType.BID_REJECTED,
+                    agent_id=action.agent_id,
+                    payload={"bid_id": action.target_id},
+                    epoch=state.current_epoch,
+                    step=state.current_step,
+                )
+            )
 
         return success
 
@@ -218,17 +226,19 @@ class MarketplaceHandler:
         if dispute is None:
             return False
 
-        self._emit_event(Event(
-            event_type=EventType.DISPUTE_FILED,
-            agent_id=action.agent_id,
-            payload={
-                "dispute_id": dispute.dispute_id,
-                "escrow_id": action.target_id,
-                "reason": action.content,
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.DISPUTE_FILED,
+                agent_id=action.agent_id,
+                payload={
+                    "dispute_id": dispute.dispute_id,
+                    "escrow_id": action.target_id,
+                    "reason": action.content,
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return True
 
@@ -308,17 +318,19 @@ class MarketplaceHandler:
                 if gov_effect.cost_b > 0 and worker_state:
                     worker_state.update_resources(-gov_effect.cost_b)
 
-            self._emit_event(Event(
-                event_type=EventType.ESCROW_RELEASED,
-                payload={
-                    "escrow_id": bounty.escrow_id,
-                    "worker_id": worker_id,
-                    "amount": released,
-                    "quality_score": quality_score,
-                },
-                epoch=state.current_epoch,
-                step=state.current_step,
-            ))
+            self._emit_event(
+                Event(
+                    event_type=EventType.ESCROW_RELEASED,
+                    payload={
+                        "escrow_id": bounty.escrow_id,
+                        "worker_id": worker_id,
+                        "amount": released,
+                        "quality_score": quality_score,
+                    },
+                    epoch=state.current_epoch,
+                    step=state.current_step,
+                )
+            )
         else:
             poster_id = settlement["poster_id"]
             refunded = settlement["refunded_to_poster"]
@@ -326,16 +338,18 @@ class MarketplaceHandler:
             if poster_state:
                 poster_state.update_resources(refunded)
 
-            self._emit_event(Event(
-                event_type=EventType.ESCROW_REFUNDED,
-                payload={
-                    "escrow_id": bounty.escrow_id,
-                    "poster_id": poster_id,
-                    "amount": refunded,
-                },
-                epoch=state.current_epoch,
-                step=state.current_step,
-            ))
+            self._emit_event(
+                Event(
+                    event_type=EventType.ESCROW_REFUNDED,
+                    payload={
+                        "escrow_id": bounty.escrow_id,
+                        "poster_id": poster_id,
+                        "amount": refunded,
+                    },
+                    epoch=state.current_epoch,
+                    step=state.current_step,
+                )
+            )
 
         return settlement
 
@@ -368,16 +382,18 @@ class MarketplaceHandler:
                         worker_state.update_resources(escrow.released_amount)
                     if poster_state:
                         poster_state.update_resources(escrow.refunded_amount)
-                    self._emit_event(Event(
-                        event_type=EventType.DISPUTE_RESOLVED,
-                        payload={
-                            "dispute_id": dispute_id,
-                            "escrow_id": escrow.escrow_id,
-                            "worker_share": dispute.worker_share,
-                            "auto_resolved": True,
-                        },
-                        epoch=state.current_epoch,
-                    ))
+                    self._emit_event(
+                        Event(
+                            event_type=EventType.DISPUTE_RESOLVED,
+                            payload={
+                                "dispute_id": dispute_id,
+                                "escrow_id": escrow.escrow_id,
+                                "worker_share": dispute.worker_share,
+                                "auto_resolved": True,
+                            },
+                            epoch=state.current_epoch,
+                        )
+                    )
 
     # ------------------------------------------------------------------
     # Observation helpers

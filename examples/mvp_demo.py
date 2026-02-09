@@ -56,10 +56,14 @@ def main():
 
     for agent in agents:
         state = orchestrator.register_agent(agent)
-        print(f"  - {agent.agent_id} ({agent.agent_type.value}): reputation={state.reputation:.2f}")
+        print(
+            f"  - {agent.agent_id} ({agent.agent_type.value}): reputation={state.reputation:.2f}"
+        )
 
     print()
-    print(f"Running simulation: {config.n_epochs} epochs x {config.steps_per_epoch} steps")
+    print(
+        f"Running simulation: {config.n_epochs} epochs x {config.steps_per_epoch} steps"
+    )
     print("-" * 60)
 
     # Run simulation
@@ -68,7 +72,9 @@ def main():
     print()
     print("Epoch-by-Epoch Metrics:")
     print("-" * 60)
-    print(f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} {'QualityGap':<12} {'Welfare':<10}")
+    print(
+        f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} {'QualityGap':<12} {'Welfare':<10}"
+    )
     print("-" * 60)
 
     for m in metrics_history:

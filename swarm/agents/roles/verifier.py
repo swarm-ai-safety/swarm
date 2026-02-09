@@ -43,7 +43,10 @@ class VerifierRole:
 
     def can_verify(self) -> bool:
         """Check if verifier can take on verification tasks."""
-        return bool(len(self._pending_verifications) < self._verifier_config["max_verifications_per_step"])
+        return bool(
+            len(self._pending_verifications)
+            < self._verifier_config["max_verifications_per_step"]
+        )
 
     def queue_verification(
         self,
@@ -53,12 +56,14 @@ class VerifierRole:
         submitter_id: str,
     ) -> None:
         """Queue an output for verification."""
-        self._pending_verifications.append({
-            "output_id": output_id,
-            "task_id": task_id,
-            "content": content,
-            "submitter_id": submitter_id,
-        })
+        self._pending_verifications.append(
+            {
+                "output_id": output_id,
+                "task_id": task_id,
+                "content": content,
+                "submitter_id": submitter_id,
+            }
+        )
 
     def verify_output(
         self,
@@ -111,9 +116,8 @@ class VerifierRole:
         quality_score = self._calculate_quality_score(content, issues, coverage)
 
         # Apply strictness
-        adjusted_threshold = (
-            self._verifier_config["quality_threshold"]
-            * (1 + self._verifier_config["strictness"] * 0.5)
+        adjusted_threshold = self._verifier_config["quality_threshold"] * (
+            1 + self._verifier_config["strictness"] * 0.5
         )
 
         is_approved = quality_score >= adjusted_threshold and len(issues) == 0
@@ -167,7 +171,9 @@ class VerifierRole:
         if not self._verification_history:
             return 0.0
 
-        return sum(r.quality_score for r in self._verification_history) / len(self._verification_history)
+        return sum(r.quality_score for r in self._verification_history) / len(
+            self._verification_history
+        )
 
     def process_pending(self) -> List[VerificationResult]:
         """Process all pending verifications."""

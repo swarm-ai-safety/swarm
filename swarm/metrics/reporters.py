@@ -136,9 +136,7 @@ class MetricsReporter:
         self.quality_threshold = quality_threshold
         self.uncertainty_band = uncertainty_band
 
-    def _compute_hard_toxicity(
-        self, interactions: List[SoftInteraction]
-    ) -> float:
+    def _compute_hard_toxicity(self, interactions: List[SoftInteraction]) -> float:
         """
         Compute hard toxicity: P(p < threshold | accepted)
 
@@ -149,9 +147,7 @@ class MetricsReporter:
         if not accepted:
             return 0.0
 
-        toxic_count = sum(
-            1 for i in accepted if i.p < self.quality_threshold
-        )
+        toxic_count = sum(1 for i in accepted if i.p < self.quality_threshold)
         return toxic_count / len(accepted)
 
     def summary(self, interactions: List[SoftInteraction]) -> MetricsSummary:
@@ -229,7 +225,9 @@ class MetricsReporter:
         # Variance metrics
         quality_var = self.soft_metrics.quality_variance(interactions)
         payoff_var_init = self.soft_metrics.payoff_variance_initiator(interactions)
-        payoff_var_counter = self.soft_metrics.payoff_variance_counterparty(interactions)
+        payoff_var_counter = self.soft_metrics.payoff_variance_counterparty(
+            interactions
+        )
 
         return MetricsSummary(
             toxicity_soft=toxicity_soft,
@@ -261,9 +259,7 @@ class MetricsReporter:
             payoff_variance_counterparty=payoff_var_counter,
         )
 
-    def compare_soft_hard(
-        self, interactions: List[SoftInteraction]
-    ) -> dict:
+    def compare_soft_hard(self, interactions: List[SoftInteraction]) -> dict:
         """
         Compare soft vs hard metrics side by side.
 
@@ -383,28 +379,32 @@ class MetricsReporter:
         ]
 
         if verbose:
-            lines.extend([
-                "",
-                "PAYOFF ANALYSIS",
-                "-" * 30,
-                f"  Conditional loss (init):    {summary.conditional_loss_initiator:+.3f}",
-                f"  Conditional loss (counter): {summary.conditional_loss_counterparty:+.3f}",
-                "",
-                "WELFARE",
-                "-" * 30,
-                f"  Total welfare:              {summary.total_welfare:.2f}",
-                f"  Social surplus:             {summary.total_social_surplus:.2f}",
-                f"  Avg initiator payoff:       {summary.avg_initiator_payoff:.3f}",
-                f"  Avg counterparty payoff:    {summary.avg_counterparty_payoff:.3f}",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "PAYOFF ANALYSIS",
+                    "-" * 30,
+                    f"  Conditional loss (init):    {summary.conditional_loss_initiator:+.3f}",
+                    f"  Conditional loss (counter): {summary.conditional_loss_counterparty:+.3f}",
+                    "",
+                    "WELFARE",
+                    "-" * 30,
+                    f"  Total welfare:              {summary.total_welfare:.2f}",
+                    f"  Social surplus:             {summary.total_social_surplus:.2f}",
+                    f"  Avg initiator payoff:       {summary.avg_initiator_payoff:.3f}",
+                    f"  Avg counterparty payoff:    {summary.avg_counterparty_payoff:.3f}",
+                ]
+            )
 
             # Interpretation
             if summary.quality_gap < 0:
-                lines.extend([
-                    "",
-                    "WARNING: Negative quality gap indicates adverse selection",
-                    "  (rejected interactions have higher quality than accepted)",
-                ])
+                lines.extend(
+                    [
+                        "",
+                        "WARNING: Negative quality gap indicates adverse selection",
+                        "  (rejected interactions have higher quality than accepted)",
+                    ]
+                )
 
         lines.append("=" * 50)
 

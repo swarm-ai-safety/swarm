@@ -1,6 +1,5 @@
 """Tests for environment modules (state, feed, tasks)."""
 
-
 import pytest
 
 from swarm.env.feed import Feed, VoteType
@@ -555,7 +554,9 @@ class TestTaskPoolAdditional:
         pool.create_task(prompt="Highest", bounty=50.0)
 
         claimable = pool.get_claimable_tasks(
-            agent_reputation=0.0, current_epoch=0, limit=2,
+            agent_reputation=0.0,
+            current_epoch=0,
+            limit=2,
         )
         assert len(claimable) == 2
         assert claimable[0].bounty == 50.0
@@ -650,7 +651,9 @@ class TestTaskTemplates:
         from swarm.env.tasks import create_planning_task
 
         task = create_planning_task(
-            "Improve governance", collaborators_needed=3, bounty=20.0,
+            "Improve governance",
+            collaborators_needed=3,
+            bounty=20.0,
         )
 
         assert "Improve governance" in task.prompt
@@ -666,7 +669,9 @@ class TestTaskTemplates:
         from swarm.env.tasks import create_optimization_task
 
         task = create_optimization_task(
-            "memory < 1GB", deadline_epoch=50, bounty=12.0,
+            "memory < 1GB",
+            deadline_epoch=50,
+            bounty=12.0,
         )
 
         assert "memory < 1GB" in task.prompt

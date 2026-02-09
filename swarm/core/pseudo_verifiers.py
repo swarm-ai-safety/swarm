@@ -37,7 +37,9 @@ class PseudoVerifier(ABC):
     weight: float = 1.0  # Weight when combining multiple verifiers
 
     @abstractmethod
-    def verify(self, output: Any, context: dict[str, Any] | None = None) -> VerificationResult:
+    def verify(
+        self, output: Any, context: dict[str, Any] | None = None
+    ) -> VerificationResult:
         """Verify an output and return a result."""
         pass
 
@@ -63,7 +65,9 @@ class FormatVerifier(PseudoVerifier):
         self.min_length = min_length
         self.patterns = [re.compile(p) for p in (patterns or [])]
 
-    def verify(self, output: Any, context: dict[str, Any] | None = None) -> VerificationResult:
+    def verify(
+        self, output: Any, context: dict[str, Any] | None = None
+    ) -> VerificationResult:
         reasons = []
         score = 1.0
 
@@ -114,7 +118,9 @@ class HeuristicVerifier(PseudoVerifier):
         """
         self.heuristics = heuristics
 
-    def verify(self, output: Any, context: dict[str, Any] | None = None) -> VerificationResult:
+    def verify(
+        self, output: Any, context: dict[str, Any] | None = None
+    ) -> VerificationResult:
         reasons = []
         score = 1.0
 
@@ -148,7 +154,9 @@ class ConsistencyVerifier(PseudoVerifier):
     def __init__(self, consistency_checks: list[Callable[[Any], bool]] | None = None):
         self.checks = consistency_checks or []
 
-    def verify(self, output: Any, context: dict[str, Any] | None = None) -> VerificationResult:
+    def verify(
+        self, output: Any, context: dict[str, Any] | None = None
+    ) -> VerificationResult:
         reasons = []
         passed_checks = 0
 
@@ -195,12 +203,18 @@ class ModelBasedVerifier(PseudoVerifier):
         self.judge_fn = judge_fn
         self.threshold = threshold
 
-    def verify(self, output: Any, context: dict[str, Any] | None = None) -> VerificationResult:
+    def verify(
+        self, output: Any, context: dict[str, Any] | None = None
+    ) -> VerificationResult:
         try:
             score = self.judge_fn(output, context)
             score = max(0.0, min(1.0, float(score)))
             passed = score >= self.threshold
-            reasons = [] if passed else [f"Model score {score:.2f} below threshold {self.threshold}"]
+            reasons = (
+                []
+                if passed
+                else [f"Model score {score:.2f} below threshold {self.threshold}"]
+            )
         except Exception as e:
             score = 0.0
             passed = False
@@ -224,7 +238,9 @@ class CompositeVerifier(PseudoVerifier):
     def __init__(self, verifiers: list[PseudoVerifier]):
         self.verifiers = verifiers
 
-    def verify(self, output: Any, context: dict[str, Any] | None = None) -> VerificationResult:
+    def verify(
+        self, output: Any, context: dict[str, Any] | None = None
+    ) -> VerificationResult:
         if not self.verifiers:
             return VerificationResult(score=1.0, passed=True)
 
@@ -271,10 +287,12 @@ def create_code_verifier() -> CompositeVerifier:
             return (-0.1, "Code unusually long")
         return (0.0, "")
 
-    return CompositeVerifier([
-        FormatVerifier(min_length=10),
-        HeuristicVerifier([has_no_syntax_errors, reasonable_length]),
-    ])
+    return CompositeVerifier(
+        [
+            FormatVerifier(min_length=10),
+            HeuristicVerifier([has_no_syntax_errors, reasonable_length]),
+        ]
+    )
 
 
 def create_research_verifier() -> CompositeVerifier:
@@ -301,10 +319,12 @@ def create_research_verifier() -> CompositeVerifier:
             return (-0.1, "Paper unusually long")
         return (0.0, "")
 
-    return CompositeVerifier([
-        FormatVerifier(min_length=1000),
-        HeuristicVerifier([has_structure, has_citations, reasonable_length]),
-    ])
+    return CompositeVerifier(
+        [
+            FormatVerifier(min_length=1000),
+            HeuristicVerifier([has_structure, has_citations, reasonable_length]),
+        ]
+    )
 
 
 def create_task_verifier(task_type: str) -> PseudoVerifier:

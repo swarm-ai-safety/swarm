@@ -149,6 +149,7 @@ class Event:
 
 # Factory functions for common events
 
+
 def interaction_proposed_event(
     interaction_id: str,
     initiator_id: str,

@@ -13,11 +13,14 @@ from swarm.models.interaction import InteractionType, SoftInteraction
 def __getattr__(name: str):
     if name == "research":
         from swarm import research
+
         return research
     if name == "evaluation":
         from swarm import evaluation
+
         return evaluation
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     # Models

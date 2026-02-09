@@ -13,7 +13,9 @@ class Plan:
     plan_id: str = ""
     task_id: str = ""
     steps: List[str] = field(default_factory=list)
-    assigned_agents: Dict[str, List[str]] = field(default_factory=dict)  # agent_id -> step indices
+    assigned_agents: Dict[str, List[str]] = field(
+        default_factory=dict
+    )  # agent_id -> step indices
     estimated_steps: int = 0
     current_step: int = 0
 
@@ -187,7 +189,10 @@ class PlannerRole:
 
             # Check if plan needs review
             plan = self._active_plans[plan_id]
-            if plan.current_step > 0 and plan.current_step % self._planning_config["review_frequency"] == 0:
+            if (
+                plan.current_step > 0
+                and plan.current_step % self._planning_config["review_frequency"] == 0
+            ):
                 # Could trigger plan review
                 pass
 

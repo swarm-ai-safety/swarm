@@ -8,7 +8,8 @@ from swarm.env.memory_tiers import MemoryEntryStatus, MemoryStore, MemoryTier
 def poisoning_rate(store: MemoryStore, tier: MemoryTier = MemoryTier.GRAPH) -> float:
     """Fraction of active entries at the given tier that are poisoned."""
     entries = [
-        e for e in store.get_entries_by_tier(tier)
+        e
+        for e in store.get_entries_by_tier(tier)
         if e.status == MemoryEntryStatus.ACTIVE
     ]
     if not entries:
@@ -20,7 +21,8 @@ def poisoning_rate(store: MemoryStore, tier: MemoryTier = MemoryTier.GRAPH) -> f
 def promotion_accuracy(store: MemoryStore) -> float:
     """Fraction of promoted entries (Tier 2+) that are not poisoned."""
     promoted = [
-        e for e in store.all_entries()
+        e
+        for e in store.all_entries()
         if e.tier in (MemoryTier.STRUCTURED, MemoryTier.GRAPH)
         and e.status == MemoryEntryStatus.ACTIVE
     ]
@@ -103,7 +105,8 @@ def content_quality_by_tier(store: MemoryStore) -> Dict[str, float]:
     result: Dict[str, float] = {}
     for tier in MemoryTier:
         entries = [
-            e for e in store.get_entries_by_tier(tier)
+            e
+            for e in store.get_entries_by_tier(tier)
             if e.status == MemoryEntryStatus.ACTIVE
         ]
         if entries:

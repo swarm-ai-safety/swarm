@@ -66,13 +66,11 @@ class GovernanceRobustness:
 
         # Normalize damage (assuming max expected damage is 100 per attack)
         max_expected_damage = self.attacks_tested * 100
-        damage_mitigation = 1.0 - min(1.0, self.total_damage_allowed / max_expected_damage)
-
-        return (
-            0.4 * prevention_rate
-            + 0.3 * detection_rate
-            + 0.3 * damage_mitigation
+        damage_mitigation = 1.0 - min(
+            1.0, self.total_damage_allowed / max_expected_damage
         )
+
+        return 0.4 * prevention_rate + 0.3 * detection_rate + 0.3 * damage_mitigation
 
     @property
     def grade(self) -> str:
@@ -178,24 +176,30 @@ class VulnerabilityReport:
         ]
 
         if self.robustness.vulnerabilities:
-            lines.extend([
-                "VULNERABILITIES DISCOVERED",
-                "-" * 40,
-            ])
+            lines.extend(
+                [
+                    "VULNERABILITIES DISCOVERED",
+                    "-" * 40,
+                ]
+            )
             for vuln in self.robustness.vulnerabilities:
-                lines.extend([
-                    f"  [{vuln.severity.upper()}] {vuln.vulnerability_id}",
-                    f"    {vuln.description}",
-                    f"    Attack Vector: {vuln.attack_vector}",
-                    f"    Mitigation: {vuln.mitigation}",
-                    "",
-                ])
+                lines.extend(
+                    [
+                        f"  [{vuln.severity.upper()}] {vuln.vulnerability_id}",
+                        f"    {vuln.description}",
+                        f"    Attack Vector: {vuln.attack_vector}",
+                        f"    Mitigation: {vuln.mitigation}",
+                        "",
+                    ]
+                )
 
         if self.robustness.recommendations:
-            lines.extend([
-                "RECOMMENDATIONS",
-                "-" * 40,
-            ])
+            lines.extend(
+                [
+                    "RECOMMENDATIONS",
+                    "-" * 40,
+                ]
+            )
             for i, rec in enumerate(self.robustness.recommendations, 1):
                 lines.append(f"  {i}. {rec}")
             lines.append("")
@@ -208,7 +212,9 @@ class VulnerabilityReport:
         return {
             "robustness": self.robustness.to_dict(),
             "attack_results": [r.to_dict() for r in self.attack_results],
-            "adversary_performances": [p.to_dict() for p in self.adversary_performances],
+            "adversary_performances": [
+                p.to_dict() for p in self.adversary_performances
+            ],
             "weakest_lever": self.weakest_lever,
             "strongest_lever": self.strongest_lever,
             "most_effective_attack": self.most_effective_attack,
@@ -301,11 +307,12 @@ class RedTeamEvaluator:
 
         # Compute aggregate metrics
         if self.attack_results:
-            robustness.overall_evasion_rate = float(np.mean([
-                r.evasion_rate for r in self.attack_results
-            ]))
+            robustness.overall_evasion_rate = float(
+                np.mean([r.evasion_rate for r in self.attack_results])
+            )
             latencies = [
-                r.detection_latency for r in self.attack_results
+                r.detection_latency
+                for r in self.attack_results
                 if r.detection_latency > 0
             ]
             if latencies:
@@ -375,8 +382,12 @@ class RedTeamEvaluator:
         run actual simulations.
         """
         # Check which defenses are active
-        has_circuit_breaker = self.governance_config.get("circuit_breaker_enabled", False)
-        has_collusion_detection = self.governance_config.get("collusion_detection_enabled", False)
+        has_circuit_breaker = self.governance_config.get(
+            "circuit_breaker_enabled", False
+        )
+        has_collusion_detection = self.governance_config.get(
+            "collusion_detection_enabled", False
+        )
         has_audit = self.governance_config.get("audit_enabled", False)
         has_staking = self.governance_config.get("staking_enabled", False)
         tax_rate = self.governance_config.get("transaction_tax_rate", 0.0)
@@ -410,7 +421,7 @@ class RedTeamEvaluator:
         if has_staking:
             base_success *= 0.9
         if tax_rate > 0:
-            base_success *= (1 - tax_rate)
+            base_success *= 1 - tax_rate
 
         # Difficulty modifier
         difficulty_modifier = {
@@ -425,6 +436,7 @@ class RedTeamEvaluator:
 
         # Determine outcome
         import random
+
         result.attack_succeeded = random.random() < min(1.0, base_success)
         result.governance_prevented = not result.attack_succeeded
 
@@ -453,7 +465,9 @@ class RedTeamEvaluator:
                     severity="high" if result.evasion_rate > 0.9 else "medium",
                     description=f"{result.scenario.name} has high evasion rate ({result.evasion_rate:.0%})",
                     attack_vector=result.scenario.category.value,
-                    affected_lever=result.scenario.targeted_levers[0] if result.scenario.targeted_levers else "unknown",
+                    affected_lever=result.scenario.targeted_levers[0]
+                    if result.scenario.targeted_levers
+                    else "unknown",
                     exploitation_difficulty=result.scenario.difficulty.value,
                     potential_damage=result.damage_caused,
                     mitigation=f"Strengthen detection for {result.scenario.category.value} attacks",
@@ -468,7 +482,9 @@ class RedTeamEvaluator:
                     severity="critical" if result.damage_caused > 50 else "high",
                     description=f"{result.scenario.name} succeeded with significant damage ({result.damage_caused:.0f})",
                     attack_vector=result.scenario.category.value,
-                    affected_lever=result.scenario.targeted_levers[0] if result.scenario.targeted_levers else "unknown",
+                    affected_lever=result.scenario.targeted_levers[0]
+                    if result.scenario.targeted_levers
+                    else "unknown",
                     exploitation_difficulty=result.scenario.difficulty.value,
                     potential_damage=result.damage_caused,
                     mitigation=f"Enable or strengthen {', '.join(result.scenario.targeted_levers)}",
@@ -488,8 +504,10 @@ class RedTeamEvaluator:
             )
 
         if not self.governance_config.get("collusion_detection_enabled"):
-            if any(r.scenario.category.value == "coordination" and r.attack_succeeded
-                   for r in self.attack_results):
+            if any(
+                r.scenario.category.value == "coordination" and r.attack_succeeded
+                for r in self.attack_results
+            ):
                 recommendations.append(
                     "Enable collusion detection to identify coordinated attacks"
                 )
@@ -501,8 +519,10 @@ class RedTeamEvaluator:
                 )
 
         if self.governance_config.get("transaction_tax_rate", 0) < 0.05:
-            if any(r.scenario.category.value == "resource" and r.attack_succeeded
-                   for r in self.attack_results):
+            if any(
+                r.scenario.category.value == "resource" and r.attack_succeeded
+                for r in self.attack_results
+            ):
                 recommendations.append(
                     "Increase transaction tax to discourage resource extraction"
                 )
@@ -532,8 +552,7 @@ class RedTeamEvaluator:
         """
         if attack_ids:
             attacks = [
-                a for a in AttackLibrary.get_all_attacks()
-                if a.attack_id in attack_ids
+                a for a in AttackLibrary.get_all_attacks() if a.attack_id in attack_ids
             ]
         else:
             # Quick set: one from each category

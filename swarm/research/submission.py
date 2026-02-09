@@ -28,14 +28,16 @@ from .platforms import ClawxivClient, Paper, SubmissionResult
 
 class Severity(Enum):
     """Issue severity levels."""
-    ERROR = "error"      # Blocks submission
+
+    ERROR = "error"  # Blocks submission
     WARNING = "warning"  # Suggests improvement
-    INFO = "info"        # Informational
+    INFO = "info"  # Informational
 
 
 @dataclass
 class ValidationIssue:
     """A single validation issue."""
+
     severity: Severity
     code: str
     message: str
@@ -45,6 +47,7 @@ class ValidationIssue:
 @dataclass
 class ValidationResult:
     """Result of paper validation."""
+
     issues: list[ValidationIssue] = field(default_factory=list)
     scores: dict[str, float] = field(default_factory=dict)
 
@@ -78,7 +81,7 @@ class ValidationResult:
         lines.append("Quality Scores:")
         for name, score in sorted(self.scores.items()):
             bar = "█" * int(score * 20) + "░" * (20 - int(score * 20))
-            lines.append(f"  {name:20} [{bar}] {score*100:5.1f}%")
+            lines.append(f"  {name:20} [{bar}] {score * 100:5.1f}%")
         lines.append(f"  {'OVERALL':20} [{self.quality_score:5.1f}%]")
         lines.append("")
 
@@ -101,7 +104,9 @@ class ValidationResult:
 
         # Verdict
         if self.passed:
-            lines.append(f"✓ PASSED - Ready for submission (score: {self.quality_score:.1f}%)")
+            lines.append(
+                f"✓ PASSED - Ready for submission (score: {self.quality_score:.1f}%)"
+            )
         else:
             lines.append(f"✗ FAILED - {len(self.errors())} error(s) must be fixed")
 
@@ -164,33 +169,41 @@ class SubmissionValidator:
     def _check_basic_fields(self, paper: Paper, result: ValidationResult) -> None:
         """Check required fields exist."""
         if not paper.title or len(paper.title) < 10:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_TITLE",
-                "Paper must have a title (>10 chars)",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_TITLE",
+                    "Paper must have a title (>10 chars)",
+                )
+            )
 
         if not paper.abstract:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_ABSTRACT",
-                "Paper must have an abstract",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_ABSTRACT",
+                    "Paper must have an abstract",
+                )
+            )
 
         if not paper.source:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_SOURCE",
-                "Paper must have LaTeX source",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_SOURCE",
+                    "Paper must have LaTeX source",
+                )
+            )
 
         if not paper.categories:
-            result.issues.append(ValidationIssue(
-                Severity.WARNING,
-                "MISSING_CATEGORIES",
-                "Paper should have categories",
-                "Add categories like ['cs.MA', 'cs.AI']",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.WARNING,
+                    "MISSING_CATEGORIES",
+                    "Paper should have categories",
+                    "Add categories like ['cs.MA', 'cs.AI']",
+                )
+            )
 
     def _check_source_length(self, paper: Paper, result: ValidationResult) -> None:
         """Check source meets minimum length."""
@@ -199,19 +212,23 @@ class SubmissionValidator:
 
         length = len(paper.source)
         if length < self.MIN_SOURCE_LENGTH:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "SOURCE_TOO_SHORT",
-                f"Source is {length} chars, minimum is {self.MIN_SOURCE_LENGTH}",
-                "Expand with methodology, results, and discussion sections",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "SOURCE_TOO_SHORT",
+                    f"Source is {length} chars, minimum is {self.MIN_SOURCE_LENGTH}",
+                    "Expand with methodology, results, and discussion sections",
+                )
+            )
         elif length < self.MIN_SOURCE_LENGTH * 2:
-            result.issues.append(ValidationIssue(
-                Severity.WARNING,
-                "SOURCE_SHORT",
-                f"Source is {length} chars, consider expanding",
-                "A full paper typically has 6000+ chars",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.WARNING,
+                    "SOURCE_SHORT",
+                    f"Source is {length} chars, consider expanding",
+                    "A full paper typically has 6000+ chars",
+                )
+            )
 
     def _check_abstract_length(self, paper: Paper, result: ValidationResult) -> None:
         """Check abstract meets minimum length."""
@@ -220,12 +237,14 @@ class SubmissionValidator:
 
         length = len(paper.abstract)
         if length < self.MIN_ABSTRACT_LENGTH:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "ABSTRACT_TOO_SHORT",
-                f"Abstract is {length} chars, minimum is {self.MIN_ABSTRACT_LENGTH}",
-                "Expand to summarize motivation, methods, and key findings",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "ABSTRACT_TOO_SHORT",
+                    f"Abstract is {length} chars, minimum is {self.MIN_ABSTRACT_LENGTH}",
+                    "Expand to summarize motivation, methods, and key findings",
+                )
+            )
 
     def _check_required_sections(self, paper: Paper, result: ValidationResult) -> None:
         """Check for required sections."""
@@ -238,14 +257,18 @@ class SubmissionValidator:
                 missing.append(name)
 
         if missing:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_SECTIONS",
-                f"Missing required sections: {', '.join(missing)}",
-                "Add \\section{} for each missing section",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_SECTIONS",
+                    f"Missing required sections: {', '.join(missing)}",
+                    "Add \\section{} for each missing section",
+                )
+            )
 
-    def _check_recommended_sections(self, paper: Paper, result: ValidationResult) -> None:
+    def _check_recommended_sections(
+        self, paper: Paper, result: ValidationResult
+    ) -> None:
         """Check for recommended sections."""
         if not paper.source:
             return
@@ -256,11 +279,13 @@ class SubmissionValidator:
                 missing.append(name)
 
         if missing:
-            result.issues.append(ValidationIssue(
-                Severity.WARNING,
-                "MISSING_RECOMMENDED",
-                f"Consider adding: {', '.join(missing)}",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.WARNING,
+                    "MISSING_RECOMMENDED",
+                    f"Consider adding: {', '.join(missing)}",
+                )
+            )
 
     def _check_quality_indicators(self, paper: Paper, result: ValidationResult) -> None:
         """Check for quality indicators."""
@@ -277,12 +302,14 @@ class SubmissionValidator:
                 missing.append(name)
 
         if len(found) < 3:
-            result.issues.append(ValidationIssue(
-                Severity.WARNING,
-                "LOW_QUALITY_INDICATORS",
-                f"Paper has few quality indicators ({len(found)}/{len(self.QUALITY_INDICATORS)})",
-                f"Consider adding: {', '.join(missing[:3])}",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.WARNING,
+                    "LOW_QUALITY_INDICATORS",
+                    f"Paper has few quality indicators ({len(found)}/{len(self.QUALITY_INDICATORS)})",
+                    f"Consider adding: {', '.join(missing[:3])}",
+                )
+            )
 
     def _check_latex_structure(self, paper: Paper, result: ValidationResult) -> None:
         """Check LaTeX structure is valid."""
@@ -291,36 +318,44 @@ class SubmissionValidator:
 
         # Check for documentclass
         if not re.search(r"\\documentclass", paper.source):
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_DOCUMENTCLASS",
-                "LaTeX source must include \\documentclass",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_DOCUMENTCLASS",
+                    "LaTeX source must include \\documentclass",
+                )
+            )
 
         # Check for begin/end document
         if not re.search(r"\\begin\{document\}", paper.source):
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_BEGIN_DOCUMENT",
-                "LaTeX source must include \\begin{document}",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_BEGIN_DOCUMENT",
+                    "LaTeX source must include \\begin{document}",
+                )
+            )
 
         if not re.search(r"\\end\{document\}", paper.source):
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_END_DOCUMENT",
-                "LaTeX source must include \\end{document}",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_END_DOCUMENT",
+                    "LaTeX source must include \\end{document}",
+                )
+            )
 
         # Check for unbalanced braces (simple check)
         open_braces = paper.source.count("{")
         close_braces = paper.source.count("}")
         if open_braces != close_braces:
-            result.issues.append(ValidationIssue(
-                Severity.WARNING,
-                "UNBALANCED_BRACES",
-                f"Possible unbalanced braces: {open_braces} open, {close_braces} close",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.WARNING,
+                    "UNBALANCED_BRACES",
+                    f"Possible unbalanced braces: {open_braces} open, {close_braces} close",
+                )
+            )
 
     def _compute_scores(self, paper: Paper, result: ValidationResult) -> None:
         """Compute quality scores."""
@@ -333,14 +368,16 @@ class SubmissionValidator:
 
         # Structure score (required sections present)
         sections_found = sum(
-            1 for pattern, _ in self.REQUIRED_SECTIONS
+            1
+            for pattern, _ in self.REQUIRED_SECTIONS
             if re.search(pattern, paper.source)
         )
         result.scores["structure"] = sections_found / len(self.REQUIRED_SECTIONS)
 
         # Quality indicators score
         indicators_found = sum(
-            1 for pattern, _ in self.QUALITY_INDICATORS
+            1
+            for pattern, _ in self.QUALITY_INDICATORS
             if re.search(pattern, paper.source)
         )
         result.scores["rigor"] = min(indicators_found / 5, 1.0)  # 5 indicators = 100%
@@ -384,7 +421,9 @@ def submit_with_validation(
         return False, validation, None
 
     if validation.quality_score < min_score:
-        print(f"❌ Submission blocked: quality score {validation.quality_score:.1f}% < {min_score}%")
+        print(
+            f"❌ Submission blocked: quality score {validation.quality_score:.1f}% < {min_score}%"
+        )
         return False, validation, None
 
     if dry_run:
@@ -446,33 +485,41 @@ class AgentxivValidator:
     def _check_basic_fields(self, paper: Paper, result: ValidationResult) -> None:
         """Check required fields exist."""
         if not paper.title or len(paper.title) < 10:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_TITLE",
-                "Paper must have a title (>10 chars)",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_TITLE",
+                    "Paper must have a title (>10 chars)",
+                )
+            )
 
         if not paper.abstract:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_ABSTRACT",
-                "Paper must have an abstract",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_ABSTRACT",
+                    "Paper must have an abstract",
+                )
+            )
 
         if not paper.source:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_CONTENT",
-                "Paper must have Markdown content",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_CONTENT",
+                    "Paper must have Markdown content",
+                )
+            )
 
         if not paper.categories:
-            result.issues.append(ValidationIssue(
-                Severity.WARNING,
-                "MISSING_CATEGORY",
-                "Paper should have a category",
-                "Add category like 'multi-agent' or 'alignment'",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.WARNING,
+                    "MISSING_CATEGORY",
+                    "Paper should have a category",
+                    "Add category like 'multi-agent' or 'alignment'",
+                )
+            )
 
     def _check_content_length(self, paper: Paper, result: ValidationResult) -> None:
         """Check content meets minimum length."""
@@ -481,12 +528,14 @@ class AgentxivValidator:
 
         length = len(paper.source)
         if length < self.MIN_CONTENT_LENGTH:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "CONTENT_TOO_SHORT",
-                f"Content is {length} chars, minimum is {self.MIN_CONTENT_LENGTH}",
-                "Expand with methodology, results, and discussion",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "CONTENT_TOO_SHORT",
+                    f"Content is {length} chars, minimum is {self.MIN_CONTENT_LENGTH}",
+                    "Expand with methodology, results, and discussion",
+                )
+            )
 
     def _check_abstract_length(self, paper: Paper, result: ValidationResult) -> None:
         """Check abstract meets minimum length."""
@@ -495,11 +544,13 @@ class AgentxivValidator:
 
         length = len(paper.abstract)
         if length < self.MIN_ABSTRACT_LENGTH:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "ABSTRACT_TOO_SHORT",
-                f"Abstract is {length} chars, minimum is {self.MIN_ABSTRACT_LENGTH}",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "ABSTRACT_TOO_SHORT",
+                    f"Abstract is {length} chars, minimum is {self.MIN_ABSTRACT_LENGTH}",
+                )
+            )
 
     def _check_required_sections(self, paper: Paper, result: ValidationResult) -> None:
         """Check for required Markdown sections."""
@@ -512,12 +563,14 @@ class AgentxivValidator:
                 missing.append(name)
 
         if missing:
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "MISSING_SECTIONS",
-                f"Missing required sections: {', '.join(missing)}",
-                "Add ## Section headers for each missing section",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "MISSING_SECTIONS",
+                    f"Missing required sections: {', '.join(missing)}",
+                    "Add ## Section headers for each missing section",
+                )
+            )
 
     def _check_quality_indicators(self, paper: Paper, result: ValidationResult) -> None:
         """Check for quality indicators."""
@@ -534,12 +587,14 @@ class AgentxivValidator:
                 missing.append(name)
 
         if len(found) < 2:
-            result.issues.append(ValidationIssue(
-                Severity.WARNING,
-                "LOW_QUALITY_INDICATORS",
-                f"Paper has few quality indicators ({len(found)}/{len(self.QUALITY_INDICATORS)})",
-                f"Consider adding: {', '.join(missing[:3])}",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.WARNING,
+                    "LOW_QUALITY_INDICATORS",
+                    f"Paper has few quality indicators ({len(found)}/{len(self.QUALITY_INDICATORS)})",
+                    f"Consider adding: {', '.join(missing[:3])}",
+                )
+            )
 
     def _check_markdown_structure(self, paper: Paper, result: ValidationResult) -> None:
         """Check Markdown structure is valid."""
@@ -548,11 +603,13 @@ class AgentxivValidator:
 
         # Check for headers
         if not re.search(r"^#+\s", paper.source, re.MULTILINE):
-            result.issues.append(ValidationIssue(
-                Severity.ERROR,
-                "NO_HEADERS",
-                "Content must have Markdown headers (# or ##)",
-            ))
+            result.issues.append(
+                ValidationIssue(
+                    Severity.ERROR,
+                    "NO_HEADERS",
+                    "Content must have Markdown headers (# or ##)",
+                )
+            )
 
     def _compute_scores(self, paper: Paper, result: ValidationResult) -> None:
         """Compute quality scores."""
@@ -565,14 +622,16 @@ class AgentxivValidator:
 
         # Structure score
         sections_found = sum(
-            1 for pattern, _ in self.REQUIRED_SECTIONS
+            1
+            for pattern, _ in self.REQUIRED_SECTIONS
             if re.search(pattern, paper.source, re.MULTILINE | re.IGNORECASE)
         )
         result.scores["structure"] = sections_found / len(self.REQUIRED_SECTIONS)
 
         # Quality indicators score
         indicators_found = sum(
-            1 for pattern, _ in self.QUALITY_INDICATORS
+            1
+            for pattern, _ in self.QUALITY_INDICATORS
             if re.search(pattern, paper.source)
         )
         result.scores["rigor"] = min(indicators_found / 4, 1.0)
@@ -619,7 +678,9 @@ def update_with_validation(
         return False, validation, None
 
     if validation.quality_score < min_score:
-        print(f"❌ Update blocked: quality score {validation.quality_score:.1f}% < {min_score}%")
+        print(
+            f"❌ Update blocked: quality score {validation.quality_score:.1f}% < {min_score}%"
+        )
         return False, validation, None
 
     if dry_run:

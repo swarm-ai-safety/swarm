@@ -319,8 +319,7 @@ class AdaptiveAdversary(BaseAgent):
 
             # Collaborate with honest agents
             honest_agents = [
-                a for a in observation.visible_agents
-                if a.get("agent_type") == "honest"
+                a for a in observation.visible_agents if a.get("agent_type") == "honest"
             ]
 
             if honest_agents and random.random() < 0.5:
@@ -344,7 +343,8 @@ class AdaptiveAdversary(BaseAgent):
     def _act_collusion(self, observation: Observation) -> Action:
         """Coordinate with allies for mutual benefit."""
         allies = [
-            a for a in observation.visible_agents
+            a
+            for a in observation.visible_agents
             if a.get("agent_id") in self.memory.potential_allies
         ]
 
@@ -376,8 +376,7 @@ class AdaptiveAdversary(BaseAgent):
         """Imitate honest agent behavior patterns."""
         # Copy what honest agents are doing
         honest_agents = [
-            a for a in observation.visible_agents
-            if a.get("agent_type") == "honest"
+            a for a in observation.visible_agents if a.get("agent_type") == "honest"
         ]
 
         if not honest_agents:
@@ -430,7 +429,8 @@ class AdaptiveAdversary(BaseAgent):
         if good_timing:
             # Execute attack
             targets = [
-                a for a in observation.visible_agents
+                a
+                for a in observation.visible_agents
                 if a.get("agent_id") in self.memory.vulnerable_targets
             ]
             if targets:
@@ -459,8 +459,7 @@ class AdaptiveAdversary(BaseAgent):
         """Dynamically blend multiple strategies."""
         # Weight strategies by their effectiveness
         weights = {
-            s: perf.effectiveness_score
-            for s, perf in self.strategy_performance.items()
+            s: perf.effectiveness_score for s, perf in self.strategy_performance.items()
         }
 
         # Normalize
@@ -484,7 +483,8 @@ class AdaptiveAdversary(BaseAgent):
         """Default opportunistic behavior."""
         # Find vulnerable targets
         targets = [
-            a for a in observation.visible_agents
+            a
+            for a in observation.visible_agents
             if a.get("agent_id") in self.memory.vulnerable_targets
             or a.get("agent_type") == "honest"
         ]

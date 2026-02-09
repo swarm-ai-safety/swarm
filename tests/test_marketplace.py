@@ -132,9 +132,7 @@ class TestBountyLifecycle:
         assert len(bounties) == 1  # Only the one without min_rep > 0
 
     def test_expire_bounties(self):
-        b1 = self.marketplace.post_bounty(
-            "a1", "t1", 10.0, deadline_epoch=5
-        )
+        b1 = self.marketplace.post_bounty("a1", "t1", 10.0, deadline_epoch=5)
         self.marketplace.post_bounty("a2", "t2", 15.0)
 
         expired = self.marketplace.expire_bounties(current_epoch=5)
@@ -173,30 +171,20 @@ class TestBidLifecycle:
         assert bid.status == BidStatus.PENDING
 
     def test_bid_exceeds_reward(self):
-        bid = self.marketplace.place_bid(
-            self.bounty.bounty_id, "bidder_1", 15.0
-        )
+        bid = self.marketplace.place_bid(self.bounty.bounty_id, "bidder_1", 15.0)
         assert bid is None
 
     def test_bid_on_own_bounty(self):
-        bid = self.marketplace.place_bid(
-            self.bounty.bounty_id, "poster", 5.0
-        )
+        bid = self.marketplace.place_bid(self.bounty.bounty_id, "poster", 5.0)
         assert bid is None
 
     def test_bid_on_closed_bounty(self):
         # Award the bounty first
-        bid = self.marketplace.place_bid(
-            self.bounty.bounty_id, "b1", 8.0
-        )
-        self.marketplace.accept_bid(
-            self.bounty.bounty_id, bid.bid_id, "poster"
-        )
+        bid = self.marketplace.place_bid(self.bounty.bounty_id, "b1", 8.0)
+        self.marketplace.accept_bid(self.bounty.bounty_id, bid.bid_id, "poster")
 
         # Now try to bid on awarded bounty
-        bid2 = self.marketplace.place_bid(
-            self.bounty.bounty_id, "b2", 7.0
-        )
+        bid2 = self.marketplace.place_bid(self.bounty.bounty_id, "b2", 7.0)
         assert bid2 is None
 
     def test_max_bids_enforced(self):
@@ -209,32 +197,22 @@ class TestBidLifecycle:
         assert mp.place_bid(bounty.bounty_id, "b3", 6.0) is None
 
     def test_reject_bid(self):
-        bid = self.marketplace.place_bid(
-            self.bounty.bounty_id, "b1", 8.0
-        )
+        bid = self.marketplace.place_bid(self.bounty.bounty_id, "b1", 8.0)
         assert self.marketplace.reject_bid(bid.bid_id, "poster")
         assert self.marketplace.get_agent_bids("b1")[0].status == BidStatus.REJECTED
 
     def test_withdraw_bid(self):
-        bid = self.marketplace.place_bid(
-            self.bounty.bounty_id, "b1", 8.0
-        )
+        bid = self.marketplace.place_bid(self.bounty.bounty_id, "b1", 8.0)
         assert self.marketplace.withdraw_bid(bid.bid_id, "b1")
         assert self.marketplace.get_agent_bids("b1")[0].status == BidStatus.WITHDRAWN
 
     def test_cannot_withdraw_others_bid(self):
-        bid = self.marketplace.place_bid(
-            self.bounty.bounty_id, "b1", 8.0
-        )
+        bid = self.marketplace.place_bid(self.bounty.bounty_id, "b1", 8.0)
         assert not self.marketplace.withdraw_bid(bid.bid_id, "b2")
 
     def test_duplicate_bid_rejected(self):
-        assert self.marketplace.place_bid(
-            self.bounty.bounty_id, "b1", 8.0
-        ) is not None
-        assert self.marketplace.place_bid(
-            self.bounty.bounty_id, "b1", 7.0
-        ) is None
+        assert self.marketplace.place_bid(self.bounty.bounty_id, "b1", 8.0) is not None
+        assert self.marketplace.place_bid(self.bounty.bounty_id, "b1", 7.0) is None
 
 
 # ===========================================================================
@@ -248,9 +226,7 @@ class TestEscrowLifecycle:
     def setup_method(self):
         self.marketplace = Marketplace()
         self.bounty = self.marketplace.post_bounty("poster", "t1", 10.0)
-        self.bid = self.marketplace.place_bid(
-            self.bounty.bounty_id, "worker", 8.0
-        )
+        self.bid = self.marketplace.place_bid(self.bounty.bounty_id, "worker", 8.0)
 
     def test_accept_bid_creates_escrow(self):
         escrow = self.marketplace.accept_bid(
@@ -279,9 +255,7 @@ class TestEscrowLifecycle:
         escrow = self.marketplace.accept_bid(
             self.bounty.bounty_id, self.bid.bid_id, "poster"
         )
-        result = self.marketplace.settle_escrow(
-            escrow.escrow_id, success=False
-        )
+        result = self.marketplace.settle_escrow(escrow.escrow_id, success=False)
         assert result["success"] is False
         assert result["refunded_to_poster"] > 0
 
@@ -294,9 +268,7 @@ class TestEscrowLifecycle:
         assert result == {}
 
     def test_escrow_amount_matches_bid(self):
-        self.marketplace.place_bid(
-            self.bounty.bounty_id, "worker2", 5.0
-        )
+        self.marketplace.place_bid(self.bounty.bounty_id, "worker2", 5.0)
         # This bid won't work because bounty is still open but we already have a bid
         # Let's use a fresh bounty
         b2 = self.marketplace.post_bounty("poster2", "t2", 20.0)
@@ -316,9 +288,7 @@ class TestDisputeLifecycle:
     def setup_method(self):
         self.marketplace = Marketplace()
         self.bounty = self.marketplace.post_bounty("poster", "t1", 10.0)
-        bid = self.marketplace.place_bid(
-            self.bounty.bounty_id, "worker", 8.0
-        )
+        bid = self.marketplace.place_bid(self.bounty.bounty_id, "worker", 8.0)
         self.escrow = self.marketplace.accept_bid(
             self.bounty.bounty_id, bid.bid_id, "poster"
         )
@@ -338,12 +308,8 @@ class TestDisputeLifecycle:
         assert bounty.status == BountyStatus.DISPUTED
 
     def test_resolve_dispute_full_release(self):
-        dispute = self.marketplace.file_dispute(
-            self.escrow.escrow_id, "poster", "test"
-        )
-        result = self.marketplace.resolve_dispute(
-            dispute.dispute_id, worker_share=1.0
-        )
+        dispute = self.marketplace.file_dispute(self.escrow.escrow_id, "poster", "test")
+        result = self.marketplace.resolve_dispute(dispute.dispute_id, worker_share=1.0)
         assert result["worker_share"] == 1.0
         assert result["worker_amount"] > 0
         assert abs(result["poster_amount"]) < 0.01
@@ -352,12 +318,8 @@ class TestDisputeLifecycle:
         assert d.status == DisputeStatus.RESOLVED_RELEASE
 
     def test_resolve_dispute_full_refund(self):
-        dispute = self.marketplace.file_dispute(
-            self.escrow.escrow_id, "poster", "test"
-        )
-        result = self.marketplace.resolve_dispute(
-            dispute.dispute_id, worker_share=0.0
-        )
+        dispute = self.marketplace.file_dispute(self.escrow.escrow_id, "poster", "test")
+        result = self.marketplace.resolve_dispute(dispute.dispute_id, worker_share=0.0)
         assert result["worker_share"] == 0.0
         assert abs(result["worker_amount"]) < 0.01
         assert result["poster_amount"] > 0
@@ -366,12 +328,8 @@ class TestDisputeLifecycle:
         assert d.status == DisputeStatus.RESOLVED_REFUND
 
     def test_resolve_dispute_split(self):
-        dispute = self.marketplace.file_dispute(
-            self.escrow.escrow_id, "poster", "test"
-        )
-        result = self.marketplace.resolve_dispute(
-            dispute.dispute_id, worker_share=0.6
-        )
+        dispute = self.marketplace.file_dispute(self.escrow.escrow_id, "poster", "test")
+        result = self.marketplace.resolve_dispute(dispute.dispute_id, worker_share=0.6)
         assert result["worker_share"] == 0.6
         assert result["worker_amount"] > 0
         assert result["poster_amount"] > 0
@@ -389,9 +347,7 @@ class TestDisputeLifecycle:
         bid = mp.place_bid(bounty.bounty_id, "worker", 8.0)
         escrow = mp.accept_bid(bounty.bounty_id, bid.bid_id, "poster")
 
-        dispute = mp.file_dispute(
-            escrow.escrow_id, "poster", "test", current_epoch=3
-        )
+        dispute = mp.file_dispute(escrow.escrow_id, "poster", "test", current_epoch=3)
 
         # Not yet timed out
         resolved = mp.auto_resolve_disputes(current_epoch=4)
@@ -537,29 +493,35 @@ class TestOrchestratorIntegration:
 
         # Setup: post bounty, place bid
         orch.state.get_agent("h1").resources = 100.0
-        orch._execute_action(Action(
-            action_type=ActionType.POST_BOUNTY,
-            agent_id="h1",
-            content="Task",
-            metadata={"reward_amount": 10.0},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.POST_BOUNTY,
+                agent_id="h1",
+                content="Task",
+                metadata={"reward_amount": 10.0},
+            )
+        )
         bounty = orch.marketplace.get_agent_bounties("h1")[0]
 
-        orch._execute_action(Action(
-            action_type=ActionType.PLACE_BID,
-            agent_id="o1",
-            target_id=bounty.bounty_id,
-            metadata={"bid_amount": 8.0},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.PLACE_BID,
+                agent_id="o1",
+                target_id=bounty.bounty_id,
+                metadata={"bid_amount": 8.0},
+            )
+        )
         bid = orch.marketplace.get_bids_for_bounty(bounty.bounty_id)[0]
 
         # Accept bid
-        success = orch._execute_action(Action(
-            action_type=ActionType.ACCEPT_BID,
-            agent_id="h1",
-            target_id=bounty.bounty_id,
-            metadata={"bid_id": bid.bid_id},
-        ))
+        success = orch._execute_action(
+            Action(
+                action_type=ActionType.ACCEPT_BID,
+                agent_id="h1",
+                target_id=bounty.bounty_id,
+                metadata={"bid_id": bid.bid_id},
+            )
+        )
         assert success
 
         # Escrow should exist
@@ -574,30 +536,36 @@ class TestOrchestratorIntegration:
 
         # Post bounty
         orch.state.get_agent("h1").resources = 100.0
-        orch._execute_action(Action(
-            action_type=ActionType.POST_BOUNTY,
-            agent_id="h1",
-            content="Research task",
-            metadata={"reward_amount": 10.0},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.POST_BOUNTY,
+                agent_id="h1",
+                content="Research task",
+                metadata={"reward_amount": 10.0},
+            )
+        )
         bounty = orch.marketplace.get_agent_bounties("h1")[0]
 
         # Place bid
-        orch._execute_action(Action(
-            action_type=ActionType.PLACE_BID,
-            agent_id="h2",
-            target_id=bounty.bounty_id,
-            metadata={"bid_amount": 8.0},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.PLACE_BID,
+                agent_id="h2",
+                target_id=bounty.bounty_id,
+                metadata={"bid_amount": 8.0},
+            )
+        )
         bid = orch.marketplace.get_bids_for_bounty(bounty.bounty_id)[0]
 
         # Accept bid
-        orch._execute_action(Action(
-            action_type=ActionType.ACCEPT_BID,
-            agent_id="h1",
-            target_id=bounty.bounty_id,
-            metadata={"bid_id": bid.bid_id},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.ACCEPT_BID,
+                agent_id="h1",
+                target_id=bounty.bounty_id,
+                metadata={"bid_id": bid.bid_id},
+            )
+        )
 
         # Settle
         task_id = bounty.task_id
@@ -620,33 +588,41 @@ class TestOrchestratorIntegration:
         orch.state.get_agent("h2").resources = 100.0
 
         # Post, bid, accept
-        orch._execute_action(Action(
-            action_type=ActionType.POST_BOUNTY,
-            agent_id="h1",
-            content="Task",
-            metadata={"reward_amount": 10.0},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.POST_BOUNTY,
+                agent_id="h1",
+                content="Task",
+                metadata={"reward_amount": 10.0},
+            )
+        )
         bounty = orch.marketplace.get_agent_bounties("h1")[0]
 
-        orch._execute_action(Action(
-            action_type=ActionType.PLACE_BID,
-            agent_id="h2",
-            target_id=bounty.bounty_id,
-            metadata={"bid_amount": 8.0},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.PLACE_BID,
+                agent_id="h2",
+                target_id=bounty.bounty_id,
+                metadata={"bid_amount": 8.0},
+            )
+        )
         bid = orch.marketplace.get_bids_for_bounty(bounty.bounty_id)[0]
 
-        orch._execute_action(Action(
-            action_type=ActionType.ACCEPT_BID,
-            agent_id="h1",
-            target_id=bounty.bounty_id,
-            metadata={"bid_id": bid.bid_id},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.ACCEPT_BID,
+                agent_id="h1",
+                target_id=bounty.bounty_id,
+                metadata={"bid_id": bid.bid_id},
+            )
+        )
 
         h1_before = orch.state.get_agent("h1").resources  # noqa: F841
         h2_before = orch.state.get_agent("h2").resources
 
-        result = orch.settle_marketplace_task(bounty.task_id, success=True, quality_score=0.9)
+        result = orch.settle_marketplace_task(
+            bounty.task_id, success=True, quality_score=0.9
+        )
         assert result is not None
 
         # Governance taxes should have been applied, affecting final amounts
@@ -660,12 +636,14 @@ class TestOrchestratorIntegration:
 
         # Post a bounty
         orch.state.get_agent("h1").resources = 100.0
-        orch._execute_action(Action(
-            action_type=ActionType.POST_BOUNTY,
-            agent_id="h1",
-            content="Task",
-            metadata={"reward_amount": 10.0},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.POST_BOUNTY,
+                agent_id="h1",
+                content="Task",
+                metadata={"reward_amount": 10.0},
+            )
+        )
 
         # Build observation for another agent
         obs = orch._build_observation("h2")
@@ -697,12 +675,14 @@ class TestOrchestratorIntegration:
         from swarm.agents.base import Action
 
         orch.state.get_agent("h1").resources = 100.0
-        orch._execute_action(Action(
-            action_type=ActionType.POST_BOUNTY,
-            agent_id="h1",
-            content="Task",
-            metadata={"reward_amount": 10.0, "deadline_epoch": 1},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.POST_BOUNTY,
+                agent_id="h1",
+                content="Task",
+                metadata={"reward_amount": 10.0, "deadline_epoch": 1},
+            )
+        )
 
         assert orch.state.get_agent("h1").resources == 90.0
 
@@ -722,38 +702,46 @@ class TestOrchestratorIntegration:
 
         # Setup: bounty -> bid -> accept -> escrow
         orch.state.get_agent("h1").resources = 100.0
-        orch._execute_action(Action(
-            action_type=ActionType.POST_BOUNTY,
-            agent_id="h1",
-            content="Task",
-            metadata={"reward_amount": 10.0},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.POST_BOUNTY,
+                agent_id="h1",
+                content="Task",
+                metadata={"reward_amount": 10.0},
+            )
+        )
         bounty = orch.marketplace.get_agent_bounties("h1")[0]
 
-        orch._execute_action(Action(
-            action_type=ActionType.PLACE_BID,
-            agent_id="h2",
-            target_id=bounty.bounty_id,
-            metadata={"bid_amount": 8.0},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.PLACE_BID,
+                agent_id="h2",
+                target_id=bounty.bounty_id,
+                metadata={"bid_amount": 8.0},
+            )
+        )
         bid = orch.marketplace.get_bids_for_bounty(bounty.bounty_id)[0]
 
-        orch._execute_action(Action(
-            action_type=ActionType.ACCEPT_BID,
-            agent_id="h1",
-            target_id=bounty.bounty_id,
-            metadata={"bid_id": bid.bid_id},
-        ))
+        orch._execute_action(
+            Action(
+                action_type=ActionType.ACCEPT_BID,
+                agent_id="h1",
+                target_id=bounty.bounty_id,
+                metadata={"bid_id": bid.bid_id},
+            )
+        )
 
         escrow = orch.marketplace.get_agent_escrows("h1")[0]
 
         # File dispute
-        success = orch._execute_action(Action(
-            action_type=ActionType.FILE_DISPUTE,
-            agent_id="h1",
-            target_id=escrow.escrow_id,
-            content="Work quality issues",
-        ))
+        success = orch._execute_action(
+            Action(
+                action_type=ActionType.FILE_DISPUTE,
+                agent_id="h1",
+                target_id=escrow.escrow_id,
+                content="Work quality issues",
+            )
+        )
         assert success
 
 

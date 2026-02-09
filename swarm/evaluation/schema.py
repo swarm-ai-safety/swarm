@@ -175,8 +175,7 @@ def validate_review(data: Dict[str, Any]) -> Tuple[bool, List[str]]:
     # verdict
     if data.get("verdict") not in ("publish", "revise", "reject"):
         errors.append(
-            f"verdict must be one of publish/revise/reject, "
-            f"got {data.get('verdict')!r}"
+            f"verdict must be one of publish/revise/reject, got {data.get('verdict')!r}"
         )
 
     # submission
@@ -210,13 +209,9 @@ def _validate_submission(sub: Any, errors: List[str]) -> None:
                     errors.append(f"submission.authors[{i}] must be an object")
                     continue
                 if "name" not in author:
-                    errors.append(
-                        f"submission.authors[{i}] missing 'name'"
-                    )
+                    errors.append(f"submission.authors[{i}] missing 'name'")
                 if "type" not in author:
-                    errors.append(
-                        f"submission.authors[{i}] missing 'type'"
-                    )
+                    errors.append(f"submission.authors[{i}] missing 'type'")
                 elif author["type"] not in ("agent", "human", "hybrid"):
                     errors.append(
                         f"submission.authors[{i}].type must be "
@@ -254,19 +249,19 @@ def _validate_checks(checks: Any, errors: List[str]) -> None:
 
     if "design_consistency" in checks:
         if checks["design_consistency"] not in ("pass", "fail"):
-            errors.append(
-                "checks.design_consistency must be 'pass' or 'fail'"
-            )
+            errors.append("checks.design_consistency must be 'pass' or 'fail'")
 
-    for rate_field in ("replay_success_rate", "artifact_resolution_rate",
-                       "artifact_hash_match_rate"):
+    for rate_field in (
+        "replay_success_rate",
+        "artifact_resolution_rate",
+        "artifact_hash_match_rate",
+    ):
         if rate_field in checks:
             val = checks[rate_field]
             if not isinstance(val, (int, float)):
                 errors.append(f"checks.{rate_field} must be a number")
 
-    for int_field in ("falsification_attempts_count",
-                      "documented_failure_modes_count"):
+    for int_field in ("falsification_attempts_count", "documented_failure_modes_count"):
         if int_field in checks:
             val = checks[int_field]
             if not isinstance(val, int):

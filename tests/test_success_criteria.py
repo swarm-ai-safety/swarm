@@ -170,7 +170,11 @@ class TestMVPv1:
 
     def test_three_motifs_reproducible(self):
         """>=3 Moltbook-like motifs reproducible via scenario YAMLs."""
-        scenario_files = ["baseline.yaml", "status_game.yaml", "collusion_detection.yaml"]
+        scenario_files = [
+            "baseline.yaml",
+            "status_game.yaml",
+            "collusion_detection.yaml",
+        ]
 
         for filename in scenario_files:
             path = SCENARIOS_DIR / filename
@@ -193,10 +197,14 @@ class TestMVPv1:
 
         # --- Baseline (no governance) ---
         baseline_orch = _build_baseline_orchestrator(
-            n_epochs=n_epochs, steps_per_epoch=steps, seed=seed,
+            n_epochs=n_epochs,
+            steps_per_epoch=steps,
+            seed=seed,
         )
         baseline_metrics = baseline_orch.run()
-        baseline_tox = sum(m.toxicity_rate for m in baseline_metrics) / len(baseline_metrics)
+        baseline_tox = sum(m.toxicity_rate for m in baseline_metrics) / len(
+            baseline_metrics
+        )
 
         # --- Strict governance (all levers) ---
         strict_gov = GovernanceConfig(
@@ -212,7 +220,9 @@ class TestMVPv1:
             audit_threshold_p=0.6,
         )
         gov_orch = _build_baseline_orchestrator(
-            n_epochs=n_epochs, steps_per_epoch=steps, seed=seed,
+            n_epochs=n_epochs,
+            steps_per_epoch=steps,
+            seed=seed,
             governance_config=strict_gov,
         )
         gov_metrics = gov_orch.run()
@@ -232,7 +242,9 @@ class TestMVPv1:
             freeze_duration_epochs=2,
         )
         cb_orch = _build_baseline_orchestrator(
-            n_epochs=n_epochs, steps_per_epoch=steps, seed=seed,
+            n_epochs=n_epochs,
+            steps_per_epoch=steps,
+            seed=seed,
             governance_config=cb_gov,
         )
         cb_metrics = cb_orch.run()
@@ -248,7 +260,9 @@ class TestMVPv1:
             transaction_tax_rate=0.10,
         )
         tax_orch = _build_baseline_orchestrator(
-            n_epochs=n_epochs, steps_per_epoch=steps, seed=seed,
+            n_epochs=n_epochs,
+            steps_per_epoch=steps,
+            seed=seed,
             governance_config=tax_gov,
         )
         tax_metrics = tax_orch.run()
@@ -262,7 +276,9 @@ class TestMVPv1:
     def test_parameter_sweep_12_configs(self):
         """Parameter sweep across >=12 governance configurations."""
         base_scenario = _build_scenario_config(
-            n_epochs=5, steps_per_epoch=5, seed=42,
+            n_epochs=5,
+            steps_per_epoch=5,
+            seed=42,
             governance_config=GovernanceConfig(),
         )
 
@@ -347,7 +363,8 @@ class TestMVPv1:
                 "type": agent.agent_type.value,
                 "total_payoff": state.total_payoff,
                 "reputation": state.reputation,
-                "interactions": state.interactions_initiated + state.interactions_received,
+                "interactions": state.interactions_initiated
+                + state.interactions_received,
             }
 
         # Verify we have interactions to analyze
@@ -361,7 +378,5 @@ class TestMVPv1:
         assert len(deceptive_results) > 0, "Must have deceptive agents"
 
         # Honest agents exist for comparison
-        honest_results = [
-            v for v in agent_results.values() if v["type"] == "honest"
-        ]
+        honest_results = [v for v in agent_results.values() if v["type"] == "honest"]
         assert len(honest_results) > 0, "Must have honest agents"

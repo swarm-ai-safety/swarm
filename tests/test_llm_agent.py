@@ -49,7 +49,12 @@ def basic_observation():
         current_epoch=1,
         current_step=5,
         visible_posts=[
-            {"post_id": "post_1", "author_id": "other_agent", "content": "Hello world", "score": 10},
+            {
+                "post_id": "post_1",
+                "author_id": "other_agent",
+                "content": "Hello world",
+                "score": 10,
+            },
         ],
         visible_agents=[
             {"agent_id": "other_agent", "reputation": 3.0, "resources": 80.0},
@@ -71,7 +76,11 @@ def basic_observation():
 def mock_anthropic_response():
     """Mock Anthropic API response."""
     mock = MagicMock()
-    mock.content = [MagicMock(text='{"action_type": "POST", "reasoning": "Test", "params": {"content": "Hello"}}')]
+    mock.content = [
+        MagicMock(
+            text='{"action_type": "POST", "reasoning": "Test", "params": {"content": "Hello"}}'
+        )
+    ]
     mock.usage = MagicMock(input_tokens=100, output_tokens=50)
     return mock
 
@@ -331,11 +340,11 @@ class TestLLMAgent:
 
         agent = LLMAgent(agent_id="llm_1", llm_config=basic_llm_config)
 
-        response = '''Here's my action:
+        response = """Here's my action:
 ```json
 {"action_type": "POST", "params": {"content": "Hello"}}
 ```
-'''
+"""
         parsed = agent._parse_action_response(response)
         assert parsed["action_type"] == "POST"
         assert parsed["params"]["content"] == "Hello"
@@ -416,7 +425,9 @@ class TestLLMAgent:
         agent._call_llm_async.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_act_async_fallback_on_error(self, basic_llm_config, basic_observation):
+    async def test_act_async_fallback_on_error(
+        self, basic_llm_config, basic_observation
+    ):
         """Test async act falls back to NOOP on error."""
         from swarm.agents.llm_agent import LLMAgent
 
@@ -455,7 +466,9 @@ class TestLLMAgent:
         assert accept is True
 
     @pytest.mark.asyncio
-    async def test_accept_interaction_async_reject(self, basic_llm_config, basic_observation):
+    async def test_accept_interaction_async_reject(
+        self, basic_llm_config, basic_observation
+    ):
         """Test async accept_interaction rejection."""
         from swarm.agents.base import InteractionProposal
         from swarm.agents.llm_agent import LLMAgent

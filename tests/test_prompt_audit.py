@@ -8,7 +8,12 @@ from swarm.logging.prompt_audit import PromptAuditConfig, PromptAuditLog
 def test_prompt_audit_logs_hash_by_default(tmp_path):
     path = tmp_path / "audit.jsonl"
     log = PromptAuditLog(
-        PromptAuditConfig(path=path, include_system_prompt=False, hash_system_prompt=True, max_chars=10)
+        PromptAuditConfig(
+            path=path,
+            include_system_prompt=False,
+            hash_system_prompt=True,
+            max_chars=10,
+        )
     )
 
     log.append_exchange(
@@ -41,7 +46,9 @@ def test_prompt_audit_logs_hash_by_default(tmp_path):
 def test_prompt_audit_can_include_system_prompt(tmp_path):
     path = tmp_path / "audit.jsonl"
     log = PromptAuditLog(
-        PromptAuditConfig(path=path, include_system_prompt=True, hash_system_prompt=True, max_chars=10)
+        PromptAuditConfig(
+            path=path, include_system_prompt=True, hash_system_prompt=True, max_chars=10
+        )
     )
 
     log.append_exchange(
@@ -63,4 +70,3 @@ def test_prompt_audit_can_include_system_prompt(tmp_path):
     rec = json.loads(path.read_text(encoding="utf-8").splitlines()[0])
     assert rec["system_prompt"].startswith("SYSTEM PRO")  # truncated to max_chars
     assert "system_prompt_sha256" in rec
-

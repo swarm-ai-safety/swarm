@@ -99,7 +99,7 @@ class TestPayoffInitiator:
             payoffs.append(engine.payoff_initiator(interaction))
 
         # Check linearity by verifying equal spacing
-        diffs = [payoffs[i+1] - payoffs[i] for i in range(len(payoffs)-1)]
+        diffs = [payoffs[i + 1] - payoffs[i] for i in range(len(payoffs) - 1)]
         for d in diffs[1:]:
             assert d == pytest.approx(diffs[0], rel=1e-6)
 
@@ -271,7 +271,7 @@ class TestBreakEven:
 
         # p* = s_minus / (s_plus + s_minus) = 1 / 3
         break_even = engine.break_even_p()
-        assert break_even == pytest.approx(1/3)
+        assert break_even == pytest.approx(1 / 3)
 
         # At break-even, surplus should be 0
         surplus = engine.expected_surplus(break_even)
@@ -283,7 +283,7 @@ class TestBreakEven:
 
         # p* = (s_minus + h) / (s_plus + s_minus + h) = 3 / 5
         social_break_even = engine.social_break_even_p()
-        assert social_break_even == pytest.approx(3/5)
+        assert social_break_even == pytest.approx(3 / 5)
 
         # At social break-even, social surplus should be 0
         interaction = SoftInteraction(p=social_break_even)

@@ -172,9 +172,7 @@ class ShadowSimulation:
             details=self._generate_details(divergence, overall_divergence),
         )
 
-    def _generate_details(
-        self, divergence: dict[str, float], overall: float
-    ) -> str:
+    def _generate_details(self, divergence: dict[str, float], overall: float) -> str:
         """Generate human-readable analysis."""
         lines = ["Shadow Simulation Analysis:", ""]
         for metric, div in sorted(divergence.items(), key=lambda x: -x[1]):
@@ -314,7 +312,9 @@ class PublishThenAttack:
                 AttackResult(
                     attack_strategy=strategy,
                     governance_still_holds=bool(evasion_rate < 0.5),
-                    metric_degradation={k: float(v) for k, v in avg_degradation.items()},
+                    metric_degradation={
+                        k: float(v) for k, v in avg_degradation.items()
+                    },
                     successful_evasion=bool(evasion_rate > 0.5),
                     details=f"Evasion rate: {evasion_rate:.1%}",
                 )
@@ -555,16 +555,26 @@ class ReflexivityAnalysis:
         lines = ["## Reflexivity Analysis", ""]
 
         if self.shadow_simulation:
-            lines.append(f"**Shadow Simulation Divergence**: {self.shadow_simulation.overall_divergence:.3f}")
-            lines.append(f"**Finding Robust to Self-Knowledge**: {'Yes' if self.shadow_simulation.finding_is_robust else 'No'}")
+            lines.append(
+                f"**Shadow Simulation Divergence**: {self.shadow_simulation.overall_divergence:.3f}"
+            )
+            lines.append(
+                f"**Finding Robust to Self-Knowledge**: {'Yes' if self.shadow_simulation.finding_is_robust else 'No'}"
+            )
             lines.append("")
 
         if self.publish_then_attack:
-            lines.append(f"**Disclosure Robustness**: {self.publish_then_attack.robustness_classification.value}")
-            lines.append(f"**Governance Holds Under Attack**: {'Yes' if self.publish_then_attack.governance_holds_under_attack else 'No'}")
+            lines.append(
+                f"**Disclosure Robustness**: {self.publish_then_attack.robustness_classification.value}"
+            )
+            lines.append(
+                f"**Governance Holds Under Attack**: {'Yes' if self.publish_then_attack.governance_holds_under_attack else 'No'}"
+            )
             lines.append("")
 
-        lines.append(f"**Final Classification**: {self.final_classification.value.upper()}")
+        lines.append(
+            f"**Final Classification**: {self.final_classification.value.upper()}"
+        )
         lines.append("")
         lines.append(f"**Epistemic Note**: {self.epistemic_note}")
 
@@ -580,9 +590,7 @@ class ReflexivityAnalyzer:
         attack_simulation_fn: Callable | None = None,
     ):
         self.shadow_sim = ShadowSimulation(simulation_fn)
-        self.publish_attack = PublishThenAttack(
-            attack_simulation_fn or simulation_fn
-        )
+        self.publish_attack = PublishThenAttack(attack_simulation_fn or simulation_fn)
         self.temporal = TemporalCheckpointing()
         self.goodhart = GoodhartResistantMetrics()
 
@@ -609,10 +617,16 @@ class ReflexivityAnalyzer:
         )
 
         # 3. Determine final classification
-        if shadow_result.finding_is_robust and attack_result.governance_holds_under_attack:
+        if (
+            shadow_result.finding_is_robust
+            and attack_result.governance_holds_under_attack
+        ):
             classification = RobustnessClassification.DISCLOSURE_ROBUST
             note = "This finding holds under full-knowledge conditions."
-        elif not shadow_result.finding_is_robust and not attack_result.governance_holds_under_attack:
+        elif (
+            not shadow_result.finding_is_robust
+            and not attack_result.governance_holds_under_attack
+        ):
             classification = RobustnessClassification.FRAGILE
             note = "WARNING: This finding inverts under full-knowledge conditions."
         else:

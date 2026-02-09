@@ -46,6 +46,8 @@ class AgentResponse(BaseModel):
     )
     name: str = Field(..., description="Agent name")
     description: str = Field(..., description="Agent description")
-    capabilities: list[str] = Field(default_factory=list, description="Agent capabilities")
+    capabilities: list[str] = Field(
+        default_factory=list, description="Agent capabilities"
+    )
     status: AgentStatus = Field(..., description="Registration status")
     registered_at: datetime = Field(..., description="Registration timestamp")

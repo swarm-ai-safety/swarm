@@ -206,9 +206,7 @@ class FlashCrashDetector:
                     if self._crash_history:
                         last = self._crash_history[-1]
                         last.end_tick = tick.tick_number
-                        last.recovery_time_ticks = (
-                            tick.tick_number - last.start_tick
-                        )
+                        last.recovery_time_ticks = tick.tick_number - last.start_tick
                     self._in_crash = False
 
         return None
@@ -229,7 +227,7 @@ class FlashCrashDetector:
 
         mean_return = sum(returns) / len(returns)
         variance = sum((r - mean_return) ** 2 for r in returns) / len(returns)
-        return float(variance ** 0.5)
+        return float(variance**0.5)
 
     def get_crash_history(self) -> List[FlashCrashEvent]:
         """Get all detected crash events."""
@@ -279,6 +277,7 @@ class HFNEngine:
         self._detector = FlashCrashDetector()
 
         import random
+
         self._rng = random.Random(seed)
 
     def submit_order(self, order: HFNOrder) -> bool:
@@ -314,15 +313,11 @@ class HFNEngine:
         if order.order_type == "bid":
             self._bids.append(order)
             # Sort by price descending, then by effective time
-            self._bids.sort(
-                key=lambda o: (-o.price, o.effective_time)
-            )
+            self._bids.sort(key=lambda o: (-o.price, o.effective_time))
         elif order.order_type == "ask":
             self._asks.append(order)
             # Sort by price ascending, then by effective time
-            self._asks.sort(
-                key=lambda o: (o.price, o.effective_time)
-            )
+            self._asks.sort(key=lambda o: (o.price, o.effective_time))
         else:
             return False
 
@@ -420,11 +415,13 @@ class HFNEngine:
         """Cancel all orders for an agent on a resource. Returns count cancelled."""
         before = len(self._bids) + len(self._asks)
         self._bids = [
-            o for o in self._bids
+            o
+            for o in self._bids
             if not (o.agent_id == agent_id and o.resource_type == resource_type)
         ]
         self._asks = [
-            o for o in self._asks
+            o
+            for o in self._asks
             if not (o.agent_id == agent_id and o.resource_type == resource_type)
         ]
         after = len(self._bids) + len(self._asks)
@@ -493,7 +490,5 @@ class HFNEngine:
         if total == 0:
             return 0.0
 
-        gini_sum = sum(
-            (2 * (i + 1) - n - 1) * c for i, c in enumerate(counts)
-        )
+        gini_sum = sum((2 * (i + 1) - n - 1) * c for i, c in enumerate(counts))
         return gini_sum / (n * total)

@@ -190,7 +190,8 @@ class EnvState:
     def get_active_agents(self) -> List[AgentState]:
         """Get all agents that are not frozen."""
         return [
-            state for agent_id, state in self.agents.items()
+            state
+            for agent_id, state in self.agents.items()
             if agent_id not in self.frozen_agents
         ]
 
@@ -228,8 +229,7 @@ class EnvState:
     def get_proposals_for_agent(self, agent_id: str) -> List[InteractionProposal]:
         """Get all pending proposals where agent is counterparty."""
         return [
-            p for p in self.pending_proposals.values()
-            if p.counterparty_id == agent_id
+            p for p in self.pending_proposals.values() if p.counterparty_id == agent_id
         ]
 
     def advance_step(self) -> None:
@@ -258,7 +258,8 @@ class EnvState:
         # Expire old proposals
         now = datetime.now()
         expired = [
-            pid for pid, p in self.pending_proposals.items()
+            pid
+            for pid, p in self.pending_proposals.items()
             if p.expires_at and p.expires_at < now
         ]
         for pid in expired:
@@ -296,7 +297,8 @@ class EnvState:
             "is_paused": self.is_paused,
             "avg_reputation": (
                 sum(a.reputation for a in self.agents.values()) / len(self.agents)
-                if self.agents else 0.0
+                if self.agents
+                else 0.0
             ),
             "total_resources": sum(a.resources for a in self.agents.values()),
         }

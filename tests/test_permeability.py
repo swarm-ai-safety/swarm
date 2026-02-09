@@ -58,10 +58,7 @@ class TestPermeabilityModel:
             seed=42,
         )
         # With permeability 1 and high quality, almost everything crosses
-        allowed_count = sum(
-            1 for _ in range(100)
-            if model.should_cross(1.0, 0.99)[0]
-        )
+        allowed_count = sum(1 for _ in range(100) if model.should_cross(1.0, 0.99)[0])
         assert allowed_count > 90
 
     def test_adaptive_permeability_reduces_with_threat(self):
@@ -69,10 +66,12 @@ class TestPermeabilityModel:
             PermeabilityConfig(base_permeability=0.8, adaptive=True),
         )
         perm_low_threat = model.compute_effective_permeability(
-            threat_level=0.1, agent_trust=0.5,
+            threat_level=0.1,
+            agent_trust=0.5,
         )
         perm_high_threat = model.compute_effective_permeability(
-            threat_level=0.9, agent_trust=0.5,
+            threat_level=0.9,
+            agent_trust=0.5,
         )
         assert perm_high_threat < perm_low_threat
 
@@ -81,10 +80,12 @@ class TestPermeabilityModel:
             PermeabilityConfig(base_permeability=0.5, adaptive=True),
         )
         perm_low_trust = model.compute_effective_permeability(
-            threat_level=0.3, agent_trust=0.1,
+            threat_level=0.3,
+            agent_trust=0.1,
         )
         perm_high_trust = model.compute_effective_permeability(
-            threat_level=0.3, agent_trust=0.9,
+            threat_level=0.3,
+            agent_trust=0.9,
         )
         assert perm_high_trust > perm_low_trust
 
@@ -93,7 +94,8 @@ class TestPermeabilityModel:
             PermeabilityConfig(base_permeability=0.5, adaptive=False),
         )
         perm = model.compute_effective_permeability(
-            threat_level=0.9, agent_trust=0.1,
+            threat_level=0.9,
+            agent_trust=0.1,
         )
         assert perm == 0.5
 
@@ -173,10 +175,9 @@ class TestPermeabilityModel:
     def test_optimal_permeability(self):
         model = PermeabilityModel()
         # Mix of high and low quality
-        interactions = (
-            [_make_interaction(p=0.9) for _ in range(5)]
-            + [_make_interaction(p=0.1) for _ in range(5)]
-        )
+        interactions = [_make_interaction(p=0.9) for _ in range(5)] + [
+            _make_interaction(p=0.1) for _ in range(5)
+        ]
         opt = model.optimal_permeability(interactions, external_harm_weight=1.0)
         assert 0.0 <= opt <= 1.0
 

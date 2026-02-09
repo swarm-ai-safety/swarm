@@ -67,15 +67,17 @@ def create_injection_pattern(
     base = base_time or datetime.now()
     interactions = []
     for i, target in enumerate(targets):
-        interactions.append(create_interaction(
-            initiator=attacker,
-            counterparty=target,
-            p=0.15,  # Low quality
-            accepted=True,  # But accepted (counterparty deceived)
-            tool_misuse_flags=2,  # Suspicious tool usage
-            verifier_rejections=1,
-            timestamp=base + timedelta(seconds=i * 30),
-        ))
+        interactions.append(
+            create_interaction(
+                initiator=attacker,
+                counterparty=target,
+                p=0.15,  # Low quality
+                accepted=True,  # But accepted (counterparty deceived)
+                tool_misuse_flags=2,  # Suspicious tool usage
+                verifier_rejections=1,
+                timestamp=base + timedelta(seconds=i * 30),
+            )
+        )
     return interactions
 
 
@@ -90,15 +92,17 @@ def create_manipulation_pattern(
     for i, victim in enumerate(victims):
         # Multiple interactions with same victim
         for j in range(3):
-            interactions.append(create_interaction(
-                initiator=manipulator,
-                counterparty=victim,
-                p=0.35,  # Low quality
-                accepted=True,
-                r_a=0.5,  # Manipulator gains reputation
-                tau=-2.0,  # Extracting resources
-                timestamp=base + timedelta(seconds=(i * 3 + j) * 60),
-            ))
+            interactions.append(
+                create_interaction(
+                    initiator=manipulator,
+                    counterparty=victim,
+                    p=0.35,  # Low quality
+                    accepted=True,
+                    r_a=0.5,  # Manipulator gains reputation
+                    tau=-2.0,  # Extracting resources
+                    timestamp=base + timedelta(seconds=(i * 3 + j) * 60),
+                )
+            )
     return interactions
 
 
@@ -115,13 +119,15 @@ def create_laundering_chain(
     chain = [source] + intermediaries + [destination]
 
     for i in range(len(chain) - 1):
-        interactions.append(create_interaction(
-            initiator=chain[i],
-            counterparty=chain[i + 1],
-            p=0.4,
-            accepted=True,
-            timestamp=base + timedelta(seconds=i * 120),
-        ))
+        interactions.append(
+            create_interaction(
+                initiator=chain[i],
+                counterparty=chain[i + 1],
+                p=0.4,
+                accepted=True,
+                timestamp=base + timedelta(seconds=i * 120),
+            )
+        )
 
     return interactions, trust_scores
 
@@ -137,23 +143,27 @@ def create_contagion_chain(
     interactions = []
 
     # Origin infects first member
-    interactions.append(create_interaction(
-        initiator=origin,
-        counterparty=chain_members[0],
-        p=0.2,  # Low quality
-        accepted=True,
-        timestamp=base,
-    ))
+    interactions.append(
+        create_interaction(
+            initiator=origin,
+            counterparty=chain_members[0],
+            p=0.2,  # Low quality
+            accepted=True,
+            timestamp=base,
+        )
+    )
 
     # Each member spreads to next
     for i in range(len(chain_members) - 1):
-        interactions.append(create_interaction(
-            initiator=chain_members[i],
-            counterparty=chain_members[i + 1],
-            p=0.2,
-            accepted=True,
-            timestamp=base + timedelta(seconds=(i + 1) * interval_seconds),
-        ))
+        interactions.append(
+            create_interaction(
+                initiator=chain_members[i],
+                counterparty=chain_members[i + 1],
+                p=0.2,
+                accepted=True,
+                timestamp=base + timedelta(seconds=(i + 1) * interval_seconds),
+            )
+        )
 
     return interactions
 
@@ -172,13 +182,15 @@ def create_normal_interactions(
         a, b = rng.choice(agents, size=2, replace=False)
         p = rng.uniform(0.4, 0.9)
         accepted = rng.random() < 0.7
-        interactions.append(create_interaction(
-            initiator=a,
-            counterparty=b,
-            p=p,
-            accepted=accepted,
-            timestamp=base + timedelta(seconds=i * 60),
-        ))
+        interactions.append(
+            create_interaction(
+                initiator=a,
+                counterparty=b,
+                p=p,
+                accepted=accepted,
+                timestamp=base + timedelta(seconds=i * 60),
+            )
+        )
     return interactions
 
 
@@ -241,7 +253,8 @@ class TestSecurityAnalyzer:
 
         # Should detect injection attempts
         injection_indicators = [
-            i for i in report.threat_indicators
+            i
+            for i in report.threat_indicators
             if i.threat_type == ThreatType.PROMPT_INJECTION
         ]
         assert len(injection_indicators) > 0
@@ -314,7 +327,9 @@ class TestSecurityAnalyzer:
         report = analyzer.analyze(interactions, agent_ids)
 
         # Should detect contagion chain
-        assert report.contagion_depth >= 0  # May or may not detect depending on velocity
+        assert (
+            report.contagion_depth >= 0
+        )  # May or may not detect depending on velocity
 
     def test_compute_agent_threat_scores(self):
         """Test per-agent threat score computation."""
@@ -621,7 +636,8 @@ class TestSecurityLever:
 
         # Create suspicious interaction
         interaction = create_interaction(
-            "a", "b",
+            "a",
+            "b",
             p=0.1,
             accepted=True,
             tool_misuse_flags=2,
@@ -630,7 +646,11 @@ class TestSecurityLever:
         effect = lever.on_interaction(interaction, state)
 
         # Should have cost penalty
-        assert effect.cost_a > 0 or effect.cost_b > 0 or "realtime_penalty" in effect.details
+        assert (
+            effect.cost_a > 0
+            or effect.cost_b > 0
+            or "realtime_penalty" in effect.details
+        )
 
     def test_clear_history(self):
         """Test clearing lever state."""
@@ -767,14 +787,16 @@ class TestSecurityScenarios:
         # Coordinated injection attempts
         for i, attacker in enumerate(attackers):
             for j, victim in enumerate(victims):
-                interactions.append(create_interaction(
-                    initiator=attacker,
-                    counterparty=victim,
-                    p=0.15,
-                    accepted=True,
-                    tool_misuse_flags=1,
-                    timestamp=base + timedelta(seconds=(i * 3 + j) * 30),
-                ))
+                interactions.append(
+                    create_interaction(
+                        initiator=attacker,
+                        counterparty=victim,
+                        p=0.15,
+                        accepted=True,
+                        tool_misuse_flags=1,
+                        timestamp=base + timedelta(seconds=(i * 3 + j) * 30),
+                    )
+                )
 
         report = analyzer.analyze(interactions, all_agents)
 
@@ -825,13 +847,15 @@ class TestSecurityScenarios:
         # Add some branches
         base = datetime.now()
         for i, member in enumerate(chain[:3]):
-            interactions.append(create_interaction(
-                initiator=member,
-                counterparty=f"branch_{i}",
-                p=0.2,
-                accepted=True,
-                timestamp=base + timedelta(seconds=i * 8),
-            ))
+            interactions.append(
+                create_interaction(
+                    initiator=member,
+                    counterparty=f"branch_{i}",
+                    p=0.2,
+                    accepted=True,
+                    timestamp=base + timedelta(seconds=i * 8),
+                )
+            )
 
         all_agents = [origin] + chain + [f"branch_{i}" for i in range(3)]
         report = analyzer.analyze(interactions, all_agents)
@@ -873,7 +897,7 @@ class TestSecurityLeverEpochStart:
 
         state = EnvState()
         reputations = reputations or {}
-        for aid in (agent_ids or ["a", "b", "c"]):
+        for aid in agent_ids or ["a", "b", "c"]:
             state.add_agent(aid)
             if aid in reputations:
                 state.agents[aid].reputation = reputations[aid]
@@ -891,9 +915,9 @@ class TestSecurityLeverEpochStart:
         """Returns empty effect when less than min_interactions."""
         lever = self._make_lever(security_min_interactions=10)
         state = self._make_state()
-        lever._interaction_history.extend([
-            create_interaction("a", "b") for _ in range(3)
-        ])
+        lever._interaction_history.extend(
+            [create_interaction("a", "b") for _ in range(3)]
+        )
         effect = lever.on_epoch_start(state, epoch=1)
         assert effect.reputation_deltas == {}
 
@@ -958,8 +982,9 @@ class TestSecurityLeverRealtimeThreat:
 
     def _make_state(self, agent_ids=None):
         from swarm.env.state import EnvState
+
         state = EnvState()
-        for aid in (agent_ids or ["a", "b"]):
+        for aid in agent_ids or ["a", "b"]:
             state.add_agent(aid)
         return state
 
@@ -1011,8 +1036,12 @@ class TestSecurityLeverRealtimeThreat:
         """Score never exceeds 1.0."""
         lever = self._make_lever()
         ix = create_interaction(
-            "a", "b", p=0.05, accepted=True,
-            tool_misuse_flags=5, verifier_rejections=5,
+            "a",
+            "b",
+            p=0.05,
+            accepted=True,
+            tool_misuse_flags=5,
+            verifier_rejections=5,
         )
         score = lever._compute_realtime_threat_score(ix)
         assert score <= 1.0
@@ -1033,7 +1062,9 @@ class TestSecurityLeverRealtimeThreat:
         """Low p + accepted → CROSS_AGENT_MANIPULATION."""
         lever = self._make_lever()
         ix = create_interaction("a", "b", p=0.1, accepted=True, tool_misuse_flags=0)
-        assert lever._identify_threat_type(ix) == ThreatType.CROSS_AGENT_MANIPULATION.value
+        assert (
+            lever._identify_threat_type(ix) == ThreatType.CROSS_AGENT_MANIPULATION.value
+        )
 
     def test_identify_threat_type_unknown(self):
         """No matching pattern → 'unknown'."""
@@ -1051,6 +1082,7 @@ class TestSecurityLeverCanAgentAct:
         lever = SecurityLever(config)
 
         from swarm.env.state import EnvState
+
         state = EnvState()
 
         assert lever.can_agent_act("any_agent", state) is True
@@ -1061,6 +1093,7 @@ class TestSecurityLeverCanAgentAct:
         lever = SecurityLever(config)
 
         from swarm.env.state import EnvState
+
         state = EnvState()
 
         assert lever.can_agent_act("free_agent", state) is True
@@ -1093,7 +1126,9 @@ class TestSecurityLeverRelease:
 
         lever.release_from_quarantine("agent_1")
         actions = lever.get_containment_actions()
-        assert any(a["action"] == "release" and a["agent_id"] == "agent_1" for a in actions)
+        assert any(
+            a["action"] == "release" and a["agent_id"] == "agent_1" for a in actions
+        )
 
 
 class TestSecurityLeverSetters:
@@ -1123,6 +1158,7 @@ class TestSecurityLeverSetters:
         lever = SecurityLever(config)
 
         from swarm.env.state import EnvState
+
         state = EnvState()
         state.add_agent("a")
         state.add_agent("b")

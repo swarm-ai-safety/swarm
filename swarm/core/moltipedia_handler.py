@@ -175,17 +175,19 @@ class MoltipediaHandler:
         if points_awarded <= 0:
             return
         self.task_pool.award_points(agent_id, points_awarded)
-        self._emit_event(Event(
-            event_type=EventType.POINTS_AWARDED,
-            agent_id=agent_id,
-            payload={
-                "points": points_awarded,
-                "page_id": page_id,
-                "edit_type": edit_type,
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.POINTS_AWARDED,
+                agent_id=agent_id,
+                payload={
+                    "points": points_awarded,
+                    "page_id": page_id,
+                    "edit_type": edit_type,
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -222,13 +224,15 @@ class MoltipediaHandler:
         outcome = self._build_outcome(quality_delta, violations, agent_type)
         observables = self.observable_generator.generate(outcome)
 
-        self._emit_event(Event(
-            event_type=EventType.PAGE_CREATED,
-            agent_id=action.agent_id,
-            payload={"page_id": page.page_id, "title": page.title},
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.PAGE_CREATED,
+                agent_id=action.agent_id,
+                payload={"page_id": page.page_id, "title": page.title},
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return MoltipediaActionResult(
             success=True,
@@ -275,7 +279,9 @@ class MoltipediaHandler:
         page.status = self._status_for_page(page)
         page.cooldown_until = state.current_step + self.config.page_cooldown_steps
 
-        outcome = self._build_outcome(page.quality_score - old_quality, violations, agent_type)
+        outcome = self._build_outcome(
+            page.quality_score - old_quality, violations, agent_type
+        )
         observables = self.observable_generator.generate(outcome)
 
         if page.created_by and page.created_by != action.agent_id:
@@ -283,17 +289,19 @@ class MoltipediaHandler:
         else:
             counterparty_id = "moltipedia"
 
-        self._emit_event(Event(
-            event_type=EventType.PAGE_EDITED,
-            agent_id=action.agent_id,
-            payload={
-                "page_id": page.page_id,
-                "edit_type": edit_type.value,
-                "quality_delta": page.quality_score - old_quality,
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.PAGE_EDITED,
+                agent_id=action.agent_id,
+                payload={
+                    "page_id": page.page_id,
+                    "edit_type": edit_type.value,
+                    "quality_delta": page.quality_score - old_quality,
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return MoltipediaActionResult(
             success=True,
@@ -310,7 +318,9 @@ class MoltipediaHandler:
             },
         )
 
-    def _handle_objection(self, action: Action, state: EnvState) -> MoltipediaActionResult:
+    def _handle_objection(
+        self, action: Action, state: EnvState
+    ) -> MoltipediaActionResult:
         page = self.task_pool.get_page(action.target_id)
         if page is None:
             return MoltipediaActionResult(success=False)
@@ -318,20 +328,24 @@ class MoltipediaHandler:
         page.status = PageStatus.CONTESTED
         page.cooldown_until = state.current_step + self.config.page_cooldown_steps
 
-        self._emit_event(Event(
-            event_type=EventType.OBJECTION_FILED,
-            agent_id=action.agent_id,
-            payload={"page_id": page.page_id, "reason": action.content},
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.OBJECTION_FILED,
+                agent_id=action.agent_id,
+                payload={"page_id": page.page_id, "reason": action.content},
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return MoltipediaActionResult(
             success=True,
             observables=None,
             initiator_id=action.agent_id,
             counterparty_id=(
-                page.created_by if page.created_by and page.created_by != action.agent_id else "moltipedia"
+                page.created_by
+                if page.created_by and page.created_by != action.agent_id
+                else "moltipedia"
             ),
             points=0.0,
             metadata={
@@ -344,7 +358,9 @@ class MoltipediaHandler:
             accepted=True,
         )
 
-    def _handle_policy_flag(self, action: Action, state: EnvState) -> MoltipediaActionResult:
+    def _handle_policy_flag(
+        self, action: Action, state: EnvState
+    ) -> MoltipediaActionResult:
         page = self.task_pool.get_page(action.target_id)
         if page is None:
             return MoltipediaActionResult(success=False)
@@ -354,23 +370,27 @@ class MoltipediaHandler:
             page.policy_violations.append(violation)
         page.status = PageStatus.CONTESTED
 
-        self._emit_event(Event(
-            event_type=EventType.POLICY_VIOLATION_FLAGGED,
-            agent_id=action.agent_id,
-            payload={
-                "page_id": page.page_id,
-                "violation": violation.value,
-            },
-            epoch=state.current_epoch,
-            step=state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.POLICY_VIOLATION_FLAGGED,
+                agent_id=action.agent_id,
+                payload={
+                    "page_id": page.page_id,
+                    "violation": violation.value,
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
+            )
+        )
 
         return MoltipediaActionResult(
             success=True,
             observables=None,
             initiator_id=action.agent_id,
             counterparty_id=(
-                page.created_by if page.created_by and page.created_by != action.agent_id else "moltipedia"
+                page.created_by
+                if page.created_by and page.created_by != action.agent_id
+                else "moltipedia"
             ),
             points=0.0,
             metadata={
@@ -383,23 +403,39 @@ class MoltipediaHandler:
             accepted=True,
         )
 
-    def _quality_delta_for_agent(self, agent_type: AgentType, is_create: bool = False) -> float:
+    def _quality_delta_for_agent(
+        self, agent_type: AgentType, is_create: bool = False
+    ) -> float:
         if agent_type == AgentType.ADVERSARIAL:
             return self._rng.uniform(-0.35, -0.1)
         if agent_type == AgentType.OPPORTUNISTIC:
-            return self._rng.uniform(0.05, 0.2) if not is_create else self._rng.uniform(0.05, 0.15)
+            return (
+                self._rng.uniform(0.05, 0.2)
+                if not is_create
+                else self._rng.uniform(0.05, 0.15)
+            )
         if agent_type == AgentType.DECEPTIVE:
             return self._rng.uniform(0.05, 0.18)
-        return self._rng.uniform(0.15, 0.35) if not is_create else self._rng.uniform(0.1, 0.25)
+        return (
+            self._rng.uniform(0.15, 0.35)
+            if not is_create
+            else self._rng.uniform(0.1, 0.25)
+        )
 
-    def _policy_violations_for_agent(self, agent_type: AgentType) -> list[PolicyViolationType]:
+    def _policy_violations_for_agent(
+        self, agent_type: AgentType
+    ) -> list[PolicyViolationType]:
         if agent_type == AgentType.ADVERSARIAL:
-            return [self._rng.choice([
-                PolicyViolationType.NEUTRALITY,
-                PolicyViolationType.SCOPE,
-                PolicyViolationType.SPECULATION,
-                PolicyViolationType.SOURCING,
-            ])]
+            return [
+                self._rng.choice(
+                    [
+                        PolicyViolationType.NEUTRALITY,
+                        PolicyViolationType.SCOPE,
+                        PolicyViolationType.SPECULATION,
+                        PolicyViolationType.SOURCING,
+                    ]
+                )
+            ]
         if agent_type == AgentType.OPPORTUNISTIC:
             return [PolicyViolationType.SOURCING] if self._rng.random() < 0.3 else []
         if agent_type == AgentType.DECEPTIVE:
@@ -410,7 +446,10 @@ class MoltipediaHandler:
         self, page: WikiPage, agent_type: AgentType
     ) -> list[PolicyViolationType]:
         if agent_type == AgentType.ADVERSARIAL:
-            violations = list(set(page.policy_violations) | set(self._policy_violations_for_agent(agent_type)))
+            violations = list(
+                set(page.policy_violations)
+                | set(self._policy_violations_for_agent(agent_type))
+            )
             return violations
         if agent_type == AgentType.OPPORTUNISTIC and self._rng.random() < 0.2:
             return list(set(page.policy_violations) | {PolicyViolationType.SOURCING})
@@ -446,7 +485,9 @@ class MoltipediaHandler:
         agent_type: AgentType,
     ) -> MoltipediaEditOutcome:
         rework_count = 1 if quality_delta < 0 or violations else 0
-        misuse_flags = 1 if agent_type == AgentType.ADVERSARIAL or quality_delta < 0 else 0
+        misuse_flags = (
+            1 if agent_type == AgentType.ADVERSARIAL or quality_delta < 0 else 0
+        )
         engagement_delta = max(-0.6, min(0.6, quality_delta * 0.8))
         return MoltipediaEditOutcome(
             quality_delta=quality_delta,

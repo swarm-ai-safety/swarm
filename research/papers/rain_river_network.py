@@ -97,9 +97,7 @@ def run_network_simulation(
         )
 
     for i in range(n_agents - n_honest):
-        orchestrator.register_agent(
-            AdversarialAgent(agent_id=f"adversary_{i}")
-        )
+        orchestrator.register_agent(AdversarialAgent(agent_id=f"adversary_{i}"))
 
     # Run simulation
     orchestrator.run()
@@ -188,23 +186,25 @@ def run_network_experiment(
                 )
 
     # Convert to DataFrame
-    df = pd.DataFrame([
-        {
-            "topology": r.topology,
-            "memory_type": r.memory_type,
-            "seed": r.seed,
-            "n_interactions": r.n_interactions,
-            "toxicity": r.toxicity,
-            "quality_gap": r.quality_gap,
-            "welfare": r.total_welfare,
-            "avg_payoff": r.avg_payoff,
-            "acceptance_rate": r.acceptance_rate,
-            "avg_clustering": r.avg_clustering,
-            "avg_path_length": r.avg_path_length,
-            "n_components": r.n_components,
-        }
-        for r in results
-    ])
+    df = pd.DataFrame(
+        [
+            {
+                "topology": r.topology,
+                "memory_type": r.memory_type,
+                "seed": r.seed,
+                "n_interactions": r.n_interactions,
+                "toxicity": r.toxicity,
+                "quality_gap": r.quality_gap,
+                "welfare": r.total_welfare,
+                "avg_payoff": r.avg_payoff,
+                "acceptance_rate": r.acceptance_rate,
+                "avg_clustering": r.avg_clustering,
+                "avg_path_length": r.avg_path_length,
+                "n_components": r.n_components,
+            }
+            for r in results
+        ]
+    )
 
     return df
 
@@ -220,7 +220,9 @@ def analyze_topology_effects(df: pd.DataFrame, verbose: bool = True) -> Dict:
         rain_welfare = rain_data["welfare"].mean()
         river_welfare = river_data["welfare"].mean()
 
-        welfare_gap = (river_welfare - rain_welfare) / rain_welfare if rain_welfare else 0
+        welfare_gap = (
+            (river_welfare - rain_welfare) / rain_welfare if rain_welfare else 0
+        )
 
         results[topo_name] = {
             "rain_welfare": rain_welfare,
@@ -235,7 +237,7 @@ def analyze_topology_effects(df: pd.DataFrame, verbose: bool = True) -> Dict:
             print(f"\n{topo_name}:")
             print(f"  Rain welfare:  {rain_welfare:.1f}")
             print(f"  River welfare: {river_welfare:.1f}")
-            print(f"  Welfare gap:   {welfare_gap*100:.1f}%")
+            print(f"  Welfare gap:   {welfare_gap * 100:.1f}%")
 
     return results
 

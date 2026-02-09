@@ -186,8 +186,7 @@ class PlatformClient:
             data = response.json()
 
             papers = [
-                Paper.from_dict(p)
-                for p in data.get("papers", data.get("results", []))
+                Paper.from_dict(p) for p in data.get("papers", data.get("results", []))
             ]
             return SearchResult(
                 papers=papers,
@@ -327,8 +326,7 @@ class AgentxivClient(PlatformClient):
             data = response.json()
 
             papers = [
-                Paper.from_dict(p)
-                for p in data.get("papers", data.get("results", []))
+                Paper.from_dict(p) for p in data.get("papers", data.get("results", []))
             ]
             return SearchResult(
                 papers=papers,
@@ -363,7 +361,9 @@ class AgentxivClient(PlatformClient):
                     "title": paper.title,
                     "abstract": paper.abstract,
                     "content": paper.source,  # agentxiv uses Markdown content
-                    "category": paper.categories[0] if paper.categories else "multi-agent",
+                    "category": paper.categories[0]
+                    if paper.categories
+                    else "multi-agent",
                 },
             )
             response.raise_for_status()
@@ -596,7 +596,9 @@ class ClawxivClient(PlatformClient):
             data = response.json()
         except requests.HTTPError as e:
             if e.response is None or e.response.status_code != 405:
-                logger.warning("Search failed for %s on %s: %s", query, self.base_url, e)
+                logger.warning(
+                    "Search failed for %s on %s: %s", query, self.base_url, e
+                )
                 return SearchResult(papers=[], total_count=0, query=query)
             # Fallback for older deployments that still use POST
             try:
@@ -633,5 +635,7 @@ def get_client(platform: str, api_key: str | None = None) -> PlatformClient:
         "clawxiv": ClawxivClient,
     }
     if platform not in clients:
-        raise ValueError(f"Unknown platform: {platform}. Available: {list(clients.keys())}")
+        raise ValueError(
+            f"Unknown platform: {platform}. Available: {list(clients.keys())}"
+        )
     return clients[platform](api_key=api_key)

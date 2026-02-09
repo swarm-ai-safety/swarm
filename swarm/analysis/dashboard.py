@@ -120,7 +120,7 @@ class DashboardState:
 
         # Trim history if needed
         if len(self.metric_history) > self.config.max_history_points:
-            self.metric_history = self.metric_history[-self.config.max_history_points:]
+            self.metric_history = self.metric_history[-self.config.max_history_points :]
 
     def update_agent(self, snapshot: AgentSnapshot) -> None:
         """Update an agent's snapshot."""
@@ -181,17 +181,20 @@ class DashboardState:
 
     def export_to_json(self) -> str:
         """Export state to JSON."""
-        return json.dumps({
-            "config": {
-                "title": self.config.title,
-                "max_history_points": self.config.max_history_points,
+        return json.dumps(
+            {
+                "config": {
+                    "title": self.config.title,
+                    "max_history_points": self.config.max_history_points,
+                },
+                "current_epoch": self.current_epoch,
+                "current_step": self.current_step,
+                "metric_history": [m.to_dict() for m in self.metric_history],
+                "agents": [a.to_dict() for a in self.agent_snapshots.values()],
+                "recent_events": self.events[-20:],
             },
-            "current_epoch": self.current_epoch,
-            "current_step": self.current_step,
-            "metric_history": [m.to_dict() for m in self.metric_history],
-            "agents": [a.to_dict() for a in self.agent_snapshots.values()],
-            "recent_events": self.events[-20:],
-        }, indent=2)
+            indent=2,
+        )
 
 
 def extract_metrics_from_orchestrator(orchestrator: Any) -> MetricSnapshot:
@@ -204,7 +207,9 @@ def extract_metrics_from_orchestrator(orchestrator: Any) -> MetricSnapshot:
         MetricSnapshot with current values
     """
     state = orchestrator.state
-    epoch_metrics = orchestrator._epoch_metrics[-1] if orchestrator._epoch_metrics else None
+    epoch_metrics = (
+        orchestrator._epoch_metrics[-1] if orchestrator._epoch_metrics else None
+    )
 
     # Get basic metrics
     toxicity = epoch_metrics.toxicity_rate if epoch_metrics else 0.0
@@ -242,7 +247,9 @@ def extract_metrics_from_orchestrator(orchestrator: Any) -> MetricSnapshot:
 
     forecaster_risk = 0.0
     governance_condition = "static"
-    if orchestrator.governance_engine and hasattr(orchestrator.governance_engine, "get_adaptive_status"):
+    if orchestrator.governance_engine and hasattr(
+        orchestrator.governance_engine, "get_adaptive_status"
+    ):
         status = orchestrator.governance_engine.get_adaptive_status()
         forecaster_risk = float(status.get("predicted_risk", 0.0))
         if status.get("adaptive_enabled", False):
@@ -285,19 +292,20 @@ def extract_agent_snapshots(orchestrator: Any) -> List[AgentSnapshot]:
         if agent_state:
             # Calculate total interactions from initiated + received
             total_interactions = (
-                agent_state.interactions_initiated +
-                agent_state.interactions_received
+                agent_state.interactions_initiated + agent_state.interactions_received
             )
-            snapshots.append(AgentSnapshot(
-                agent_id=agent_id,
-                agent_type=agent_state.agent_type.value,
-                name=agent_state.name,
-                reputation=agent_state.reputation,
-                resources=agent_state.resources,
-                interactions=total_interactions,
-                payoff_total=agent_state.total_payoff,
-                is_frozen=orchestrator.state.is_agent_frozen(agent_id),
-            ))
+            snapshots.append(
+                AgentSnapshot(
+                    agent_id=agent_id,
+                    agent_type=agent_state.agent_type.value,
+                    name=agent_state.name,
+                    reputation=agent_state.reputation,
+                    resources=agent_state.resources,
+                    interactions=total_interactions,
+                    payoff_total=agent_state.total_payoff,
+                    is_frozen=orchestrator.state.is_agent_frozen(agent_id),
+                )
+            )
 
     return snapshots
 
@@ -319,13 +327,15 @@ def extract_incoherence_agent_profiles(orchestrator: Any) -> List[Dict[str, Any]
         agent_state = orchestrator.state.get_agent(agent_id)
         if agent_state is None:
             continue
-        rows.append({
-            "agent_id": agent_id,
-            "agent_type": agent_state.agent_type.value,
-            "name": agent_state.name,
-            "incoherence_index": sum(values) / len(values) if values else 0.0,
-            "n_interactions": len(values),
-        })
+        rows.append(
+            {
+                "agent_id": agent_id,
+                "agent_type": agent_state.agent_type.value,
+                "name": agent_state.name,
+                "incoherence_index": sum(values) / len(values) if values else 0.0,
+                "n_interactions": len(values),
+            }
+        )
     return rows
 
 
@@ -355,14 +365,17 @@ def create_condition_comparison_data(
     rows: List[Dict[str, Any]] = []
     for condition, snapshots in grouped.items():
         n = len(snapshots)
-        rows.append({
-            "condition": condition,
-            "n_points": n,
-            "mean_toxicity_rate": sum(s.toxicity_rate for s in snapshots) / n,
-            "mean_incoherence_index": sum(s.incoherence_index for s in snapshots) / n,
-            "mean_forecaster_risk": sum(s.forecaster_risk for s in snapshots) / n,
-            "mean_total_welfare": sum(s.total_welfare for s in snapshots) / n,
-        })
+        rows.append(
+            {
+                "condition": condition,
+                "n_points": n,
+                "mean_toxicity_rate": sum(s.toxicity_rate for s in snapshots) / n,
+                "mean_incoherence_index": sum(s.incoherence_index for s in snapshots)
+                / n,
+                "mean_forecaster_risk": sum(s.forecaster_risk for s in snapshots) / n,
+                "mean_total_welfare": sum(s.total_welfare for s in snapshots) / n,
+            }
+        )
     return sorted(rows, key=lambda row: row["condition"])
 
 
@@ -776,9 +789,13 @@ def run_dashboard(
 
     # Build command
     cmd = [
-        sys.executable, "-m", "streamlit", "run",
+        sys.executable,
+        "-m",
+        "streamlit",
+        "run",
         dashboard_path,
-        "--server.port", str(port),
+        "--server.port",
+        str(port),
     ]
 
     if not open_browser:

@@ -231,6 +231,7 @@ class BaseAgent(ABC):
         # Memory configuration (import here to avoid circular imports)
         if memory_config is None:
             from swarm.agents.memory_config import MemoryConfig
+
             self.memory_config = MemoryConfig()
         else:
             self.memory_config = memory_config
@@ -335,15 +336,17 @@ class BaseAgent(ABC):
                 current * (1 - alpha) + 0.5 * alpha
             )
 
-        self._memory.append({
-            "type": "interaction_outcome",
-            "interaction_id": interaction.interaction_id,
-            "counterparty": counterparty,
-            "p": interaction.p,
-            "payoff": payoff,
-            "accepted": interaction.accepted,
-            "timestamp": datetime.now().isoformat(),
-        })
+        self._memory.append(
+            {
+                "type": "interaction_outcome",
+                "interaction_id": interaction.interaction_id,
+                "counterparty": counterparty,
+                "p": interaction.p,
+                "payoff": payoff,
+                "accepted": interaction.accepted,
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
 
     def remember(self, memory_item: Dict) -> None:
         """Add an item to memory."""
@@ -379,7 +382,8 @@ class BaseAgent(ABC):
         # Bootstrap from interaction history for agents we've interacted with
         # but whose trust hasn't been initialized yet (e.g. after a memory clear)
         relevant = [
-            i for i in self._interaction_history
+            i
+            for i in self._interaction_history
             if (i.initiator == counterparty_id or i.counterparty == counterparty_id)
             and i.accepted
         ]
@@ -442,7 +446,9 @@ class BaseAgent(ABC):
         """
         alpha = 0.3  # Learning rate
         current = self._counterparty_memory.get(counterparty_id, 0.5)
-        self._counterparty_memory[counterparty_id] = current * (1 - alpha) + new_p * alpha
+        self._counterparty_memory[counterparty_id] = (
+            current * (1 - alpha) + new_p * alpha
+        )
 
     def should_post(self, observation: Observation) -> bool:
         """Determine if agent should create a post."""

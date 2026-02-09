@@ -158,8 +158,12 @@ def run_adversarial_simulation(
             adversary_welfare += counter_payoff
 
         # Count exploitation (adversary gains at honest expense)
-        adv_in_inter = (inter.initiator in adversary_ids) or (inter.counterparty in adversary_ids)
-        hon_in_inter = (inter.initiator in honest_ids) or (inter.counterparty in honest_ids)
+        adv_in_inter = (inter.initiator in adversary_ids) or (
+            inter.counterparty in adversary_ids
+        )
+        hon_in_inter = (inter.initiator in honest_ids) or (
+            inter.counterparty in honest_ids
+        )
         if adv_in_inter and hon_in_inter and inter.p < 0.5:
             exploitation_count += 1
 
@@ -211,7 +215,9 @@ def run_adversarial_experiment(
 
             if verbose:
                 avg_honest = np.mean([r.honest_welfare for r in condition_results])
-                avg_adversary = np.mean([r.adversary_welfare for r in condition_results])
+                avg_adversary = np.mean(
+                    [r.adversary_welfare for r in condition_results]
+                )
                 avg_exploit = np.mean([r.exploitation_rate for r in condition_results])
                 print(
                     f"{scenario:15} {memory_type:5}: "
@@ -221,21 +227,23 @@ def run_adversarial_experiment(
                 )
 
     # Convert to DataFrame
-    df = pd.DataFrame([
-        {
-            "attack_scenario": r.attack_scenario,
-            "memory_type": r.memory_type,
-            "seed": r.seed,
-            "n_interactions": r.n_interactions,
-            "toxicity": r.toxicity,
-            "quality_gap": r.quality_gap,
-            "total_welfare": r.total_welfare,
-            "honest_welfare": r.honest_welfare,
-            "adversary_welfare": r.adversary_welfare,
-            "exploitation_rate": r.exploitation_rate,
-        }
-        for r in results
-    ])
+    df = pd.DataFrame(
+        [
+            {
+                "attack_scenario": r.attack_scenario,
+                "memory_type": r.memory_type,
+                "seed": r.seed,
+                "n_interactions": r.n_interactions,
+                "toxicity": r.toxicity,
+                "quality_gap": r.quality_gap,
+                "total_welfare": r.total_welfare,
+                "honest_welfare": r.honest_welfare,
+                "adversary_welfare": r.adversary_welfare,
+                "exploitation_rate": r.exploitation_rate,
+            }
+            for r in results
+        ]
+    )
 
     return df
 
@@ -245,8 +253,12 @@ def analyze_vulnerability(df: pd.DataFrame, verbose: bool = True) -> Dict:
     results = {}
 
     for scenario in ATTACK_SCENARIOS:
-        rain_data = df[(df["attack_scenario"] == scenario) & (df["memory_type"] == "rain")]
-        river_data = df[(df["attack_scenario"] == scenario) & (df["memory_type"] == "river")]
+        rain_data = df[
+            (df["attack_scenario"] == scenario) & (df["memory_type"] == "rain")
+        ]
+        river_data = df[
+            (df["attack_scenario"] == scenario) & (df["memory_type"] == "river")
+        ]
 
         rain_exploit = rain_data["exploitation_rate"].mean()
         river_exploit = river_data["exploitation_rate"].mean()
@@ -266,7 +278,9 @@ def analyze_vulnerability(df: pd.DataFrame, verbose: bool = True) -> Dict:
             print(f"\n{scenario}:")
             print(f"  Rain exploitation rate:  {rain_exploit:.3f}")
             print(f"  River exploitation rate: {river_exploit:.3f}")
-            print(f"  Difference: {(rain_exploit - river_exploit):.3f} (+ = rain more vulnerable)")
+            print(
+                f"  Difference: {(rain_exploit - river_exploit):.3f} (+ = rain more vulnerable)"
+            )
 
     return results
 

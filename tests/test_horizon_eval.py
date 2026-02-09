@@ -30,6 +30,7 @@ from tests.fixtures.horizon_fixtures import (
 # Helpers
 # =====================================================================
 
+
 def _default_evaluator(**overrides) -> SystemHorizonEvaluator:
     """Create evaluator with sensible test defaults."""
     defaults = {
@@ -47,6 +48,7 @@ def _default_evaluator(**overrides) -> SystemHorizonEvaluator:
 # =====================================================================
 # Tests: Stable baseline (null hypothesis)
 # =====================================================================
+
 
 class TestStableBaseline:
     """Under stable conditions, horizon metrics should be near-neutral."""
@@ -89,6 +91,7 @@ class TestStableBaseline:
 # Tests: Drifting quality (adverse selection)
 # =====================================================================
 
+
 class TestDriftingQuality:
     """Systematically declining quality should trigger drift detection."""
 
@@ -110,8 +113,7 @@ class TestDriftingQuality:
         result = evaluator.evaluate(epochs)
 
         assert result.effective_system_horizon > 1.0, (
-            f"Expected system horizon > 1.0, "
-            f"got {result.effective_system_horizon}"
+            f"Expected system horizon > 1.0, got {result.effective_system_horizon}"
         )
 
     def test_amplification_ratio_greater_than_one(self):
@@ -121,15 +123,17 @@ class TestDriftingQuality:
         result = evaluator.evaluate(epochs)
 
         assert result.horizon_amplification_ratio > 1.0, (
-            f"Expected amplification > 1, "
-            f"got {result.horizon_amplification_ratio}"
+            f"Expected amplification > 1, got {result.horizon_amplification_ratio}"
         )
 
     def test_worsening_drift_detected(self):
         """Declining quality gap should be detected as worsening drift."""
         epochs = generate_drifting_epochs(
-            n_epochs=40, interactions_per_epoch=50,
-            start_quality=0.85, end_quality=0.25, seed=42,
+            n_epochs=40,
+            interactions_per_epoch=50,
+            start_quality=0.85,
+            end_quality=0.25,
+            seed=42,
         )
         evaluator = _default_evaluator()
         result = evaluator.evaluate(epochs)
@@ -138,8 +142,7 @@ class TestDriftingQuality:
         # because adverse-selection dynamics make low-p interactions
         # increasingly accepted relative to high-p ones.
         assert result.adverse_selection_drift < 0, (
-            f"Expected negative drift slope, "
-            f"got {result.adverse_selection_drift:.4f}"
+            f"Expected negative drift slope, got {result.adverse_selection_drift:.4f}"
         )
 
     def test_cumulative_harm_increases(self):
@@ -163,38 +166,42 @@ class TestDriftingQuality:
 # Tests: Variance-dominated dynamics
 # =====================================================================
 
+
 class TestVarianceDominance:
     """High-variance scenarios should trigger hot-mess detection."""
 
     def test_high_variance_dominance_index(self):
         """Bimodal quality distribution should produce high VDI."""
         epochs = generate_variance_dominated_epochs(
-            n_epochs=15, quality_spread=0.35, seed=42,
+            n_epochs=15,
+            quality_spread=0.35,
+            seed=42,
         )
         evaluator = _default_evaluator(variance_dominance_threshold=1.0)
         result = evaluator.evaluate(epochs)
 
         assert result.variance_dominance_index > 0.5, (
-            f"Expected high VDI for bimodal data, "
-            f"got {result.variance_dominance_index}"
+            f"Expected high VDI for bimodal data, got {result.variance_dominance_index}"
         )
 
     def test_hot_mess_epochs_detected(self):
         """Some epochs should be classified as hot-mess."""
         epochs = generate_variance_dominated_epochs(
-            n_epochs=15, quality_spread=0.35, seed=42,
+            n_epochs=15,
+            quality_spread=0.35,
+            seed=42,
         )
         evaluator = _default_evaluator(variance_dominance_threshold=0.8)
         result = evaluator.evaluate(epochs)
 
-        assert result.hot_mess_epochs > 0, (
-            "Expected at least some hot-mess epochs"
-        )
+        assert result.hot_mess_epochs > 0, "Expected at least some hot-mess epochs"
 
     def test_stable_has_few_hot_mess_epochs(self):
         """Stable scenario should have few/no hot-mess epochs."""
         epochs = generate_stable_epochs(
-            n_epochs=15, noise=0.05, seed=42,
+            n_epochs=15,
+            noise=0.05,
+            seed=42,
         )
         evaluator = _default_evaluator(variance_dominance_threshold=1.0)
         result = evaluator.evaluate(epochs)
@@ -210,13 +217,17 @@ class TestVarianceDominance:
 # Tests: Chain depth
 # =====================================================================
 
+
 class TestChainDepth:
     """Chained hand-offs should produce measurable chain depth."""
 
     def test_chained_scenario_has_depth(self):
         """Explicit chain fixtures should yield chain depth > 1."""
         epochs = generate_chained_handoff_epochs(
-            n_epochs=10, chains_per_epoch=5, chain_length=4, seed=42,
+            n_epochs=10,
+            chains_per_epoch=5,
+            chain_length=4,
+            seed=42,
         )
         evaluator = _default_evaluator()
         result = evaluator.evaluate(epochs)
@@ -233,7 +244,10 @@ class TestChainDepth:
         """Stable scenario should have lower chain depth than chained scenario."""
         stable_epochs = generate_stable_epochs(n_epochs=10, seed=42)
         chained_epochs = generate_chained_handoff_epochs(
-            n_epochs=10, chains_per_epoch=5, chain_length=4, seed=42,
+            n_epochs=10,
+            chains_per_epoch=5,
+            chain_length=4,
+            seed=42,
         )
         evaluator = _default_evaluator()
         stable_result = evaluator.evaluate(stable_epochs)
@@ -248,6 +262,7 @@ class TestChainDepth:
 # =====================================================================
 # Tests: Harm acceleration
 # =====================================================================
+
 
 class TestHarmAcceleration:
     """Accelerating harm scenarios should produce positive second-differences."""
@@ -278,6 +293,7 @@ class TestHarmAcceleration:
 # =====================================================================
 # Tests: Autocorrelation internals
 # =====================================================================
+
 
 class TestAutocorrelation:
     """Unit tests for the autocorrelation computation."""
@@ -317,6 +333,7 @@ class TestAutocorrelation:
 # Tests: group_by_epoch helper
 # =====================================================================
 
+
 class TestGroupByEpoch:
     """Tests for the group_by_epoch utility."""
 
@@ -327,9 +344,7 @@ class TestGroupByEpoch:
         interactions = []
         for e in range(3):
             for _ in range(5):
-                interactions.append(
-                    _make_interaction(0.7, True, "a", "b", epoch=e)
-                )
+                interactions.append(_make_interaction(0.7, True, "a", "b", epoch=e))
 
         grouped = group_by_epoch(interactions, n_epochs=3, steps_per_epoch=5)
         assert len(grouped) == 3
@@ -356,6 +371,7 @@ class TestGroupByEpoch:
 # =====================================================================
 # Tests: Result serialisation
 # =====================================================================
+
 
 class TestResultSerialization:
     """HorizonEvalResult.to_dict() should be JSON-safe."""
@@ -386,6 +402,7 @@ class TestResultSerialization:
 # Tests: Edge cases
 # =====================================================================
 
+
 class TestEdgeCases:
     """Edge cases and boundary conditions."""
 
@@ -413,8 +430,7 @@ class TestEdgeCases:
         epochs = []
         for e in range(5):
             epoch_data = [
-                _make_interaction(0.3, False, "a", "b", epoch=e)
-                for _ in range(10)
+                _make_interaction(0.3, False, "a", "b", epoch=e) for _ in range(10)
             ]
             epochs.append(epoch_data)
 
@@ -442,7 +458,9 @@ class TestEdgeCases:
         """Evaluator should reject an epoch exceeding max_interactions_per_epoch."""
         evaluator = _default_evaluator(max_interactions_per_epoch=10)
         epochs = generate_stable_epochs(
-            n_epochs=2, interactions_per_epoch=20, seed=42,
+            n_epochs=2,
+            interactions_per_epoch=20,
+            seed=42,
         )
         with pytest.raises(ValueError, match="exceeding max_interactions_per_epoch"):
             evaluator.evaluate(epochs)

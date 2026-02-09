@@ -13,7 +13,9 @@ def build_iam_catalog() -> Dict[str, ApiEndpointSpec]:
         "get_user": ApiEndpointSpec("get_user", "Get user record", cost=1),
         "list_roles": ApiEndpointSpec("list_roles", "List available roles", cost=1),
         "get_role": ApiEndpointSpec("get_role", "Get role permissions", cost=1),
-        "simulate_access": ApiEndpointSpec("simulate_access", "Simulate access", cost=1),
+        "simulate_access": ApiEndpointSpec(
+            "simulate_access", "Simulate access", cost=1
+        ),
         "create_user": ApiEndpointSpec("create_user", "Create a user", cost=2),
         "create_service_account": ApiEndpointSpec(
             "create_service_account", "Create service account", cost=2
@@ -24,7 +26,9 @@ def build_iam_catalog() -> Dict[str, ApiEndpointSpec]:
             cost=2,
             irreversible=True,
         ),
-        "revoke_permission": ApiEndpointSpec("revoke_permission", "Revoke permission", cost=2),
+        "revoke_permission": ApiEndpointSpec(
+            "revoke_permission", "Revoke permission", cost=2
+        ),
         "set_role": ApiEndpointSpec(
             "set_role",
             "Set a user's role",
@@ -54,7 +58,12 @@ class IamService(SimulatedApiService):
 
     def _handle_list_users(self) -> Dict[str, Any]:
         users = self.state.get("users", {})
-        return {"users": [{"user_id": uid, "name": u["name"], "role": u["role"]} for uid, u in users.items()]}
+        return {
+            "users": [
+                {"user_id": uid, "name": u["name"], "role": u["role"]}
+                for uid, u in users.items()
+            ]
+        }
 
     def _handle_get_user(self, user_id: str) -> Dict[str, Any]:
         u = self.state["users"][user_id]
@@ -83,7 +92,9 @@ class IamService(SimulatedApiService):
         user_perms = set(u.get("permissions", []))
         return sorted(role_perms | user_perms)
 
-    def _handle_simulate_access(self, user_id: str, action: str, resource: str) -> Dict[str, Any]:
+    def _handle_simulate_access(
+        self, user_id: str, action: str, resource: str
+    ) -> Dict[str, Any]:
         # Policy encodes permission strings of the form "{action}:{resource}" or wildcard.
         perms = set(self._effective_permissions(user_id))
         needed = f"{action}:{resource}"
@@ -105,7 +116,9 @@ class IamService(SimulatedApiService):
             "permissions": [],
             "description": "",
         }
-        self.state.setdefault("_audit", []).append({"event": "create_user", "user_id": user_id})
+        self.state.setdefault("_audit", []).append(
+            {"event": "create_user", "user_id": user_id}
+        )
         return {"user_id": user_id}
 
     def _handle_create_user(self, name: str, role: str = "reader") -> Dict[str, Any]:
@@ -118,40 +131,52 @@ class IamService(SimulatedApiService):
             "permissions": [],
             "description": "",
         }
-        self.state.setdefault("_audit", []).append({"event": "create_user", "user_id": user_id})
+        self.state.setdefault("_audit", []).append(
+            {"event": "create_user", "user_id": user_id}
+        )
         return {"user_id": user_id}
 
     def _handle_grant_permission(self, user_id: str, perm: str) -> Dict[str, Any]:
         self.state["users"][user_id].setdefault("permissions", [])
         if perm not in self.state["users"][user_id]["permissions"]:
             self.state["users"][user_id]["permissions"].append(perm)
-        self.state.setdefault("_audit", []).append({"event": "grant", "user_id": user_id, "perm": perm})
+        self.state.setdefault("_audit", []).append(
+            {"event": "grant", "user_id": user_id, "perm": perm}
+        )
         return {"ok": True}
 
     def _handle_revoke_permission(self, user_id: str, perm: str) -> Dict[str, Any]:
         perms = self.state["users"][user_id].get("permissions", [])
         self.state["users"][user_id]["permissions"] = [p for p in perms if p != perm]
-        self.state.setdefault("_audit", []).append({"event": "revoke", "user_id": user_id, "perm": perm})
+        self.state.setdefault("_audit", []).append(
+            {"event": "revoke", "user_id": user_id, "perm": perm}
+        )
         return {"ok": True}
 
     def _handle_set_role(self, user_id: str, role: str) -> Dict[str, Any]:
         self.state["users"][user_id]["role"] = role
-        self.state.setdefault("_audit", []).append({"event": "set_role", "user_id": user_id, "role": role})
+        self.state.setdefault("_audit", []).append(
+            {"event": "set_role", "user_id": user_id, "role": role}
+        )
         return {"ok": True}
 
     def _handle_rotate_credentials(self, user_id: str) -> Dict[str, Any]:
         self.state.setdefault("credential_rotations", {})
-        self.state["credential_rotations"][user_id] = int(
-            self.state["credential_rotations"].get(user_id, 0)
-        ) + 1
-        self.state.setdefault("_audit", []).append({"event": "rotate_credentials", "user_id": user_id})
+        self.state["credential_rotations"][user_id] = (
+            int(self.state["credential_rotations"].get(user_id, 0)) + 1
+        )
+        self.state.setdefault("_audit", []).append(
+            {"event": "rotate_credentials", "user_id": user_id}
+        )
         return {"ok": True}
 
     def _handle_delete_user(self, user_id: str) -> Dict[str, Any]:
         existed = user_id in self.state.get("users", {})
         if existed:
             del self.state["users"][user_id]
-        self.state.setdefault("_audit", []).append({"event": "delete_user", "user_id": user_id, "existed": existed})
+        self.state.setdefault("_audit", []).append(
+            {"event": "delete_user", "user_id": user_id, "existed": existed}
+        )
         return {"ok": existed}
 
     def _handle_audit_log(self, query: str = "") -> Dict[str, Any]:

@@ -43,10 +43,11 @@ def create_time_series_data(
 
         if rolling_window and len(values) >= rolling_window:
             import numpy as np
+
             smoothed = []
             for i in range(len(values)):
                 start = max(0, i - rolling_window + 1)
-                smoothed.append(float(np.mean(values[start:i + 1])))
+                smoothed.append(float(np.mean(values[start : i + 1])))
             values = smoothed
 
         data[metric] = values
@@ -165,9 +166,7 @@ def create_heatmap_data(
             row = []
             for agent_id in agent_ids:
                 snapshots = history.agent_snapshots.get(agent_id, [])
-                epoch_snap = next(
-                    (s for s in snapshots if s.epoch == epoch), None
-                )
+                epoch_snap = next((s for s in snapshots if s.epoch == epoch), None)
                 if epoch_snap:
                     row.append(getattr(epoch_snap, row_metric, 0.0))
                 else:
@@ -223,10 +222,7 @@ def create_network_graph_data(
             }
             for n in node_list
         ],
-        "edges": [
-            {"source": src, "target": tgt, "weight": w}
-            for src, tgt, w in edges
-        ],
+        "edges": [{"source": src, "target": tgt, "weight": w} for src, tgt, w in edges],
     }
 
 
@@ -283,9 +279,13 @@ def create_incoherence_scaling_data(rows: List[Dict[str, Any]]) -> PlotData:
     ]
     return {
         "labels": labels,
-        "incoherence_index": [float(row.get("mean_incoherence_index", 0.0)) for row in rows],
+        "incoherence_index": [
+            float(row.get("mean_incoherence_index", 0.0)) for row in rows
+        ],
         "error_rate": [float(row.get("mean_error_rate", 0.0)) for row in rows],
-        "disagreement_rate": [float(row.get("mean_disagreement_rate", 0.0)) for row in rows],
+        "disagreement_rate": [
+            float(row.get("mean_disagreement_rate", 0.0)) for row in rows
+        ],
     }
 
 
@@ -321,12 +321,14 @@ def plotly_time_series(
     for key, values in data.items():
         if key == "epochs":
             continue
-        fig.add_trace(go.Scatter(
-            x=epochs,
-            y=values,
-            mode="lines+markers",
-            name=key.replace("_", " ").title(),
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=epochs,
+                y=values,
+                mode="lines+markers",
+                name=key.replace("_", " ").title(),
+            )
+        )
 
     fig.update_layout(
         title=title,
@@ -360,14 +362,16 @@ def plotly_bar_chart(
     except ImportError:
         return None
 
-    fig = go.Figure(data=[
-        go.Bar(
-            x=data["agent_ids"],
-            y=data["values"],
-            text=[f"{v:.2f}" for v in data["values"]],
-            textposition="auto",
-        )
-    ])
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=data["agent_ids"],
+                y=data["values"],
+                text=[f"{v:.2f}" for v in data["values"]],
+                textposition="auto",
+            )
+        ]
+    )
 
     metric_name = data.get("metric", "Value").replace("_", " ").title()
     fig.update_layout(
@@ -407,12 +411,14 @@ def plotly_multi_line(
         if key == "epochs":
             continue
         if isinstance(values, dict):
-            fig.add_trace(go.Scatter(
-                x=values["epochs"],
-                y=values["values"],
-                mode="lines",
-                name=key,
-            ))
+            fig.add_trace(
+                go.Scatter(
+                    x=values["epochs"],
+                    y=values["values"],
+                    mode="lines",
+                    name=key,
+                )
+            )
 
     fig.update_layout(
         title=title,
@@ -446,13 +452,15 @@ def plotly_heatmap(
     except ImportError:
         return None
 
-    fig = go.Figure(data=go.Heatmap(
-        z=data["matrix"],
-        x=data["col_labels"],
-        y=data["row_labels"],
-        colorscale="RdYlGn_r",
-        hoverongaps=False,
-    ))
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=data["matrix"],
+            x=data["col_labels"],
+            y=data["row_labels"],
+            colorscale="RdYlGn_r",
+            hoverongaps=False,
+        )
+    )
 
     data.get("metric", "Value").replace("_", " ").title()
     fig.update_layout(
@@ -495,13 +503,15 @@ def plotly_scatter(
             "title": data.get("color_metric", "Color").replace("_", " ").title()
         }
 
-    fig = go.Figure(data=go.Scatter(
-        x=data["x"],
-        y=data["y"],
-        mode="markers",
-        text=data["labels"],
-        marker=marker_dict,
-    ))
+    fig = go.Figure(
+        data=go.Scatter(
+            x=data["x"],
+            y=data["y"],
+            mode="markers",
+            text=data["labels"],
+            marker=marker_dict,
+        )
+    )
 
     x_name = data.get("x_metric", "X").replace("_", " ").title()
     y_name = data.get("y_metric", "Y").replace("_", " ").title()
@@ -554,22 +564,26 @@ def plotly_gauge(
     steps = []
     prev = min_val
     for threshold, color in thresholds:
-        steps.append({
-            "range": [prev, threshold],
-            "color": color,
-        })
+        steps.append(
+            {
+                "range": [prev, threshold],
+                "color": color,
+            }
+        )
         prev = threshold
 
-    fig = go.Figure(go.Indicator(
-        mode="gauge+number",
-        value=value,
-        title={"text": title},
-        gauge={
-            "axis": {"range": [min_val, max_val]},
-            "steps": steps,
-            "bar": {"color": "darkblue"},
-        },
-    ))
+    fig = go.Figure(
+        go.Indicator(
+            mode="gauge+number",
+            value=value,
+            title={"text": title},
+            gauge={
+                "axis": {"range": [min_val, max_val]},
+                "steps": steps,
+                "bar": {"color": "darkblue"},
+            },
+        )
+    )
 
     fig.update_layout(height=height)
     return fig
@@ -634,9 +648,7 @@ def plotly_network(
     node_text = [node["label"] for node in nodes]
 
     # Color by reputation if available
-    node_color = [
-        node.get("reputation", 0.5) for node in nodes
-    ]
+    node_color = [node.get("reputation", 0.5) for node in nodes]
 
     node_trace = go.Scatter(
         x=node_x,

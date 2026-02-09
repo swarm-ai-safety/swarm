@@ -60,16 +60,16 @@ def extract_paper_metadata(content: str, path: str) -> Dict[str, Any]:
                 if author:
                     # Determine if agent or human
                     author_type = "hybrid" if "SWARM" in author else "human"
-                    metadata["authors"].append({
-                        "name": author,
-                        "type": author_type,
-                    })
+                    metadata["authors"].append(
+                        {
+                            "name": author,
+                            "type": author_type,
+                        }
+                    )
 
         # Extract claims from abstract
         abstract_match = re.search(
-            r"\\begin\{abstract\}(.*?)\\end\{abstract\}",
-            content,
-            re.DOTALL
+            r"\\begin\{abstract\}(.*?)\\end\{abstract\}", content, re.DOTALL
         )
         if abstract_match:
             metadata["claims_summary"] = abstract_match.group(1).strip()[:500]
@@ -109,30 +109,38 @@ def extract_experimental_data(content: str, paper_dir: str) -> Dict[str, Any]:
 
     # Look for agent role definitions
     if "RainAgent" in content or "RiverAgent" in content:
-        data["agent_roles"].append({
-            "name": "RainAgent",
-            "incentive": "Maximize individual welfare",
-            "policy": "No memory persistence, each session independent",
-        })
-        data["agent_roles"].append({
-            "name": "RiverAgent",
-            "incentive": "Maximize individual welfare",
-            "policy": "Full memory persistence across sessions",
-        })
+        data["agent_roles"].append(
+            {
+                "name": "RainAgent",
+                "incentive": "Maximize individual welfare",
+                "policy": "No memory persistence, each session independent",
+            }
+        )
+        data["agent_roles"].append(
+            {
+                "name": "RiverAgent",
+                "incentive": "Maximize individual welfare",
+                "policy": "Full memory persistence across sessions",
+            }
+        )
 
     if "AdversarialAgent" in content:
-        data["agent_roles"].append({
-            "name": "AdversarialAgent",
-            "incentive": "Exploit other agents",
-            "policy": "Exploitative behavior regardless of memory",
-        })
+        data["agent_roles"].append(
+            {
+                "name": "AdversarialAgent",
+                "incentive": "Exploit other agents",
+                "policy": "Exploitative behavior regardless of memory",
+            }
+        )
 
     if "HonestAgent" in content:
-        data["agent_roles"].append({
-            "name": "HonestAgent",
-            "incentive": "Cooperative welfare maximization",
-            "policy": "Honest behavior with configurable memory",
-        })
+        data["agent_roles"].append(
+            {
+                "name": "HonestAgent",
+                "incentive": "Cooperative welfare maximization",
+                "policy": "Honest behavior with configurable memory",
+            }
+        )
 
     # Check for interaction rules
     if "Orchestrator" in content:
@@ -143,8 +151,13 @@ def extract_experimental_data(content: str, paper_dir: str) -> Dict[str, Any]:
 
     # Check for multi-agent dependency claims
     multi_agent_keywords = [
-        "multi-agent", "collective", "population", "agents interact",
-        "between agents", "counterparty", "ecosystem"
+        "multi-agent",
+        "collective",
+        "population",
+        "agents interact",
+        "between agents",
+        "counterparty",
+        "ecosystem",
     ]
     for kw in multi_agent_keywords:
         if kw in content.lower():
@@ -204,7 +217,9 @@ def extract_reproducibility_data(content: str, paper_dir: str) -> Dict[str, Any]
             # Paper claims to use multiple seeds - simulate high replay success
             data["reference_result"] = 1.0
             # Assume 90% of replays would succeed with proper seeds
-            data["replay_results"] = [1.0] * int(n_seeds * 0.9) + [0.0] * int(n_seeds * 0.1)
+            data["replay_results"] = [1.0] * int(n_seeds * 0.9) + [0.0] * int(
+                n_seeds * 0.1
+            )
 
     # Also check for explicit reproducibility claims
     repro_indicators = [
@@ -214,7 +229,9 @@ def extract_reproducibility_data(content: str, paper_dir: str) -> Dict[str, Any]
         r"open.?source",
         r"github",
     ]
-    repro_count = sum(1 for p in repro_indicators if re.search(p, content, re.IGNORECASE))
+    repro_count = sum(
+        1 for p in repro_indicators if re.search(p, content, re.IGNORECASE)
+    )
 
     # If strong reproducibility indicators but no seed count found
     if repro_count >= 2 and not data["replay_results"]:
@@ -236,7 +253,9 @@ def extract_artifact_data(content: str, paper_dir: str) -> Dict[str, Any]:
     # Find project root (go up from paper directory until we find pyproject.toml or .git)
     project_root = Path(paper_dir)
     for _ in range(5):  # Max 5 levels up
-        if (project_root / "pyproject.toml").exists() or (project_root / ".git").exists():
+        if (project_root / "pyproject.toml").exists() or (
+            project_root / ".git"
+        ).exists():
             break
         project_root = project_root.parent
 
@@ -248,17 +267,21 @@ def extract_artifact_data(content: str, paper_dir: str) -> Dict[str, Any]:
         # Clean up LaTeX escapes (\_  -> _)
         clean_ref = ref.replace("\\_", "_").replace("\\", "")
 
-        if "/" in clean_ref and (clean_ref.endswith(".py") or clean_ref.endswith(".yaml")):
+        if "/" in clean_ref and (
+            clean_ref.endswith(".py") or clean_ref.endswith(".yaml")
+        ):
             if clean_ref in seen_paths:
                 continue
             seen_paths.add(clean_ref)
 
             # Try to resolve relative to project root
             potential_path = project_root / clean_ref
-            data["artifacts"].append({
-                "label": clean_ref,
-                "url": str(potential_path),
-            })
+            data["artifacts"].append(
+                {
+                    "label": clean_ref,
+                    "url": str(potential_path),
+                }
+            )
 
     # Extract GitHub URLs (deduplicated)
     github_matches = re.findall(r"github\.com/[\w-]+/[\w-]+", content)
@@ -266,10 +289,12 @@ def extract_artifact_data(content: str, paper_dir: str) -> Dict[str, Any]:
     for url in github_matches:
         if url not in seen_urls:
             seen_urls.add(url)
-            data["artifacts"].append({
-                "label": f"Repository: {url}",
-                "url": f"https://{url}",
-            })
+            data["artifacts"].append(
+                {
+                    "label": f"Repository: {url}",
+                    "url": f"https://{url}",
+                }
+            )
 
     # File resolver that checks if file exists
     def file_resolver(path: str) -> Optional[bytes]:
@@ -320,7 +345,7 @@ def extract_emergence_data(content: str) -> Dict[str, Any]:
     # Pattern: Rain vs River comparisons
     welfare_matches = re.findall(
         r"(Rain|River|Baseline|Governed)\s*.*?(\d+\.?\d*)\s*\$?\\pm\$?\s*(\d+\.?\d*)",
-        content
+        content,
     )
 
     if welfare_matches:
@@ -335,11 +360,7 @@ def extract_emergence_data(content: str) -> Dict[str, Any]:
     # Look for topology-related experiments
     topo_patterns = ["complete", "small.world", "scale.free", "ring", "network"]
     for pattern in topo_patterns:
-        match = re.search(
-            rf"{pattern}.*?(\d+\.?\d*)",
-            content,
-            re.IGNORECASE
-        )
+        match = re.search(rf"{pattern}.*?(\d+\.?\d*)", content, re.IGNORECASE)
         if match:
             data["topology_outcomes"][pattern] = float(match.group(1))
 
@@ -356,32 +377,34 @@ def extract_failure_mode_data(content: str) -> Dict[str, Any]:
 
     # Look for limitations section
     limitations_match = re.search(
-        r"\\section\{Limitations?\}(.*?)\\section",
-        content,
-        re.DOTALL | re.IGNORECASE
+        r"\\section\{Limitations?\}(.*?)\\section", content, re.DOTALL | re.IGNORECASE
     )
     if limitations_match:
         limitations_text = limitations_match.group(1)
         # Extract bullet points
         items = re.findall(r"\\item\s+(.+?)(?=\\item|$)", limitations_text, re.DOTALL)
         for item in items:
-            data["failure_modes"].append({
-                "description": item.strip()[:200],
-                "parameter_regime": "general",
-            })
+            data["failure_modes"].append(
+                {
+                    "description": item.strip()[:200],
+                    "parameter_regime": "general",
+                }
+            )
 
     # Look for "where effects disappear" language
     disappear_matches = re.findall(
         r"(effect.*?(?:disappear|small|negligible|zero)|"
         r"no.*?(?:effect|difference|improvement))",
         content,
-        re.IGNORECASE
+        re.IGNORECASE,
     )
     for match in disappear_matches[:3]:
-        data["failure_modes"].append({
-            "description": match.strip(),
-            "parameter_regime": "identified",
-        })
+        data["failure_modes"].append(
+            {
+                "description": match.strip(),
+                "parameter_regime": "identified",
+            }
+        )
 
     # Check for adversarial exploration
     if re.search(r"adversar|attack|exploit|malicious", content, re.IGNORECASE):
@@ -397,10 +420,12 @@ def extract_failure_mode_data(content: str) -> Dict[str, Any]:
     for pattern in false_patterns:
         match = re.search(pattern, content, re.IGNORECASE)
         if match:
-            data["falsification_attempts"].append({
-                "description": match.group(0),
-                "result": "partial_refutation",
-            })
+            data["falsification_attempts"].append(
+                {
+                    "description": match.group(0),
+                    "result": "partial_refutation",
+                }
+            )
 
     return data
 
@@ -439,12 +464,18 @@ def evaluate_paper(paper_path: str) -> Dict[str, Any]:
         replay_success_rate=repro_result.checks.get("replay_success_rate"),
         artifact_resolution_rate=artifact_result.checks.get("artifact_resolution_rate"),
         artifact_hash_match_rate=artifact_result.checks.get("artifact_hash_match_rate"),
-        emergence_test_conducted=emergence_result.checks.get("emergence_test_conducted"),
+        emergence_test_conducted=emergence_result.checks.get(
+            "emergence_test_conducted"
+        ),
         emergence_delta=emergence_result.checks.get("emergence_delta"),
         emergence_result_type=emergence_result.checks.get("emergence_result_type"),
         topology_sensitivity=emergence_result.checks.get("topology_sensitivity"),
-        falsification_attempts_count=failure_result.checks.get("falsification_attempts_count"),
-        documented_failure_modes_count=failure_result.checks.get("documented_failure_modes_count"),
+        falsification_attempts_count=failure_result.checks.get(
+            "falsification_attempts_count"
+        ),
+        documented_failure_modes_count=failure_result.checks.get(
+            "documented_failure_modes_count"
+        ),
     )
 
     scores = Scores(
@@ -596,7 +627,9 @@ def main():
     parser = argparse.ArgumentParser(description="Evaluate paper using SWARM rubric")
     parser.add_argument("paper", help="Path to paper (.tex or .md)")
     parser.add_argument("--output", "-o", help="Output JSON file for structured review")
-    parser.add_argument("--json", action="store_true", help="Output JSON only (no report)")
+    parser.add_argument(
+        "--json", action="store_true", help="Output JSON only (no report)"
+    )
     args = parser.parse_args()
 
     if not os.path.exists(args.paper):

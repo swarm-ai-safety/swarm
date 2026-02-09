@@ -60,8 +60,7 @@ class ChallengeGenerator:
                 MathOperation.MULTIPLY,
             ),
             (
-                "A lobster has {a} shells and finds {b} more. "
-                "How many shells total?",
+                "A lobster has {a} shells and finds {b} more. How many shells total?",
                 MathOperation.ADD,
             ),
             (
@@ -70,8 +69,7 @@ class ChallengeGenerator:
                 MathOperation.SUBTRACT,
             ),
             (
-                "A lobster splits {a} newtons across {b} claws. "
-                "How much per claw?",
+                "A lobster splits {a} newtons across {b} claws. How much per claw?",
                 MathOperation.DIVIDE,
             ),
         ]
@@ -159,16 +157,40 @@ class ChallengeGenerator:
     @staticmethod
     def _number_to_words(n: int) -> str:
         ones = [
-            "zero", "one", "two", "three", "four", "five", "six",
-            "seven", "eight", "nine",
+            "zero",
+            "one",
+            "two",
+            "three",
+            "four",
+            "five",
+            "six",
+            "seven",
+            "eight",
+            "nine",
         ]
         teens = [
-            "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
-            "sixteen", "seventeen", "eighteen", "nineteen",
+            "ten",
+            "eleven",
+            "twelve",
+            "thirteen",
+            "fourteen",
+            "fifteen",
+            "sixteen",
+            "seventeen",
+            "eighteen",
+            "nineteen",
         ]
         tens = [
-            "", "", "twenty", "thirty", "forty", "fifty", "sixty",
-            "seventy", "eighty", "ninety",
+            "",
+            "",
+            "twenty",
+            "thirty",
+            "forty",
+            "fifty",
+            "sixty",
+            "seventy",
+            "eighty",
+            "ninety",
         ]
         if n < 10:
             return ones[n]
@@ -327,16 +349,21 @@ class MoltbookFeed:
         sort: str = "top",
     ) -> List[MoltbookPost]:
         posts = [
-            p for p in self._posts.values()
+            p
+            for p in self._posts.values()
             if p.status == ContentStatus.PUBLISHED
             and (submolt is None or p.submolt == submolt)
         ]
         if sort == "new":
-            posts.sort(key=lambda p: p.published_at_step or p.created_at_step, reverse=True)
+            posts.sort(
+                key=lambda p: p.published_at_step or p.created_at_step, reverse=True
+            )
         elif sort == "old":
             posts.sort(key=lambda p: p.published_at_step or p.created_at_step)
         else:
-            posts.sort(key=lambda p: (p.net_votes, p.published_at_step or 0), reverse=True)
+            posts.sort(
+                key=lambda p: (p.net_votes, p.published_at_step or 0), reverse=True
+            )
         return posts[:limit]
 
     def verify_content(self, post_id: str, answer: float, current_step: int) -> bool:

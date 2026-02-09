@@ -66,7 +66,9 @@ class ReplayRunner:
 
         return self.results
 
-    def _build_orchestrator_with_seed(self, seed: int, replay_index: int) -> Orchestrator:
+    def _build_orchestrator_with_seed(
+        self, seed: int, replay_index: int
+    ) -> Orchestrator:
         """Deep-copy scenario config, apply overrides, then build orchestrator."""
         scenario = copy.deepcopy(self.episode_spec.scenario)
         scenario.orchestrator_config.seed = seed
@@ -77,10 +79,10 @@ class ReplayRunner:
 
         for path, value in self.episode_spec.parameter_overrides.items():
             if path.startswith("simulation."):
-                attr = path[len("simulation."):]
+                attr = path[len("simulation.") :]
                 setattr(scenario.orchestrator_config, attr, value)
             elif path.startswith("governance."):
-                attr = path[len("governance."):]
+                attr = path[len("governance.") :]
                 setattr(scenario.orchestrator_config.governance_config, attr, value)
             else:
                 _set_nested_attr(scenario.orchestrator_config, path, value)
@@ -97,16 +99,22 @@ class ReplayRunner:
         metrics_history = orchestrator.get_metrics_history()
         n_epochs = len(metrics_history)
 
-        total_interactions = sum(metric.total_interactions for metric in metrics_history)
-        accepted_interactions = sum(metric.accepted_interactions for metric in metrics_history)
+        total_interactions = sum(
+            metric.total_interactions for metric in metrics_history
+        )
+        accepted_interactions = sum(
+            metric.accepted_interactions for metric in metrics_history
+        )
         total_welfare = sum(metric.total_welfare for metric in metrics_history)
         avg_toxicity = (
             sum(metric.toxicity_rate for metric in metrics_history) / n_epochs
-            if n_epochs else 0.0
+            if n_epochs
+            else 0.0
         )
         avg_quality_gap = (
             sum(metric.quality_gap for metric in metrics_history) / n_epochs
-            if n_epochs else 0.0
+            if n_epochs
+            else 0.0
         )
 
         return ReplayRunResult(

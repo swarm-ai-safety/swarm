@@ -192,11 +192,13 @@ class TestDashboardState:
         state = DashboardState()
 
         for i in range(5):
-            state.update_metrics(MetricSnapshot(
-                epoch=i,
-                step=0,
-                toxicity_rate=i * 0.1,
-            ))
+            state.update_metrics(
+                MetricSnapshot(
+                    epoch=i,
+                    step=0,
+                    toxicity_rate=i * 0.1,
+                )
+            )
 
         epochs, values = state.get_metric_series("toxicity_rate")
 
@@ -289,35 +291,37 @@ class TestIncoherenceDashboardHelpers:
 
     def test_create_condition_comparison_data(self):
         """Condition comparison should aggregate rows by governance condition."""
-        rows = create_condition_comparison_data([
-            MetricSnapshot(
-                epoch=1,
-                step=0,
-                governance_condition="static",
-                toxicity_rate=0.2,
-                incoherence_index=0.3,
-                forecaster_risk=0.2,
-                total_welfare=100.0,
-            ),
-            MetricSnapshot(
-                epoch=2,
-                step=0,
-                governance_condition="adaptive_on",
-                toxicity_rate=0.1,
-                incoherence_index=0.2,
-                forecaster_risk=0.8,
-                total_welfare=120.0,
-            ),
-            MetricSnapshot(
-                epoch=3,
-                step=0,
-                governance_condition="static",
-                toxicity_rate=0.4,
-                incoherence_index=0.5,
-                forecaster_risk=0.4,
-                total_welfare=110.0,
-            ),
-        ])
+        rows = create_condition_comparison_data(
+            [
+                MetricSnapshot(
+                    epoch=1,
+                    step=0,
+                    governance_condition="static",
+                    toxicity_rate=0.2,
+                    incoherence_index=0.3,
+                    forecaster_risk=0.2,
+                    total_welfare=100.0,
+                ),
+                MetricSnapshot(
+                    epoch=2,
+                    step=0,
+                    governance_condition="adaptive_on",
+                    toxicity_rate=0.1,
+                    incoherence_index=0.2,
+                    forecaster_risk=0.8,
+                    total_welfare=120.0,
+                ),
+                MetricSnapshot(
+                    epoch=3,
+                    step=0,
+                    governance_condition="static",
+                    toxicity_rate=0.4,
+                    incoherence_index=0.5,
+                    forecaster_risk=0.4,
+                    total_welfare=110.0,
+                ),
+            ]
+        )
 
         assert [row["condition"] for row in rows] == ["adaptive_on", "static"]
         by_condition = {row["condition"]: row for row in rows}
@@ -338,11 +342,19 @@ class TestIncoherenceDashboardHelpers:
         state.add_agent("a1", agent_type=AgentType.HONEST)
         state.add_agent("a2", agent_type=AgentType.ADVERSARIAL)
 
-        state.record_interaction(SoftInteraction(initiator="a1", counterparty="a2", p=0.5))
-        state.record_interaction(SoftInteraction(initiator="a1", counterparty="a2", p=1.0))
-        state.record_interaction(SoftInteraction(initiator="a2", counterparty="a1", p=0.25))
+        state.record_interaction(
+            SoftInteraction(initiator="a1", counterparty="a2", p=0.5)
+        )
+        state.record_interaction(
+            SoftInteraction(initiator="a1", counterparty="a2", p=1.0)
+        )
+        state.record_interaction(
+            SoftInteraction(initiator="a2", counterparty="a1", p=0.25)
+        )
         # Unknown agent should be skipped gracefully.
-        state.record_interaction(SoftInteraction(initiator="ghost", counterparty="a1", p=0.5))
+        state.record_interaction(
+            SoftInteraction(initiator="ghost", counterparty="a1", p=0.5)
+        )
 
         orchestrator = SimpleNamespace(state=state)
         profiles = extract_incoherence_agent_profiles(orchestrator)

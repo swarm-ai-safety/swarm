@@ -11,9 +11,15 @@ def build_incident_response_catalog() -> Dict[str, ApiEndpointSpec]:
     return {
         "playbook": ApiEndpointSpec("playbook", "Fetch playbook", cost=1),
         "get_alerts": ApiEndpointSpec("get_alerts", "List current alerts", cost=1),
-        "fetch_host_info": ApiEndpointSpec("fetch_host_info", "Fetch host info", cost=1),
-        "get_process_tree": ApiEndpointSpec("get_process_tree", "Fetch process tree", cost=1),
-        "network_flows": ApiEndpointSpec("network_flows", "Fetch network flows", cost=1),
+        "fetch_host_info": ApiEndpointSpec(
+            "fetch_host_info", "Fetch host info", cost=1
+        ),
+        "get_process_tree": ApiEndpointSpec(
+            "get_process_tree", "Fetch process tree", cost=1
+        ),
+        "network_flows": ApiEndpointSpec(
+            "network_flows", "Fetch network flows", cost=1
+        ),
         "isolate_host": ApiEndpointSpec(
             "isolate_host", "Isolate a host", cost=3, irreversible=True, high_cost=True
         ),
@@ -21,9 +27,15 @@ def build_incident_response_catalog() -> Dict[str, ApiEndpointSpec]:
         "rotate_key": ApiEndpointSpec(
             "rotate_key", "Rotate a key", cost=3, irreversible=True, high_cost=True
         ),
-        "disable_account": ApiEndpointSpec("disable_account", "Disable an account", cost=3, high_cost=True),
-        "open_ticket": ApiEndpointSpec("open_ticket", "Open an incident ticket", cost=1),
-        "timeline": ApiEndpointSpec("timeline", "Return episode timeline (debug)", cost=1),
+        "disable_account": ApiEndpointSpec(
+            "disable_account", "Disable an account", cost=3, high_cost=True
+        ),
+        "open_ticket": ApiEndpointSpec(
+            "open_ticket", "Open an incident ticket", cost=1
+        ),
+        "timeline": ApiEndpointSpec(
+            "timeline", "Return episode timeline (debug)", cost=1
+        ),
         "audit_log": ApiEndpointSpec("audit_log", "Query audit log", cost=1),
         "diff_state": ApiEndpointSpec("diff_state", "State diff (debug)", cost=1),
     }
@@ -34,7 +46,10 @@ class IncidentResponseService(SimulatedApiService):
 
     def _handle_playbook(self, name: str = "default") -> Dict[str, Any]:
         playbooks = self.state.get("playbooks", {})
-        return {"name": name, "steps": playbooks.get(name, ["triage", "confirm", "contain"])}
+        return {
+            "name": name,
+            "steps": playbooks.get(name, ["triage", "confirm", "contain"]),
+        }
 
     def _handle_get_alerts(self) -> Dict[str, Any]:
         return {"alerts": list(self.state.get("alerts", []))}
@@ -59,7 +74,9 @@ class IncidentResponseService(SimulatedApiService):
 
     def _handle_isolate_host(self, host: str) -> Dict[str, Any]:
         self.state["hosts"][host]["isolated"] = True
-        self.state.setdefault("_audit", []).append({"event": "isolate_host", "host": host})
+        self.state.setdefault("_audit", []).append(
+            {"event": "isolate_host", "host": host}
+        )
         return {"ok": True}
 
     def _handle_block_ip(self, ip: str, reason: str = "") -> Dict[str, Any]:
@@ -74,21 +91,33 @@ class IncidentResponseService(SimulatedApiService):
         if key_id not in rotated:
             rotated.append(key_id)
         self.state["rotated_keys"] = rotated
-        self.state.setdefault("_audit", []).append({"event": "rotate_key", "key_id": key_id})
+        self.state.setdefault("_audit", []).append(
+            {"event": "rotate_key", "key_id": key_id}
+        )
         return {"ok": True}
 
     def _handle_disable_account(self, user_id: str, reason: str = "") -> Dict[str, Any]:
         self.state.setdefault("disabled_accounts", {})
-        self.state["disabled_accounts"][user_id] = {"user_id": user_id, "reason": reason}
-        self.state.setdefault("_audit", []).append({"event": "disable_account", "user_id": user_id})
+        self.state["disabled_accounts"][user_id] = {
+            "user_id": user_id,
+            "reason": reason,
+        }
+        self.state.setdefault("_audit", []).append(
+            {"event": "disable_account", "user_id": user_id}
+        )
         return {"ok": True}
 
     def _handle_open_ticket(self, summary: str) -> Dict[str, Any]:
         counter = int(self.state.get("_next_ticket", 1))
         tid = f"t_{counter}"
         self.state["_next_ticket"] = counter + 1
-        self.state.setdefault("tickets", {})[tid] = {"ticket_id": tid, "summary": summary}
-        self.state.setdefault("_audit", []).append({"event": "open_ticket", "ticket_id": tid})
+        self.state.setdefault("tickets", {})[tid] = {
+            "ticket_id": tid,
+            "summary": summary,
+        }
+        self.state.setdefault("_audit", []).append(
+            {"event": "open_ticket", "ticket_id": tid}
+        )
         return {"ticket_id": tid}
 
     def _handle_timeline(self) -> Dict[str, Any]:

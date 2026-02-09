@@ -116,6 +116,7 @@ class OrchestratorConfig(BaseModel):
     observation_noise_probability: float = 0.0
     observation_noise_std: float = 0.0
 
+
 @dataclass
 class EpochMetrics:
     """Metrics collected at the end of each epoch."""
@@ -242,7 +243,9 @@ class Orchestrator:
         self._agents: Dict[str, BaseAgent] = {}
 
         # Computation engines (injectable)
-        self.payoff_engine = payoff_engine or SoftPayoffEngine(self.config.payoff_config)
+        self.payoff_engine = payoff_engine or SoftPayoffEngine(
+            self.config.payoff_config
+        )
         self.proxy_computer = proxy_computer or ProxyComputer()
         self.metrics_calculator = metrics_calculator or SoftMetrics(self.payoff_engine)
         self._observable_generator: ObservableGenerator = (
@@ -264,10 +267,12 @@ class Orchestrator:
         if self.config.marketplace_config is not None:
             marketplace = Marketplace(self.config.marketplace_config)
             self.marketplace: Optional[Marketplace] = marketplace
-            self._marketplace_handler: Optional[MarketplaceHandler] = MarketplaceHandler(
-                marketplace=marketplace,
-                task_pool=self.task_pool,
-                emit_event=self._emit_event,
+            self._marketplace_handler: Optional[MarketplaceHandler] = (
+                MarketplaceHandler(
+                    marketplace=marketplace,
+                    task_pool=self.task_pool,
+                    emit_event=self._emit_event,
+                )
             )
         else:
             self.marketplace = None
@@ -287,7 +292,9 @@ class Orchestrator:
             rate_limit_lever = None
             challenge_lever = None
             if self.governance_engine is not None:
-                rate_limit_lever = self.governance_engine.get_moltbook_rate_limit_lever()
+                rate_limit_lever = (
+                    self.governance_engine.get_moltbook_rate_limit_lever()
+                )
                 challenge_lever = self.governance_engine.get_moltbook_challenge_lever()
             self._moltbook_handler: Optional[MoltbookHandler] = MoltbookHandler(
                 config=self.config.moltbook_config,
@@ -348,7 +355,9 @@ class Orchestrator:
 
         # Callbacks
         self._on_epoch_end: List[Callable[[EpochMetrics], None]] = []
-        self._on_interaction_complete: List[Callable[[SoftInteraction, float, float], None]] = []
+        self._on_interaction_complete: List[
+            Callable[[SoftInteraction, float, float], None]
+        ] = []
 
     def register_agent(self, agent: BaseAgent) -> AgentState:
         """
@@ -373,17 +382,19 @@ class Orchestrator:
         )
 
         # Log event
-        self._emit_event(Event(
-            event_type=EventType.AGENT_CREATED,
-            agent_id=agent.agent_id,
-            payload={
-                "agent_type": agent.agent_type.value,
-                "name": getattr(agent, "name", agent.agent_id),
-                "roles": [r.value for r in agent.roles],
-            },
-            epoch=self.state.current_epoch,
-            step=self.state.current_step,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.AGENT_CREATED,
+                agent_id=agent.agent_id,
+                payload={
+                    "agent_type": agent.agent_type.value,
+                    "name": getattr(agent, "name", agent.agent_id),
+                    "roles": [r.value for r in agent.roles],
+                },
+                epoch=self.state.current_epoch,
+                step=self.state.current_step,
+            )
+        )
 
         return state
 
@@ -407,17 +418,19 @@ class Orchestrator:
         self._initialize_network()
 
         # Log simulation start
-        self._emit_event(Event(
-            event_type=EventType.SIMULATION_STARTED,
-            payload={
-                "n_epochs": self.config.n_epochs,
-                "steps_per_epoch": self.config.steps_per_epoch,
-                "n_agents": len(self._agents),
-                "seed": self.config.seed,
-                "scenario_id": self.config.scenario_id,
-                "replay_k": self.config.replay_k,
-            },
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.SIMULATION_STARTED,
+                payload={
+                    "n_epochs": self.config.n_epochs,
+                    "steps_per_epoch": self.config.steps_per_epoch,
+                    "n_agents": len(self._agents),
+                    "seed": self.config.seed,
+                    "scenario_id": self.config.scenario_id,
+                    "replay_k": self.config.replay_k,
+                },
+            )
+        )
 
         # Main loop
         for _epoch in range(self.config.n_epochs):
@@ -429,13 +442,17 @@ class Orchestrator:
                 callback(epoch_metrics)
 
         # Log simulation end
-        self._emit_event(Event(
-            event_type=EventType.SIMULATION_ENDED,
-            payload={
-                "total_epochs": self.config.n_epochs,
-                "final_metrics": self._epoch_metrics[-1].__dict__ if self._epoch_metrics else {},
-            },
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.SIMULATION_ENDED,
+                payload={
+                    "total_epochs": self.config.n_epochs,
+                    "final_metrics": self._epoch_metrics[-1].__dict__
+                    if self._epoch_metrics
+                    else {},
+                },
+            )
+        )
 
         return self._epoch_metrics
 
@@ -473,11 +490,13 @@ class Orchestrator:
         if self.network is not None:
             pruned = self.network.decay_edges()
             if pruned > 0:
-                self._emit_event(Event(
-                    event_type=EventType.EPOCH_COMPLETED,
-                    payload={"network_edges_pruned": pruned},
-                    epoch=epoch_start,
-                ))
+                self._emit_event(
+                    Event(
+                        event_type=EventType.EPOCH_COMPLETED,
+                        payload={"network_edges_pruned": pruned},
+                        epoch=epoch_start,
+                    )
+                )
 
         # Apply memory decay for rain/river agents at epoch boundary
         self._apply_agent_memory_decay(epoch_start)
@@ -486,11 +505,13 @@ class Orchestrator:
         metrics = self._compute_epoch_metrics()
 
         # Log epoch completion
-        self._emit_event(Event(
-            event_type=EventType.EPOCH_COMPLETED,
-            payload=metrics.__dict__,
-            epoch=epoch_start,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.EPOCH_COMPLETED,
+                payload=metrics.__dict__,
+                epoch=epoch_start,
+            )
+        )
 
         # Advance to next epoch
         self.state.advance_epoch()
@@ -507,7 +528,7 @@ class Orchestrator:
             epoch: Current epoch number
         """
         for agent in self._agents.values():
-            if hasattr(agent, 'apply_memory_decay'):
+            if hasattr(agent, "apply_memory_decay"):
                 agent.apply_memory_decay(epoch)
 
     def _run_step(self) -> None:
@@ -541,7 +562,9 @@ class Orchestrator:
                 continue
 
             # Check governance admission control (staking)
-            if self.governance_engine and not self.governance_engine.can_agent_act(agent_id, self.state):
+            if self.governance_engine and not self.governance_engine.can_agent_act(
+                agent_id, self.state
+            ):
                 continue
 
             agent = self._agents[agent_id]
@@ -576,7 +599,9 @@ class Orchestrator:
         selected.metadata["ensemble_samples"] = samples
         return selected
 
-    async def _select_action_async(self, agent: BaseAgent, observation: Observation) -> Action:
+    async def _select_action_async(
+        self, agent: BaseAgent, observation: Observation
+    ) -> Action:
         """Async action selection with optional governance ensembling."""
         if (
             self.governance_engine is None
@@ -642,7 +667,11 @@ class Orchestrator:
         elif self.config.schedule_mode == "priority":
             # Sort by reputation (higher reputation goes first)
             agent_ids.sort(
-                key=lambda aid: (agent_st.reputation if (agent_st := self.state.get_agent(aid)) else 0),
+                key=lambda aid: (
+                    agent_st.reputation
+                    if (agent_st := self.state.get_agent(aid))
+                    else 0
+                ),
                 reverse=True,
             )
         # else: round_robin (default order)
@@ -655,9 +684,7 @@ class Orchestrator:
         rate_limit = self.state.get_rate_limit_state(agent_id)
 
         # Get visible posts
-        visible_posts = [
-            p.to_dict() for p in self.feed.get_ranked_posts(limit=20)
-        ]
+        visible_posts = [p.to_dict() for p in self.feed.get_ranked_posts(limit=20)]
 
         # Get pending proposals for this agent
         pending_proposals = [
@@ -673,7 +700,8 @@ class Orchestrator:
 
         # Get available tasks
         available_tasks = [
-            t.to_dict() for t in self.task_pool.get_claimable_tasks(
+            t.to_dict()
+            for t in self.task_pool.get_claimable_tasks(
                 agent_reputation=agent_state.reputation if agent_state else 0,
                 current_epoch=self.state.current_epoch,
             )
@@ -681,7 +709,8 @@ class Orchestrator:
 
         # Get agent's active tasks
         active_tasks = [
-            t.to_dict() for t in self.task_pool.get_tasks_for_agent(agent_id)
+            t.to_dict()
+            for t in self.task_pool.get_tasks_for_agent(agent_id)
             if t.status in (TaskStatus.CLAIMED, TaskStatus.IN_PROGRESS)
         ]
 
@@ -700,13 +729,17 @@ class Orchestrator:
                 "agent_type": s.agent_type.value,
                 "reputation": s.reputation,
                 "resources": s.resources,
-                "edge_weight": self.network.edge_weight(agent_id, s.agent_id) if self.network else 1.0,
+                "edge_weight": self.network.edge_weight(agent_id, s.agent_id)
+                if self.network
+                else 1.0,
             }
             for s in active_agents
             if s.agent_id != agent_id
         ]
 
-        visible_agents = [self._apply_observation_noise(record) for record in visible_agents]
+        visible_agents = [
+            self._apply_observation_noise(record) for record in visible_agents
+        ]
 
         # Build marketplace observation via handler
         available_bounties: List[Dict] = []
@@ -716,7 +749,8 @@ class Orchestrator:
 
         if self._marketplace_handler is not None:
             mkt_obs = self._marketplace_handler.build_observation_fields(
-                agent_id, self.state,
+                agent_id,
+                self.state,
             )
             available_bounties = mkt_obs["available_bounties"]
             active_bids = mkt_obs["active_bids"]
@@ -733,7 +767,8 @@ class Orchestrator:
 
         if self._moltipedia_handler is not None:
             wiki_obs = self._moltipedia_handler.build_observation_fields(
-                agent_id, self.state,
+                agent_id,
+                self.state,
             )
             contested_pages = wiki_obs["contested_pages"]
             search_results = wiki_obs["search_results"]
@@ -750,7 +785,8 @@ class Orchestrator:
 
         if self._moltbook_handler is not None:
             molt_obs = self._moltbook_handler.get_agent_observation(
-                agent_id, self.state.current_step,
+                agent_id,
+                self.state.current_step,
             )
             moltbook_published_posts = molt_obs["published_posts"]
             moltbook_pending_posts = molt_obs["pending_posts"]
@@ -770,7 +806,8 @@ class Orchestrator:
             self._memory_handler.maybe_compaction(agent_id, self.state)
 
             mem_obs = self._memory_handler.build_observation_fields(
-                agent_id, self.state,
+                agent_id,
+                self.state,
             )
             memory_hot_cache = mem_obs["memory_hot_cache"]
             memory_pending_promotions = mem_obs["memory_pending_promotions"]
@@ -782,10 +819,18 @@ class Orchestrator:
             agent_state=agent_state or AgentState(),
             current_epoch=self.state.current_epoch,
             current_step=self.state.current_step,
-            can_post=rate_limit.can_post(self.state.rate_limits) if self.config.enable_rate_limits else True,
-            can_interact=rate_limit.can_interact(self.state.rate_limits) if self.config.enable_rate_limits else True,
-            can_vote=rate_limit.can_vote(self.state.rate_limits) if self.config.enable_rate_limits else True,
-            can_claim_task=rate_limit.can_claim_task(self.state.rate_limits) if self.config.enable_rate_limits else True,
+            can_post=rate_limit.can_post(self.state.rate_limits)
+            if self.config.enable_rate_limits
+            else True,
+            can_interact=rate_limit.can_interact(self.state.rate_limits)
+            if self.config.enable_rate_limits
+            else True,
+            can_vote=rate_limit.can_vote(self.state.rate_limits)
+            if self.config.enable_rate_limits
+            else True,
+            can_claim_task=rate_limit.can_claim_task(self.state.rate_limits)
+            if self.config.enable_rate_limits
+            else True,
             visible_posts=visible_posts,
             pending_proposals=pending_proposals,
             available_tasks=available_tasks,
@@ -864,7 +909,7 @@ class Orchestrator:
             try:
                 self.feed.create_post(
                     author_id=agent_id,
-                    content=action.content[:self.config.max_content_length],
+                    content=action.content[: self.config.max_content_length],
                 )
                 rate_limit.record_post()
                 return True
@@ -878,7 +923,7 @@ class Orchestrator:
             try:
                 self.feed.create_post(
                     author_id=agent_id,
-                    content=action.content[:self.config.max_content_length],
+                    content=action.content[: self.config.max_content_length],
                     parent_id=action.target_id,
                 )
                 rate_limit.record_post()
@@ -890,7 +935,9 @@ class Orchestrator:
             if not rate_limit.can_vote(self.state.rate_limits):
                 return False
 
-            vote_type = VoteType.UPVOTE if action.vote_direction > 0 else VoteType.DOWNVOTE
+            vote_type = (
+                VoteType.UPVOTE if action.vote_direction > 0 else VoteType.DOWNVOTE
+            )
             vote = self.feed.vote(action.target_id, agent_id, vote_type)
             if vote:
                 rate_limit.record_vote()
@@ -918,28 +965,34 @@ class Orchestrator:
             rate_limit.record_interaction()
 
             # Log proposal event
-            self._emit_event(interaction_proposed_event(
-                interaction_id=proposal.proposal_id,
-                initiator_id=agent_id,
-                counterparty_id=action.counterparty_id,
-                interaction_type=action.interaction_type.value,
-                v_hat=0.0,  # Computed later
-                p=0.5,
-                epoch=self.state.current_epoch,
-                step=self.state.current_step,
-            ))
+            self._emit_event(
+                interaction_proposed_event(
+                    interaction_id=proposal.proposal_id,
+                    initiator_id=agent_id,
+                    counterparty_id=action.counterparty_id,
+                    interaction_type=action.interaction_type.value,
+                    v_hat=0.0,  # Computed later
+                    p=0.5,
+                    epoch=self.state.current_epoch,
+                    step=self.state.current_step,
+                )
+            )
 
             return True
 
         elif action.action_type == ActionType.ACCEPT_INTERACTION:
-            accept_proposal: Optional[InteractionProposal] = self.state.remove_proposal(action.target_id)
+            accept_proposal: Optional[InteractionProposal] = self.state.remove_proposal(
+                action.target_id
+            )
             if accept_proposal:
                 self._complete_interaction(accept_proposal, accepted=True)
                 return True
             return False
 
         elif action.action_type == ActionType.REJECT_INTERACTION:
-            proposal_rej: Optional[InteractionProposal] = self.state.remove_proposal(action.target_id)
+            proposal_rej: Optional[InteractionProposal] = self.state.remove_proposal(
+                action.target_id
+            )
             if proposal_rej:
                 self._complete_interaction(proposal_rej, accepted=False)
                 return True
@@ -971,7 +1024,8 @@ class Orchestrator:
             if self._marketplace_handler is None:
                 return False
             return self._marketplace_handler.handle_post_bounty(
-                action, self.state,
+                action,
+                self.state,
                 enable_rate_limits=self.config.enable_rate_limits,
             )
 
@@ -979,7 +1033,8 @@ class Orchestrator:
             if self._marketplace_handler is None:
                 return False
             return self._marketplace_handler.handle_place_bid(
-                action, self.state,
+                action,
+                self.state,
                 enable_rate_limits=self.config.enable_rate_limits,
             )
 
@@ -1189,7 +1244,9 @@ class Orchestrator:
         """Complete an interaction and compute payoffs."""
         # Generate observables via the injectable generator
         observables = self._observable_generator.generate(
-            proposal, accepted, self.state,
+            proposal,
+            accepted,
+            self.state,
         )
 
         # Compute v_hat and p
@@ -1234,25 +1291,29 @@ class Orchestrator:
         """Apply governance, compute payoffs, update state, and emit events."""
         gov_effect = GovernanceEffect()
         if self.governance_engine:
-            gov_effect = self.governance_engine.apply_interaction(interaction, self.state)
+            gov_effect = self.governance_engine.apply_interaction(
+                interaction, self.state
+            )
             interaction.c_a += gov_effect.cost_a
             interaction.c_b += gov_effect.cost_b
             self._apply_governance_effect(gov_effect)
 
             if gov_effect.cost_a > 0 or gov_effect.cost_b > 0:
-                self._emit_event(Event(
-                    event_type=EventType.GOVERNANCE_COST_APPLIED,
-                    interaction_id=interaction.interaction_id,
-                    initiator_id=interaction.initiator,
-                    counterparty_id=interaction.counterparty,
-                    payload={
-                        "cost_a": gov_effect.cost_a,
-                        "cost_b": gov_effect.cost_b,
-                        "levers": [e.lever_name for e in gov_effect.lever_effects],
-                    },
-                    epoch=self.state.current_epoch,
-                    step=self.state.current_step,
-                ))
+                self._emit_event(
+                    Event(
+                        event_type=EventType.GOVERNANCE_COST_APPLIED,
+                        interaction_id=interaction.interaction_id,
+                        initiator_id=interaction.initiator,
+                        counterparty_id=interaction.counterparty,
+                        payload={
+                            "cost_a": gov_effect.cost_a,
+                            "cost_b": gov_effect.cost_b,
+                            "levers": [e.lever_name for e in gov_effect.lever_effects],
+                        },
+                        epoch=self.state.current_epoch,
+                        step=self.state.current_step,
+                    )
+                )
 
         payoff_init = self.payoff_engine.payoff_initiator(interaction)
         payoff_counter = self.payoff_engine.payoff_counterparty(interaction)
@@ -1272,39 +1333,49 @@ class Orchestrator:
                 counterparty_state.total_payoff += payoff_counter
 
         if interaction.initiator in self._agents:
-            self._agents[interaction.initiator].update_from_outcome(interaction, payoff_init)
+            self._agents[interaction.initiator].update_from_outcome(
+                interaction, payoff_init
+            )
         if interaction.counterparty in self._agents:
-            self._agents[interaction.counterparty].update_from_outcome(interaction, payoff_counter)
+            self._agents[interaction.counterparty].update_from_outcome(
+                interaction, payoff_counter
+            )
 
         self.state.record_interaction(interaction)
 
-        self._emit_event(interaction_completed_event(
-            interaction_id=interaction.interaction_id,
-            accepted=interaction.accepted,
-            payoff_initiator=payoff_init,
-            payoff_counterparty=payoff_counter,
-            epoch=self.state.current_epoch,
-            step=self.state.current_step,
-        ))
+        self._emit_event(
+            interaction_completed_event(
+                interaction_id=interaction.interaction_id,
+                accepted=interaction.accepted,
+                payoff_initiator=payoff_init,
+                payoff_counterparty=payoff_counter,
+                epoch=self.state.current_epoch,
+                step=self.state.current_step,
+            )
+        )
 
-        self._emit_event(payoff_computed_event(
-            interaction_id=interaction.interaction_id,
-            initiator_id=interaction.initiator,
-            counterparty_id=interaction.counterparty,
-            payoff_initiator=payoff_init,
-            payoff_counterparty=payoff_counter,
-            components={
-                "p": interaction.p,
-                "v_hat": interaction.v_hat,
-                "tau": interaction.tau,
-                "accepted": interaction.accepted,
-            },
-            epoch=self.state.current_epoch,
-            step=self.state.current_step,
-        ))
+        self._emit_event(
+            payoff_computed_event(
+                interaction_id=interaction.interaction_id,
+                initiator_id=interaction.initiator,
+                counterparty_id=interaction.counterparty,
+                payoff_initiator=payoff_init,
+                payoff_counterparty=payoff_counter,
+                components={
+                    "p": interaction.p,
+                    "v_hat": interaction.v_hat,
+                    "tau": interaction.tau,
+                    "accepted": interaction.accepted,
+                },
+                epoch=self.state.current_epoch,
+                step=self.state.current_step,
+            )
+        )
 
         if self.network is not None and interaction.accepted:
-            self.network.strengthen_edge(interaction.initiator, interaction.counterparty)
+            self.network.strengthen_edge(
+                interaction.initiator, interaction.counterparty
+            )
 
         for callback in self._on_interaction_complete:
             callback(interaction, payoff_init, payoff_counter)
@@ -1320,15 +1391,17 @@ class Orchestrator:
         old_rep = agent_state.reputation
         agent_state.update_reputation(delta)
 
-        self._emit_event(reputation_updated_event(
-            agent_id=agent_id,
-            old_reputation=old_rep,
-            new_reputation=agent_state.reputation,
-            delta=delta,
-            reason="interaction_outcome",
-            epoch=self.state.current_epoch,
-            step=self.state.current_step,
-        ))
+        self._emit_event(
+            reputation_updated_event(
+                agent_id=agent_id,
+                old_reputation=old_rep,
+                new_reputation=agent_state.reputation,
+                delta=delta,
+                reason="interaction_outcome",
+                epoch=self.state.current_epoch,
+                step=self.state.current_step,
+            )
+        )
 
     # =========================================================================
     # Marketplace Delegation (preserves public interface)
@@ -1371,15 +1444,17 @@ class Orchestrator:
             if agent_state:
                 old_rep = agent_state.reputation
                 agent_state.update_reputation(delta)
-                self._emit_event(reputation_updated_event(
-                    agent_id=agent_id,
-                    old_reputation=old_rep,
-                    new_reputation=agent_state.reputation,
-                    delta=delta,
-                    reason="governance",
-                    epoch=self.state.current_epoch,
-                    step=self.state.current_step,
-                ))
+                self._emit_event(
+                    reputation_updated_event(
+                        agent_id=agent_id,
+                        old_reputation=old_rep,
+                        new_reputation=agent_state.reputation,
+                        delta=delta,
+                        reason="governance",
+                        epoch=self.state.current_epoch,
+                        step=self.state.current_step,
+                    )
+                )
 
         # Apply resource deltas
         for agent_id, delta in effect.resource_deltas.items():
@@ -1396,7 +1471,8 @@ class Orchestrator:
             "memory_provenance",
         }
         return sum(
-            lever.cost_a for lever in effect.lever_effects
+            lever.cost_a
+            for lever in effect.lever_effects
             if lever.lever_name in memory_levers
         )
 
@@ -1409,7 +1485,8 @@ class Orchestrator:
             "moltipedia_no_self_fix",
         }
         return sum(
-            lever.cost_a for lever in effect.lever_effects
+            lever.cost_a
+            for lever in effect.lever_effects
             if lever.lever_name in moltipedia_levers
         )
 
@@ -1430,17 +1507,19 @@ class Orchestrator:
                 continue
             if lever.cost_a <= 0:
                 continue
-            self._emit_event(Event(
-                event_type=event_map[lever.lever_name],
-                agent_id=interaction.initiator,
-                payload={
-                    "page_id": page_id,
-                    "cost_a": lever.cost_a,
-                    "details": lever.details,
-                },
-                epoch=self.state.current_epoch,
-                step=self.state.current_step,
-            ))
+            self._emit_event(
+                Event(
+                    event_type=event_map[lever.lever_name],
+                    agent_id=interaction.initiator,
+                    payload={
+                        "page_id": page_id,
+                        "cost_a": lever.cost_a,
+                        "details": lever.details,
+                    },
+                    epoch=self.state.current_epoch,
+                    step=self.state.current_step,
+                )
+            )
 
     def _compute_epoch_metrics(self) -> EpochMetrics:
         """Compute metrics for the current epoch."""
@@ -1602,7 +1681,9 @@ class Orchestrator:
 
     def _is_llm_agent(self, agent: BaseAgent) -> bool:
         """Check if an agent is an LLM agent with async support."""
-        return hasattr(agent, 'act_async') and hasattr(agent, 'accept_interaction_async')
+        return hasattr(agent, "act_async") and hasattr(
+            agent, "accept_interaction_async"
+        )
 
     async def run_async(self) -> List[EpochMetrics]:
         """
@@ -1618,16 +1699,18 @@ class Orchestrator:
         self._initialize_network()
 
         # Log simulation start
-        self._emit_event(Event(
-            event_type=EventType.SIMULATION_STARTED,
-            payload={
-                "n_epochs": self.config.n_epochs,
-                "steps_per_epoch": self.config.steps_per_epoch,
-                "n_agents": len(self._agents),
-                "seed": self.config.seed,
-                "async": True,
-            },
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.SIMULATION_STARTED,
+                payload={
+                    "n_epochs": self.config.n_epochs,
+                    "steps_per_epoch": self.config.steps_per_epoch,
+                    "n_agents": len(self._agents),
+                    "seed": self.config.seed,
+                    "async": True,
+                },
+            )
+        )
 
         # Main loop
         for _epoch in range(self.config.n_epochs):
@@ -1639,13 +1722,17 @@ class Orchestrator:
                 callback(epoch_metrics)
 
         # Log simulation end
-        self._emit_event(Event(
-            event_type=EventType.SIMULATION_ENDED,
-            payload={
-                "total_epochs": self.config.n_epochs,
-                "final_metrics": self._epoch_metrics[-1].__dict__ if self._epoch_metrics else {},
-            },
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.SIMULATION_ENDED,
+                payload={
+                    "total_epochs": self.config.n_epochs,
+                    "final_metrics": self._epoch_metrics[-1].__dict__
+                    if self._epoch_metrics
+                    else {},
+                },
+            )
+        )
 
         return self._epoch_metrics
 
@@ -1673,21 +1760,25 @@ class Orchestrator:
         if self.network is not None:
             pruned = self.network.decay_edges()
             if pruned > 0:
-                self._emit_event(Event(
-                    event_type=EventType.EPOCH_COMPLETED,
-                    payload={"network_edges_pruned": pruned},
-                    epoch=epoch_start,
-                ))
+                self._emit_event(
+                    Event(
+                        event_type=EventType.EPOCH_COMPLETED,
+                        payload={"network_edges_pruned": pruned},
+                        epoch=epoch_start,
+                    )
+                )
 
         # Compute epoch metrics
         metrics = self._compute_epoch_metrics()
 
         # Log epoch completion
-        self._emit_event(Event(
-            event_type=EventType.EPOCH_COMPLETED,
-            payload=metrics.__dict__,
-            epoch=epoch_start,
-        ))
+        self._emit_event(
+            Event(
+                event_type=EventType.EPOCH_COMPLETED,
+                payload=metrics.__dict__,
+                epoch=epoch_start,
+            )
+        )
 
         # Advance to next epoch
         self.state.advance_epoch()
@@ -1724,7 +1815,9 @@ class Orchestrator:
                 continue
 
             # Check governance admission control (staking)
-            if self.governance_engine and not self.governance_engine.can_agent_act(agent_id, self.state):
+            if self.governance_engine and not self.governance_engine.can_agent_act(
+                agent_id, self.state
+            ):
                 continue
 
             agents_to_act.append(agent_id)
@@ -1785,7 +1878,9 @@ class Orchestrator:
 
             # Get decision (async for LLM agents)
             if self._is_llm_agent(counterparty):
-                accept = await counterparty.accept_interaction_async(agent_proposal, observation)  # type: ignore[attr-defined]
+                accept = await counterparty.accept_interaction_async(
+                    agent_proposal, observation
+                )  # type: ignore[attr-defined]
             else:
                 accept = counterparty.accept_interaction(agent_proposal, observation)
 
@@ -1814,16 +1909,15 @@ class Orchestrator:
 
         agents = self.get_all_agents()
         adversarial_count = sum(
-            1 for agent in agents
+            1
+            for agent in agents
             if agent.agent_type in (AgentType.ADVERSARIAL, AgentType.DECEPTIVE)
         )
         structural = extract_structural_features(
             horizon_length=self.config.steps_per_epoch,
             agent_count=len(agents),
             action_space_size=len(ActionType),
-            adversarial_fraction=(
-                adversarial_count / len(agents) if agents else 0.0
-            ),
+            adversarial_fraction=(adversarial_count / len(agents) if agents else 0.0),
         )
         features = structural
 
@@ -1842,7 +1936,7 @@ class Orchestrator:
         """
         stats = {}
         for agent_id, agent in self._agents.items():
-            if hasattr(agent, 'get_usage_stats'):
+            if hasattr(agent, "get_usage_stats"):
                 stats[agent_id] = agent.get_usage_stats()
         return stats
 
@@ -1874,7 +1968,7 @@ class Orchestrator:
         """
         reports = {}
         for agent_id, agent in self._agents.items():
-            if hasattr(agent, 'get_strategy_report'):
+            if hasattr(agent, "get_strategy_report"):
                 reports[agent_id] = agent.get_strategy_report()
         return reports
 
@@ -1895,12 +1989,13 @@ class Orchestrator:
             detected: Whether the agent was detected
         """
         agent = self._agents.get(agent_id)
-        if agent is not None and hasattr(agent, 'update_adversary_outcome'):
+        if agent is not None and hasattr(agent, "update_adversary_outcome"):
             # Get recent payoff for this agent
             recent_payoff = 0.0
             if self.state.completed_interactions:
                 agent_interactions = [
-                    i for i in self.state.completed_interactions
+                    i
+                    for i in self.state.completed_interactions
                     if i.initiator == agent_id or i.counterparty == agent_id
                 ]
                 if agent_interactions:
@@ -1940,7 +2035,7 @@ class Orchestrator:
             if agent_state and agent_state.agent_type == AgentType.ADVERSARIAL:
                 metrics["total_adversaries"] += 1
 
-                if hasattr(agent, 'get_strategy_report'):
+                if hasattr(agent, "get_strategy_report"):
                     metrics["adaptive_adversaries"] += 1
                     report = agent.get_strategy_report()
                     metrics["by_agent"][agent_id] = report
@@ -1954,7 +2049,9 @@ class Orchestrator:
                             }
                         attempts = stats.get("attempts", 0)
                         detection_rate = stats.get("detection_rate", 0)
-                        metrics["strategies_used"][strategy]["total_attempts"] += attempts
+                        metrics["strategies_used"][strategy]["total_attempts"] += (
+                            attempts
+                        )
                         metrics["strategies_used"][strategy]["total_detections"] += int(
                             attempts * detection_rate
                         )
@@ -1963,7 +2060,8 @@ class Orchestrator:
 
                     # Calculate detection rate from strategy stats
                     total_attempts = sum(
-                        s.get("attempts", 0) for s in report.get("strategy_stats", {}).values()
+                        s.get("attempts", 0)
+                        for s in report.get("strategy_stats", {}).values()
                     )
                     total_detected = sum(
                         s.get("attempts", 0) * s.get("detection_rate", 0)

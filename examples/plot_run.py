@@ -142,8 +142,14 @@ def _plot_acceptance_rate(plt, plots_dir: Path, history) -> Path:
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Generate plots for a SWARM run folder")
-    parser.add_argument("run_dir", type=Path, help="Run folder (contains history.json or csv/*_epochs.csv)")
+    parser = argparse.ArgumentParser(
+        description="Generate plots for a SWARM run folder"
+    )
+    parser.add_argument(
+        "run_dir",
+        type=Path,
+        help="Run folder (contains history.json or csv/*_epochs.csv)",
+    )
     parser.add_argument(
         "--metric",
         default=None,
@@ -158,7 +164,7 @@ def main() -> int:
         history = _load_history(run_dir)
     except Exception as err:
         _write_fallback_readme(plots_dir, f"Could not load history: {err}")
-        print(f"Wrote {plots_dir/'README.txt'}")
+        print(f"Wrote {plots_dir / 'README.txt'}")
         return 1
 
     plt = _maybe_import_matplotlib(run_dir)
@@ -167,12 +173,16 @@ def main() -> int:
             plots_dir,
             "matplotlib not available in this environment.",
         )
-        print(f"Wrote {plots_dir/'README.txt'}")
+        print(f"Wrote {plots_dir / 'README.txt'}")
         return 0
 
     plots_dir.mkdir(parents=True, exist_ok=True)
 
-    metrics = [args.metric] if args.metric else ["toxicity_rate", "quality_gap", "total_welfare"]
+    metrics = (
+        [args.metric]
+        if args.metric
+        else ["toxicity_rate", "quality_gap", "total_welfare"]
+    )
 
     written = []
     for metric in metrics:
@@ -180,7 +190,7 @@ def main() -> int:
             written.append(_plot_series(plt, plots_dir, history, metric))
         except Exception as err:
             _write_fallback_readme(plots_dir, f"Failed plotting {metric}: {err}")
-            print(f"Wrote {plots_dir/'README.txt'}")
+            print(f"Wrote {plots_dir / 'README.txt'}")
             return 1
 
     try:

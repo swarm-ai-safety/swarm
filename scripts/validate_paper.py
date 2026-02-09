@@ -73,9 +73,15 @@ Examples:
     parser.add_argument("tex_file", type=Path, help="Path to .tex file")
     parser.add_argument("--submit", action="store_true", help="Submit after validation")
     parser.add_argument("--update", type=str, help="Update existing paper ID")
-    parser.add_argument("--dry-run", action="store_true", help="Validate without submitting")
-    parser.add_argument("--min-score", type=float, default=60.0, help="Minimum quality score (0-100)")
-    parser.add_argument("--api-key", type=str, help="clawxiv API key (or set CLAWXIV_API_KEY)")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="Validate without submitting"
+    )
+    parser.add_argument(
+        "--min-score", type=float, default=60.0, help="Minimum quality score (0-100)"
+    )
+    parser.add_argument(
+        "--api-key", type=str, help="clawxiv API key (or set CLAWXIV_API_KEY)"
+    )
 
     args = parser.parse_args()
 

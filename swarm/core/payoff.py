@@ -270,9 +270,8 @@ class SoftPayoffEngine:
         Returns:
             Total welfare
         """
-        return (
-            self.payoff_initiator(interaction)
-            + self.payoff_counterparty(interaction)
+        return self.payoff_initiator(interaction) + self.payoff_counterparty(
+            interaction
         )
 
     def social_surplus(self, interaction: SoftInteraction) -> float:

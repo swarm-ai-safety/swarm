@@ -1,7 +1,5 @@
 """Tests for composite tasks and emergent capability measurement."""
 
-
-
 from swarm.env.composite_tasks import (
     CapabilityType,
     CompositeTask,
@@ -74,11 +72,13 @@ class TestSubtask:
         assert subtask.can_claim({CapabilityType.ANALYSIS, CapabilityType.RESEARCH})
 
         # Can claim with superset
-        assert subtask.can_claim({
-            CapabilityType.ANALYSIS,
-            CapabilityType.RESEARCH,
-            CapabilityType.PLANNING,
-        })
+        assert subtask.can_claim(
+            {
+                CapabilityType.ANALYSIS,
+                CapabilityType.RESEARCH,
+                CapabilityType.PLANNING,
+            }
+        )
 
     def test_claim_and_complete(self):
         """Should support claim/start/complete workflow."""
@@ -329,10 +329,12 @@ class TestCompositeTaskPool:
         assert joinable[0].task_id == task1.task_id
 
         # Agent with both can join both
-        joinable = pool.get_joinable_tasks({
-            CapabilityType.RESEARCH,
-            CapabilityType.PLANNING,
-        })
+        joinable = pool.get_joinable_tasks(
+            {
+                CapabilityType.RESEARCH,
+                CapabilityType.PLANNING,
+            }
+        )
         assert len(joinable) == 2
 
     def test_expire_overdue(self):

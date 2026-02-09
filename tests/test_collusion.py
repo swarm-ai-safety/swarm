@@ -59,13 +59,15 @@ def create_collusion_pattern(
         # Alternate initiator
         init, counter = (agent_a, agent_b) if i % 2 == 0 else (agent_b, agent_a)
         accepted = np.random.random() < acceptance_rate
-        interactions.append(create_interaction(
-            initiator=init,
-            counterparty=counter,
-            p=p_internal,
-            accepted=accepted,
-            timestamp=base + timedelta(seconds=i * interval_seconds),
-        ))
+        interactions.append(
+            create_interaction(
+                initiator=init,
+                counterparty=counter,
+                p=p_internal,
+                accepted=accepted,
+                timestamp=base + timedelta(seconds=i * interval_seconds),
+            )
+        )
     return interactions
 
 
@@ -83,13 +85,15 @@ def create_normal_interactions(
         a, b = rng.choice(agents, size=2, replace=False)
         p = rng.uniform(0.3, 0.8)
         accepted = rng.random() < 0.6
-        interactions.append(create_interaction(
-            initiator=a,
-            counterparty=b,
-            p=p,
-            accepted=accepted,
-            timestamp=base + timedelta(seconds=i * 60),
-        ))
+        interactions.append(
+            create_interaction(
+                initiator=a,
+                counterparty=b,
+                p=p,
+                accepted=accepted,
+                timestamp=base + timedelta(seconds=i * 60),
+            )
+        )
     return interactions
 
 
@@ -138,7 +142,9 @@ class TestCollusionDetector:
 
         # Should flag alice-bob pair
         assert report.n_flagged_pairs >= 1
-        flagged_agents = {p.agent_a for p in report.suspicious_pairs} | {p.agent_b for p in report.suspicious_pairs}
+        flagged_agents = {p.agent_a for p in report.suspicious_pairs} | {
+            p.agent_b for p in report.suspicious_pairs
+        }
         assert "alice" in flagged_agents or "bob" in flagged_agents
 
     def test_detects_high_acceptance_rate(self):
@@ -150,24 +156,30 @@ class TestCollusionDetector:
 
         # Create pattern with 100% acceptance (suspicious)
         interactions = create_collusion_pattern(
-            "alice", "bob",
+            "alice",
+            "bob",
             count=15,
             acceptance_rate=1.0,
             p_internal=0.4,  # Low quality but still accepted
         )
         # Add normal interactions with OTHER agents (not alice/bob)
-        interactions.extend(create_normal_interactions(
-            ["charlie", "david", "eve", "frank"],
-            count=20,
-        ))
+        interactions.extend(
+            create_normal_interactions(
+                ["charlie", "david", "eve", "frank"],
+                count=20,
+            )
+        )
 
         report = detector.analyze(interactions)
 
         # Alice-Bob should have high acceptance score
         alice_bob_pair = next(
-            (p for p in report.suspicious_pairs
-             if {p.agent_a, p.agent_b} == {"alice", "bob"}),
-            None
+            (
+                p
+                for p in report.suspicious_pairs
+                if {p.agent_a, p.agent_b} == {"alice", "bob"}
+            ),
+            None,
         )
         if alice_bob_pair:
             assert alice_bob_pair.mutual_acceptance_rate >= 0.8
@@ -330,18 +342,22 @@ class TestVoteCoordination:
         # Each voter votes randomly on each target
         for voter in voters:
             for target in targets:
-                votes.append({
-                    "voter": voter,
-                    "target": target,
-                    "direction": rng.choice([1, -1]),
-                })
+                votes.append(
+                    {
+                        "voter": voter,
+                        "target": target,
+                        "direction": rng.choice([1, -1]),
+                    }
+                )
 
         result = detect_vote_coordination(votes, threshold=0.9)
 
         # Random voting with many targets shouldn't show perfect coordination
         # Allow some coincidental alignment but not too many pairs
         high_coordination = [r for r in result if r[2] >= 0.9]
-        assert len(high_coordination) <= 1  # Allow at most 1 coincidental high alignment
+        assert (
+            len(high_coordination) <= 1
+        )  # Allow at most 1 coincidental high alignment
 
     def test_detects_coordination(self):
         """Should detect coordinated voting."""
@@ -406,7 +422,9 @@ class TestTemporalClustering:
         # Then another burst
         for i in range(5):
             interactions.append(
-                create_interaction("a", "b", timestamp=base + timedelta(seconds=1000 + i))
+                create_interaction(
+                    "a", "b", timestamp=base + timedelta(seconds=1000 + i)
+                )
             )
 
         result = temporal_clustering_score(interactions, window_seconds=10)
@@ -548,8 +566,7 @@ class TestEdgeCases:
 
         # Interactions with zero variance in benefits
         interactions = [
-            create_interaction("a", "b", tau=0.0, c_a=0.0, c_b=0.0)
-            for _ in range(5)
+            create_interaction("a", "b", tau=0.0, c_a=0.0, c_b=0.0) for _ in range(5)
         ]
 
         report = detector.analyze(interactions)
@@ -605,7 +622,7 @@ class TestCollusionPenaltyLever:
         from swarm.env.state import EnvState
 
         state = EnvState()
-        for aid in (agent_ids or ["a", "b", "c"]):
+        for aid in agent_ids or ["a", "b", "c"]:
             state.add_agent(aid)
         return state
 
@@ -675,9 +692,7 @@ class TestCollusionPenaltyLever:
         state = self._make_state()
         lever.set_agent_ids(["a", "b", "c"])
 
-        lever._interaction_history.extend(
-            create_collusion_pattern("a", "b", count=10)
-        )
+        lever._interaction_history.extend(create_collusion_pattern("a", "b", count=10))
         lever._interaction_history.extend(
             create_normal_interactions(["a", "c"], count=5)
         )
@@ -755,8 +770,10 @@ class TestCollusionPenaltyLever:
             alice_risk = report.agent_collusion_risk.get("alice", 0)
             bob_risk = report.agent_collusion_risk.get("bob", 0)
 
-            if (alice_risk >= lever._detector.collusion_threshold and
-                    bob_risk >= lever._detector.collusion_threshold):
+            if (
+                alice_risk >= lever._detector.collusion_threshold
+                and bob_risk >= lever._detector.collusion_threshold
+            ):
                 interaction = create_interaction("alice", "bob")
                 effect = lever.on_interaction(interaction, state)
                 assert effect.cost_a > 0

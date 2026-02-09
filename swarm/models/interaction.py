@@ -46,14 +46,14 @@ class SoftInteraction:
 
     # Computed labels
     v_hat: float = 0.0  # raw proxy score [-1, +1]
-    p: float = 0.5      # P(v = +1) in [0, 1]
+    p: float = 0.5  # P(v = +1) in [0, 1]
 
     # Payoff components
-    tau: float = 0.0    # transfer from initiator to counterparty
-    c_a: float = 0.0    # governance cost (initiator)
-    c_b: float = 0.0    # governance cost (counterparty)
-    r_a: float = 0.0    # reputation change (initiator)
-    r_b: float = 0.0    # reputation change (counterparty)
+    tau: float = 0.0  # transfer from initiator to counterparty
+    c_a: float = 0.0  # governance cost (initiator)
+    c_b: float = 0.0  # governance cost (counterparty)
+    r_a: float = 0.0  # reputation change (initiator)
+    r_b: float = 0.0  # reputation change (counterparty)
 
     # Optional ground truth for calibration testing
     ground_truth: Optional[int] = None  # +1 or -1 if known

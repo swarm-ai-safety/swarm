@@ -24,18 +24,32 @@ def metrics_over_time(
     toxicity = [m.toxicity_rate for m in epoch_metrics]
     quality_gap = [m.quality_gap for m in epoch_metrics]
     welfare = [m.total_welfare for m in epoch_metrics]
-    has_incoherence = bool(incoherence_series) and len(incoherence_series) == len(epochs)
+    has_incoherence = bool(incoherence_series) and len(incoherence_series) == len(
+        epochs
+    )
 
     if has_incoherence:
         fig = make_subplots(
-            rows=2, cols=2,
-            subplot_titles=("Toxicity Rate", "Quality Gap", "Incoherence Index", "Total Welfare"),
+            rows=2,
+            cols=2,
+            subplot_titles=(
+                "Toxicity Rate",
+                "Quality Gap",
+                "Incoherence Index",
+                "Total Welfare",
+            ),
             vertical_spacing=0.15,
         )
     else:
         fig = make_subplots(
-            rows=2, cols=2,
-            subplot_titles=("Toxicity Rate", "Quality Gap", "Total Welfare", "Acceptance Rate"),
+            rows=2,
+            cols=2,
+            subplot_titles=(
+                "Toxicity Rate",
+                "Quality Gap",
+                "Total Welfare",
+                "Acceptance Rate",
+            ),
             vertical_spacing=0.15,
         )
 
@@ -47,7 +61,8 @@ def metrics_over_time(
             line={"color": "#dc3545"},
             name="Toxicity",
         ),
-        row=1, col=1,
+        row=1,
+        col=1,
     )
 
     fig.add_trace(
@@ -58,7 +73,8 @@ def metrics_over_time(
             line={"color": "#0d6efd"},
             name="Quality Gap",
         ),
-        row=1, col=2,
+        row=1,
+        col=2,
     )
 
     fig.add_trace(
@@ -69,7 +85,8 @@ def metrics_over_time(
             line={"color": "#28a745"},
             name="Welfare",
         ),
-        row=2, col=2 if has_incoherence else 1,
+        row=2,
+        col=2 if has_incoherence else 1,
     )
 
     if has_incoherence:
@@ -81,13 +98,16 @@ def metrics_over_time(
                 line={"color": "#fd7e14"},
                 name="Incoherence",
             ),
-            row=2, col=1,
+            row=2,
+            col=1,
         )
     else:
         # Acceptance rate
         accepted = [m.accepted_interactions for m in epoch_metrics]
         total = [m.total_interactions for m in epoch_metrics]
-        acc_rate = [a / t if t > 0 else 0 for a, t in zip(accepted, total, strict=False)]
+        acc_rate = [
+            a / t if t > 0 else 0 for a, t in zip(accepted, total, strict=False)
+        ]
         fig.add_trace(
             go.Scatter(
                 x=epochs,
@@ -96,7 +116,8 @@ def metrics_over_time(
                 line={"color": "#6f42c1"},
                 name="Acceptance",
             ),
-            row=2, col=2,
+            row=2,
+            col=2,
         )
 
     fig.update_layout(height=height, showlegend=False)
@@ -121,10 +142,17 @@ def agent_reputation_bar(agent_states: List[Dict], height: int = 300) -> Any:
     reps = [a["reputation"] for a in agent_states]
     colors = [AGENT_COLORS.get(a["agent_type"], "#999") for a in agent_states]
 
-    fig = go.Figure(data=[
-        go.Bar(x=ids, y=reps, marker_color=colors,
-               text=[f"{r:.1f}" for r in reps], textposition="auto")
-    ])
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=ids,
+                y=reps,
+                marker_color=colors,
+                text=[f"{r:.1f}" for r in reps],
+                textposition="auto",
+            )
+        ]
+    )
     fig.update_layout(
         title="Agent Reputation",
         xaxis_title="Agent",
@@ -142,10 +170,17 @@ def agent_payoff_bar(agent_states: List[Dict], height: int = 300) -> Any:
     payoffs = [a["total_payoff"] for a in agent_states]
     colors = [AGENT_COLORS.get(a["agent_type"], "#999") for a in agent_states]
 
-    fig = go.Figure(data=[
-        go.Bar(x=ids, y=payoffs, marker_color=colors,
-               text=[f"{p:.1f}" for p in payoffs], textposition="auto")
-    ])
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=ids,
+                y=payoffs,
+                marker_color=colors,
+                text=[f"{p:.1f}" for p in payoffs],
+                textposition="auto",
+            )
+        ]
+    )
     fig.update_layout(
         title="Agent Total Payoff",
         xaxis_title="Agent",
@@ -166,14 +201,16 @@ def agent_type_pie(agent_states: List[Dict], height: int = 300) -> Any:
     values = list(type_counts.values())
     colors = [AGENT_COLORS.get(t, "#999") for t in labels]
 
-    fig = go.Figure(data=[
-        go.Pie(
-            labels=labels,
-            values=values,
-            marker={"colors": colors},
-            textinfo="label+value",
-        )
-    ])
+    fig = go.Figure(
+        data=[
+            go.Pie(
+                labels=labels,
+                values=values,
+                marker={"colors": colors},
+                textinfo="label+value",
+            )
+        ]
+    )
     fig.update_layout(title="Agent Distribution", height=height)
     return fig
 
@@ -192,13 +229,15 @@ def reputation_trajectories(history: Any, height: int = 400) -> Any:
         agent_type = agent_id.split("_")[0]
         color = AGENT_COLORS.get(agent_type, "#999")
 
-        fig.add_trace(go.Scatter(
-            x=epochs,
-            y=reps,
-            mode="lines",
-            name=agent_id,
-            line={"color": color},
-        ))
+        fig.add_trace(
+            go.Scatter(
+                x=epochs,
+                y=reps,
+                mode="lines",
+                name=agent_id,
+                line={"color": color},
+            )
+        )
 
     fig.update_layout(
         title="Reputation Trajectories",
@@ -234,10 +273,16 @@ def scenario_comparison_bar(
         else:
             values.append(0.0)
 
-    fig = go.Figure(data=[
-        go.Bar(x=scenario_ids, y=values,
-               text=[f"{v:.3f}" for v in values], textposition="auto")
-    ])
+    fig = go.Figure(
+        data=[
+            go.Bar(
+                x=scenario_ids,
+                y=values,
+                text=[f"{v:.3f}" for v in values],
+                textposition="auto",
+            )
+        ]
+    )
     fig.update_layout(
         title=metric_name.replace("_", " ").title(),
         xaxis_title="Scenario",
@@ -261,8 +306,9 @@ def sweep_tradeoff_scatter(
     # Human-readable label for the swept parameter
     pretty = x_key.replace("_", " ").title()
 
-    fig = make_subplots(rows=1, cols=2,
-                        subplot_titles=(f"Toxicity vs {pretty}", f"Welfare vs {pretty}"))
+    fig = make_subplots(
+        rows=1, cols=2, subplot_titles=(f"Toxicity vs {pretty}", f"Welfare vs {pretty}")
+    )
 
     x_vals = [r[x_key] for r in sweep_results]
 
@@ -274,7 +320,8 @@ def sweep_tradeoff_scatter(
             name="Toxicity",
             line={"color": "#dc3545"},
         ),
-        row=1, col=1,
+        row=1,
+        col=1,
     )
 
     fig.add_trace(
@@ -285,7 +332,8 @@ def sweep_tradeoff_scatter(
             name="Welfare",
             line={"color": "#28a745"},
         ),
-        row=1, col=2,
+        row=1,
+        col=2,
     )
 
     fig.update_layout(height=height, showlegend=False)

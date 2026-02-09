@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 # Base evaluator
 # ---------------------------------------------------------------------------
 
+
 class BaseEvaluator(ABC):
     """Abstract base for all evaluation axis evaluators."""
 
@@ -49,6 +50,7 @@ class EvaluationResult:
 # ---------------------------------------------------------------------------
 # 1. Experimental Validity
 # ---------------------------------------------------------------------------
+
 
 class ExperimentalValidityEvaluator(BaseEvaluator):
     """Evaluates whether agent interactions actually test the stated claim.
@@ -83,9 +85,7 @@ class ExperimentalValidityEvaluator(BaseEvaluator):
             _has_keys(r, ("name", "incentive", "policy")) for r in agent_roles
         ):
             passed_checks += 1
-            strengths.append(
-                f"Agent roles fully specified ({len(agent_roles)} agents)"
-            )
+            strengths.append(f"Agent roles fully specified ({len(agent_roles)} agents)")
         else:
             if not agent_roles:
                 required_changes.append("Agent roles must be explicitly specified")
@@ -115,9 +115,7 @@ class ExperimentalValidityEvaluator(BaseEvaluator):
             passed_checks += 1
             strengths.append("Claims depend on multi-agent interaction")
         else:
-            weaknesses.append(
-                "Claims may be reducible to single-agent behavior"
-            )
+            weaknesses.append("Claims may be reducible to single-agent behavior")
 
         # Check 4: Interaction depth
         depth = submission_data.get("interaction_depth", 0.0)
@@ -145,6 +143,7 @@ class ExperimentalValidityEvaluator(BaseEvaluator):
 # ---------------------------------------------------------------------------
 # 2. Reproducibility
 # ---------------------------------------------------------------------------
+
 
 class ReproducibilityEvaluator(BaseEvaluator):
     """Evaluates whether another agent can rerun and recover the result.
@@ -206,9 +205,7 @@ class ReproducibilityEvaluator(BaseEvaluator):
             )
             replay_success_rate = successes / len(replay_results)
             result_variance = (
-                statistics.variance(replay_results)
-                if len(replay_results) >= 2
-                else 0.0
+                statistics.variance(replay_results) if len(replay_results) >= 2 else 0.0
             )
 
             score_components.append(replay_success_rate)
@@ -232,7 +229,9 @@ class ReproducibilityEvaluator(BaseEvaluator):
             weaknesses.append("No replay results provided for verification")
             score_components.append(0.0)
 
-        score = sum(score_components) / len(score_components) if score_components else 0.0
+        score = (
+            sum(score_components) / len(score_components) if score_components else 0.0
+        )
 
         checks: Dict[str, Any] = {}
         if replay_success_rate is not None:
@@ -252,6 +251,7 @@ class ReproducibilityEvaluator(BaseEvaluator):
 # ---------------------------------------------------------------------------
 # 3. Artifact Integrity
 # ---------------------------------------------------------------------------
+
 
 class ArtifactIntegrityEvaluator(BaseEvaluator):
     """Evaluates artifact integrity (agent-era citation checking).
@@ -357,19 +357,13 @@ class ArtifactIntegrityEvaluator(BaseEvaluator):
             )
 
         if unresolved:
-            weaknesses.append(
-                f"Unresolved artifacts: {', '.join(unresolved)}"
-            )
+            weaknesses.append(f"Unresolved artifacts: {', '.join(unresolved)}")
 
         if mismatched:
-            weaknesses.append(
-                f"Hash mismatches: {', '.join(mismatched)}"
-            )
+            weaknesses.append(f"Hash mismatches: {', '.join(mismatched)}")
 
         if hash_checked_count > 0 and hash_match_rate == 1.0:
-            strengths.append(
-                f"All {hash_checked_count} artifact hashes verified"
-            )
+            strengths.append(f"All {hash_checked_count} artifact hashes verified")
 
         return EvaluationResult(
             score=score,
@@ -386,6 +380,7 @@ class ArtifactIntegrityEvaluator(BaseEvaluator):
 # ---------------------------------------------------------------------------
 # 4. Emergence Detection
 # ---------------------------------------------------------------------------
+
 
 class EmergenceDetectionEvaluator(BaseEvaluator):
     """Evaluates whether multi-agent effects were properly tested.
@@ -451,9 +446,7 @@ class EmergenceDetectionEvaluator(BaseEvaluator):
             emergence_delta = emergence_delta_val
 
             # Classify result type
-            relative_delta = (
-                emergence_delta_val / max(abs(max_single), 1e-9)
-            )
+            relative_delta = emergence_delta_val / max(abs(max_single), 1e-9)
 
             if relative_delta > self.NULL_THRESHOLD:
                 emergence_result_type = "positive"
@@ -483,7 +476,9 @@ class EmergenceDetectionEvaluator(BaseEvaluator):
 
             # Bonus for statistical analysis
             if has_stats:
-                strengths.append("Statistical analysis reported for emergence comparison")
+                strengths.append(
+                    "Statistical analysis reported for emergence comparison"
+                )
                 score_components.append(0.2)
 
         else:
@@ -513,19 +508,18 @@ class EmergenceDetectionEvaluator(BaseEvaluator):
                 score_components.append(min(1.0, topology_sensitivity_val))
             else:
                 # Invariance to topology is a finding, not a failure
-                strengths.append(
-                    "Results robust across topologies (low sensitivity)"
-                )
+                strengths.append("Results robust across topologies (low sensitivity)")
                 score_components.append(0.3)
         else:
             weaknesses.append(
-                "Limited topology perturbation data "
-                "(consider testing >= 2 topologies)"
+                "Limited topology perturbation data (consider testing >= 2 topologies)"
             )
             # Not a hard failure, just a weakness
             score_components.append(0.0)
 
-        score = sum(score_components) / len(score_components) if score_components else 0.0
+        score = (
+            sum(score_components) / len(score_components) if score_components else 0.0
+        )
 
         checks: Dict[str, Any] = {
             "emergence_test_conducted": emergence_test_conducted,
@@ -549,6 +543,7 @@ class EmergenceDetectionEvaluator(BaseEvaluator):
 # ---------------------------------------------------------------------------
 # 5. Limits & Failure Modes
 # ---------------------------------------------------------------------------
+
 
 class FailureModeEvaluator(BaseEvaluator):
     """Evaluates whether the submission identifies where and how it fails.
@@ -577,9 +572,7 @@ class FailureModeEvaluator(BaseEvaluator):
 
         failure_modes = submission_data.get("failure_modes", [])
         falsification_attempts = submission_data.get("falsification_attempts", [])
-        adversarial_explored = submission_data.get(
-            "adversarial_cases_explored", False
-        )
+        adversarial_explored = submission_data.get("adversarial_cases_explored", False)
 
         failure_count = len(failure_modes)
         falsification_count = len(falsification_attempts)
@@ -588,15 +581,11 @@ class FailureModeEvaluator(BaseEvaluator):
 
         # Check 1: At least one documented failure mode (required)
         if failure_count >= 1:
-            strengths.append(
-                f"{failure_count} failure mode(s) documented"
-            )
+            strengths.append(f"{failure_count} failure mode(s) documented")
             # Diminishing returns: 1 mode = 0.5, 2 = 0.75, 3+ = ~1.0
             score_components.append(min(1.0, 0.5 + 0.25 * (failure_count - 1)))
         else:
-            required_changes.append(
-                "At least one failure mode must be documented"
-            )
+            required_changes.append("At least one failure mode must be documented")
             score_components.append(0.0)
 
         # Check 2: Falsification attempts
@@ -614,12 +603,12 @@ class FailureModeEvaluator(BaseEvaluator):
             strengths.append("Adversarial or degenerate cases explored")
             score_components.append(1.0)
         else:
-            weaknesses.append(
-                "No adversarial or degenerate cases explored"
-            )
+            weaknesses.append("No adversarial or degenerate cases explored")
             score_components.append(0.0)
 
-        score = sum(score_components) / len(score_components) if score_components else 0.0
+        score = (
+            sum(score_components) / len(score_components) if score_components else 0.0
+        )
 
         return EvaluationResult(
             score=score,
@@ -636,6 +625,7 @@ class FailureModeEvaluator(BaseEvaluator):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _has_keys(d: Any, keys: Tuple[str, ...]) -> bool:
     """Check that a dict-like object has all specified keys."""

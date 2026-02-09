@@ -224,6 +224,7 @@ Set "accept" to `true` to accept the interaction, `false` to reject it.
 # Observation Formatting
 # =============================================================================
 
+
 def format_observation(observation: Observation) -> str:
     """
     Format an Observation into a human-readable prompt section.
@@ -254,7 +255,7 @@ def format_observation(observation: Observation) -> str:
         lines.append("")
         lines.append("## Visible Posts (top 5)")
         for post in observation.visible_posts[:5]:
-            safe_content = _sanitize_agent_content(post.get('content', '')[:50])
+            safe_content = _sanitize_agent_content(post.get("content", "")[:50])
             lines.append(
                 f"- [{post.get('post_id', 'unknown')[:8]}] "
                 f"by {post.get('author_id', 'unknown')}: "
@@ -267,7 +268,7 @@ def format_observation(observation: Observation) -> str:
         lines.append("")
         lines.append("## Pending Proposals (interactions proposed to you)")
         for prop in observation.pending_proposals:
-            safe_content = _sanitize_agent_content(prop.get('content', '')[:50])
+            safe_content = _sanitize_agent_content(prop.get("content", "")[:50])
             lines.append(
                 f"- [{prop.get('proposal_id', 'unknown')[:8]}] "
                 f"from {prop.get('initiator_id', 'unknown')}: "
@@ -280,7 +281,9 @@ def format_observation(observation: Observation) -> str:
         lines.append("")
         lines.append("## Available Tasks")
         for task in observation.available_tasks[:5]:
-            safe_prompt = _sanitize_agent_content(task.get('prompt', 'No description')[:50])
+            safe_prompt = _sanitize_agent_content(
+                task.get("prompt", "No description")[:50]
+            )
             lines.append(
                 f"- [{task.get('task_id', 'unknown')[:8]}] "
                 f"[{safe_prompt}] "
@@ -292,7 +295,9 @@ def format_observation(observation: Observation) -> str:
         lines.append("")
         lines.append("## Your Active Tasks")
         for task in observation.active_tasks:
-            safe_prompt = _sanitize_agent_content(task.get('prompt', 'No description')[:50])
+            safe_prompt = _sanitize_agent_content(
+                task.get("prompt", "No description")[:50]
+            )
             lines.append(
                 f"- [{task.get('task_id', 'unknown')[:8]}] "
                 f"[{safe_prompt}] "
@@ -333,7 +338,7 @@ def format_interaction_proposal(proposal: Dict[str, Any]) -> str:
     Returns:
         Formatted string
     """
-    safe_content = _sanitize_agent_content(proposal.get('content', 'No description'))
+    safe_content = _sanitize_agent_content(proposal.get("content", "No description"))
     lines = [
         "## Interaction Proposal",
         f"- Proposal ID: {proposal.get('proposal_id', 'unknown')}",
@@ -342,7 +347,7 @@ def format_interaction_proposal(proposal: Dict[str, Any]) -> str:
         f"- Content: [{safe_content}]",
     ]
 
-    if proposal.get('offered_transfer'):
+    if proposal.get("offered_transfer"):
         lines.append(f"- Offered Transfer: {proposal['offered_transfer']:.2f}")
 
     return "\n".join(lines)
@@ -351,6 +356,7 @@ def format_interaction_proposal(proposal: Dict[str, Any]) -> str:
 # =============================================================================
 # Full Prompt Construction
 # =============================================================================
+
 
 def build_action_prompt(
     persona: PersonaType,
@@ -392,7 +398,9 @@ def build_action_prompt(
                 )
 
     user_parts.append("\n## Your Turn")
-    user_parts.append("Decide your action and respond with the JSON format specified above.")
+    user_parts.append(
+        "Decide your action and respond with the JSON format specified above."
+    )
 
     user = "\n".join(user_parts)
 
@@ -435,10 +443,11 @@ def build_accept_prompt(
     ]
 
     # Add history with this counterparty
-    initiator_id = proposal.get('initiator_id', '')
+    initiator_id = proposal.get("initiator_id", "")
     if memory:
         relevant = [
-            m for m in memory
+            m
+            for m in memory
             if m.get("type") == "interaction_outcome"
             and m.get("counterparty") == initiator_id
         ]

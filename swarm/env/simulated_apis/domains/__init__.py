@@ -16,4 +16,3 @@ __all__ = [
     "build_payments_catalog",
     "build_incident_response_catalog",
 ]
-

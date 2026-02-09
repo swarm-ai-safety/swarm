@@ -87,7 +87,9 @@ class IncoherenceCircuitBreakerLever(GovernanceLever):
         avg_uncertainty = tracker.avg_uncertainty()
         agents_to_freeze = set()
         if avg_uncertainty >= self.config.incoherence_breaker_threshold:
-            tracker.freeze_until_epoch = state.current_epoch + self.config.freeze_duration_epochs
+            tracker.freeze_until_epoch = (
+                state.current_epoch + self.config.freeze_duration_epochs
+            )
             agents_to_freeze.add(agent_id)
 
         return LeverEffect(

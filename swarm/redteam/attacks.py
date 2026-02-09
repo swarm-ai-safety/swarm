@@ -266,7 +266,11 @@ class AttackLibrary:
                 "identity_overlap": 0.0,  # Appear independent
                 "vote_coordination": True,
             },
-            targeted_levers=["vote_normalization", "bandwidth_cap", "collusion_detection"],
+            targeted_levers=[
+                "vote_normalization",
+                "bandwidth_cap",
+                "collusion_detection",
+            ],
             metrics_to_track=[
                 "combined_vote_power",
                 "coordination_detected",
@@ -423,7 +427,9 @@ class AttackLibrary:
         return [a for a in cls.get_all_attacks() if a.category == category]
 
     @classmethod
-    def get_attacks_by_difficulty(cls, difficulty: AttackDifficulty) -> List[AttackScenario]:
+    def get_attacks_by_difficulty(
+        cls, difficulty: AttackDifficulty
+    ) -> List[AttackScenario]:
         """Get attacks filtered by difficulty."""
         return [a for a in cls.get_all_attacks() if a.difficulty == difficulty]
 
@@ -431,6 +437,7 @@ class AttackLibrary:
     def get_attacks_targeting_lever(cls, lever: str) -> List[AttackScenario]:
         """Get attacks that target a specific governance lever."""
         return [
-            a for a in cls.get_all_attacks()
+            a
+            for a in cls.get_all_attacks()
             if lever in a.targeted_levers or "all" in a.targeted_levers
         ]

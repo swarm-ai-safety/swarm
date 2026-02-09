@@ -651,6 +651,7 @@ class TestRedTeamEvaluatorFull:
     def test_evaluate_full_with_verbose(self, capsys):
         """evaluate() with verbose=True prints progress."""
         import random
+
         random.seed(42)
 
         config = {
@@ -676,6 +677,7 @@ class TestRedTeamEvaluatorFull:
     def test_evaluate_populates_report_extremes(self):
         """evaluate() sets most_effective_attack and least_effective_attack."""
         import random
+
         random.seed(42)
 
         config = {"circuit_breaker_enabled": True}
@@ -698,6 +700,7 @@ class TestRedTeamEvaluatorFull:
     def test_evaluate_categorizes_results(self):
         """evaluate() groups results by category and difficulty."""
         import random
+
         random.seed(42)
 
         config = {}
@@ -734,50 +737,63 @@ class TestSimulateAttackOutcome:
     def test_collusion_ring_with_detection(self):
         """collusion_detection_enabled reduces collusion success."""
         import random
+
         random.seed(42)
 
         config = {"collusion_detection_enabled": True}
         evaluator = self._make_evaluator(config)
         scenario = AttackLibrary.collusion_ring()
-        result = evaluator._simulate_attack_outcome(scenario, self._make_result(scenario))
+        result = evaluator._simulate_attack_outcome(
+            scenario, self._make_result(scenario)
+        )
         assert result.collusion_detected is True
 
     def test_collusion_ring_without_detection(self):
         """Without collusion detection, collusion not flagged."""
         import random
+
         random.seed(42)
 
         config = {"collusion_detection_enabled": False}
         evaluator = self._make_evaluator(config)
         scenario = AttackLibrary.collusion_ring()
-        result = evaluator._simulate_attack_outcome(scenario, self._make_result(scenario))
+        result = evaluator._simulate_attack_outcome(
+            scenario, self._make_result(scenario)
+        )
         assert result.collusion_detected is False
 
     def test_threshold_dancing_with_circuit_breaker(self):
         """circuit_breaker_enabled affects threshold dancing."""
         import random
+
         random.seed(42)
 
         config = {"circuit_breaker_enabled": True}
         evaluator = self._make_evaluator(config)
         scenario = AttackLibrary.threshold_dancing()
-        result = evaluator._simulate_attack_outcome(scenario, self._make_result(scenario))
+        result = evaluator._simulate_attack_outcome(
+            scenario, self._make_result(scenario)
+        )
         assert result.evasion_rate >= 0
 
     def test_reputation_farming_with_audit(self):
         """audit_enabled reduces reputation farming success."""
         import random
+
         random.seed(42)
 
         config = {"audit_enabled": True}
         evaluator = self._make_evaluator(config)
         scenario = AttackLibrary.reputation_farming_exploit()
-        result = evaluator._simulate_attack_outcome(scenario, self._make_result(scenario))
+        result = evaluator._simulate_attack_outcome(
+            scenario, self._make_result(scenario)
+        )
         assert result.evasion_rate >= 0
 
     def test_staking_reduces_success(self):
         """staking_enabled reduces base success."""
         import random
+
         random.seed(100)
 
         config_with = {"staking_enabled": True}
@@ -787,11 +803,15 @@ class TestSimulateAttackOutcome:
 
         random.seed(100)
         eval_with = self._make_evaluator(config_with)
-        result_with = eval_with._simulate_attack_outcome(scenario, self._make_result(scenario))
+        result_with = eval_with._simulate_attack_outcome(
+            scenario, self._make_result(scenario)
+        )
 
         random.seed(100)
         eval_without = self._make_evaluator(config_without)
-        result_without = eval_without._simulate_attack_outcome(scenario, self._make_result(scenario))
+        result_without = eval_without._simulate_attack_outcome(
+            scenario, self._make_result(scenario)
+        )
 
         # Staking should reduce evasion rate
         assert result_with.evasion_rate <= result_without.evasion_rate
@@ -799,23 +819,29 @@ class TestSimulateAttackOutcome:
     def test_tax_rate_reduces_success(self):
         """Positive transaction_tax_rate reduces success probability."""
         import random
+
         random.seed(100)
 
         scenario = AttackLibrary.reputation_farming_exploit()
 
         random.seed(100)
         eval_tax = self._make_evaluator({"transaction_tax_rate": 0.2})
-        result_tax = eval_tax._simulate_attack_outcome(scenario, self._make_result(scenario))
+        result_tax = eval_tax._simulate_attack_outcome(
+            scenario, self._make_result(scenario)
+        )
 
         random.seed(100)
         eval_no_tax = self._make_evaluator({"transaction_tax_rate": 0.0})
-        result_no_tax = eval_no_tax._simulate_attack_outcome(scenario, self._make_result(scenario))
+        result_no_tax = eval_no_tax._simulate_attack_outcome(
+            scenario, self._make_result(scenario)
+        )
 
         assert result_tax.evasion_rate <= result_no_tax.evasion_rate
 
     def test_successful_attack_has_damage_before_detection(self):
         """Successful attack sets damage_before_detection to 60% of damage."""
         import random
+
         random.seed(1)
 
         config = {}
@@ -825,7 +851,9 @@ class TestSimulateAttackOutcome:
         # Keep trying seeds until we get a successful attack
         for seed in range(100):
             random.seed(seed)
-            result = evaluator._simulate_attack_outcome(scenario, self._make_result(scenario))
+            result = evaluator._simulate_attack_outcome(
+                scenario, self._make_result(scenario)
+            )
             if result.attack_succeeded:
                 assert result.damage_before_detection == pytest.approx(
                     result.damage_caused * 0.6
@@ -836,13 +864,19 @@ class TestSimulateAttackOutcome:
         """Prevented attack sets detected_at_epoch."""
         import random
 
-        config = {"circuit_breaker_enabled": True, "audit_enabled": True, "staking_enabled": True}
+        config = {
+            "circuit_breaker_enabled": True,
+            "audit_enabled": True,
+            "staking_enabled": True,
+        }
         evaluator = self._make_evaluator(config)
         scenario = AttackLibrary.threshold_dancing()
 
         for seed in range(100):
             random.seed(seed)
-            result = evaluator._simulate_attack_outcome(scenario, self._make_result(scenario))
+            result = evaluator._simulate_attack_outcome(
+                scenario, self._make_result(scenario)
+            )
             if result.governance_prevented:
                 assert result.detected_at_epoch == result.detection_latency
                 break
@@ -854,6 +888,7 @@ class TestIdentifyVulnerabilities:
     def test_high_evasion_rate_creates_vulnerability(self):
         """Evasion rate > 0.7 creates a vulnerability."""
         import random
+
         random.seed(42)
 
         # Use minimal governance so attacks succeed easily
@@ -875,6 +910,7 @@ class TestIdentifyVulnerabilities:
     def test_successful_attack_creates_vulnerability(self):
         """Successful attack with damage > 30 creates vulnerability."""
         import random
+
         random.seed(42)
 
         config = {}
@@ -905,6 +941,7 @@ class TestGenerateRecommendations:
     def test_missing_collusion_detection_with_coordination_attack(self):
         """Recommends collusion detection when coordination attack succeeds."""
         import random
+
         random.seed(42)
 
         config = {"collusion_detection_enabled": False}
@@ -1067,12 +1104,15 @@ class TestComputeGovernanceEffectiveness:
         ]
 
         eff = compute_governance_effectiveness(
-            agent_actions, agent_types, detections, penalties,
+            agent_actions,
+            agent_types,
+            detections,
+            penalties,
         )
 
-        assert eff.true_positives == 1   # act_1
+        assert eff.true_positives == 1  # act_1
         assert eff.false_negatives == 1  # act_2
-        assert eff.true_negatives == 1   # act_3
+        assert eff.true_negatives == 1  # act_3
         assert eff.false_positives == 1  # act_4
         assert eff.honest_agents_penalized == 1
         assert eff.penalties_applied == 15.0
@@ -1086,7 +1126,10 @@ class TestComputeGovernanceEffectiveness:
         detections = [{"action_id": "a1"}]
 
         eff = compute_governance_effectiveness(
-            agent_actions, agent_types, detections, [],
+            agent_actions,
+            agent_types,
+            detections,
+            [],
         )
         assert eff.true_positives == 1
 
