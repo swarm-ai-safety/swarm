@@ -1,0 +1,59 @@
+# LDT Cooperation Scenario
+# Tests Logical Decision Theory agents against various agent types.
+# LDT agents should cooperate with each other (logical twins) and
+# maintain robust cooperation even against opportunistic/adversarial agents.
+
+scenario_id: ldt_cooperation
+description: "LDT agents vs mixed population — cooperation through logical correlation"
+motif: ldt_cooperation
+
+agents:
+  - type: ldt
+    count: 3
+    config:
+      cooperation_prior: 0.65
+      similarity_threshold: 0.7
+      welfare_weight: 0.3
+      updateless_commitment: 0.8
+  - type: honest
+    count: 2
+  - type: opportunistic
+    count: 1
+  - type: adversarial
+    count: 1
+
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 1.0
+  bandwidth_cap: 10
+  circuit_breaker_enabled: false
+  audit_enabled: false
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.0
+  rho_b: 0.0
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 10
+  min_agents: 7
+  toxicity_threshold: 0.4
+
+outputs:
+  event_log: "logs/ldt_cooperation_events.jsonl"
+  metrics_csv: "logs/ldt_cooperation_metrics.csv"

@@ -13,6 +13,7 @@ from swarm.agents.base import (
 )
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.ldt_agent import LDTAgent
 from swarm.agents.memory_config import MemoryConfig
 from swarm.agents.moltbook_agent import (
     CollusiveVoterAgent,
@@ -45,6 +46,7 @@ __all__ = [
     "MemoryConfig",
     # Agent types
     "HonestAgent",
+    "LDTAgent",
     "OpportunisticAgent",
     "DeceptiveAgent",
     "AdversarialAgent",

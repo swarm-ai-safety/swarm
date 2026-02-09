@@ -11,6 +11,7 @@ from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.base import BaseAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.ldt_agent import LDTAgent
 from swarm.agents.memory_agent import (
     CacheGamerAgent,
     CollusiveVerifierAgent,
@@ -53,6 +54,7 @@ from swarm.governance.config import GovernanceConfig
 # Agent type registry for scripted agents
 AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "honest": HonestAgent,
+    "ldt": LDTAgent,
     "opportunistic": OpportunisticAgent,
     "deceptive": DeceptiveAgent,
     "adversarial": AdversarialAgent,
