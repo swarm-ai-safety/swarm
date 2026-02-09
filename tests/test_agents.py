@@ -2,6 +2,8 @@
 
 import random
 
+import pytest
+
 from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.base import Action, ActionType, Observation, Role
 from swarm.agents.deceptive import DeceptiveAgent
@@ -91,8 +93,30 @@ class TestBaseAgent:
         )
         agent._interaction_history.append(interaction)
 
+        # Bootstrap uses EMA (alpha=0.3) from neutral: 0.5 * 0.7 + 0.8 * 0.3 = 0.59
         trust = agent.compute_counterparty_trust("agent_2")
-        assert trust == 0.8
+        assert trust == pytest.approx(0.59)
+
+    def test_counterparty_trust_updates_with_new_interactions(self):
+        """Test that trust reflects new interactions, not just the first computation."""
+        agent = HonestAgent(agent_id="agent_1")
+
+        # First interaction with low p
+        i1 = SoftInteraction(
+            initiator="agent_2", counterparty="agent_1", accepted=True, p=0.3,
+        )
+        agent.update_from_outcome(i1, payoff=0.0)
+        trust_after_bad = agent.compute_counterparty_trust("agent_2")
+
+        # Several good interactions should increase trust
+        for _ in range(5):
+            ix = SoftInteraction(
+                initiator="agent_2", counterparty="agent_1", accepted=True, p=0.9,
+            )
+            agent.update_from_outcome(ix, payoff=1.0)
+
+        trust_after_good = agent.compute_counterparty_trust("agent_2")
+        assert trust_after_good > trust_after_bad
 
 
 class TestHonestAgent:
