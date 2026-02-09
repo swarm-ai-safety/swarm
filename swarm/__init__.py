@@ -9,7 +9,9 @@ from swarm.models.agent import AgentState, AgentStatus, AgentType
 from swarm.models.interaction import InteractionType, SoftInteraction
 
 
-# Lazy imports to avoid circular dependencies
+# Lazy imports: ``swarm.research`` and ``swarm.evaluation`` depend on core
+# modules that import from this package.  Deferring them avoids circular
+# import errors while still allowing ``import swarm; swarm.research``.
 def __getattr__(name: str):
     if name == "research":
         from swarm import research

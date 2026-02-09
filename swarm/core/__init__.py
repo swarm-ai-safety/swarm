@@ -1,5 +1,6 @@
 """Core computation modules for payoff, proxy, and orchestration."""
 
+from swarm.core.handler import Handler
 from swarm.core.orchestrator import EpochMetrics, Orchestrator, OrchestratorConfig
 from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.core.proxy import ProxyComputer, ProxyObservables, ProxyWeights
@@ -39,4 +40,6 @@ __all__ = [
     "create_code_verifier",
     "create_research_verifier",
     "create_task_verifier",
+    # Handler base class
+    "Handler",
 ]

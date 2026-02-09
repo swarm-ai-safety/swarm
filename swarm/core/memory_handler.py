@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, Optional
 from pydantic import BaseModel, model_validator
 
 from swarm.agents.base import Action, ActionType
+from swarm.core.handler import Handler
 from swarm.core.memory_observables import MemoryActionOutcome, MemoryObservableGenerator
 from swarm.core.proxy import ProxyObservables
 from swarm.env.memory_tiers import MemoryStore
@@ -47,7 +48,7 @@ class MemoryActionResult:
     accepted: bool = True
 
 
-class MemoryHandler:
+class MemoryHandler(Handler):
     """Handles memory tier actions and lifecycle events."""
 
     def __init__(
@@ -55,8 +56,8 @@ class MemoryHandler:
         config: MemoryTierConfig,
         emit_event: Callable[[Event], None],
     ):
+        super().__init__(emit_event=emit_event)
         self.config = config
-        self._emit_event = emit_event
         self._rng = random.Random(config.seed)
         self.store = MemoryStore(seed=config.seed)
         self.store._hot_cache_size = config.hot_cache_size

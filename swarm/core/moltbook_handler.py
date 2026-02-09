@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, Optional, Tuple
 from pydantic import BaseModel, model_validator
 
 from swarm.agents.base import Action, ActionType
+from swarm.core.handler import Handler
 from swarm.core.moltbook_observables import (
     MoltbookActionOutcome,
     MoltbookObservableGenerator,
@@ -97,7 +98,7 @@ class MoltbookScorer:
         self.wasted_actions[agent_id] = self.wasted_actions.get(agent_id, 0) + 1
 
 
-class MoltbookHandler:
+class MoltbookHandler(Handler):
     """Handles Moltbook posts, comments, verification, and votes."""
 
     def __init__(
@@ -108,8 +109,8 @@ class MoltbookHandler:
         rate_limit_lever: Optional[MoltbookRateLimitLever] = None,
         challenge_lever: Optional[ChallengeVerificationLever] = None,
     ) -> None:
+        super().__init__(emit_event=emit_event)
         self.config = config
-        self._emit_event = emit_event
         self._rng = random.Random(config.seed)
         self.feed = MoltbookFeed(max_content_length=config.max_content_length)
         self.challenge_gen = ChallengeGenerator(seed=config.seed)
@@ -164,7 +165,7 @@ class MoltbookHandler:
     # Lifecycle hooks
     # ------------------------------------------------------------------
 
-    def on_epoch_start(self) -> None:
+    def on_epoch_start(self, state: Any = None) -> None:
         self._rate_limit_lever.on_epoch_start(None, 0)
 
     def tick(self, current_step: int) -> None:

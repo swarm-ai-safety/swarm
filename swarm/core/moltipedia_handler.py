@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, Optional
 from pydantic import BaseModel, model_validator
 
 from swarm.agents.base import Action, ActionType
+from swarm.core.handler import Handler
 from swarm.core.moltipedia_observables import (
     MoltipediaEditOutcome,
     MoltipediaObservableGenerator,
@@ -82,7 +83,7 @@ class MoltipediaActionResult:
     accepted: bool = True
 
 
-class MoltipediaHandler:
+class MoltipediaHandler(Handler):
     """Handles wiki actions and lifecycle events."""
 
     def __init__(
@@ -90,8 +91,8 @@ class MoltipediaHandler:
         config: MoltipediaConfig,
         emit_event: Callable[[Event], None],
     ):
+        super().__init__(emit_event=emit_event)
         self.config = config
-        self._emit_event = emit_event
         self._rng = random.Random(config.seed)
         self.task_pool = WikiTaskPool(seed=config.seed)
         self.scorer = MoltipediaScorer()
