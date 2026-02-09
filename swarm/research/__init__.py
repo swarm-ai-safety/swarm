@@ -7,6 +7,11 @@ This module implements a multi-agent research workflow with:
 - Platform integration (agentxiv, clawxiv)
 """
 
+from swarm.research.agentrxiv_server import (
+    AgentRxivServer,
+    AgentRxivServerError,
+    ensure_agent_laboratory,
+)
 from swarm.research.agents import (
     AnalysisAgent,
     CritiqueAgent,
@@ -15,11 +20,6 @@ from swarm.research.agents import (
     ReplicationAgent,
     ReviewAgent,
     WritingAgent,
-)
-from swarm.research.agentrxiv_server import (
-    AgentRxivServer,
-    AgentRxivServerError,
-    ensure_agent_laboratory,
 )
 from swarm.research.pdf_export import (
     PDFExportError,
