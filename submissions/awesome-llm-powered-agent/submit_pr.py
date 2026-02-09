@@ -18,6 +18,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -64,7 +65,10 @@ def gh_api(
     for attempt in range(4):
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
-                return json.loads(resp.read().decode()) if resp.read else {}
+                data = resp.read()
+                if not data:
+                    return {}
+                return json.loads(data.decode())
         except urllib.error.HTTPError as exc:
             payload = exc.read().decode() if exc.fp else ""
             if exc.code == 422 and "already exists" in payload.lower():
@@ -125,25 +129,49 @@ def get_readme(owner: str, token: str) -> tuple[str, str]:
 
 def patch_readme(content: str) -> str:
     """Insert the SWARM entry into the Multi-Agent Simulation Projects section."""
-    # Find the last entry in Multi-Agent Simulation Projects
-    marker = "* ![AgentVerse Stars]"
-    idx = content.find(marker)
-    if idx == -1:
-        raise ValueError(
-            "Could not locate AgentVerse entry in README — "
-            "upstream format may have changed."
-        )
-    # Find the end of that line
-    eol = content.index("\n", idx)
-    # Insert SWARM entry after AgentVerse line
-    patched = content[: eol + 1] + SWARM_ENTRY + "\n" + content[eol + 1 :]
-
     # Verify idempotency
-    if content.count("swarm-ai-safety/swarm") > 0:
+    if "swarm-ai-safety/swarm" in content:
         print("SWARM entry already present — skipping patch.")
         return content
 
-    return patched
+    header_match = re.search(
+        r"^###\s+Multi-Agent Simulation Projects\s*$",
+        content,
+        flags=re.MULTILINE,
+    )
+    if not header_match:
+        raise ValueError(
+            "Could not locate 'Multi-Agent Simulation Projects' section — "
+            "upstream format may have changed."
+        )
+
+    header_line_end = content.find("\n", header_match.end())
+    if header_line_end == -1:
+        header_line_end = len(content)
+        section_start = header_line_end
+    else:
+        section_start = header_line_end + 1
+
+    next_section = re.search(r"^##\s+", content[section_start:], flags=re.MULTILINE)
+    section_end = section_start + next_section.start() if next_section else len(content)
+
+    section = content[section_start:section_end]
+    lines = section.splitlines(keepends=True)
+
+    insert_at = None
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith("* "):
+            insert_at = i + 1
+
+    if insert_at is None:
+        insert_at = 0
+        while insert_at < len(lines) and lines[insert_at].strip() == "":
+            insert_at += 1
+
+    lines.insert(insert_at, SWARM_ENTRY + "\n")
+    new_section = "".join(lines)
+
+    return content[:section_start] + new_section + content[section_end:]
 
 
 def create_branch(owner: str, token: str) -> None:
