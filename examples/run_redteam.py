@@ -124,8 +124,8 @@ def run_evaluation(mode: str, out_dir: Path) -> int:
             return obj.isoformat()
         if hasattr(obj, "to_dict"):
             return obj.to_dict()
-        if hasattr(obj, "__dict__"):
-            return obj.__dict__
+        # Avoid __dict__ fallback -- it could leak internal state
+        # (e.g. credentials added to config objects in the future).
         return str(obj)
 
     with open(report_json_path, "w") as f:
