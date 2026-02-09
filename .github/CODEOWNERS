@@ -2,18 +2,18 @@
 * @rsavitt
 
 # Core simulation engine
-/src/core/ @rsavitt
+/swarm/core/ @rsavitt
 
 # Agent implementations
-/src/agents/ @rsavitt
+/swarm/agents/ @rsavitt
 
 # Metrics and analysis
-/src/metrics/ @rsavitt
-/src/analysis/ @rsavitt
+/swarm/metrics/ @rsavitt
+/swarm/analysis/ @rsavitt
 
 # Governance and boundaries
-/src/governance/ @rsavitt
-/src/boundaries/ @rsavitt
+/swarm/governance/ @rsavitt
+/swarm/boundaries/ @rsavitt
 
 # CI/CD and tooling
 /.github/ @rsavitt
