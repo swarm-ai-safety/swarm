@@ -1,0 +1,22 @@
+diff --git a/README.md b/README.md
+index 1234567..abcdefg 100644
+--- a/README.md
++++ b/README.md
+@@
+   <tr>
+     <td width="23%">
+     <img src="https://vitalab.github.io/article/images/autocurricula/env.png" width="100%"/>
+     </td>
++    <td width="23%">
++    <img src="https://github.com/swarm-ai-safety/swarm/raw/main/docs/images/swarm-hero.gif" width="100%"/>
++    </td>
+   </tr>
+   <tr>
+     <th>
+     <a href="https://github.com/openai/multi-agent-emergence-environments">Multiagent emergence</a>
+     </th>
++    <th>
++    <a href="https://github.com/swarm-ai-safety/swarm">SWARM</a>
++    </th>
+ 
+   </tr>
