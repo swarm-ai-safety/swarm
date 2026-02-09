@@ -91,7 +91,21 @@ social_surplus = S_soft - E_soft = p·s_plus - (1-p)·(s_minus + h)
 
 The paradox would likely attenuate or reverse under social surplus accounting. The sensitivity analysis confirms this: at `rho=1.0` (where welfare = social surplus), 100% honest dominates by 43%.
 
-## 5. Red-Team Evaluation
+## 5. Related Work
+
+The purity paradox connects to several threads in the multi-agent systems and game theory literature:
+
+- **Pollack, Karimi & Lanctot (2024), "Conditions for Altruistic Perversity in Two-Strategy Population Games"** (arXiv:2407.11250). The closest theoretical precedent. They prove that in two-strategy population games with convex welfare functions, increasing the proportion of altruistic agents can *decrease* total welfare — a phenomenon they term "altruistic perversity." Our purity paradox is an instance of this: honest agents play the altruistic strategy, and the welfare function is effectively convex due to the interaction-volume effect (more aggressive agents generate more surplus-counted interactions). Their conditions (convex welfare + large altruistic population) map directly onto our `rho < 0.5` + `s+ > s-` regime.
+
+- **Tennant, Hailes & Musolesi (2024), "Dynamics of Moral Behavior in Heterogeneous Populations of Learning Agents"** (arXiv:2403.04202). Studies morally heterogeneous populations in iterated social dilemmas and finds that population composition significantly affects emergent cooperation dynamics. Their work on how minority "immoral" agents can shift equilibria in heterogeneous populations complements our finding that small dishonest minorities drive aggregate welfare through increased interaction volume.
+
+- **Meir & Parkes (2015), "Playing the Wrong Game: Bounding Externalities in Diverse Populations"** (arXiv:1411.1751). Formalizes how agents optimizing private objectives in diverse populations generate externalities that distort social welfare. Their "biased price of anarchy" framework provides theoretical grounding for our observation that private welfare (summed payoffs) diverges from social surplus when externalities are under-priced — exactly the mechanism behind the purity paradox at low `rho`.
+
+- **Tomasev et al. (2025), "Virtual Agent Economies"** (arXiv:2509.10147). The foundational virtual agent economies paper that SWARM builds upon. Their welfare and toxicity metrics form the basis of our simulation framework. The purity paradox arises from the specific welfare accounting choices in this lineage of work.
+
+- **"The Trust Paradox in LLM-Based Multi-Agent Systems"** (arXiv:2510.18563). Identifies a structurally similar paradox in LLM-based multi-agent settings: systems designed for maximum trust can underperform mixed-trust configurations. While focused on LLM coordination rather than game-theoretic payoffs, the parallel suggests the purity paradox may generalize beyond the specific welfare metric examined here.
+
+## 6. Red-Team Evaluation
 
 Separate from the purity paradox, we ran 8 attack vectors against 4 governance configurations:
 
@@ -104,7 +118,7 @@ Separate from the purity paradox, we ran 8 attack vectors against 4 governance c
 
 Top vulnerabilities: Sybil attacks (damage=120, CRITICAL), collusion rings (97, CRITICAL), resource drain (60, CRITICAL). Even the strictest governance only reaches a D grade.
 
-## 6. Conclusions
+## 7. Conclusions
 
 1. **The purity paradox is real but conditional.** It depends on surplus asymmetry (`s+ > s-`) and low externality internalization (`rho < 0.5`). It is not a universal property of multi-agent systems.
 
@@ -116,7 +130,7 @@ Top vulnerabilities: Sybil attacks (damage=120, CRITICAL), collusion rings (97, 
 
 5. **Governance alone is insufficient.** Even strict governance (all levers enabled) only achieves a D grade against adversarial attacks. Defense-in-depth and Sybil-specific countermeasures remain open problems.
 
-## 7. Artifacts
+## 8. Artifacts
 
 | File | Description |
 |------|-------------|
