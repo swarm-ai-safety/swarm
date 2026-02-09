@@ -1880,7 +1880,7 @@ class Orchestrator:
             if self._is_llm_agent(counterparty):
                 accept = await counterparty.accept_interaction_async(
                     agent_proposal, observation
-                )  # type: ignore[attr-defined]
+                )
             else:
                 accept = counterparty.accept_interaction(agent_proposal, observation)
 
