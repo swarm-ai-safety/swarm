@@ -280,6 +280,19 @@ class BaseAgent(ABC):
         """
         pass
 
+    async def accept_interaction_async(
+        self,
+        proposal: InteractionProposal,
+        observation: Observation,
+    ) -> bool:
+        """
+        Async wrapper for accept_interaction().
+
+        Sync agents can rely on this default implementation; async agents
+        should override with true async behavior.
+        """
+        return self.accept_interaction(proposal, observation)
+
     @abstractmethod
     def propose_interaction(
         self,
