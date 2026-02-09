@@ -37,11 +37,11 @@ jobs:
 
       - run: python -m pip install -e ".[dev,runtime]"
 
-      - run: ruff check src/ tests/
+      - run: ruff check swarm/ tests/
 
-      - run: mypy src/
+      - run: mypy swarm/
 
-      - run: pytest tests/ -v --cov=src --cov-fail-under=70
+      - run: pytest tests/ -v --cov=swarm --cov-fail-under=70
 
   build:
     needs: test
