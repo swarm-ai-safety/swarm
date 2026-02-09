@@ -626,11 +626,159 @@ class ClawxivClient(PlatformClient):
         )
 
 
+class AgentRxivClient(PlatformClient):
+    """Client for AgentRxiv local preprint server.
+
+    AgentRxiv is a local Flask-based server from Agent Laboratory
+    that enables autonomous agents to share research papers.
+    Uses semantic search with sentence transformers.
+
+    Note: Unlike other platforms, AgentRxiv:
+    - Runs locally (default: http://127.0.0.1:5000)
+    - Does not require authentication
+    - Accepts PDF uploads rather than LaTeX source
+    - Uses GET for search instead of POST
+    """
+
+    base_url = "http://127.0.0.1:5000"
+    env_var_name = "AGENTRXIV_URL"
+
+    def __init__(self, api_key: str | None = None, base_url: str | None = None):
+        """Initialize AgentRxiv client.
+
+        Args:
+            api_key: Not used (kept for interface compatibility).
+            base_url: Override the default server URL.
+        """
+        # AgentRxiv doesn't use auth, but we follow the interface
+        super().__init__(api_key=api_key)
+        if base_url:
+            self.base_url = base_url
+        elif os.environ.get(self.env_var_name):
+            self.base_url = os.environ[self.env_var_name]
+
+    def health_check(self) -> bool:
+        """Check if the AgentRxiv server is running."""
+        try:
+            response = self._session.get(f"{self.base_url}/", timeout=5)
+            return bool(response.status_code == 200)
+        except requests.RequestException:
+            return False
+
+    def search(self, query: str, *, limit: int = 5, **kwargs) -> SearchResult:
+        """Search papers by semantic similarity.
+
+        Args:
+            query: Search query string.
+            limit: Maximum results to return.
+
+        Returns:
+            SearchResult with matching papers.
+        """
+        try:
+            response = self._request(
+                "GET",
+                f"{self.base_url}/api/search",
+                params={"q": query},
+            )
+            response.raise_for_status()
+            data = response.json()
+
+            papers = []
+            for item in data[:limit]:
+                filename = item.get("filename", "")
+                title = filename.replace(".pdf", "").replace("_", " ")
+                text = item.get("text", "")
+
+                papers.append(Paper(
+                    paper_id=f"agentrxiv:{item.get('id', 0)}",
+                    title=title,
+                    abstract=text[:500] if text else "",
+                    source=text,
+                    categories=["agentrxiv"],
+                ))
+
+            return SearchResult(
+                papers=papers,
+                total_count=len(data),
+                query=query,
+            )
+        except requests.RequestException as e:
+            logger.warning("AgentRxiv search failed: %s", e)
+            return SearchResult(papers=[], total_count=0, query=query)
+
+    def get_paper(self, paper_id: str) -> Paper | None:
+        """Retrieve a paper by ID."""
+        # Extract numeric ID
+        if isinstance(paper_id, str) and paper_id.startswith("agentrxiv:"):
+            paper_id = paper_id.split(":")[1]
+
+        try:
+            response = self._request("GET", f"{self.base_url}/view/{paper_id}")
+            if response.status_code == 404:
+                return None
+            response.raise_for_status()
+            return Paper(paper_id=f"agentrxiv:{paper_id}")
+        except requests.RequestException as e:
+            logger.warning("Get paper %s failed: %s", paper_id, e)
+            return None
+
+    def submit(self, paper: Paper, pdf_path: str | None = None) -> SubmissionResult:
+        """Submit a paper (PDF) to AgentRxiv.
+
+        Args:
+            paper: Paper metadata.
+            pdf_path: Path to PDF file. Required for AgentRxiv.
+
+        Returns:
+            SubmissionResult indicating success or failure.
+        """
+        if not pdf_path:
+            return SubmissionResult(
+                success=False,
+                message="AgentRxiv requires pdf_path for submission",
+            )
+
+        try:
+            with open(pdf_path, "rb") as f:
+                filename = f"{paper.title}.pdf" if paper.title else "paper.pdf"
+                files = {"file": (filename, f, "application/pdf")}
+                response = self._session.post(
+                    f"{self.base_url}/upload",
+                    files=files,
+                    timeout=60,
+                )
+
+            if response.status_code == 200:
+                return SubmissionResult(
+                    success=True,
+                    paper_id=f"agentrxiv:{paper.title}",
+                    message="Paper uploaded successfully",
+                )
+            else:
+                return SubmissionResult(
+                    success=False,
+                    message=f"Upload failed: {response.text}",
+                )
+        except Exception as e:
+            logger.error("AgentRxiv submit failed: %s", e)
+            return SubmissionResult(success=False, message=str(e))
+
+    def trigger_update(self) -> bool:
+        """Trigger server to process new uploads."""
+        try:
+            response = self._request("GET", f"{self.base_url}/update")
+            return bool(response.status_code == 200)
+        except requests.RequestException:
+            return False
+
+
 def get_client(platform: str, api_key: str | None = None) -> PlatformClient:
     """Factory function to get a platform client."""
-    clients = {
+    clients: dict[str, type[PlatformClient]] = {
         "agentxiv": AgentxivClient,
         "clawxiv": ClawxivClient,
+        "agentrxiv": AgentRxivClient,
     }
     if platform not in clients:
         raise ValueError(f"Unknown platform: {platform}. Available: {list(clients.keys())}")

@@ -205,6 +205,141 @@ def cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_agentrxiv(args: argparse.Namespace) -> int:
+    """Handle AgentRxiv subcommands."""
+    subcmd = args.agentrxiv_cmd
+
+    if subcmd == "start":
+        return _agentrxiv_start(args)
+    elif subcmd == "search":
+        return _agentrxiv_search(args)
+    elif subcmd == "submit":
+        return _agentrxiv_submit(args)
+    elif subcmd == "status":
+        return _agentrxiv_status(args)
+    else:
+        print(f"Unknown agentrxiv subcommand: {subcmd}", file=sys.stderr)
+        return 1
+
+
+def _agentrxiv_start(args: argparse.Namespace) -> int:
+    """Start the AgentRxiv server."""
+    from swarm.research.agentrxiv_server import AgentRxivServer, AgentRxivServerError
+
+    port = getattr(args, "port", 5000) or 5000
+    uploads_dir = getattr(args, "uploads_dir", "./agentrxiv_papers") or "./agentrxiv_papers"
+
+    print(f"Starting AgentRxiv server on port {port}...")
+
+    try:
+        server = AgentRxivServer(port=port, uploads_dir=uploads_dir)
+        server.start(wait=True)
+        print(f"AgentRxiv server running at {server.base_url}")
+        print("Press Ctrl+C to stop...")
+
+        try:
+            import time
+            while server.is_running:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            print("\nShutting down...")
+            server.stop()
+            print("Server stopped.")
+        return 0
+
+    except AgentRxivServerError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        return 1
+
+
+def _agentrxiv_search(args: argparse.Namespace) -> int:
+    """Search papers on AgentRxiv."""
+    from swarm.research.platforms import AgentRxivClient
+
+    base_url = getattr(args, "url", None)
+    client = AgentRxivClient(base_url=base_url)
+
+    if not client.health_check():
+        print("Error: AgentRxiv server not running", file=sys.stderr)
+        print("Start it with: python -m swarm agentrxiv start", file=sys.stderr)
+        return 1
+
+    query = args.query
+    limit = getattr(args, "limit", 5) or 5
+
+    print(f"Searching AgentRxiv for: {query}")
+    print("-" * 60)
+
+    result = client.search(query, limit=limit)
+
+    if not result.papers:
+        print("No papers found.")
+        return 0
+
+    for i, paper in enumerate(result.papers, 1):
+        print(f"\n{i}. {paper.title}")
+        print(f"   ID: {paper.paper_id}")
+        if paper.abstract:
+            abstract = paper.abstract[:200] + "..." if len(paper.abstract) > 200 else paper.abstract
+            print(f"   Abstract: {abstract}")
+
+    print(f"\nTotal results: {result.total_count}")
+    return 0
+
+
+def _agentrxiv_submit(args: argparse.Namespace) -> int:
+    """Submit a paper to AgentRxiv."""
+    from swarm.research.platforms import AgentRxivClient, Paper
+
+    pdf_path = Path(args.pdf)
+    if not pdf_path.exists():
+        print(f"Error: PDF file not found: {pdf_path}", file=sys.stderr)
+        return 1
+
+    base_url = getattr(args, "url", None)
+    client = AgentRxivClient(base_url=base_url)
+
+    if not client.health_check():
+        print("Error: AgentRxiv server not running", file=sys.stderr)
+        print("Start it with: python -m swarm agentrxiv start", file=sys.stderr)
+        return 1
+
+    title = getattr(args, "title", None) or pdf_path.stem.replace("_", " ")
+
+    print(f"Uploading: {pdf_path}")
+    print(f"Title: {title}")
+
+    paper = Paper(title=title, abstract="")
+    result = client.submit(paper, pdf_path=str(pdf_path))
+
+    if result.success:
+        print(f"Success! Paper ID: {result.paper_id}")
+        print("Triggering index update...")
+        client.trigger_update()
+        print("Done.")
+        return 0
+    else:
+        print(f"Error: {result.message}", file=sys.stderr)
+        return 1
+
+
+def _agentrxiv_status(args: argparse.Namespace) -> int:
+    """Check AgentRxiv server status."""
+    from swarm.research.platforms import AgentRxivClient
+
+    base_url = getattr(args, "url", None)
+    client = AgentRxivClient(base_url=base_url)
+
+    print(f"Checking AgentRxiv at {client.base_url}...")
+
+    if client.health_check():
+        print("Status: RUNNING")
+        return 0
+    else:
+        print("Status: NOT RUNNING")
+        return 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="python -m src",
@@ -236,12 +371,43 @@ def main() -> int:
     list_parser = subparsers.add_parser("list", help="List available scenarios")
     list_parser.add_argument("--dir", default="scenarios", help="Scenarios directory (default: scenarios)")
 
+    # agentrxiv
+    arxiv_parser = subparsers.add_parser("agentrxiv", help="Manage AgentRxiv local preprint server")
+    arxiv_subparsers = arxiv_parser.add_subparsers(dest="agentrxiv_cmd")
+
+    # agentrxiv start
+    arxiv_start = arxiv_subparsers.add_parser("start", help="Start local AgentRxiv server")
+    arxiv_start.add_argument("--port", type=int, default=5000, help="Port to run server on (default: 5000)")
+    arxiv_start.add_argument("--uploads-dir", default="./agentrxiv_papers", help="Directory for PDF storage")
+
+    # agentrxiv search
+    arxiv_search = arxiv_subparsers.add_parser("search", help="Search papers on AgentRxiv")
+    arxiv_search.add_argument("query", help="Search query")
+    arxiv_search.add_argument("--limit", type=int, default=5, help="Maximum results (default: 5)")
+    arxiv_search.add_argument("--url", help="AgentRxiv server URL (default: http://127.0.0.1:5000)")
+
+    # agentrxiv submit
+    arxiv_submit = arxiv_subparsers.add_parser("submit", help="Submit a PDF to AgentRxiv")
+    arxiv_submit.add_argument("pdf", help="Path to PDF file")
+    arxiv_submit.add_argument("--title", help="Paper title (default: derived from filename)")
+    arxiv_submit.add_argument("--url", help="AgentRxiv server URL (default: http://127.0.0.1:5000)")
+
+    # agentrxiv status
+    arxiv_status = arxiv_subparsers.add_parser("status", help="Check AgentRxiv server status")
+    arxiv_status.add_argument("--url", help="AgentRxiv server URL (default: http://127.0.0.1:5000)")
+
     args = parser.parse_args()
 
     if args.command == "run":
         return cmd_run(args)
     elif args.command == "list":
         return cmd_list(args)
+    elif args.command == "agentrxiv":
+        if args.agentrxiv_cmd:
+            return cmd_agentrxiv(args)
+        else:
+            arxiv_parser.print_help()
+            return 0
     else:
         parser.print_help()
         return 0
