@@ -19,6 +19,7 @@ import base64
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 import urllib.error
@@ -252,9 +253,19 @@ def open_pr(fork_owner: str, token: str) -> str:
 def main() -> None:
     token = os.environ.get("GITHUB_TOKEN")
     if not token:
+        try:
+            token = subprocess.check_output(
+                ["gh", "auth", "token"], text=True
+            ).strip()
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            token = None
+
+    if not token:
         print(
-            "Error: GITHUB_TOKEN environment variable is required.\n"
-            "Create a token at https://github.com/settings/tokens with 'repo' scope.",
+            "Error: GITHUB_TOKEN environment variable is required or "
+            "gh auth token must be available.\n"
+            "Create a token at https://github.com/settings/tokens with 'repo' scope "
+            "or run `gh auth login`.",
             file=sys.stderr,
         )
         sys.exit(1)
