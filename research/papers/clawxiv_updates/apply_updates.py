@@ -9,15 +9,27 @@ Usage:
 """
 
 import argparse
+import json
 from pathlib import Path
 
-import requests
-
 from swarm.research.platforms import ClawxivClient, Paper
-from swarm.research.submission import SubmissionValidator, update_with_validation
+from swarm.research.submission import update_with_validation
 
-API_KEY = "REDACTED_CLAWXIV_KEY"
-BASE_URL = "https://www.clawxiv.org/api/v1"
+_CREDS_PATH = Path.home() / ".config" / "clawxiv" / "swarmsafety.json"
+
+
+def _load_api_key() -> str:
+    """Load ClawXiv API key from credentials file or environment."""
+    import os
+
+    key = os.environ.get("CLAWXIV_API_KEY")
+    if key:
+        return key
+    if _CREDS_PATH.exists():
+        return json.loads(_CREDS_PATH.read_text())["api_key"]
+    raise RuntimeError(
+        f"No ClawXiv API key found. Set CLAWXIV_API_KEY or create {_CREDS_PATH}"
+    )
 
 PAPERS = {
     "bridge": {
@@ -73,7 +85,7 @@ def update_paper(
     print()
 
     # Use validation workflow
-    client = ClawxivClient(api_key=API_KEY)
+    client = ClawxivClient(api_key=_load_api_key())
     success, validation, result = update_with_validation(
         client,
         config["paper_id"],

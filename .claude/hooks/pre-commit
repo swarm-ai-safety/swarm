@@ -6,12 +6,64 @@ if [[ "${SKIP_SWARM_HOOKS:-0}" == "1" ]]; then
   exit 0
 fi
 
+# ── 1. Secrets scan (must run first, blocks on any match) ──
+echo "[swarm pre-commit] secrets scan"
+
+PATTERNS=(
+    'ax_[0-9a-f]{32}'           # agentxiv API keys
+    'clx_[0-9a-f]{32}'          # clawxiv API keys
+    'sk-[A-Za-z0-9]{48}'        # OpenAI API keys
+    'sk_live_[A-Za-z0-9]+'      # Stripe live keys
+    'AKIA[0-9A-Z]{16}'          # AWS access keys
+    'ghp_[A-Za-z0-9]{36}'       # GitHub personal tokens
+    'gho_[A-Za-z0-9]{36}'       # GitHub OAuth tokens
+    'moltbook_sk_[A-Za-z0-9_]+' # Moltbook API keys
+    'moltipedia_[0-9a-f]{64}'   # Moltipedia API keys
+    'wm_[0-9a-f]{32}'           # Wikimolt API keys
+    'clawchan_[0-9a-f]{48}'     # 4claw API keys
+    'clawk_[0-9a-f]{32}'        # Clawk API keys
+    'API_KEY\s*=\s*["\x27][^"\x27]{20,}["\x27]'  # Generic API_KEY assignments
+    'Bearer\s+[A-Za-z0-9_-]{20,}'  # Bearer tokens in strings
+)
+
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|js|ts|yaml|yml|json|sh|env|md)$' || true)
+
+if [ -n "$STAGED_FILES" ]; then
+    FOUND=0
+    DIFF=$(git diff --cached -U0)
+    for pattern in "${PATTERNS[@]}"; do
+        MATCHES=$(echo "$DIFF" | grep -E "^\+" | grep -E "$pattern" || true)
+        if [ -n "$MATCHES" ]; then
+            echo "ERROR: Potential secret detected matching pattern: $pattern"
+            echo "$MATCHES" | head -5
+            echo ""
+            FOUND=1
+        fi
+    done
+
+    if [ $FOUND -eq 1 ]; then
+        echo "=========================================="
+        echo "COMMIT BLOCKED: Potential secrets detected"
+        echo "=========================================="
+        echo ""
+        echo "Use environment variables or credential files instead."
+        echo "  api_key = os.environ.get('YOUR_API_KEY')"
+        echo "  or load from ~/.config/<platform>/credentials.json"
+        echo ""
+        exit 1
+    fi
+    echo "[swarm pre-commit] secrets scan: clean"
+fi
+
+# ── 2. Lint ──
 echo "[swarm pre-commit] ruff"
 ruff check swarm/ tests/
 
+# ── 3. Type check ──
 echo "[swarm pre-commit] mypy"
 mypy swarm/
 
+# ── 4. Scenario load sanity ──
 echo "[swarm pre-commit] YAML scenario load (sanity)"
 python - <<'PY'
 from pathlib import Path
@@ -23,8 +75,8 @@ for p in paths:
 print(f"OK: loaded {len(paths)} scenarios")
 PY
 
+# ── 5. Smoke sim ──
 echo "[swarm pre-commit] smoke sim (baseline, fast)"
 python -m swarm run scenarios/baseline.yaml --epochs 1 --steps 5 -q
 
 echo "[swarm pre-commit] done"
-

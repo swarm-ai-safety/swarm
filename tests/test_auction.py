@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.env.auction import (
+from swarm.env.auction import (
     AuctionBid,
     AuctionConfig,
     DworkinAuction,

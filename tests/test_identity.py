@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.models.identity import (
+from swarm.models.identity import (
     AgentIdentity,
     CredentialIssuer,
     IdentityConfig,

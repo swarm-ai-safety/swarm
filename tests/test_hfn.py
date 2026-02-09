@@ -2,7 +2,7 @@
 
 import pytest
 
-from src.env.hfn import (
+from swarm.env.hfn import (
     FlashCrashDetector,
     FlashCrashEvent,
     HFNConfig,
