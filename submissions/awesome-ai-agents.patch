@@ -1,0 +1,37 @@
+diff --git a/README.md b/README.md
+index 2f8fcf6..f912b46 100644
+--- a/README.md
++++ b/README.md
+@@ -2634,6 +2634,32 @@ Sweep is a Github assistant the helps fix small bugs and implement small feature
+ - [Tricks for prompting Sweep](https://sweep-ai.notion.site/Tricks-for-prompting-Sweep-3124d090f42e42a6a53618eaa88cdbf1)
+ 
+ 
++</details>
++
++## [SWARM](https://github.com/swarm-ai-safety/swarm)
++Safety simulation framework for multi-agent AI interactions
++
++<details>
++
++![Image](https://raw.githubusercontent.com/swarm-ai-safety/swarm/main/docs/swarm-logo.png)
++
++### Category
++Multi-agent, Research, Safety, Build your own
++
++### Description
++- SWARM (System-Wide Assessment of Risk in Multi-agent systems) is a research framework for studying emergent risks in multi-agent AI systems
++- Uses soft probabilistic labels instead of binary classifications to measure whether agent interactions are beneficial
++- Reveals how catastrophic failures can emerge from interactions between many sub-AGI agents, even when none are individually dangerous
++- Provides measurable safety metrics: toxicity rate, quality gap (adverse selection), and incoherence across replays
++- Includes testable governance mechanisms: transaction taxes, reputation decay, circuit breakers, random audits, staking, and collusion detection
++- Supports multiple agent types: Honest, Opportunistic, Deceptive, Adversarial, and LLM-based agents
++- YAML-defined scenarios with parameter sweeps and full reproducibility from seed + scenario config
++
++### Links
++- [GitHub](https://github.com/swarm-ai-safety/swarm)
++- [Website](https://swarm-ai.org)
++- [Documentation](https://docs.swarm-ai.org)
++
+ </details>
+ 
+ ## [Taxy AI](https://github.com/TaxyAI/browser-extension)
