@@ -132,6 +132,30 @@ class EpochMetrics:
     network_metrics: Optional[Dict[str, float]] = None
     capability_metrics: Optional[EmergentCapabilityMetrics] = None
 
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to dictionary for serialization."""
+        result: Dict[str, Any] = {
+            "epoch": self.epoch,
+            "total_interactions": self.total_interactions,
+            "accepted_interactions": self.accepted_interactions,
+            "total_posts": self.total_posts,
+            "total_votes": self.total_votes,
+            "toxicity_rate": self.toxicity_rate,
+            "quality_gap": self.quality_gap,
+            "avg_payoff": self.avg_payoff,
+            "total_welfare": self.total_welfare,
+            "network_metrics": self.network_metrics,
+        }
+        if self.capability_metrics is not None:
+            result["capability_metrics"] = (
+                self.capability_metrics.to_dict()
+                if hasattr(self.capability_metrics, "to_dict")
+                else None
+            )
+        else:
+            result["capability_metrics"] = None
+        return result
+
 
 class Orchestrator:
     """
