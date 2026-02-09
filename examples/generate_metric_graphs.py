@@ -131,18 +131,31 @@ def run_scenario_collect(scenario_path: Path) -> ScenarioResult:
     scenario = load_scenario(scenario_path)
     orchestrator = build_orchestrator(scenario)
 
-    # We need per-epoch agent reputation data, so we hook into the epoch loop.
-    # The simplest approach: run epoch-by-epoch manually.
-    config = scenario.orchestrator_config
-    n_epochs = config.n_epochs
-
     result = ScenarioResult(scenario_id=scenario.scenario_id)
 
-    # Run the full simulation first
+    # Capture per-epoch reputation snapshots via callback so we get
+    # the actual evolving reputation stats, not just end-state values.
+    epoch_rep_snapshots: List[Dict[str, float]] = []
+
+    def _capture_reputation(_em: Any) -> None:
+        agents = orchestrator.get_all_agents()
+        reps = [orchestrator.state.get_agent(a.agent_id).reputation for a in agents]
+        n_frozen = len(orchestrator.state.frozen_agents)
+        epoch_rep_snapshots.append({
+            "avg_reputation": float(np.mean(reps)) if reps else 0.0,
+            "reputation_std": float(np.std(reps)) if len(reps) > 1 else 0.0,
+            "n_agents": len(agents),
+            "n_frozen": n_frozen,
+        })
+
+    orchestrator.on_epoch_end(_capture_reputation)
+
+    # Run the full simulation
     epoch_metrics_list = orchestrator.run()
 
-    # Collect epoch data (EpochMetrics objects)
-    for em in epoch_metrics_list:
+    # Collect epoch data with per-epoch reputation stats
+    for i, em in enumerate(epoch_metrics_list):
+        rep_snap = epoch_rep_snapshots[i] if i < len(epoch_rep_snapshots) else {}
         ce = CollectedEpoch(
             epoch=em.epoch,
             total_interactions=em.total_interactions,
@@ -153,17 +166,18 @@ def run_scenario_collect(scenario_path: Path) -> ScenarioResult:
             quality_gap=em.quality_gap,
             avg_payoff=em.avg_payoff,
             total_welfare=em.total_welfare,
+            avg_reputation=rep_snap.get("avg_reputation", 0.0),
+            reputation_std=rep_snap.get("reputation_std", 0.0),
+            n_agents=rep_snap.get("n_agents", 0),
+            n_frozen=rep_snap.get("n_frozen", 0),
         )
         result.epochs.append(ce)
 
-    # Collect final agent states and compute reputation stats per epoch
+    # Collect final agent states
     all_agents = orchestrator.get_all_agents()
     frozen_set = orchestrator.state.frozen_agents
-
-    reputations = []
     for agent in all_agents:
         state = orchestrator.state.get_agent(agent.agent_id)
-        reputations.append(state.reputation)
         result.agents.append(
             AgentFinalState(
                 agent_id=agent.agent_id,
@@ -174,17 +188,6 @@ def run_scenario_collect(scenario_path: Path) -> ScenarioResult:
                 is_frozen=agent.agent_id in frozen_set,
             )
         )
-
-    # Stamp agent counts onto epoch records (uniform for now)
-    n_agents = len(all_agents)
-    n_frozen = len(frozen_set)
-    avg_rep = float(np.mean(reputations)) if reputations else 0.0
-    rep_std = float(np.std(reputations)) if len(reputations) > 1 else 0.0
-    for ce in result.epochs:
-        ce.n_agents = n_agents
-        ce.n_frozen = n_frozen
-        ce.avg_reputation = avg_rep
-        ce.reputation_std = rep_std
 
     return result
 
