@@ -308,7 +308,7 @@ then plateauing at 0.341 for 10), while welfare scaled super-linearly. Note
 that the non-monotonic adversarial fraction (0% at 3, 16.7% at 6, 10% at
 10) means the scaling effects conflate population size with compositional
 variation — the pure population-size effect on welfare is likely even
-stronger than the ~n^1.9 observed
+stronger than the ~n^1.9 observed.
 
 ### 4.4 Collapse Dynamics
 
@@ -416,6 +416,47 @@ to realize these gains.
 
 ![Figure 7: Timeline Overlay](figures/fig7_timeline_overlay.png)
 *Welfare and acceptance rate trajectories across adversarial escalation scenarios.*
+
+### 4.7 Track A: Multi-Agent Problem-Solving Benchmark
+
+To validate the adversarial dynamics observed in the simulation scenarios, we
+ran a complementary benchmark (Track A) testing multi-agent problem-solving
+under adversarial interference. Track A evaluates 500 mathematical reasoning
+tasks across 12 conditions, progressively adding architectural layers and
+adversarial agents.
+
+| Condition | Accuracy | Adv. Success | Adv. Block | Note |
+|-----------|----------|-------------|-----------|------|
+| single | 1.000 | — | — | Single solver baseline |
+| diverge | 1.000 | — | — | Two solvers, pick highest confidence |
+| sda | 1.000 | — | — | Diverge + reconcile on disagreement |
+| critic | 1.000 | — | — | + critic layer |
+| memory | 1.000 | — | — | + memory retrieval |
+| adv_noise | 0.774 | 0.226 | 0.000 | + 1 noisy adversary |
+| adv_confident | 0.764 | 0.236 | 0.706 | + 1 confident-wrong adversary |
+| adv_strategic | 0.780 | 0.220 | 0.000 | + 1 strategic adversary |
+| adv_sycophant | 0.792 | 0.208 | 0.000 | + 1 sycophant adversary |
+| adv_coordinated | 0.760 | 0.240 | 0.000 | + 2 coordinated adversaries |
+| adv_majority | 0.702 | 0.298 | 0.000 | + 3 adversaries (majority) |
+| adv_memory | 0.780 | 0.220 | 0.000 | Memory + 1 strategic adversary |
+
+The Track A results reinforce the simulation findings in three ways. First,
+non-adversarial conditions maintain perfect accuracy regardless of
+architectural complexity — cooperative multi-agent architectures incur no
+accuracy cost from adding diverge, critic, or memory layers. Second, a single
+adversarial agent reduces accuracy by 20-24% (from 1.000 to 0.774-0.792),
+consistent with the multiplicative welfare cost observed in the simulation
+scenarios. Third, the adversary majority condition (3 adversaries vs. 2
+solvers) produces the lowest accuracy (0.702) and highest adversary success
+rate (0.298), paralleling the simulation finding that >40% adversarial
+fraction exceeds governance capacity. Notably, the adversary block rate is
+effectively zero for all conditions except adv_confident (0.706), suggesting
+that current detection mechanisms catch obvious adversarial behavior
+(high-confidence wrong answers) but miss subtler strategies — the Track A
+analogue of the simulation finding that collusion detection provides
+qualitatively different protection from individual-level governance.
+
+Full Track A results and figures are available in `runs/swarm_collate/`.
 
 ## 5. Discussion
 
