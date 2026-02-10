@@ -14,8 +14,10 @@ from pathlib import Path
 from statistics import mean
 from typing import Any
 
+from swarm.research.agents import Critique, PeerReview
 from swarm.research.pdf_export import PDFExportError, paper_to_pdf
 from swarm.research.platforms import Paper
+from swarm.research.quality import QualityGates
 from swarm.research.swarm_papers.agentrxiv_bridge import AgentRxivBridge
 from swarm.research.swarm_papers.memory import (
     BasicAudit,
@@ -173,6 +175,8 @@ class RunSummary:
     critique_summary: CritiqueSummary
     reputation_summary: dict[str, dict[str, float]]
     reputation_drift: list[dict[str, object]]
+    peer_reviews: list[dict] = field(default_factory=list)
+    review_gate_passed: bool | None = None
 
 
 @dataclass
@@ -188,6 +192,7 @@ class TrackAConfig:
     agentrxiv_url: str | None = None
     enable_pdf: bool = False
     publish_to_agentrxiv: bool = False
+    enable_peer_review: bool = True
     query: str = "SWARM Track A verifiable reasoning"
     llm_enabled: bool = False
     llm_config: "LLMConfig | None" = None
@@ -1292,6 +1297,8 @@ class TrackARunner:
         self.memory_store = MemoryStore(self.output_dir / "memory.jsonl")
         self.audit = BasicAudit()
         self.agentrxiv = AgentRxivBridge(config.agentrxiv_url) if config.enable_agentrxiv else None
+        if self.agentrxiv:
+            self.agentrxiv.set_review_store(self.output_dir / "reviews.jsonl")
         self._agentrxiv_cache: list[MemoryArtifact] = []
         self._agentrxiv_loaded = False
         self.reputation = ReputationTracker()
@@ -1666,10 +1673,61 @@ class TrackARunner:
             },
             "reputation_summary": summary.reputation_summary,
             "reputation_drift": summary.reputation_drift,
+            "peer_reviews": summary.peer_reviews,
+            "review_gate_passed": summary.review_gate_passed,
         }
         self.summary_path.write_text(json.dumps(payload, indent=2))
         if summary.reputation_drift:
             self._write_reputation_csv(summary.reputation_drift)
+
+    def _generate_peer_review(self, paper: Paper) -> PeerReview:
+        """Lightweight self-review checking abstract, source length, completeness."""
+        critiques: list[Critique] = []
+        if not paper.abstract or len(paper.abstract.strip()) < 20:
+            critiques.append(
+                Critique(
+                    severity="high",
+                    category="completeness",
+                    issue="Abstract is missing or too short",
+                    suggestion="Add a substantive abstract",
+                )
+            )
+        if not paper.source or len(paper.source) < 200:
+            critiques.append(
+                Critique(
+                    severity="high",
+                    category="completeness",
+                    issue="Paper source is missing or too short",
+                    suggestion="Ensure paper has substantive content",
+                )
+            )
+        if paper.source and "\\section" not in paper.source:
+            critiques.append(
+                Critique(
+                    severity="medium",
+                    category="completeness",
+                    issue="Paper has no sections",
+                    suggestion="Add section structure",
+                )
+            )
+        high = len([c for c in critiques if c.severity in ("high", "critical")])
+        if high > 0:
+            recommendation = "major_revision"
+        elif critiques:
+            recommendation = "minor_revision"
+        else:
+            recommendation = "accept"
+        from swarm.research.agents import _RECOMMENDATION_RATINGS
+        rating = _RECOMMENDATION_RATINGS.get(recommendation, 3)
+        return PeerReview(
+            review_id=uuid.uuid4().hex[:12],
+            paper_id=paper.paper_id or paper.content_hash(),
+            reviewer_id="track_a_self_review",
+            critiques=critiques,
+            recommendation=recommendation,
+            summary=f"Self-review found {len(critiques)} issue(s). Recommendation: {recommendation}",
+            rating=rating,
+        )
 
     def _write_paper(self, summary: RunSummary) -> None:
         builder = PaperBuilder()
@@ -1708,6 +1766,18 @@ class TrackARunner:
         if summary.bib_entries:
             bib_path = self.output_dir / "references.bib"
             bib_path.write_text(summary.bib_entries)
+
+        # Peer review gate
+        if self.config.enable_peer_review and self.config.publish_to_agentrxiv:
+            review = self._generate_peer_review(paper)
+            summary.peer_reviews.append(review.to_dict())
+            if self.agentrxiv:
+                self.agentrxiv.submit_review(review)
+            gate = QualityGates.review_gate()
+            gate_result = gate.run(review.to_review())
+            summary.review_gate_passed = gate_result.passed
+            if not gate_result.passed:
+                return
 
         if self.config.enable_pdf:
             try:

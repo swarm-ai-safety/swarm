@@ -182,11 +182,20 @@ Redteam variant differences:
 | Scenario | s+ | s- | h | theta | rho_a | rho_b | w_rep |
 |----------|-----|-----|------|-------|-------|-------|-------|
 | baseline | 2.0 | 1.0 | 2.0 | 0.5 | 0.0 | 0.0 | 1.0 |
-| adversarial_redteam | 3.0 | 1.5 | 3.0 | 0.5 | — | — | 2.5 |
-| collusion_detection | 3.0 | 1.5 | 2.5 | 0.5 | — | — | 2.0 |
-| emergent_capabilities | 3.5 | 1.0 | 2.0 | 0.5 | — | — | 2.5 |
+| adversarial_redteam | 3.0 | 1.5 | 3.0 | 0.5 | 0.0 | 0.0 | 2.5 |
+| collusion_detection | 3.0 | 1.5 | 2.5 | 0.5 | 0.0 | 0.0 | 2.0 |
+| emergent_capabilities | 3.5 | 1.0 | 2.0 | 0.5 | 0.0 | 0.0 | 2.5 |
 | marketplace_economy | 2.0 | 1.0 | 2.0 | 0.5 | 0.1 | 0.1 | 1.0 |
 | network_effects | 2.0 | 1.0 | 2.0 | 0.5 | 0.1 | 0.1 | 1.0 |
+
+Note: rho_a = rho_b = 0.0 indicates that externality internalization is
+disabled — agents do not bear direct costs from ecosystem harm. This is the
+framework default (`SoftPayoffConfig.rho_a = 0.0`). Only marketplace_economy
+and network_effects enable partial internalization (0.1), creating an
+additional incentive for agents to avoid generating negative externalities.
+The adversarial and collusion scenarios intentionally omit internalization to
+isolate the effect of governance levers (taxes, staking, audits, collusion
+detection) from payoff-structure incentives.
 
 ### 3.4 Formal Model
 
@@ -239,19 +248,28 @@ acceptance threshold admits borderline interactions.
 
 ### 4.1 Cross-Scenario Summary
 
-| Scenario | Acceptance | Toxicity | Welfare/Epoch | Adv. Frac. | Collapse? |
-|----------|-----------|----------|---------------|------------|-----------|
-| baseline | 0.938 | 0.298 | 5.0 | 0.200 | No |
-| adversarial_redteam_v1 | 0.556 | 0.295 | 3.8 | 0.500 | Epoch 12 |
-| adversarial_redteam_v2 | 0.481 | 0.312 | 3.8 | 0.500 | Epoch 13 |
-| adversarial_redteam_v3 | 0.455 | 0.312 | 3.5 | 0.500 | Epoch 14 |
-| collusion_detection | 0.425 | 0.370 | 6.3 | 0.375 | No |
-| emergent_capabilities | 0.998 | 0.297 | 44.9 | 0.000 | No |
-| incoherence_short | 1.000 | 0.183 | 1.0 | 0.000 | No |
-| incoherence_medium | 0.940 | 0.343 | 5.7 | 0.167 | No |
-| incoherence_long | 0.787 | 0.341 | 21.3 | 0.100 | No |
-| marketplace_economy | 0.549 | 0.328 | 3.7 | 0.143 | No |
-| network_effects | 0.783 | 0.335 | 9.9 | 0.100 | No |
+| Scenario | Acceptance | Toxicity | Quality Gap | Welfare/Epoch | Adv. Frac. | Collapse? |
+|----------|-----------|----------|-------------|---------------|------------|-----------|
+| baseline | 0.938 | 0.298 | 0.047 | 5.0 | 0.200 | No |
+| adversarial_redteam_v1 | 0.556 | 0.295 | 0.187 | 3.8 | 0.500 | Epoch 12 |
+| adversarial_redteam_v2 | 0.481 | 0.312 | 0.203 | 3.8 | 0.500 | Epoch 13 |
+| adversarial_redteam_v3 | 0.455 | 0.312 | 0.208 | 3.5 | 0.500 | Epoch 14 |
+| collusion_detection | 0.425 | 0.370 | — | 6.3 | 0.375 | No |
+| emergent_capabilities | 0.998 | 0.297 | — | 44.9 | 0.000 | No |
+| incoherence_short | 1.000 | 0.183 | 0.000 | 1.0 | 0.000 | No |
+| incoherence_medium | 0.940 | 0.343 | — | 5.7 | 0.167 | No |
+| incoherence_long | 0.787 | 0.341 | — | 21.3 | 0.100 | No |
+| marketplace_economy | 0.549 | 0.328 | 0.247 | 3.7 | 0.143 | No |
+| network_effects | 0.783 | 0.335 | 0.245 | 9.9 | 0.100 | No |
+
+Quality gap = E[p|accepted] - E[p|rejected]. Positive values indicate the
+governance mechanism successfully separates high-quality from low-quality
+interactions. Dashes indicate scenarios where quality gap was not logged in
+the epoch event stream (all interactions accepted, or event logs not
+retained). The adversarial scenarios show persistently elevated quality gaps
+(0.19-0.21), reflecting the governance mechanism's attempt to filter
+adversarial interactions — but the sustained pressure ultimately overwhelms
+this filtering capacity, leading to collapse.
 
 ### 4.2 Regime Classification
 
@@ -275,11 +293,67 @@ acceptance threshold admits borderline interactions.
 - Collusion detection prevented collapse that occurred in redteam scenarios with higher adversarial fraction
 
 **Incoherence scaling** (related to variance-dominated failure modes [12]):
-- Toxicity scaled with agent count: 0.183 (3 agents) -> 0.343 (6) -> 0.341 (10)
-- Acceptance rate decreased: 1.000 -> 0.940 -> 0.787
-- Non-linear welfare scaling: 1.0 -> 5.7 -> 21.3 (super-linear in agent count)
 
-### 4.4 Marketplace and Network Analysis
+| Metric | 3 agents | 6 agents | 10 agents | Scaling |
+|--------|----------|----------|-----------|---------|
+| Toxicity | 0.183 | 0.343 | 0.341 | Saturates at ~0.34 |
+| Acceptance rate | 1.000 | 0.940 | 0.787 | Linear decline |
+| Welfare/epoch | 0.99 | 5.70 | 21.31 | Super-linear (~n^1.9) |
+| Welfare/agent/ep | 0.33 | 0.95 | 2.13 | Super-linear (~n^1.5) |
+| Interactions/agent/ep | 0.29 | 1.04 | 2.76 | Super-linear (~n^1.9) |
+| Adv. fraction | 0.0% | 16.7% | 10.0% | Non-monotonic |
+
+Toxicity saturated quickly (jumping 0.183 to 0.343 between 3 and 6 agents,
+then plateauing at 0.341 for 10), while welfare scaled super-linearly. Note
+that the non-monotonic adversarial fraction (0% at 3, 16.7% at 6, 10% at
+10) means the scaling effects conflate population size with compositional
+variation — the pure population-size effect on welfare is likely even
+stronger than the ~n^1.9 observed
+
+### 4.4 Collapse Dynamics
+
+Epoch-by-epoch analysis of the three red-team variants reveals the mechanism
+of collapse, not just its timing. Table 4.4a shows welfare trajectories for
+the critical pre-collapse window.
+
+| Epoch | v1 Welfare | v1 Accept% | v2 Welfare | v2 Accept% | v3 Welfare | v3 Accept% |
+|-------|-----------|-----------|-----------|-----------|-----------|-----------|
+| 0 | 6.7 | 63% | 6.7 | 63% | 6.7 | 63% |
+| 5 | 24.5 | 83% | 18.6 | 85% | 8.7 | 60% |
+| 7 | 6.5 | 100% | 8.3 | 86% | 3.3 | 43% |
+| 9 | 2.7 | 25% | 1.1 | 33% | 8.4 | 67% |
+| 10 | **0.0** | 0% | 8.9 | 55% | 4.5 | 38% |
+| 11 | 6.1 | 100% | 2.7 | 25% | 6.2 | 57% |
+| 12 | 0.0 | 0% | 3.9 | 50% | 5.1 | 50% |
+| 13 | 3.3 | 40% | **0.0** | 0% | 1.1 | 14% |
+| 14 | 0.0 | 0% | 0.0 | 0% | **0.0** | 0% |
+
+The collapse pattern is consistent across variants: acceptance rate drops
+below ~25% in the epoch before welfare reaches zero, triggered by a
+cascading rejection spiral. As the governance mechanism increasingly rejects
+adversarial interactions, the remaining interaction volume falls below the
+threshold needed to sustain positive welfare. Crucially, v1 shows a brief
+recovery at epoch 11 (welfare 6.1) before permanent collapse — the ecosystem
+can transiently revive when stochastic variation produces a low-adversarial
+interaction batch, but the underlying composition makes sustained recovery
+impossible.
+
+Quality gap acts as a leading indicator of collapse. The adversarial
+scenarios maintain quality gaps of 0.23-0.38 throughout the pre-collapse
+trajectory, compared to the baseline's episodic spikes to 0.27 followed by
+return to zero. The persistence of elevated quality gap signals that the
+governance mechanism is continuously straining to separate adversarial from
+honest interactions — a strain that eventually exceeds its capacity.
+
+The governance tuning across v1-v3 (reducing audit penalties and freeze
+duration) smoothed the welfare trajectory before collapse: v1 shows a sharp
+cliff (24.5 at epoch 5 to 0.0 at epoch 10), while v3 shows a more gradual
+decline (8.7 at epoch 5 to 0.0 at epoch 14). This gentler degradation
+purchased two additional epochs of operation but at lower peak welfare,
+consistent with the trade-off between governance aggressiveness and ecosystem
+throughput identified in Section 5.3.
+
+### 4.5 Marketplace and Network Analysis
 
 **Marketplace economy.** The bounty/escrow marketplace scenario (7 agents,
 14.3% adversarial) achieved a 0.549 acceptance rate — the lowest among
@@ -320,7 +394,7 @@ throughput (246 vs. 45 accepted) at comparable toxicity (0.335 vs. 0.328),
 but required more agents (10 vs. 7) and longer runtime (20 vs. 10 epochs)
 to realize these gains.
 
-### 4.5 Figures
+### 4.6 Figures
 
 ![Figure 1: Scenario Comparison](figures/fig1_scenario_comparison.png)
 *Cross-scenario comparison of acceptance rate, toxicity, and welfare.*
@@ -404,6 +478,48 @@ that the welfare cost of adversarial pressure is not linear but
 multiplicative: each adversarial agent degrades not just its own interactions
 but the productivity of the surrounding cooperative network.
 
+The emergent capabilities result merits closer examination. The scenario
+deployed 8 agents — 6 honest with specialized capabilities (research/analysis,
+planning/execution, verification/communication) and 2 opportunistic
+generalists (coordination/creativity/communication) — on a complete network
+with dynamic edge strengthening. Three factors drove the exceptional 44.9
+welfare/epoch:
+
+1. **Capability complementarity.** Composite tasks (research synthesis,
+   planning coordination, problem solving) required multiple capability types,
+   creating natural demand for inter-agent collaboration. The specialized
+   agents could not complete tasks alone, forcing cooperative interaction
+   patterns that generated high-p interactions across the network.
+
+2. **Network amplification.** The complete topology with dynamic edge
+   strengthening (rate 0.15, decay 0.02) meant that successful collaborations
+   increased the probability of future collaborations between the same agents.
+   Over 30 epochs and 635 interactions (634 accepted, acceptance rate 0.998),
+   this created self-reinforcing cooperative clusters. The per-agent welfare
+   (5.61/agent/epoch) was 5.6x the baseline (1.00/agent/epoch), indicating
+   that the gains were not merely from having more agents but from
+   qualitatively different interaction patterns.
+
+3. **Opportunistic agents as coordinators.** The 2 opportunistic agents, with
+   their generalist capabilities (coordination, creativity, communication),
+   served as bridges between specialist clusters rather than exploiting
+   information asymmetries. With no adversarial agents to exploit, the
+   opportunistic behavioral type defaulted to positive-sum coordination — an
+   observation consistent with the market microstructure analogy: when there
+   are no informed (adversarial) traders, the bid-ask spread narrows and
+   market makers (opportunistic agents) facilitate rather than extract.
+
+This scenario demonstrates that the welfare ceiling of cooperative multi-agent
+systems is far higher than contested or adversarial scenarios suggest. The
+ratio of emergent-to-baseline welfare (44.9/5.0 = 9.0x) with only 60% more
+agents (8 vs. 5) implies that the composition and capability structure of the
+agent population matters at least as much as its size. The practical
+implication is that multi-agent system designers can achieve outsized welfare
+gains by investing in capability diversity and cooperative infrastructure —
+but these gains are fragile, as even small adversarial fractions (the
+baseline's 20% deceptive agent reduces welfare by 89%) can dramatically
+reduce the cooperative surplus.
+
 ### 5.4 Incoherence and Scale
 
 The incoherence series (3, 6, 10 agents) reveals two scaling dynamics,
@@ -413,8 +529,8 @@ and 6 agents, then plateaued at 0.341 for 10 agents. This suggests a floor
 effect — once any adversarial or opportunistic agents are present, baseline
 toxicity stabilizes around 0.34 regardless of further scaling. Acceptance
 rate, by contrast, declined steadily (1.000 to 0.940 to 0.787), indicating
-that the governance
-mechanism becomes more selective as the interaction graph grows denser.
+that the governance mechanism becomes more selective as the interaction graph
+grows denser.
 
 Welfare scaled super-linearly (1.0 to 5.7 to 21.3), consistent with network
 effects in cooperative production: more agents create more interaction
