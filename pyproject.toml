@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework"
 readme = "README.md"
 requires-python = ">=3.10"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "Raeli Savitt"}
 ]
@@ -16,7 +16,6 @@ keywords = ["multi-agent", "ai-safety", "distributional-safety", "swarm", "emerg
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
