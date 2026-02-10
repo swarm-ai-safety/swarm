@@ -1,43 +1,52 @@
 # SWARM-GasTown Bridge
 
-Instrument real production systems with SWARM metrics.
+Instrument GasTown multi-agent workspaces with SWARM metrics.
 
 ## Overview
 
-Gas Town is a production multi-agent development environment. SWARM-GasTown enables:
+GasTown is a production multi-agent development environment. SWARM-GasTown enables:
 
-- **Event capture** from Beads task system
+- **Event capture** from the Beads task system (SQLite)
 - **Git-based observables** from PR workflows
-- **Governance hooks** via `gt` CLI
+- **Governance hooks** via the `gt` CLI
 
 ## Installation
 
+The bridge is packaged in-tree under `swarm/bridges/gastown/`:
+
 ```bash
-pip install swarm-gastown
+pip install -e ".[dev,runtime]"
 ```
 
 ## Quick Start
 
 ```python
-from swarm_gastown import GasTownWatcher, GasTownMapper
+from swarm.bridges.gastown import GasTownBridge, GasTownConfig
 
-# Start watching for events
-watcher = GasTownWatcher(beads_dir="/path/to/beads")
-watcher.start()
+config = GasTownConfig(
+    workspace_path="/path/to/gastown-workspace",
+    agent_role_map={
+        "polecat-1": "agent_p1",
+        "polecat-2": "agent_p2",
+    },
+)
 
-# Map events to SWARM interactions
-mapper = GasTownMapper()
+bridge = GasTownBridge(config)
 
-for event in watcher.events():
-    interaction = mapper.map_bead_lifecycle(event)
-    metrics.record(interaction)
+# Poll for new interactions (call periodically or in a loop)
+interactions = bridge.poll()
+
+for interaction in interactions:
+    print(f"Agent {interaction.counterparty}: p={interaction.p:.3f}")
+
+bridge.shutdown()
 ```
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────┐
-│              Gas Town Production             │
+│              GasTown Workspace               │
 │  ┌─────────┐  ┌─────────┐  ┌─────────┐     │
 │  │  Beads  │  │   Git   │  │   gt    │     │
 │  │ (tasks) │  │  (PRs)  │  │  (CLI)  │     │
@@ -48,11 +57,14 @@ for event in watcher.events():
 ┌─────────────────────────────────────────────┐
 │          SWARM-GasTown Bridge               │
 │  ┌──────────────┐  ┌────────────────────┐  │
-│  │ BeadsWatcher │  │ GitObservables    │  │
+│  │ BeadsClient  │  │  GitObserver       │  │
 │  └──────────────┘  └────────────────────┘  │
 │  ┌──────────────────────────────────────┐  │
-│  │        GasTownMapper                  │  │
+│  │  GasTownMapper → ProxyComputer       │  │
 │  └──────────────────────────────────────┘  │
+│  ┌──────────────┐  ┌────────────────────┐  │
+│  │ GasTownPolicy│  │  GasTownAgent      │  │
+│  └──────────────┘  └────────────────────┘  │
 └─────────────────────────────────────────────┘
         │
         ▼
@@ -66,39 +78,24 @@ for event in watcher.events():
 
 Git-based signals mapped to SWARM observables:
 
-| Git Signal | SWARM Observable |
-|------------|------------------|
-| Commits per PR | task_progress_delta |
-| Review iterations | rework_count |
-| CI failures | verifier_rejections |
-| Time to merge | engagement_delta |
+| Git Signal | SWARM Observable | Formula |
+|------------|------------------|---------|
+| Commits per PR | `task_progress_delta` | `min(1.0, commits / 10)` |
+| Review iterations | `rework_count` | Direct count |
+| CI failures | `verifier_rejections` | Direct count |
+| Time to merge | `counterparty_engagement_delta` | `1.0 - min(1.0, hours / 48)` |
 
 ## Governance Integration
 
-SWARM governance maps to Gas Town actions:
+SWARM governance maps to GasTown actions:
 
-| SWARM Lever | Gas Town Action |
-|-------------|-----------------|
-| Transaction tax | Token budget deduction |
-| Circuit breaker | Agent suspension |
-| Random audit | Witness review |
-
-## Dashboard
-
-Real-time metrics visualization:
-
-```bash
-swarm-gastown dashboard --port 8080
-```
-
-## Calibration
-
-Calibrate against manual labels:
-
-```bash
-swarm-gastown calibrate --labels manual_labels.csv --output params.yaml
-```
+| SWARM Lever | GasTown Action | Implementation |
+|-------------|----------------|----------------|
+| Transaction tax | Budget deduction | Per-agent budget tracking |
+| Circuit breaker | Agent suspension | `gt stop <agent>` |
+| Random audit | Witness review | `gt sling <bead> --to witness` |
+| Staking requirement | Bead hold | Flag bead for approval |
 
 ## Status
 
-**In Development** - Event capture functional, calibration study in progress.
+**Implemented** - Bridge, mapper, policy, and agent adapter are functional. See `tests/test_gastown_bridge.py` for usage examples.

@@ -1,0 +1,188 @@
+"""GitObserver — extract PR/commit observables from git repos.
+
+All git calls use ``subprocess.run`` with timeouts.  Errors are caught
+and logged rather than raised so a single bad worktree never crashes
+the bridge polling loop.
+"""
+
+import logging
+import subprocess
+from datetime import datetime
+from typing import Dict, List, Optional
+
+from swarm.bridges.gastown.events import GasTownEvent, GasTownEventType
+
+logger = logging.getLogger(__name__)
+
+_SUBPROCESS_TIMEOUT = 10  # seconds
+
+
+def _run_git(
+    args: List[str],
+    cwd: str,
+    timeout: int = _SUBPROCESS_TIMEOUT,
+) -> Optional[subprocess.CompletedProcess[str]]:
+    """Run a git command, returning ``None`` on failure."""
+    try:
+        return subprocess.run(
+            ["git", *args],
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            cwd=cwd,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
+        logger.warning("git %s failed in %s: %s", " ".join(args), cwd, exc)
+        return None
+
+
+class GitObserver:
+    """Extracts PR/commit observables from a GasTown workspace."""
+
+    def __init__(self, workspace_path: str) -> None:
+        self._workspace_path = workspace_path
+
+    def get_pr_stats(self, worktree: str) -> dict:
+        """Compute PR-related observables for a worktree/branch.
+
+        Returns a dict with keys:
+            commit_count, files_changed, review_iterations,
+            ci_failures, time_to_merge_hours.
+        """
+        stats: dict = {
+            "commit_count": 0,
+            "files_changed": 0,
+            "review_iterations": 0,
+            "ci_failures": 0,
+            "time_to_merge_hours": None,
+        }
+
+        # Commit count since divergence from main
+        result = _run_git(["rev-list", "--count", "HEAD", "^main"], cwd=worktree)
+        if result and result.returncode == 0:
+            try:
+                stats["commit_count"] = int(result.stdout.strip())
+            except ValueError:
+                pass
+
+        # Files changed
+        result = _run_git(
+            ["diff", "--name-only", "main...HEAD"], cwd=worktree
+        )
+        if result and result.returncode == 0:
+            files = [f for f in result.stdout.strip().splitlines() if f]
+            stats["files_changed"] = len(files)
+
+        # Review iterations (force-push count via reflog)
+        result = _run_git(["reflog", "--format=%gs", "HEAD"], cwd=worktree)
+        if result and result.returncode == 0:
+            pushes = [
+                line
+                for line in result.stdout.strip().splitlines()
+                if "reset" in line.lower() or "amend" in line.lower()
+            ]
+            stats["review_iterations"] = len(pushes)
+
+        # CI failures (convention: commits with "[ci-fail]" in message)
+        result = _run_git(
+            ["log", "--oneline", "--grep=[ci-fail]", "main..HEAD"],
+            cwd=worktree,
+        )
+        if result and result.returncode == 0:
+            failures = [line for line in result.stdout.strip().splitlines() if line]
+            stats["ci_failures"] = len(failures)
+
+        # Time to merge (if branch has been merged into main)
+        first = _run_git(
+            ["log", "--reverse", "--format=%aI", "main..HEAD"],
+            cwd=worktree,
+        )
+        merge = _run_git(
+            ["log", "-1", "--merges", "--format=%aI", "HEAD"],
+            cwd=worktree,
+        )
+        if (
+            first
+            and first.returncode == 0
+            and merge
+            and merge.returncode == 0
+        ):
+            first_line = first.stdout.strip().splitlines()
+            merge_line = merge.stdout.strip()
+            if first_line and merge_line:
+                try:
+                    t0 = datetime.fromisoformat(first_line[0])
+                    t1 = datetime.fromisoformat(merge_line)
+                    stats["time_to_merge_hours"] = (
+                        t1 - t0
+                    ).total_seconds() / 3600.0
+                except (ValueError, IndexError):
+                    pass
+
+        return stats
+
+    def get_agent_worktrees(self) -> Dict[str, str]:
+        """Map agent names to their worktree paths.
+
+        Scans the workspace for git worktrees and infers agent names
+        from the worktree directory names.
+        """
+        result = _run_git(
+            ["worktree", "list", "--porcelain"], cwd=self._workspace_path
+        )
+        if not result or result.returncode != 0:
+            return {}
+
+        worktrees: Dict[str, str] = {}
+        current_path: Optional[str] = None
+        for line in result.stdout.splitlines():
+            if line.startswith("worktree "):
+                current_path = line[len("worktree ") :]
+            elif line.startswith("branch ") and current_path:
+                branch = line[len("branch refs/heads/") :]
+                # Convention: branch names like "agent/<name>/..."
+                parts = branch.split("/")
+                if len(parts) >= 2:
+                    agent_name = parts[1] if parts[0] == "agent" else parts[0]
+                else:
+                    agent_name = branch
+                worktrees[agent_name] = current_path
+                current_path = None
+        return worktrees
+
+    def get_recent_activity(
+        self, agent_name: str, since: datetime
+    ) -> List[GasTownEvent]:
+        """Emit PR-related events for an agent since *since*."""
+        worktrees = self.get_agent_worktrees()
+        wt = worktrees.get(agent_name)
+        if not wt:
+            return []
+
+        events: List[GasTownEvent] = []
+        since_iso = since.isoformat()
+
+        result = _run_git(
+            ["log", f"--since={since_iso}", "--format=%H %s", "HEAD"],
+            cwd=wt,
+        )
+        if result and result.returncode == 0:
+            for line in result.stdout.strip().splitlines():
+                if not line:
+                    continue
+                parts = line.split(" ", 1)
+                sha = parts[0]
+                msg = parts[1] if len(parts) > 1 else ""
+                event_type = GasTownEventType.PR_OPENED
+                if "merge" in msg.lower():
+                    event_type = GasTownEventType.PR_MERGED
+                elif "[ci-fail]" in msg:
+                    event_type = GasTownEventType.CI_FAILED
+                events.append(
+                    GasTownEvent(
+                        event_type=event_type,
+                        agent_name=agent_name,
+                        payload={"sha": sha, "message": msg},
+                    )
+                )
+        return events
