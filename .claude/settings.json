@@ -5,7 +5,8 @@
       "Bash(mypy:*)",
       "Bash(git status)",
       "Bash(git diff:*)",
-      "Bash(bash .claude/hooks/scan_secrets.sh:*)"
+      "Bash(bash .claude/hooks/scan_secrets.sh:*)",
+      "Bash(ls:*)"
     ]
   },
   "hooks": {
