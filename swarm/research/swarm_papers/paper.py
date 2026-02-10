@@ -6,6 +6,8 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Iterable
 
+import pandas as pd
+
 from swarm.research.platforms import Paper
 from swarm.research.swarm_papers.memory import MemoryArtifact
 
@@ -46,6 +48,18 @@ class PaperFigure:
     caption: str
 
 
+# Abbreviations for adversarial conditions
+CONDITION_ABBREV = {
+    "adv_noise": "nse",
+    "adv_confident": "cnf",
+    "adv_strategic": "str",
+    "adv_sycophant": "syc",
+    "adv_coordinated": "crd",
+    "adv_majority": "maj",
+    "adv_memory": "mem",
+}
+
+
 class PaperBuilder:
     """Builds a LaTeX paper from Track A run summaries."""
 
@@ -63,88 +77,94 @@ class PaperBuilder:
 
     def _render_latex(self, context: PaperContext) -> str:
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-        table_rows = self._render_table_rows(context.conditions)
+        conditions_table = self._render_conditions_table(context.conditions)
         related_work = self._render_related(context.related_work)
         memory_section = self._render_memory(context.memory_items)
         critique_section = self._render_critique(context.critique_summary)
-        family_table = self._render_family_tables(context.family_metrics, context.conditions)
+        family_tables = self._render_family_tables(context.family_metrics, context.conditions)
         figures_section = self._render_figures(context.figures)
 
-        return """\\documentclass{article}
-\\usepackage{booktabs}
-\\usepackage{graphicx}
-\\usepackage{geometry}
-\\geometry{margin=1in}
-\\title{%s}
-\\date{%s}
-\\begin{document}
+        return f"""\\documentclass{{article}}
+\\usepackage{{booktabs}}
+\\usepackage{{graphicx}}
+\\usepackage{{geometry}}
+\\usepackage{{adjustbox}}
+\\geometry{{margin=1in}}
+\\title{{{_escape_latex(context.title)}}}
+\\date{{{_escape_latex(now)}}}
+\\begin{{document}}
 \\maketitle
-\\begin{abstract}
-%s
-\\end{abstract}
+\\begin{{abstract}}
+{_escape_latex(context.abstract)}
+\\end{{abstract}}
 
-\\section{Introduction}
+\\section{{Introduction}}
 We evaluate SWARM-style coordination mechanisms on Track A (verifiable reasoning),
 using controlled arithmetic and word-problem tasks with deterministic checks.
 Each condition corresponds to a coordination policy (divergence, critique,
-reconciliation, memory). This paper summarizes one full run (ID: %s).
+reconciliation, memory). This paper summarizes one full run (ID: {_escape_latex(context.run_id)}).
 
-\\section{Methods}
-Tasks: %d total, generated with fixed random seed and difficulty calibration.
+\\section{{Methods}}
+Tasks: {context.task_count} total, generated with fixed random seed and difficulty calibration.
 
-\\subsection{Conditions}
-\\begin{tabular}{llll}
-\\toprule
-Condition & Accuracy & Avg. Tokens & Notes \\\\
-\\midrule
-%s
-\\bottomrule
-\\end{tabular}
+\\subsection{{Conditions}}
+{conditions_table}
 
-\\section{Results}
+\\section{{Results}}
 Across conditions, we report accuracy (correct/total), disagreement rate when
 multiple solvers are active, and reconciliation frequency when enabled.
 
-%s
+{critique_section}
 
-\\section{Related Work (AgentRxiv)}
-\\begin{itemize}
-%s
-\\end{itemize}
+{family_tables}
 
-%s
+{figures_section}
 
-\\section{Limitations}
+\\section{{Related Work (AgentRxiv)}}
+\\begin{{itemize}}
+{related_work}
+\\end{{itemize}}
+
+{memory_section}
+
+\\section{{Limitations}}
 We treat confidence as a reported scalar and rely on simple divergence heuristics.
 Future runs should incorporate stronger validators and richer task suites.
 
-%s
+{self._render_bibliography(context.bib)}
 
-\\end{document}
-""" % (
-            _escape_latex(context.title),
-            _escape_latex(now),
-            _escape_latex(context.abstract),
-            _escape_latex(context.run_id),
-            context.task_count,
-            table_rows,
-            critique_section
-            + ("\n\n" + family_table if family_table else "")
-            + ("\n\n" + figures_section if figures_section else ""),
-            related_work,
-            memory_section,
-            self._render_bibliography(context.bib),
-        )
+\\end{{document}}
+"""
 
-    def _render_table_rows(self, conditions: Iterable[dict]) -> str:
+    def _render_conditions_table(self, conditions: Iterable[dict]) -> str:
+        """Render conditions summary table using pandas."""
         rows = []
         for cond in conditions:
-            name = _escape_latex(cond.get("name", ""))
-            acc = cond.get("accuracy", 0.0)
-            tokens = cond.get("avg_tokens", 0.0)
-            note = _escape_latex(cond.get("note", ""))
-            rows.append(f"{name} & {acc:.3f} & {tokens:.1f} & {note} \\\\")
-        return "\n".join(rows) if rows else "--"
+            rows.append({
+                "Condition": cond.get("name", ""),
+                "Accuracy": cond.get("accuracy", 0.0),
+                "Tokens": cond.get("avg_tokens", 0.0),
+                "Notes": cond.get("note", ""),
+            })
+
+        if not rows:
+            return "No conditions recorded."
+
+        df = pd.DataFrame(rows)
+        df["Accuracy"] = df["Accuracy"].map(lambda x: f"{x:.3f}")
+        df["Tokens"] = df["Tokens"].map(lambda x: f"{x:.1f}")
+
+        latex = df.to_latex(
+            index=False,
+            escape=True,
+            column_format="llrl",
+            position="h",
+        )
+        # Add booktabs rules
+        latex = latex.replace("\\toprule", "\\toprule")
+        latex = latex.replace("\\midrule", "\\midrule")
+        latex = latex.replace("\\bottomrule", "\\bottomrule")
+        return latex
 
     def _render_memory(self, items: list[MemoryArtifact]) -> str:
         if not items:
@@ -189,7 +209,7 @@ Future runs should incorporate stronger validators and richer task suites.
             return "\\paragraph{Critique Summary} No critic flags were recorded."
         lines = [
             "\\paragraph{Critique Summary}",
-            f"Critic flags: {_escape_latex(str(summary.total_flags))} "
+            f"Critic flags: {summary.total_flags} "
             f"({summary.flag_rate:.1%} of episodes).",
         ]
         if summary.top_reasons:
@@ -207,31 +227,70 @@ Future runs should incorporate stronger validators and richer task suites.
     def _render_family_tables(
         self, family_metrics: dict[str, dict[str, dict[str, float]]], conditions: list[dict]
     ) -> str:
+        """Render per-family accuracy tables using pandas."""
         if not family_metrics:
             return ""
 
         condition_names = [cond.get("name", "") for cond in conditions]
         families = _order_families(family_metrics)
+
+        # Split into baseline and adversarial conditions
+        baseline_conds = [c for c in condition_names if not c.startswith("adv_")]
+        adv_conds = [c for c in condition_names if c.startswith("adv_")]
+
         sections = []
-        sections.append(self._render_family_table_section(
-            title="Per-Family Accuracy",
-            metric_key="accuracy",
-            family_metrics=family_metrics,
-            families=families,
-            condition_names=condition_names,
-            format_str="{:.2f}",
-        ))
-        sections.append(self._render_family_table_section(
-            title="Per-Family Token Efficiency (Correct per 1k tokens)",
-            metric_key="token_eff",
-            family_metrics=family_metrics,
-            families=families,
-            condition_names=condition_names,
-            format_str="{:.2f}",
-        ))
+
+        # Baseline accuracy table
+        if baseline_conds:
+            sections.append(self._render_family_df(
+                title="Per-Family Accuracy (Baseline)",
+                metric_key="accuracy",
+                family_metrics=family_metrics,
+                families=families,
+                condition_names=baseline_conds,
+                abbreviate=False,
+            ))
+
+        # Adversarial accuracy table
+        if adv_conds:
+            sections.append(self._render_family_df(
+                title="Per-Family Accuracy (Adversarial)",
+                metric_key="accuracy",
+                family_metrics=family_metrics,
+                families=families,
+                condition_names=adv_conds,
+                abbreviate=True,
+            ))
+
+        # Token efficiency - only if any non-zero values
+        has_tokens = any(
+            family_metrics.get(cond, {}).get(fam, {}).get("token_eff", 0.0) > 0
+            for cond in condition_names
+            for fam in families
+        )
+        if has_tokens:
+            if baseline_conds:
+                sections.append(self._render_family_df(
+                    title="Per-Family Token Efficiency (Baseline)",
+                    metric_key="token_eff",
+                    family_metrics=family_metrics,
+                    families=families,
+                    condition_names=baseline_conds,
+                    abbreviate=False,
+                ))
+            if adv_conds:
+                sections.append(self._render_family_df(
+                    title="Per-Family Token Efficiency (Adversarial)",
+                    metric_key="token_eff",
+                    family_metrics=family_metrics,
+                    families=families,
+                    condition_names=adv_conds,
+                    abbreviate=True,
+                ))
+
         return "\n\n".join(sections)
 
-    def _render_family_table_section(
+    def _render_family_df(
         self,
         *,
         title: str,
@@ -239,26 +298,55 @@ Future runs should incorporate stronger validators and richer task suites.
         family_metrics: dict[str, dict[str, dict[str, float]]],
         families: list[str],
         condition_names: list[str],
-        format_str: str,
+        abbreviate: bool = False,
     ) -> str:
-        cols = "l" + "r" * len(condition_names)
-        lines = [f"\\subsection{{{_escape_latex(title)}}}", "\\begin{tabular}{" + cols + "}"]
-        header = "Family & " + " & ".join(_escape_latex(name) for name in condition_names) + " \\\\"
-        lines.append("\\toprule")
-        lines.append(header)
-        lines.append("\\midrule")
+        """Render a family metrics table using pandas DataFrame."""
+        # Build data dictionary
+        data: dict[str, list[float]] = {"Family": []}
+        display_names = []
+
+        for cond in condition_names:
+            display = CONDITION_ABBREV.get(cond, cond) if abbreviate else cond
+            display_names.append(display)
+            data[display] = []
+
         for family in families:
-            row = [_escape_latex(_family_label(family))]
-            for name in condition_names:
-                value = family_metrics.get(name, {}).get(family, {}).get(metric_key, 0.0)
-                row.append(format_str.format(value))
-            lines.append(" & ".join(row) + " \\\\")
-        lines.append("\\bottomrule")
-        lines.append("\\end{tabular}")
-        return "\n".join(lines)
+            data["Family"].append(_family_label(family))
+            for cond, display in zip(condition_names, display_names):
+                value = family_metrics.get(cond, {}).get(family, {}).get(metric_key, 0.0)
+                data[display].append(value)
+
+        df = pd.DataFrame(data)
+
+        # Format numeric columns
+        for col in display_names:
+            df[col] = df[col].map(lambda x: f"{x:.2f}")
+
+        # Generate LaTeX with adjustbox for wide tables
+        latex = df.to_latex(
+            index=False,
+            escape=True,
+            column_format="l" + "r" * len(display_names),
+        )
+
+        # Wrap in adjustbox if abbreviating (likely wide table)
+        if abbreviate:
+            legend = (
+                "\\noindent\\textit{Legend: "
+                + ", ".join(f"{v}={k.replace('adv_', '')}" for k, v in CONDITION_ABBREV.items() if k in condition_names)
+                + "}"
+            )
+            return f"""\\subsection{{{_escape_latex(title)}}}
+\\begin{{adjustbox}}{{max width=\\textwidth}}
+{latex}\\end{{adjustbox}}
+
+{legend}"""
+        else:
+            return f"\\subsection{{{_escape_latex(title)}}}\n{latex}"
 
 
 def _escape_latex(text: str) -> str:
+    """Escape special LaTeX characters."""
     replacements = {
         "&": r"\&",
         "%": r"\%",
@@ -275,6 +363,7 @@ def _escape_latex(text: str) -> str:
 
 
 def _order_families(family_metrics: dict[str, dict[str, dict[str, float]]]) -> list[str]:
+    """Order families with preferred ones first."""
     preferred = ["arithmetic", "algebra", "logic_grid", "symbolic", "word"]
     families: set[str] = set()
     for metrics in family_metrics.values():
@@ -285,4 +374,5 @@ def _order_families(family_metrics: dict[str, dict[str, dict[str, float]]]) -> l
 
 
 def _family_label(family: str) -> str:
+    """Convert family key to display label."""
     return "logic" if family == "logic_grid" else family

@@ -1873,8 +1873,7 @@ class TrackARunner:
             )
             images[fig4_path.name] = _encode_image(fig4_path)
 
-            # Token efficiency heatmap
-            fig4b, ax4b = plt.subplots(figsize=(12, 8))
+            # Token efficiency heatmap - only generate if any tokens were used
             matrix_eff = []
             for cond in conditions:
                 row = []
@@ -1885,28 +1884,33 @@ class TrackARunner:
                     else:
                         row.append(0.0)
                 matrix_eff.append(row)
-            im2 = ax4b.imshow(matrix_eff, vmin=0.0, cmap="Purples")
-            ax4b.set_xticks(range(len(families)))
-            ax4b.set_xticklabels([_family_label(f) for f in families], rotation=45, ha="right", fontsize=9)
-            ax4b.set_yticks(range(len(conditions)))
-            ax4b.set_yticklabels(conditions, fontsize=9)
-            ax4b.set_title("Token Efficiency by Task Family and Condition")
-            for i in range(len(conditions)):
-                for j in range(len(families)):
-                    ax4b.text(j, i, f"{matrix_eff[i][j]:.1f}", ha="center", va="center", fontsize=8)
-            fig4b.colorbar(im2, ax=ax4b, fraction=0.046, pad=0.04, label="Correct / 1k tokens")
-            fig4b.tight_layout()
-            fig4b_path = self.output_dir / "figure_family_token_eff.png"
-            fig4b.savefig(fig4b_path, dpi=150)
-            plt.close(fig4b)
 
-            figures.append(
-                PaperFigure(
-                    filename=fig4b_path.name,
-                    caption="Per-family token efficiency (correct per 1k tokens).",
+            # Skip this figure if all token efficiency values are 0 (heuristic solvers)
+            has_token_data = any(val > 0 for row in matrix_eff for val in row)
+            if has_token_data:
+                fig4b, ax4b = plt.subplots(figsize=(12, 8))
+                im2 = ax4b.imshow(matrix_eff, vmin=0.0, cmap="Purples")
+                ax4b.set_xticks(range(len(families)))
+                ax4b.set_xticklabels([_family_label(f) for f in families], rotation=45, ha="right", fontsize=9)
+                ax4b.set_yticks(range(len(conditions)))
+                ax4b.set_yticklabels(conditions, fontsize=9)
+                ax4b.set_title("Token Efficiency by Task Family and Condition")
+                for i in range(len(conditions)):
+                    for j in range(len(families)):
+                        ax4b.text(j, i, f"{matrix_eff[i][j]:.1f}", ha="center", va="center", fontsize=8)
+                fig4b.colorbar(im2, ax=ax4b, fraction=0.046, pad=0.04, label="Correct / 1k tokens")
+                fig4b.tight_layout()
+                fig4b_path = self.output_dir / "figure_family_token_eff.png"
+                fig4b.savefig(fig4b_path, dpi=150)
+                plt.close(fig4b)
+
+                figures.append(
+                    PaperFigure(
+                        filename=fig4b_path.name,
+                        caption="Per-family token efficiency (correct per 1k tokens).",
+                    )
                 )
-            )
-            images[fig4b_path.name] = _encode_image(fig4b_path)
+                images[fig4b_path.name] = _encode_image(fig4b_path)
 
         if summary.reputation_drift:
             fig5, ax5 = plt.subplots(figsize=(10, 5))

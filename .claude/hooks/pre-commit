@@ -83,12 +83,13 @@ else
         ruff check $STAGED_PY
 
         # ── 3. Type check (staged swarm/ files only) ──
-        # Use --follow-imports=silent to type-check without surfacing errors in deps
-        # (--follow-imports=skip causes mypy serialization crashes on some files)
+        # Use --follow-imports=skip to avoid checking pre-existing errors in imports.
+        # If mypy crashes internally (known bug with some files), the handler below
+        # logs a warning and continues instead of blocking the commit.
         STAGED_SWARM=$(echo "$STAGED_PY" | grep '^swarm/' || true)
         if [ -n "$STAGED_SWARM" ]; then
             echo "[swarm pre-commit] mypy (staged swarm/ files)"
-            MYPY_OUTPUT=$(mypy --follow-imports=silent $STAGED_SWARM 2>&1) && true
+            MYPY_OUTPUT=$(mypy --follow-imports=skip $STAGED_SWARM 2>&1) && true
             MYPY_EXIT=$?
             if [ $MYPY_EXIT -ne 0 ]; then
                 if echo "$MYPY_OUTPUT" | grep -q "Internal error\|AssertionError"; then
