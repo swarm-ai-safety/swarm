@@ -1747,7 +1747,9 @@ class TrackARunner:
         try:
             import matplotlib.pyplot as plt
         except Exception:
-            return [], {}
+            empty_figs: list[PaperFigure] = []
+            empty_imgs: dict[str, str] = {}
+            return empty_figs, empty_imgs
 
         figures: list[PaperFigure] = []
         images: dict[str, str] = {}

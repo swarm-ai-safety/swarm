@@ -1,0 +1,148 @@
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{array}
+\geometry{margin=1in}
+\title{SWARM Track A: Disagreement + Memory in Verifiable Reasoning}
+\date{2026-02-10}
+\begin{document}
+\maketitle
+\begin{abstract}
+We benchmark SWARM coordination mechanisms on a verifiable reasoning track, comparing divergence, critique, reconciliation, and memory retrieval. We report accuracy, disagreement rates, and costs across 500 tasks.
+\end{abstract}
+
+\section{Introduction}
+We evaluate SWARM-style coordination mechanisms on Track A (verifiable reasoning),
+using controlled arithmetic and word-problem tasks with deterministic checks.
+Each condition corresponds to a coordination policy (divergence, critique,
+reconciliation, memory). This paper summarizes one full run (ID: track\_a\_20260210\_034234).
+
+\section{Methods}
+Tasks: 500 total, generated with fixed random seed and difficulty calibration.
+
+\subsection{Conditions}
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llrl}
+\toprule
+Condition & Type & Acc. & Description \\
+\midrule
+single & baseline & 100\% & Single solver baseline \\
+diverge & baseline & 100\% & Two solvers, pick highest confidence \\
+sda & baseline & 100\% & Diverge + reconcile on disagreement \\
+critic & baseline & 100\% & Diverge + critic + reconcile \\
+memory & baseline & 100\% & SDA + memory retrieval \\
+\midrule
+adv\_noise & adv. & 77\% & 2 solvers + 1 noisy adversary + voting \\
+adv\_confident & adv. & 76\% & 2 solvers + 1 confident-wrong + voting \\
+adv\_strategic & adv. & 78\% & 2 solvers + 1 strategic adversary + voting \\
+adv\_sycophant & adv. & 79\% & 2 solvers + 1 sycophant + voting \\
+adv\_coordinated & adv. & 76\% & 2 solvers + 2 coordinated adversaries \\
+adv\_majority & adv. & 70\% & 2 solvers + 3 adversaries (majority) \\
+adv\_memory & adv. & 78\% & Memory + 1 strategic adversary + voting \\
+\bottomrule
+\end{tabular}
+\caption{Coordination conditions and overall accuracy.}
+\end{table}
+
+\section{Results}
+Across conditions, we report accuracy (correct/total), disagreement rate when
+multiple solvers are active, and reconciliation frequency when enabled.
+
+\paragraph{Critique Summary}
+Critic flags: 3892 (64.9\% of episodes).
+\begin{itemize}
+\item confident disagreement
+\item derived-solution mismatch
+\item non-numeric answer in numeric task
+\end{itemize}
+
+\subsection{Per-Family Accuracy}
+
+\paragraph{Baseline Conditions}
+All baseline conditions achieve 100\% accuracy across all task families (arithmetic, algebra, logic, symbolic, word, code\_verify, inequality, knights\_knaves, logic\_grid\_4x4, modular, system\_eq).
+
+\paragraph{Adversarial Conditions}
+Table~\ref{tab:adv} shows per-family accuracy under adversarial attack with voting enabled.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{l|ccccccc}
+\toprule
+Family & Nse & Cnf & Str & Syc & Crd & Maj & Mem \\
+\midrule
+arithmetic    & .70 & .67 & .71 & .74 & .67 & .66 & .71 \\
+algebra       & .85 & .85 & .85 & .87 & .85 & .82 & .85 \\
+logic         & .64 & .64 & .64 & .64 & .64 & .56 & .64 \\
+symbolic      & .91 & .88 & .88 & \textbf{.95} & .82 & .91 & .88 \\
+word          & .73 & .73 & .78 & .75 & .74 & .70 & .78 \\
+code\_verify  & .61 & .58 & .61 & .61 & .58 & .58 & .61 \\
+inequality    & .84 & .84 & .84 & .86 & .84 & .81 & .84 \\
+knights\_knaves & .83 & .83 & .83 & .83 & .83 & \textbf{.00} & .83 \\
+logic\_grid   & .84 & .84 & .84 & .84 & .84 & .80 & .84 \\
+modular       & .81 & .81 & .81 & .81 & .81 & .78 & .81 \\
+system\_eq    & .80 & .80 & .80 & .80 & .80 & .76 & .80 \\
+\bottomrule
+\end{tabular}
+\caption{Per-family accuracy under adversarial conditions. Columns: Nse=noise, Cnf=confident, Str=strategic, Syc=sycophant, Crd=coordinated, Maj=majority, Mem=memory. Bold: best (.95) and worst (.00).}
+\label{tab:adv}
+\end{table}
+
+\subsection{Key Findings}
+
+\begin{enumerate}
+\item \textbf{Voting is essential for adversary resistance.} Without voting, adversary success rate is $\sim$95\%. With voting, it drops to $\sim$24\%.
+\item \textbf{Binary tasks are vulnerable.} knights\_knaves achieves 0\% accuracy under adv\_majority (3 adversaries vs 2 honest), as adversaries can outvote the correct binary choice.
+\item \textbf{Symbolic reasoning is most robust.} Achieves 95\% accuracy even under sycophant attacks.
+\item \textbf{Code verification is weakest.} Consistently 58--61\% across adversarial conditions.
+\end{enumerate}
+
+\section{Figures}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\linewidth]{figure_accuracy.png}
+\caption{Accuracy across coordination conditions.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\linewidth]{figure_rates.png}
+\caption{Disagreement, reconcile, and adversary-flag rates by condition.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\linewidth]{figure_efficiency.png}
+\caption{Accuracy vs average token cost.}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\linewidth]{figure_family_heatmap.png}
+\caption{Per-family accuracy heatmap (rows: conditions, columns: task families).}
+\end{figure}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\linewidth]{figure_reputation_drift.png}
+\caption{EMA reputation trajectories for solvers and roles over 6,000 episodes.}
+\end{figure}
+
+\section{Related Work}
+AgentRxiv integration was disabled for this run.
+
+\section{Limitations}
+\begin{itemize}
+\item Heuristic solvers used (0 tokens); LLM evaluation pending.
+\item Confidence treated as reported scalar without calibration.
+\item Simple divergence heuristics; richer critics needed.
+\item Binary-choice tasks need guaranteed honest majority.
+\end{itemize}
+
+\section{Conclusion}
+Voting-based coordination provides strong adversary resistance (76.5\% accuracy vs 100\% baseline), reducing adversary success from 95\% to 24\%. Task families vary significantly in robustness: symbolic reasoning resists attacks well (89\%), while code verification (60\%) and binary logic puzzles under majority attack (0\%) remain vulnerable.
+
+\end{document}

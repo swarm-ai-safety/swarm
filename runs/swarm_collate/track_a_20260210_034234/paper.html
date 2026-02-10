@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="" xml:lang="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="dcterms.date" content="2026-02-10" />
+  <title>SWARM Track A Results</title>
+  <style>
+    html {
+      line-height: 1.5;
+      font-family: Georgia, serif;
+      font-size: 20px;
+      color: #1a1a1a;
+      background-color: #fdfdfd;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 36em;
+      padding-left: 50px;
+      padding-right: 50px;
+      padding-top: 50px;
+      padding-bottom: 50px;
+      hyphens: auto;
+      word-wrap: break-word;
+      text-rendering: optimizeLegibility;
+      font-kerning: normal;
+    }
+    @media (max-width: 600px) {
+      body {
+        font-size: 0.9em;
+        padding: 1em;
+      }
+    }
+    @media print {
+      body {
+        background-color: transparent;
+        color: black;
+        font-size: 12pt;
+      }
+      p, h2, h3 {
+        orphans: 3;
+        widows: 3;
+      }
+      h2, h3, h4 {
+        page-break-after: avoid;
+      }
+    }
+    p {
+      margin: 1em 0;
+    }
+    a {
+      color: #1a1a1a;
+    }
+    a:visited {
+      color: #1a1a1a;
+    }
+    img {
+      max-width: 100%;
+    }
+    h1, h2, h3, h4, h5, h6 {
+      margin-top: 1.4em;
+    }
+    h5, h6 {
+      font-size: 1em;
+      font-style: italic;
+    }
+    h6 {
+      font-weight: normal;
+    }
+    ol, ul {
+      padding-left: 1.7em;
+      margin-top: 1em;
+    }
+    li > ol, li > ul {
+      margin-top: 0;
+    }
+    blockquote {
+      margin: 1em 0 1em 1.7em;
+      padding-left: 1em;
+      border-left: 2px solid #e6e6e6;
+      color: #606060;
+    }
+    code {
+      font-family: Menlo, Monaco, 'Lucida Console', Consolas, monospace;
+      font-size: 85%;
+      margin: 0;
+    }
+    pre {
+      margin: 1em 0;
+      overflow: auto;
+    }
+    pre code {
+      padding: 0;
+      overflow: visible;
+    }
+    .sourceCode {
+     background-color: transparent;
+     overflow: visible;
+    }
+    hr {
+      background-color: #1a1a1a;
+      border: none;
+      height: 1px;
+      margin: 1em 0;
+    }
+    table {
+      margin: 1em 0;
+      border-collapse: collapse;
+      width: 100%;
+      overflow-x: auto;
+      display: block;
+      font-variant-numeric: lining-nums tabular-nums;
+    }
+    table caption {
+      margin-bottom: 0.75em;
+    }
+    tbody {
+      margin-top: 0.5em;
+      border-top: 1px solid #1a1a1a;
+      border-bottom: 1px solid #1a1a1a;
+    }
+    th {
+      border-top: 1px solid #1a1a1a;
+      padding: 0.25em 0.5em 0.25em 0.5em;
+    }
+    td {
+      padding: 0.125em 0.5em 0.25em 0.5em;
+    }
+    header {
+      margin-bottom: 4em;
+      text-align: center;
+    }
+    #TOC li {
+      list-style: none;
+    }
+    #TOC a:not(:hover) {
+      text-decoration: none;
+    }
+    code{white-space: pre-wrap;}
+    span.smallcaps{font-variant: small-caps;}
+    span.underline{text-decoration: underline;}
+    div.column{display: inline-block; vertical-align: top; width: 50%;}
+    div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+    ul.task-list{list-style: none;}
+    .display.math{display: block; text-align: center; margin: 0.5rem auto;}
+  </style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+<body>
+<header id="title-block-header">
+<h1 class="title">SWARM Track A Results</h1>
+<p class="date">2026-02-10</p>
+</header>
+<h1 id="introduction">Introduction</h1>
+<p>We evaluate SWARM-style coordination mechanisms on Track A (verifiable reasoning), using controlled arithmetic and word-problem tasks with deterministic checks. Each condition corresponds to a coordination policy (divergence, critique, reconciliation, memory). This paper summarizes one full run (ID: track_a_20260210_034234).</p>
+<h1 id="methods">Methods</h1>
+<p>Tasks: 500 total, generated with fixed random seed and difficulty calibration.</p>
+<h2 id="conditions">Conditions</h2>
+<div class="tabular">
+<p><span>llll</span> Condition &amp; Accuracy &amp; Avg. Tokens &amp; Notes   single &amp; 1.000 &amp; 0.0 &amp; Single solver baseline  diverge &amp; 1.000 &amp; 0.0 &amp; Two solvers, pick highest confidence  sda &amp; 1.000 &amp; 0.0 &amp; Diverge + reconcile on disagreement  critic &amp; 1.000 &amp; 0.0 &amp; Diverge + critic + reconcile  memory &amp; 1.000 &amp; 0.0 &amp; SDA + memory retrieval  adv_noise &amp; 0.774 &amp; 0.0 &amp; Two solvers + 1 noisy adversary + voting  adv_confident &amp; 0.764 &amp; 0.0 &amp; Two solvers + 1 confident-wrong adversary + voting  adv_strategic &amp; 0.780 &amp; 0.0 &amp; Two solvers + 1 strategic adversary + voting  adv_sycophant &amp; 0.792 &amp; 0.0 &amp; Two solvers + 1 sycophant adversary + voting  adv_coordinated &amp; 0.760 &amp; 0.0 &amp; Two solvers + 2 coordinated adversaries + voting  adv_majority &amp; 0.702 &amp; 0.0 &amp; Two solvers + 3 adversaries (adversary majority) + voting  adv_memory &amp; 0.780 &amp; 0.0 &amp; Memory condition + 1 strategic adversary + voting  </p>
+</div>
+<h1 id="results">Results</h1>
+<p>Across conditions, we report accuracy (correct/total), disagreement rate when multiple solvers are active, and reconciliation frequency when enabled.</p>
+<h4 id="critique-summary">Critique Summary</h4>
+<p>Critic flags: 3892 (64.9</p>
+<ul>
+<li><p>confident disagreement</p></li>
+<li><p>derived-solution mismatch</p></li>
+<li><p>non-numeric answer in numeric task</p></li>
+</ul>
+<h2 id="per-family-accuracy">Per-Family Accuracy</h2>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Family</th>
+<th style="text-align: right;">single</th>
+<th style="text-align: right;">diverge</th>
+<th style="text-align: right;">sda</th>
+<th style="text-align: right;">critic</th>
+<th style="text-align: right;">memory</th>
+<th style="text-align: right;">adv_noise</th>
+<th style="text-align: right;">adv_confident</th>
+<th style="text-align: right;">adv_strategic</th>
+<th style="text-align: right;">adv_sycophant</th>
+<th style="text-align: right;">adv_coordinated</th>
+<th style="text-align: right;">adv_majority</th>
+<th style="text-align: right;">adv_memory</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">arithmetic</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.70</td>
+<td style="text-align: right;">0.67</td>
+<td style="text-align: right;">0.71</td>
+<td style="text-align: right;">0.74</td>
+<td style="text-align: right;">0.67</td>
+<td style="text-align: right;">0.66</td>
+<td style="text-align: right;">0.71</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">algebra</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.85</td>
+<td style="text-align: right;">0.85</td>
+<td style="text-align: right;">0.85</td>
+<td style="text-align: right;">0.87</td>
+<td style="text-align: right;">0.85</td>
+<td style="text-align: right;">0.82</td>
+<td style="text-align: right;">0.85</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">logic</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">0.64</td>
+<td style="text-align: right;">0.56</td>
+<td style="text-align: right;">0.64</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">symbolic</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.91</td>
+<td style="text-align: right;">0.88</td>
+<td style="text-align: right;">0.88</td>
+<td style="text-align: right;">0.95</td>
+<td style="text-align: right;">0.82</td>
+<td style="text-align: right;">0.91</td>
+<td style="text-align: right;">0.88</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">word</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.73</td>
+<td style="text-align: right;">0.73</td>
+<td style="text-align: right;">0.78</td>
+<td style="text-align: right;">0.75</td>
+<td style="text-align: right;">0.74</td>
+<td style="text-align: right;">0.70</td>
+<td style="text-align: right;">0.78</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">code_verify</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.61</td>
+<td style="text-align: right;">0.58</td>
+<td style="text-align: right;">0.61</td>
+<td style="text-align: right;">0.61</td>
+<td style="text-align: right;">0.58</td>
+<td style="text-align: right;">0.58</td>
+<td style="text-align: right;">0.61</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">inequality</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.84</td>
+<td style="text-align: right;">0.84</td>
+<td style="text-align: right;">0.84</td>
+<td style="text-align: right;">0.86</td>
+<td style="text-align: right;">0.84</td>
+<td style="text-align: right;">0.81</td>
+<td style="text-align: right;">0.84</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">knights_knaves</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.83</td>
+<td style="text-align: right;">0.83</td>
+<td style="text-align: right;">0.83</td>
+<td style="text-align: right;">0.83</td>
+<td style="text-align: right;">0.83</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.83</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">logic_grid_4x4</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.84</td>
+<td style="text-align: right;">0.84</td>
+<td style="text-align: right;">0.84</td>
+<td style="text-align: right;">0.84</td>
+<td style="text-align: right;">0.84</td>
+<td style="text-align: right;">0.80</td>
+<td style="text-align: right;">0.84</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">modular</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.81</td>
+<td style="text-align: right;">0.81</td>
+<td style="text-align: right;">0.81</td>
+<td style="text-align: right;">0.81</td>
+<td style="text-align: right;">0.81</td>
+<td style="text-align: right;">0.78</td>
+<td style="text-align: right;">0.81</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">system_eq</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.80</td>
+<td style="text-align: right;">0.80</td>
+<td style="text-align: right;">0.80</td>
+<td style="text-align: right;">0.80</td>
+<td style="text-align: right;">0.80</td>
+<td style="text-align: right;">0.76</td>
+<td style="text-align: right;">0.80</td>
+</tr>
+</tbody>
+</table>
+<h2 id="per-family-token-efficiency-correct-per-1k-tokens">Per-Family Token Efficiency (Correct per 1k tokens)</h2>
+<table>
+<thead>
+<tr class="header">
+<th style="text-align: left;">Family</th>
+<th style="text-align: right;">single</th>
+<th style="text-align: right;">diverge</th>
+<th style="text-align: right;">sda</th>
+<th style="text-align: right;">critic</th>
+<th style="text-align: right;">memory</th>
+<th style="text-align: right;">adv_noise</th>
+<th style="text-align: right;">adv_confident</th>
+<th style="text-align: right;">adv_strategic</th>
+<th style="text-align: right;">adv_sycophant</th>
+<th style="text-align: right;">adv_coordinated</th>
+<th style="text-align: right;">adv_majority</th>
+<th style="text-align: right;">adv_memory</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">arithmetic</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">algebra</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">logic</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">symbolic</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">word</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">code_verify</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">inequality</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">knights_knaves</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">logic_grid_4x4</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">modular</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">system_eq</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+<td style="text-align: right;">0.00</td>
+</tr>
+</tbody>
+</table>
+<h1 id="figures">Figures</h1>
+<figure>
+<img src="figure_accuracy.png" alt="Accuracy across coordination conditions." /><figcaption aria-hidden="true">Accuracy across coordination conditions.</figcaption>
+</figure>
+<figure>
+<img src="figure_rates.png" alt="Disagreement, reconcile, and adversary-flag rates by condition." /><figcaption aria-hidden="true">Disagreement, reconcile, and adversary-flag rates by condition.</figcaption>
+</figure>
+<figure>
+<img src="figure_efficiency.png" alt="Accuracy vs average token cost." /><figcaption aria-hidden="true">Accuracy vs average token cost.</figcaption>
+</figure>
+<figure>
+<img src="figure_family_heatmap.png" alt="Per-family accuracy (arithmetic, algebra, logic, symbolic, word)." /><figcaption aria-hidden="true">Per-family accuracy (arithmetic, algebra, logic, symbolic, word).</figcaption>
+</figure>
+<figure>
+<img src="figure_family_token_eff.png" alt="Per-family token efficiency (correct per 1k tokens)." /><figcaption aria-hidden="true">Per-family token efficiency (correct per 1k tokens).</figcaption>
+</figure>
+<figure>
+<img src="figure_reputation_drift.png" alt="EMA reputation trajectories for key solvers/roles." /><figcaption aria-hidden="true">EMA reputation trajectories for key solvers/roles.</figcaption>
+</figure>
+<h1 id="related-work-agentrxiv">Related Work (AgentRxiv)</h1>
+<ul>
+<li><p>None.</p></li>
+</ul>
+<h1 id="memory-artifacts">Memory Artifacts</h1>
+<p>No memory artifacts were accepted in this run.</p>
+<h1 id="limitations">Limitations</h1>
+<p>We treat confidence as a reported scalar and rely on simple divergence heuristics. Future runs should incorporate stronger validators and richer task suites.</p>
+</body>
+</html>

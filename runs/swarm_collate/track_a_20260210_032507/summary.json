@@ -1,0 +1,225 @@
+{
+  "run_id": "track_a_20260210_032507",
+  "task_count": 20,
+  "conditions": [
+    {
+      "name": "adv_noise",
+      "accuracy": 0.2,
+      "avg_tokens": 0,
+      "avg_confidence": 0.75,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.8,
+      "note": "Two solvers + 1 noisy adversary"
+    },
+    {
+      "name": "adv_confident",
+      "accuracy": 0.2,
+      "avg_tokens": 0,
+      "avg_confidence": 0.85,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.8,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.8,
+      "note": "Two solvers + 1 confident-wrong adversary"
+    },
+    {
+      "name": "adv_strategic",
+      "accuracy": 0.1,
+      "avg_tokens": 0,
+      "avg_confidence": 0.75,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.9,
+      "note": "Two solvers + 1 strategic adversary"
+    },
+    {
+      "name": "adv_sycophant",
+      "accuracy": 0.3,
+      "avg_tokens": 0,
+      "avg_confidence": 0.7,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.7,
+      "note": "Two solvers + 1 sycophant adversary"
+    },
+    {
+      "name": "adv_coordinated",
+      "accuracy": 0.0,
+      "avg_tokens": 0,
+      "avg_confidence": 0.75,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 1.0,
+      "note": "Two solvers + 2 coordinated adversaries"
+    },
+    {
+      "name": "adv_majority",
+      "accuracy": 0.75,
+      "avg_tokens": 0,
+      "avg_confidence": 0.6375,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 0.25,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.25,
+      "note": "Two solvers + 3 adversaries (adversary majority)"
+    },
+    {
+      "name": "adv_memory",
+      "accuracy": 0.1,
+      "avg_tokens": 0,
+      "avg_confidence": 0.75,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.9,
+      "note": "Memory condition + 1 strategic adversary"
+    }
+  ],
+  "memory_artifacts": [],
+  "related_work": [],
+  "family_metrics": {
+    "adv_noise": {
+      "algebra": 0.0,
+      "arithmetic": 0.0,
+      "symbolic": 0.5714285714285714,
+      "word": 0.0,
+      "logic_grid": 0.0
+    },
+    "adv_confident": {
+      "algebra": 0.0,
+      "arithmetic": 0.0,
+      "symbolic": 0.5714285714285714,
+      "word": 0.0,
+      "logic_grid": 0.0
+    },
+    "adv_strategic": {
+      "algebra": 0.3333333333333333,
+      "arithmetic": 0.0,
+      "symbolic": 0.0,
+      "word": 0.3333333333333333,
+      "logic_grid": 0.0
+    },
+    "adv_sycophant": {
+      "algebra": 0.0,
+      "arithmetic": 0.0,
+      "symbolic": 0.8571428571428571,
+      "word": 0.0,
+      "logic_grid": 0.0
+    },
+    "adv_coordinated": {
+      "algebra": 0.0,
+      "arithmetic": 0.0,
+      "symbolic": 0.0,
+      "word": 0.0,
+      "logic_grid": 0.0
+    },
+    "adv_majority": {
+      "algebra": 0.3333333333333333,
+      "arithmetic": 1.0,
+      "symbolic": 0.7142857142857143,
+      "word": 0.6666666666666666,
+      "logic_grid": 1.0
+    },
+    "adv_memory": {
+      "algebra": 0.3333333333333333,
+      "arithmetic": 0.0,
+      "symbolic": 0.0,
+      "word": 0.3333333333333333,
+      "logic_grid": 0.0
+    }
+  },
+  "critique_summary": {
+    "total_flags": 140,
+    "flag_rate": 1.0,
+    "top_reasons": [
+      "confident disagreement",
+      "logic grid inconsistency"
+    ]
+  },
+  "reputation_summary": {
+    "solvers": {
+      "precise": {
+        "total": 140.0,
+        "accuracy": 1.0,
+        "ema_accuracy": 0.9999998036995362,
+        "deviation_rate": 0.07142857142857142
+      },
+      "creative": {
+        "total": 140.0,
+        "accuracy": 0.75,
+        "ema_accuracy": 0.7254833795016657,
+        "deviation_rate": 0.22857142857142856
+      },
+      "adversary": {
+        "total": 100.0,
+        "accuracy": 0.18,
+        "ema_accuracy": 0.1198357791365518,
+        "deviation_rate": 0.96
+      },
+      "adversary_0": {
+        "total": 40.0,
+        "accuracy": 0.1,
+        "ema_accuracy": 0.15343502264252576,
+        "deviation_rate": 0.85
+      },
+      "adversary_1": {
+        "total": 40.0,
+        "accuracy": 0.1,
+        "ema_accuracy": 0.15343502264252576,
+        "deviation_rate": 0.75
+      },
+      "adversary_2": {
+        "total": 20.0,
+        "accuracy": 0.2,
+        "ema_accuracy": 0.20683290846709312,
+        "deviation_rate": 0.9
+      }
+    },
+    "roles": {
+      "precise solver": {
+        "total": 140.0,
+        "accuracy": 1.0,
+        "ema_accuracy": 0.9999998036995362,
+        "deviation_rate": 0.07142857142857142
+      },
+      "creative solver": {
+        "total": 140.0,
+        "accuracy": 0.75,
+        "ema_accuracy": 0.7254833795016657,
+        "deviation_rate": 0.22857142857142856
+      },
+      "adversary": {
+        "total": 200.0,
+        "accuracy": 0.15,
+        "ema_accuracy": 0.09657177618265922,
+        "deviation_rate": 0.89
+      }
+    }
+  }
+}

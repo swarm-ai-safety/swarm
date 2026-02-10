@@ -1,0 +1,129 @@
+\documentclass{article}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{geometry}
+\geometry{margin=1in}
+\title{SWARM Track A: Disagreement + Memory in Verifiable Reasoning}
+\date{2026-02-10}
+\begin{document}
+\maketitle
+\begin{abstract}
+We benchmark SWARM coordination mechanisms on a verifiable reasoning track, comparing divergence, critique, reconciliation, and memory retrieval. We report accuracy, disagreement rates, and costs across 100 tasks.
+\end{abstract}
+
+\section{Introduction}
+We evaluate SWARM-style coordination mechanisms on Track A (verifiable reasoning),
+using controlled arithmetic and word-problem tasks with deterministic checks.
+Each condition corresponds to a coordination policy (divergence, critique,
+reconciliation, memory). This paper summarizes one full run (ID: track\_a\_20260210\_033517).
+
+\section{Methods}
+Tasks: 100 total, generated with fixed random seed and difficulty calibration.
+
+\subsection{Conditions}
+\begin{tabular}{llll}
+\toprule
+Condition & Accuracy & Avg. Tokens & Notes \
+\midrule
+adv\_noise & 0.060 & 0.0 & Two solvers + 1 noisy adversary \
+adv\_confident & 0.030 & 0.0 & Two solvers + 1 confident-wrong adversary \
+adv\_strategic & 0.020 & 0.0 & Two solvers + 1 strategic adversary \
+adv\_sycophant & 0.080 & 0.0 & Two solvers + 1 sycophant adversary \
+adv\_coordinated & 0.030 & 0.0 & Two solvers + 2 coordinated adversaries \
+adv\_majority & 0.670 & 0.0 & Two solvers + 3 adversaries (adversary majority) \
+adv\_memory & 0.020 & 0.0 & Memory condition + 1 strategic adversary \
+\bottomrule
+\end{tabular}
+
+\section{Results}
+Across conditions, we report accuracy (correct/total), disagreement rate when
+multiple solvers are active, and reconciliation frequency when enabled.
+
+\paragraph{Critique Summary}
+Critic flags: 697 (99.6% of episodes).
+\begin{itemize}
+\item confident disagreement
+\item non-numeric answer in numeric task
+\item derived-solution mismatch
+\end{itemize}
+
+\subsection{Per-Family Accuracy}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Family & adv\_noise & adv\_confident & adv\_strategic & adv\_sycophant & adv\_coordinated & adv\_majority & adv\_memory \\
+\midrule
+arithmetic & 0.17 & 0.00 & 0.08 & 0.17 & 0.00 & 0.58 & 0.08 \\
+algebra & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 1.00 & 0.00 \\
+logic & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.70 & 0.00 \\
+symbolic & 0.36 & 0.27 & 0.09 & 0.55 & 0.00 & 0.91 & 0.09 \\
+word & 0.00 & 0.00 & 0.00 & 0.00 & 0.08 & 0.75 & 0.00 \\
+code\_verify & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.60 & 0.00 \\
+inequality & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.60 & 0.00 \\
+knights\_knaves & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+logic\_grid\_4x4 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.78 & 0.00 \\
+modular & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.62 & 0.00 \\
+system\_eq & 0.00 & 0.00 & 0.00 & 0.00 & 0.18 & 0.64 & 0.00 \\
+\bottomrule
+\end{tabular}
+
+\subsection{Per-Family Token Efficiency (Correct per 1k tokens)}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Family & adv\_noise & adv\_confident & adv\_strategic & adv\_sycophant & adv\_coordinated & adv\_majority & adv\_memory \\
+\midrule
+arithmetic & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+algebra & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+logic & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+symbolic & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+word & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+code\_verify & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+inequality & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+knights\_knaves & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+logic\_grid\_4x4 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+modular & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+system\_eq & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 & 0.00 \\
+\bottomrule
+\end{tabular}
+
+\section{Figures}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\linewidth]{figure\_accuracy.png}
+\caption{Accuracy across coordination conditions.}
+\end{figure}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\linewidth]{figure\_rates.png}
+\caption{Disagreement, reconcile, and adversary-flag rates by condition.}
+\end{figure}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\linewidth]{figure\_efficiency.png}
+\caption{Accuracy vs average token cost.}
+\end{figure}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\linewidth]{figure\_family\_heatmap.png}
+\caption{Per-family accuracy (arithmetic, algebra, logic, symbolic, word).}
+\end{figure}
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.85\linewidth]{figure\_reputation\_drift.png}
+\caption{EMA reputation trajectories for key solvers/roles.}
+\end{figure}
+
+\section{Related Work (AgentRxiv)}
+\begin{itemize}
+\item None.
+\end{itemize}
+
+\section{Memory Artifacts}
+No memory artifacts were accepted in this run.
+
+\section{Limitations}
+We treat confidence as a reported scalar and rely on simple divergence heuristics.
+Future runs should incorporate stronger validators and richer task suites.
+
+
+
+\end{document}

@@ -1,0 +1,138 @@
+{
+  "run_id": "track_a_20260210_031412",
+  "task_count": 200,
+  "conditions": [
+    {
+      "name": "single",
+      "accuracy": 1.0,
+      "avg_tokens": 0,
+      "avg_confidence": 0.7,
+      "disagreement_rate": 0.0,
+      "reconcile_rate": 0.0,
+      "critic_flag_rate": 0.0,
+      "adversary_rate": 0.0,
+      "note": "Single solver baseline"
+    },
+    {
+      "name": "diverge",
+      "accuracy": 1.0,
+      "avg_tokens": 0,
+      "avg_confidence": 0.7,
+      "disagreement_rate": 0.24,
+      "reconcile_rate": 0.0,
+      "critic_flag_rate": 0.0,
+      "adversary_rate": 0.0,
+      "note": "Two solvers, pick highest confidence"
+    },
+    {
+      "name": "sda",
+      "accuracy": 1.0,
+      "avg_tokens": 0,
+      "avg_confidence": 0.7,
+      "disagreement_rate": 0.24,
+      "reconcile_rate": 0.24,
+      "critic_flag_rate": 0.0,
+      "adversary_rate": 0.0,
+      "note": "Diverge + reconcile on disagreement"
+    },
+    {
+      "name": "critic",
+      "accuracy": 1.0,
+      "avg_tokens": 0,
+      "avg_confidence": 0.6759999999999999,
+      "disagreement_rate": 0.24,
+      "reconcile_rate": 0.24,
+      "critic_flag_rate": 0.24,
+      "adversary_rate": 0.0,
+      "note": "Diverge + critic + reconcile"
+    },
+    {
+      "name": "memory",
+      "accuracy": 1.0,
+      "avg_tokens": 0,
+      "avg_confidence": 0.6759999999999999,
+      "disagreement_rate": 0.24,
+      "reconcile_rate": 0.24,
+      "critic_flag_rate": 0.24,
+      "adversary_rate": 0.0,
+      "note": "SDA + memory retrieval"
+    }
+  ],
+  "memory_artifacts": [],
+  "related_work": [],
+  "family_metrics": {
+    "single": {
+      "algebra": 1.0,
+      "arithmetic": 1.0,
+      "word": 1.0,
+      "symbolic": 1.0,
+      "logic_grid": 1.0
+    },
+    "diverge": {
+      "algebra": 1.0,
+      "arithmetic": 1.0,
+      "word": 1.0,
+      "symbolic": 1.0,
+      "logic_grid": 1.0
+    },
+    "sda": {
+      "algebra": 1.0,
+      "arithmetic": 1.0,
+      "word": 1.0,
+      "symbolic": 1.0,
+      "logic_grid": 1.0
+    },
+    "critic": {
+      "algebra": 1.0,
+      "arithmetic": 1.0,
+      "word": 1.0,
+      "symbolic": 1.0,
+      "logic_grid": 1.0
+    },
+    "memory": {
+      "algebra": 1.0,
+      "arithmetic": 1.0,
+      "word": 1.0,
+      "symbolic": 1.0,
+      "logic_grid": 1.0
+    }
+  },
+  "critique_summary": {
+    "total_flags": 96,
+    "flag_rate": 0.096,
+    "top_reasons": [
+      "confident disagreement",
+      "logic grid inconsistency"
+    ]
+  },
+  "reputation_summary": {
+    "solvers": {
+      "precise": {
+        "total": 1000.0,
+        "accuracy": 1.0,
+        "ema_accuracy": 0.9999999999999994,
+        "deviation_rate": 0.0
+      },
+      "creative": {
+        "total": 800.0,
+        "accuracy": 0.795,
+        "ema_accuracy": 0.7676447961265656,
+        "deviation_rate": 0.24
+      }
+    },
+    "roles": {
+      "precise solver": {
+        "total": 1000.0,
+        "accuracy": 1.0,
+        "ema_accuracy": 0.9999999999999994,
+        "deviation_rate": 0.0
+      },
+      "creative solver": {
+        "total": 800.0,
+        "accuracy": 0.795,
+        "ema_accuracy": 0.7676447961265656,
+        "deviation_rate": 0.24
+      }
+    }
+  }
+}

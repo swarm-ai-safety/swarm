@@ -1,0 +1,2294 @@
+{
+  "run_id": "track_a_20260210_032806",
+  "task_count": 20,
+  "conditions": [
+    {
+      "name": "adv_noise",
+      "accuracy": 0.2,
+      "avg_tokens": 0,
+      "avg_confidence": 0.75,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.8,
+      "note": "Two solvers + 1 noisy adversary"
+    },
+    {
+      "name": "adv_confident",
+      "accuracy": 0.2,
+      "avg_tokens": 0,
+      "avg_confidence": 0.85,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.8,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.8,
+      "note": "Two solvers + 1 confident-wrong adversary"
+    },
+    {
+      "name": "adv_strategic",
+      "accuracy": 0.1,
+      "avg_tokens": 0,
+      "avg_confidence": 0.75,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.9,
+      "note": "Two solvers + 1 strategic adversary"
+    },
+    {
+      "name": "adv_sycophant",
+      "accuracy": 0.3,
+      "avg_tokens": 0,
+      "avg_confidence": 0.7,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.7,
+      "note": "Two solvers + 1 sycophant adversary"
+    },
+    {
+      "name": "adv_coordinated",
+      "accuracy": 0.0,
+      "avg_tokens": 0,
+      "avg_confidence": 0.75,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 1.0,
+      "note": "Two solvers + 2 coordinated adversaries"
+    },
+    {
+      "name": "adv_majority",
+      "accuracy": 0.75,
+      "avg_tokens": 0,
+      "avg_confidence": 0.6375,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 0.25,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.25,
+      "note": "Two solvers + 3 adversaries (adversary majority)"
+    },
+    {
+      "name": "adv_memory",
+      "accuracy": 0.1,
+      "avg_tokens": 0,
+      "avg_confidence": 0.75,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 1.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 1.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.9,
+      "note": "Memory condition + 1 strategic adversary"
+    }
+  ],
+  "memory_artifacts": [],
+  "related_work": [],
+  "bib_entries": "",
+  "family_metrics": {
+    "adv_noise": {
+      "algebra": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 0.5714285714285714,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      }
+    },
+    "adv_confident": {
+      "algebra": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 0.5714285714285714,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      }
+    },
+    "adv_strategic": {
+      "algebra": {
+        "accuracy": 0.3333333333333333,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 0.3333333333333333,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      }
+    },
+    "adv_sycophant": {
+      "algebra": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 0.8571428571428571,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      }
+    },
+    "adv_coordinated": {
+      "algebra": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      }
+    },
+    "adv_majority": {
+      "algebra": {
+        "accuracy": 0.3333333333333333,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 0.7142857142857143,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 0.6666666666666666,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      }
+    },
+    "adv_memory": {
+      "algebra": {
+        "accuracy": 0.3333333333333333,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 0.3333333333333333,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      }
+    }
+  },
+  "critique_summary": {
+    "total_flags": 140,
+    "flag_rate": 1.0,
+    "top_reasons": [
+      "confident disagreement",
+      "logic grid inconsistency",
+      "non-integer solution for linear equation"
+    ]
+  },
+  "reputation_summary": {
+    "solvers": {
+      "precise": {
+        "total": 140.0,
+        "accuracy": 1.0,
+        "ema_accuracy": 0.9999998036995362,
+        "deviation_rate": 0.07142857142857142
+      },
+      "creative": {
+        "total": 140.0,
+        "accuracy": 0.75,
+        "ema_accuracy": 0.7254833795016657,
+        "deviation_rate": 0.22857142857142856
+      },
+      "adversary": {
+        "total": 100.0,
+        "accuracy": 0.18,
+        "ema_accuracy": 0.1198357791365518,
+        "deviation_rate": 0.96
+      },
+      "adversary_0": {
+        "total": 40.0,
+        "accuracy": 0.1,
+        "ema_accuracy": 0.15343502264252576,
+        "deviation_rate": 0.85
+      },
+      "adversary_1": {
+        "total": 40.0,
+        "accuracy": 0.1,
+        "ema_accuracy": 0.15343502264252576,
+        "deviation_rate": 0.75
+      },
+      "adversary_2": {
+        "total": 20.0,
+        "accuracy": 0.2,
+        "ema_accuracy": 0.20683290846709312,
+        "deviation_rate": 0.9
+      }
+    },
+    "roles": {
+      "precise solver": {
+        "total": 140.0,
+        "accuracy": 1.0,
+        "ema_accuracy": 0.9999998036995362,
+        "deviation_rate": 0.07142857142857142
+      },
+      "creative solver": {
+        "total": 140.0,
+        "accuracy": 0.75,
+        "ema_accuracy": 0.7254833795016657,
+        "deviation_rate": 0.22857142857142856
+      },
+      "adversary": {
+        "total": 200.0,
+        "accuracy": 0.15,
+        "ema_accuracy": 0.09657177618265922,
+        "deviation_rate": 0.89
+      }
+    }
+  },
+  "reputation_drift": [
+    {
+      "episode": 0,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.55,
+        "creative": 0.45,
+        "adversary": 0.45
+      },
+      "roles": {
+        "precise solver": 0.55,
+        "creative solver": 0.45,
+        "adversary": 0.45
+      }
+    },
+    {
+      "episode": 1,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.5950000000000001,
+        "creative": 0.505,
+        "adversary": 0.405
+      },
+      "roles": {
+        "precise solver": 0.5950000000000001,
+        "creative solver": 0.505,
+        "adversary": 0.405
+      }
+    },
+    {
+      "episode": 2,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.6355000000000001,
+        "creative": 0.5545,
+        "adversary": 0.36450000000000005
+      },
+      "roles": {
+        "precise solver": 0.6355000000000001,
+        "creative solver": 0.5545,
+        "adversary": 0.36450000000000005
+      }
+    },
+    {
+      "episode": 3,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.67195,
+        "creative": 0.59905,
+        "adversary": 0.42805000000000004
+      },
+      "roles": {
+        "precise solver": 0.67195,
+        "creative solver": 0.59905,
+        "adversary": 0.42805000000000004
+      }
+    },
+    {
+      "episode": 4,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.704755,
+        "creative": 0.539145,
+        "adversary": 0.38524500000000006
+      },
+      "roles": {
+        "precise solver": 0.704755,
+        "creative solver": 0.539145,
+        "adversary": 0.38524500000000006
+      }
+    },
+    {
+      "episode": 5,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.7342795,
+        "creative": 0.5852305,
+        "adversary": 0.34672050000000004
+      },
+      "roles": {
+        "precise solver": 0.7342795,
+        "creative solver": 0.5852305,
+        "adversary": 0.34672050000000004
+      }
+    },
+    {
+      "episode": 6,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.7608515499999999,
+        "creative": 0.6267074499999999,
+        "adversary": 0.41204845
+      },
+      "roles": {
+        "precise solver": 0.7608515499999999,
+        "creative solver": 0.6267074499999999,
+        "adversary": 0.41204845
+      }
+    },
+    {
+      "episode": 7,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.7847663949999999,
+        "creative": 0.6640367049999999,
+        "adversary": 0.370843605
+      },
+      "roles": {
+        "precise solver": 0.7847663949999999,
+        "creative solver": 0.6640367049999999,
+        "adversary": 0.370843605
+      }
+    },
+    {
+      "episode": 8,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.8062897554999999,
+        "creative": 0.6976330344999999,
+        "adversary": 0.33375924450000005
+      },
+      "roles": {
+        "precise solver": 0.8062897554999999,
+        "creative solver": 0.6976330344999999,
+        "adversary": 0.33375924450000005
+      }
+    },
+    {
+      "episode": 9,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.82566077995,
+        "creative": 0.72786973105,
+        "adversary": 0.30038332005000007
+      },
+      "roles": {
+        "precise solver": 0.82566077995,
+        "creative solver": 0.72786973105,
+        "adversary": 0.30038332005000007
+      }
+    },
+    {
+      "episode": 10,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.843094701955,
+        "creative": 0.755082757945,
+        "adversary": 0.27034498804500007
+      },
+      "roles": {
+        "precise solver": 0.843094701955,
+        "creative solver": 0.755082757945,
+        "adversary": 0.27034498804500007
+      }
+    },
+    {
+      "episode": 11,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.8587852317595001,
+        "creative": 0.7795744821505,
+        "adversary": 0.34331048924050006
+      },
+      "roles": {
+        "precise solver": 0.8587852317595001,
+        "creative solver": 0.7795744821505,
+        "adversary": 0.34331048924050006
+      }
+    },
+    {
+      "episode": 12,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.87290670858355,
+        "creative": 0.8016170339354499,
+        "adversary": 0.3089794403164501
+      },
+      "roles": {
+        "precise solver": 0.87290670858355,
+        "creative solver": 0.8016170339354499,
+        "adversary": 0.3089794403164501
+      }
+    },
+    {
+      "episode": 13,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.885616037725195,
+        "creative": 0.7214553305419049,
+        "adversary": 0.2780814962848051
+      },
+      "roles": {
+        "precise solver": 0.885616037725195,
+        "creative solver": 0.7214553305419049,
+        "adversary": 0.2780814962848051
+      }
+    },
+    {
+      "episode": 14,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.8970544339526755,
+        "creative": 0.7493097974877144,
+        "adversary": 0.3502733466563246
+      },
+      "roles": {
+        "precise solver": 0.8970544339526755,
+        "creative solver": 0.7493097974877144,
+        "adversary": 0.3502733466563246
+      }
+    },
+    {
+      "episode": 15,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.9073489905574079,
+        "creative": 0.774378817738943,
+        "adversary": 0.31524601199069213
+      },
+      "roles": {
+        "precise solver": 0.9073489905574079,
+        "creative solver": 0.774378817738943,
+        "adversary": 0.31524601199069213
+      }
+    },
+    {
+      "episode": 16,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.9166140915016672,
+        "creative": 0.6969409359650487,
+        "adversary": 0.28372141079162294
+      },
+      "roles": {
+        "precise solver": 0.9166140915016672,
+        "creative solver": 0.6969409359650487,
+        "adversary": 0.28372141079162294
+      }
+    },
+    {
+      "episode": 17,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.9249526823515004,
+        "creative": 0.6272468423685439,
+        "adversary": 0.25534926971246064
+      },
+      "roles": {
+        "precise solver": 0.9249526823515004,
+        "creative solver": 0.6272468423685439,
+        "adversary": 0.25534926971246064
+      }
+    },
+    {
+      "episode": 18,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.9324574141163504,
+        "creative": 0.6645221581316895,
+        "adversary": 0.22981434274121457
+      },
+      "roles": {
+        "precise solver": 0.9324574141163504,
+        "creative solver": 0.6645221581316895,
+        "adversary": 0.22981434274121457
+      }
+    },
+    {
+      "episode": 19,
+      "condition": "adv_noise",
+      "solvers": {
+        "precise": 0.9392116727047154,
+        "creative": 0.6980699423185205,
+        "adversary": 0.20683290846709312
+      },
+      "roles": {
+        "precise solver": 0.9392116727047154,
+        "creative solver": 0.6980699423185205,
+        "adversary": 0.20683290846709312
+      }
+    },
+    {
+      "episode": 20,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9452905054342439,
+        "creative": 0.6282629480866685,
+        "adversary": 0.18614961762038382
+      },
+      "roles": {
+        "precise solver": 0.9452905054342439,
+        "creative solver": 0.6282629480866685,
+        "adversary": 0.18614961762038382
+      }
+    },
+    {
+      "episode": 21,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9507614548908194,
+        "creative": 0.6654366532780016,
+        "adversary": 0.16753465585834543
+      },
+      "roles": {
+        "precise solver": 0.9507614548908194,
+        "creative solver": 0.6654366532780016,
+        "adversary": 0.16753465585834543
+      }
+    },
+    {
+      "episode": 22,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9556853094017375,
+        "creative": 0.6988929879502015,
+        "adversary": 0.15078119027251088
+      },
+      "roles": {
+        "precise solver": 0.9556853094017375,
+        "creative solver": 0.6988929879502015,
+        "adversary": 0.15078119027251088
+      }
+    },
+    {
+      "episode": 23,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9601167784615637,
+        "creative": 0.7290036891551813,
+        "adversary": 0.2357030712452598
+      },
+      "roles": {
+        "precise solver": 0.9601167784615637,
+        "creative solver": 0.7290036891551813,
+        "adversary": 0.2357030712452598
+      }
+    },
+    {
+      "episode": 24,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9641051006154073,
+        "creative": 0.6561033202396632,
+        "adversary": 0.2121327641207338
+      },
+      "roles": {
+        "precise solver": 0.9641051006154073,
+        "creative solver": 0.6561033202396632,
+        "adversary": 0.2121327641207338
+      }
+    },
+    {
+      "episode": 25,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9676945905538666,
+        "creative": 0.6904929882156969,
+        "adversary": 0.19091948770866043
+      },
+      "roles": {
+        "precise solver": 0.9676945905538666,
+        "creative solver": 0.6904929882156969,
+        "adversary": 0.19091948770866043
+      }
+    },
+    {
+      "episode": 26,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9709251314984799,
+        "creative": 0.7214436893941273,
+        "adversary": 0.27182753893779443
+      },
+      "roles": {
+        "precise solver": 0.9709251314984799,
+        "creative solver": 0.7214436893941273,
+        "adversary": 0.27182753893779443
+      }
+    },
+    {
+      "episode": 27,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9738326183486319,
+        "creative": 0.7492993204547146,
+        "adversary": 0.244644785044015
+      },
+      "roles": {
+        "precise solver": 0.9738326183486319,
+        "creative solver": 0.7492993204547146,
+        "adversary": 0.244644785044015
+      }
+    },
+    {
+      "episode": 28,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9764493565137687,
+        "creative": 0.7743693884092431,
+        "adversary": 0.22018030653961349
+      },
+      "roles": {
+        "precise solver": 0.9764493565137687,
+        "creative solver": 0.7743693884092431,
+        "adversary": 0.22018030653961349
+      }
+    },
+    {
+      "episode": 29,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9788044208623918,
+        "creative": 0.7969324495683188,
+        "adversary": 0.19816227588565213
+      },
+      "roles": {
+        "precise solver": 0.9788044208623918,
+        "creative solver": 0.7969324495683188,
+        "adversary": 0.19816227588565213
+      }
+    },
+    {
+      "episode": 30,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9809239787761527,
+        "creative": 0.8172392046114869,
+        "adversary": 0.17834604829708692
+      },
+      "roles": {
+        "precise solver": 0.9809239787761527,
+        "creative solver": 0.8172392046114869,
+        "adversary": 0.17834604829708692
+      }
+    },
+    {
+      "episode": 31,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9828315808985374,
+        "creative": 0.8355152841503383,
+        "adversary": 0.2605114434673782
+      },
+      "roles": {
+        "precise solver": 0.9828315808985374,
+        "creative solver": 0.8355152841503383,
+        "adversary": 0.2605114434673782
+      }
+    },
+    {
+      "episode": 32,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9845484228086836,
+        "creative": 0.8519637557353045,
+        "adversary": 0.2344602991206404
+      },
+      "roles": {
+        "precise solver": 0.9845484228086836,
+        "creative solver": 0.8519637557353045,
+        "adversary": 0.2344602991206404
+      }
+    },
+    {
+      "episode": 33,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9860935805278153,
+        "creative": 0.766767380161774,
+        "adversary": 0.21101426920857635
+      },
+      "roles": {
+        "precise solver": 0.9860935805278153,
+        "creative solver": 0.766767380161774,
+        "adversary": 0.21101426920857635
+      }
+    },
+    {
+      "episode": 34,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9874842224750338,
+        "creative": 0.7900906421455967,
+        "adversary": 0.28991284228771874
+      },
+      "roles": {
+        "precise solver": 0.9874842224750338,
+        "creative solver": 0.7900906421455967,
+        "adversary": 0.28991284228771874
+      }
+    },
+    {
+      "episode": 35,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9887358002275304,
+        "creative": 0.811081577931037,
+        "adversary": 0.2609215580589469
+      },
+      "roles": {
+        "precise solver": 0.9887358002275304,
+        "creative solver": 0.811081577931037,
+        "adversary": 0.2609215580589469
+      }
+    },
+    {
+      "episode": 36,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9898622202047773,
+        "creative": 0.7299734201379333,
+        "adversary": 0.2348294022530522
+      },
+      "roles": {
+        "precise solver": 0.9898622202047773,
+        "creative solver": 0.7299734201379333,
+        "adversary": 0.2348294022530522
+      }
+    },
+    {
+      "episode": 37,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9908759981842996,
+        "creative": 0.65697607812414,
+        "adversary": 0.21134646202774698
+      },
+      "roles": {
+        "precise solver": 0.9908759981842996,
+        "creative solver": 0.65697607812414,
+        "adversary": 0.21134646202774698
+      }
+    },
+    {
+      "episode": 38,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9917883983658696,
+        "creative": 0.6912784703117261,
+        "adversary": 0.1902118158249723
+      },
+      "roles": {
+        "precise solver": 0.9917883983658696,
+        "creative solver": 0.6912784703117261,
+        "adversary": 0.1902118158249723
+      }
+    },
+    {
+      "episode": 39,
+      "condition": "adv_confident",
+      "solvers": {
+        "precise": 0.9926095585292827,
+        "creative": 0.7221506232805535,
+        "adversary": 0.17119063424247508
+      },
+      "roles": {
+        "precise solver": 0.9926095585292827,
+        "creative solver": 0.7221506232805535,
+        "adversary": 0.17119063424247508
+      }
+    },
+    {
+      "episode": 40,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9933486026763544,
+        "creative": 0.6499355609524982,
+        "adversary": 0.25407157081822757
+      },
+      "roles": {
+        "precise solver": 0.9933486026763544,
+        "creative solver": 0.6499355609524982,
+        "adversary": 0.25407157081822757
+      }
+    },
+    {
+      "episode": 41,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.994013742408719,
+        "creative": 0.6849420048572483,
+        "adversary": 0.2286644137364048
+      },
+      "roles": {
+        "precise solver": 0.994013742408719,
+        "creative solver": 0.6849420048572483,
+        "adversary": 0.2286644137364048
+      }
+    },
+    {
+      "episode": 42,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.994612368167847,
+        "creative": 0.7164478043715234,
+        "adversary": 0.20579797236276434
+      },
+      "roles": {
+        "precise solver": 0.994612368167847,
+        "creative solver": 0.7164478043715234,
+        "adversary": 0.20579797236276434
+      }
+    },
+    {
+      "episode": 43,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9951511313510624,
+        "creative": 0.7448030239343711,
+        "adversary": 0.18521817512648792
+      },
+      "roles": {
+        "precise solver": 0.9951511313510624,
+        "creative solver": 0.7448030239343711,
+        "adversary": 0.18521817512648792
+      }
+    },
+    {
+      "episode": 44,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9956360182159562,
+        "creative": 0.6703227215409341,
+        "adversary": 0.16669635761383914
+      },
+      "roles": {
+        "precise solver": 0.9956360182159562,
+        "creative solver": 0.6703227215409341,
+        "adversary": 0.16669635761383914
+      }
+    },
+    {
+      "episode": 45,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9960724163943605,
+        "creative": 0.7032904493868407,
+        "adversary": 0.15002672185245522
+      },
+      "roles": {
+        "precise solver": 0.9960724163943605,
+        "creative solver": 0.7032904493868407,
+        "adversary": 0.15002672185245522
+      }
+    },
+    {
+      "episode": 46,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9964651747549245,
+        "creative": 0.7329614044481566,
+        "adversary": 0.1350240496672097
+      },
+      "roles": {
+        "precise solver": 0.9964651747549245,
+        "creative solver": 0.7329614044481566,
+        "adversary": 0.1350240496672097
+      }
+    },
+    {
+      "episode": 47,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.996818657279432,
+        "creative": 0.7596652640033409,
+        "adversary": 0.12152164470048875
+      },
+      "roles": {
+        "precise solver": 0.996818657279432,
+        "creative solver": 0.7596652640033409,
+        "adversary": 0.12152164470048875
+      }
+    },
+    {
+      "episode": 48,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9971367915514888,
+        "creative": 0.7836987376030068,
+        "adversary": 0.10936948023043988
+      },
+      "roles": {
+        "precise solver": 0.9971367915514888,
+        "creative solver": 0.7836987376030068,
+        "adversary": 0.10936948023043988
+      }
+    },
+    {
+      "episode": 49,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.99742311239634,
+        "creative": 0.8053288638427061,
+        "adversary": 0.0984325322073959
+      },
+      "roles": {
+        "precise solver": 0.99742311239634,
+        "creative solver": 0.8053288638427061,
+        "adversary": 0.0984325322073959
+      }
+    },
+    {
+      "episode": 50,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.997680801156706,
+        "creative": 0.8247959774584355,
+        "adversary": 0.0885892789866563
+      },
+      "roles": {
+        "precise solver": 0.997680801156706,
+        "creative solver": 0.8247959774584355,
+        "adversary": 0.0885892789866563
+      }
+    },
+    {
+      "episode": 51,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9979127210410353,
+        "creative": 0.8423163797125919,
+        "adversary": 0.07973035108799068
+      },
+      "roles": {
+        "precise solver": 0.9979127210410353,
+        "creative solver": 0.8423163797125919,
+        "adversary": 0.07973035108799068
+      }
+    },
+    {
+      "episode": 52,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9981214489369318,
+        "creative": 0.8580847417413326,
+        "adversary": 0.0717573159791916
+      },
+      "roles": {
+        "precise solver": 0.9981214489369318,
+        "creative solver": 0.8580847417413326,
+        "adversary": 0.0717573159791916
+      }
+    },
+    {
+      "episode": 53,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9983093040432386,
+        "creative": 0.7722762675671994,
+        "adversary": 0.06458158438127244
+      },
+      "roles": {
+        "precise solver": 0.9983093040432386,
+        "creative solver": 0.7722762675671994,
+        "adversary": 0.06458158438127244
+      }
+    },
+    {
+      "episode": 54,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9984783736389147,
+        "creative": 0.7950486408104794,
+        "adversary": 0.0581234259431452
+      },
+      "roles": {
+        "precise solver": 0.9984783736389147,
+        "creative solver": 0.7950486408104794,
+        "adversary": 0.0581234259431452
+      }
+    },
+    {
+      "episode": 55,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9986305362750232,
+        "creative": 0.8155437767294315,
+        "adversary": 0.05231108334883068
+      },
+      "roles": {
+        "precise solver": 0.9986305362750232,
+        "creative solver": 0.8155437767294315,
+        "adversary": 0.05231108334883068
+      }
+    },
+    {
+      "episode": 56,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9987674826475209,
+        "creative": 0.7339893990564883,
+        "adversary": 0.14707997501394762
+      },
+      "roles": {
+        "precise solver": 0.9987674826475209,
+        "creative solver": 0.7339893990564883,
+        "adversary": 0.14707997501394762
+      }
+    },
+    {
+      "episode": 57,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9988907343827688,
+        "creative": 0.6605904591508395,
+        "adversary": 0.13237197751255286
+      },
+      "roles": {
+        "precise solver": 0.9988907343827688,
+        "creative solver": 0.6605904591508395,
+        "adversary": 0.13237197751255286
+      }
+    },
+    {
+      "episode": 58,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9990016609444918,
+        "creative": 0.6945314132357555,
+        "adversary": 0.11913477976129758
+      },
+      "roles": {
+        "precise solver": 0.9990016609444918,
+        "creative solver": 0.6945314132357555,
+        "adversary": 0.11913477976129758
+      }
+    },
+    {
+      "episode": 59,
+      "condition": "adv_strategic",
+      "solvers": {
+        "precise": 0.9991014948500426,
+        "creative": 0.72507827191218,
+        "adversary": 0.10722130178516782
+      },
+      "roles": {
+        "precise solver": 0.9991014948500426,
+        "creative solver": 0.72507827191218,
+        "adversary": 0.10722130178516782
+      }
+    },
+    {
+      "episode": 60,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9991913453650384,
+        "creative": 0.652570444720962,
+        "adversary": 0.09649917160665104
+      },
+      "roles": {
+        "precise solver": 0.9991913453650384,
+        "creative solver": 0.652570444720962,
+        "adversary": 0.09649917160665104
+      }
+    },
+    {
+      "episode": 61,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9992722108285346,
+        "creative": 0.6873134002488658,
+        "adversary": 0.08684925444598594
+      },
+      "roles": {
+        "precise solver": 0.9992722108285346,
+        "creative solver": 0.6873134002488658,
+        "adversary": 0.08684925444598594
+      }
+    },
+    {
+      "episode": 62,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9993449897456811,
+        "creative": 0.7185820602239792,
+        "adversary": 0.07816432900138735
+      },
+      "roles": {
+        "precise solver": 0.9993449897456811,
+        "creative solver": 0.7185820602239792,
+        "adversary": 0.07816432900138735
+      }
+    },
+    {
+      "episode": 63,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.999410490771113,
+        "creative": 0.7467238542015813,
+        "adversary": 0.17034789610124862
+      },
+      "roles": {
+        "precise solver": 0.999410490771113,
+        "creative solver": 0.7467238542015813,
+        "adversary": 0.17034789610124862
+      }
+    },
+    {
+      "episode": 64,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9994694416940016,
+        "creative": 0.6720514687814232,
+        "adversary": 0.15331310649112376
+      },
+      "roles": {
+        "precise solver": 0.9994694416940016,
+        "creative solver": 0.6720514687814232,
+        "adversary": 0.15331310649112376
+      }
+    },
+    {
+      "episode": 65,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9995224975246014,
+        "creative": 0.7048463219032809,
+        "adversary": 0.1379817958420114
+      },
+      "roles": {
+        "precise solver": 0.9995224975246014,
+        "creative solver": 0.7048463219032809,
+        "adversary": 0.1379817958420114
+      }
+    },
+    {
+      "episode": 66,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9995702477721413,
+        "creative": 0.7343616897129528,
+        "adversary": 0.22418361625781025
+      },
+      "roles": {
+        "precise solver": 0.9995702477721413,
+        "creative solver": 0.7343616897129528,
+        "adversary": 0.22418361625781025
+      }
+    },
+    {
+      "episode": 67,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9996132229949272,
+        "creative": 0.7609255207416575,
+        "adversary": 0.20176525463202924
+      },
+      "roles": {
+        "precise solver": 0.9996132229949272,
+        "creative solver": 0.7609255207416575,
+        "adversary": 0.20176525463202924
+      }
+    },
+    {
+      "episode": 68,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9996519006954344,
+        "creative": 0.7848329686674917,
+        "adversary": 0.18158872916882632
+      },
+      "roles": {
+        "precise solver": 0.9996519006954344,
+        "creative solver": 0.7848329686674917,
+        "adversary": 0.18158872916882632
+      }
+    },
+    {
+      "episode": 69,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.999686710625891,
+        "creative": 0.8063496718007426,
+        "adversary": 0.2634298562519437
+      },
+      "roles": {
+        "precise solver": 0.999686710625891,
+        "creative solver": 0.8063496718007426,
+        "adversary": 0.2634298562519437
+      }
+    },
+    {
+      "episode": 70,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9997180395633019,
+        "creative": 0.8257147046206683,
+        "adversary": 0.23708687062674935
+      },
+      "roles": {
+        "precise solver": 0.9997180395633019,
+        "creative solver": 0.8257147046206683,
+        "adversary": 0.23708687062674935
+      }
+    },
+    {
+      "episode": 71,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9997462356069716,
+        "creative": 0.8431432341586015,
+        "adversary": 0.31337818356407443
+      },
+      "roles": {
+        "precise solver": 0.9997462356069716,
+        "creative solver": 0.8431432341586015,
+        "adversary": 0.31337818356407443
+      }
+    },
+    {
+      "episode": 72,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9997716120462744,
+        "creative": 0.8588289107427414,
+        "adversary": 0.282040365207667
+      },
+      "roles": {
+        "precise solver": 0.9997716120462744,
+        "creative solver": 0.8588289107427414,
+        "adversary": 0.282040365207667
+      }
+    },
+    {
+      "episode": 73,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.999794450841647,
+        "creative": 0.7729460196684672,
+        "adversary": 0.2538363286869003
+      },
+      "roles": {
+        "precise solver": 0.999794450841647,
+        "creative solver": 0.7729460196684672,
+        "adversary": 0.2538363286869003
+      }
+    },
+    {
+      "episode": 74,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9998150057574823,
+        "creative": 0.7956514177016205,
+        "adversary": 0.3284526958182103
+      },
+      "roles": {
+        "precise solver": 0.9998150057574823,
+        "creative solver": 0.7956514177016205,
+        "adversary": 0.3284526958182103
+      }
+    },
+    {
+      "episode": 75,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9998335051817341,
+        "creative": 0.8160862759314584,
+        "adversary": 0.29560742623638925
+      },
+      "roles": {
+        "precise solver": 0.9998335051817341,
+        "creative solver": 0.8160862759314584,
+        "adversary": 0.29560742623638925
+      }
+    },
+    {
+      "episode": 76,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9998501546635606,
+        "creative": 0.7344776483383126,
+        "adversary": 0.26604668361275036
+      },
+      "roles": {
+        "precise solver": 0.9998501546635606,
+        "creative solver": 0.7344776483383126,
+        "adversary": 0.26604668361275036
+      }
+    },
+    {
+      "episode": 77,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9998651391972045,
+        "creative": 0.6610298835044814,
+        "adversary": 0.3394420152514753
+      },
+      "roles": {
+        "precise solver": 0.9998651391972045,
+        "creative solver": 0.6610298835044814,
+        "adversary": 0.3394420152514753
+      }
+    },
+    {
+      "episode": 78,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9998786252774841,
+        "creative": 0.6949268951540333,
+        "adversary": 0.3054978137263278
+      },
+      "roles": {
+        "precise solver": 0.9998786252774841,
+        "creative solver": 0.6949268951540333,
+        "adversary": 0.3054978137263278
+      }
+    },
+    {
+      "episode": 79,
+      "condition": "adv_sycophant",
+      "solvers": {
+        "precise": 0.9998907627497357,
+        "creative": 0.7254342056386299,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9998907627497357,
+        "creative solver": 0.7254342056386299,
+        "adversary": 0.274948032353695
+      }
+    },
+    {
+      "episode": 80,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999016864747621,
+        "creative": 0.6528907850747669,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999016864747621,
+        "creative solver": 0.6528907850747669,
+        "adversary": 0.222707906206493
+      }
+    },
+    {
+      "episode": 81,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999115178272858,
+        "creative": 0.6876017065672902,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999115178272858,
+        "creative solver": 0.6876017065672902,
+        "adversary": 0.18039340402725934
+      }
+    },
+    {
+      "episode": 82,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999203660445573,
+        "creative": 0.7188415359105612,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999203660445573,
+        "creative solver": 0.7188415359105612,
+        "adversary": 0.1461186572620801
+      }
+    },
+    {
+      "episode": 83,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999283294401016,
+        "creative": 0.746957382319505,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999283294401016,
+        "creative solver": 0.746957382319505,
+        "adversary": 0.11835611238228487
+      }
+    },
+    {
+      "episode": 84,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999354964960914,
+        "creative": 0.6722616440875545,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999354964960914,
+        "creative solver": 0.6722616440875545,
+        "adversary": 0.09586845102965075
+      }
+    },
+    {
+      "episode": 85,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999419468464822,
+        "creative": 0.7050354796787991,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999419468464822,
+        "creative solver": 0.7050354796787991,
+        "adversary": 0.07765344533401711
+      }
+    },
+    {
+      "episode": 86,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.999947752161834,
+        "creative": 0.7345319317109191,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.999947752161834,
+        "creative solver": 0.7345319317109191,
+        "adversary": 0.06289929072055386
+      }
+    },
+    {
+      "episode": 87,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999529769456506,
+        "creative": 0.7610787385398272,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999529769456506,
+        "creative solver": 0.7610787385398272,
+        "adversary": 0.050948425483648634
+      }
+    },
+    {
+      "episode": 88,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999576792510855,
+        "creative": 0.7849708646858445,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999576792510855,
+        "creative solver": 0.7849708646858445,
+        "adversary": 0.0412682246417554
+      }
+    },
+    {
+      "episode": 89,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999619113259769,
+        "creative": 0.8064737782172601,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999619113259769,
+        "creative solver": 0.8064737782172601,
+        "adversary": 0.033427261959821875
+      }
+    },
+    {
+      "episode": 90,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999657201933791,
+        "creative": 0.825826400395534,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999657201933791,
+        "creative solver": 0.825826400395534,
+        "adversary": 0.02707608218745572
+      }
+    },
+    {
+      "episode": 91,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999691481740413,
+        "creative": 0.8432437603559806,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999691481740413,
+        "creative solver": 0.8432437603559806,
+        "adversary": 0.021931626571839134
+      }
+    },
+    {
+      "episode": 92,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999722333566371,
+        "creative": 0.8589193843203825,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999722333566371,
+        "creative solver": 0.8589193843203825,
+        "adversary": 0.0177646175231897
+      }
+    },
+    {
+      "episode": 93,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999750100209733,
+        "creative": 0.7730274458883443,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999750100209733,
+        "creative solver": 0.7730274458883443,
+        "adversary": 0.014389340193783656
+      }
+    },
+    {
+      "episode": 94,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999775090188759,
+        "creative": 0.7957247012995098,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999775090188759,
+        "creative solver": 0.7957247012995098,
+        "adversary": 0.011655365556964763
+      }
+    },
+    {
+      "episode": 95,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999797581169884,
+        "creative": 0.8161522311695588,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999797581169884,
+        "creative solver": 0.8161522311695588,
+        "adversary": 0.009440846101141459
+      }
+    },
+    {
+      "episode": 96,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999817823052896,
+        "creative": 0.7345370080526029,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999817823052896,
+        "creative solver": 0.7345370080526029,
+        "adversary": 0.007647085341924582
+      }
+    },
+    {
+      "episode": 97,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999836040747606,
+        "creative": 0.6610833072473427,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999836040747606,
+        "creative solver": 0.6610833072473427,
+        "adversary": 0.006194139126958912
+      }
+    },
+    {
+      "episode": 98,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999852436672846,
+        "creative": 0.6949749765226084,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999852436672846,
+        "creative solver": 0.6949749765226084,
+        "adversary": 0.005017252692836718
+      }
+    },
+    {
+      "episode": 99,
+      "condition": "adv_coordinated",
+      "solvers": {
+        "precise": 0.9999867193005562,
+        "creative": 0.7254774788703475,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999867193005562,
+        "creative solver": 0.7254774788703475,
+        "adversary": 0.004063974681197742
+      }
+    },
+    {
+      "episode": 100,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999880473705005,
+        "creative": 0.6529297309833128,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999880473705005,
+        "creative solver": 0.6529297309833128,
+        "adversary": 0.002962637542593154
+      }
+    },
+    {
+      "episode": 101,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999892426334505,
+        "creative": 0.6876367578849815,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999892426334505,
+        "creative solver": 0.6876367578849815,
+        "adversary": 0.00215976276855041
+      }
+    },
+    {
+      "episode": 102,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999903183701054,
+        "creative": 0.7188730820964833,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999903183701054,
+        "creative solver": 0.7188730820964833,
+        "adversary": 0.0015744670582732488
+      }
+    },
+    {
+      "episode": 103,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999912865330949,
+        "creative": 0.746985773886835,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999912865330949,
+        "creative solver": 0.746985773886835,
+        "adversary": 0.2721477864854812
+      }
+    },
+    {
+      "episode": 104,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999921578797853,
+        "creative": 0.6722871964981515,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999921578797853,
+        "creative solver": 0.6722871964981515,
+        "adversary": 0.19839573634791582
+      }
+    },
+    {
+      "episode": 105,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999929420918068,
+        "creative": 0.7050584768483363,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999929420918068,
+        "creative solver": 0.7050584768483363,
+        "adversary": 0.14463049179763066
+      }
+    },
+    {
+      "episode": 106,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999936478826261,
+        "creative": 0.7345526291635027,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999936478826261,
+        "creative solver": 0.7345526291635027,
+        "adversary": 0.37643562852047274
+      }
+    },
+    {
+      "episode": 107,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999942830943636,
+        "creative": 0.7610973662471524,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999942830943636,
+        "creative solver": 0.7610973662471524,
+        "adversary": 0.2744215731914247
+      }
+    },
+    {
+      "episode": 108,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999948547849272,
+        "creative": 0.7849876296224372,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999948547849272,
+        "creative solver": 0.7849876296224372,
+        "adversary": 0.2000533268565486
+      }
+    },
+    {
+      "episode": 109,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999953693064345,
+        "creative": 0.8064888666601935,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999953693064345,
+        "creative solver": 0.8064888666601935,
+        "adversary": 0.14583887527842396
+      }
+    },
+    {
+      "episode": 110,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.999995832375791,
+        "creative": 0.8258399799941741,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.999995832375791,
+        "creative solver": 0.8258399799941741,
+        "adversary": 0.10631654007797106
+      }
+    },
+    {
+      "episode": 111,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.999996249138212,
+        "creative": 0.8432559819947567,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.999996249138212,
+        "creative solver": 0.8432559819947567,
+        "adversary": 0.348504757716841
+      }
+    },
+    {
+      "episode": 112,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999966242243907,
+        "creative": 0.8589303837952811,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999966242243907,
+        "creative solver": 0.8589303837952811,
+        "adversary": 0.2540599683755771
+      }
+    },
+    {
+      "episode": 113,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999969618019516,
+        "creative": 0.773037345415753,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999969618019516,
+        "creative solver": 0.773037345415753,
+        "adversary": 0.18520971694579572
+      }
+    },
+    {
+      "episode": 114,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999972656217565,
+        "creative": 0.7957336108741777,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999972656217565,
+        "creative solver": 0.7957336108741777,
+        "adversary": 0.4060178836534851
+      }
+    },
+    {
+      "episode": 115,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999975390595809,
+        "creative": 0.8161602497867599,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999975390595809,
+        "creative solver": 0.8161602497867599,
+        "adversary": 0.2959870371833907
+      }
+    },
+    {
+      "episode": 116,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999977851536228,
+        "creative": 0.734544224808084,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999977851536228,
+        "creative solver": 0.734544224808084,
+        "adversary": 0.21577455010669183
+      }
+    },
+    {
+      "episode": 117,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999980066382606,
+        "creative": 0.6610898023272757,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999980066382606,
+        "creative solver": 0.6610898023272757,
+        "adversary": 0.15729964702777835
+      }
+    },
+    {
+      "episode": 118,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.9999982059744345,
+        "creative": 0.694980822094548,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.9999982059744345,
+        "creative solver": 0.694980822094548,
+        "adversary": 0.11467144268325044
+      }
+    },
+    {
+      "episode": 119,
+      "condition": "adv_majority",
+      "solvers": {
+        "precise": 0.999998385376991,
+        "creative": 0.7254827398850933,
+        "adversary": 0.274948032353695
+      },
+      "roles": {
+        "precise solver": 0.999998385376991,
+        "creative solver": 0.7254827398850933,
+        "adversary": 0.08359548171608958
+      }
+    },
+    {
+      "episode": 120,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999985468392919,
+        "creative": 0.652934465896584,
+        "adversary": 0.34745322911832555
+      },
+      "roles": {
+        "precise solver": 0.9999985468392919,
+        "creative solver": 0.652934465896584,
+        "adversary": 0.17523593354448064
+      }
+    },
+    {
+      "episode": 121,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999986921553627,
+        "creative": 0.6876410193069256,
+        "adversary": 0.312707906206493
+      },
+      "roles": {
+        "precise solver": 0.9999986921553627,
+        "creative solver": 0.6876410193069256,
+        "adversary": 0.15771234019003258
+      }
+    },
+    {
+      "episode": 122,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999988229398264,
+        "creative": 0.718876917376233,
+        "adversary": 0.2814371155858437
+      },
+      "roles": {
+        "precise solver": 0.9999988229398264,
+        "creative solver": 0.718876917376233,
+        "adversary": 0.1419411061710293
+      }
+    },
+    {
+      "episode": 123,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999989406458438,
+        "creative": 0.7469892256386097,
+        "adversary": 0.25329340402725936
+      },
+      "roles": {
+        "precise solver": 0.9999989406458438,
+        "creative solver": 0.7469892256386097,
+        "adversary": 0.12774699555392638
+      }
+    },
+    {
+      "episode": 124,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999990465812595,
+        "creative": 0.6722903030747488,
+        "adversary": 0.22796406362453342
+      },
+      "roles": {
+        "precise solver": 0.9999990465812595,
+        "creative solver": 0.6722903030747488,
+        "adversary": 0.11497229599853374
+      }
+    },
+    {
+      "episode": 125,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999991419231335,
+        "creative": 0.7050612727672739,
+        "adversary": 0.20516765726208008
+      },
+      "roles": {
+        "precise solver": 0.9999991419231335,
+        "creative solver": 0.7050612727672739,
+        "adversary": 0.10347506639868037
+      }
+    },
+    {
+      "episode": 126,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999992277308202,
+        "creative": 0.7345551454905466,
+        "adversary": 0.18465089153587208
+      },
+      "roles": {
+        "precise solver": 0.9999992277308202,
+        "creative solver": 0.7345551454905466,
+        "adversary": 0.09312755975881233
+      }
+    },
+    {
+      "episode": 127,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999993049577381,
+        "creative": 0.7610996309414919,
+        "adversary": 0.16618580238228486
+      },
+      "roles": {
+        "precise solver": 0.9999993049577381,
+        "creative solver": 0.7610996309414919,
+        "adversary": 0.0838148037829311
+      }
+    },
+    {
+      "episode": 128,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999993744619643,
+        "creative": 0.7849896678473427,
+        "adversary": 0.14956722214405638
+      },
+      "roles": {
+        "precise solver": 0.9999993744619643,
+        "creative solver": 0.7849896678473427,
+        "adversary": 0.075433323404638
+      }
+    },
+    {
+      "episode": 129,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999994370157679,
+        "creative": 0.8064907010626085,
+        "adversary": 0.13461049992965074
+      },
+      "roles": {
+        "precise solver": 0.9999994370157679,
+        "creative solver": 0.8064907010626085,
+        "adversary": 0.0678899910641742
+      }
+    },
+    {
+      "episode": 130,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999994933141911,
+        "creative": 0.8258416309563475,
+        "adversary": 0.12114944993668567
+      },
+      "roles": {
+        "precise solver": 0.9999994933141911,
+        "creative solver": 0.8258416309563475,
+        "adversary": 0.061100991957756784
+      }
+    },
+    {
+      "episode": 131,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.999999543982772,
+        "creative": 0.8432574678607128,
+        "adversary": 0.1090345049430171
+      },
+      "roles": {
+        "precise solver": 0.999999543982772,
+        "creative solver": 0.8432574678607128,
+        "adversary": 0.05499089276198111
+      }
+    },
+    {
+      "episode": 132,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999995895844949,
+        "creative": 0.8589317210746414,
+        "adversary": 0.0981310544487154
+      },
+      "roles": {
+        "precise solver": 0.9999995895844949,
+        "creative solver": 0.8589317210746414,
+        "adversary": 0.049491803485783
+      }
+    },
+    {
+      "episode": 133,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999996306260454,
+        "creative": 0.7730385489671773,
+        "adversary": 0.08831794900384386
+      },
+      "roles": {
+        "precise solver": 0.9999996306260454,
+        "creative solver": 0.7730385489671773,
+        "adversary": 0.0445426231372047
+      }
+    },
+    {
+      "episode": 134,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999996675634408,
+        "creative": 0.7957346940704595,
+        "adversary": 0.07948615410345948
+      },
+      "roles": {
+        "precise solver": 0.9999996675634408,
+        "creative solver": 0.7957346940704595,
+        "adversary": 0.040088360823484236
+      }
+    },
+    {
+      "episode": 135,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999997008070968,
+        "creative": 0.8161612246634136,
+        "adversary": 0.07153753869311354
+      },
+      "roles": {
+        "precise solver": 0.9999997008070968,
+        "creative solver": 0.8161612246634136,
+        "adversary": 0.036079524741135814
+      }
+    },
+    {
+      "episode": 136,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.999999730726387,
+        "creative": 0.7345451021970723,
+        "adversary": 0.16438378482380217
+      },
+      "roles": {
+        "precise solver": 0.999999730726387,
+        "creative solver": 0.7345451021970723,
+        "adversary": 0.13247157226702225
+      }
+    },
+    {
+      "episode": 137,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999997576537484,
+        "creative": 0.6610905919773651,
+        "adversary": 0.14794540634142195
+      },
+      "roles": {
+        "precise solver": 0.9999997576537484,
+        "creative solver": 0.6610905919773651,
+        "adversary": 0.11922441504032003
+      }
+    },
+    {
+      "episode": 138,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999997818883736,
+        "creative": 0.6949815327796286,
+        "adversary": 0.13315086570727977
+      },
+      "roles": {
+        "precise solver": 0.9999997818883736,
+        "creative solver": 0.6949815327796286,
+        "adversary": 0.10730197353628802
+      }
+    },
+    {
+      "episode": 139,
+      "condition": "adv_memory",
+      "solvers": {
+        "precise": 0.9999998036995362,
+        "creative": 0.7254833795016657,
+        "adversary": 0.1198357791365518
+      },
+      "roles": {
+        "precise solver": 0.9999998036995362,
+        "creative solver": 0.7254833795016657,
+        "adversary": 0.09657177618265922
+      }
+    }
+  ]
+}

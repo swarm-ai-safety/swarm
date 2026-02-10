@@ -1,0 +1,6152 @@
+{
+  "run_id": "track_a_20260210_033259",
+  "task_count": 100,
+  "conditions": [
+    {
+      "name": "single",
+      "accuracy": 0.74,
+      "avg_tokens": 0,
+      "avg_confidence": 0.7,
+      "disagreement_rate": 0.0,
+      "reconcile_rate": 0.0,
+      "critic_flag_rate": 0.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 0.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.0,
+      "note": "Single solver baseline"
+    },
+    {
+      "name": "diverge",
+      "accuracy": 0.74,
+      "avg_tokens": 0,
+      "avg_confidence": 0.7,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.0,
+      "critic_flag_rate": 0.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 0.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.0,
+      "note": "Two solvers, pick highest confidence"
+    },
+    {
+      "name": "sda",
+      "accuracy": 0.74,
+      "avg_tokens": 0,
+      "avg_confidence": 0.7,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 0.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 0.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.0,
+      "note": "Diverge + reconcile on disagreement"
+    },
+    {
+      "name": "critic",
+      "accuracy": 0.74,
+      "avg_tokens": 0,
+      "avg_confidence": 0.6619999999999999,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 0.38,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 0.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.0,
+      "note": "Diverge + critic + reconcile"
+    },
+    {
+      "name": "memory",
+      "accuracy": 0.74,
+      "avg_tokens": 0,
+      "avg_confidence": 0.6619999999999999,
+      "disagreement_rate": 0.25,
+      "reconcile_rate": 0.25,
+      "critic_flag_rate": 0.38,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 0.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.0,
+      "note": "SDA + memory retrieval"
+    }
+  ],
+  "memory_artifacts": [],
+  "related_work": [],
+  "bib_entries": "",
+  "family_metrics": {
+    "single": {
+      "system_eq": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "modular": {
+        "accuracy": 0.25,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "algebra": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "inequality": {
+        "accuracy": 0.2,
+        "token_eff": 0.0
+      },
+      "code_verify": {
+        "accuracy": 0.5,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid_4x4": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "knights_knaves": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      }
+    },
+    "diverge": {
+      "system_eq": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "modular": {
+        "accuracy": 0.25,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "algebra": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "inequality": {
+        "accuracy": 0.2,
+        "token_eff": 0.0
+      },
+      "code_verify": {
+        "accuracy": 0.5,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid_4x4": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "knights_knaves": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      }
+    },
+    "sda": {
+      "system_eq": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "modular": {
+        "accuracy": 0.25,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "algebra": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "inequality": {
+        "accuracy": 0.2,
+        "token_eff": 0.0
+      },
+      "code_verify": {
+        "accuracy": 0.5,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid_4x4": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "knights_knaves": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      }
+    },
+    "critic": {
+      "system_eq": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "modular": {
+        "accuracy": 0.25,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "algebra": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "inequality": {
+        "accuracy": 0.2,
+        "token_eff": 0.0
+      },
+      "code_verify": {
+        "accuracy": 0.5,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid_4x4": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "knights_knaves": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      }
+    },
+    "memory": {
+      "system_eq": {
+        "accuracy": 0.0,
+        "token_eff": 0.0
+      },
+      "modular": {
+        "accuracy": 0.25,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "algebra": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "inequality": {
+        "accuracy": 0.2,
+        "token_eff": 0.0
+      },
+      "code_verify": {
+        "accuracy": 0.5,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid_4x4": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "knights_knaves": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      }
+    }
+  },
+  "critique_summary": {
+    "total_flags": 76,
+    "flag_rate": 0.152,
+    "top_reasons": [
+      "confident disagreement",
+      "non-numeric answer in numeric task",
+      "logic grid inconsistency"
+    ]
+  },
+  "reputation_summary": {
+    "solvers": {
+      "precise": {
+        "total": 500.0,
+        "accuracy": 0.74,
+        "ema_accuracy": 0.6866722144171814,
+        "deviation_rate": 0.0
+      },
+      "creative": {
+        "total": 400.0,
+        "accuracy": 0.6,
+        "ema_accuracy": 0.5856316430507139,
+        "deviation_rate": 0.25
+      }
+    },
+    "roles": {
+      "precise solver": {
+        "total": 500.0,
+        "accuracy": 0.74,
+        "ema_accuracy": 0.6866722144171814,
+        "deviation_rate": 0.0
+      },
+      "creative solver": {
+        "total": 400.0,
+        "accuracy": 0.6,
+        "ema_accuracy": 0.5856316430507139,
+        "deviation_rate": 0.25
+      }
+    }
+  },
+  "reputation_drift": [
+    {
+      "episode": 0,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.45
+      },
+      "roles": {
+        "precise solver": 0.45
+      }
+    },
+    {
+      "episode": 1,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.405
+      },
+      "roles": {
+        "precise solver": 0.405
+      }
+    },
+    {
+      "episode": 2,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.4645
+      },
+      "roles": {
+        "precise solver": 0.4645
+      }
+    },
+    {
+      "episode": 3,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.51805
+      },
+      "roles": {
+        "precise solver": 0.51805
+      }
+    },
+    {
+      "episode": 4,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.566245
+      },
+      "roles": {
+        "precise solver": 0.566245
+      }
+    },
+    {
+      "episode": 5,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6096205
+      },
+      "roles": {
+        "precise solver": 0.6096205
+      }
+    },
+    {
+      "episode": 6,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.64865845
+      },
+      "roles": {
+        "precise solver": 0.64865845
+      }
+    },
+    {
+      "episode": 7,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.583792605
+      },
+      "roles": {
+        "precise solver": 0.583792605
+      }
+    },
+    {
+      "episode": 8,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.5254133445
+      },
+      "roles": {
+        "precise solver": 0.5254133445
+      }
+    },
+    {
+      "episode": 9,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.57287201005
+      },
+      "roles": {
+        "precise solver": 0.57287201005
+      }
+    },
+    {
+      "episode": 10,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.615584809045
+      },
+      "roles": {
+        "precise solver": 0.615584809045
+      }
+    },
+    {
+      "episode": 11,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6540263281405
+      },
+      "roles": {
+        "precise solver": 0.6540263281405
+      }
+    },
+    {
+      "episode": 12,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.68862369532645
+      },
+      "roles": {
+        "precise solver": 0.68862369532645
+      }
+    },
+    {
+      "episode": 13,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6197613257938049
+      },
+      "roles": {
+        "precise solver": 0.6197613257938049
+      }
+    },
+    {
+      "episode": 14,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6577851932144244
+      },
+      "roles": {
+        "precise solver": 0.6577851932144244
+      }
+    },
+    {
+      "episode": 15,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.692006673892982
+      },
+      "roles": {
+        "precise solver": 0.692006673892982
+      }
+    },
+    {
+      "episode": 16,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6228060065036838
+      },
+      "roles": {
+        "precise solver": 0.6228060065036838
+      }
+    },
+    {
+      "episode": 17,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6605254058533154
+      },
+      "roles": {
+        "precise solver": 0.6605254058533154
+      }
+    },
+    {
+      "episode": 18,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6944728652679839
+      },
+      "roles": {
+        "precise solver": 0.6944728652679839
+      }
+    },
+    {
+      "episode": 19,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7250255787411856
+      },
+      "roles": {
+        "precise solver": 0.7250255787411856
+      }
+    },
+    {
+      "episode": 20,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.752523020867067
+      },
+      "roles": {
+        "precise solver": 0.752523020867067
+      }
+    },
+    {
+      "episode": 21,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7772707187803604
+      },
+      "roles": {
+        "precise solver": 0.7772707187803604
+      }
+    },
+    {
+      "episode": 22,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6995436469023243
+      },
+      "roles": {
+        "precise solver": 0.6995436469023243
+      }
+    },
+    {
+      "episode": 23,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7295892822120918
+      },
+      "roles": {
+        "precise solver": 0.7295892822120918
+      }
+    },
+    {
+      "episode": 24,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7566303539908826
+      },
+      "roles": {
+        "precise solver": 0.7566303539908826
+      }
+    },
+    {
+      "episode": 25,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7809673185917944
+      },
+      "roles": {
+        "precise solver": 0.7809673185917944
+      }
+    },
+    {
+      "episode": 26,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8028705867326149
+      },
+      "roles": {
+        "precise solver": 0.8028705867326149
+      }
+    },
+    {
+      "episode": 27,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8225835280593534
+      },
+      "roles": {
+        "precise solver": 0.8225835280593534
+      }
+    },
+    {
+      "episode": 28,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8403251752534181
+      },
+      "roles": {
+        "precise solver": 0.8403251752534181
+      }
+    },
+    {
+      "episode": 29,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7562926577280763
+      },
+      "roles": {
+        "precise solver": 0.7562926577280763
+      }
+    },
+    {
+      "episode": 30,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7806633919552687
+      },
+      "roles": {
+        "precise solver": 0.7806633919552687
+      }
+    },
+    {
+      "episode": 31,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8025970527597418
+      },
+      "roles": {
+        "precise solver": 0.8025970527597418
+      }
+    },
+    {
+      "episode": 32,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7223373474837677
+      },
+      "roles": {
+        "precise solver": 0.7223373474837677
+      }
+    },
+    {
+      "episode": 33,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7501036127353908
+      },
+      "roles": {
+        "precise solver": 0.7501036127353908
+      }
+    },
+    {
+      "episode": 34,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7750932514618517
+      },
+      "roles": {
+        "precise solver": 0.7750932514618517
+      }
+    },
+    {
+      "episode": 35,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7975839263156665
+      },
+      "roles": {
+        "precise solver": 0.7975839263156665
+      }
+    },
+    {
+      "episode": 36,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8178255336840999
+      },
+      "roles": {
+        "precise solver": 0.8178255336840999
+      }
+    },
+    {
+      "episode": 37,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8360429803156899
+      },
+      "roles": {
+        "precise solver": 0.8360429803156899
+      }
+    },
+    {
+      "episode": 38,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7524386822841209
+      },
+      "roles": {
+        "precise solver": 0.7524386822841209
+      }
+    },
+    {
+      "episode": 39,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6771948140557088
+      },
+      "roles": {
+        "precise solver": 0.6771948140557088
+      }
+    },
+    {
+      "episode": 40,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.709475332650138
+      },
+      "roles": {
+        "precise solver": 0.709475332650138
+      }
+    },
+    {
+      "episode": 41,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6385277993851242
+      },
+      "roles": {
+        "precise solver": 0.6385277993851242
+      }
+    },
+    {
+      "episode": 42,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.5746750194466118
+      },
+      "roles": {
+        "precise solver": 0.5746750194466118
+      }
+    },
+    {
+      "episode": 43,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6172075175019506
+      },
+      "roles": {
+        "precise solver": 0.6172075175019506
+      }
+    },
+    {
+      "episode": 44,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6554867657517555
+      },
+      "roles": {
+        "precise solver": 0.6554867657517555
+      }
+    },
+    {
+      "episode": 45,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.68993808917658
+      },
+      "roles": {
+        "precise solver": 0.68993808917658
+      }
+    },
+    {
+      "episode": 46,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.720944280258922
+      },
+      "roles": {
+        "precise solver": 0.720944280258922
+      }
+    },
+    {
+      "episode": 47,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7488498522330298
+      },
+      "roles": {
+        "precise solver": 0.7488498522330298
+      }
+    },
+    {
+      "episode": 48,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7739648670097268
+      },
+      "roles": {
+        "precise solver": 0.7739648670097268
+      }
+    },
+    {
+      "episode": 49,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7965683803087541
+      },
+      "roles": {
+        "precise solver": 0.7965683803087541
+      }
+    },
+    {
+      "episode": 50,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8169115422778787
+      },
+      "roles": {
+        "precise solver": 0.8169115422778787
+      }
+    },
+    {
+      "episode": 51,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8352203880500908
+      },
+      "roles": {
+        "precise solver": 0.8352203880500908
+      }
+    },
+    {
+      "episode": 52,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7516983492450817
+      },
+      "roles": {
+        "precise solver": 0.7516983492450817
+      }
+    },
+    {
+      "episode": 53,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6765285143205736
+      },
+      "roles": {
+        "precise solver": 0.6765285143205736
+      }
+    },
+    {
+      "episode": 54,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7088756628885162
+      },
+      "roles": {
+        "precise solver": 0.7088756628885162
+      }
+    },
+    {
+      "episode": 55,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7379880965996646
+      },
+      "roles": {
+        "precise solver": 0.7379880965996646
+      }
+    },
+    {
+      "episode": 56,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7641892869396981
+      },
+      "roles": {
+        "precise solver": 0.7641892869396981
+      }
+    },
+    {
+      "episode": 57,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6877703582457283
+      },
+      "roles": {
+        "precise solver": 0.6877703582457283
+      }
+    },
+    {
+      "episode": 58,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7189933224211554
+      },
+      "roles": {
+        "precise solver": 0.7189933224211554
+      }
+    },
+    {
+      "episode": 59,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7470939901790399
+      },
+      "roles": {
+        "precise solver": 0.7470939901790399
+      }
+    },
+    {
+      "episode": 60,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7723845911611359
+      },
+      "roles": {
+        "precise solver": 0.7723845911611359
+      }
+    },
+    {
+      "episode": 61,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7951461320450223
+      },
+      "roles": {
+        "precise solver": 0.7951461320450223
+      }
+    },
+    {
+      "episode": 62,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.81563151884052
+      },
+      "roles": {
+        "precise solver": 0.81563151884052
+      }
+    },
+    {
+      "episode": 63,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.834068366956468
+      },
+      "roles": {
+        "precise solver": 0.834068366956468
+      }
+    },
+    {
+      "episode": 64,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8506615302608213
+      },
+      "roles": {
+        "precise solver": 0.8506615302608213
+      }
+    },
+    {
+      "episode": 65,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8655953772347391
+      },
+      "roles": {
+        "precise solver": 0.8655953772347391
+      }
+    },
+    {
+      "episode": 66,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8790358395112652
+      },
+      "roles": {
+        "precise solver": 0.8790358395112652
+      }
+    },
+    {
+      "episode": 67,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7911322555601387
+      },
+      "roles": {
+        "precise solver": 0.7911322555601387
+      }
+    },
+    {
+      "episode": 68,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8120190300041248
+      },
+      "roles": {
+        "precise solver": 0.8120190300041248
+      }
+    },
+    {
+      "episode": 69,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8308171270037124
+      },
+      "roles": {
+        "precise solver": 0.8308171270037124
+      }
+    },
+    {
+      "episode": 70,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7477354143033411
+      },
+      "roles": {
+        "precise solver": 0.7477354143033411
+      }
+    },
+    {
+      "episode": 71,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.772961872873007
+      },
+      "roles": {
+        "precise solver": 0.772961872873007
+      }
+    },
+    {
+      "episode": 72,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6956656855857063
+      },
+      "roles": {
+        "precise solver": 0.6956656855857063
+      }
+    },
+    {
+      "episode": 73,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7260991170271357
+      },
+      "roles": {
+        "precise solver": 0.7260991170271357
+      }
+    },
+    {
+      "episode": 74,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6534892053244221
+      },
+      "roles": {
+        "precise solver": 0.6534892053244221
+      }
+    },
+    {
+      "episode": 75,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6881402847919799
+      },
+      "roles": {
+        "precise solver": 0.6881402847919799
+      }
+    },
+    {
+      "episode": 76,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7193262563127819
+      },
+      "roles": {
+        "precise solver": 0.7193262563127819
+      }
+    },
+    {
+      "episode": 77,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7473936306815037
+      },
+      "roles": {
+        "precise solver": 0.7473936306815037
+      }
+    },
+    {
+      "episode": 78,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7726542676133533
+      },
+      "roles": {
+        "precise solver": 0.7726542676133533
+      }
+    },
+    {
+      "episode": 79,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.695388840852018
+      },
+      "roles": {
+        "precise solver": 0.695388840852018
+      }
+    },
+    {
+      "episode": 80,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7258499567668162
+      },
+      "roles": {
+        "precise solver": 0.7258499567668162
+      }
+    },
+    {
+      "episode": 81,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6532649610901345
+      },
+      "roles": {
+        "precise solver": 0.6532649610901345
+      }
+    },
+    {
+      "episode": 82,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6879384649811211
+      },
+      "roles": {
+        "precise solver": 0.6879384649811211
+      }
+    },
+    {
+      "episode": 83,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.719144618483009
+      },
+      "roles": {
+        "precise solver": 0.719144618483009
+      }
+    },
+    {
+      "episode": 84,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7472301566347082
+      },
+      "roles": {
+        "precise solver": 0.7472301566347082
+      }
+    },
+    {
+      "episode": 85,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7725071409712373
+      },
+      "roles": {
+        "precise solver": 0.7725071409712373
+      }
+    },
+    {
+      "episode": 86,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7952564268741136
+      },
+      "roles": {
+        "precise solver": 0.7952564268741136
+      }
+    },
+    {
+      "episode": 87,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7157307841867022
+      },
+      "roles": {
+        "precise solver": 0.7157307841867022
+      }
+    },
+    {
+      "episode": 88,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.744157705768032
+      },
+      "roles": {
+        "precise solver": 0.744157705768032
+      }
+    },
+    {
+      "episode": 89,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7697419351912288
+      },
+      "roles": {
+        "precise solver": 0.7697419351912288
+      }
+    },
+    {
+      "episode": 90,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.792767741672106
+      },
+      "roles": {
+        "precise solver": 0.792767741672106
+      }
+    },
+    {
+      "episode": 91,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7134909675048954
+      },
+      "roles": {
+        "precise solver": 0.7134909675048954
+      }
+    },
+    {
+      "episode": 92,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7421418707544059
+      },
+      "roles": {
+        "precise solver": 0.7421418707544059
+      }
+    },
+    {
+      "episode": 93,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7679276836789652
+      },
+      "roles": {
+        "precise solver": 0.7679276836789652
+      }
+    },
+    {
+      "episode": 94,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7911349153110687
+      },
+      "roles": {
+        "precise solver": 0.7911349153110687
+      }
+    },
+    {
+      "episode": 95,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8120214237799619
+      },
+      "roles": {
+        "precise solver": 0.8120214237799619
+      }
+    },
+    {
+      "episode": 96,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8308192814019657
+      },
+      "roles": {
+        "precise solver": 0.8308192814019657
+      }
+    },
+    {
+      "episode": 97,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8477373532617691
+      },
+      "roles": {
+        "precise solver": 0.8477373532617691
+      }
+    },
+    {
+      "episode": 98,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7629636179355922
+      },
+      "roles": {
+        "precise solver": 0.7629636179355922
+      }
+    },
+    {
+      "episode": 99,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.686667256142033
+      },
+      "roles": {
+        "precise solver": 0.686667256142033
+      }
+    },
+    {
+      "episode": 100,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6180005305278297,
+        "creative": 0.45
+      },
+      "roles": {
+        "precise solver": 0.6180005305278297,
+        "creative solver": 0.45
+      }
+    },
+    {
+      "episode": 101,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.5562004774750468,
+        "creative": 0.405
+      },
+      "roles": {
+        "precise solver": 0.5562004774750468,
+        "creative solver": 0.405
+      }
+    },
+    {
+      "episode": 102,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6005804297275421,
+        "creative": 0.4645
+      },
+      "roles": {
+        "precise solver": 0.6005804297275421,
+        "creative solver": 0.4645
+      }
+    },
+    {
+      "episode": 103,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6405223867547879,
+        "creative": 0.51805
+      },
+      "roles": {
+        "precise solver": 0.6405223867547879,
+        "creative solver": 0.51805
+      }
+    },
+    {
+      "episode": 104,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.676470148079309,
+        "creative": 0.466245
+      },
+      "roles": {
+        "precise solver": 0.676470148079309,
+        "creative solver": 0.466245
+      }
+    },
+    {
+      "episode": 105,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7088231332713781,
+        "creative": 0.5196205
+      },
+      "roles": {
+        "precise solver": 0.7088231332713781,
+        "creative solver": 0.5196205
+      }
+    },
+    {
+      "episode": 106,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7379408199442403,
+        "creative": 0.56765845
+      },
+      "roles": {
+        "precise solver": 0.7379408199442403,
+        "creative solver": 0.56765845
+      }
+    },
+    {
+      "episode": 107,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6641467379498163,
+        "creative": 0.510892605
+      },
+      "roles": {
+        "precise solver": 0.6641467379498163,
+        "creative solver": 0.510892605
+      }
+    },
+    {
+      "episode": 108,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.5977320641548347,
+        "creative": 0.4598033445
+      },
+      "roles": {
+        "precise solver": 0.5977320641548347,
+        "creative solver": 0.4598033445
+      }
+    },
+    {
+      "episode": 109,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6379588577393512,
+        "creative": 0.51382301005
+      },
+      "roles": {
+        "precise solver": 0.6379588577393512,
+        "creative solver": 0.51382301005
+      }
+    },
+    {
+      "episode": 110,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6741629719654161,
+        "creative": 0.562440709045
+      },
+      "roles": {
+        "precise solver": 0.6741629719654161,
+        "creative solver": 0.562440709045
+      }
+    },
+    {
+      "episode": 111,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7067466747688744,
+        "creative": 0.6061966381405
+      },
+      "roles": {
+        "precise solver": 0.7067466747688744,
+        "creative solver": 0.6061966381405
+      }
+    },
+    {
+      "episode": 112,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.736072007291987,
+        "creative": 0.64557697432645
+      },
+      "roles": {
+        "precise solver": 0.736072007291987,
+        "creative solver": 0.64557697432645
+      }
+    },
+    {
+      "episode": 113,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6624648065627883,
+        "creative": 0.5810192768938051
+      },
+      "roles": {
+        "precise solver": 0.6624648065627883,
+        "creative solver": 0.5810192768938051
+      }
+    },
+    {
+      "episode": 114,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6962183259065094,
+        "creative": 0.6229173492044245
+      },
+      "roles": {
+        "precise solver": 0.6962183259065094,
+        "creative solver": 0.6229173492044245
+      }
+    },
+    {
+      "episode": 115,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7265964933158585,
+        "creative": 0.660625614283982
+      },
+      "roles": {
+        "precise solver": 0.7265964933158585,
+        "creative solver": 0.660625614283982
+      }
+    },
+    {
+      "episode": 116,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6539368439842727,
+        "creative": 0.5945630528555839
+      },
+      "roles": {
+        "precise solver": 0.6539368439842727,
+        "creative solver": 0.5945630528555839
+      }
+    },
+    {
+      "episode": 117,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6885431595858453,
+        "creative": 0.5351067475700255
+      },
+      "roles": {
+        "precise solver": 0.6885431595858453,
+        "creative solver": 0.5351067475700255
+      }
+    },
+    {
+      "episode": 118,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7196888436272608,
+        "creative": 0.581596072813023
+      },
+      "roles": {
+        "precise solver": 0.7196888436272608,
+        "creative solver": 0.581596072813023
+      }
+    },
+    {
+      "episode": 119,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7477199592645347,
+        "creative": 0.6234364655317206
+      },
+      "roles": {
+        "precise solver": 0.7477199592645347,
+        "creative solver": 0.6234364655317206
+      }
+    },
+    {
+      "episode": 120,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7729479633380812,
+        "creative": 0.6610928189785485
+      },
+      "roles": {
+        "precise solver": 0.7729479633380812,
+        "creative solver": 0.6610928189785485
+      }
+    },
+    {
+      "episode": 121,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7956531670042731,
+        "creative": 0.6949835370806937
+      },
+      "roles": {
+        "precise solver": 0.7956531670042731,
+        "creative solver": 0.6949835370806937
+      }
+    },
+    {
+      "episode": 122,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7160878503038458,
+        "creative": 0.6254851833726244
+      },
+      "roles": {
+        "precise solver": 0.7160878503038458,
+        "creative solver": 0.6254851833726244
+      }
+    },
+    {
+      "episode": 123,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7444790652734612,
+        "creative": 0.562936665035362
+      },
+      "roles": {
+        "precise solver": 0.7444790652734612,
+        "creative solver": 0.562936665035362
+      }
+    },
+    {
+      "episode": 124,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.770031158746115,
+        "creative": 0.6066429985318258
+      },
+      "roles": {
+        "precise solver": 0.770031158746115,
+        "creative solver": 0.6066429985318258
+      }
+    },
+    {
+      "episode": 125,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7930280428715035,
+        "creative": 0.6459786986786432
+      },
+      "roles": {
+        "precise solver": 0.7930280428715035,
+        "creative solver": 0.6459786986786432
+      }
+    },
+    {
+      "episode": 126,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8137252385843532,
+        "creative": 0.6813808288107789
+      },
+      "roles": {
+        "precise solver": 0.8137252385843532,
+        "creative solver": 0.6813808288107789
+      }
+    },
+    {
+      "episode": 127,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8323527147259179,
+        "creative": 0.7132427459297009
+      },
+      "roles": {
+        "precise solver": 0.8323527147259179,
+        "creative solver": 0.7132427459297009
+      }
+    },
+    {
+      "episode": 128,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.849117443253326,
+        "creative": 0.6419184713367309
+      },
+      "roles": {
+        "precise solver": 0.849117443253326,
+        "creative solver": 0.6419184713367309
+      }
+    },
+    {
+      "episode": 129,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7642056989279935,
+        "creative": 0.5777266242030578
+      },
+      "roles": {
+        "precise solver": 0.7642056989279935,
+        "creative solver": 0.5777266242030578
+      }
+    },
+    {
+      "episode": 130,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7877851290351942,
+        "creative": 0.619953961782752
+      },
+      "roles": {
+        "precise solver": 0.7877851290351942,
+        "creative solver": 0.619953961782752
+      }
+    },
+    {
+      "episode": 131,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8090066161316747,
+        "creative": 0.6579585656044767
+      },
+      "roles": {
+        "precise solver": 0.8090066161316747,
+        "creative solver": 0.6579585656044767
+      }
+    },
+    {
+      "episode": 132,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7281059545185072,
+        "creative": 0.5921627090440291
+      },
+      "roles": {
+        "precise solver": 0.7281059545185072,
+        "creative solver": 0.5921627090440291
+      }
+    },
+    {
+      "episode": 133,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7552953590666565,
+        "creative": 0.6329464381396263
+      },
+      "roles": {
+        "precise solver": 0.7552953590666565,
+        "creative solver": 0.6329464381396263
+      }
+    },
+    {
+      "episode": 134,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7797658231599908,
+        "creative": 0.6696517943256636
+      },
+      "roles": {
+        "precise solver": 0.7797658231599908,
+        "creative solver": 0.6696517943256636
+      }
+    },
+    {
+      "episode": 135,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8017892408439917,
+        "creative": 0.6026866148930973
+      },
+      "roles": {
+        "precise solver": 0.8017892408439917,
+        "creative solver": 0.6026866148930973
+      }
+    },
+    {
+      "episode": 136,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8216103167595925,
+        "creative": 0.6424179534037875
+      },
+      "roles": {
+        "precise solver": 0.8216103167595925,
+        "creative solver": 0.6424179534037875
+      }
+    },
+    {
+      "episode": 137,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8394492850836333,
+        "creative": 0.5781761580634087
+      },
+      "roles": {
+        "precise solver": 0.8394492850836333,
+        "creative solver": 0.5781761580634087
+      }
+    },
+    {
+      "episode": 138,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7555043565752699,
+        "creative": 0.5203585422570679
+      },
+      "roles": {
+        "precise solver": 0.7555043565752699,
+        "creative solver": 0.5203585422570679
+      }
+    },
+    {
+      "episode": 139,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.679953920917743,
+        "creative": 0.4683226880313611
+      },
+      "roles": {
+        "precise solver": 0.679953920917743,
+        "creative solver": 0.4683226880313611
+      }
+    },
+    {
+      "episode": 140,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7119585288259687,
+        "creative": 0.521490419228225
+      },
+      "roles": {
+        "precise solver": 0.7119585288259687,
+        "creative solver": 0.521490419228225
+      }
+    },
+    {
+      "episode": 141,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6407626759433718,
+        "creative": 0.46934137730540254
+      },
+      "roles": {
+        "precise solver": 0.6407626759433718,
+        "creative solver": 0.46934137730540254
+      }
+    },
+    {
+      "episode": 142,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.5766864083490346,
+        "creative": 0.4224072395748623
+      },
+      "roles": {
+        "precise solver": 0.5766864083490346,
+        "creative solver": 0.4224072395748623
+      }
+    },
+    {
+      "episode": 143,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6190177675141312,
+        "creative": 0.4801665156173761
+      },
+      "roles": {
+        "precise solver": 0.6190177675141312,
+        "creative solver": 0.4801665156173761
+      }
+    },
+    {
+      "episode": 144,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6571159907627181,
+        "creative": 0.5321498640556385
+      },
+      "roles": {
+        "precise solver": 0.6571159907627181,
+        "creative solver": 0.5321498640556385
+      }
+    },
+    {
+      "episode": 145,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6914043916864463,
+        "creative": 0.5789348776500747
+      },
+      "roles": {
+        "precise solver": 0.6914043916864463,
+        "creative solver": 0.5789348776500747
+      }
+    },
+    {
+      "episode": 146,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7222639525178016,
+        "creative": 0.6210413898850672
+      },
+      "roles": {
+        "precise solver": 0.7222639525178016,
+        "creative solver": 0.6210413898850672
+      }
+    },
+    {
+      "episode": 147,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7500375572660215,
+        "creative": 0.6589372508965604
+      },
+      "roles": {
+        "precise solver": 0.7500375572660215,
+        "creative solver": 0.6589372508965604
+      }
+    },
+    {
+      "episode": 148,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7750338015394194,
+        "creative": 0.6930435258069043
+      },
+      "roles": {
+        "precise solver": 0.7750338015394194,
+        "creative solver": 0.6930435258069043
+      }
+    },
+    {
+      "episode": 149,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7975304213854775,
+        "creative": 0.7237391732262138
+      },
+      "roles": {
+        "precise solver": 0.7975304213854775,
+        "creative solver": 0.7237391732262138
+      }
+    },
+    {
+      "episode": 150,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8177773792469297,
+        "creative": 0.7513652559035925
+      },
+      "roles": {
+        "precise solver": 0.8177773792469297,
+        "creative solver": 0.7513652559035925
+      }
+    },
+    {
+      "episode": 151,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8359996413222367,
+        "creative": 0.7762287303132333
+      },
+      "roles": {
+        "precise solver": 0.8359996413222367,
+        "creative solver": 0.7762287303132333
+      }
+    },
+    {
+      "episode": 152,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.752399677190013,
+        "creative": 0.6986058572819099
+      },
+      "roles": {
+        "precise solver": 0.752399677190013,
+        "creative solver": 0.6986058572819099
+      }
+    },
+    {
+      "episode": 153,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6771597094710117,
+        "creative": 0.628745271553719
+      },
+      "roles": {
+        "precise solver": 0.6771597094710117,
+        "creative solver": 0.628745271553719
+      }
+    },
+    {
+      "episode": 154,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7094437385239105,
+        "creative": 0.665870744398347
+      },
+      "roles": {
+        "precise solver": 0.7094437385239105,
+        "creative solver": 0.665870744398347
+      }
+    },
+    {
+      "episode": 155,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7384993646715194,
+        "creative": 0.6992836699585123
+      },
+      "roles": {
+        "precise solver": 0.7384993646715194,
+        "creative solver": 0.6992836699585123
+      }
+    },
+    {
+      "episode": 156,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7646494282043675,
+        "creative": 0.729355302962661
+      },
+      "roles": {
+        "precise solver": 0.7646494282043675,
+        "creative solver": 0.729355302962661
+      }
+    },
+    {
+      "episode": 157,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6881844853839308,
+        "creative": 0.656419772666395
+      },
+      "roles": {
+        "precise solver": 0.6881844853839308,
+        "creative solver": 0.656419772666395
+      }
+    },
+    {
+      "episode": 158,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7193660368455378,
+        "creative": 0.6907777953997555
+      },
+      "roles": {
+        "precise solver": 0.7193660368455378,
+        "creative solver": 0.6907777953997555
+      }
+    },
+    {
+      "episode": 159,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.747429433160984,
+        "creative": 0.62170001585978
+      },
+      "roles": {
+        "precise solver": 0.747429433160984,
+        "creative solver": 0.62170001585978
+      }
+    },
+    {
+      "episode": 160,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7726864898448855,
+        "creative": 0.659530014273802
+      },
+      "roles": {
+        "precise solver": 0.7726864898448855,
+        "creative solver": 0.659530014273802
+      }
+    },
+    {
+      "episode": 161,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.795417840860397,
+        "creative": 0.6935770128464218
+      },
+      "roles": {
+        "precise solver": 0.795417840860397,
+        "creative solver": 0.6935770128464218
+      }
+    },
+    {
+      "episode": 162,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8158760567743573,
+        "creative": 0.6242193115617797
+      },
+      "roles": {
+        "precise solver": 0.8158760567743573,
+        "creative solver": 0.6242193115617797
+      }
+    },
+    {
+      "episode": 163,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8342884510969215,
+        "creative": 0.5617973804056017
+      },
+      "roles": {
+        "precise solver": 0.8342884510969215,
+        "creative solver": 0.5617973804056017
+      }
+    },
+    {
+      "episode": 164,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8508596059872293,
+        "creative": 0.5056176423650415
+      },
+      "roles": {
+        "precise solver": 0.8508596059872293,
+        "creative solver": 0.5056176423650415
+      }
+    },
+    {
+      "episode": 165,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8657736453885064,
+        "creative": 0.5550558781285373
+      },
+      "roles": {
+        "precise solver": 0.8657736453885064,
+        "creative solver": 0.5550558781285373
+      }
+    },
+    {
+      "episode": 166,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8791962808496557,
+        "creative": 0.5995502903156836
+      },
+      "roles": {
+        "precise solver": 0.8791962808496557,
+        "creative solver": 0.5995502903156836
+      }
+    },
+    {
+      "episode": 167,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7912766527646902,
+        "creative": 0.5395952612841153
+      },
+      "roles": {
+        "precise solver": 0.7912766527646902,
+        "creative solver": 0.5395952612841153
+      }
+    },
+    {
+      "episode": 168,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8121489874882212,
+        "creative": 0.5856357351557038
+      },
+      "roles": {
+        "precise solver": 0.8121489874882212,
+        "creative solver": 0.5856357351557038
+      }
+    },
+    {
+      "episode": 169,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.830934088739399,
+        "creative": 0.6270721616401334
+      },
+      "roles": {
+        "precise solver": 0.830934088739399,
+        "creative solver": 0.6270721616401334
+      }
+    },
+    {
+      "episode": 170,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7478406798654591,
+        "creative": 0.56436494547612
+      },
+      "roles": {
+        "precise solver": 0.7478406798654591,
+        "creative solver": 0.56436494547612
+      }
+    },
+    {
+      "episode": 171,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7730566118789132,
+        "creative": 0.507928450928508
+      },
+      "roles": {
+        "precise solver": 0.7730566118789132,
+        "creative solver": 0.507928450928508
+      }
+    },
+    {
+      "episode": 172,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6957509506910219,
+        "creative": 0.4571356058356572
+      },
+      "roles": {
+        "precise solver": 0.6957509506910219,
+        "creative solver": 0.4571356058356572
+      }
+    },
+    {
+      "episode": 173,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7261758556219197,
+        "creative": 0.5114220452520915
+      },
+      "roles": {
+        "precise solver": 0.7261758556219197,
+        "creative solver": 0.5114220452520915
+      }
+    },
+    {
+      "episode": 174,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6535582700597277,
+        "creative": 0.5602798407268823
+      },
+      "roles": {
+        "precise solver": 0.6535582700597277,
+        "creative solver": 0.5602798407268823
+      }
+    },
+    {
+      "episode": 175,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6882024430537549,
+        "creative": 0.6042518566541941
+      },
+      "roles": {
+        "precise solver": 0.6882024430537549,
+        "creative solver": 0.6042518566541941
+      }
+    },
+    {
+      "episode": 176,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7193821987483794,
+        "creative": 0.6438266709887747
+      },
+      "roles": {
+        "precise solver": 0.7193821987483794,
+        "creative solver": 0.6438266709887747
+      }
+    },
+    {
+      "episode": 177,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7474439788735414,
+        "creative": 0.6794440038898972
+      },
+      "roles": {
+        "precise solver": 0.7474439788735414,
+        "creative solver": 0.6794440038898972
+      }
+    },
+    {
+      "episode": 178,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7726995809861873,
+        "creative": 0.7114996035009075
+      },
+      "roles": {
+        "precise solver": 0.7726995809861873,
+        "creative solver": 0.7114996035009075
+      }
+    },
+    {
+      "episode": 179,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6954296228875686,
+        "creative": 0.6403496431508168
+      },
+      "roles": {
+        "precise solver": 0.6954296228875686,
+        "creative solver": 0.6403496431508168
+      }
+    },
+    {
+      "episode": 180,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7258866605988117,
+        "creative": 0.5763146788357351
+      },
+      "roles": {
+        "precise solver": 0.7258866605988117,
+        "creative solver": 0.5763146788357351
+      }
+    },
+    {
+      "episode": 181,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6532979945389306,
+        "creative": 0.5186832109521615
+      },
+      "roles": {
+        "precise solver": 0.6532979945389306,
+        "creative solver": 0.5186832109521615
+      }
+    },
+    {
+      "episode": 182,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6879681950850375,
+        "creative": 0.46681488985694536
+      },
+      "roles": {
+        "precise solver": 0.6879681950850375,
+        "creative solver": 0.46681488985694536
+      }
+    },
+    {
+      "episode": 183,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7191713755765338,
+        "creative": 0.5201334008712508
+      },
+      "roles": {
+        "precise solver": 0.7191713755765338,
+        "creative solver": 0.5201334008712508
+      }
+    },
+    {
+      "episode": 184,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7472542380188804,
+        "creative": 0.5681200607841258
+      },
+      "roles": {
+        "precise solver": 0.7472542380188804,
+        "creative solver": 0.5681200607841258
+      }
+    },
+    {
+      "episode": 185,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7725288142169923,
+        "creative": 0.6113080547057133
+      },
+      "roles": {
+        "precise solver": 0.7725288142169923,
+        "creative solver": 0.6113080547057133
+      }
+    },
+    {
+      "episode": 186,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7952759327952931,
+        "creative": 0.550177249235142
+      },
+      "roles": {
+        "precise solver": 0.7952759327952931,
+        "creative solver": 0.550177249235142
+      }
+    },
+    {
+      "episode": 187,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7157483395157638,
+        "creative": 0.4951595243116278
+      },
+      "roles": {
+        "precise solver": 0.7157483395157638,
+        "creative solver": 0.4951595243116278
+      }
+    },
+    {
+      "episode": 188,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7441735055641874,
+        "creative": 0.5456435718804651
+      },
+      "roles": {
+        "precise solver": 0.7441735055641874,
+        "creative solver": 0.5456435718804651
+      }
+    },
+    {
+      "episode": 189,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7697561550077686,
+        "creative": 0.5910792146924186
+      },
+      "roles": {
+        "precise solver": 0.7697561550077686,
+        "creative solver": 0.5910792146924186
+      }
+    },
+    {
+      "episode": 190,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7927805395069918,
+        "creative": 0.5319712932231768
+      },
+      "roles": {
+        "precise solver": 0.7927805395069918,
+        "creative solver": 0.5319712932231768
+      }
+    },
+    {
+      "episode": 191,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7135024855562926,
+        "creative": 0.47877416390085914
+      },
+      "roles": {
+        "precise solver": 0.7135024855562926,
+        "creative solver": 0.47877416390085914
+      }
+    },
+    {
+      "episode": 192,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7421522370006634,
+        "creative": 0.5308967475107732
+      },
+      "roles": {
+        "precise solver": 0.7421522370006634,
+        "creative solver": 0.5308967475107732
+      }
+    },
+    {
+      "episode": 193,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.767937013300597,
+        "creative": 0.5778070727596959
+      },
+      "roles": {
+        "precise solver": 0.767937013300597,
+        "creative solver": 0.5778070727596959
+      }
+    },
+    {
+      "episode": 194,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7911433119705373,
+        "creative": 0.6200263654837262
+      },
+      "roles": {
+        "precise solver": 0.7911433119705373,
+        "creative solver": 0.6200263654837262
+      }
+    },
+    {
+      "episode": 195,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8120289807734836,
+        "creative": 0.6580237289353537
+      },
+      "roles": {
+        "precise solver": 0.8120289807734836,
+        "creative solver": 0.6580237289353537
+      }
+    },
+    {
+      "episode": 196,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8308260826961352,
+        "creative": 0.6922213560418183
+      },
+      "roles": {
+        "precise solver": 0.8308260826961352,
+        "creative solver": 0.6922213560418183
+      }
+    },
+    {
+      "episode": 197,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.8477434744265216,
+        "creative": 0.7229992204376365
+      },
+      "roles": {
+        "precise solver": 0.8477434744265216,
+        "creative solver": 0.7229992204376365
+      }
+    },
+    {
+      "episode": 198,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.7629691269838695,
+        "creative": 0.6506992983938729
+      },
+      "roles": {
+        "precise solver": 0.7629691269838695,
+        "creative solver": 0.6506992983938729
+      }
+    },
+    {
+      "episode": 199,
+      "condition": "diverge",
+      "solvers": {
+        "precise": 0.6866722142854826,
+        "creative": 0.5856293685544856
+      },
+      "roles": {
+        "precise solver": 0.6866722142854826,
+        "creative solver": 0.5856293685544856
+      }
+    },
+    {
+      "episode": 200,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6180049928569344,
+        "creative": 0.527066431699037
+      },
+      "roles": {
+        "precise solver": 0.6180049928569344,
+        "creative solver": 0.527066431699037
+      }
+    },
+    {
+      "episode": 201,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.556204493571241,
+        "creative": 0.4743597885291333
+      },
+      "roles": {
+        "precise solver": 0.556204493571241,
+        "creative solver": 0.4743597885291333
+      }
+    },
+    {
+      "episode": 202,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6005840442141169,
+        "creative": 0.52692380967622
+      },
+      "roles": {
+        "precise solver": 0.6005840442141169,
+        "creative solver": 0.52692380967622
+      }
+    },
+    {
+      "episode": 203,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6405256397927053,
+        "creative": 0.574231428708598
+      },
+      "roles": {
+        "precise solver": 0.6405256397927053,
+        "creative solver": 0.574231428708598
+      }
+    },
+    {
+      "episode": 204,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6764730758134347,
+        "creative": 0.5168082858377382
+      },
+      "roles": {
+        "precise solver": 0.6764730758134347,
+        "creative solver": 0.5168082858377382
+      }
+    },
+    {
+      "episode": 205,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7088257682320913,
+        "creative": 0.5651274572539644
+      },
+      "roles": {
+        "precise solver": 0.7088257682320913,
+        "creative solver": 0.5651274572539644
+      }
+    },
+    {
+      "episode": 206,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7379431914088822,
+        "creative": 0.6086147115285679
+      },
+      "roles": {
+        "precise solver": 0.7379431914088822,
+        "creative solver": 0.6086147115285679
+      }
+    },
+    {
+      "episode": 207,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.664148872267994,
+        "creative": 0.5477532403757112
+      },
+      "roles": {
+        "precise solver": 0.664148872267994,
+        "creative solver": 0.5477532403757112
+      }
+    },
+    {
+      "episode": 208,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.5977339850411947,
+        "creative": 0.49297791633814003
+      },
+      "roles": {
+        "precise solver": 0.5977339850411947,
+        "creative solver": 0.49297791633814003
+      }
+    },
+    {
+      "episode": 209,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6379605865370752,
+        "creative": 0.543680124704326
+      },
+      "roles": {
+        "precise solver": 0.6379605865370752,
+        "creative solver": 0.543680124704326
+      }
+    },
+    {
+      "episode": 210,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6741645278833677,
+        "creative": 0.5893121122338935
+      },
+      "roles": {
+        "precise solver": 0.6741645278833677,
+        "creative solver": 0.5893121122338935
+      }
+    },
+    {
+      "episode": 211,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7067480750950309,
+        "creative": 0.6303809010105041
+      },
+      "roles": {
+        "precise solver": 0.7067480750950309,
+        "creative solver": 0.6303809010105041
+      }
+    },
+    {
+      "episode": 212,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7360732675855278,
+        "creative": 0.6673428109094537
+      },
+      "roles": {
+        "precise solver": 0.7360732675855278,
+        "creative solver": 0.6673428109094537
+      }
+    },
+    {
+      "episode": 213,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6624659408269751,
+        "creative": 0.6006085298185083
+      },
+      "roles": {
+        "precise solver": 0.6624659408269751,
+        "creative solver": 0.6006085298185083
+      }
+    },
+    {
+      "episode": 214,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6962193467442775,
+        "creative": 0.6405476768366575
+      },
+      "roles": {
+        "precise solver": 0.6962193467442775,
+        "creative solver": 0.6405476768366575
+      }
+    },
+    {
+      "episode": 215,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7265974120698497,
+        "creative": 0.6764929091529918
+      },
+      "roles": {
+        "precise solver": 0.7265974120698497,
+        "creative solver": 0.6764929091529918
+      }
+    },
+    {
+      "episode": 216,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6539376708628648,
+        "creative": 0.6088436182376926
+      },
+      "roles": {
+        "precise solver": 0.6539376708628648,
+        "creative solver": 0.6088436182376926
+      }
+    },
+    {
+      "episode": 217,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6885439037765784,
+        "creative": 0.5479592564139234
+      },
+      "roles": {
+        "precise solver": 0.6885439037765784,
+        "creative solver": 0.5479592564139234
+      }
+    },
+    {
+      "episode": 218,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7196895133989205,
+        "creative": 0.593163330772531
+      },
+      "roles": {
+        "precise solver": 0.7196895133989205,
+        "creative solver": 0.593163330772531
+      }
+    },
+    {
+      "episode": 219,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7477205620590285,
+        "creative": 0.633846997695278
+      },
+      "roles": {
+        "precise solver": 0.7477205620590285,
+        "creative solver": 0.633846997695278
+      }
+    },
+    {
+      "episode": 220,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7729485058531256,
+        "creative": 0.6704622979257502
+      },
+      "roles": {
+        "precise solver": 0.7729485058531256,
+        "creative solver": 0.6704622979257502
+      }
+    },
+    {
+      "episode": 221,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7956536552678131,
+        "creative": 0.7034160681331751
+      },
+      "roles": {
+        "precise solver": 0.7956536552678131,
+        "creative solver": 0.7034160681331751
+      }
+    },
+    {
+      "episode": 222,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7160882897410318,
+        "creative": 0.6330744613198577
+      },
+      "roles": {
+        "precise solver": 0.7160882897410318,
+        "creative solver": 0.6330744613198577
+      }
+    },
+    {
+      "episode": 223,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7444794607669286,
+        "creative": 0.5697670151878719
+      },
+      "roles": {
+        "precise solver": 0.7444794607669286,
+        "creative solver": 0.5697670151878719
+      }
+    },
+    {
+      "episode": 224,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7700315146902358,
+        "creative": 0.6127903136690847
+      },
+      "roles": {
+        "precise solver": 0.7700315146902358,
+        "creative solver": 0.6127903136690847
+      }
+    },
+    {
+      "episode": 225,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7930283632212122,
+        "creative": 0.6515112823021761
+      },
+      "roles": {
+        "precise solver": 0.7930283632212122,
+        "creative solver": 0.6515112823021761
+      }
+    },
+    {
+      "episode": 226,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.813725526899091,
+        "creative": 0.6863601540719585
+      },
+      "roles": {
+        "precise solver": 0.813725526899091,
+        "creative solver": 0.6863601540719585
+      }
+    },
+    {
+      "episode": 227,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8323529742091819,
+        "creative": 0.7177241386647626
+      },
+      "roles": {
+        "precise solver": 0.8323529742091819,
+        "creative solver": 0.7177241386647626
+      }
+    },
+    {
+      "episode": 228,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8491176767882637,
+        "creative": 0.6459517247982863
+      },
+      "roles": {
+        "precise solver": 0.8491176767882637,
+        "creative solver": 0.6459517247982863
+      }
+    },
+    {
+      "episode": 229,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7642059091094373,
+        "creative": 0.5813565523184577
+      },
+      "roles": {
+        "precise solver": 0.7642059091094373,
+        "creative solver": 0.5813565523184577
+      }
+    },
+    {
+      "episode": 230,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7877853181984936,
+        "creative": 0.623220897086612
+      },
+      "roles": {
+        "precise solver": 0.7877853181984936,
+        "creative solver": 0.623220897086612
+      }
+    },
+    {
+      "episode": 231,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8090067863786442,
+        "creative": 0.6608988073779508
+      },
+      "roles": {
+        "precise solver": 0.8090067863786442,
+        "creative solver": 0.6608988073779508
+      }
+    },
+    {
+      "episode": 232,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7281061077407798,
+        "creative": 0.5948089266401557
+      },
+      "roles": {
+        "precise solver": 0.7281061077407798,
+        "creative solver": 0.5948089266401557
+      }
+    },
+    {
+      "episode": 233,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7552954969667018,
+        "creative": 0.6353280339761401
+      },
+      "roles": {
+        "precise solver": 0.7552954969667018,
+        "creative solver": 0.6353280339761401
+      }
+    },
+    {
+      "episode": 234,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7797659472700317,
+        "creative": 0.6717952305785261
+      },
+      "roles": {
+        "precise solver": 0.7797659472700317,
+        "creative solver": 0.6717952305785261
+      }
+    },
+    {
+      "episode": 235,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8017893525430285,
+        "creative": 0.6046157075206735
+      },
+      "roles": {
+        "precise solver": 0.8017893525430285,
+        "creative solver": 0.6046157075206735
+      }
+    },
+    {
+      "episode": 236,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8216104172887256,
+        "creative": 0.6441541367686061
+      },
+      "roles": {
+        "precise solver": 0.8216104172887256,
+        "creative solver": 0.6441541367686061
+      }
+    },
+    {
+      "episode": 237,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8394493755598531,
+        "creative": 0.5797387230917456
+      },
+      "roles": {
+        "precise solver": 0.8394493755598531,
+        "creative solver": 0.5797387230917456
+      }
+    },
+    {
+      "episode": 238,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7555044380038678,
+        "creative": 0.5217648507825711
+      },
+      "roles": {
+        "precise solver": 0.7555044380038678,
+        "creative solver": 0.5217648507825711
+      }
+    },
+    {
+      "episode": 239,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.679953994203481,
+        "creative": 0.46958836570431395
+      },
+      "roles": {
+        "precise solver": 0.679953994203481,
+        "creative solver": 0.46958836570431395
+      }
+    },
+    {
+      "episode": 240,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.711958594783133,
+        "creative": 0.5226295291338826
+      },
+      "roles": {
+        "precise solver": 0.711958594783133,
+        "creative solver": 0.5226295291338826
+      }
+    },
+    {
+      "episode": 241,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6407627353048196,
+        "creative": 0.4703665762204944
+      },
+      "roles": {
+        "precise solver": 0.6407627353048196,
+        "creative solver": 0.4703665762204944
+      }
+    },
+    {
+      "episode": 242,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.5766864617743377,
+        "creative": 0.42332991859844493
+      },
+      "roles": {
+        "precise solver": 0.5766864617743377,
+        "creative solver": 0.42332991859844493
+      }
+    },
+    {
+      "episode": 243,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6190178155969039,
+        "creative": 0.4809969267386005
+      },
+      "roles": {
+        "precise solver": 0.6190178155969039,
+        "creative solver": 0.4809969267386005
+      }
+    },
+    {
+      "episode": 244,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6571160340372135,
+        "creative": 0.5328972340647404
+      },
+      "roles": {
+        "precise solver": 0.6571160340372135,
+        "creative solver": 0.5328972340647404
+      }
+    },
+    {
+      "episode": 245,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6914044306334922,
+        "creative": 0.5796075106582664
+      },
+      "roles": {
+        "precise solver": 0.6914044306334922,
+        "creative solver": 0.5796075106582664
+      }
+    },
+    {
+      "episode": 246,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.722263987570143,
+        "creative": 0.6216467595924398
+      },
+      "roles": {
+        "precise solver": 0.722263987570143,
+        "creative solver": 0.6216467595924398
+      }
+    },
+    {
+      "episode": 247,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7500375888131287,
+        "creative": 0.6594820836331958
+      },
+      "roles": {
+        "precise solver": 0.7500375888131287,
+        "creative solver": 0.6594820836331958
+      }
+    },
+    {
+      "episode": 248,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7750338299318158,
+        "creative": 0.6935338752698762
+      },
+      "roles": {
+        "precise solver": 0.7750338299318158,
+        "creative solver": 0.6935338752698762
+      }
+    },
+    {
+      "episode": 249,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7975304469386342,
+        "creative": 0.7241804877428886
+      },
+      "roles": {
+        "precise solver": 0.7975304469386342,
+        "creative solver": 0.7241804877428886
+      }
+    },
+    {
+      "episode": 250,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8177774022447708,
+        "creative": 0.7517624389685997
+      },
+      "roles": {
+        "precise solver": 0.8177774022447708,
+        "creative solver": 0.7517624389685997
+      }
+    },
+    {
+      "episode": 251,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8359996620202937,
+        "creative": 0.7765861950717398
+      },
+      "roles": {
+        "precise solver": 0.8359996620202937,
+        "creative solver": 0.7765861950717398
+      }
+    },
+    {
+      "episode": 252,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7523996958182644,
+        "creative": 0.6989275755645658
+      },
+      "roles": {
+        "precise solver": 0.7523996958182644,
+        "creative solver": 0.6989275755645658
+      }
+    },
+    {
+      "episode": 253,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6771597262364379,
+        "creative": 0.6290348180081092
+      },
+      "roles": {
+        "precise solver": 0.6771597262364379,
+        "creative solver": 0.6290348180081092
+      }
+    },
+    {
+      "episode": 254,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7094437536127941,
+        "creative": 0.6661313362072983
+      },
+      "roles": {
+        "precise solver": 0.7094437536127941,
+        "creative solver": 0.6661313362072983
+      }
+    },
+    {
+      "episode": 255,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7384993782515147,
+        "creative": 0.6995182025865684
+      },
+      "roles": {
+        "precise solver": 0.7384993782515147,
+        "creative solver": 0.6995182025865684
+      }
+    },
+    {
+      "episode": 256,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7646494404263632,
+        "creative": 0.7295663823279115
+      },
+      "roles": {
+        "precise solver": 0.7646494404263632,
+        "creative solver": 0.7295663823279115
+      }
+    },
+    {
+      "episode": 257,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6881844963837269,
+        "creative": 0.6566097440951204
+      },
+      "roles": {
+        "precise solver": 0.6881844963837269,
+        "creative solver": 0.6566097440951204
+      }
+    },
+    {
+      "episode": 258,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7193660467453542,
+        "creative": 0.6909487696856084
+      },
+      "roles": {
+        "precise solver": 0.7193660467453542,
+        "creative solver": 0.6909487696856084
+      }
+    },
+    {
+      "episode": 259,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7474294420708187,
+        "creative": 0.6218538927170475
+      },
+      "roles": {
+        "precise solver": 0.7474294420708187,
+        "creative solver": 0.6218538927170475
+      }
+    },
+    {
+      "episode": 260,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7726864978637369,
+        "creative": 0.6596685034453428
+      },
+      "roles": {
+        "precise solver": 0.7726864978637369,
+        "creative solver": 0.6596685034453428
+      }
+    },
+    {
+      "episode": 261,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7954178480773632,
+        "creative": 0.6937016531008084
+      },
+      "roles": {
+        "precise solver": 0.7954178480773632,
+        "creative solver": 0.6937016531008084
+      }
+    },
+    {
+      "episode": 262,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8158760632696268,
+        "creative": 0.6243314877907277
+      },
+      "roles": {
+        "precise solver": 0.8158760632696268,
+        "creative solver": 0.6243314877907277
+      }
+    },
+    {
+      "episode": 263,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8342884569426641,
+        "creative": 0.5618983390116549
+      },
+      "roles": {
+        "precise solver": 0.8342884569426641,
+        "creative solver": 0.5618983390116549
+      }
+    },
+    {
+      "episode": 264,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8508596112483977,
+        "creative": 0.5057085051104894
+      },
+      "roles": {
+        "precise solver": 0.8508596112483977,
+        "creative solver": 0.5057085051104894
+      }
+    },
+    {
+      "episode": 265,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8657736501235579,
+        "creative": 0.5551376545994404
+      },
+      "roles": {
+        "precise solver": 0.8657736501235579,
+        "creative solver": 0.5551376545994404
+      }
+    },
+    {
+      "episode": 266,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8791962851112021,
+        "creative": 0.5996238891394964
+      },
+      "roles": {
+        "precise solver": 0.8791962851112021,
+        "creative solver": 0.5996238891394964
+      }
+    },
+    {
+      "episode": 267,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7912766566000818,
+        "creative": 0.5396615002255467
+      },
+      "roles": {
+        "precise solver": 0.7912766566000818,
+        "creative solver": 0.5396615002255467
+      }
+    },
+    {
+      "episode": 268,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8121489909400736,
+        "creative": 0.585695350202992
+      },
+      "roles": {
+        "precise solver": 0.8121489909400736,
+        "creative solver": 0.585695350202992
+      }
+    },
+    {
+      "episode": 269,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8309340918460663,
+        "creative": 0.6271258151826928
+      },
+      "roles": {
+        "precise solver": 0.8309340918460663,
+        "creative solver": 0.6271258151826928
+      }
+    },
+    {
+      "episode": 270,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7478406826614596,
+        "creative": 0.5644132336644235
+      },
+      "roles": {
+        "precise solver": 0.7478406826614596,
+        "creative solver": 0.5644132336644235
+      }
+    },
+    {
+      "episode": 271,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7730566143953137,
+        "creative": 0.5079719102979812
+      },
+      "roles": {
+        "precise solver": 0.7730566143953137,
+        "creative solver": 0.5079719102979812
+      }
+    },
+    {
+      "episode": 272,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6957509529557824,
+        "creative": 0.45717471926818304
+      },
+      "roles": {
+        "precise solver": 0.6957509529557824,
+        "creative solver": 0.45717471926818304
+      }
+    },
+    {
+      "episode": 273,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7261758576602041,
+        "creative": 0.5114572473413648
+      },
+      "roles": {
+        "precise solver": 0.7261758576602041,
+        "creative solver": 0.5114572473413648
+      }
+    },
+    {
+      "episode": 274,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6535582718941837,
+        "creative": 0.5603115226072283
+      },
+      "roles": {
+        "precise solver": 0.6535582718941837,
+        "creative solver": 0.5603115226072283
+      }
+    },
+    {
+      "episode": 275,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6882024447047653,
+        "creative": 0.6042803703465054
+      },
+      "roles": {
+        "precise solver": 0.6882024447047653,
+        "creative solver": 0.6042803703465054
+      }
+    },
+    {
+      "episode": 276,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7193822002342888,
+        "creative": 0.6438523333118549
+      },
+      "roles": {
+        "precise solver": 0.7193822002342888,
+        "creative solver": 0.6438523333118549
+      }
+    },
+    {
+      "episode": 277,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7474439802108599,
+        "creative": 0.6794670999806693
+      },
+      "roles": {
+        "precise solver": 0.7474439802108599,
+        "creative solver": 0.6794670999806693
+      }
+    },
+    {
+      "episode": 278,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7726995821897739,
+        "creative": 0.7115203899826024
+      },
+      "roles": {
+        "precise solver": 0.7726995821897739,
+        "creative solver": 0.7115203899826024
+      }
+    },
+    {
+      "episode": 279,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6954296239707964,
+        "creative": 0.6403683509843422
+      },
+      "roles": {
+        "precise solver": 0.6954296239707964,
+        "creative solver": 0.6403683509843422
+      }
+    },
+    {
+      "episode": 280,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7258866615737168,
+        "creative": 0.576331515885908
+      },
+      "roles": {
+        "precise solver": 0.7258866615737168,
+        "creative solver": 0.576331515885908
+      }
+    },
+    {
+      "episode": 281,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6532979954163451,
+        "creative": 0.5186983642973172
+      },
+      "roles": {
+        "precise solver": 0.6532979954163451,
+        "creative solver": 0.5186983642973172
+      }
+    },
+    {
+      "episode": 282,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6879681958747106,
+        "creative": 0.4668285278675855
+      },
+      "roles": {
+        "precise solver": 0.6879681958747106,
+        "creative solver": 0.4668285278675855
+      }
+    },
+    {
+      "episode": 283,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7191713762872395,
+        "creative": 0.520145675080827
+      },
+      "roles": {
+        "precise solver": 0.7191713762872395,
+        "creative solver": 0.520145675080827
+      }
+    },
+    {
+      "episode": 284,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7472542386585155,
+        "creative": 0.5681311075727443
+      },
+      "roles": {
+        "precise solver": 0.7472542386585155,
+        "creative solver": 0.5681311075727443
+      }
+    },
+    {
+      "episode": 285,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7725288147926639,
+        "creative": 0.6113179968154698
+      },
+      "roles": {
+        "precise solver": 0.7725288147926639,
+        "creative solver": 0.6113179968154698
+      }
+    },
+    {
+      "episode": 286,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7952759333133975,
+        "creative": 0.5501861971339229
+      },
+      "roles": {
+        "precise solver": 0.7952759333133975,
+        "creative solver": 0.5501861971339229
+      }
+    },
+    {
+      "episode": 287,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7157483399820578,
+        "creative": 0.49516757742053064
+      },
+      "roles": {
+        "precise solver": 0.7157483399820578,
+        "creative solver": 0.49516757742053064
+      }
+    },
+    {
+      "episode": 288,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.744173505983852,
+        "creative": 0.5456508196784776
+      },
+      "roles": {
+        "precise solver": 0.744173505983852,
+        "creative solver": 0.5456508196784776
+      }
+    },
+    {
+      "episode": 289,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7697561553854668,
+        "creative": 0.5910857377106299
+      },
+      "roles": {
+        "precise solver": 0.7697561553854668,
+        "creative solver": 0.5910857377106299
+      }
+    },
+    {
+      "episode": 290,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7927805398469201,
+        "creative": 0.531977163939567
+      },
+      "roles": {
+        "precise solver": 0.7927805398469201,
+        "creative solver": 0.531977163939567
+      }
+    },
+    {
+      "episode": 291,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7135024858622281,
+        "creative": 0.47877944754561025
+      },
+      "roles": {
+        "precise solver": 0.7135024858622281,
+        "creative solver": 0.47877944754561025
+      }
+    },
+    {
+      "episode": 292,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7421522372760053,
+        "creative": 0.5309015027910492
+      },
+      "roles": {
+        "precise solver": 0.7421522372760053,
+        "creative solver": 0.5309015027910492
+      }
+    },
+    {
+      "episode": 293,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7679370135484048,
+        "creative": 0.5778113525119443
+      },
+      "roles": {
+        "precise solver": 0.7679370135484048,
+        "creative solver": 0.5778113525119443
+      }
+    },
+    {
+      "episode": 294,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7911433121935644,
+        "creative": 0.6200302172607498
+      },
+      "roles": {
+        "precise solver": 0.7911433121935644,
+        "creative solver": 0.6200302172607498
+      }
+    },
+    {
+      "episode": 295,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.812028980974208,
+        "creative": 0.6580271955346748
+      },
+      "roles": {
+        "precise solver": 0.812028980974208,
+        "creative solver": 0.6580271955346748
+      }
+    },
+    {
+      "episode": 296,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8308260828767872,
+        "creative": 0.6922244759812073
+      },
+      "roles": {
+        "precise solver": 0.8308260828767872,
+        "creative solver": 0.6922244759812073
+      }
+    },
+    {
+      "episode": 297,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.8477434745891085,
+        "creative": 0.7230020283830866
+      },
+      "roles": {
+        "precise solver": 0.8477434745891085,
+        "creative solver": 0.7230020283830866
+      }
+    },
+    {
+      "episode": 298,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.7629691271301976,
+        "creative": 0.650701825544778
+      },
+      "roles": {
+        "precise solver": 0.7629691271301976,
+        "creative solver": 0.650701825544778
+      }
+    },
+    {
+      "episode": 299,
+      "condition": "sda",
+      "solvers": {
+        "precise": 0.6866722144171779,
+        "creative": 0.5856316429903001
+      },
+      "roles": {
+        "precise solver": 0.6866722144171779,
+        "creative solver": 0.5856316429903001
+      }
+    },
+    {
+      "episode": 300,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6180049929754601,
+        "creative": 0.5270684786912702
+      },
+      "roles": {
+        "precise solver": 0.6180049929754601,
+        "creative solver": 0.5270684786912702
+      }
+    },
+    {
+      "episode": 301,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.5562044936779141,
+        "creative": 0.47436163082214317
+      },
+      "roles": {
+        "precise solver": 0.5562044936779141,
+        "creative solver": 0.47436163082214317
+      }
+    },
+    {
+      "episode": 302,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6005840443101227,
+        "creative": 0.5269254677399289
+      },
+      "roles": {
+        "precise solver": 0.6005840443101227,
+        "creative solver": 0.5269254677399289
+      }
+    },
+    {
+      "episode": 303,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6405256398791104,
+        "creative": 0.574232920965936
+      },
+      "roles": {
+        "precise solver": 0.6405256398791104,
+        "creative solver": 0.574232920965936
+      }
+    },
+    {
+      "episode": 304,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6764730758911993,
+        "creative": 0.5168096288693425
+      },
+      "roles": {
+        "precise solver": 0.6764730758911993,
+        "creative solver": 0.5168096288693425
+      }
+    },
+    {
+      "episode": 305,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7088257683020793,
+        "creative": 0.5651286659824082
+      },
+      "roles": {
+        "precise solver": 0.7088257683020793,
+        "creative solver": 0.5651286659824082
+      }
+    },
+    {
+      "episode": 306,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7379431914718714,
+        "creative": 0.6086157993841673
+      },
+      "roles": {
+        "precise solver": 0.7379431914718714,
+        "creative solver": 0.6086157993841673
+      }
+    },
+    {
+      "episode": 307,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6641488723246842,
+        "creative": 0.5477542194457506
+      },
+      "roles": {
+        "precise solver": 0.6641488723246842,
+        "creative solver": 0.5477542194457506
+      }
+    },
+    {
+      "episode": 308,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.5977339850922159,
+        "creative": 0.49297879750117557
+      },
+      "roles": {
+        "precise solver": 0.5977339850922159,
+        "creative solver": 0.49297879750117557
+      }
+    },
+    {
+      "episode": 309,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6379605865829943,
+        "creative": 0.543680917751058
+      },
+      "roles": {
+        "precise solver": 0.6379605865829943,
+        "creative solver": 0.543680917751058
+      }
+    },
+    {
+      "episode": 310,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6741645279246948,
+        "creative": 0.5893128259759522
+      },
+      "roles": {
+        "precise solver": 0.6741645279246948,
+        "creative solver": 0.5893128259759522
+      }
+    },
+    {
+      "episode": 311,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7067480751322254,
+        "creative": 0.6303815433783571
+      },
+      "roles": {
+        "precise solver": 0.7067480751322254,
+        "creative solver": 0.6303815433783571
+      }
+    },
+    {
+      "episode": 312,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7360732676190028,
+        "creative": 0.6673433890405214
+      },
+      "roles": {
+        "precise solver": 0.7360732676190028,
+        "creative solver": 0.6673433890405214
+      }
+    },
+    {
+      "episode": 313,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6624659408571025,
+        "creative": 0.6006090501364693
+      },
+      "roles": {
+        "precise solver": 0.6624659408571025,
+        "creative solver": 0.6006090501364693
+      }
+    },
+    {
+      "episode": 314,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6962193467713923,
+        "creative": 0.6405481451228223
+      },
+      "roles": {
+        "precise solver": 0.6962193467713923,
+        "creative solver": 0.6405481451228223
+      }
+    },
+    {
+      "episode": 315,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7265974120942531,
+        "creative": 0.6764933306105401
+      },
+      "roles": {
+        "precise solver": 0.7265974120942531,
+        "creative solver": 0.6764933306105401
+      }
+    },
+    {
+      "episode": 316,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6539376708848278,
+        "creative": 0.608843997549486
+      },
+      "roles": {
+        "precise solver": 0.6539376708848278,
+        "creative solver": 0.608843997549486
+      }
+    },
+    {
+      "episode": 317,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.688543903796345,
+        "creative": 0.5479595977945374
+      },
+      "roles": {
+        "precise solver": 0.688543903796345,
+        "creative solver": 0.5479595977945374
+      }
+    },
+    {
+      "episode": 318,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7196895134167105,
+        "creative": 0.5931636380150836
+      },
+      "roles": {
+        "precise solver": 0.7196895134167105,
+        "creative solver": 0.5931636380150836
+      }
+    },
+    {
+      "episode": 319,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7477205620750395,
+        "creative": 0.6338472742135752
+      },
+      "roles": {
+        "precise solver": 0.7477205620750395,
+        "creative solver": 0.6338472742135752
+      }
+    },
+    {
+      "episode": 320,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7729485058675355,
+        "creative": 0.6704625467922177
+      },
+      "roles": {
+        "precise solver": 0.7729485058675355,
+        "creative solver": 0.6704625467922177
+      }
+    },
+    {
+      "episode": 321,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7956536552807819,
+        "creative": 0.7034162921129959
+      },
+      "roles": {
+        "precise solver": 0.7956536552807819,
+        "creative solver": 0.7034162921129959
+      }
+    },
+    {
+      "episode": 322,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7160882897527038,
+        "creative": 0.6330746629016963
+      },
+      "roles": {
+        "precise solver": 0.7160882897527038,
+        "creative solver": 0.6330746629016963
+      }
+    },
+    {
+      "episode": 323,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7444794607774334,
+        "creative": 0.5697671966115267
+      },
+      "roles": {
+        "precise solver": 0.7444794607774334,
+        "creative solver": 0.5697671966115267
+      }
+    },
+    {
+      "episode": 324,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7700315146996901,
+        "creative": 0.612790476950374
+      },
+      "roles": {
+        "precise solver": 0.7700315146996901,
+        "creative solver": 0.612790476950374
+      }
+    },
+    {
+      "episode": 325,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7930283632297211,
+        "creative": 0.6515114292553367
+      },
+      "roles": {
+        "precise solver": 0.7930283632297211,
+        "creative solver": 0.6515114292553367
+      }
+    },
+    {
+      "episode": 326,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.813725526906749,
+        "creative": 0.686360286329803
+      },
+      "roles": {
+        "precise solver": 0.813725526906749,
+        "creative solver": 0.686360286329803
+      }
+    },
+    {
+      "episode": 327,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8323529742160741,
+        "creative": 0.7177242576968227
+      },
+      "roles": {
+        "precise solver": 0.8323529742160741,
+        "creative solver": 0.7177242576968227
+      }
+    },
+    {
+      "episode": 328,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8491176767944667,
+        "creative": 0.6459518319271405
+      },
+      "roles": {
+        "precise solver": 0.8491176767944667,
+        "creative solver": 0.6459518319271405
+      }
+    },
+    {
+      "episode": 329,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7642059091150201,
+        "creative": 0.5813566487344264
+      },
+      "roles": {
+        "precise solver": 0.7642059091150201,
+        "creative solver": 0.5813566487344264
+      }
+    },
+    {
+      "episode": 330,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.787785318203518,
+        "creative": 0.6232209838609838
+      },
+      "roles": {
+        "precise solver": 0.787785318203518,
+        "creative solver": 0.6232209838609838
+      }
+    },
+    {
+      "episode": 331,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8090067863831663,
+        "creative": 0.6608988854748854
+      },
+      "roles": {
+        "precise solver": 0.8090067863831663,
+        "creative solver": 0.6608988854748854
+      }
+    },
+    {
+      "episode": 332,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7281061077448496,
+        "creative": 0.5948089969273969
+      },
+      "roles": {
+        "precise solver": 0.7281061077448496,
+        "creative solver": 0.5948089969273969
+      }
+    },
+    {
+      "episode": 333,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7552954969703647,
+        "creative": 0.6353280972346572
+      },
+      "roles": {
+        "precise solver": 0.7552954969703647,
+        "creative solver": 0.6353280972346572
+      }
+    },
+    {
+      "episode": 334,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7797659472733283,
+        "creative": 0.6717952875111914
+      },
+      "roles": {
+        "precise solver": 0.7797659472733283,
+        "creative solver": 0.6717952875111914
+      }
+    },
+    {
+      "episode": 335,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8017893525459955,
+        "creative": 0.6046157587600723
+      },
+      "roles": {
+        "precise solver": 0.8017893525459955,
+        "creative solver": 0.6046157587600723
+      }
+    },
+    {
+      "episode": 336,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.821610417291396,
+        "creative": 0.6441541828840651
+      },
+      "roles": {
+        "precise solver": 0.821610417291396,
+        "creative solver": 0.6441541828840651
+      }
+    },
+    {
+      "episode": 337,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8394493755622563,
+        "creative": 0.5797387645956587
+      },
+      "roles": {
+        "precise solver": 0.8394493755622563,
+        "creative solver": 0.5797387645956587
+      }
+    },
+    {
+      "episode": 338,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7555044380060307,
+        "creative": 0.5217648881360928
+      },
+      "roles": {
+        "precise solver": 0.7555044380060307,
+        "creative solver": 0.5217648881360928
+      }
+    },
+    {
+      "episode": 339,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6799539942054277,
+        "creative": 0.46958839932248353
+      },
+      "roles": {
+        "precise solver": 0.6799539942054277,
+        "creative solver": 0.46958839932248353
+      }
+    },
+    {
+      "episode": 340,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7119585947848849,
+        "creative": 0.5226295593902351
+      },
+      "roles": {
+        "precise solver": 0.7119585947848849,
+        "creative solver": 0.5226295593902351
+      }
+    },
+    {
+      "episode": 341,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6407627353063964,
+        "creative": 0.4703666034512116
+      },
+      "roles": {
+        "precise solver": 0.6407627353063964,
+        "creative solver": 0.4703666034512116
+      }
+    },
+    {
+      "episode": 342,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.5766864617757568,
+        "creative": 0.42332994310609046
+      },
+      "roles": {
+        "precise solver": 0.5766864617757568,
+        "creative solver": 0.42332994310609046
+      }
+    },
+    {
+      "episode": 343,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6190178155981811,
+        "creative": 0.4809969487954814
+      },
+      "roles": {
+        "precise solver": 0.6190178155981811,
+        "creative solver": 0.4809969487954814
+      }
+    },
+    {
+      "episode": 344,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.657116034038363,
+        "creative": 0.5328972539159332
+      },
+      "roles": {
+        "precise solver": 0.657116034038363,
+        "creative solver": 0.5328972539159332
+      }
+    },
+    {
+      "episode": 345,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6914044306345267,
+        "creative": 0.5796075285243399
+      },
+      "roles": {
+        "precise solver": 0.6914044306345267,
+        "creative solver": 0.5796075285243399
+      }
+    },
+    {
+      "episode": 346,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.722263987571074,
+        "creative": 0.621646775671906
+      },
+      "roles": {
+        "precise solver": 0.722263987571074,
+        "creative solver": 0.621646775671906
+      }
+    },
+    {
+      "episode": 347,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7500375888139666,
+        "creative": 0.6594820981047154
+      },
+      "roles": {
+        "precise solver": 0.7500375888139666,
+        "creative solver": 0.6594820981047154
+      }
+    },
+    {
+      "episode": 348,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.77503382993257,
+        "creative": 0.6935338882942438
+      },
+      "roles": {
+        "precise solver": 0.77503382993257,
+        "creative solver": 0.6935338882942438
+      }
+    },
+    {
+      "episode": 349,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.797530446939313,
+        "creative": 0.7241804994648194
+      },
+      "roles": {
+        "precise solver": 0.797530446939313,
+        "creative solver": 0.7241804994648194
+      }
+    },
+    {
+      "episode": 350,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8177774022453816,
+        "creative": 0.7517624495183375
+      },
+      "roles": {
+        "precise solver": 0.8177774022453816,
+        "creative solver": 0.7517624495183375
+      }
+    },
+    {
+      "episode": 351,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8359996620208435,
+        "creative": 0.7765862045665037
+      },
+      "roles": {
+        "precise solver": 0.8359996620208435,
+        "creative solver": 0.7765862045665037
+      }
+    },
+    {
+      "episode": 352,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7523996958187592,
+        "creative": 0.6989275841098533
+      },
+      "roles": {
+        "precise solver": 0.7523996958187592,
+        "creative solver": 0.6989275841098533
+      }
+    },
+    {
+      "episode": 353,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6771597262368833,
+        "creative": 0.629034825698868
+      },
+      "roles": {
+        "precise solver": 0.6771597262368833,
+        "creative solver": 0.629034825698868
+      }
+    },
+    {
+      "episode": 354,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7094437536131949,
+        "creative": 0.6661313431289813
+      },
+      "roles": {
+        "precise solver": 0.7094437536131949,
+        "creative solver": 0.6661313431289813
+      }
+    },
+    {
+      "episode": 355,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7384993782518754,
+        "creative": 0.6995182088160832
+      },
+      "roles": {
+        "precise solver": 0.7384993782518754,
+        "creative solver": 0.6995182088160832
+      }
+    },
+    {
+      "episode": 356,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7646494404266878,
+        "creative": 0.7295663879344748
+      },
+      "roles": {
+        "precise solver": 0.7646494404266878,
+        "creative solver": 0.7295663879344748
+      }
+    },
+    {
+      "episode": 357,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.688184496384019,
+        "creative": 0.6566097491410273
+      },
+      "roles": {
+        "precise solver": 0.688184496384019,
+        "creative solver": 0.6566097491410273
+      }
+    },
+    {
+      "episode": 358,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7193660467456171,
+        "creative": 0.6909487742269246
+      },
+      "roles": {
+        "precise solver": 0.7193660467456171,
+        "creative solver": 0.6909487742269246
+      }
+    },
+    {
+      "episode": 359,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7474294420710554,
+        "creative": 0.6218538968042321
+      },
+      "roles": {
+        "precise solver": 0.7474294420710554,
+        "creative solver": 0.6218538968042321
+      }
+    },
+    {
+      "episode": 360,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7726864978639499,
+        "creative": 0.6596685071238089
+      },
+      "roles": {
+        "precise solver": 0.7726864978639499,
+        "creative solver": 0.6596685071238089
+      }
+    },
+    {
+      "episode": 361,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7954178480775549,
+        "creative": 0.693701656411428
+      },
+      "roles": {
+        "precise solver": 0.7954178480775549,
+        "creative solver": 0.693701656411428
+      }
+    },
+    {
+      "episode": 362,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8158760632697994,
+        "creative": 0.6243314907702853
+      },
+      "roles": {
+        "precise solver": 0.8158760632697994,
+        "creative solver": 0.6243314907702853
+      }
+    },
+    {
+      "episode": 363,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8342884569428195,
+        "creative": 0.5618983416932568
+      },
+      "roles": {
+        "precise solver": 0.8342884569428195,
+        "creative solver": 0.5618983416932568
+      }
+    },
+    {
+      "episode": 364,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8508596112485376,
+        "creative": 0.5057085075239312
+      },
+      "roles": {
+        "precise solver": 0.8508596112485376,
+        "creative solver": 0.5057085075239312
+      }
+    },
+    {
+      "episode": 365,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8657736501236838,
+        "creative": 0.555137656771538
+      },
+      "roles": {
+        "precise solver": 0.8657736501236838,
+        "creative solver": 0.555137656771538
+      }
+    },
+    {
+      "episode": 366,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8791962851113154,
+        "creative": 0.5996238910943843
+      },
+      "roles": {
+        "precise solver": 0.8791962851113154,
+        "creative solver": 0.5996238910943843
+      }
+    },
+    {
+      "episode": 367,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7912766566001839,
+        "creative": 0.5396615019849459
+      },
+      "roles": {
+        "precise solver": 0.7912766566001839,
+        "creative solver": 0.5396615019849459
+      }
+    },
+    {
+      "episode": 368,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8121489909401655,
+        "creative": 0.5856953517864513
+      },
+      "roles": {
+        "precise solver": 0.8121489909401655,
+        "creative solver": 0.5856953517864513
+      }
+    },
+    {
+      "episode": 369,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8309340918461489,
+        "creative": 0.6271258166078061
+      },
+      "roles": {
+        "precise solver": 0.8309340918461489,
+        "creative solver": 0.6271258166078061
+      }
+    },
+    {
+      "episode": 370,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.747840682661534,
+        "creative": 0.5644132349470254
+      },
+      "roles": {
+        "precise solver": 0.747840682661534,
+        "creative solver": 0.5644132349470254
+      }
+    },
+    {
+      "episode": 371,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7730566143953806,
+        "creative": 0.5079719114523229
+      },
+      "roles": {
+        "precise solver": 0.7730566143953806,
+        "creative solver": 0.5079719114523229
+      }
+    },
+    {
+      "episode": 372,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6957509529558425,
+        "creative": 0.4571747203070906
+      },
+      "roles": {
+        "precise solver": 0.6957509529558425,
+        "creative solver": 0.4571747203070906
+      }
+    },
+    {
+      "episode": 373,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7261758576602583,
+        "creative": 0.5114572482763816
+      },
+      "roles": {
+        "precise solver": 0.7261758576602583,
+        "creative solver": 0.5114572482763816
+      }
+    },
+    {
+      "episode": 374,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6535582718942324,
+        "creative": 0.5603115234487435
+      },
+      "roles": {
+        "precise solver": 0.6535582718942324,
+        "creative solver": 0.5603115234487435
+      }
+    },
+    {
+      "episode": 375,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6882024447048092,
+        "creative": 0.6042803711038691
+      },
+      "roles": {
+        "precise solver": 0.6882024447048092,
+        "creative solver": 0.6042803711038691
+      }
+    },
+    {
+      "episode": 376,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7193822002343283,
+        "creative": 0.6438523339934822
+      },
+      "roles": {
+        "precise solver": 0.7193822002343283,
+        "creative solver": 0.6438523339934822
+      }
+    },
+    {
+      "episode": 377,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7474439802108954,
+        "creative": 0.679467100594134
+      },
+      "roles": {
+        "precise solver": 0.7474439802108954,
+        "creative solver": 0.679467100594134
+      }
+    },
+    {
+      "episode": 378,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7726995821898058,
+        "creative": 0.7115203905347206
+      },
+      "roles": {
+        "precise solver": 0.7726995821898058,
+        "creative solver": 0.7115203905347206
+      }
+    },
+    {
+      "episode": 379,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6954296239708253,
+        "creative": 0.6403683514812486
+      },
+      "roles": {
+        "precise solver": 0.6954296239708253,
+        "creative solver": 0.6403683514812486
+      }
+    },
+    {
+      "episode": 380,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7258866615737428,
+        "creative": 0.5763315163331237
+      },
+      "roles": {
+        "precise solver": 0.7258866615737428,
+        "creative solver": 0.5763315163331237
+      }
+    },
+    {
+      "episode": 381,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6532979954163686,
+        "creative": 0.5186983646998113
+      },
+      "roles": {
+        "precise solver": 0.6532979954163686,
+        "creative solver": 0.5186983646998113
+      }
+    },
+    {
+      "episode": 382,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6879681958747317,
+        "creative": 0.46682852822983023
+      },
+      "roles": {
+        "precise solver": 0.6879681958747317,
+        "creative solver": 0.46682852822983023
+      }
+    },
+    {
+      "episode": 383,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7191713762872585,
+        "creative": 0.5201456754068472
+      },
+      "roles": {
+        "precise solver": 0.7191713762872585,
+        "creative solver": 0.5201456754068472
+      }
+    },
+    {
+      "episode": 384,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7472542386585326,
+        "creative": 0.5681311078661625
+      },
+      "roles": {
+        "precise solver": 0.7472542386585326,
+        "creative solver": 0.5681311078661625
+      }
+    },
+    {
+      "episode": 385,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7725288147926793,
+        "creative": 0.6113179970795463
+      },
+      "roles": {
+        "precise solver": 0.7725288147926793,
+        "creative solver": 0.6113179970795463
+      }
+    },
+    {
+      "episode": 386,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7952759333134114,
+        "creative": 0.5501861973715917
+      },
+      "roles": {
+        "precise solver": 0.7952759333134114,
+        "creative solver": 0.5501861973715917
+      }
+    },
+    {
+      "episode": 387,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7157483399820703,
+        "creative": 0.49516757763443253
+      },
+      "roles": {
+        "precise solver": 0.7157483399820703,
+        "creative solver": 0.49516757763443253
+      }
+    },
+    {
+      "episode": 388,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7441735059838633,
+        "creative": 0.5456508198709893
+      },
+      "roles": {
+        "precise solver": 0.7441735059838633,
+        "creative solver": 0.5456508198709893
+      }
+    },
+    {
+      "episode": 389,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.769756155385477,
+        "creative": 0.5910857378838904
+      },
+      "roles": {
+        "precise solver": 0.769756155385477,
+        "creative solver": 0.5910857378838904
+      }
+    },
+    {
+      "episode": 390,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7927805398469293,
+        "creative": 0.5319771640955013
+      },
+      "roles": {
+        "precise solver": 0.7927805398469293,
+        "creative solver": 0.5319771640955013
+      }
+    },
+    {
+      "episode": 391,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7135024858622364,
+        "creative": 0.4787794476859512
+      },
+      "roles": {
+        "precise solver": 0.7135024858622364,
+        "creative solver": 0.4787794476859512
+      }
+    },
+    {
+      "episode": 392,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7421522372760128,
+        "creative": 0.530901502917356
+      },
+      "roles": {
+        "precise solver": 0.7421522372760128,
+        "creative solver": 0.530901502917356
+      }
+    },
+    {
+      "episode": 393,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7679370135484115,
+        "creative": 0.5778113526256204
+      },
+      "roles": {
+        "precise solver": 0.7679370135484115,
+        "creative solver": 0.5778113526256204
+      }
+    },
+    {
+      "episode": 394,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7911433121935704,
+        "creative": 0.6200302173630584
+      },
+      "roles": {
+        "precise solver": 0.7911433121935704,
+        "creative solver": 0.6200302173630584
+      }
+    },
+    {
+      "episode": 395,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8120289809742133,
+        "creative": 0.6580271956267526
+      },
+      "roles": {
+        "precise solver": 0.8120289809742133,
+        "creative solver": 0.6580271956267526
+      }
+    },
+    {
+      "episode": 396,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8308260828767919,
+        "creative": 0.6922244760640773
+      },
+      "roles": {
+        "precise solver": 0.8308260828767919,
+        "creative solver": 0.6922244760640773
+      }
+    },
+    {
+      "episode": 397,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.8477434745891127,
+        "creative": 0.7230020284576696
+      },
+      "roles": {
+        "precise solver": 0.8477434745891127,
+        "creative solver": 0.7230020284576696
+      }
+    },
+    {
+      "episode": 398,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.7629691271302015,
+        "creative": 0.6507018256119026
+      },
+      "roles": {
+        "precise solver": 0.7629691271302015,
+        "creative solver": 0.6507018256119026
+      }
+    },
+    {
+      "episode": 399,
+      "condition": "critic",
+      "solvers": {
+        "precise": 0.6866722144171814,
+        "creative": 0.5856316430507124
+      },
+      "roles": {
+        "precise solver": 0.6866722144171814,
+        "creative solver": 0.5856316430507124
+      }
+    },
+    {
+      "episode": 400,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6180049929754633,
+        "creative": 0.5270684787456411
+      },
+      "roles": {
+        "precise solver": 0.6180049929754633,
+        "creative solver": 0.5270684787456411
+      }
+    },
+    {
+      "episode": 401,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.556204493677917,
+        "creative": 0.474361630871077
+      },
+      "roles": {
+        "precise solver": 0.556204493677917,
+        "creative solver": 0.474361630871077
+      }
+    },
+    {
+      "episode": 402,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6005840443101254,
+        "creative": 0.5269254677839693
+      },
+      "roles": {
+        "precise solver": 0.6005840443101254,
+        "creative solver": 0.5269254677839693
+      }
+    },
+    {
+      "episode": 403,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6405256398791128,
+        "creative": 0.5742329210055724
+      },
+      "roles": {
+        "precise solver": 0.6405256398791128,
+        "creative solver": 0.5742329210055724
+      }
+    },
+    {
+      "episode": 404,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6764730758912015,
+        "creative": 0.5168096289050153
+      },
+      "roles": {
+        "precise solver": 0.6764730758912015,
+        "creative solver": 0.5168096289050153
+      }
+    },
+    {
+      "episode": 405,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7088257683020813,
+        "creative": 0.5651286660145137
+      },
+      "roles": {
+        "precise solver": 0.7088257683020813,
+        "creative solver": 0.5651286660145137
+      }
+    },
+    {
+      "episode": 406,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7379431914718732,
+        "creative": 0.6086157994130623
+      },
+      "roles": {
+        "precise solver": 0.7379431914718732,
+        "creative solver": 0.6086157994130623
+      }
+    },
+    {
+      "episode": 407,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6641488723246859,
+        "creative": 0.5477542194717561
+      },
+      "roles": {
+        "precise solver": 0.6641488723246859,
+        "creative solver": 0.5477542194717561
+      }
+    },
+    {
+      "episode": 408,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.5977339850922173,
+        "creative": 0.49297879752458046
+      },
+      "roles": {
+        "precise solver": 0.5977339850922173,
+        "creative solver": 0.49297879752458046
+      }
+    },
+    {
+      "episode": 409,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6379605865829956,
+        "creative": 0.5436809177721225
+      },
+      "roles": {
+        "precise solver": 0.6379605865829956,
+        "creative solver": 0.5436809177721225
+      }
+    },
+    {
+      "episode": 410,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.674164527924696,
+        "creative": 0.5893128259949102
+      },
+      "roles": {
+        "precise solver": 0.674164527924696,
+        "creative solver": 0.5893128259949102
+      }
+    },
+    {
+      "episode": 411,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7067480751322265,
+        "creative": 0.6303815433954192
+      },
+      "roles": {
+        "precise solver": 0.7067480751322265,
+        "creative solver": 0.6303815433954192
+      }
+    },
+    {
+      "episode": 412,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7360732676190038,
+        "creative": 0.6673433890558773
+      },
+      "roles": {
+        "precise solver": 0.7360732676190038,
+        "creative solver": 0.6673433890558773
+      }
+    },
+    {
+      "episode": 413,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6624659408571034,
+        "creative": 0.6006090501502896
+      },
+      "roles": {
+        "precise solver": 0.6624659408571034,
+        "creative solver": 0.6006090501502896
+      }
+    },
+    {
+      "episode": 414,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6962193467713931,
+        "creative": 0.6405481451352607
+      },
+      "roles": {
+        "precise solver": 0.6962193467713931,
+        "creative solver": 0.6405481451352607
+      }
+    },
+    {
+      "episode": 415,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7265974120942538,
+        "creative": 0.6764933306217347
+      },
+      "roles": {
+        "precise solver": 0.7265974120942538,
+        "creative solver": 0.6764933306217347
+      }
+    },
+    {
+      "episode": 416,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6539376708848285,
+        "creative": 0.6088439975595612
+      },
+      "roles": {
+        "precise solver": 0.6539376708848285,
+        "creative solver": 0.6088439975595612
+      }
+    },
+    {
+      "episode": 417,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6885439037963456,
+        "creative": 0.5479595978036051
+      },
+      "roles": {
+        "precise solver": 0.6885439037963456,
+        "creative solver": 0.5479595978036051
+      }
+    },
+    {
+      "episode": 418,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.719689513416711,
+        "creative": 0.5931636380232447
+      },
+      "roles": {
+        "precise solver": 0.719689513416711,
+        "creative solver": 0.5931636380232447
+      }
+    },
+    {
+      "episode": 419,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7477205620750399,
+        "creative": 0.6338472742209202
+      },
+      "roles": {
+        "precise solver": 0.7477205620750399,
+        "creative solver": 0.6338472742209202
+      }
+    },
+    {
+      "episode": 420,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7729485058675359,
+        "creative": 0.6704625467988282
+      },
+      "roles": {
+        "precise solver": 0.7729485058675359,
+        "creative solver": 0.6704625467988282
+      }
+    },
+    {
+      "episode": 421,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7956536552807824,
+        "creative": 0.7034162921189454
+      },
+      "roles": {
+        "precise solver": 0.7956536552807824,
+        "creative solver": 0.7034162921189454
+      }
+    },
+    {
+      "episode": 422,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7160882897527041,
+        "creative": 0.6330746629070508
+      },
+      "roles": {
+        "precise solver": 0.7160882897527041,
+        "creative solver": 0.6330746629070508
+      }
+    },
+    {
+      "episode": 423,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7444794607774337,
+        "creative": 0.5697671966163458
+      },
+      "roles": {
+        "precise solver": 0.7444794607774337,
+        "creative solver": 0.5697671966163458
+      }
+    },
+    {
+      "episode": 424,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7700315146996903,
+        "creative": 0.6127904769547112
+      },
+      "roles": {
+        "precise solver": 0.7700315146996903,
+        "creative solver": 0.6127904769547112
+      }
+    },
+    {
+      "episode": 425,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7930283632297213,
+        "creative": 0.6515114292592401
+      },
+      "roles": {
+        "precise solver": 0.7930283632297213,
+        "creative solver": 0.6515114292592401
+      }
+    },
+    {
+      "episode": 426,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8137255269067492,
+        "creative": 0.6863602863333161
+      },
+      "roles": {
+        "precise solver": 0.8137255269067492,
+        "creative solver": 0.6863602863333161
+      }
+    },
+    {
+      "episode": 427,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8323529742160742,
+        "creative": 0.7177242576999845
+      },
+      "roles": {
+        "precise solver": 0.8323529742160742,
+        "creative solver": 0.7177242576999845
+      }
+    },
+    {
+      "episode": 428,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8491176767944668,
+        "creative": 0.6459518319299861
+      },
+      "roles": {
+        "precise solver": 0.8491176767944668,
+        "creative solver": 0.6459518319299861
+      }
+    },
+    {
+      "episode": 429,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7642059091150202,
+        "creative": 0.5813566487369874
+      },
+      "roles": {
+        "precise solver": 0.7642059091150202,
+        "creative solver": 0.5813566487369874
+      }
+    },
+    {
+      "episode": 430,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7877853182035182,
+        "creative": 0.6232209838632887
+      },
+      "roles": {
+        "precise solver": 0.7877853182035182,
+        "creative solver": 0.6232209838632887
+      }
+    },
+    {
+      "episode": 431,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8090067863831664,
+        "creative": 0.6608988854769599
+      },
+      "roles": {
+        "precise solver": 0.8090067863831664,
+        "creative solver": 0.6608988854769599
+      }
+    },
+    {
+      "episode": 432,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7281061077448497,
+        "creative": 0.5948089969292639
+      },
+      "roles": {
+        "precise solver": 0.7281061077448497,
+        "creative solver": 0.5948089969292639
+      }
+    },
+    {
+      "episode": 433,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7552954969703648,
+        "creative": 0.6353280972363375
+      },
+      "roles": {
+        "precise solver": 0.7552954969703648,
+        "creative solver": 0.6353280972363375
+      }
+    },
+    {
+      "episode": 434,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7797659472733283,
+        "creative": 0.6717952875127038
+      },
+      "roles": {
+        "precise solver": 0.7797659472733283,
+        "creative solver": 0.6717952875127038
+      }
+    },
+    {
+      "episode": 435,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8017893525459955,
+        "creative": 0.6046157587614335
+      },
+      "roles": {
+        "precise solver": 0.8017893525459955,
+        "creative solver": 0.6046157587614335
+      }
+    },
+    {
+      "episode": 436,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.821610417291396,
+        "creative": 0.6441541828852901
+      },
+      "roles": {
+        "precise solver": 0.821610417291396,
+        "creative solver": 0.6441541828852901
+      }
+    },
+    {
+      "episode": 437,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8394493755622563,
+        "creative": 0.5797387645967611
+      },
+      "roles": {
+        "precise solver": 0.8394493755622563,
+        "creative solver": 0.5797387645967611
+      }
+    },
+    {
+      "episode": 438,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7555044380060307,
+        "creative": 0.521764888137085
+      },
+      "roles": {
+        "precise solver": 0.7555044380060307,
+        "creative solver": 0.521764888137085
+      }
+    },
+    {
+      "episode": 439,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6799539942054277,
+        "creative": 0.4695883993233765
+      },
+      "roles": {
+        "precise solver": 0.6799539942054277,
+        "creative solver": 0.4695883993233765
+      }
+    },
+    {
+      "episode": 440,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7119585947848849,
+        "creative": 0.5226295593910388
+      },
+      "roles": {
+        "precise solver": 0.7119585947848849,
+        "creative solver": 0.5226295593910388
+      }
+    },
+    {
+      "episode": 441,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6407627353063964,
+        "creative": 0.470366603451935
+      },
+      "roles": {
+        "precise solver": 0.6407627353063964,
+        "creative solver": 0.470366603451935
+      }
+    },
+    {
+      "episode": 442,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.5766864617757568,
+        "creative": 0.4233299431067415
+      },
+      "roles": {
+        "precise solver": 0.5766864617757568,
+        "creative solver": 0.4233299431067415
+      }
+    },
+    {
+      "episode": 443,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6190178155981811,
+        "creative": 0.48099694879606736
+      },
+      "roles": {
+        "precise solver": 0.6190178155981811,
+        "creative solver": 0.48099694879606736
+      }
+    },
+    {
+      "episode": 444,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.657116034038363,
+        "creative": 0.5328972539164606
+      },
+      "roles": {
+        "precise solver": 0.657116034038363,
+        "creative solver": 0.5328972539164606
+      }
+    },
+    {
+      "episode": 445,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6914044306345267,
+        "creative": 0.5796075285248146
+      },
+      "roles": {
+        "precise solver": 0.6914044306345267,
+        "creative solver": 0.5796075285248146
+      }
+    },
+    {
+      "episode": 446,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.722263987571074,
+        "creative": 0.6216467756723331
+      },
+      "roles": {
+        "precise solver": 0.722263987571074,
+        "creative solver": 0.6216467756723331
+      }
+    },
+    {
+      "episode": 447,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7500375888139666,
+        "creative": 0.6594820981050997
+      },
+      "roles": {
+        "precise solver": 0.7500375888139666,
+        "creative solver": 0.6594820981050997
+      }
+    },
+    {
+      "episode": 448,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.77503382993257,
+        "creative": 0.6935338882945897
+      },
+      "roles": {
+        "precise solver": 0.77503382993257,
+        "creative solver": 0.6935338882945897
+      }
+    },
+    {
+      "episode": 449,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.797530446939313,
+        "creative": 0.7241804994651307
+      },
+      "roles": {
+        "precise solver": 0.797530446939313,
+        "creative solver": 0.7241804994651307
+      }
+    },
+    {
+      "episode": 450,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8177774022453816,
+        "creative": 0.7517624495186177
+      },
+      "roles": {
+        "precise solver": 0.8177774022453816,
+        "creative solver": 0.7517624495186177
+      }
+    },
+    {
+      "episode": 451,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8359996620208435,
+        "creative": 0.776586204566756
+      },
+      "roles": {
+        "precise solver": 0.8359996620208435,
+        "creative solver": 0.776586204566756
+      }
+    },
+    {
+      "episode": 452,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7523996958187592,
+        "creative": 0.6989275841100804
+      },
+      "roles": {
+        "precise solver": 0.7523996958187592,
+        "creative solver": 0.6989275841100804
+      }
+    },
+    {
+      "episode": 453,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6771597262368833,
+        "creative": 0.6290348256990723
+      },
+      "roles": {
+        "precise solver": 0.6771597262368833,
+        "creative solver": 0.6290348256990723
+      }
+    },
+    {
+      "episode": 454,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7094437536131949,
+        "creative": 0.6661313431291651
+      },
+      "roles": {
+        "precise solver": 0.7094437536131949,
+        "creative solver": 0.6661313431291651
+      }
+    },
+    {
+      "episode": 455,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7384993782518754,
+        "creative": 0.6995182088162486
+      },
+      "roles": {
+        "precise solver": 0.7384993782518754,
+        "creative solver": 0.6995182088162486
+      }
+    },
+    {
+      "episode": 456,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7646494404266878,
+        "creative": 0.7295663879346237
+      },
+      "roles": {
+        "precise solver": 0.7646494404266878,
+        "creative solver": 0.7295663879346237
+      }
+    },
+    {
+      "episode": 457,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.688184496384019,
+        "creative": 0.6566097491411613
+      },
+      "roles": {
+        "precise solver": 0.688184496384019,
+        "creative solver": 0.6566097491411613
+      }
+    },
+    {
+      "episode": 458,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7193660467456171,
+        "creative": 0.6909487742270451
+      },
+      "roles": {
+        "precise solver": 0.7193660467456171,
+        "creative solver": 0.6909487742270451
+      }
+    },
+    {
+      "episode": 459,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7474294420710554,
+        "creative": 0.6218538968043407
+      },
+      "roles": {
+        "precise solver": 0.7474294420710554,
+        "creative solver": 0.6218538968043407
+      }
+    },
+    {
+      "episode": 460,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7726864978639499,
+        "creative": 0.6596685071239066
+      },
+      "roles": {
+        "precise solver": 0.7726864978639499,
+        "creative solver": 0.6596685071239066
+      }
+    },
+    {
+      "episode": 461,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7954178480775549,
+        "creative": 0.6937016564115159
+      },
+      "roles": {
+        "precise solver": 0.7954178480775549,
+        "creative solver": 0.6937016564115159
+      }
+    },
+    {
+      "episode": 462,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8158760632697994,
+        "creative": 0.6243314907703643
+      },
+      "roles": {
+        "precise solver": 0.8158760632697994,
+        "creative solver": 0.6243314907703643
+      }
+    },
+    {
+      "episode": 463,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8342884569428195,
+        "creative": 0.5618983416933279
+      },
+      "roles": {
+        "precise solver": 0.8342884569428195,
+        "creative solver": 0.5618983416933279
+      }
+    },
+    {
+      "episode": 464,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8508596112485376,
+        "creative": 0.5057085075239951
+      },
+      "roles": {
+        "precise solver": 0.8508596112485376,
+        "creative solver": 0.5057085075239951
+      }
+    },
+    {
+      "episode": 465,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8657736501236838,
+        "creative": 0.5551376567715957
+      },
+      "roles": {
+        "precise solver": 0.8657736501236838,
+        "creative solver": 0.5551376567715957
+      }
+    },
+    {
+      "episode": 466,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8791962851113154,
+        "creative": 0.5996238910944361
+      },
+      "roles": {
+        "precise solver": 0.8791962851113154,
+        "creative solver": 0.5996238910944361
+      }
+    },
+    {
+      "episode": 467,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7912766566001839,
+        "creative": 0.5396615019849925
+      },
+      "roles": {
+        "precise solver": 0.7912766566001839,
+        "creative solver": 0.5396615019849925
+      }
+    },
+    {
+      "episode": 468,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8121489909401655,
+        "creative": 0.5856953517864932
+      },
+      "roles": {
+        "precise solver": 0.8121489909401655,
+        "creative solver": 0.5856953517864932
+      }
+    },
+    {
+      "episode": 469,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8309340918461489,
+        "creative": 0.6271258166078439
+      },
+      "roles": {
+        "precise solver": 0.8309340918461489,
+        "creative solver": 0.6271258166078439
+      }
+    },
+    {
+      "episode": 470,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.747840682661534,
+        "creative": 0.5644132349470595
+      },
+      "roles": {
+        "precise solver": 0.747840682661534,
+        "creative solver": 0.5644132349470595
+      }
+    },
+    {
+      "episode": 471,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7730566143953806,
+        "creative": 0.5079719114523535
+      },
+      "roles": {
+        "precise solver": 0.7730566143953806,
+        "creative solver": 0.5079719114523535
+      }
+    },
+    {
+      "episode": 472,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6957509529558425,
+        "creative": 0.4571747203071182
+      },
+      "roles": {
+        "precise solver": 0.6957509529558425,
+        "creative solver": 0.4571747203071182
+      }
+    },
+    {
+      "episode": 473,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7261758576602583,
+        "creative": 0.5114572482764064
+      },
+      "roles": {
+        "precise solver": 0.7261758576602583,
+        "creative solver": 0.5114572482764064
+      }
+    },
+    {
+      "episode": 474,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6535582718942324,
+        "creative": 0.5603115234487658
+      },
+      "roles": {
+        "precise solver": 0.6535582718942324,
+        "creative solver": 0.5603115234487658
+      }
+    },
+    {
+      "episode": 475,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6882024447048092,
+        "creative": 0.6042803711038892
+      },
+      "roles": {
+        "precise solver": 0.6882024447048092,
+        "creative solver": 0.6042803711038892
+      }
+    },
+    {
+      "episode": 476,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7193822002343283,
+        "creative": 0.6438523339935003
+      },
+      "roles": {
+        "precise solver": 0.7193822002343283,
+        "creative solver": 0.6438523339935003
+      }
+    },
+    {
+      "episode": 477,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7474439802108954,
+        "creative": 0.6794671005941503
+      },
+      "roles": {
+        "precise solver": 0.7474439802108954,
+        "creative solver": 0.6794671005941503
+      }
+    },
+    {
+      "episode": 478,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7726995821898058,
+        "creative": 0.7115203905347353
+      },
+      "roles": {
+        "precise solver": 0.7726995821898058,
+        "creative solver": 0.7115203905347353
+      }
+    },
+    {
+      "episode": 479,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6954296239708253,
+        "creative": 0.6403683514812617
+      },
+      "roles": {
+        "precise solver": 0.6954296239708253,
+        "creative solver": 0.6403683514812617
+      }
+    },
+    {
+      "episode": 480,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7258866615737428,
+        "creative": 0.5763315163331355
+      },
+      "roles": {
+        "precise solver": 0.7258866615737428,
+        "creative solver": 0.5763315163331355
+      }
+    },
+    {
+      "episode": 481,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6532979954163686,
+        "creative": 0.518698364699822
+      },
+      "roles": {
+        "precise solver": 0.6532979954163686,
+        "creative solver": 0.518698364699822
+      }
+    },
+    {
+      "episode": 482,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6879681958747317,
+        "creative": 0.46682852822983983
+      },
+      "roles": {
+        "precise solver": 0.6879681958747317,
+        "creative solver": 0.46682852822983983
+      }
+    },
+    {
+      "episode": 483,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7191713762872585,
+        "creative": 0.5201456754068559
+      },
+      "roles": {
+        "precise solver": 0.7191713762872585,
+        "creative solver": 0.5201456754068559
+      }
+    },
+    {
+      "episode": 484,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7472542386585326,
+        "creative": 0.5681311078661703
+      },
+      "roles": {
+        "precise solver": 0.7472542386585326,
+        "creative solver": 0.5681311078661703
+      }
+    },
+    {
+      "episode": 485,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7725288147926793,
+        "creative": 0.6113179970795533
+      },
+      "roles": {
+        "precise solver": 0.7725288147926793,
+        "creative solver": 0.6113179970795533
+      }
+    },
+    {
+      "episode": 486,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7952759333134114,
+        "creative": 0.5501861973715979
+      },
+      "roles": {
+        "precise solver": 0.7952759333134114,
+        "creative solver": 0.5501861973715979
+      }
+    },
+    {
+      "episode": 487,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7157483399820703,
+        "creative": 0.49516757763443814
+      },
+      "roles": {
+        "precise solver": 0.7157483399820703,
+        "creative solver": 0.49516757763443814
+      }
+    },
+    {
+      "episode": 488,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7441735059838633,
+        "creative": 0.5456508198709943
+      },
+      "roles": {
+        "precise solver": 0.7441735059838633,
+        "creative solver": 0.5456508198709943
+      }
+    },
+    {
+      "episode": 489,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.769756155385477,
+        "creative": 0.5910857378838948
+      },
+      "roles": {
+        "precise solver": 0.769756155385477,
+        "creative solver": 0.5910857378838948
+      }
+    },
+    {
+      "episode": 490,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7927805398469293,
+        "creative": 0.5319771640955053
+      },
+      "roles": {
+        "precise solver": 0.7927805398469293,
+        "creative solver": 0.5319771640955053
+      }
+    },
+    {
+      "episode": 491,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7135024858622364,
+        "creative": 0.4787794476859548
+      },
+      "roles": {
+        "precise solver": 0.7135024858622364,
+        "creative solver": 0.4787794476859548
+      }
+    },
+    {
+      "episode": 492,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7421522372760128,
+        "creative": 0.5309015029173594
+      },
+      "roles": {
+        "precise solver": 0.7421522372760128,
+        "creative solver": 0.5309015029173594
+      }
+    },
+    {
+      "episode": 493,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7679370135484115,
+        "creative": 0.5778113526256234
+      },
+      "roles": {
+        "precise solver": 0.7679370135484115,
+        "creative solver": 0.5778113526256234
+      }
+    },
+    {
+      "episode": 494,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7911433121935704,
+        "creative": 0.6200302173630611
+      },
+      "roles": {
+        "precise solver": 0.7911433121935704,
+        "creative solver": 0.6200302173630611
+      }
+    },
+    {
+      "episode": 495,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8120289809742133,
+        "creative": 0.6580271956267549
+      },
+      "roles": {
+        "precise solver": 0.8120289809742133,
+        "creative solver": 0.6580271956267549
+      }
+    },
+    {
+      "episode": 496,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8308260828767919,
+        "creative": 0.6922244760640794
+      },
+      "roles": {
+        "precise solver": 0.8308260828767919,
+        "creative solver": 0.6922244760640794
+      }
+    },
+    {
+      "episode": 497,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.8477434745891127,
+        "creative": 0.7230020284576715
+      },
+      "roles": {
+        "precise solver": 0.8477434745891127,
+        "creative solver": 0.7230020284576715
+      }
+    },
+    {
+      "episode": 498,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.7629691271302015,
+        "creative": 0.6507018256119044
+      },
+      "roles": {
+        "precise solver": 0.7629691271302015,
+        "creative solver": 0.6507018256119044
+      }
+    },
+    {
+      "episode": 499,
+      "condition": "memory",
+      "solvers": {
+        "precise": 0.6866722144171814,
+        "creative": 0.5856316430507139
+      },
+      "roles": {
+        "precise solver": 0.6866722144171814,
+        "creative solver": 0.5856316430507139
+      }
+    }
+  ]
+}

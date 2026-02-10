@@ -1,0 +1,596 @@
+{
+  "run_id": "track_a_20260210_033353",
+  "task_count": 50,
+  "conditions": [
+    {
+      "name": "single",
+      "accuracy": 1.0,
+      "avg_tokens": 0,
+      "avg_confidence": 0.7,
+      "disagreement_rate": 0.0,
+      "reconcile_rate": 0.0,
+      "critic_flag_rate": 0.0,
+      "adversary_rate": 0.0,
+      "adversary_selection_rate": 0.0,
+      "adversary_block_rate": 0.0,
+      "adversary_success_rate": 0.0,
+      "note": "Single solver baseline"
+    }
+  ],
+  "memory_artifacts": [],
+  "related_work": [],
+  "bib_entries": "",
+  "family_metrics": {
+    "single": {
+      "system_eq": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "modular": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "symbolic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "word": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "algebra": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "inequality": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "code_verify": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "arithmetic": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "logic_grid_4x4": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      },
+      "knights_knaves": {
+        "accuracy": 1.0,
+        "token_eff": 0.0
+      }
+    }
+  },
+  "critique_summary": {
+    "total_flags": 0,
+    "flag_rate": 0.0,
+    "top_reasons": []
+  },
+  "reputation_summary": {
+    "solvers": {
+      "precise": {
+        "total": 50.0,
+        "accuracy": 1.0,
+        "ema_accuracy": 0.99742311239634,
+        "deviation_rate": 0.0
+      }
+    },
+    "roles": {
+      "precise solver": {
+        "total": 50.0,
+        "accuracy": 1.0,
+        "ema_accuracy": 0.99742311239634,
+        "deviation_rate": 0.0
+      }
+    }
+  },
+  "reputation_drift": [
+    {
+      "episode": 0,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.55
+      },
+      "roles": {
+        "precise solver": 0.55
+      }
+    },
+    {
+      "episode": 1,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.5950000000000001
+      },
+      "roles": {
+        "precise solver": 0.5950000000000001
+      }
+    },
+    {
+      "episode": 2,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.6355000000000001
+      },
+      "roles": {
+        "precise solver": 0.6355000000000001
+      }
+    },
+    {
+      "episode": 3,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.67195
+      },
+      "roles": {
+        "precise solver": 0.67195
+      }
+    },
+    {
+      "episode": 4,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.704755
+      },
+      "roles": {
+        "precise solver": 0.704755
+      }
+    },
+    {
+      "episode": 5,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7342795
+      },
+      "roles": {
+        "precise solver": 0.7342795
+      }
+    },
+    {
+      "episode": 6,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7608515499999999
+      },
+      "roles": {
+        "precise solver": 0.7608515499999999
+      }
+    },
+    {
+      "episode": 7,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.7847663949999999
+      },
+      "roles": {
+        "precise solver": 0.7847663949999999
+      }
+    },
+    {
+      "episode": 8,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8062897554999999
+      },
+      "roles": {
+        "precise solver": 0.8062897554999999
+      }
+    },
+    {
+      "episode": 9,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.82566077995
+      },
+      "roles": {
+        "precise solver": 0.82566077995
+      }
+    },
+    {
+      "episode": 10,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.843094701955
+      },
+      "roles": {
+        "precise solver": 0.843094701955
+      }
+    },
+    {
+      "episode": 11,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8587852317595001
+      },
+      "roles": {
+        "precise solver": 0.8587852317595001
+      }
+    },
+    {
+      "episode": 12,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.87290670858355
+      },
+      "roles": {
+        "precise solver": 0.87290670858355
+      }
+    },
+    {
+      "episode": 13,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.885616037725195
+      },
+      "roles": {
+        "precise solver": 0.885616037725195
+      }
+    },
+    {
+      "episode": 14,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.8970544339526755
+      },
+      "roles": {
+        "precise solver": 0.8970544339526755
+      }
+    },
+    {
+      "episode": 15,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9073489905574079
+      },
+      "roles": {
+        "precise solver": 0.9073489905574079
+      }
+    },
+    {
+      "episode": 16,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9166140915016672
+      },
+      "roles": {
+        "precise solver": 0.9166140915016672
+      }
+    },
+    {
+      "episode": 17,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9249526823515004
+      },
+      "roles": {
+        "precise solver": 0.9249526823515004
+      }
+    },
+    {
+      "episode": 18,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9324574141163504
+      },
+      "roles": {
+        "precise solver": 0.9324574141163504
+      }
+    },
+    {
+      "episode": 19,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9392116727047154
+      },
+      "roles": {
+        "precise solver": 0.9392116727047154
+      }
+    },
+    {
+      "episode": 20,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9452905054342439
+      },
+      "roles": {
+        "precise solver": 0.9452905054342439
+      }
+    },
+    {
+      "episode": 21,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9507614548908194
+      },
+      "roles": {
+        "precise solver": 0.9507614548908194
+      }
+    },
+    {
+      "episode": 22,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9556853094017375
+      },
+      "roles": {
+        "precise solver": 0.9556853094017375
+      }
+    },
+    {
+      "episode": 23,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9601167784615637
+      },
+      "roles": {
+        "precise solver": 0.9601167784615637
+      }
+    },
+    {
+      "episode": 24,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9641051006154073
+      },
+      "roles": {
+        "precise solver": 0.9641051006154073
+      }
+    },
+    {
+      "episode": 25,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9676945905538666
+      },
+      "roles": {
+        "precise solver": 0.9676945905538666
+      }
+    },
+    {
+      "episode": 26,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9709251314984799
+      },
+      "roles": {
+        "precise solver": 0.9709251314984799
+      }
+    },
+    {
+      "episode": 27,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9738326183486319
+      },
+      "roles": {
+        "precise solver": 0.9738326183486319
+      }
+    },
+    {
+      "episode": 28,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9764493565137687
+      },
+      "roles": {
+        "precise solver": 0.9764493565137687
+      }
+    },
+    {
+      "episode": 29,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9788044208623918
+      },
+      "roles": {
+        "precise solver": 0.9788044208623918
+      }
+    },
+    {
+      "episode": 30,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9809239787761527
+      },
+      "roles": {
+        "precise solver": 0.9809239787761527
+      }
+    },
+    {
+      "episode": 31,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9828315808985374
+      },
+      "roles": {
+        "precise solver": 0.9828315808985374
+      }
+    },
+    {
+      "episode": 32,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9845484228086836
+      },
+      "roles": {
+        "precise solver": 0.9845484228086836
+      }
+    },
+    {
+      "episode": 33,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9860935805278153
+      },
+      "roles": {
+        "precise solver": 0.9860935805278153
+      }
+    },
+    {
+      "episode": 34,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9874842224750338
+      },
+      "roles": {
+        "precise solver": 0.9874842224750338
+      }
+    },
+    {
+      "episode": 35,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9887358002275304
+      },
+      "roles": {
+        "precise solver": 0.9887358002275304
+      }
+    },
+    {
+      "episode": 36,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9898622202047773
+      },
+      "roles": {
+        "precise solver": 0.9898622202047773
+      }
+    },
+    {
+      "episode": 37,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9908759981842996
+      },
+      "roles": {
+        "precise solver": 0.9908759981842996
+      }
+    },
+    {
+      "episode": 38,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9917883983658696
+      },
+      "roles": {
+        "precise solver": 0.9917883983658696
+      }
+    },
+    {
+      "episode": 39,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9926095585292827
+      },
+      "roles": {
+        "precise solver": 0.9926095585292827
+      }
+    },
+    {
+      "episode": 40,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9933486026763544
+      },
+      "roles": {
+        "precise solver": 0.9933486026763544
+      }
+    },
+    {
+      "episode": 41,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.994013742408719
+      },
+      "roles": {
+        "precise solver": 0.994013742408719
+      }
+    },
+    {
+      "episode": 42,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.994612368167847
+      },
+      "roles": {
+        "precise solver": 0.994612368167847
+      }
+    },
+    {
+      "episode": 43,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9951511313510624
+      },
+      "roles": {
+        "precise solver": 0.9951511313510624
+      }
+    },
+    {
+      "episode": 44,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9956360182159562
+      },
+      "roles": {
+        "precise solver": 0.9956360182159562
+      }
+    },
+    {
+      "episode": 45,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9960724163943605
+      },
+      "roles": {
+        "precise solver": 0.9960724163943605
+      }
+    },
+    {
+      "episode": 46,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9964651747549245
+      },
+      "roles": {
+        "precise solver": 0.9964651747549245
+      }
+    },
+    {
+      "episode": 47,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.996818657279432
+      },
+      "roles": {
+        "precise solver": 0.996818657279432
+      }
+    },
+    {
+      "episode": 48,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.9971367915514888
+      },
+      "roles": {
+        "precise solver": 0.9971367915514888
+      }
+    },
+    {
+      "episode": 49,
+      "condition": "single",
+      "solvers": {
+        "precise": 0.99742311239634
+      },
+      "roles": {
+        "precise solver": 0.99742311239634
+      }
+    }
+  ]
+}
