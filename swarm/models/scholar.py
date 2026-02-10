@@ -168,3 +168,4 @@ class ScholarActionResult:
     synthesis_result: Optional[SynthesisResult] = None
     verification_verdict: Optional[bool] = None  # True=valid, False=invalid
     citation_verified: Optional[Citation] = None
+
