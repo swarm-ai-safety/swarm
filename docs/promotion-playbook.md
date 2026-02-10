@@ -110,3 +110,47 @@ Different focus. Those frameworks evaluate agent capabilities or simulate agent 
 
 **"The financial market analogy is a stretch."**
 The mapping is specific, not metaphorical. Adverse selection (Akerlof 1970), market maker pricing under asymmetric information (Kyle 1985, Glosten-Milgrom 1985), and collusion detection (FINRA-style surveillance) all have direct mathematical analogues in the SWARM framework. The quality gap metric is the agent-ecosystem equivalent of the bid-ask spread.
+
+## Awesome-List Submission Tracker
+
+### Submitted
+
+| List | PR | Section | Status |
+|------|----|---------|--------|
+| `kyegomez/awesome-multi-agent-papers` (~1.2k stars) | [#30](https://github.com/kyegomez/awesome-multi-agent-papers/pull/30) | Social Simulation & Agent Societies | Open |
+| `Giskard-AI/awesome-ai-safety` (~200 stars) | [#8](https://github.com/Giskard-AI/awesome-ai-safety/pull/8) | General ML Testing | Open |
+
+### Next Targets (no star requirement)
+
+| List | Stars | Section | Notes |
+|------|-------|---------|-------|
+| `jphall663/awesome-machine-learning-interpretability` | ~4k | Python responsible AI packages | Broad responsible-ML framing fits distributional safety |
+| `EthicalML/awesome-artificial-intelligence-regulation` | ~1.4k | Interactive and Practical Tools | Governance/safety angle is a strong fit |
+| `ydyjya/Awesome-LLM-Safety` | ~1.8k | Datasets & Benchmark | Frame as applicable to LLM-based agent safety evaluation |
+
+### Requires 500+ GitHub Stars
+
+| List | Stars | Section | Blocker |
+|------|-------|---------|---------|
+| `EthicalML/awesome-production-machine-learning` | ~20k | Privacy and Safety | Hard 500-star minimum |
+
+### Requires Significant Traction (1000+ stars)
+
+| List | Stars | Section |
+|------|-------|---------|
+| `josephmisiti/awesome-machine-learning` | ~71k | Python > General-Purpose Machine Learning |
+| `owainlewis/awesome-artificial-intelligence` | ~13k | General resources |
+
+### Non-Awesome Platforms
+
+| Platform | When | Notes |
+|----------|------|-------|
+| Papers With Code | Once paper is on arXiv | Link paper + repo, drives academic traffic |
+| Hugging Face Papers | Once on arXiv | Daily papers feed, community upvotes |
+| Linux Foundation AI Landscape | Once project matures | Enterprise credibility, requires LFAI criteria |
+| OECD AI Policy Observatory | Long-term | Governance/safety relevance |
+
+Submit to the next target:
+```
+/submit_to_list jphall663/awesome-machine-learning-interpretability "Python"
+```
