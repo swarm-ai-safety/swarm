@@ -47,7 +47,7 @@ credentials/
 submissions/
 bridges/
 swarm-api/
-demo/
+examples/demo/
 
 # API keys and secrets
 *.pem

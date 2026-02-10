@@ -56,7 +56,7 @@ Build and evaluate a **multi-agent sandbox economy** to study *system-level safe
 | CLI Entry Point | ✅ Complete | `python -m src run/list` |
 | Pre-commit Hooks | ✅ Complete | `.pre-commit-config.yaml` |
 | Makefile | ✅ Complete | `Makefile` |
-| Demo App | ✅ Complete | `demo/` (Streamlit, 5 pages) |
+| Demo App | ✅ Complete | `examples/demo/` (Streamlit, 5 pages) |
 | Project Governance | ✅ Complete | `CONTRIBUTING.md`, `SECURITY.md`, `CODEOWNERS` |
 
 ---
@@ -836,7 +836,7 @@ distributional-agi-safety/
 │   ├── virtual-agent-economies.md
 │   └── transferability/
 │       └── incoherence_governance.md
-├── demo/                        # ✅ Interactive Streamlit demo
+├── examples/demo/               # ✅ Interactive Streamlit demo
 │   ├── app.py
 │   ├── utils/
 │   └── pages/
@@ -929,7 +929,7 @@ distributional-agi-safety/
 | 36 | Release Workflow | `.github/workflows/release.yml` | ✅ Complete |
 | 37 | Pre-commit Hooks | `.pre-commit-config.yaml` | ✅ Complete |
 | 38 | Makefile | `Makefile` | ✅ Complete |
-| 39 | Demo App | `demo/` | ✅ Complete |
+| 39 | Demo App | `examples/demo/` | ✅ Complete |
 | 40 | Integration Tests | `tests/test_integration.py` | ✅ Complete |
 | 41 | Property-Based Tests | `tests/test_property_based.py` | ✅ Complete |
 

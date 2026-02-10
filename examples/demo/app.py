@@ -2,7 +2,7 @@
 Distributional AGI Safety — Interactive Demo
 
 Run with:
-    streamlit run demo/app.py
+    streamlit run examples/demo/app.py
 """
 
 import sys
