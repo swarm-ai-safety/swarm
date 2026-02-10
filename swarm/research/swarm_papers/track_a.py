@@ -12,6 +12,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from statistics import mean
+from typing import Any
 
 from swarm.research.pdf_export import PDFExportError, paper_to_pdf
 from swarm.research.platforms import Paper
@@ -32,6 +33,25 @@ from swarm.research.swarm_papers.paper import (
     PaperFigure,
     RelatedWorkItem,
 )
+
+# Optional dependency — may not be installed
+try:
+    from swarm.agents.llm_config import LLMConfig, LLMProvider
+except Exception:  # pragma: no cover - optional
+
+    class LLMConfig:  # type: ignore[no-redef]
+        """Stub when swarm.agents.llm_config is not installed."""
+
+        def __init__(self, **kwargs: Any) -> None:
+            for k, v in kwargs.items():
+                setattr(self, k, v)
+
+    class LLMProvider:  # type: ignore[no-redef]
+        """Stub when swarm.agents.llm_config is not installed."""
+
+        ANTHROPIC = "anthropic"
+        OPENAI = "openai"
+        OLLAMA = "ollama"
 
 
 def _build_related_work(
@@ -56,13 +76,6 @@ def _build_related_work(
             f"}}"
         )
     return items, "\n\n".join(bib_lines)
-
-
-try:  # optional dependency
-    from swarm.agents.llm_config import LLMConfig, LLMProvider
-except Exception:  # pragma: no cover - optional
-    LLMConfig = None  # type: ignore
-    LLMProvider = None  # type: ignore
 
 
 @dataclass
