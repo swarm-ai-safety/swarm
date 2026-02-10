@@ -22,9 +22,9 @@ from swarm.core.observable_generator import (
     DefaultObservableGenerator,
     ObservableGenerator,
 )
-from swarm.core.scholar_handler import ScholarConfig, ScholarHandler
 from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.core.proxy import ProxyComputer, ProxyObservables
+from swarm.core.scholar_handler import ScholarConfig, ScholarHandler
 from swarm.env.composite_tasks import (
     CompositeTask,
     CompositeTaskPool,

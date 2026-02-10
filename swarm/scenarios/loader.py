@@ -24,12 +24,6 @@ from swarm.agents.moltbook_agent import (
     SpamBotAgent,
 )
 from swarm.agents.opportunistic import OpportunisticAgent
-from swarm.agents.wiki_editor import (
-    CollusiveEditorAgent,
-    DiligentEditorAgent,
-    PointFarmerAgent,
-    VandalAgent,
-)
 from swarm.agents.scholar_agent import (
     AdversarialRetrieverAgent,
     AdversarialSynthesizerAgent,
@@ -37,12 +31,18 @@ from swarm.agents.scholar_agent import (
     SynthesizerAgent,
     VerifierAgent,
 )
+from swarm.agents.wiki_editor import (
+    CollusiveEditorAgent,
+    DiligentEditorAgent,
+    PointFarmerAgent,
+    VandalAgent,
+)
 from swarm.core.memory_handler import MemoryTierConfig
-from swarm.core.scholar_handler import ScholarConfig
 from swarm.core.moltbook_handler import MoltbookConfig
 from swarm.core.moltipedia_handler import MoltipediaConfig
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 from swarm.core.payoff import PayoffConfig
+from swarm.core.scholar_handler import ScholarConfig
 from swarm.env.marketplace import MarketplaceConfig
 from swarm.env.network import NetworkConfig, NetworkTopology
 from swarm.env.state import RateLimits

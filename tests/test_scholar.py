@@ -5,7 +5,6 @@ import pytest
 from swarm.agents.base import ActionType, Observation
 from swarm.agents.scholar_agent import (
     AdversarialRetrieverAgent,
-    AdversarialSynthesizerAgent,
     RetrieverAgent,
     SynthesizerAgent,
     VerifierAgent,
@@ -15,18 +14,14 @@ from swarm.core.scholar_handler import ScholarConfig, ScholarHandler
 from swarm.metrics.scholar_metrics import (
     adversary_success_rate,
     citation_precision,
-    citation_recall,
     hallucination_rate,
     scholar_metrics_summary,
 )
-from swarm.models.agent import AgentState
 from swarm.models.interaction import SoftInteraction
 from swarm.models.scholar import (
     Citation,
     Passage,
-    ScholarActionResult,
     ScholarQuery,
-    SynthesisResult,
 )
 
 
