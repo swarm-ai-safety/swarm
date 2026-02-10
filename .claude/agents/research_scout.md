@@ -1,3 +1,7 @@
+---
+name: Research Scout
+---
+
 # Research Scout Agent
 
 Investigate an external repository or codebase for patterns, techniques, or architecture relevant to a specific goal in this project.
