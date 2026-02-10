@@ -18,6 +18,12 @@
             "command": "bash .claude/hooks/post_write_secrets_check.sh",
             "timeout": 10,
             "statusMessage": "Scanning for secrets"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post_write_gitignore_check.sh",
+            "timeout": 10,
+            "statusMessage": "Checking gitignore coverage"
           }
         ]
       },
@@ -29,6 +35,12 @@
             "command": "bash .claude/hooks/post_write_secrets_check.sh",
             "timeout": 10,
             "statusMessage": "Scanning for secrets"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post_write_gitignore_check.sh",
+            "timeout": 10,
+            "statusMessage": "Checking gitignore coverage"
           }
         ]
       }
