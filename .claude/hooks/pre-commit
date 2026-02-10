@@ -108,6 +108,11 @@ fi
 
 # ── 4. Tests ──
 echo "[swarm pre-commit] pytest"
-python -m pytest tests/ -x -q
+python -m pytest tests/ -x -q; PYTEST_EXIT=$?
+if [ $PYTEST_EXIT -ne 0 ]; then
+    echo "[swarm pre-commit] pytest FAILED (exit $PYTEST_EXIT)"
+    exit 1
+fi
 
 echo "[swarm pre-commit] done"
+exit 0

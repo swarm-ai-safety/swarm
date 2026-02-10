@@ -58,13 +58,15 @@ argues that safety properties are better characterized by distributions over
 outcomes than by point classifications. Probabilistic labels enable
 continuous metrics — toxicity as E[1-p | accepted], quality gap as the
 difference in expected p between accepted and rejected interactions — that
-capture adverse selection dynamics invisible to binary classification.
+capture adverse selection dynamics — the "lemons problem" [7] — invisible to
+binary classification.
 
 We implement this framework in SWARM (System-Wide Assessment of Risk in
 Multi-agent systems), a configurable simulation environment supporting
 multiple agent behavioral types, governance lever combinations, network
-topologies, and economic mechanisms including Dworkin-style auctions and
-mission economies [4]. Using SWARM, we run 11 scenarios spanning cooperative,
+topologies, and economic mechanisms including Dworkin-style resource
+auctions [8], Shapley-value reward allocation [9], and mission
+economies [4]. Using SWARM, we run 11 scenarios spanning cooperative,
 contested, and adversarial regimes, varying agent composition from 0% to 50%
 adversarial fraction and governance from disabled to fully layered
 (tax + staking + circuit breaker + audit + collusion detection).
@@ -219,7 +221,7 @@ acceptance threshold admits borderline interactions.
 - Maintained positive welfare (6.3/epoch) despite 37.5% adversarial fraction
 - Collusion detection prevented collapse that occurred in redteam scenarios with higher adversarial fraction
 
-**Incoherence scaling:**
+**Incoherence scaling** (related to variance-dominated failure modes [12]):
 - Toxicity scaled with agent count: 0.183 (3 agents) -> 0.343 (6) -> 0.341 (10)
 - Acceptance rate decreased: 1.000 -> 0.940 -> 0.787
 - Non-linear welfare scaling: 1.0 -> 5.7 -> 21.3 (super-linear in agent count)
@@ -252,7 +254,9 @@ achieved higher per-agent welfare (0.99/agent/epoch) than the baseline
 suggesting that network topology — specifically, the ability for honest
 agents to strengthen connections with each other and weaken ties to bad
 actors — provides a decentralized governance mechanism complementary to
-centralized levers.
+centralized levers [11]. The dynamic edge evolution also provides a natural
+dampener against flash-crash-style cascading failures [10], as weakened
+edges to adversarial nodes reduce contagion velocity.
 
 **Comparison.** The marketplace and network scenarios represent two
 architectural approaches to the same problem: the marketplace uses
@@ -384,6 +388,53 @@ These results suggest three practical design principles:
    that tightens as adversarial indicators rise would better track the
    operating regime.
 
+### 4.6 Future Work
+
+Several directions follow naturally from these findings:
+
+**Multi-seed validation.** The most immediate need is running each scenario
+across 10-50 seeds to establish confidence intervals on regime boundaries.
+The critical adversarial threshold (37.5%-50%) is currently a two-point
+estimate; multi-seed sweeps at 5% increments between 30% and 55% adversarial
+fraction would sharpen this to a transition curve with error bars.
+
+**Adaptive governance.** All governance parameters in this study were static.
+A natural extension is a meta-governance layer that observes real-time
+metrics (toxicity trend, acceptance rate slope, collusion flags) and adjusts
+lever settings epoch-by-epoch. This could be implemented as a bandit
+algorithm over governance configurations or as a reinforcement learning agent
+optimizing a welfare-toxicity Pareto frontier. The key question is whether
+adaptive governance can prevent collapse at adversarial fractions above 50%,
+or whether the threshold is fundamental.
+
+**Dynamic adversarial fraction.** In deployed systems, agents may shift
+strategies over time — an honest agent may become opportunistic as it
+discovers exploits, or an adversarial agent may reform after repeated
+penalties. Modeling adversarial fraction as a dynamic variable (driven by
+payoff incentives, imitation dynamics, or evolutionary pressure) would test
+whether governance can stabilize composition or whether adversarial drift is
+self-reinforcing.
+
+**Scale experiments.** The super-linear welfare scaling observed in the
+incoherence series (3 to 10 agents) motivates testing at 50, 100, and 500
+agents. Key questions: Does the adversarial threshold shift with scale? Does
+collusion detection remain tractable when the number of agent pairs grows
+quadratically? Do network topologies that work at 10 agents fragment or
+centralize at 100?
+
+**Learned proxy weights.** The current proxy weights (0.4, 0.2, 0.2, 0.2)
+are hand-set. Training the weight vector and sigmoid parameters (k, b) via
+gradient descent on labeled interaction data would test whether calibration
+quality affects the adversarial threshold — better proxies might extend the
+viable operating range by narrowing the bid-ask spread analogy from
+Section 4.1.
+
+**Cross-scenario transfer.** Testing whether governance parameters optimized
+for one regime transfer to another would inform deployment strategy. A
+configuration tuned on the baseline scenario may fail catastrophically when
+adversarial fraction increases — quantifying this brittleness would
+strengthen the case for regime-aware adaptive governance.
+
 ## 5. Limitations
 
 - **Single-seed runs.** Each scenario was run with seed 42 only. Results may
@@ -457,6 +508,65 @@ Market Microstructure. Working Paper.
 
 [12] Anthropic. (2026). The Hot Mess Theory of AI. Anthropic Alignment Blog.
 https://alignment.anthropic.com/2026/hot-mess-of-ai/
+
+## 7. Appendix
+
+### A.1 Full Run Data
+
+| Scenario | Seed | Agents | Epochs | Steps | Total Int. | Accepted | Accept Rate | Toxicity | Welfare/Ep | Total Welfare | Final Welfare | Adv. Frac | Collapse |
+|----------|------|--------|--------|-------|------------|----------|-------------|----------|------------|---------------|---------------|-----------|----------|
+| baseline | 42 | 5 | 10 | 10 | 48 | 45 | 0.938 | 0.298 | 4.98 | — | — | 0.200 | — |
+| adversarial_redteam_v1 | 42 | 8 | 30 | 15 | 135 | 75 | 0.556 | 0.295 | 3.80 | — | — | 0.500 | Ep 12 |
+| adversarial_redteam_v2 | 42 | 8 | 30 | 15 | 158 | 76 | 0.481 | 0.312 | 3.80 | — | — | 0.500 | Ep 13 |
+| adversarial_redteam_v3 | 42 | 8 | 30 | 15 | 156 | 71 | 0.455 | 0.312 | 3.49 | — | — | 0.500 | Ep 14 |
+| collusion_detection | 42 | 8 | 25 | 15 | 299 | 127 | 0.425 | 0.370 | 6.29 | — | — | 0.375 | — |
+| emergent_capabilities | 42 | 8 | 30 | 20 | 635 | 634 | 0.998 | 0.297 | 44.90 | — | — | 0.000 | — |
+| incoherence_short | 42 | 3 | 8 | 2 | 7 | 7 | 1.000 | 0.183 | 0.99 | 7.94 | 0.00 | 0.000 | — |
+| incoherence_medium | 42 | 6 | 8 | 8 | 50 | 47 | 0.940 | 0.343 | 5.70 | 45.56 | 4.33 | 0.167 | — |
+| incoherence_long | 42 | 10 | 8 | 20 | 221 | 174 | 0.787 | 0.341 | 21.31 | 170.49 | 18.50 | 0.100 | — |
+| marketplace_economy | 42 | 7 | 10 | 10 | 82 | 45 | 0.549 | 0.328 | 3.70 | 36.95 | 1.41 | 0.143 | — |
+| network_effects | 42 | 10 | 20 | 10 | 314 | 246 | 0.783 | 0.335 | 9.90 | 197.90 | 12.94 | 0.100 | — |
+
+### A.2 Per-Agent Efficiency
+
+| Scenario | Agents | Welfare/Ep | Welfare/Agent/Ep | Interactions/Agent/Ep |
+|----------|--------|------------|------------------|-----------------------|
+| baseline | 5 | 4.98 | 1.00 | 0.96 |
+| adversarial_redteam_v1 | 8 | 3.80 | 0.48 | 0.56 |
+| collusion_detection | 8 | 6.29 | 0.79 | 1.50 |
+| emergent_capabilities | 8 | 44.90 | 5.61 | 2.65 |
+| incoherence_short | 3 | 0.99 | 0.33 | 0.29 |
+| incoherence_medium | 6 | 5.70 | 0.95 | 1.04 |
+| incoherence_long | 10 | 21.31 | 2.13 | 2.76 |
+| marketplace_economy | 7 | 3.70 | 0.53 | 1.17 |
+| network_effects | 10 | 9.90 | 0.99 | 1.57 |
+
+### A.3 Governance Lever Coverage Matrix
+
+| Scenario | Tax | Rep Decay | Staking | Circuit Breaker | Audit | Collusion | Network | Marketplace | Levers Active |
+|----------|-----|-----------|---------|-----------------|-------|-----------|---------|-------------|---------------|
+| baseline | | | | | | | | | 0 |
+| adversarial_redteam_v* | x | x | x | x | x | x | x | | 7 |
+| collusion_detection | x | x | x | x | | x | x | | 6 |
+| emergent_capabilities | x | x | x | x | | | x | | 5 |
+| incoherence_short | | | | | | | | | 0 |
+| incoherence_medium | | | | | | | | | 0 |
+| incoherence_long | | | | | | | | | 0 |
+| marketplace_economy | x | x | | x | x | | | x | 5 |
+| network_effects | x | x | | x | x | | x | | 5 |
+
+### A.4 Regime Boundary Summary
+
+Based on observed data, the regime boundaries can be approximated as:
+
+| Boundary | Adversarial Fraction | Governance Required | Key Indicator |
+|----------|---------------------|---------------------|---------------|
+| Cooperative -> Contested | ~15-20% | Individual levers sufficient | Toxicity crosses 0.30 |
+| Contested -> Collapse | ~40-50% | Structural levers insufficient | Acceptance drops below 0.50 |
+| Collusion-buffered ceiling | ~37.5% | Collusion detection active | Toxicity > 0.35 but welfare positive |
+
+Note: These boundaries are estimated from single-seed runs and should be
+validated with multi-seed sweeps (see Section 4.6).
 
 ---
 
