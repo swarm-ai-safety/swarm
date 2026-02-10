@@ -245,83 +245,92 @@ def default_conditions() -> list[ConditionSpec]:
 
 
 def adversarial_conditions() -> list[ConditionSpec]:
-    """Return adversarial condition variants for robustness testing."""
+    """Return adversarial condition variants for robustness testing.
+
+    All conditions use voting (majority vote) for adversary resistance.
+    """
     return [
         # Basic adversary injection - tests if high-confidence wrong answers get selected
         ConditionSpec(
             name="adv_noise",
-            description="Two solvers + 1 noisy adversary",
+            description="Two solvers + 1 noisy adversary + voting",
             n_solvers=2,
             adversary=True,
             adversary_count=1,
             adversary_strategy=AdversaryStrategy.NOISE,
+            vote=True,
             use_critic=True,
             use_reconcile=True,
         ),
         # Confident wrong adversary - always wrong with 95% confidence
         ConditionSpec(
             name="adv_confident",
-            description="Two solvers + 1 confident-wrong adversary",
+            description="Two solvers + 1 confident-wrong adversary + voting",
             n_solvers=2,
             adversary=True,
             adversary_count=1,
             adversary_strategy=AdversaryStrategy.CONFIDENT_WRONG,
+            vote=True,
             use_critic=True,
             use_reconcile=True,
         ),
         # Strategic adversary - plausible errors that are hard to detect
         ConditionSpec(
             name="adv_strategic",
-            description="Two solvers + 1 strategic adversary",
+            description="Two solvers + 1 strategic adversary + voting",
             n_solvers=2,
             adversary=True,
             adversary_count=1,
             adversary_strategy=AdversaryStrategy.STRATEGIC,
+            vote=True,
             use_critic=True,
             use_reconcile=True,
         ),
         # Sycophant adversary - agrees with peers but introduces subtle errors
         ConditionSpec(
             name="adv_sycophant",
-            description="Two solvers + 1 sycophant adversary",
+            description="Two solvers + 1 sycophant adversary + voting",
             n_solvers=2,
             adversary=True,
             adversary_count=1,
             adversary_strategy=AdversaryStrategy.SYCOPHANT,
+            vote=True,
             use_critic=True,
             use_reconcile=True,
         ),
         # Coordinated attack - multiple adversaries collude
         ConditionSpec(
             name="adv_coordinated",
-            description="Two solvers + 2 coordinated adversaries",
+            description="Two solvers + 2 coordinated adversaries + voting",
             n_solvers=2,
             adversary=True,
             adversary_count=2,
             adversary_strategy=AdversaryStrategy.COORDINATED,
+            vote=True,
             use_critic=True,
             use_reconcile=True,
         ),
         # Majority adversary - adversaries outnumber honest solvers
         ConditionSpec(
             name="adv_majority",
-            description="Two solvers + 3 adversaries (adversary majority)",
+            description="Two solvers + 3 adversaries (adversary majority) + voting",
             n_solvers=2,
             adversary=True,
             adversary_count=3,
             adversary_strategy=AdversaryStrategy.NOISE,
-            vote=True,  # Use voting to test majority attack
+            vote=True,
             use_critic=True,
             use_reconcile=True,
         ),
         # Adversary with memory - can adversarial artifacts poison memory?
         ConditionSpec(
             name="adv_memory",
-            description="Memory condition + 1 strategic adversary",
+            description="Memory condition + 1 strategic adversary + voting",
             n_solvers=2,
             adversary=True,
             adversary_count=1,
             adversary_strategy=AdversaryStrategy.STRATEGIC,
+            vote=True,
             use_critic=True,
             use_reconcile=True,
             use_memory=True,
