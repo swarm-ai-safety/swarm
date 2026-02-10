@@ -335,28 +335,47 @@ def all_conditions() -> list[ConditionSpec]:
 
 
 class TrackATaskGenerator:
-    """Generate Track A tasks (arithmetic, algebra, logic, symbolic)."""
+    """Generate Track A tasks with configurable difficulty and task families."""
 
     def __init__(self, seed: int) -> None:
         self._rng = random.Random(seed)
         self._people = ["Ava", "Ben", "Cleo"]
         self._pets = ["cat", "dog", "owl"]
         self._colors = ["red", "green", "blue"]
+        # Extended for 4x4 grids
+        self._people_4 = ["Ava", "Ben", "Cleo", "Dana"]
+        self._pets_4 = ["cat", "dog", "owl", "fish"]
+        self._colors_4 = ["red", "green", "blue", "yellow"]
+        self._hobbies = ["chess", "piano", "gardening", "painting"]
 
     def generate(self, n_tasks: int, difficulty: float) -> list[ReasoningTask]:
         tasks: list[ReasoningTask] = []
         for idx in range(n_tasks):
             roll = self._rng.random()
-            if roll < 0.25:
+            # Original families (~65%)
+            if roll < 0.15:
                 task = self._expression_task(idx, difficulty)
-            elif roll < 0.50:
+            elif roll < 0.30:
                 task = self._word_problem_task(idx, difficulty)
-            elif roll < 0.70:
+            elif roll < 0.42:
                 task = self._algebra_task(idx, difficulty)
-            elif roll < 0.90:
+            elif roll < 0.54:
                 task = self._symbolic_task(idx, difficulty)
-            else:
+            elif roll < 0.62:
                 task = self._logic_grid_task(idx)
+            # New harder families (~38%)
+            elif roll < 0.70:
+                task = self._system_of_equations_task(idx, difficulty)
+            elif roll < 0.76:
+                task = self._modular_arithmetic_task(idx, difficulty)
+            elif roll < 0.82:
+                task = self._inequality_task(idx, difficulty)
+            elif roll < 0.88:
+                task = self._logic_grid_4x4_task(idx)
+            elif roll < 0.94:
+                task = self._knights_knaves_task(idx)
+            else:
+                task = self._code_verify_task(idx, difficulty)
             tasks.append(task)
         return tasks
 
@@ -1787,6 +1806,60 @@ def _build_reputation_series(
                 label = f"role:{name}"
                 series.setdefault(label, []).append((episode, float(value)))
     return series
+
+
+def _build_related_work(papers: list[Paper]) -> tuple[list[RelatedWorkItem], str]:
+    used_keys: set[str] = set()
+    items: list[RelatedWorkItem] = []
+    entries: list[str] = []
+    year = datetime.now(timezone.utc).year
+
+    for paper in papers:
+        title = paper.title or "Untitled"
+        paper_id = paper.paper_id or ""
+        key = _cite_key(title, paper_id, used_keys)
+        authors = " and ".join(paper.authors) if paper.authors else "AgentRxiv Contributors"
+        note = f"AgentRxiv ID: {paper_id}" if paper_id else "AgentRxiv"
+        entries.append(
+            "@misc{{{key},\n"
+            "  title={{ {title} }},\n"
+            "  author={{ {author} }},\n"
+            "  howpublished={{AgentRxiv}},\n"
+            "  year={{ {year} }},\n"
+            "  note={{ {note} }}\n"
+            "}}".format(
+                key=key,
+                title=_bib_escape(title),
+                author=_bib_escape(authors),
+                year=year,
+                note=_bib_escape(note),
+            )
+        )
+        items.append(RelatedWorkItem(title=title, cite_key=key, paper_id=paper_id))
+
+    return items, "\n\n".join(entries)
+
+
+def _cite_key(title: str, paper_id: str, used: set[str]) -> str:
+    base = ""
+    if paper_id:
+        digits = re.sub(r"[^0-9]", "", paper_id)
+        base = f"agentrxiv{digits}" if digits else ""
+    if not base:
+        slug = "_".join(re.findall(r"[a-z0-9]+", title.lower())[:4])
+        base = f"agentrxiv_{slug}" if slug else "agentrxiv_paper"
+    key = base
+    counter = 1
+    while key in used:
+        counter += 1
+        key = f"{base}_{counter}"
+    used.add(key)
+    return key
+
+
+def _bib_escape(text: str) -> str:
+    text = text.replace("\n", " ").replace("\r", " ")
+    return text.replace("{", "\\{").replace("}", "\\}")
 
 
 def _clamp(value: float) -> float:

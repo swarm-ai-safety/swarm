@@ -9,7 +9,12 @@ from swarm.research.swarm_papers.memory import (
     RetrievalPolicy,
     WritePolicy,
 )
-from swarm.research.swarm_papers.paper import CritiqueSummary, PaperBuilder, PaperFigure
+from swarm.research.swarm_papers.paper import (
+    CritiqueSummary,
+    PaperBuilder,
+    PaperFigure,
+    RelatedWorkItem,
+)
 from swarm.research.swarm_papers.track_a import (
     ConditionSpec,
     RunSummary,
@@ -28,6 +33,7 @@ __all__ = [
     "PaperBuilder",
     "PaperFigure",
     "CritiqueSummary",
+    "RelatedWorkItem",
     "ConditionSpec",
     "RunSummary",
     "TrackAConfig",
