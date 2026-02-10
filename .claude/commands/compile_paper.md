@@ -25,26 +25,33 @@ if [ -z "$RUN_DIR" ] || [ ! -d "$RUN_DIR" ]; then
     exit 1
 fi
 
-echo "Compiling: $RUN_DIR/paper.tex"
-cd "$RUN_DIR"
+# Use absolute path to avoid cwd issues
+ABS_RUN_DIR="$(cd "$RUN_DIR" && pwd)"
 
-# Compile with tectonic (preferred) or pdflatex
-if command -v tectonic &>/dev/null; then
-    tectonic paper.tex
-elif command -v pdflatex &>/dev/null; then
-    pdflatex -interaction=nonstopmode paper.tex
-else
-    # Try conda tectonic
-    /opt/anaconda3/bin/tectonic paper.tex 2>/dev/null || {
-        echo "No LaTeX compiler found. Install tectonic: conda install -c conda-forge tectonic"
-        exit 1
-    }
-fi
+echo "Compiling: $ABS_RUN_DIR/paper.tex"
 
-# Open the PDF
-if [ -f paper.pdf ]; then
-    echo "Opening: $RUN_DIR/paper.pdf"
-    open paper.pdf
+# Run in a subshell so cd doesn't pollute the caller's working directory
+(
+    cd "$ABS_RUN_DIR"
+
+    # Compile with tectonic (preferred) or pdflatex
+    if command -v tectonic &>/dev/null; then
+        tectonic paper.tex
+    elif command -v pdflatex &>/dev/null; then
+        pdflatex -interaction=nonstopmode paper.tex
+    else
+        # Try conda tectonic
+        /opt/anaconda3/bin/tectonic paper.tex 2>/dev/null || {
+            echo "No LaTeX compiler found. Install tectonic: conda install -c conda-forge tectonic"
+            exit 1
+        }
+    fi
+)
+
+# Open the PDF using absolute path
+if [ -f "$ABS_RUN_DIR/paper.pdf" ]; then
+    echo "Opening: $ABS_RUN_DIR/paper.pdf"
+    open "$ABS_RUN_DIR/paper.pdf"
 else
     echo "Compilation failed - no PDF generated"
     exit 1

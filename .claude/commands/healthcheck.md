@@ -8,19 +8,54 @@ Scan the codebase for code health issues that arise from parallel commits, merge
 
 ## Behavior
 
-### Step 1: Duplicate Definitions
+### Step 1: Duplicate Definitions (AST-based)
 
-Scan all `.py` files under `swarm/` and `tests/` for duplicate function and class definitions within the same file:
+Use Python's `ast` module to find duplicate function/class definitions **at the same scope** (same class or module level). This avoids false positives from same-named methods on different classes (e.g. multiple classes each defining `__init__` or `to_dict`).
 
-```bash
-# For each .py file, extract all "def name" and "class name" lines
-# Flag any name that appears more than once in the same file
+```python
+import ast, os, collections
+
+issues = []
+for root_dir in ['swarm', 'tests']:
+    for dirpath, dirs, files in os.walk(root_dir):
+        for f in sorted(files):
+            if not f.endswith('.py'):
+                continue
+            path = os.path.join(dirpath, f)
+            with open(path) as fh:
+                try:
+                    tree = ast.parse(fh.read(), filename=path)
+                except SyntaxError:
+                    continue
+
+            # Check module-level duplicates
+            mod_names = collections.defaultdict(list)
+            for node in ast.iter_child_nodes(tree):
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    mod_names[node.name].append(node.lineno)
+                elif isinstance(node, ast.ClassDef):
+                    # Check class-level duplicates
+                    cls_names = collections.defaultdict(list)
+                    for item in ast.iter_child_nodes(node):
+                        if isinstance(item, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                            cls_names[item.name].append(item.lineno)
+                    for name, linenos in sorted(cls_names.items()):
+                        if len(linenos) > 1:
+                            issues.append((path, node.name, name, linenos))
+
+            for name, linenos in sorted(mod_names.items()):
+                if len(linenos) > 1:
+                    issues.append((path, '<module>', name, linenos))
+
+for path, scope, name, linenos in issues:
+    lines_str = ', '.join(str(l) for l in linenos)
+    print(f'SHADOW: {path}  {scope}.{name}  (lines {lines_str})')
 ```
 
 For each duplicate found, report:
 ```
-DUPLICATE: swarm/research/swarm_papers/track_a.py
-  def _build_related_work  (lines 57, 2258, 2337)
+SHADOW: swarm/research/swarm_papers/track_a.py  <module>._build_related_work  (lines 57, 2258)
+  The second definition silently shadows the first.
   Keep the most robust version (longest, or the one with helper calls)
 ```
 
