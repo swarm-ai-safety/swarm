@@ -9,5 +9,30 @@ fi
 echo "[swarm pre-push] running CI checks (lint, typecheck, tests)"
 make ci
 
+# --- Repo topics guard ---
+# Ensure canonical topics from .github/repo-topics.txt are set on the remote.
+TOPICS_FILE="$(git rev-parse --show-toplevel)/.github/repo-topics.txt"
+REPO="swarm-ai-safety/swarm"
+
+if [[ -f "$TOPICS_FILE" ]] && command -v gh &>/dev/null; then
+  echo "[swarm pre-push] checking repo topics"
+  current_topics=$(gh repo view "$REPO" --json repositoryTopics -q '.repositoryTopics[].name' 2>/dev/null || true)
+  missing=""
+  while IFS= read -r topic; do
+    topic=$(echo "$topic" | xargs)  # trim whitespace
+    [[ -z "$topic" ]] && continue
+    if ! echo "$current_topics" | grep -qx "$topic"; then
+      missing="${missing:+$missing,}$topic"
+    fi
+  done < "$TOPICS_FILE"
+
+  if [[ -n "$missing" ]]; then
+    echo "[swarm pre-push] re-adding missing topics: $missing"
+    gh repo edit "$REPO" --add-topic "$missing"
+  else
+    echo "[swarm pre-push] repo topics OK"
+  fi
+fi
+
 echo "[swarm pre-push] done"
 
