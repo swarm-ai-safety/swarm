@@ -677,8 +677,9 @@ strengthen the case for regime-aware adaptive governance.
 
 We have presented a simulation-based study of governance trade-offs in
 multi-agent AI systems, using probabilistic soft labels to capture the
-continuous nature of interaction quality. Across 11 scenarios spanning
-cooperative, contested, and adversarial regimes, three findings stand out.
+continuous nature of interaction quality. Across 11 simulation scenarios,
+a 500-task multi-agent benchmark, and 209 total epochs spanning cooperative,
+contested, and adversarial regimes, five findings stand out.
 
 First, there exists a critical adversarial fraction between 37.5% and 50%
 that separates recoverable degradation from irreversible collapse. Below
@@ -690,7 +691,16 @@ market maker cannot sustain liquidity when the fraction of informed traders
 exceeds a critical level [5, 6], a governance mechanism cannot sustain
 cooperation when adversarial agents dominate the interaction graph.
 
-Second, collusion detection — monitoring pair-wise interaction patterns
+Second, epoch-by-epoch analysis reveals the collapse mechanism: a cascading
+rejection spiral in which acceptance rate drops below ~25%, starving the
+ecosystem of interaction volume. Quality gap — the difference in expected p
+between accepted and rejected interactions — acts as a leading indicator,
+remaining persistently elevated (0.19-0.21) across pre-collapse trajectories
+while stable scenarios show only episodic spikes. This suggests that
+continuous quality gap monitoring could provide earlier warning of impending
+collapse than toxicity or acceptance rate alone.
+
+Third, collusion detection — monitoring pair-wise interaction patterns
 rather than individual agent behavior — provides qualitatively different
 protection from individual-level governance levers. Transaction taxes,
 staking requirements, and circuit breakers are necessary but insufficient
@@ -699,12 +709,21 @@ survived at 37.5% adversarial fraction where comparable configurations
 without structural monitoring would be expected to fail, extending the
 viable operating range by roughly 15-20 percentage points.
 
-Third, welfare scales super-linearly with cooperative population size
+Fourth, welfare scales super-linearly with cooperative population size
 (1.0 to 5.7 to 21.3 welfare/epoch across 3, 6, and 10 agents), while
-toxicity saturates quickly (plateauing around 0.34 above 6 agents). This
-asymmetry is encouraging for the viability of large cooperative multi-agent
-systems but raises the stakes of governance failure: collapse in a large
-ecosystem destroys disproportionately more value than in a small one.
+toxicity saturates quickly (plateauing around 0.34 above 6 agents). In the
+cooperative regime, capability complementarity and network amplification
+drove welfare to 44.9/epoch (9x baseline) — demonstrating that multi-agent
+systems can achieve outsized returns when adversarial pressure is absent,
+but that these gains are fragile to even moderate adversarial infiltration.
+
+Fifth, the Track A benchmark validates these dynamics in a problem-solving
+context: cooperative multi-agent architectures maintain perfect accuracy
+regardless of complexity, while a single adversarial agent reduces accuracy
+by 20-24% and adversary-majority conditions produce the lowest accuracy
+(0.702). The near-zero adversary block rate for subtle strategies mirrors
+the simulation finding that individual-level detection misses coordinated
+threats.
 
 These results argue for a shift in multi-agent safety from static,
 per-agent alignment toward dynamic, ecosystem-level governance that is
@@ -742,6 +761,28 @@ dataset are released to support further research in this direction.
   boundaries to systems with hundreds or thousands of agents requires
   further validation, particularly given the super-linear welfare scaling
   observed.
+
+- **Incomplete quality gap coverage.** Quality gap data was retained for
+  only 6 of 11 scenarios. The missing scenarios (collusion_detection,
+  emergent_capabilities, incoherence_medium, incoherence_long) either had
+  near-universal acceptance (making quality gap undefined or trivially zero)
+  or did not retain epoch-level event logs. Future work should ensure
+  consistent quality gap logging across all scenarios.
+
+- **Track A benchmark simplifications.** The Track A benchmark uses
+  simulated adversaries with fixed strategies (noisy, confident-wrong,
+  strategic, sycophant) rather than adaptive agents. Real adversaries would
+  likely adjust strategies in response to detection, potentially reducing
+  the block rates observed. The benchmark also uses synthetic mathematical
+  tasks rather than open-ended problems where adversarial influence may be
+  harder to detect.
+
+- **Confounded emergent capabilities comparison.** The emergent capabilities
+  scenario differs from baseline in multiple dimensions simultaneously
+  (agent count, network topology, governance parameters, composition),
+  making it difficult to attribute the 9x welfare gain to any single factor.
+  Controlled ablation studies isolating each variable would strengthen the
+  causal claims in Section 5.4.
 
 ## 8. References
 
