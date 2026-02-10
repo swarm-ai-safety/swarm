@@ -25,25 +25,30 @@
 
 % ══════════════════════════════════════════════════════════════════════
 \begin{abstract}
-We study governance trade-offs in multi-agent AI systems using a probabilistic
-simulation framework that replaces binary safety labels with calibrated soft
-scores $p = P(v = +1)$. Across 11 scenarios (209 total epochs, 81
-agent-slots), we find that ecosystem outcomes cluster into three regimes:
-\emph{cooperative} (acceptance $> 0.93$, toxicity $< 0.30$),
-\emph{contested} (acceptance $0.42$--$0.94$, toxicity $0.33$--$0.37$), and
-\emph{adversarial collapse} (acceptance $< 0.56$, collapse by epoch 12--14).
-Collapse occurred exclusively when adversarial fraction reached 50\%, and
-governance tuning delayed but did not prevent it---shifting collapse from
-epoch~12 to~14 across three red-team variants. Collusion detection proved
-critical: a scenario with 37.5\% adversarial agents avoided collapse entirely
-when pair-wise frequency and correlation monitoring were enabled, while
-comparable scenarios without it collapsed. Incoherence metrics scaled
-sub-linearly with agent count, while welfare scaled super-linearly, suggesting
-that larger cooperative populations are disproportionately productive but also
-harder to monitor. These results formalize the intuition from market
-microstructure theory that adverse selection in agent ecosystems is
-regime-dependent: governance interventions that suffice under moderate
-adversarial pressure fail abruptly beyond a critical threshold.
+We study governance trade-offs in multi-agent AI systems using a simulation
+framework that replaces binary safety labels with calibrated soft scores
+$p = P(v = +1)$. Across 11 scenarios and a 500-task problem-solving
+benchmark, ecosystem outcomes cluster into three regimes: \emph{cooperative}
+(acceptance $> 0.93$), \emph{contested} ($0.42$--$0.94$), and
+\emph{adversarial collapse} ($< 0.56$, collapse by epoch 12--14). A critical
+adversarial fraction between 37.5\% and 50\% separates recoverable
+degradation from irreversible collapse; governance tuning delayed but could
+not prevent it. The collapse mechanism is a cascading rejection spiral in
+which acceptance drops below ${\sim}25\%$, starving interaction volume.
+Quality gap---the difference in expected~$p$ between accepted and rejected
+interactions---acts as a leading indicator, remaining persistently elevated
+($0.19$--$0.21$) in collapsing scenarios versus episodic in stable ones.
+Collusion detection (pair-wise frequency and correlation monitoring) proved
+the critical differentiator, preventing collapse at 37.5\% adversarial
+fraction where individual-level governance alone would fail. In cooperative
+regimes, welfare scaled super-linearly (${\sim}n^{1.9}$) to 44.9/epoch (9x
+baseline), while toxicity saturated at ${\sim}0.34$. A complementary
+benchmark (Track~A) validates these dynamics: a single adversarial agent
+reduces multi-agent accuracy by 20--24\%, and adversary-majority conditions
+yield the lowest accuracy (0.702). These results formalize the market
+microstructure intuition that adverse selection in agent ecosystems is
+regime-dependent: governance that suffices under moderate pressure fails
+abruptly beyond a critical threshold.
 \end{abstract}
 
 % ══════════════════════════════════════════════════════════════════════

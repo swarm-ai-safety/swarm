@@ -41,6 +41,9 @@ governance:
   freeze_threshold_violations: 2
   freeze_duration_epochs: 3
 
+  # Collusion detection
+  collusion_detection_enabled: true
+
   # Frequent audits
   audit_enabled: true
   audit_probability: 0.25
