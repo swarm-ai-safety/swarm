@@ -213,6 +213,36 @@ def cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_sandbox(args: argparse.Namespace) -> int:
+    """Handle sandbox subcommands."""
+    from swarm.bridges.worktree.__main__ import (
+        cmd_create,
+        cmd_destroy,
+        cmd_exec,
+        cmd_gc,
+        cmd_status,
+    )
+    from swarm.bridges.worktree.__main__ import (
+        cmd_list as sandbox_list,
+    )
+
+    handlers = {
+        "create": cmd_create,
+        "destroy": cmd_destroy,
+        "list": sandbox_list,
+        "exec": cmd_exec,
+        "status": cmd_status,
+        "gc": cmd_gc,
+    }
+
+    subcmd = args.sandbox_cmd
+    if subcmd in handlers:
+        return handlers[subcmd](args)
+
+    print(f"Unknown sandbox subcommand: {subcmd}", file=sys.stderr)
+    return 1
+
+
 def cmd_agentrxiv(args: argparse.Namespace) -> int:
     """Handle AgentRxiv subcommands."""
     subcmd = args.agentrxiv_cmd
@@ -393,6 +423,44 @@ def main() -> int:
         "--dir", default="scenarios", help="Scenarios directory (default: scenarios)"
     )
 
+    # sandbox
+    sandbox_parser = subparsers.add_parser("sandbox", help="Manage worktree sandboxes for agents")
+    sandbox_subparsers = sandbox_parser.add_subparsers(dest="sandbox_cmd")
+
+    def _add_sandbox_common(p: argparse.ArgumentParser) -> None:
+        p.add_argument("--repo", default=None, help="Path to the main git repository")
+        p.add_argument("--root", default=None, help="Sandbox root directory")
+
+    # sandbox create
+    sb_create = sandbox_subparsers.add_parser("create", help="Create a sandbox for an agent")
+    sb_create.add_argument("agent_id", help="Agent identifier")
+    sb_create.add_argument("--branch", default=None, help="Branch to check out")
+    _add_sandbox_common(sb_create)
+
+    # sandbox destroy
+    sb_destroy = sandbox_subparsers.add_parser("destroy", help="Destroy an agent's sandbox")
+    sb_destroy.add_argument("agent_id", help="Agent identifier")
+    _add_sandbox_common(sb_destroy)
+
+    # sandbox list
+    sb_list = sandbox_subparsers.add_parser("list", help="List active sandboxes")
+    _add_sandbox_common(sb_list)
+
+    # sandbox exec
+    sb_exec = sandbox_subparsers.add_parser("exec", help="Execute a command in a sandbox")
+    sb_exec.add_argument("agent_id", help="Agent identifier")
+    sb_exec.add_argument("exec_cmd", nargs=argparse.REMAINDER, help="Command to execute (after --)")
+    _add_sandbox_common(sb_exec)
+
+    # sandbox status
+    sb_status = sandbox_subparsers.add_parser("status", help="Show boundary metrics and agent stats")
+    sb_status.add_argument("agent_id", nargs="?", default=None, help="Optional agent ID for per-agent stats")
+    _add_sandbox_common(sb_status)
+
+    # sandbox gc
+    sb_gc = sandbox_subparsers.add_parser("gc", help="Garbage-collect stale sandboxes")
+    _add_sandbox_common(sb_gc)
+
     # agentrxiv
     arxiv_parser = subparsers.add_parser("agentrxiv", help="Manage AgentRxiv local preprint server")
     arxiv_subparsers = arxiv_parser.add_subparsers(dest="agentrxiv_cmd")
@@ -424,6 +492,17 @@ def main() -> int:
         return cmd_run(args)
     elif args.command == "list":
         return cmd_list(args)
+    elif args.command == "sandbox":
+        if args.sandbox_cmd:
+            # Strip leading "--" from exec remainder
+            if args.sandbox_cmd == "exec":
+                raw = getattr(args, "exec_cmd", [])
+                if raw and raw[0] == "--":
+                    args.exec_cmd = raw[1:]
+            return cmd_sandbox(args)
+        else:
+            sandbox_parser.print_help()
+            return 0
     elif args.command == "agentrxiv":
         if args.agentrxiv_cmd:
             return cmd_agentrxiv(args)
