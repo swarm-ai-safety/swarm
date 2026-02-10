@@ -57,6 +57,16 @@ examples/demo/
 secrets.yaml
 secrets.json
 
+# LaTeX build artifacts
+*.aux
+*.bbl
+*.blg
+*.out
+*.log
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+
 # Runtime artifacts
 .DS_Store
 sandboxes/
