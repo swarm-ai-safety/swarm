@@ -55,6 +55,19 @@ from swarm.research.submission import (
     submit_with_validation,
     update_with_validation,
 )
+from swarm.research.swarm_papers import (
+    AgentRxivBridge,
+    ConditionSpec,
+    CritiqueSummary,
+    MemoryArtifact,
+    MemoryStore,
+    PaperBuilder,
+    PaperFigure,
+    RetrievalPolicy,
+    TrackAConfig,
+    TrackARunner,
+    WritePolicy,
+)
 from swarm.research.validation import ValidationResult as PaperValidationResult
 from swarm.research.validation import ValidationWorkflow
 from swarm.research.workflow import ResearchWorkflow, WorkflowConfig
@@ -109,4 +122,16 @@ __all__ = [
     "ScenarioGenerator",
     "ValidationWorkflow",
     "PaperValidationResult",
+    # Track A pipeline
+    "TrackARunner",
+    "TrackAConfig",
+    "ConditionSpec",
+    "PaperBuilder",
+    "PaperFigure",
+    "CritiqueSummary",
+    "AgentRxivBridge",
+    "MemoryArtifact",
+    "MemoryStore",
+    "RetrievalPolicy",
+    "WritePolicy",
 ]

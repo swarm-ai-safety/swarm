@@ -8,11 +8,8 @@
       }
     },
     "sqlite_runs": {
-      "command": "uvx",
-      "args": ["mcp-server-sqlite==2025.4.24"],
-      "env": {
-        "SQLITE_PATH": "${SWARM_RUNS_DB_PATH}"
-      }
+      "command": "/Users/raelisavitt/.local/bin/uvx",
+      "args": ["mcp-server-sqlite", "--db-path", "runs/runs.db"]
     }
   }
 }
