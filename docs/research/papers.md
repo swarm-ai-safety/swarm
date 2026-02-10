@@ -25,10 +25,10 @@ The original adverse selection paper. Shows how information asymmetry can cause 
 
 Introduces the distributional approach to AI safety that SWARM implements. Key contribution: system-level risks from sub-AGI agent interactions.
 
-**The Hot Mess Theory of AI** (2026)
-[Anthropic Alignment Forum](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
+**Hägele, Sohl-Dickstein et al. (2026)** - *The Hot Mess of AI: How Does Misalignment Scale With Model Intelligence and Task Complexity?*
+[arXiv:2601.23045](https://arxiv.org/abs/2601.23045)
 
-Argues that AGI risk may emerge from chaotic multi-agent dynamics rather than single superintelligent agents. SWARM provides empirical tools to test this hypothesis.
+Proposes a bias–variance decomposition for AI misalignment, asking whether increasingly capable models fail by coherently pursuing wrong goals or by acting incoherently (a "hot mess"). Finds that longer reasoning and action sequences consistently increase model incoherence. Relevant to SWARM because incoherent individual agents amplify distributional risk at the system level.
 
 ### Multi-Agent Systems
 
