@@ -98,9 +98,9 @@ differentiator between survival and collapse in contested environments.
 | adversarial_redteam_v3 | 8 | 4H, 2Adv, 2AA | 50.0% | 30 | small_world (k=4, p=0.15) |
 | collusion_detection | 8 | 3H, 2O, 3Adv | 37.5% | 25 | small_world (k=4, p=0.2) |
 | emergent_capabilities | 8 | 6H, 2O | 0.0% | 30 | complete |
-| incoherence_short | 3 | — | 0.0% | 8 | — |
-| incoherence_medium | 6 | — | 16.7% | 8 | — |
-| incoherence_long | 10 | — | 10.0% | 8 | — |
+| incoherence_short | 3 | 3H | 0.0% | 8 | none |
+| incoherence_medium | 6 | 5H, 1O | 16.7% | 8 | none |
+| incoherence_long | 10 | 9H, 1Adv | 10.0% | 8 | none |
 | marketplace_economy | 7 | 3H, 2O, 1D, 1Adv | 14.3% | 10 | none |
 | network_effects | 10 | 4H, 3O, 2D, 1Adv | 10.0% | 20 | small_world (k=4, p=0.1) |
 
@@ -133,7 +133,46 @@ Redteam variant differences:
 | marketplace_economy | 2.0 | 1.0 | 2.0 | 0.5 | 0.1 | 0.1 | 1.0 |
 | network_effects | 2.0 | 1.0 | 2.0 | 0.5 | 0.1 | 0.1 | 1.0 |
 
-### 2.4 Metrics
+### 2.4 Formal Model
+
+**Proxy computation.** Four observable signals — task progress, rework penalty,
+verifier penalty, and engagement signal — are combined into a raw proxy score
+via weighted sum:
+
+v_hat = w_task * x_task + w_rework * x_rework + w_verifier * x_verifier + w_engage * x_engage
+
+where each x_i is in [-1, +1] and the weights (default: 0.4, 0.2, 0.2, 0.2)
+are normalized to sum to one. The raw score is mapped to a probability through
+a calibrated sigmoid:
+
+p = P(v = +1 | v_hat) = 1 / (1 + exp(-k * (v_hat - b)))
+
+with steepness k = 2 and bias b = 0 by default.
+
+**Soft payoffs.** Given probability p for an interaction, the expected surplus
+and externality are:
+
+S_soft = p * s+ - (1-p) * s-
+E_soft = (1-p) * h
+
+Agent payoffs decompose as:
+
+pi_i = alpha_i * S_soft + T_i - G_i - rho_i * E_soft + w_rep * delta_R_i
+
+where alpha_i is the surplus share (theta for initiator, 1-theta for
+counterparty), T_i is net transfer (zero-sum across parties), G_i is
+governance cost (taxes, staking slashes, audit penalties), rho_i controls
+externality internalization, and delta_R_i is the reputation change weighted
+by w_rep. This decomposition follows mechanism design principles [1, 2] and
+the distributional safety framework [3].
+
+**Acceptance rule.** An interaction is accepted when p >= p_bar (default
+p_bar = 0.5). This creates the adverse selection dynamic described by
+Akerlof [7] and Glosten-Milgrom [6]: agents with private knowledge of low
+interaction quality may still find it profitable to participate when the
+acceptance threshold admits borderline interactions.
+
+### 2.5 Metrics
 
 - **Acceptance rate**: fraction of interactions accepted by governance threshold (p >= p_bar)
 - **Toxicity**: E[1-p | accepted], expected harm from accepted interactions
@@ -185,7 +224,46 @@ Redteam variant differences:
 - Acceptance rate decreased: 1.000 -> 0.940 -> 0.787
 - Non-linear welfare scaling: 1.0 -> 5.7 -> 21.3 (super-linear in agent count)
 
-### 3.4 Figures
+### 3.4 Marketplace and Network Analysis
+
+**Marketplace economy.** The bounty/escrow marketplace scenario (7 agents,
+14.3% adversarial) achieved a 0.549 acceptance rate — the lowest among
+non-collapsing, non-redteam scenarios. Of 82 total interactions, only 45
+were accepted, reflecting the additional filtering imposed by escrow
+verification and dispute resolution. Despite this selectivity, welfare
+remained modest at 3.7/epoch (total: 37.0), with final-epoch welfare
+dropping to 1.4. The marketplace mechanism effectively traded throughput for
+safety: toxicity (0.328) was lower than the collusion detection scenario
+(0.370) despite having fewer governance levers active, suggesting that
+economic friction (escrow fees, bid deadlines, dispute costs) functions as
+an implicit governance mechanism by raising the cost of low-quality
+participation.
+
+**Network effects.** The small-world network scenario (10 agents, 10%
+adversarial, k=4, p=0.1 rewiring) sustained operation across all 20 epochs
+with no collapse. It processed the second-highest interaction volume (314
+total, 246 accepted) behind only the emergent capabilities scenario. Welfare
+scaled well at 9.9/epoch (total: 197.9), with final-epoch welfare of 12.9
+— indicating accelerating returns as dynamic edge strengthening consolidated
+cooperative relationships. The acceptance rate (0.783) and toxicity (0.335)
+positioned it squarely in the contested regime. Notably, this scenario
+achieved higher per-agent welfare (0.99/agent/epoch) than the baseline
+(1.0/agent/epoch) despite having both deceptive and adversarial agents,
+suggesting that network topology — specifically, the ability for honest
+agents to strengthen connections with each other and weaken ties to bad
+actors — provides a decentralized governance mechanism complementary to
+centralized levers.
+
+**Comparison.** The marketplace and network scenarios represent two
+architectural approaches to the same problem: the marketplace uses
+centralized economic mechanisms (escrow, arbitration) while the network
+relies on decentralized topological evolution (edge strengthening/decay).
+The network approach yielded higher welfare (9.9 vs. 3.7/epoch) and
+throughput (246 vs. 45 accepted) at comparable toxicity (0.335 vs. 0.328),
+but required more agents (10 vs. 7) and longer runtime (20 vs. 10 epochs)
+to realize these gains.
+
+### 3.5 Figures
 
 ![Figure 1: Scenario Comparison](figures/fig1_scenario_comparison.png)
 *Cross-scenario comparison of acceptance rate, toxicity, and welfare.*
