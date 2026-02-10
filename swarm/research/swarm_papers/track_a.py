@@ -1,5 +1,7 @@
 """Track A: Verifiable reasoning benchmark pipeline."""
 
+from __future__ import annotations
+
 import base64
 import json
 import math
@@ -1757,12 +1759,13 @@ class TrackARunner:
         tokens = [cond.avg_tokens for cond in summary.conditions]
 
         # Figure 1: Accuracy by condition
-        fig1, ax1 = plt.subplots(figsize=(6, 3.5))
+        fig1, ax1 = plt.subplots(figsize=(10, 4))
         ax1.bar(names, accuracies, color="#4C72B0")
         ax1.set_ylim(0, 1.0)
         ax1.set_ylabel("Accuracy")
         ax1.set_title("Track A Accuracy by Condition")
         ax1.grid(axis="y", linestyle="--", alpha=0.4)
+        plt.xticks(rotation=45, ha="right")
         fig1.tight_layout()
         fig1_path = self.output_dir / "figure_accuracy.png"
         fig1.savefig(fig1_path, dpi=150)
@@ -1777,7 +1780,7 @@ class TrackARunner:
         images[fig1_path.name] = _encode_image(fig1_path)
 
         # Figure 2: Coordination rates
-        fig2, ax2 = plt.subplots(figsize=(6, 3.5))
+        fig2, ax2 = plt.subplots(figsize=(10, 4))
         x = list(range(len(names)))
         width = 0.25
         disagreement = [cond.disagreement_rate for cond in summary.conditions]
@@ -1787,7 +1790,7 @@ class TrackARunner:
         ax2.bar(x, reconcile, width=width, label="reconcile")
         ax2.bar([i + width for i in x], adversary, width=width, label="adversary")
         ax2.set_xticks(x)
-        ax2.set_xticklabels(names)
+        ax2.set_xticklabels(names, rotation=45, ha="right")
         ax2.set_ylim(0, 1.0)
         ax2.set_ylabel("Rate")
         ax2.set_title("Coordination & Adversary Flags")
@@ -1807,10 +1810,13 @@ class TrackARunner:
         images[fig2_path.name] = _encode_image(fig2_path)
 
         # Figure 3: Accuracy vs tokens
-        fig3, ax3 = plt.subplots(figsize=(6, 3.5))
-        ax3.scatter(tokens, accuracies, color="#55A868")
-        for name, x_val, y_val in zip(names, tokens, accuracies, strict=False):
-            ax3.annotate(name, (x_val, y_val), textcoords="offset points", xytext=(4, 3), fontsize=8)
+        fig3, ax3 = plt.subplots(figsize=(10, 5))
+        ax3.scatter(tokens, accuracies, color="#55A868", s=60)
+        # Stagger annotations to reduce overlap
+        offsets = [(6, 4), (-6, -12), (6, -12), (-6, 4), (10, 0), (-10, 0)]
+        for i, (name, x_val, y_val) in enumerate(zip(names, tokens, accuracies, strict=False)):
+            offset = offsets[i % len(offsets)]
+            ax3.annotate(name, (x_val, y_val), textcoords="offset points", xytext=offset, fontsize=7)
         ax3.set_xlabel("Avg Tokens")
         ax3.set_ylabel("Accuracy")
         ax3.set_title("Efficiency Tradeoff")
@@ -1829,7 +1835,7 @@ class TrackARunner:
         images[fig3_path.name] = _encode_image(fig3_path)
 
         if summary.family_metrics:
-            fig4, ax4 = plt.subplots(figsize=(7, 3.8))
+            fig4, ax4 = plt.subplots(figsize=(12, 8))
             families = _family_order(summary.family_metrics)
             conditions = [cond.name for cond in summary.conditions]
             matrix = []
@@ -1846,13 +1852,13 @@ class TrackARunner:
                 matrix.append(row)
             im = ax4.imshow(matrix, vmin=0.0, vmax=1.0, cmap="Blues")
             ax4.set_xticks(range(len(families)))
-            ax4.set_xticklabels([_family_label(f) for f in families], rotation=30, ha="right")
+            ax4.set_xticklabels([_family_label(f) for f in families], rotation=45, ha="right", fontsize=9)
             ax4.set_yticks(range(len(conditions)))
-            ax4.set_yticklabels(conditions)
+            ax4.set_yticklabels(conditions, fontsize=9)
             ax4.set_title("Accuracy by Task Family and Condition")
             for i in range(len(conditions)):
                 for j in range(len(families)):
-                    ax4.text(j, i, f"{matrix[i][j]:.2f}", ha="center", va="center", fontsize=7)
+                    ax4.text(j, i, f"{matrix[i][j]:.2f}", ha="center", va="center", fontsize=8)
             fig4.colorbar(im, ax=ax4, fraction=0.046, pad=0.04)
             fig4.tight_layout()
             fig4_path = self.output_dir / "figure_family_heatmap.png"
@@ -1868,7 +1874,7 @@ class TrackARunner:
             images[fig4_path.name] = _encode_image(fig4_path)
 
             # Token efficiency heatmap
-            fig4b, ax4b = plt.subplots(figsize=(7, 3.8))
+            fig4b, ax4b = plt.subplots(figsize=(12, 8))
             matrix_eff = []
             for cond in conditions:
                 row = []
@@ -1881,13 +1887,13 @@ class TrackARunner:
                 matrix_eff.append(row)
             im2 = ax4b.imshow(matrix_eff, vmin=0.0, cmap="Purples")
             ax4b.set_xticks(range(len(families)))
-            ax4b.set_xticklabels([_family_label(f) for f in families], rotation=30, ha="right")
+            ax4b.set_xticklabels([_family_label(f) for f in families], rotation=45, ha="right", fontsize=9)
             ax4b.set_yticks(range(len(conditions)))
-            ax4b.set_yticklabels(conditions)
+            ax4b.set_yticklabels(conditions, fontsize=9)
             ax4b.set_title("Token Efficiency by Task Family and Condition")
             for i in range(len(conditions)):
                 for j in range(len(families)):
-                    ax4b.text(j, i, f"{matrix_eff[i][j]:.1f}", ha="center", va="center", fontsize=7)
+                    ax4b.text(j, i, f"{matrix_eff[i][j]:.1f}", ha="center", va="center", fontsize=8)
             fig4b.colorbar(im2, ax=ax4b, fraction=0.046, pad=0.04, label="Correct / 1k tokens")
             fig4b.tight_layout()
             fig4b_path = self.output_dir / "figure_family_token_eff.png"
@@ -1903,7 +1909,7 @@ class TrackARunner:
             images[fig4b_path.name] = _encode_image(fig4b_path)
 
         if summary.reputation_drift:
-            fig5, ax5 = plt.subplots(figsize=(7, 3.6))
+            fig5, ax5 = plt.subplots(figsize=(10, 5))
             series = _build_reputation_series(summary.reputation_drift)
             for label, points in series.items():
                 xs = [p[0] for p in points]
@@ -1914,7 +1920,7 @@ class TrackARunner:
             ax5.set_title("Reputation Drift Over Episodes")
             ax5.set_ylim(0.0, 1.0)
             ax5.grid(True, linestyle="--", alpha=0.4)
-            ax5.legend(fontsize=7, ncol=2, frameon=False)
+            ax5.legend(fontsize=8, ncol=3, frameon=False, loc="lower right")
             fig5.tight_layout()
             fig5_path = self.output_dir / "figure_reputation_drift.png"
             fig5.savefig(fig5_path, dpi=150)

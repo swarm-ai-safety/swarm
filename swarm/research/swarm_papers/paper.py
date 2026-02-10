@@ -95,7 +95,7 @@ Tasks: %d total, generated with fixed random seed and difficulty calibration.
 \\subsection{Conditions}
 \\begin{tabular}{llll}
 \\toprule
-Condition & Accuracy & Avg. Tokens & Notes \\
+Condition & Accuracy & Avg. Tokens & Notes \\\\
 \\midrule
 %s
 \\bottomrule
@@ -143,7 +143,7 @@ Future runs should incorporate stronger validators and richer task suites.
             acc = cond.get("accuracy", 0.0)
             tokens = cond.get("avg_tokens", 0.0)
             note = _escape_latex(cond.get("note", ""))
-            rows.append(f"{name} & {acc:.3f} & {tokens:.1f} & {note} \\")
+            rows.append(f"{name} & {acc:.3f} & {tokens:.1f} & {note} \\\\")
         return "\n".join(rows) if rows else "--"
 
     def _render_memory(self, items: list[MemoryArtifact]) -> str:
