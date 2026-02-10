@@ -88,6 +88,38 @@ To submit a paper for inclusion, open a PR adding your reference.
 
 ## Related Work
 
+### Positioning: SWARM and the "Coasean Singularity"
+
+Recent economic work has begun to analyze AI agents as market participants, rather than merely as tools for prediction or automation. Most notably, Shahidi et al. (2025) articulate a comprehensive framework for understanding how agentic AI may reshape markets by dramatically lowering transaction costs, potentially reorganizing firm boundaries, platform design, and equilibrium outcomes in what they term a "Coasean singularity."
+
+SWARM is complementary to this economic perspective, but differs in both unit of analysis and methodological orientation.
+
+#### From single-agent adoption to population-level dynamics
+
+Where the NBER view primarily analyzes agent adoption and platform incentives at a conceptual and market-design level, SWARM focuses on populations of interacting agents and the emergent dynamics that arise from their interaction. Rather than treating AI agents as isolated intermediaries between humans and markets, SWARM treats markets themselves as multi-agent systems, in which welfare, robustness, and failure modes are determined by collective behavior rather than individual optimality.
+
+This distinction is critical for studying the paper's own cautionary claim: that individually rational adoption of AI agents can lead to socially suboptimal equilibria. SWARM operationalizes this claim by explicitly modeling congestion, adversarial behavior, strategic adaptation, and coordination failures across many agents acting simultaneously.
+
+#### From theoretical feasibility to empirical stress-testing
+
+The NBER chapter emphasizes that AI agents expand the feasible set of market designs—making preference-rich matching mechanisms, sophisticated bargaining protocols, and privacy-preserving interactions practical at scale. SWARM takes the next step by asking:
+
+**Which of these designs remain stable, efficient, and safe once embedded in realistic multi-agent environments?**
+
+SWARM is positioned not as a competing theory of agent-mediated markets, but as an experimental and benchmarking layer that stress-tests mechanisms proposed by economic theory under conditions of bounded alignment, heterogeneous capabilities, platform interference, and adversarial pressure.
+
+#### Alignment as an equilibrium property
+
+In the NBER framework, alignment is largely framed as a principal-agent problem: eliciting preferences, honoring them, and deciding when agents should defer to humans. SWARM generalizes this notion by treating alignment as an equilibrium property of agent collectives. Even perfectly aligned agents at the individual level may produce misaligned outcomes at the system level due to externalities, feedback loops, or incentive mismatches—phenomena that are difficult to capture without explicit multi-agent simulation.
+
+This shift mirrors a broader move in AI safety research toward distributional and patchwork AGI perspectives, where risk emerges not from a single superintelligent system but from interactions among many competent agents.
+
+#### Positioning summary
+
+The NBER "Coasean singularity" framework provides a theoretical map of how AI agents may transform markets by collapsing transaction costs and enabling new designs. SWARM positions itself as the experimental substrate for this map: a way to instantiate, measure, and compare agent-mediated market designs under realistic multi-agent conditions.
+
+By focusing on equilibrium behavior, failure modes, and governance-relevant metrics, SWARM aims to bridge economic theory, agentic AI engineering, and AI safety—providing empirical grounding for claims about welfare, robustness, and market structure in an agent-native economy.
+
 ### Simulation Frameworks
 
 - **Concordia** (Google DeepMind) - Generative agent simulation
