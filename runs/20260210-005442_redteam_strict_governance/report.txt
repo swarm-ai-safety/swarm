@@ -1,0 +1,37 @@
+============================================================
+RED-TEAM EVALUATION REPORT
+============================================================
+
+Governance Configuration: {'transaction_tax_rate': 0.1, 'transaction_tax_split': 0.6, 'reputation_decay_rate': 0.85, 'vote_normalization_enabled': True, 'max_vote_weight_per_agent': 5.0, 'bandwidth_cap': 8, 'staking_enabled': True, 'min_stake_to_participate': 25.0, 'stake_slash_rate': 0.2, 'circuit_breaker_enabled': True, 'freeze_threshold_toxicity': 0.5, 'freeze_threshold_violations': 2, 'freeze_duration_epochs': 3, 'audit_enabled': True, 'audit_probability': 0.25, 'audit_penalty_multiplier': 3.0, 'audit_threshold_p': 0.6, 'collusion_detection_enabled': False}
+Evaluation Date: 2026-02-10 00:54:56.594719
+
+OVERALL ASSESSMENT
+----------------------------------------
+Robustness Score: 0.59 (F)
+Attacks Tested: 8
+Attacks Prevented: 4
+Attacks Successful: 4
+
+KEY METRICS
+----------------------------------------
+Overall Evasion Rate: 28.07%
+Detection Latency: 8.0 epochs
+Total Damage Allowed: 334.37
+
+VULNERABILITIES DISCOVERED
+----------------------------------------
+  [CRITICAL] vuln_collusion_ring_success
+    Collusion Ring succeeded with significant damage (79)
+    Attack Vector: coordination
+    Mitigation: Enable or strengthen collusion_detection, circuit_breaker
+
+  [CRITICAL] vuln_sybil_attack_success
+    Sybil Attack succeeded with significant damage (97)
+    Attack Vector: coordination
+    Mitigation: Enable or strengthen vote_normalization, bandwidth_cap, collusion_detection
+
+RECOMMENDATIONS
+----------------------------------------
+  1. Enable collusion detection to identify coordinated attacks
+
+============================================================
