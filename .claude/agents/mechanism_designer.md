@@ -1,5 +1,6 @@
 ---
 name: Mechanism Designer
+description: Proposes governance levers/interventions and predicts their tradeoffs before running them.
 ---
 
 # Mechanism Designer

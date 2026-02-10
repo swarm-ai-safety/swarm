@@ -1,5 +1,6 @@
 ---
 name: Metrics Auditor
+description: Ensures metrics are well-defined, robust, and consistently logged/exported.
 ---
 
 # Metrics Auditor

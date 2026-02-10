@@ -1,5 +1,6 @@
 ---
 name: Adversary Designer
+description: Designs adaptive/evasive strategies that probe governance gaps.
 ---
 
 # Adversary Designer

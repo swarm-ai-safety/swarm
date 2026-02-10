@@ -1,5 +1,6 @@
 ---
 name: Scenario Architect
+description: Designs scenarios that isolate a single mechanism and are easy to reproduce.
 ---
 
 # Scenario Architect

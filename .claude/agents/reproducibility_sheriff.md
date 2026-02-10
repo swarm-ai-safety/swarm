@@ -1,5 +1,6 @@
 ---
 name: Reproducibility Sheriff
+description: Enforces plots-from-PR reproducibility and research hygiene.
 ---
 
 # Reproducibility Sheriff
