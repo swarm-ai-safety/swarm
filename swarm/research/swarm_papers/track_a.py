@@ -523,6 +523,337 @@ class TrackATaskGenerator:
             },
         )
 
+    # ========== NEW HARDER TASK FAMILIES ==========
+
+    def _system_of_equations_task(self, idx: int, difficulty: float) -> ReasoningTask:
+        """System of 2 linear equations with 2 unknowns."""
+        max_val = int(5 + 15 * difficulty)
+
+        # Generate solution first, then construct equations
+        x_sol = self._rng.randint(1, max_val)
+        y_sol = self._rng.randint(1, max_val)
+
+        # Coefficients for equation 1: a1*x + b1*y = c1
+        a1 = self._rng.randint(1, max_val)
+        b1 = self._rng.randint(1, max_val)
+        c1 = a1 * x_sol + b1 * y_sol
+
+        # Coefficients for equation 2: a2*x + b2*y = c2
+        # Ensure linearly independent (different ratio)
+        a2 = self._rng.randint(1, max_val)
+        b2 = self._rng.randint(1, max_val)
+        while a1 * b2 == a2 * b1:  # Avoid parallel lines
+            b2 = self._rng.randint(1, max_val)
+        c2 = a2 * x_sol + b2 * y_sol
+
+        prompt = (
+            f"Solve the system of equations:\n"
+            f"  {a1}x + {b1}y = {c1}\n"
+            f"  {a2}x + {b2}y = {c2}\n"
+            f"What is the value of x? Provide only the numeric answer."
+        )
+
+        return ReasoningTask(
+            task_id=f"sys_{idx}",
+            prompt=prompt,
+            answer=str(x_sol),
+            metadata={
+                "expression": str(x_sol),  # Direct evaluable expression
+                "family": "system_eq",
+                "solution": str(x_sol),
+                "x": str(x_sol),
+                "y": str(y_sol),
+            },
+        )
+
+    def _modular_arithmetic_task(self, idx: int, difficulty: float) -> ReasoningTask:
+        """Modular arithmetic: remainders and modular operations."""
+        max_val = int(20 + 80 * difficulty)
+        modulus = self._rng.randint(3, 13)
+
+        task_type = self._rng.choice(["remainder", "mod_add", "mod_mult", "mod_power"])
+
+        if task_type == "remainder":
+            n = self._rng.randint(max_val, max_val * 3)
+            answer = n % modulus
+            prompt = f"What is {n} mod {modulus}? Provide only the numeric answer."
+            expr = f"{n} % {modulus}"
+        elif task_type == "mod_add":
+            a = self._rng.randint(1, max_val)
+            b = self._rng.randint(1, max_val)
+            answer = (a + b) % modulus
+            prompt = f"Compute ({a} + {b}) mod {modulus}. Provide only the numeric answer."
+            expr = f"({a} + {b}) % {modulus}"
+        elif task_type == "mod_mult":
+            a = self._rng.randint(1, max_val)
+            b = self._rng.randint(1, max_val)
+            answer = (a * b) % modulus
+            prompt = f"Compute ({a} × {b}) mod {modulus}. Provide only the numeric answer."
+            expr = f"({a} * {b}) % {modulus}"
+        else:  # mod_power
+            base = self._rng.randint(2, 7)
+            exp = self._rng.randint(2, 5)
+            answer = pow(base, exp, modulus)
+            prompt = f"Compute {base}^{exp} mod {modulus}. Provide only the numeric answer."
+            expr = f"pow({base}, {exp}, {modulus})"
+
+        return ReasoningTask(
+            task_id=f"mod_{idx}",
+            prompt=prompt,
+            answer=str(answer),
+            metadata={"expression": expr, "family": "modular", "solution": str(answer)},
+        )
+
+    def _inequality_task(self, idx: int, difficulty: float) -> ReasoningTask:
+        """Linear inequalities - find boundary or count integers."""
+        max_val = int(5 + 30 * difficulty)
+
+        task_type = self._rng.choice(["boundary", "count", "compound"])
+
+        if task_type == "boundary":
+            # ax + b < c, find largest integer x
+            a = self._rng.randint(2, max_val)
+            b = self._rng.randint(1, max_val)
+            c = self._rng.randint(b + a * 2, b + a * max_val)
+            # ax < c - b => x < (c-b)/a
+            boundary = (c - b) / a
+            answer = int(boundary) if boundary != int(boundary) else int(boundary) - 1
+            prompt = (
+                f"Find the largest integer x such that {a}x + {b} < {c}. "
+                f"Provide only the numeric answer."
+            )
+            expr = f"floor(({c} - {b}) / {a} - epsilon)"
+        elif task_type == "count":
+            # Count integers in range a <= x <= b
+            low = self._rng.randint(1, max_val)
+            high = low + self._rng.randint(5, 20)
+            answer = high - low + 1
+            prompt = (
+                f"How many integers x satisfy {low} ≤ x ≤ {high}? "
+                f"Provide only the numeric answer."
+            )
+            expr = f"{high} - {low} + 1"
+        else:  # compound
+            # a < x + b < c, count integers
+            b = self._rng.randint(1, max_val)
+            a = self._rng.randint(1, 10)
+            c = a + self._rng.randint(5, 15)
+            # a < x + b < c => a - b < x < c - b
+            low_x = a - b + 1
+            high_x = c - b - 1
+            answer = max(0, high_x - low_x + 1)
+            prompt = (
+                f"How many integers x satisfy {a} < x + {b} < {c}? "
+                f"Provide only the numeric answer."
+            )
+            expr = f"count({a} < x + {b} < {c})"
+
+        return ReasoningTask(
+            task_id=f"ineq_{idx}",
+            prompt=prompt,
+            answer=str(answer),
+            metadata={"expression": expr, "family": "inequality", "solution": str(answer)},
+        )
+
+    def _logic_grid_4x4_task(self, idx: int) -> ReasoningTask:
+        """4x4 logic grid puzzle - harder than 3x3."""
+        people = list(self._people_4)
+        pets = list(self._pets_4)
+        colors = list(self._colors_4)
+        hobbies = list(self._hobbies)
+
+        self._rng.shuffle(pets)
+        self._rng.shuffle(colors)
+        self._rng.shuffle(hobbies)
+
+        mapping = {
+            person: {"pet": pet, "color": color, "hobby": hobby}
+            for person, pet, color, hobby in zip(people, pets, colors, hobbies, strict=False)
+        }
+
+        target_person = self._rng.choice(people)
+        target_attr = self._rng.choice(["pet", "hobby"])
+        target_value = mapping[target_person][target_attr]
+
+        # Generate clues that allow deduction
+        clues = []
+        others = [p for p in people if p != target_person]
+
+        # Clue 1: Direct assignment for one person
+        p1 = self._rng.choice(others)
+        clues.append(f"{p1} has the {mapping[p1]['pet']}.")
+
+        # Clue 2: Color to hobby link
+        p2 = self._rng.choice([p for p in others if p != p1])
+        clues.append(f"The person wearing {mapping[p2]['color']} enjoys {mapping[p2]['hobby']}.")
+
+        # Clue 3: Negative clue
+        p3 = self._rng.choice([p for p in others if p not in [p1, p2]])
+        wrong_pet = self._rng.choice([pet for pet in pets if pet != mapping[p3]["pet"]])
+        clues.append(f"{p3} does not have the {wrong_pet}.")
+
+        # Clue 4: Link target to identifiable attribute
+        clues.append(
+            f"The person wearing {mapping[target_person]['color']} has the {target_value}."
+        )
+
+        clues_text = " ".join(f"{i+1}) {clue}" for i, clue in enumerate(clues))
+        prompt = (
+            f"Four researchers ({', '.join(people)}) each have a different pet "
+            f"({', '.join(self._pets_4)}), wear a different color "
+            f"({', '.join(self._colors_4)}), and have a hobby ({', '.join(self._hobbies)}). "
+            f"Clues: {clues_text} "
+            f"Question: Who has the {target_value}? Provide the name only."
+        )
+
+        return ReasoningTask(
+            task_id=f"logic4_{idx}",
+            prompt=prompt,
+            answer=target_person,
+            metadata={
+                "solution": target_person,
+                "options": people,
+                "family": "logic_grid_4x4",
+            },
+        )
+
+    def _knights_knaves_task(self, idx: int) -> ReasoningTask:
+        """Knights and Knaves puzzle - truth-tellers vs liars."""
+        names = ["Alice", "Bob", "Carol"]
+        n = self._rng.randint(2, 3)
+        selected = names[:n]
+
+        # Assign roles: True = Knight (truth-teller), False = Knave (liar)
+        roles = {name: self._rng.choice([True, False]) for name in selected}
+
+        # Generate statements
+        statements = []
+        for name in selected:
+            is_knight = roles[name]
+            target = self._rng.choice(selected)
+
+            if target == name:
+                # Self-reference
+                stmt = f"{name} says: 'I am a knight.'"
+            else:
+                # About another
+                target_is_knight = roles[target]
+                if is_knight:
+                    # Knight tells truth
+                    claim = "knight" if target_is_knight else "knave"
+                else:
+                    # Knave lies
+                    claim = "knave" if target_is_knight else "knight"
+                stmt = f"{name} says: '{target} is a {claim}.'"
+            statements.append(stmt)
+
+        statements_text = " ".join(statements)
+        target_person = self._rng.choice(selected)
+        answer = "knight" if roles[target_person] else "knave"
+
+        prompt = (
+            f"On an island, knights always tell the truth and knaves always lie. "
+            f"You meet {n} people: {', '.join(selected)}. "
+            f"{statements_text} "
+            f"Is {target_person} a knight or a knave? Answer with only 'knight' or 'knave'."
+        )
+
+        return ReasoningTask(
+            task_id=f"kk_{idx}",
+            prompt=prompt,
+            answer=answer,
+            metadata={
+                "solution": answer,
+                "options": ["knight", "knave"],
+                "family": "knights_knaves",
+                "roles": {k: "knight" if v else "knave" for k, v in roles.items()},
+            },
+        )
+
+    def _code_verify_task(self, idx: int, difficulty: float) -> ReasoningTask:
+        """Code verification task - trace through simple function."""
+        task_type = self._rng.choice(["trace", "bug", "output"])
+        max_val = int(5 + 20 * difficulty)
+
+        if task_type == "trace":
+            # Trace variable value through loop
+            n = self._rng.randint(3, min(8, max_val))
+            start = self._rng.randint(0, 5)
+            step = self._rng.randint(1, 3)
+            answer = start + step * n
+            code = f"""x = {start}
+for i in range({n}):
+    x = x + {step}"""
+            prompt = (
+                f"What is the value of x after this code runs?\n```python\n{code}\n```\n"
+                f"Provide only the numeric answer."
+            )
+            expr = f"{start} + {step} * {n}"
+        elif task_type == "bug":
+            # Find the bug - off-by-one errors
+            n = self._rng.randint(3, 6)
+            # Buggy sum: sum of 1 to n but with off-by-one
+            buggy_sum = (n - 1) * n // 2  # Missing last element
+            code = f"""def sum_to_n(n):
+    total = 0
+    for i in range(n):  # Bug: should be range(n+1) or range(1, n+1)
+        total += i
+    return total
+
+result = sum_to_n({n})"""
+            prompt = (
+                f"What value does this buggy code return?\n```python\n{code}\n```\n"
+                f"Provide only the numeric answer."
+            )
+            answer = buggy_sum
+            expr = f"sum(range({n}))"
+        else:  # output
+            # Simple function output
+            a = self._rng.randint(2, max_val)
+            b = self._rng.randint(1, max_val)
+            c = self._rng.randint(1, max_val)
+            func_type = self._rng.choice(["linear", "quadratic", "factorial"])
+
+            if func_type == "linear":
+                answer = a * c + b
+                code = f"""def f(x):
+    return {a} * x + {b}
+
+result = f({c})"""
+                expr = f"{a} * {c} + {b}"
+            elif func_type == "quadratic":
+                answer = a * c * c + b * c
+                code = f"""def f(x):
+    return {a} * x * x + {b} * x
+
+result = f({c})"""
+                expr = f"{a} * {c}**2 + {b} * {c}"
+            else:  # factorial
+                n = self._rng.randint(3, 6)
+                answer = 1
+                for i in range(1, n + 1):
+                    answer *= i
+                code = f"""def factorial(n):
+    if n <= 1:
+        return 1
+    return n * factorial(n - 1)
+
+result = factorial({n})"""
+                expr = f"{n}!"
+
+            prompt = (
+                f"What value does 'result' hold after this code runs?\n"
+                f"```python\n{code}\n```\n"
+                f"Provide only the numeric answer."
+            )
+
+        return ReasoningTask(
+            task_id=f"code_{idx}",
+            prompt=prompt,
+            answer=str(answer),
+            metadata={"expression": expr, "family": "code_verify", "solution": str(answer)},
+        )
+
 
 class BaseSolver:
     def solve(self, task: ReasoningTask, memory_hint: str) -> Solution:  # pragma: no cover
