@@ -88,9 +88,62 @@ that collusion detection — a structural governance lever operating on
 interaction patterns rather than individual agents — is the critical
 differentiator between survival and collapse in contested environments.
 
-## 2. Experimental Setup
+## 2. Related Work
 
-### 2.1 Scenarios
+**Multi-agent safety.** The safety of multi-agent systems has been approached
+from several angles. Dafoe et al. [13] survey cooperative AI, framing the
+challenge as designing agents that can collaborate despite misaligned
+incentives. Leibo et al. [14] study emergent social dilemmas in
+multi-agent reinforcement learning, demonstrating that competitive dynamics
+arise even among independently trained cooperative agents. Our work
+complements these by focusing on *governance* as the mechanism for
+maintaining cooperation, rather than relying on agent-level alignment.
+
+**Distributional safety.** Kenton et al. [3] introduce the distributional
+safety framework, arguing that safety properties should be characterized
+by outcome distributions rather than binary labels. We operationalize
+this framework concretely: our soft labels p = P(v = +1) enable
+continuous metrics (toxicity, quality gap) that capture adverse selection
+dynamics invisible to binary classification. Anthropic's "hot mess" theory
+[12] extends this intuition to variance-dominated failure modes, where
+the danger lies not in expected outcomes but in heavy-tailed distributions
+of harm — a framing consistent with our observation that toxicity saturates
+while welfare variance grows with scale.
+
+**Mechanism design for AI.** The application of economic mechanism design
+to AI governance draws on classical results from Myerson [1] and
+Hurwicz [2]. More recently, Tomasev et al. [4] propose virtual agent
+economies as a governance layer for multi-agent systems, using economic
+incentives (taxes, staking, auctions) to align agent behavior. Our
+framework implements and stress-tests several of these mechanisms,
+finding that individual economic levers are necessary but insufficient
+against coordinated adversarial behavior — structural monitoring
+(collusion detection) provides qualitatively different protection.
+
+**Market microstructure analogies.** We draw heavily on the adverse
+selection models of Kyle [5] and Glosten-Milgrom [6], treating the
+governance mechanism as a market maker that must set terms of
+participation under asymmetric information. Akerlof's lemons problem [7]
+provides the conceptual foundation: when the governance threshold cannot
+distinguish high-quality from low-quality interactions, adverse selection
+drives out cooperative agents. The flash crash literature [10] informs
+our analysis of cascading failure in network topologies, where
+contagion through dense connections can amplify local failures into
+systemic collapse.
+
+**Agent ecosystems.** Chen et al. [11] study multi-agent market dynamics
+in cooperative settings, finding that network topology shapes emergent
+specialization. Our network effects scenario confirms this: small-world
+topology enables honest agents to strengthen cooperative ties while
+weakening connections to adversarial nodes, providing a decentralized
+complement to centralized governance. Park et al. [15] demonstrate
+emergent social behavior in generative agent populations, motivating
+our inclusion of behavioral heterogeneity (honest, opportunistic,
+deceptive, adversarial) as a first-class experimental variable.
+
+## 3. Experimental Setup
+
+### 3.1 Scenarios
 
 | Scenario | Agents | Composition | Adversarial % | Epochs | Network |
 |----------|--------|-------------|---------------|--------|---------|
@@ -108,7 +161,7 @@ differentiator between survival and collapse in contested environments.
 
 Agent types: **H** = honest, **O** = opportunistic, **D** = deceptive, **Adv** = adversarial, **AA** = adaptive adversary.
 
-### 2.2 Governance Parameters
+### 3.2 Governance Parameters
 
 | Scenario | Tax Rate | Rep. Decay | Staking | Circuit Breaker | Audit | Collusion Det. |
 |----------|----------|------------|---------|-----------------|-------|----------------|
@@ -124,7 +177,7 @@ Redteam variant differences:
 - **v2**: `audit_penalty=1.0`, `freeze_duration=1`
 - **v3**: `audit_penalty=1.0`, `freeze_duration=1`, `rep_decay=1.0`
 
-### 2.3 Payoff Parameters
+### 3.3 Payoff Parameters
 
 | Scenario | s+ | s- | h | theta | rho_a | rho_b | w_rep |
 |----------|-----|-----|------|-------|-------|-------|-------|
@@ -135,7 +188,7 @@ Redteam variant differences:
 | marketplace_economy | 2.0 | 1.0 | 2.0 | 0.5 | 0.1 | 0.1 | 1.0 |
 | network_effects | 2.0 | 1.0 | 2.0 | 0.5 | 0.1 | 0.1 | 1.0 |
 
-### 2.4 Formal Model
+### 3.4 Formal Model
 
 **Proxy computation.** Four observable signals — task progress, rework penalty,
 verifier penalty, and engagement signal — are combined into a raw proxy score
@@ -174,7 +227,7 @@ Akerlof [7] and Glosten-Milgrom [6]: agents with private knowledge of low
 interaction quality may still find it profitable to participate when the
 acceptance threshold admits borderline interactions.
 
-### 2.5 Metrics
+### 3.5 Metrics
 
 - **Acceptance rate**: fraction of interactions accepted by governance threshold (p >= p_bar)
 - **Toxicity**: E[1-p | accepted], expected harm from accepted interactions
@@ -182,9 +235,9 @@ acceptance threshold admits borderline interactions.
 - **Quality gap**: E[p|accepted] - E[p|rejected] (negative = adverse selection)
 - **Collapse epoch**: first epoch where ecosystem function degrades irreversibly (welfare drops to zero or agents frozen)
 
-## 3. Results
+## 4. Results
 
-### 3.1 Cross-Scenario Summary
+### 4.1 Cross-Scenario Summary
 
 | Scenario | Acceptance | Toxicity | Welfare/Epoch | Adv. Frac. | Collapse? |
 |----------|-----------|----------|---------------|------------|-----------|
@@ -200,7 +253,7 @@ acceptance threshold admits borderline interactions.
 | marketplace_economy | 0.549 | 0.328 | 3.7 | 0.143 | No |
 | network_effects | 0.783 | 0.335 | 9.9 | 0.100 | No |
 
-### 3.2 Regime Classification
+### 4.2 Regime Classification
 
 | Regime | Scenarios | Acceptance | Toxicity | Collapse |
 |--------|-----------|-----------|----------|----------|
@@ -208,7 +261,7 @@ acceptance threshold admits borderline interactions.
 | Contested | collusion_detection, marketplace, network, incoherence_med/long | 0.42 - 0.94 | 0.33 - 0.37 | Never |
 | Adversarial collapse | redteam_v1, v2, v3 | < 0.56 | 0.30 - 0.31 | Epochs 12-14 |
 
-### 3.3 Key Observations
+### 4.3 Key Observations
 
 **Adversarial red-team progression (v1 -> v2 -> v3):**
 - Acceptance rate declined monotonically: 0.556 -> 0.481 -> 0.455
@@ -226,7 +279,7 @@ acceptance threshold admits borderline interactions.
 - Acceptance rate decreased: 1.000 -> 0.940 -> 0.787
 - Non-linear welfare scaling: 1.0 -> 5.7 -> 21.3 (super-linear in agent count)
 
-### 3.4 Marketplace and Network Analysis
+### 4.4 Marketplace and Network Analysis
 
 **Marketplace economy.** The bounty/escrow marketplace scenario (7 agents,
 14.3% adversarial) achieved a 0.549 acceptance rate — the lowest among
@@ -267,7 +320,7 @@ throughput (246 vs. 45 accepted) at comparable toxicity (0.335 vs. 0.328),
 but required more agents (10 vs. 7) and longer runtime (20 vs. 10 epochs)
 to realize these gains.
 
-### 3.5 Figures
+### 4.5 Figures
 
 ![Figure 1: Scenario Comparison](figures/fig1_scenario_comparison.png)
 *Cross-scenario comparison of acceptance rate, toxicity, and welfare.*
@@ -287,9 +340,12 @@ to realize these gains.
 ![Figure 6: Network vs Collusion](figures/fig6_network_vs_collusion.png)
 *Network topology effects on collusion detection efficacy.*
 
-## 4. Discussion
+![Figure 7: Timeline Overlay](figures/fig7_timeline_overlay.png)
+*Welfare and acceptance rate trajectories across adversarial escalation scenarios.*
 
-### 4.1 Regime Transitions and the Adversarial Threshold
+## 5. Discussion
+
+### 5.1 Regime Transitions and the Adversarial Threshold
 
 The sharpest finding is the existence of a critical adversarial fraction
 between 37.5% and 50%. Below this threshold, ecosystems remained functional
@@ -311,7 +367,7 @@ adversarial fraction is at least as important as tuning governance parameters �
 structural composition matters more than lever calibration once a critical
 threshold is crossed.
 
-### 4.2 Collusion Detection as a Phase-Transition Buffer
+### 5.2 Collusion Detection as a Phase-Transition Buffer
 
 The collusion detection scenario is the most governance-intensive non-collapsing
 run. At 37.5% adversarial fraction, it sat just below the collapse threshold
@@ -330,7 +386,7 @@ detection appears to be roughly 25-40% adversarial fraction: below 25%,
 individual-level governance suffices; above 40-50%, no tested configuration
 prevented collapse.
 
-### 4.3 The Welfare-Toxicity Trade-off
+### 5.3 The Welfare-Toxicity Trade-off
 
 Across the contested regime, welfare and toxicity are not simply inversely
 correlated. The collusion detection scenario achieved higher welfare (6.3/epoch)
@@ -348,15 +404,16 @@ that the welfare cost of adversarial pressure is not linear but
 multiplicative: each adversarial agent degrades not just its own interactions
 but the productivity of the surrounding cooperative network.
 
-### 4.4 Incoherence and Scale
+### 5.4 Incoherence and Scale
 
 The incoherence series (3, 6, 10 agents) reveals two scaling dynamics,
 consistent with Anthropic's "hot mess" framing of variance-dominated failure
 [12]. Toxicity saturated quickly: it jumped from 0.183 to 0.343 between 3
 and 6 agents, then plateaued at 0.341 for 10 agents. This suggests a floor
 effect — once any adversarial or opportunistic agents are present, baseline
-toxicity stabilizes around 0.34 regardless of further scaling. Acceptance rate, by contrast,
-declined steadily (1.000 to 0.940 to 0.787), indicating that the governance
+toxicity stabilizes around 0.34 regardless of further scaling. Acceptance
+rate, by contrast, declined steadily (1.000 to 0.940 to 0.787), indicating
+that the governance
 mechanism becomes more selective as the interaction graph grows denser.
 
 Welfare scaled super-linearly (1.0 to 5.7 to 21.3), consistent with network
@@ -367,7 +424,7 @@ multi-agent systems, but it also raises the stakes of the adversarial
 threshold: a collapse in a large ecosystem destroys disproportionately more
 value.
 
-### 4.5 Implications for Multi-Agent System Design
+### 5.5 Implications for Multi-Agent System Design
 
 These results suggest three practical design principles:
 
@@ -389,7 +446,7 @@ These results suggest three practical design principles:
    that tightens as adversarial indicators rise would better track the
    operating regime.
 
-### 4.6 Future Work
+### 5.6 Future Work
 
 Several directions follow naturally from these findings:
 
@@ -428,7 +485,7 @@ are hand-set. Training the weight vector and sigmoid parameters (k, b) via
 gradient descent on labeled interaction data would test whether calibration
 quality affects the adversarial threshold — better proxies might extend the
 viable operating range by narrowing the bid-ask spread analogy from
-Section 4.1.
+Section 5.1.
 
 **Cross-scenario transfer.** Testing whether governance parameters optimized
 for one regime transfer to another would inform deployment strategy. A
@@ -436,7 +493,46 @@ configuration tuned on the baseline scenario may fail catastrophically when
 adversarial fraction increases — quantifying this brittleness would
 strengthen the case for regime-aware adaptive governance.
 
-## 5. Limitations
+## 6. Conclusion
+
+We have presented a simulation-based study of governance trade-offs in
+multi-agent AI systems, using probabilistic soft labels to capture the
+continuous nature of interaction quality. Across 11 scenarios spanning
+cooperative, contested, and adversarial regimes, three findings stand out.
+
+First, there exists a critical adversarial fraction between 37.5% and 50%
+that separates recoverable degradation from irreversible collapse. Below
+this threshold, governance mechanisms maintained positive welfare even
+under significant adversarial pressure. Above it, parameter tuning delayed
+collapse by at most two epochs but could not prevent it. This threshold
+behavior mirrors phase transitions in market microstructure: just as a
+market maker cannot sustain liquidity when the fraction of informed traders
+exceeds a critical level [5, 6], a governance mechanism cannot sustain
+cooperation when adversarial agents dominate the interaction graph.
+
+Second, collusion detection — monitoring pair-wise interaction patterns
+rather than individual agent behavior — provides qualitatively different
+protection from individual-level governance levers. Transaction taxes,
+staking requirements, and circuit breakers are necessary but insufficient
+against coordinated adversarial strategies. The collusion detection scenario
+survived at 37.5% adversarial fraction where comparable configurations
+without structural monitoring would be expected to fail, extending the
+viable operating range by roughly 15-20 percentage points.
+
+Third, welfare scales super-linearly with cooperative population size
+(1.0 to 5.7 to 21.3 welfare/epoch across 3, 6, and 10 agents), while
+toxicity saturates quickly (plateauing around 0.34 above 6 agents). This
+asymmetry is encouraging for the viability of large cooperative multi-agent
+systems but raises the stakes of governance failure: collapse in a large
+ecosystem destroys disproportionately more value than in a small one.
+
+These results argue for a shift in multi-agent safety from static,
+per-agent alignment toward dynamic, ecosystem-level governance that is
+regime-aware, structurally informed, and designed around distributional
+rather than binary safety properties. The SWARM framework and accompanying
+dataset are released to support further research in this direction.
+
+## 7. Limitations
 
 - **Single-seed runs.** Each scenario was run with seed 42 only. Results may
   not be robust to stochastic variation; multi-seed sweeps with confidence
@@ -467,7 +563,7 @@ strengthen the case for regime-aware adaptive governance.
   further validation, particularly given the super-linear welfare scaling
   observed.
 
-## 6. References
+## 8. References
 
 [1] Myerson, R.B. (1981). Optimal Auction Design. *Mathematics of Operations
 Research*, 6(1), 58-73.
@@ -510,18 +606,30 @@ Market Microstructure. Working Paper.
 [12] Anthropic. (2026). The Hot Mess Theory of AI. Anthropic Alignment Blog.
 https://alignment.anthropic.com/2026/hot-mess-of-ai/
 
-## 7. Appendix
+[13] Dafoe, A., Hughes, E., Bachrach, Y., Collins, T., McKee, K.R.,
+Leibo, J.Z., Larson, K., & Graepel, T. (2020). Open Problems in
+Cooperative AI. *arXiv preprint* arXiv:2012.08630.
+
+[14] Leibo, J.Z., Zambaldi, V., Lanctot, M., Marecki, J., & Graepel, T.
+(2017). Multi-Agent Reinforcement Learning in Sequential Social Dilemmas.
+*AAMAS 2017*.
+
+[15] Park, J.S., O'Brien, J.C., Cai, C.J., Morris, M.R., Liang, P., &
+Bernstein, M.S. (2023). Generative Agents: Interactive Simulacra of Human
+Behavior. *UIST 2023*.
+
+## 9. Appendix
 
 ### A.1 Full Run Data
 
 | Scenario | Seed | Agents | Epochs | Steps | Total Int. | Accepted | Accept Rate | Toxicity | Welfare/Ep | Total Welfare | Final Welfare | Adv. Frac | Collapse |
 |----------|------|--------|--------|-------|------------|----------|-------------|----------|------------|---------------|---------------|-----------|----------|
-| baseline | 42 | 5 | 10 | 10 | 48 | 45 | 0.938 | 0.298 | 4.98 | — | — | 0.200 | — |
-| adversarial_redteam_v1 | 42 | 8 | 30 | 15 | 135 | 75 | 0.556 | 0.295 | 3.80 | — | — | 0.500 | Ep 12 |
-| adversarial_redteam_v2 | 42 | 8 | 30 | 15 | 158 | 76 | 0.481 | 0.312 | 3.80 | — | — | 0.500 | Ep 13 |
-| adversarial_redteam_v3 | 42 | 8 | 30 | 15 | 156 | 71 | 0.455 | 0.312 | 3.49 | — | — | 0.500 | Ep 14 |
-| collusion_detection | 42 | 8 | 25 | 15 | 299 | 127 | 0.425 | 0.370 | 6.29 | — | — | 0.375 | — |
-| emergent_capabilities | 42 | 8 | 30 | 20 | 635 | 634 | 0.998 | 0.297 | 44.90 | — | — | 0.000 | — |
+| baseline | 42 | 5 | 10 | 10 | 48 | 45 | 0.938 | 0.298 | 4.98 | 49.80 | 3.93 | 0.200 | — |
+| adversarial_redteam_v1 | 42 | 8 | 30 | 15 | 135 | 75 | 0.556 | 0.295 | 3.80 | 113.96 | 0.00 | 0.500 | Ep 12 |
+| adversarial_redteam_v2 | 42 | 8 | 30 | 15 | 158 | 76 | 0.481 | 0.312 | 3.80 | 114.05 | 0.00 | 0.500 | Ep 13 |
+| adversarial_redteam_v3 | 42 | 8 | 30 | 15 | 156 | 71 | 0.455 | 0.312 | 3.49 | 104.60 | 0.00 | 0.500 | Ep 14 |
+| collusion_detection | 42 | 8 | 25 | 15 | 299 | 127 | 0.425 | 0.370 | 6.29 | 157.25 | 2.83 | 0.375 | — |
+| emergent_capabilities | 42 | 8 | 30 | 20 | 635 | 634 | 0.998 | 0.297 | 44.90 | 1347.00 | 38.82 | 0.000 | — |
 | incoherence_short | 42 | 3 | 8 | 2 | 7 | 7 | 1.000 | 0.183 | 0.99 | 7.94 | 0.00 | 0.000 | — |
 | incoherence_medium | 42 | 6 | 8 | 8 | 50 | 47 | 0.940 | 0.343 | 5.70 | 45.56 | 4.33 | 0.167 | — |
 | incoherence_long | 42 | 10 | 8 | 20 | 221 | 174 | 0.787 | 0.341 | 21.31 | 170.49 | 18.50 | 0.100 | — |
@@ -567,7 +675,7 @@ Based on observed data, the regime boundaries can be approximated as:
 | Collusion-buffered ceiling | ~37.5% | Collusion detection active | Toxicity > 0.35 but welfare positive |
 
 Note: These boundaries are estimated from single-seed runs and should be
-validated with multi-seed sweeps (see Section 4.6).
+validated with multi-seed sweeps (see Section 5.6).
 
 ---
 
