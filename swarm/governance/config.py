@@ -137,6 +137,15 @@ class GovernanceConfig(BaseModel):
     memory_provenance_enabled: bool = False
     memory_provenance_revert_penalty: float = 0.1
 
+    # Self-evolution governance (LiveSWE bridge)
+    self_evolution_enabled: bool = False
+    self_evolution_max_growth_rate: float = 0.1
+    self_evolution_max_tools: int = 20
+    self_evolution_block_self_mod: bool = True
+    self_evolution_divergence_threshold: float = 0.7
+    self_evolution_tool_risk_threshold: float = 0.6
+    self_evolution_growth_freeze_duration: int = 1
+
     # Diversity as Defense (DaD)
     diversity_enabled: bool = False
     diversity_rho_max: float = 0.5  # Correlation cap (Rule 1)
@@ -291,6 +300,24 @@ class GovernanceConfig(BaseModel):
             raise ValueError("moltbook_challenge_difficulty must be in [0, 1]")
         if self.moltbook_challenge_window_steps < 0:
             raise ValueError("moltbook_challenge_window_steps must be >= 0")
+
+        # Self-evolution governance validation
+        if self.self_evolution_max_growth_rate < 0:
+            raise ValueError("self_evolution_max_growth_rate must be non-negative")
+        if self.self_evolution_max_tools < 1:
+            raise ValueError("self_evolution_max_tools must be >= 1")
+        if not 0.0 <= self.self_evolution_divergence_threshold <= 1.0:
+            raise ValueError(
+                "self_evolution_divergence_threshold must be in [0, 1]"
+            )
+        if not 0.0 <= self.self_evolution_tool_risk_threshold <= 1.0:
+            raise ValueError(
+                "self_evolution_tool_risk_threshold must be in [0, 1]"
+            )
+        if self.self_evolution_growth_freeze_duration < 1:
+            raise ValueError(
+                "self_evolution_growth_freeze_duration must be >= 1"
+            )
 
         # Diversity as Defense validation
         if not 0.0 <= self.diversity_rho_max <= 1.0:
