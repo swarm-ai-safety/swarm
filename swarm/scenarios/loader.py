@@ -11,6 +11,10 @@ from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.base import BaseAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.skill_evolving import (
+    SkillEvolvingHonestAgent,
+    SkillEvolvingOpportunisticAgent,
+)
 from swarm.agents.memory_agent import (
     CacheGamerAgent,
     CollusiveVerifierAgent,
@@ -77,6 +81,9 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "adversarial_synthesizer": AdversarialSynthesizerAgent,
     # RLM (Recursive Language Model) agents
     "rlm": RLMAgent,
+    # Skill-evolving agents
+    "skill_honest": SkillEvolvingHonestAgent,
+    "skill_opportunistic": SkillEvolvingOpportunisticAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
