@@ -37,7 +37,7 @@ governance:
 
   # Sensitive circuit breaker
   circuit_breaker_enabled: true
-  freeze_threshold_toxicity: 0.5
+  freeze_threshold_toxicity: 0.35
   freeze_threshold_violations: 2
   freeze_duration_epochs: 3
 
