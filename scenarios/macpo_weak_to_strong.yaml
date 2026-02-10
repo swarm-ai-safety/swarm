@@ -1,0 +1,55 @@
+# Draft scenario: MACPO (weak-to-strong supervision)
+
+scenario_id: macpo_weak_to_strong
+description: "Weak-to-strong supervision via population mix and governance"
+motif: weak_to_strong
+
+agents:
+  # Larger weak-teacher pool (honest/opportunistic), smaller strong student pool
+  - type: honest
+    count: 4
+  - type: opportunistic
+    count: 2
+  - type: deceptive
+    count: 2
+
+governance:
+  # Iterative learning analogs via reputation and audits
+  reputation_decay_rate: 0.9
+  vote_normalization_enabled: true
+  max_vote_weight_per_agent: 4.0
+
+  audit_enabled: true
+  audit_probability: 0.15
+  audit_penalty_multiplier: 2.0
+  audit_threshold_p: 0.55
+
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.65
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+simulation:
+  n_epochs: 25
+  steps_per_epoch: 10
+  seed: 202
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 40
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  w_rep: 1.2
+
+success_criteria:
+  toxicity_threshold: 0.4
+
+outputs:
+  event_log: "logs/macpo_weak_to_strong_events.jsonl"
+  metrics_csv: "logs/macpo_weak_to_strong_metrics.csv"

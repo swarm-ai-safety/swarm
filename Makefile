@@ -1,4 +1,4 @@
-.PHONY: install install-dev lint lint-fix typecheck test coverage ci clean docs docs-serve test-changes test-parallel test-durations test-no-network claude-code-demo
+.PHONY: install install-dev lint lint-fix typecheck test coverage ci clean docs docs-serve test-changes test-parallel test-durations test-no-network claude-code-demo run-alignment-scenarios run-alignment-analyze run-alignment-all
 
 PYTHON ?= python
 
@@ -47,6 +47,16 @@ docs-serve:
 
 claude-code-demo:
 	bash scripts/run_claude_code_demo.sh $(SCENARIO)
+
+run-alignment-scenarios:
+	swarm run scenarios/alignment_waltz_targeted_feedback.yaml
+	swarm run scenarios/macpo_weak_to_strong.yaml
+
+run-alignment-analyze:
+	swarm analyze logs/alignment_waltz_targeted_feedback_metrics.csv --metrics toxicity_rate,quality_gap,spread
+	swarm analyze logs/macpo_weak_to_strong_metrics.csv --metrics toxicity_rate,quality_gap,spread
+
+run-alignment-all: run-alignment-scenarios run-alignment-analyze
 
 clean:
 	rm -rf .mypy_cache .pytest_cache .ruff_cache htmlcov .coverage site/
