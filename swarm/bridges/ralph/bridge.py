@@ -95,6 +95,6 @@ class RalphBridge:
                     interaction_id=interaction.interaction_id,
                     initiator_id=interaction.initiator,
                     counterparty_id=interaction.counterparty,
-                    metadata=interaction.metadata,
+                    payload=interaction.metadata,
                 )
             )
