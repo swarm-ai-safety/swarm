@@ -15,6 +15,14 @@ if [ -z "$ROOT" ]; then
 fi
 cd "$ROOT"
 
+# ── 0. Gitignore enforcement (auto-unstage junk before anything else) ──
+JUNK=$(git diff --cached --name-only | grep -E '(\.DS_Store|\.db$|\.env$|credentials)' || true)
+if [ -n "$JUNK" ]; then
+    echo "[swarm pre-commit] unstaging junk files:"
+    echo "$JUNK" | while read -r f; do echo "  - $f"; done
+    echo "$JUNK" | xargs git reset HEAD --quiet
+fi
+
 # ── 1. Secrets scan (must run first, blocks on any match) ──
 echo "[swarm pre-commit] secrets scan"
 
