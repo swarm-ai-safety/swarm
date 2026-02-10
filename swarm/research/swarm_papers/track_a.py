@@ -54,30 +54,6 @@ except Exception:  # pragma: no cover - optional
         OLLAMA = "ollama"
 
 
-def _build_related_work(
-    papers: list[Paper],
-) -> tuple[list[RelatedWorkItem], str]:
-    """Convert AgentRxiv papers to RelatedWorkItem list and BibTeX string."""
-    items: list[RelatedWorkItem] = []
-    bib_lines: list[str] = []
-    for i, paper in enumerate(papers):
-        cite_key = f"agentrxiv{i + 1}"
-        items.append(
-            RelatedWorkItem(
-                title=paper.title or "Untitled",
-                cite_key=cite_key,
-                paper_id=paper.paper_id or "",
-            )
-        )
-        bib_lines.append(
-            f"@misc{{{cite_key},\n"
-            f"  title = {{{paper.title or 'Untitled'}}},\n"
-            f"  note = {{AgentRxiv: {paper.paper_id or 'unknown'}}},\n"
-            f"}}"
-        )
-    return items, "\n\n".join(bib_lines)
-
-
 @dataclass
 class ReasoningTask:
     task_id: str
@@ -2334,31 +2310,3 @@ def _adjust_llm_config(config: "LLMConfig", temperature: float) -> "LLMConfig":
     )
 
 
-def _build_related_work(papers: list) -> tuple[list[RelatedWorkItem], str]:
-    """Convert papers from AgentRxiv to RelatedWorkItem objects and BibTeX."""
-    items: list[RelatedWorkItem] = []
-    bib_lines: list[str] = []
-
-    for paper in papers:
-        paper_id = getattr(paper, "paper_id", "") or ""
-        title = getattr(paper, "title", "") or "Untitled"
-        # Create a cite key from paper_id or title
-        cite_key = paper_id.replace("-", "_") if paper_id else title[:20].replace(" ", "_").lower()
-
-        items.append(RelatedWorkItem(
-            title=title,
-            cite_key=cite_key,
-            paper_id=paper_id,
-        ))
-
-        # Generate BibTeX entry
-        authors = getattr(paper, "authors", "") or "Unknown"
-        year = getattr(paper, "year", "") or datetime.now().year
-        bib_lines.append(f"""@article{{{cite_key},
-  title = {{{title}}},
-  author = {{{authors}}},
-  year = {{{year}}},
-  note = {{AgentRxiv: {paper_id}}},
-}}""")
-
-    return items, "\n\n".join(bib_lines)
