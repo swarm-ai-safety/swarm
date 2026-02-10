@@ -59,6 +59,11 @@ class ActionType(Enum):
     SEARCH_MEMORY = "search_memory"
     CHALLENGE_MEMORY = "challenge_memory"
 
+    # Scholar/literature synthesis actions
+    RETRIEVE_PASSAGES = "retrieve_passages"
+    SYNTHESIZE_ANSWER = "synthesize_answer"
+    VERIFY_CITATION = "verify_citation"
+
     # Special actions
     NOOP = "noop"  # Do nothing this turn
 
@@ -177,6 +182,13 @@ class Observation:
     memory_challenged_entries: List[Dict] = field(default_factory=list)
     memory_entry_counts: Dict = field(default_factory=dict)
     memory_writes_remaining: int = 0
+
+    # Scholar/literature synthesis observations
+    scholar_query: Optional[Dict] = None  # Current query to answer
+    scholar_passage_pool: List[Dict] = field(default_factory=list)  # Retrieved passages
+    scholar_draft_citations: List[Dict] = field(default_factory=list)  # Citations to verify
+    scholar_citation_to_verify: Optional[Dict] = None  # Next citation for verifier
+    scholar_synthesis_result: Optional[Dict] = None  # Final synthesis output
 
 
 @dataclass

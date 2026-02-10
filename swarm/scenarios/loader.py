@@ -30,7 +30,15 @@ from swarm.agents.wiki_editor import (
     PointFarmerAgent,
     VandalAgent,
 )
+from swarm.agents.scholar_agent import (
+    AdversarialRetrieverAgent,
+    AdversarialSynthesizerAgent,
+    RetrieverAgent,
+    SynthesizerAgent,
+    VerifierAgent,
+)
 from swarm.core.memory_handler import MemoryTierConfig
+from swarm.core.scholar_handler import ScholarConfig
 from swarm.core.moltbook_handler import MoltbookConfig
 from swarm.core.moltipedia_handler import MoltipediaConfig
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
@@ -59,6 +67,12 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "memory_poisoner": MemoryPoisonerAgent,
     "cache_gamer": CacheGamerAgent,
     "collusive_verifier": CollusiveVerifierAgent,
+    # Scholar/literature synthesis agents
+    "retriever": RetrieverAgent,
+    "synthesizer": SynthesizerAgent,
+    "verifier": VerifierAgent,
+    "adversarial_retriever": AdversarialRetrieverAgent,
+    "adversarial_synthesizer": AdversarialSynthesizerAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
@@ -218,6 +232,24 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         moltbook_challenge_enabled=data.get("moltbook_challenge_enabled", False),
         moltbook_challenge_difficulty=data.get("moltbook_challenge_difficulty", 0.5),
         moltbook_challenge_window_steps=data.get("moltbook_challenge_window_steps", 1),
+        # Self-evolution governance
+        self_evolution_enabled=data.get("self_evolution_enabled", False),
+        self_evolution_max_growth_rate=data.get(
+            "self_evolution_max_growth_rate", 0.1
+        ),
+        self_evolution_max_tools=data.get("self_evolution_max_tools", 20),
+        self_evolution_block_self_mod=data.get(
+            "self_evolution_block_self_mod", True
+        ),
+        self_evolution_divergence_threshold=data.get(
+            "self_evolution_divergence_threshold", 0.7
+        ),
+        self_evolution_tool_risk_threshold=data.get(
+            "self_evolution_tool_risk_threshold", 0.6
+        ),
+        self_evolution_growth_freeze_duration=data.get(
+            "self_evolution_growth_freeze_duration", 1
+        ),
         # Memory tier governance
         memory_promotion_gate_enabled=data.get("memory_promotion_gate_enabled", False),
         memory_promotion_min_quality=data.get("memory_promotion_min_quality", 0.5),
@@ -457,6 +489,33 @@ def parse_memory_tier_config(data: Dict[str, Any]) -> Optional[MemoryTierConfig]
     return config
 
 
+def parse_scholar_config(data: Dict[str, Any]) -> Optional[ScholarConfig]:
+    """
+    Parse scholar section from YAML into ScholarConfig.
+
+    Args:
+        data: The scholar section from YAML
+
+    Returns:
+        ScholarConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    config = ScholarConfig(
+        enabled=data.get("enabled", True),
+        corpus_path=Path(data["corpus_path"]) if data.get("corpus_path") else None,
+        dataset_path=Path(data["dataset_path"]) if data.get("dataset_path") else None,
+        top_k=data.get("top_k", 30),
+        entailment_threshold=data.get("entailment_threshold", 0.7),
+        seed=data.get("seed"),
+    )
+    return config
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -484,6 +543,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
     moltipedia_config = parse_moltipedia_config(data.get("moltipedia", {}))
     moltbook_config = parse_moltbook_config(data.get("moltbook", {}))
     memory_tier_config = parse_memory_tier_config(data.get("memory_tiers", {}))
+    scholar_config = parse_scholar_config(data.get("scholar", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -506,6 +566,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         moltipedia_config=moltipedia_config,
         moltbook_config=moltbook_config,
         memory_tier_config=memory_tier_config,
+        scholar_config=scholar_config,
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")
         else None,

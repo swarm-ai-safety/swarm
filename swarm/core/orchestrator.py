@@ -22,6 +22,7 @@ from swarm.core.observable_generator import (
     DefaultObservableGenerator,
     ObservableGenerator,
 )
+from swarm.core.scholar_handler import ScholarConfig, ScholarHandler
 from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.core.proxy import ProxyComputer, ProxyObservables
 from swarm.env.composite_tasks import (
@@ -93,6 +94,9 @@ class OrchestratorConfig(BaseModel):
 
     # Memory tier configuration
     memory_tier_config: Optional[MemoryTierConfig] = None
+
+    # Scholar/literature synthesis configuration
+    scholar_config: Optional[ScholarConfig] = None
 
     # Composite task configuration
     enable_composite_tasks: bool = False
@@ -315,6 +319,15 @@ class Orchestrator:
         else:
             self._memory_handler = None
 
+        # Scholar handler
+        if self.config.scholar_config is not None:
+            self._scholar_handler: Optional[ScholarHandler] = ScholarHandler(
+                config=self.config.scholar_config,
+                emit_event=self._emit_event,
+            )
+        else:
+            self._scholar_handler = None
+
         # Boundary handler
         if self.config.enable_boundaries:
             external_world = ExternalWorld().create_default_world()
@@ -468,6 +481,9 @@ class Orchestrator:
         if self._memory_handler is not None:
             self._memory_handler.on_epoch_start(self.state)
 
+        if self._scholar_handler is not None:
+            self._scholar_handler.on_epoch_start(self.state)
+
         # Apply epoch-start governance (reputation decay, unfreezes)
         if self.governance_engine:
             gov_effect = self.governance_engine.apply_epoch_start(
@@ -485,6 +501,10 @@ class Orchestrator:
         # Marketplace epoch maintenance
         if self._marketplace_handler is not None:
             self._marketplace_handler.on_epoch_end(self.state)
+
+        # Scholar epoch maintenance
+        if self._scholar_handler is not None:
+            self._scholar_handler.on_epoch_end(self.state)
 
         # Apply network edge decay
         if self.network is not None:
@@ -815,6 +835,24 @@ class Orchestrator:
             memory_entry_counts = mem_obs["memory_entry_counts"]
             memory_writes_remaining = mem_obs["memory_writes_remaining"]
 
+        # Build scholar observation via handler
+        scholar_query = None
+        scholar_passage_pool: List[Dict] = []
+        scholar_draft_citations: List[Dict] = []
+        scholar_citation_to_verify = None
+        scholar_synthesis_result = None
+
+        if self._scholar_handler is not None:
+            scholar_obs = self._scholar_handler.build_observation_fields(
+                agent_id,
+                self.state,
+            )
+            scholar_query = scholar_obs["scholar_query"]
+            scholar_passage_pool = scholar_obs["scholar_passage_pool"]
+            scholar_draft_citations = scholar_obs["scholar_draft_citations"]
+            scholar_citation_to_verify = scholar_obs["scholar_citation_to_verify"]
+            scholar_synthesis_result = scholar_obs["scholar_synthesis_result"]
+
         return Observation(
             agent_state=agent_state or AgentState(),
             current_epoch=self.state.current_epoch,
@@ -859,6 +897,11 @@ class Orchestrator:
             memory_challenged_entries=memory_challenged_entries,
             memory_entry_counts=memory_entry_counts,
             memory_writes_remaining=memory_writes_remaining,
+            scholar_query=scholar_query,
+            scholar_passage_pool=scholar_passage_pool,
+            scholar_draft_citations=scholar_draft_citations,
+            scholar_citation_to_verify=scholar_citation_to_verify,
+            scholar_synthesis_result=scholar_synthesis_result,
         )
 
     def _apply_observation_noise(self, record: Dict[str, Any]) -> Dict[str, Any]:
@@ -1193,6 +1236,43 @@ class Orchestrator:
                 p=p,
                 tau=0.0,
                 metadata=moltbook_result.metadata or {},
+            )
+
+            self._finalize_interaction(interaction)
+            return True
+
+        # Scholar/literature synthesis actions
+        elif action.action_type in (
+            ActionType.RETRIEVE_PASSAGES,
+            ActionType.SYNTHESIZE_ANSWER,
+            ActionType.VERIFY_CITATION,
+        ):
+            if self._scholar_handler is None:
+                return False
+
+            scholar_result = self._scholar_handler.handle_action(action, self.state)
+            if not scholar_result.success:
+                return False
+
+            if scholar_result.observables is None:
+                return True
+
+            v_hat, p = self.proxy_computer.compute_labels(scholar_result.observables)
+
+            interaction = SoftInteraction(
+                initiator=scholar_result.initiator_id,
+                counterparty=scholar_result.counterparty_id,
+                interaction_type=InteractionType.COLLABORATION,
+                accepted=scholar_result.accepted,
+                task_progress_delta=scholar_result.observables.task_progress_delta,
+                rework_count=scholar_result.observables.rework_count,
+                verifier_rejections=scholar_result.observables.verifier_rejections,
+                tool_misuse_flags=scholar_result.observables.tool_misuse_flags,
+                counterparty_engagement_delta=scholar_result.observables.counterparty_engagement_delta,
+                v_hat=v_hat,
+                p=p,
+                tau=0.0,
+                metadata=scholar_result.metadata or {},
             )
 
             self._finalize_interaction(interaction)

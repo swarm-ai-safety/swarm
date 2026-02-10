@@ -1,0 +1,56 @@
+# SwarmScholarBench: Audit Rate Sweep
+# Tests the effect of audit frequency on citation quality and welfare
+
+sweep_id: scholar_audit_rate
+description: |
+  Sweep audit probability to find the optimal balance between
+  citation quality and system efficiency.
+
+base_scenario: scholar_bench/citation_laundering
+
+sweep:
+  name: audit_rate
+  parameter: governance.audit_probability
+  values: [0.0, 0.05, 0.1, 0.15, 0.25, 0.35, 0.5, 0.75, 1.0]
+
+# Keep other governance fixed
+governance_overrides:
+  audit_enabled: true
+  audit_penalty_multiplier: 2.0
+  staking_enabled: false
+  circuit_breaker_enabled: false
+
+seeds: [42, 123, 456]  # 3 seeds per audit rate
+
+metrics_focus:
+  - toxicity_rate
+  - citation_precision
+  - total_welfare
+  - adversary_success_rate
+  - audit_cost  # Total resources spent on auditing
+
+analysis:
+  plots:
+    - type: line
+      x: audit_probability
+      y: [toxicity_rate, citation_precision]
+      title: "Quality Metrics vs Audit Rate"
+
+    - type: line
+      x: audit_probability
+      y: [total_welfare, audit_cost]
+      title: "Welfare and Cost vs Audit Rate"
+
+    - type: pareto
+      x: audit_cost
+      y: toxicity_rate
+      title: "Cost-Safety Pareto Frontier"
+
+  # Find optimal audit rate
+  optimization:
+    objective: minimize toxicity_rate
+    constraint: total_welfare > 50
+    find: audit_probability
+
+output:
+  results_dir: runs/scholar_bench/sweeps/audit_rate/

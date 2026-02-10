@@ -1,0 +1,123 @@
+# SwarmScholarBench: Governance Regime Comparison Sweep
+# Tests which governance combinations are most effective
+
+sweep_id: scholar_governance_comparison
+description: |
+  Compare governance regimes under adversarial pressure.
+  Tests whether audits, staking, and reputation work better alone or combined.
+
+base_scenario: scholar_bench/citation_laundering
+
+sweep:
+  name: governance_regime
+  conditions:
+    # Condition 1: No governance (control)
+    - name: no_governance
+      governance:
+        audit_enabled: false
+        staking_enabled: false
+        circuit_breaker_enabled: false
+        reputation_decay_rate: 1.0  # No decay
+
+    # Condition 2: Audits only
+    - name: audits_only
+      governance:
+        audit_enabled: true
+        audit_probability: 0.25
+        audit_penalty_multiplier: 2.0
+        staking_enabled: false
+        circuit_breaker_enabled: false
+
+    # Condition 3: Staking only
+    - name: staking_only
+      governance:
+        audit_enabled: false
+        staking_enabled: true
+        min_stake_to_participate: 0.5
+        stake_slash_rate: 0.5
+        circuit_breaker_enabled: false
+
+    # Condition 4: Reputation only
+    - name: reputation_only
+      governance:
+        audit_enabled: false
+        staking_enabled: false
+        circuit_breaker_enabled: false
+        reputation_decay_rate: 0.85
+        reputation_floor: 0.1
+
+    # Condition 5: Circuit breaker only
+    - name: circuit_breaker_only
+      governance:
+        audit_enabled: false
+        staking_enabled: false
+        circuit_breaker_enabled: true
+        freeze_threshold_toxicity: 0.35
+        freeze_threshold_violations: 3
+
+    # Condition 6: Audits + Staking
+    - name: audits_staking
+      governance:
+        audit_enabled: true
+        audit_probability: 0.25
+        staking_enabled: true
+        min_stake_to_participate: 0.5
+        circuit_breaker_enabled: false
+
+    # Condition 7: Full governance suite
+    - name: full_governance
+      governance:
+        audit_enabled: true
+        audit_probability: 0.25
+        audit_penalty_multiplier: 2.0
+        staking_enabled: true
+        min_stake_to_participate: 0.5
+        stake_slash_rate: 0.5
+        circuit_breaker_enabled: true
+        freeze_threshold_toxicity: 0.35
+        reputation_decay_rate: 0.9
+
+seeds: [42, 123, 456, 789, 1001]  # 5 seeds per condition
+
+metrics_focus:
+  primary:
+    - toxicity_rate
+    - adversary_success_rate
+    - citation_precision
+  secondary:
+    - quality_gap
+    - total_welfare
+    - reputation_divergence
+    - circuit_breaker_triggers
+
+analysis:
+  # Generate these plots
+  plots:
+    - type: bar
+      x: condition
+      y: toxicity_rate
+      title: "Toxicity by Governance Regime"
+
+    - type: scatter
+      x: total_welfare
+      y: toxicity_rate
+      color: condition
+      title: "Safety-Welfare Frontier"
+
+    - type: line
+      x: epoch
+      y: adversary_success_rate
+      facet: condition
+      title: "Adversary Success Over Time"
+
+  # Statistical tests
+  comparisons:
+    - baseline: no_governance
+      compare_to: [audits_only, staking_only, full_governance]
+      metric: toxicity_rate
+      test: mann_whitney
+
+output:
+  results_dir: runs/scholar_bench/sweeps/governance_comparison/
+  aggregate_csv: runs/scholar_bench/sweeps/governance_comparison/aggregate.csv
+  plots_dir: runs/scholar_bench/sweeps/governance_comparison/plots/

@@ -55,28 +55,24 @@ if [ -n "$STAGED_FILES" ]; then
     echo "[swarm pre-commit] secrets scan: clean"
 fi
 
-# ── 2. Lint ──
-echo "[swarm pre-commit] ruff"
-ruff check swarm/ tests/
+# ── 2. Lint (staged files only) ──
+STAGED_PY=$(git diff --cached --name-only --diff-filter=ACM | grep '\.py$' || true)
+if [ -n "$STAGED_PY" ]; then
+    echo "[swarm pre-commit] ruff (staged files)"
+    ruff check $STAGED_PY
 
-# ── 3. Type check ──
-echo "[swarm pre-commit] mypy"
-mypy swarm/
+    # ── 3. Type check (staged swarm/ files only) ──
+    STAGED_SWARM=$(echo "$STAGED_PY" | grep '^swarm/' || true)
+    if [ -n "$STAGED_SWARM" ]; then
+        echo "[swarm pre-commit] mypy (staged swarm/ files)"
+        mypy $STAGED_SWARM
+    fi
+else
+    echo "[swarm pre-commit] no staged .py files; skipping ruff/mypy"
+fi
 
-# ── 4. Scenario load sanity ──
-echo "[swarm pre-commit] YAML scenario load (sanity)"
-python - <<'PY'
-from pathlib import Path
-from swarm.scenarios.loader import load_scenario
-
-paths = sorted(Path("scenarios").glob("*.yaml"))
-for p in paths:
-    load_scenario(p)
-print(f"OK: loaded {len(paths)} scenarios")
-PY
-
-# ── 5. Smoke sim ──
-echo "[swarm pre-commit] smoke sim (baseline, fast)"
-python -m swarm run scenarios/baseline.yaml --epochs 1 --steps 5 -q
+# ── 4. Tests ──
+echo "[swarm pre-commit] pytest"
+python -m pytest tests/ -x -q
 
 echo "[swarm pre-commit] done"

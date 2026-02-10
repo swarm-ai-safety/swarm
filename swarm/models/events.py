@@ -74,6 +74,11 @@ class EventType(Enum):
     MEMORY_WRITE_RATE_LIMITED = "memory_write_rate_limited"
     MEMORY_PROMOTION_BLOCKED = "memory_promotion_blocked"
 
+    # Scholar/literature synthesis events
+    SCHOLAR_RETRIEVAL = "scholar_retrieval"
+    SCHOLAR_SYNTHESIS = "scholar_synthesis"
+    SCHOLAR_VERIFICATION = "scholar_verification"
+
     # System events
     SIMULATION_STARTED = "simulation_started"
     SIMULATION_ENDED = "simulation_ended"

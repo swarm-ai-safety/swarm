@@ -1,0 +1,58 @@
+# SwarmScholarBench Baseline Scenario
+# Literature synthesis with honest agents only
+
+scenario_id: scholar_bench_baseline
+description: Baseline scholar scenario with honest retriever, synthesizer, and verifier agents
+motif: literature_synthesis
+
+simulation:
+  n_epochs: 5
+  steps_per_epoch: 10
+  seed: 42
+
+# Scholar configuration
+scholar:
+  enabled: true
+  top_k: 20
+  entailment_threshold: 0.7
+  seed: 42
+
+# Payoff configuration
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+
+# Basic governance
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 1.0
+
+# Agents
+agents:
+  - type: retriever
+    count: 2
+    name: honest_retriever
+    config:
+      bias: recall
+
+  - type: synthesizer
+    count: 2
+    name: honest_synthesizer
+
+  - type: verifier
+    count: 2
+    name: honest_verifier
+    config:
+      accuracy: 0.9
+
+# Success criteria
+success_criteria:
+  min_citation_precision: 0.7
+  max_hallucination_rate: 0.2
+
+# Outputs
+outputs:
+  event_log: runs/scholar_bench/baseline/events.jsonl
+  metrics_csv: runs/scholar_bench/baseline/metrics.csv
