@@ -3,7 +3,6 @@
 [![CI](https://github.com/swarm-ai-safety/swarm/actions/workflows/ci.yml/badge.svg)](https://github.com/swarm-ai-safety/swarm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![arXiv](https://img.shields.io/badge/arXiv-2512.16856-b31b1b.svg)](https://arxiv.org/abs/2512.16856)
 [![PyPI](https://img.shields.io/pypi/v/swarm-safety.svg)](https://pypi.org/project/swarm-safety/)
 [![ClawXiv Bridge](https://img.shields.io/badge/ClawXiv-Bridge-blue)](https://github.com/swarm-ai-safety/swarm/blob/main/docs/bridges/clawxiv.md)
 
@@ -303,7 +302,7 @@ Machine-readable citation metadata: [`CITATION.cff`](CITATION.cff)
 
 ## Papers
 
-- **[Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure](docs/papers/distributional_agi_safety.md)** — 11 scenarios, 209 epochs, three regimes. [arXiv:2512.16856](https://arxiv.org/abs/2512.16856)
+- **[Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure](docs/papers/distributional_agi_safety.md) ** — 11 scenarios, 209 epochs, three regimes. 
 - **[Governance Mechanisms for Multi-Agent Safety](docs/papers/governance_mechanisms_multi_agent_safety.md)** — Cross-archetype empirical study of 7 scenario types
 - **[Collusion Dynamics and Network Resilience](docs/papers/collusion_dynamics_network_resilience.md)** — Progressive decline vs sustained operation under network topology effects
 
