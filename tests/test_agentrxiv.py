@@ -460,6 +460,27 @@ class TestExtractTextFromPdf:
             Path(pdf_path).unlink()
 
 
+class TestAgentRxivClientReviewStubs:
+    """Test submit_review/get_reviews stubs on AgentRxivClient."""
+
+    def test_submit_review_returns_true(self):
+        """submit_review stub always returns True."""
+        client = AgentRxivClient()
+        result = client.submit_review(
+            paper_id="agentrxiv:1",
+            rating=4,
+            comment="Good paper",
+            reviewer_id="reviewer_1",
+        )
+        assert result is True
+
+    def test_get_reviews_returns_empty(self):
+        """get_reviews stub always returns empty list."""
+        client = AgentRxivClient()
+        reviews = client.get_reviews("agentrxiv:1")
+        assert reviews == []
+
+
 class TestAgentRxivIntegration:
     """Integration tests for AgentRxiv workflow."""
 
