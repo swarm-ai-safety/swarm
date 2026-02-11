@@ -12,6 +12,83 @@ from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Set
 
+# Whitelisted keys for condition and effect dicts.
+# Keys outside these sets are stripped during validation to prevent
+# untrusted agents from injecting arbitrary influence via crafted skills.
+VALID_CONDITION_KEYS = frozenset({
+    "min_p", "max_p", "min_reputation", "max_reputation",
+    "interaction_types", "counterparty_types", "min_trust", "max_trust",
+})
+VALID_EFFECT_KEYS = frozenset({
+    "acceptance_threshold_delta", "trust_weight_delta",
+    "preferred_action", "avoid_action", "target_type_preference",
+})
+
+# Range constraints for numeric values in condition/effect dicts
+_CONDITION_RANGES: Dict[str, tuple] = {
+    "min_p": (0.0, 1.0),
+    "max_p": (0.0, 1.0),
+    "min_reputation": (-100.0, 100.0),
+    "max_reputation": (-100.0, 100.0),
+    "min_trust": (0.0, 1.0),
+    "max_trust": (0.0, 1.0),
+}
+_EFFECT_RANGES: Dict[str, tuple] = {
+    "acceptance_threshold_delta": (-0.5, 0.5),
+    "trust_weight_delta": (-0.5, 0.5),
+}
+
+
+def _clamp(value: float, lo: float, hi: float) -> float:
+    return max(lo, min(hi, value))
+
+
+def validate_condition(cond: Dict) -> Dict:
+    """Validate and sanitise a skill condition dict.
+
+    - Strips keys not in VALID_CONDITION_KEYS
+    - Clamps numeric values to allowed ranges
+    - Caps list-type values to reasonable length
+    """
+    cleaned: Dict = {}
+    for key, value in cond.items():
+        if key not in VALID_CONDITION_KEYS:
+            continue
+        if key in _CONDITION_RANGES and isinstance(value, (int, float)):
+            lo, hi = _CONDITION_RANGES[key]
+            cleaned[key] = _clamp(float(value), lo, hi)
+        elif key in ("interaction_types", "counterparty_types"):
+            if isinstance(value, list):
+                cleaned[key] = [str(v) for v in value[:50]]  # cap list size
+            else:
+                continue
+        else:
+            cleaned[key] = value
+    return cleaned
+
+
+def validate_effect(eff: Dict) -> Dict:
+    """Validate and sanitise a skill effect dict.
+
+    - Strips keys not in VALID_EFFECT_KEYS
+    - Clamps numeric deltas to allowed ranges
+    """
+    cleaned: Dict = {}
+    for key, value in eff.items():
+        if key not in VALID_EFFECT_KEYS:
+            continue
+        if key in _EFFECT_RANGES and isinstance(value, (int, float)):
+            lo, hi = _EFFECT_RANGES[key]
+            cleaned[key] = _clamp(float(value), lo, hi)
+        else:
+            cleaned[key] = value
+    return cleaned
+
+
+def clamp_p(p: float) -> float:
+    """Clamp p to [0, 1].  Enforces the documented safety invariant."""
+    return max(0.0, min(1.0, float(p)))
+
 
 class SkillType(Enum):
     """Types of skills in the library."""
@@ -92,7 +169,11 @@ class Skill:
 
     @classmethod
     def from_dict(cls, data: Dict) -> "Skill":
-        """Deserialize from dictionary."""
+        """Deserialize from dictionary.
+
+        Validates and sanitises condition/effect dicts to prevent
+        injection of arbitrary keys or out-of-range numeric values.
+        """
         return cls(
             skill_id=data["skill_id"],
             name=data["name"],
@@ -103,8 +184,8 @@ class Skill:
             version=data.get("version", 1),
             parent_id=data.get("parent_id"),
             child_ids=data.get("child_ids", []),
-            condition=data.get("condition", {}),
-            effect=data.get("effect", {}),
+            condition=validate_condition(data.get("condition", {})),
+            effect=validate_effect(data.get("effect", {})),
             source_interaction_ids=data.get("source_interaction_ids", []),
             tags=set(data.get("tags", [])),
         )
@@ -151,6 +232,7 @@ class SkillPerformance:
 
     def record(self, payoff: float, p: float) -> None:
         """Record a skill invocation outcome."""
+        p = clamp_p(p)
         self.invocations += 1
         self.total_payoff += payoff
         self.total_p_delta += p - 0.5  # Deviation from neutral
@@ -187,6 +269,9 @@ class SkillInvocation:
     payoff: float = 0.0
     p: float = 0.5
     timestamp: datetime = field(default_factory=datetime.now)
+
+    def __post_init__(self) -> None:
+        self.p = clamp_p(self.p)
 
     def to_dict(self) -> Dict:
         """Serialize."""

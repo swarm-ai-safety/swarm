@@ -115,6 +115,9 @@ class SkillHandler:
         # Track skill invocation agents for poisoning detection
         self._invocation_agents: Dict[str, Set[str]] = {}
 
+        # Track skill IDs already proposed to shared library to avoid re-proposing
+        self._proposed_skill_ids: Set[str] = set()
+
     @property
     def enabled(self) -> bool:
         return self.config.enabled
@@ -284,16 +287,16 @@ class SkillHandler:
             SharingMode.SHARED_GATED,
             SharingMode.COMMUNICATION,
         ):
-            # Check if agent just extracted a new skill
             engine = self._evolution_engines.get(agent_id)
             if engine:
-                # Try to propose the newest skill to shared library
                 skills = agent.skill_library.all_skills
                 if skills:
                     newest = max(skills, key=lambda s: s.created_at)
-                    # Only propose recently created skills
-                    self._governance.propose_skill(
-                        skill=newest,
-                        author_reputation=reputation,
-                        library=self._shared_library,
-                    )
+                    # Only propose genuinely new skills (not already proposed)
+                    if newest.skill_id not in self._proposed_skill_ids:
+                        self._proposed_skill_ids.add(newest.skill_id)
+                        self._governance.propose_skill(
+                            skill=newest,
+                            author_reputation=reputation,
+                            library=self._shared_library,
+                        )

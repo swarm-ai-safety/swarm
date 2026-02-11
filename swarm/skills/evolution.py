@@ -45,6 +45,13 @@ class EvolutionConfig:
     # Rate limiting
     max_extractions_per_epoch: int = 5
 
+    # Memory bounds
+    max_invocation_log_size: int = 5000
+    max_co_occurrence_entries: int = 10000
+
+    # Effect delta clamp range for composed skills
+    max_effect_delta: float = 0.5
+
 
 class SkillEvolutionEngine:
     """Extracts, evolves, and composes skills from interaction outcomes.
@@ -178,6 +185,11 @@ class SkillEvolutionEngine:
             p=p,
         )
         self._invocation_log.append(invocation)
+        # Cap invocation log to prevent unbounded memory growth
+        if len(self._invocation_log) > self.config.max_invocation_log_size:
+            self._invocation_log = self._invocation_log[
+                -self.config.max_invocation_log_size:
+            ]
         library.record_invocation(skill_id, payoff, p)
         return invocation
 
@@ -357,18 +369,22 @@ class SkillEvolutionEngine:
 
         return merged
 
-    @staticmethod
-    def _merge_effects(eff_a: Dict, eff_b: Dict) -> Dict:
-        """Merge two effects additively for numeric values."""
+    def _merge_effects(self, eff_a: Dict, eff_b: Dict) -> Dict:
+        """Merge two effects additively for numeric values.
+
+        Clamps numeric deltas to [-max_effect_delta, +max_effect_delta]
+        to prevent unbounded accumulation through recursive composition.
+        """
         merged: Dict = {}
         all_keys = set(eff_a.keys()) | set(eff_b.keys())
+        clamp = self.config.max_effect_delta
 
         for key in all_keys:
             va = eff_a.get(key)
             vb = eff_b.get(key)
 
             if isinstance(va, (int, float)) and isinstance(vb, (int, float)):
-                merged[key] = va + vb
+                merged[key] = max(-clamp, min(clamp, va + vb))
             elif va is not None:
                 merged[key] = va
             else:
@@ -382,3 +398,13 @@ class SkillEvolutionEngine:
             for sid_b in skill_ids[i + 1:]:
                 key = tuple(sorted([sid_a, sid_b]))
                 self._co_occurrences[key] = self._co_occurrences.get(key, 0) + 1
+
+        # Cap co-occurrence dict to prevent unbounded growth
+        if len(self._co_occurrences) > self.config.max_co_occurrence_entries:
+            # Keep only the entries with highest counts
+            sorted_entries = sorted(
+                self._co_occurrences.items(), key=lambda x: x[1], reverse=True
+            )
+            self._co_occurrences = dict(
+                sorted_entries[: self.config.max_co_occurrence_entries]
+            )

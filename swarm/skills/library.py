@@ -16,6 +16,7 @@ from swarm.skills.model import (
     SkillDomain,
     SkillPerformance,
     SkillType,
+    clamp_p,
 )
 
 
@@ -216,6 +217,7 @@ class SkillLibrary:
         p: float,
     ) -> None:
         """Record the outcome of invoking a skill."""
+        p = clamp_p(p)
         perf = self._performance.get(skill_id)
         if perf:
             perf.record(payoff, p)

@@ -7,6 +7,7 @@ Controls:
 - Version control / rollback for shared skills
 """
 
+import copy
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional, Set
 
@@ -86,7 +87,11 @@ class SkillGovernanceEngine:
         agent_reputation: float,
         library: SkillLibrary,
     ) -> bool:
-        """Check if agent has permission to write to the library."""
+        """Check if agent has permission to write to the library.
+
+        Reputation gating applies to all shared library modes
+        (SHARED_GATED and COMMUNICATION).
+        """
         if library.owner_id != "shared":
             return True  # Private libraries are unrestricted
 
@@ -282,7 +287,7 @@ class SkillGovernanceEngine:
         if skill.skill_id not in self._skill_versions:
             self._skill_versions[skill.skill_id] = []
 
-        self._skill_versions[skill.skill_id].append(skill)
+        self._skill_versions[skill.skill_id].append(copy.deepcopy(skill))
 
         # Trim old versions
         max_v = self.config.max_versions_kept
