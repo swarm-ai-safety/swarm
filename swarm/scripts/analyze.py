@@ -335,7 +335,7 @@ def format_results(
 
 
 # ── Main analysis pipeline ─────────────────────────────────────────────
-def analyze(scenario_path: Path, seeds: List[int]) -> Tuple[str, Dict[str, Any]]:
+def analyze(scenario_path: Path, seeds: List[int]) -> Tuple[str, Dict[str, Any], List[Dict[str, Any]]]:
     """Run the full analysis pipeline.
 
     Returns (formatted_text, summary_dict).
@@ -387,13 +387,13 @@ def analyze(scenario_path: Path, seeds: List[int]) -> Tuple[str, Dict[str, Any]]
     overall_gini = gini_coefficient(all_values)
 
     # Gini per seed for 1-sample t-test
-    gini_per_seed = []
+    gini_per_seed_list = []
     for sd in per_seed_data:
         seed_vals = []
         for label in group_labels:
             seed_vals.extend(sd.get(label, []))
-        gini_per_seed.append(gini_coefficient(np.array(seed_vals)))
-    gini_per_seed = np.array(gini_per_seed)
+        gini_per_seed_list.append(gini_coefficient(np.array(seed_vals)))
+    gini_per_seed = np.array(gini_per_seed_list)
 
     # ── Hypothesis tests ───────────────────────────────────────────────
     tests: List[Dict[str, Any]] = []
@@ -569,7 +569,7 @@ def analyze(scenario_path: Path, seeds: List[int]) -> Tuple[str, Dict[str, Any]]
                     "payoff": payoff,
                 })
 
-    return text, summary, csv_rows  # type: ignore[return-value]
+    return text, summary, csv_rows
 
 
 def save_artifacts(
