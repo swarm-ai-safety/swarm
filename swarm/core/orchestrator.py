@@ -503,7 +503,10 @@ class Orchestrator:
 
         # Handler epoch-start hooks (via registry)
         for handler in self._handler_registry.all_handlers():
-            handler.on_epoch_start(self.state)
+            try:
+                handler.on_epoch_start(self.state)
+            except Exception:
+                pass  # handler hook failures must not break simulation
 
         # Apply epoch-start governance (reputation decay, unfreezes)
         if self.governance_engine:
@@ -521,7 +524,10 @@ class Orchestrator:
 
         # Handler epoch-end hooks (via registry)
         for handler in self._handler_registry.all_handlers():
-            handler.on_epoch_end(self.state)
+            try:
+                handler.on_epoch_end(self.state)
+            except Exception:
+                pass  # handler hook failures must not break simulation
 
         # Apply network edge decay
         if self.network is not None:
@@ -585,7 +591,10 @@ class Orchestrator:
 
         # Handler per-step hooks (via registry)
         for handler in self._handler_registry.all_handlers():
-            handler.on_step(self.state, self.state.current_step)
+            try:
+                handler.on_step(self.state, self.state.current_step)
+            except Exception:
+                pass  # handler hook failures must not break simulation
 
         # Get agent schedule for this step
         agent_order = self._get_agent_schedule()
@@ -782,11 +791,20 @@ class Orchestrator:
         # Collect handler observation fields via registry
         handler_fields: Dict[str, Any] = {}
         for handler in self._handler_registry.all_handlers():
-            handler.on_pre_observation(agent_id, self.state)
-            fields = handler.build_observation_fields(agent_id, self.state)
+            try:
+                handler.on_pre_observation(agent_id, self.state)
+                fields = handler.build_observation_fields(agent_id, self.state)
+            except Exception:
+                continue
             mapping = handler.observation_field_mapping()
             for key, value in fields.items():
                 obs_key = mapping.get(key, key)
+                if obs_key in handler_fields:
+                    raise ValueError(
+                        f"Observation field '{obs_key}' returned by "
+                        f"{type(handler).__name__} conflicts with a field "
+                        f"already set by another handler"
+                    )
                 handler_fields[obs_key] = value
 
         return Observation(
@@ -897,11 +915,18 @@ class Orchestrator:
             return core_result
 
         # --- Handler-dispatched actions (via registry) ---
+        if not isinstance(action.action_type, ActionType):
+            return False
+
         handler = self._handler_registry.get_handler(action.action_type)
         if handler is None:
             return False
 
-        result = handler.handle_action(action, self.state)
+        try:
+            result = handler.handle_action(action, self.state)
+        except Exception:
+            return False
+
         if not result.success:
             return False
 
@@ -912,17 +937,26 @@ class Orchestrator:
         # Standard proxy computation + interaction finalization pipeline
         v_hat, p = self.proxy_computer.compute_labels(result.observables)
 
-        # Build interaction_type: use result attribute if present
+        # Build interaction_type from result
         interaction_type = InteractionType.COLLABORATION
-        if hasattr(result, "interaction_type"):
+        if hasattr(result, "interaction_type") and isinstance(
+            getattr(result, "interaction_type", None), InteractionType
+        ):
             interaction_type = result.interaction_type
 
-        # Build tau and ground_truth from result if present
-        tau = getattr(result, "tau", 0.0)
-        ground_truth_val = getattr(result, "ground_truth", None)
-        # For backward compat with domain-specific result types
-        if hasattr(result, "points") and not hasattr(result, "tau"):
+        # Build tau: prefer explicit tau, fall back to negated points
+        tau = 0.0
+        if hasattr(result, "tau") and result.tau != 0.0:
+            tau = result.tau
+        elif hasattr(result, "points") and result.points != 0.0:
             tau = -result.points
+
+        # Build ground_truth: prefer explicit field, fall back to submission
+        ground_truth_val = getattr(result, "ground_truth", None)
+        if ground_truth_val is None and hasattr(result, "submission"):
+            submission = result.submission
+            if submission is not None:
+                ground_truth_val = -1 if submission.is_cheat else 1
 
         interaction = SoftInteraction(
             initiator=result.initiator_id,
@@ -944,7 +978,10 @@ class Orchestrator:
         gov_effect, _, _ = self._finalize_interaction(interaction)
 
         # Handler-specific post-processing
-        handler.post_finalize(result, interaction, gov_effect, self.state)
+        try:
+            handler.post_finalize(result, interaction, gov_effect, self.state)
+        except Exception:
+            pass  # post_finalize failures must not break the action
 
         return True
 
@@ -1564,7 +1601,10 @@ class Orchestrator:
 
         # Handler epoch-start hooks (via registry)
         for handler in self._handler_registry.all_handlers():
-            handler.on_epoch_start(self.state)
+            try:
+                handler.on_epoch_start(self.state)
+            except Exception:
+                pass
 
         # Apply epoch-start governance (reputation decay, unfreezes)
         if self.governance_engine:
@@ -1582,7 +1622,10 @@ class Orchestrator:
 
         # Handler epoch-end hooks (via registry)
         for handler in self._handler_registry.all_handlers():
-            handler.on_epoch_end(self.state)
+            try:
+                handler.on_epoch_end(self.state)
+            except Exception:
+                pass
 
         # Apply network edge decay
         if self.network is not None:
@@ -1630,7 +1673,10 @@ class Orchestrator:
 
         # Handler per-step hooks (via registry)
         for handler in self._handler_registry.all_handlers():
-            handler.on_step(self.state, self.state.current_step)
+            try:
+                handler.on_step(self.state, self.state.current_step)
+            except Exception:
+                pass
 
         # Get agent schedule for this step
         agent_order = self._get_agent_schedule()
