@@ -69,11 +69,11 @@ class BoulwareStrategy(NegotiationStrategy):
         if is_buyer:
             lo = state.seller_reservation * 0.8
             hi = state.buyer_reservation
-            return lo + concession * (hi - lo)
+            return float(lo + concession * (hi - lo))
         else:
             hi = state.buyer_reservation * 1.2
             lo = state.seller_reservation
-            return hi - concession * (hi - lo)
+            return float(hi - concession * (hi - lo))
 
     def should_accept(
         self, state: NegotiationState, offer: float, is_buyer: bool
@@ -105,9 +105,9 @@ class AdaptiveStrategy(NegotiationStrategy):
             concession = 0.1 * t
 
         if is_buyer:
-            return state.buyer_reservation * (0.6 + concession)
+            return float(state.buyer_reservation * (0.6 + concession))
         else:
-            return state.seller_reservation * (1.4 - concession)
+            return float(state.seller_reservation * (1.4 - concession))
 
     def should_accept(
         self, state: NegotiationState, offer: float, is_buyer: bool

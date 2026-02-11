@@ -329,10 +329,10 @@ class HybridMechanism(MatchingMechanism):
         # Phase 1: Recommender pre-filters for each proposer
         # Each proposer gets a shortlist of top-k receivers
         shortlists: List[List[int]] = []
-        for p in proposers:
+        for prop in proposers:
             scores = []
-            for j, r in enumerate(receivers):
-                u = p.preferences.utility(r.attributes, 0.0)
+            for j, recv in enumerate(receivers):
+                u = prop.preferences.utility(recv.attributes, 0.0)
                 u += float(rng.normal(0, self.recommender_noise))
                 scores.append((j, u))
             scores.sort(key=lambda x: x[1], reverse=True)
@@ -344,12 +344,12 @@ class HybridMechanism(MatchingMechanism):
 
         # Receiver rankings (over all proposers)
         receiver_ranks: List[Dict[int, int]] = []
-        for r in receivers:
+        for recv in receivers:
             scores = []
-            for j, p in enumerate(proposers):
-                u = r.preferences.utility(p.attributes, 0.0)
-                if r.preferences.noise_std > 0:
-                    u += float(rng.normal(0, r.preferences.noise_std))
+            for j, prop in enumerate(proposers):
+                u = recv.preferences.utility(prop.attributes, 0.0)
+                if recv.preferences.noise_std > 0:
+                    u += float(rng.normal(0, recv.preferences.noise_std))
                 scores.append((j, u))
             scores.sort(key=lambda x: x[1], reverse=True)
             receiver_ranks.append(

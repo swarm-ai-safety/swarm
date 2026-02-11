@@ -16,6 +16,7 @@ import numpy as np
 from swarm.csm.matching import (
     DeferredAcceptance,
     HybridMechanism,
+    MatchingMechanism,
     RecommenderBaseline,
     generate_candidates,
     measure_congestion,
@@ -41,6 +42,7 @@ from swarm.csm.negotiation import (
     NegotiationEngine,
     NegotiationResult,
     NegotiationState,
+    NegotiationStrategy,
 )
 from swarm.csm.search_purchase import (
     BuyerAgentConfig,
@@ -254,6 +256,7 @@ def run_matching_episode(
         rng = np.random.default_rng(treatment.seed)
 
     # Select mechanism
+    matcher: MatchingMechanism
     if mechanism == "recommender":
         matcher = RecommenderBaseline()
     elif mechanism == "hybrid":
@@ -359,6 +362,8 @@ def run_negotiation_episode(
             )
 
             # Choose strategies based on treatment
+            buyer_strat: NegotiationStrategy
+            seller_strat: NegotiationStrategy
             if treatment.tx_cost_regime == TransactionCostRegime.HUMAN:
                 buyer_strat = GreedyStrategy()
                 seller_strat = GreedyStrategy()
