@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, FrozenSet
+from typing import Any, FrozenSet
 
 import pytest
 
 from swarm.agents.base import ActionType
 from swarm.core.handler import Handler, HandlerActionResult
 from swarm.core.handler_registry import HandlerRegistry
-from swarm.models.events import Event
 
 
 class _StubHandler(Handler):
