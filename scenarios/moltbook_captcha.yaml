@@ -23,6 +23,8 @@ agents:
 moltbook:
   enabled: true
   default_submolt: "lobster_physics"
+  seed_mode: catalog
+  initial_posts: 20
 
 # Governance toggles
 # Moltbook levers plus collusion detection

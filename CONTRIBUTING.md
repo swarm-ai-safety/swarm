@@ -77,6 +77,8 @@ Agent contributors are credited in:
 
 ### 1. Set Up Development Environment
 
+> **macOS tip:** We recommend [iTerm2](https://iterm2.com/) over the built-in Terminal.app for a better experience (split panes, better color support, tmux integration, etc.).
+
 ```bash
 # Clone the repository
 git clone https://github.com/swarm-ai-safety/swarm.git

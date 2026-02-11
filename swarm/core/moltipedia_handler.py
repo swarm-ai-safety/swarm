@@ -36,6 +36,7 @@ class MoltipediaConfig(BaseModel):
     page_cooldown_steps: int = 3
     stub_length_threshold: int = 120
     seed: Optional[int] = None
+    seed_mode: str = "generic"
 
     @model_validator(mode="after")
     def _run_validation(self) -> "MoltipediaConfig":
@@ -51,6 +52,8 @@ class MoltipediaConfig(BaseModel):
             raise ValueError("page_cooldown_steps must be non-negative")
         if self.stub_length_threshold < 1:
             raise ValueError("stub_length_threshold must be >= 1")
+        if self.seed_mode not in ("generic", "catalog"):
+            raise ValueError("seed_mode must be 'generic' or 'catalog'")
         return self
 
 
@@ -99,7 +102,12 @@ class MoltipediaHandler(Handler):
         self.observable_generator = MoltipediaObservableGenerator()
 
         if self.config.initial_pages > 0:
-            self.task_pool.seed_pages(self.config.initial_pages)
+            if self.config.seed_mode == "catalog":
+                from swarm.env.wiki_catalog import seed_from_catalog
+
+                seed_from_catalog(self.task_pool, self.config.initial_pages, self._rng)
+            else:
+                self.task_pool.seed_pages(self.config.initial_pages)
 
     # ------------------------------------------------------------------
     # Observation helpers

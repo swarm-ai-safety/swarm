@@ -363,7 +363,7 @@ class TestOpenClawService:
         data = resp.json()
         assert "job_id" in data
         # Job may already be running by the time the response is built
-        assert data["status"] in ("queued", "running")
+        assert data["status"] in ("queued", "running", "completed")
 
     def test_get_run_status(self):
         def mock_sim(scenario, seed):

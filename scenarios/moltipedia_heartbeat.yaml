@@ -23,6 +23,7 @@ agents:
 moltipedia:
   enabled: true
   initial_pages: 50
+  seed_mode: catalog
   contested_queue_size: 6
   random_queue_size: 6
   search_queue_size: 6

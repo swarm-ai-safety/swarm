@@ -434,6 +434,7 @@ def parse_moltipedia_config(data: Dict[str, Any]) -> Optional[MoltipediaConfig]:
         page_cooldown_steps=data.get("page_cooldown_steps", 3),
         stub_length_threshold=data.get("stub_length_threshold", 120),
         seed=data.get("seed"),
+        seed_mode=data.get("seed_mode", "generic"),
     )
     return config
 
@@ -459,6 +460,8 @@ def parse_moltbook_config(data: Dict[str, Any]) -> Optional[MoltbookConfig]:
         default_submolt=data.get("default_submolt", "general"),
         max_content_length=data.get("max_content_length", 10000),
         seed=data.get("seed"),
+        seed_mode=data.get("seed_mode", "none"),
+        initial_posts=data.get("initial_posts", 0),
     )
     return config
 

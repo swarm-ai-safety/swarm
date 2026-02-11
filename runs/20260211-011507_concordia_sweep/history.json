@@ -1,0 +1,818 @@
+[
+  {
+    "label": "baseline",
+    "seed": 42,
+    "mean_toxicity": 0.3463449037096523,
+    "mean_welfare": 43.243437999196935,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.36825842158678335,
+        "welfare": 40.285113085784246,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.26081871488115155,
+        "welfare": 54.78947349104454,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.5921399056851493,
+        "welfare": 10.06111273250484,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.24988633459188442,
+        "welfare": 56.26534483009561,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.26062114180329293,
+        "welfare": 54.81614585655545,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "baseline",
+    "seed": 43,
+    "mean_toxicity": 0.390614564543993,
+    "mean_welfare": 37.267033786560944,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.3543941688828874,
+        "welfare": 42.1567872008102,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.34631230835095034,
+        "welfare": 43.2478383726217,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.4882371466075038,
+        "welfare": 24.087985207986996,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.1942168519936874,
+        "welfare": 63.7807249808522,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.5699123468849362,
+        "welfare": 13.061833170533616,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "tax_only",
+    "seed": 42,
+    "mean_toxicity": 0.3463449037096523,
+    "mean_welfare": 41.0394217562894,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.36825842158678335,
+        "welfare": 38.06163571675657,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.26081871488115155,
+        "welfare": 52.04999981649231,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.5921399056851493,
+        "welfare": 9.5580570958796,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.24988633459188442,
+        "welfare": 53.452077588590825,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.26062114180329293,
+        "welfare": 52.075338563727676,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "tax_only",
+    "seed": 43,
+    "mean_toxicity": 0.390614564543993,
+    "mean_welfare": 35.31898957382566,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.3543941688828874,
+        "welfare": 39.86980281935634,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.34631230835095034,
+        "welfare": 41.08544645399061,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.4882371466075038,
+        "welfare": 22.742569334111042,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.1942168519936874,
+        "welfare": 60.59168873180959,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.5699123468849362,
+        "welfare": 12.305440529860716,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "reputation",
+    "seed": 42,
+    "mean_toxicity": 0.3463449037096523,
+    "mean_welfare": 43.243437999196935,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.36825842158678335,
+        "welfare": 40.285113085784246,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.26081871488115155,
+        "welfare": 54.78947349104454,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.5921399056851493,
+        "welfare": 10.06111273250484,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.24988633459188442,
+        "welfare": 56.26534483009561,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.26062114180329293,
+        "welfare": 54.81614585655545,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "reputation",
+    "seed": 43,
+    "mean_toxicity": 0.390614564543993,
+    "mean_welfare": 37.267033786560944,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.3543941688828874,
+        "welfare": 42.1567872008102,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.34631230835095034,
+        "welfare": 43.2478383726217,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.4882371466075038,
+        "welfare": 24.087985207986996,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.1942168519936874,
+        "welfare": 63.7807249808522,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.5699123468849362,
+        "welfare": 13.061833170533616,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "circuit_breaker",
+    "seed": 42,
+    "mean_toxicity": 0.3463449037096523,
+    "mean_welfare": 43.243437999196935,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 3,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.36825842158678335,
+        "welfare": 40.285113085784246,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.26081871488115155,
+        "welfare": 54.78947349104454,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.5921399056851493,
+        "welfare": 10.06111273250484,
+        "quality_gap": 0.0,
+        "frozen_count": 3,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.24988633459188442,
+        "welfare": 56.26534483009561,
+        "quality_gap": 0.0,
+        "frozen_count": 3,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.26062114180329293,
+        "welfare": 54.81614585655545,
+        "quality_gap": 0.0,
+        "frozen_count": 3,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "circuit_breaker",
+    "seed": 43,
+    "mean_toxicity": 0.390614564543993,
+    "mean_welfare": 37.267033786560944,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 4,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.3543941688828874,
+        "welfare": 42.1567872008102,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.34631230835095034,
+        "welfare": 43.2478383726217,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.4882371466075038,
+        "welfare": 24.087985207986996,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.1942168519936874,
+        "welfare": 63.7807249808522,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.5699123468849362,
+        "welfare": 13.061833170533616,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "audits",
+    "seed": 42,
+    "mean_toxicity": 0.3463449037096523,
+    "mean_welfare": 42.45202846946198,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.36825842158678335,
+        "welfare": 38.2078803222697,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.26081871488115155,
+        "welfare": 54.78947349104454,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.5921399056851493,
+        "welfare": 8.18129784734459,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.24988633459188442,
+        "welfare": 56.26534483009561,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.26062114180329293,
+        "welfare": 54.81614585655545,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "audits",
+    "seed": 43,
+    "mean_toxicity": 0.390614564543993,
+    "mean_welfare": 36.46089110677148,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.3543941688828874,
+        "welfare": 40.679067143707925,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.34631230835095034,
+        "welfare": 43.2478383726217,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.4882371466075038,
+        "welfare": 21.970314726421957,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.1942168519936874,
+        "welfare": 63.7807249808522,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.5699123468849362,
+        "welfare": 12.626510310253606,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "collusion_detection",
+    "seed": 42,
+    "mean_toxicity": 0.3463449037096523,
+    "mean_welfare": 43.243437999196935,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.36825842158678335,
+        "welfare": 40.285113085784246,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.26081871488115155,
+        "welfare": 54.78947349104454,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.5921399056851493,
+        "welfare": 10.06111273250484,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.24988633459188442,
+        "welfare": 56.26534483009561,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.26062114180329293,
+        "welfare": 54.81614585655545,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "collusion_detection",
+    "seed": 43,
+    "mean_toxicity": 0.390614564543993,
+    "mean_welfare": 37.267033786560944,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.3543941688828874,
+        "welfare": 42.1567872008102,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.34631230835095034,
+        "welfare": 43.2478383726217,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.4882371466075038,
+        "welfare": 24.087985207986996,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.1942168519936874,
+        "welfare": 63.7807249808522,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.5699123468849362,
+        "welfare": 13.061833170533616,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "light_defense",
+    "seed": 42,
+    "mean_toxicity": 0.3463449037096523,
+    "mean_welfare": 41.510703549704175,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.36825842158678335,
+        "welfare": 37.78258323489071,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.26081871488115155,
+        "welfare": 53.1457892863132,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.5921399056851493,
+        "welfare": 8.876099261265438,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.24988633459188442,
+        "welfare": 54.57738448519274,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.26062114180329293,
+        "welfare": 53.17166148085879,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "light_defense",
+    "seed": 43,
+    "mean_toxicity": 0.390614564543993,
+    "mean_welfare": 35.8533385636034,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 0,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.3543941688828874,
+        "welfare": 40.04573654338675,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.34631230835095034,
+        "welfare": 41.950403221443054,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.4882371466075038,
+        "welfare": 22.795252235630688,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.1942168519936874,
+        "welfare": 61.86730323142663,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.5699123468849362,
+        "welfare": 12.607997586129875,
+        "quality_gap": 0.0,
+        "frozen_count": 0,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "full_defense",
+    "seed": 42,
+    "mean_toxicity": 0.3463449037096523,
+    "mean_welfare": 37.24792305065652,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 4,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.36825842158678335,
+        "welfare": 33.48187310234849,
+        "quality_gap": 0.0,
+        "frozen_count": 1,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.26081871488115155,
+        "welfare": 50.406315611760974,
+        "quality_gap": 0.0,
+        "frozen_count": 2,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.5921399056851493,
+        "welfare": 6.90645510745414,
+        "quality_gap": 0.0,
+        "frozen_count": 3,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.24988633459188442,
+        "welfare": 51.764117243687956,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.26062114180329293,
+        "welfare": 43.68085418803101,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      }
+    ]
+  },
+  {
+    "label": "full_defense",
+    "seed": 43,
+    "mean_toxicity": 0.390614564543993,
+    "mean_welfare": 32.05580734774427,
+    "mean_quality_gap": 0.0,
+    "max_frozen": 4,
+    "total_interactions": 225,
+    "epoch_metrics": [
+      {
+        "epoch": 0,
+        "toxicity": 0.3543941688828874,
+        "welfare": 36.65046211910618,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 1,
+        "toxicity": 0.34631230835095034,
+        "welfare": 39.78801130281197,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 2,
+        "toxicity": 0.4882371466075038,
+        "welfare": 18.36119898412822,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 3,
+        "toxicity": 0.1942168519936874,
+        "welfare": 58.678266982384024,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      },
+      {
+        "epoch": 4,
+        "toxicity": 0.5699123468849362,
+        "welfare": 6.8010973502909655,
+        "quality_gap": 0.0,
+        "frozen_count": 4,
+        "interactions_count": 45
+      }
+    ]
+  }
+]

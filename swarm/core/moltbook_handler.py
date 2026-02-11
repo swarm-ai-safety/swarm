@@ -33,11 +33,17 @@ class MoltbookConfig(BaseModel):
     default_submolt: str = "general"
     max_content_length: int = 10000
     seed: Optional[int] = None
+    seed_mode: str = "none"
+    initial_posts: int = 0
 
     @model_validator(mode="after")
     def _run_validation(self) -> "MoltbookConfig":
         if self.max_content_length < 1:
             raise ValueError("max_content_length must be >= 1")
+        if self.seed_mode not in ("none", "catalog"):
+            raise ValueError("seed_mode must be 'none' or 'catalog'")
+        if self.initial_posts < 0:
+            raise ValueError("initial_posts must be non-negative")
         return self
 
 
@@ -124,6 +130,11 @@ class MoltbookHandler(Handler):
         self._challenge_lever = challenge_lever or ChallengeVerificationLever(
             self.governance_config
         )
+
+        if self.config.seed_mode == "catalog" and self.config.initial_posts > 0:
+            from swarm.env.moltbook_catalog import seed_from_catalog
+
+            seed_from_catalog(self.feed, self.config.initial_posts, self._rng)
 
     # ------------------------------------------------------------------
     # Observation helpers
