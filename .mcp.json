@@ -8,7 +8,7 @@
       }
     },
     "sqlite_runs": {
-      "command": "/Users/raelisavitt/.local/bin/uvx",
+      "command": "uvx",
       "args": ["mcp-server-sqlite", "--db-path", "runs/runs.db"]
     }
   }
