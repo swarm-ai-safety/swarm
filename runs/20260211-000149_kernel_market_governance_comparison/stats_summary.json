@@ -1,0 +1,1648 @@
+{
+  "descriptive": {
+    "audits_only": {
+      "welfare": {
+        "mean": 15.018014475850777,
+        "sd": 4.001299933283842
+      },
+      "toxicity_rate": {
+        "mean": 0.43190463621405994,
+        "sd": 0.01782104563352538
+      },
+      "quality_gap": {
+        "mean": 0.11636565564520611,
+        "sd": 0.03360827630763735
+      },
+      "honest_payoff": {
+        "mean": 3.2758924393826745,
+        "sd": 1.6398258006185638
+      },
+      "opportunistic_payoff": {
+        "mean": 2.9267506903192495,
+        "sd": 1.1991659454329389
+      },
+      "adversarial_payoff": {
+        "mean": -1.7949574566274975,
+        "sd": 0.4951509723701438
+      }
+    },
+    "audits_staking": {
+      "welfare": {
+        "mean": 13.337687042176777,
+        "sd": 5.501541165603951
+      },
+      "toxicity_rate": {
+        "mean": 0.43957027079159294,
+        "sd": 0.022207173138594855
+      },
+      "quality_gap": {
+        "mean": 0.09699028785187572,
+        "sd": 0.044867090402155196
+      },
+      "honest_payoff": {
+        "mean": 2.9465652360057346,
+        "sd": 1.6401469655154548
+      },
+      "opportunistic_payoff": {
+        "mean": 2.6044786867943266,
+        "sd": 0.6493215077493601
+      },
+      "adversarial_payoff": {
+        "mean": -1.657722363111705,
+        "sd": 0.6734095303642609
+      }
+    },
+    "circuit_breaker_only": {
+      "welfare": {
+        "mean": 22.955892472130028,
+        "sd": 6.757513252950572
+      },
+      "toxicity_rate": {
+        "mean": 0.3947904851686717,
+        "sd": 0.020863260901899598
+      },
+      "quality_gap": {
+        "mean": 0.03780918393018543,
+        "sd": 0.029620060120570585
+      },
+      "honest_payoff": {
+        "mean": 4.29865759068259,
+        "sd": 1.8408329717098717
+      },
+      "opportunistic_payoff": {
+        "mean": 3.744345892837708,
+        "sd": 0.9462999891049059
+      },
+      "adversarial_payoff": {
+        "mean": -0.5865589892154306,
+        "sd": 0.19605689967262718
+      }
+    },
+    "full_governance": {
+      "welfare": {
+        "mean": 21.383181429523106,
+        "sd": 8.053848056045599
+      },
+      "toxicity_rate": {
+        "mean": 0.3991605308626823,
+        "sd": 0.021077370300636583
+      },
+      "quality_gap": {
+        "mean": 0.01480731700234062,
+        "sd": 0.04457314212071885
+      },
+      "honest_payoff": {
+        "mean": 4.341699979641825,
+        "sd": 2.4411456755497576
+      },
+      "opportunistic_payoff": {
+        "mean": 3.4010550814394214,
+        "sd": 0.849746166193778
+      },
+      "adversarial_payoff": {
+        "mean": -0.9225418768603145,
+        "sd": 0.3562931188225431
+      }
+    },
+    "no_governance": {
+      "welfare": {
+        "mean": 12.699783525872931,
+        "sd": 5.741769102417222
+      },
+      "toxicity_rate": {
+        "mean": 0.44625600888117817,
+        "sd": 0.028157845830315484
+      },
+      "quality_gap": {
+        "mean": 0.11324303342774385,
+        "sd": 0.033134277823324246
+      },
+      "honest_payoff": {
+        "mean": 2.635576999681134,
+        "sd": 1.777990089089208
+      },
+      "opportunistic_payoff": {
+        "mean": 2.531518672994701,
+        "sd": 0.491153470047861
+      },
+      "adversarial_payoff": {
+        "mean": -1.4007517460772858,
+        "sd": 0.4022082975339558
+      }
+    },
+    "reputation_only": {
+      "welfare": {
+        "mean": 15.17886206064953,
+        "sd": 3.400090546450046
+      },
+      "toxicity_rate": {
+        "mean": 0.43573079946574617,
+        "sd": 0.023294628737987832
+      },
+      "quality_gap": {
+        "mean": 0.11290585287310384,
+        "sd": 0.028776548624007733
+      },
+      "honest_payoff": {
+        "mean": 3.0861832758562513,
+        "sd": 1.4937430032523848
+      },
+      "opportunistic_payoff": {
+        "mean": 2.823502283414549,
+        "sd": 0.7456668923987534
+      },
+      "adversarial_payoff": {
+        "mean": -1.2750973085814354,
+        "sd": 0.6533991780140214
+      }
+    },
+    "staking_only": {
+      "welfare": {
+        "mean": 10.653214898623284,
+        "sd": 4.128309630485692
+      },
+      "toxicity_rate": {
+        "mean": 0.451794848747049,
+        "sd": 0.02236496581066636
+      },
+      "quality_gap": {
+        "mean": 0.09895563572615097,
+        "sd": 0.03415457669826746
+      },
+      "honest_payoff": {
+        "mean": 2.259365279217233,
+        "sd": 1.1772033521640617
+      },
+      "opportunistic_payoff": {
+        "mean": 2.267902858622802,
+        "sd": 0.5503002339614049
+      },
+      "adversarial_payoff": {
+        "mean": -1.464294757448411,
+        "sd": 0.4874179269689029
+      }
+    }
+  },
+  "pairwise_all": [
+    {
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "audits_staking",
+      "t": 0.7811054125565194,
+      "p": 0.44584370777641114,
+      "d": 0.3493209600138791,
+      "diff": 1.680327433674,
+      "ci_lo": -2.870154801590166,
+      "ci_hi": 6.230809668938166,
+      "dof": 16.43977275781817,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "circuit_breaker_only",
+      "t": -3.196332866556578,
+      "p": 0.006173764176302161,
+      "d": -1.4294435136674544,
+      "diff": -7.937877996279251,
+      "ci_lo": -13.24319300129448,
+      "ci_hi": -2.632562991264022,
+      "dof": 14.620155606589478,
+      "p_bonferroni": 0.2592980954046908,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "full_governance",
+      "t": -2.2382211870842164,
+      "p": 0.04306667025680842,
+      "d": -1.0009629446001163,
+      "diff": -6.365166953672329,
+      "ci_lo": -12.500052270786876,
+      "ci_hi": -0.23028163655778222,
+      "dof": 13.18777605528641,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "no_governance",
+      "t": 1.0475018193464538,
+      "p": 0.31036528781252354,
+      "d": 0.46845705492267503,
+      "diff": 2.3182309499778455,
+      "ci_lo": -2.3716033807761523,
+      "ci_hi": 7.008065280731843,
+      "dof": 16.073270180974777,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "reputation_only",
+      "t": -0.09686974401424925,
+      "p": 0.9239279322728275,
+      "d": -0.04332146651577294,
+      "diff": -0.16084758479875383,
+      "ci_lo": -3.6558530808404397,
+      "ci_hi": 3.334157911242932,
+      "dof": 17.543040780064487,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "staking_only",
+      "t": 2.4008035291944725,
+      "p": 0.027393227552939714,
+      "d": 1.0736719783800484,
+      "diff": 4.364799577227492,
+      "ci_lo": 0.5449346874109509,
+      "ci_hi": 8.184664467044033,
+      "dof": 17.982451851480807,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "audits_staking",
+      "regime_b": "circuit_breaker_only",
+      "t": -3.490476021826689,
+      "p": 0.0027433505352517044,
+      "d": -1.560988331727503,
+      "diff": -9.618205429953251,
+      "ci_lo": -15.42452580363426,
+      "ci_hi": -3.811885056272243,
+      "dof": 17.28909963161045,
+      "p_bonferroni": 0.11522072248057158,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "audits_staking",
+      "regime_b": "full_governance",
+      "t": -2.6084993812977033,
+      "p": 0.019082064749365517,
+      "d": -1.1665563871695617,
+      "diff": -8.045494387346329,
+      "ci_lo": -14.5874322641045,
+      "ci_hi": -1.503556510588158,
+      "dof": 15.897352026920556,
+      "p_bonferroni": 0.8014467194733517,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "audits_staking",
+      "regime_b": "no_governance",
+      "t": 0.2536744276905542,
+      "p": 0.8026271958408651,
+      "d": 0.11344665289388683,
+      "diff": 0.6379035163038456,
+      "ci_lo": -4.645880309851063,
+      "ci_hi": 5.921687342458754,
+      "dof": 17.967220442800507,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "audits_staking",
+      "regime_b": "reputation_only",
+      "t": -0.9002512882572422,
+      "p": 0.3822128026823709,
+      "d": -0.40260461547499043,
+      "diff": -1.8411750184727538,
+      "ci_lo": -6.20037409752244,
+      "ci_hi": 2.5180240605769324,
+      "dof": 14.999871405987975,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "audits_staking",
+      "regime_b": "staking_only",
+      "t": 1.2341925111013523,
+      "p": 0.23422225824062007,
+      "d": 0.5519476704287576,
+      "diff": 2.684472143553492,
+      "ci_lo": -1.9109362308901918,
+      "ci_hi": 7.279880517997176,
+      "dof": 16.695561236385537,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "full_governance",
+      "t": 0.47305527396284036,
+      "p": 0.6420295857463945,
+      "d": 0.21155674993913945,
+      "diff": 1.5727110426069224,
+      "ci_lo": -5.427115601615776,
+      "ci_hi": 8.572537686829621,
+      "dof": 17.472725488353504,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "no_governance",
+      "t": 3.657490836843267,
+      "p": 0.001866271788663531,
+      "d": 1.6356796276528274,
+      "diff": 10.256108946257097,
+      "ci_lo": 4.353805416638809,
+      "ci_hi": 16.158412475875384,
+      "dof": 17.542662502888398,
+      "p_bonferroni": 0.0783834151238683,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "reputation_only",
+      "t": 3.251040728401555,
+      "p": 0.006160013038290777,
+      "d": 1.4539096132652616,
+      "diff": 7.777030411480498,
+      "ci_lo": 2.6202210464926345,
+      "ci_hi": 12.93383977646836,
+      "dof": 13.282524427055627,
+      "p_bonferroni": 0.2587205476082126,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "staking_only",
+      "t": 4.9129448308282955,
+      "p": 0.0001913048291973391,
+      "d": 2.197135722287655,
+      "diff": 12.302677573506744,
+      "ci_lo": 6.962013349466498,
+      "ci_hi": 17.643341797546988,
+      "dof": 14.896662966269561,
+      "p_bonferroni": 0.008034802826288242,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "full_governance",
+      "regime_b": "no_governance",
+      "t": 2.77618492010507,
+      "p": 0.013331032959840554,
+      "d": 1.2415476398929517,
+      "diff": 8.683397903650174,
+      "ci_lo": 2.0616700469917104,
+      "ci_hi": 15.305125760308638,
+      "dof": 16.270490370020838,
+      "p_bonferroni": 0.5599033843133032,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "full_governance",
+      "regime_b": "reputation_only",
+      "t": 2.24427557057321,
+      "p": 0.0442655825101028,
+      "d": 1.0036705472087648,
+      "diff": 6.204319368873575,
+      "ci_lo": 0.1869979034438396,
+      "ci_hi": 12.221640834303312,
+      "dof": 12.109322971506083,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "full_governance",
+      "regime_b": "staking_only",
+      "t": 3.7491841603438836,
+      "p": 0.002307600005918639,
+      "d": 1.6766861285388788,
+      "diff": 10.729966530899821,
+      "ci_lo": 4.566900074331825,
+      "ci_hi": 16.89303298746782,
+      "dof": 13.424027881668001,
+      "p_bonferroni": 0.09691920024858285,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "no_governance",
+      "regime_b": "reputation_only",
+      "t": -1.1748194147164879,
+      "p": 0.2588463853279944,
+      "d": -0.5253952145185168,
+      "diff": -2.4790785347765993,
+      "ci_lo": -6.986999399003693,
+      "ci_hi": 2.0288423294504945,
+      "dof": 14.62077335253626,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "no_governance",
+      "regime_b": "staking_only",
+      "t": 0.9151539995050583,
+      "p": 0.3734168103144133,
+      "d": 0.40926931055482385,
+      "diff": 2.0465686272496466,
+      "ci_lo": -2.6861276218186942,
+      "ci_hi": 6.7792648763179875,
+      "dof": 16.342867986578682,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "reputation_only",
+      "regime_b": "staking_only",
+      "t": 2.6759049106974646,
+      "p": 0.01575456324965484,
+      "d": 1.196701056329007,
+      "diff": 4.525647162026246,
+      "ci_lo": 0.9630652709377538,
+      "ci_hi": 8.088229053114738,
+      "dof": 17.36218628153799,
+      "p_bonferroni": 0.6616916564855033,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "audits_staking",
+      "t": -0.8513440679054853,
+      "p": 0.4062797042448202,
+      "d": -0.38073264161557246,
+      "diff": -0.007665634577532998,
+      "ci_lo": -0.02664645208589797,
+      "ci_hi": 0.011315182930831974,
+      "dof": 17.193707578721117,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "circuit_breaker_only",
+      "t": 4.277410034413431,
+      "p": 0.0004759481968388633,
+      "d": 1.9129159209176292,
+      "diff": 0.03711415104538823,
+      "ci_lo": 0.01885292915374333,
+      "ci_hi": 0.05537537293703314,
+      "dof": 17.570658407255063,
+      "p_bonferroni": 0.01998982426723226,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "full_governance",
+      "t": 3.751455155858897,
+      "p": 0.0015208744985422409,
+      "d": 1.6777017486085122,
+      "diff": 0.03274410535137767,
+      "ci_lo": 0.014370068583178866,
+      "ci_hi": 0.05111814211957648,
+      "dof": 17.51580982492816,
+      "p_bonferroni": 0.06387672893877412,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "no_governance",
+      "t": -1.36189355791852,
+      "p": 0.19305882133833116,
+      "d": -0.6090573147249716,
+      "diff": -0.014351372667118223,
+      "ci_lo": -0.0367847960835513,
+      "ci_hi": 0.008082050749314854,
+      "dof": 15.213184255287477,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "reputation_only",
+      "t": -0.41253077880964995,
+      "p": 0.6851526087218609,
+      "d": -0.1844893728458614,
+      "diff": -0.003826163251686221,
+      "ci_lo": -0.023407948708355424,
+      "ci_hi": 0.015755622204982982,
+      "dof": 16.84694290056504,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "staking_only",
+      "t": -2.1994840615250073,
+      "p": 0.04184260708999417,
+      "d": -0.9836391753994492,
+      "diff": -0.01989021253298906,
+      "ci_lo": -0.0389572428412816,
+      "ci_hi": -0.0008231822246965136,
+      "dof": 17.145172218442404,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "circuit_breaker_only",
+      "t": 4.6473614003421995,
+      "p": 0.00020219949713592725,
+      "d": 2.0783632014347546,
+      "diff": 0.04477978562292123,
+      "ci_lo": 0.024530648877087488,
+      "ci_hi": 0.06502892236875497,
+      "dof": 17.930307539486524,
+      "p_bonferroni": 0.008492378879708945,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "full_governance",
+      "t": 4.173691258804709,
+      "p": 0.0005735769072578655,
+      "d": 1.8665314743567998,
+      "diff": 0.04040973992891067,
+      "ci_lo": 0.020064613158475037,
+      "ci_hi": 0.06075486669934631,
+      "dof": 17.951145987304766,
+      "p_bonferroni": 0.024090230104830353,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "no_governance",
+      "t": -0.5895559431042463,
+      "p": 0.5632098084374063,
+      "d": -0.2636574330640186,
+      "diff": -0.006685738089585225,
+      "ci_lo": -0.03060390420321281,
+      "ci_hi": 0.01723242802404236,
+      "dof": 17.07275117770408,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "reputation_only",
+      "t": 0.3772539871848018,
+      "p": 0.7104059086874256,
+      "d": 0.1687131120256103,
+      "diff": 0.003839471325846777,
+      "ci_lo": -0.017545987537712828,
+      "ci_hi": 0.025224930189406383,
+      "dof": 17.959016179610334,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "staking_only",
+      "t": -1.2265427084825051,
+      "p": 0.23579859733446862,
+      "d": -0.5485265746947179,
+      "diff": -0.012224577955456062,
+      "ci_lo": -0.0331639038897981,
+      "ci_hi": 0.008714747978885974,
+      "dof": 17.99909770915698,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "full_governance",
+      "t": -0.46597257244095114,
+      "p": 0.6468248632334226,
+      "d": -0.20838926952568237,
+      "diff": -0.00437004569401056,
+      "ci_lo": -0.02407333824765344,
+      "ci_hi": 0.015333246859632318,
+      "dof": 17.998123856166927,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "no_governance",
+      "t": -4.644002762520855,
+      "p": 0.00024665732774937913,
+      "d": -2.0768611729386888,
+      "diff": -0.051465523712506456,
+      "ci_lo": -0.07489054299227015,
+      "ci_hi": -0.028040504432742766,
+      "dof": 16.593291152272542,
+      "p_bonferroni": 0.010359607765473924,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "reputation_only",
+      "t": -4.140001832791492,
+      "p": 0.0006289178862169913,
+      "d": -1.8514651050190987,
+      "diff": -0.040940314297074454,
+      "ci_lo": -0.061734214033126816,
+      "ci_hi": -0.020146414561022088,
+      "dof": 17.785619931499046,
+      "p_bonferroni": 0.026414551221113632,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "staking_only",
+      "t": -5.8937781450228615,
+      "p": 1.4295421712712554e-05,
+      "d": -2.635777715314747,
+      "diff": -0.05700436357837729,
+      "ci_lo": -0.07733140562948358,
+      "ci_hi": -0.036677321527271003,
+      "dof": 17.913735337847804,
+      "p_bonferroni": 0.0006004077119339272,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "full_governance",
+      "regime_b": "no_governance",
+      "t": -4.234219099576507,
+      "p": 0.0005808549536556109,
+      "d": -1.8936003476562042,
+      "diff": -0.047095478018495895,
+      "ci_lo": -0.07059688635221201,
+      "ci_hi": -0.023594069684779784,
+      "dof": 16.675839224261836,
+      "p_bonferroni": 0.024395908053535656,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "full_governance",
+      "regime_b": "reputation_only",
+      "t": -3.6812271561868086,
+      "p": 0.001732337585085191,
+      "d": -1.6462948323703879,
+      "diff": -0.036570268603063893,
+      "ci_lo": -0.05745625272312804,
+      "ci_hi": -0.015684284482999744,
+      "dof": 17.822872420315218,
+      "p_bonferroni": 0.07275817857357803,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "full_governance",
+      "regime_b": "staking_only",
+      "t": -5.416018628327502,
+      "p": 3.8532564633997296e-05,
+      "d": -2.4221171640690926,
+      "diff": -0.05263431788436673,
+      "ci_lo": -0.0730567751237898,
+      "ci_hi": -0.03221186064494366,
+      "dof": 17.937081027545183,
+      "p_bonferroni": 0.0016183677146278865,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "no_governance",
+      "regime_b": "reputation_only",
+      "t": 0.9107688057146548,
+      "p": 0.3748696888715687,
+      "d": 0.40730819227285336,
+      "diff": 0.010525209415432002,
+      "ci_lo": -0.013815126035606234,
+      "ci_hi": 0.03486554486647024,
+      "dof": 17.389539544060053,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "no_governance",
+      "regime_b": "staking_only",
+      "t": -0.4870910460713449,
+      "p": 0.6323707491670413,
+      "d": -0.21783373804940181,
+      "diff": -0.005538839865870837,
+      "ci_lo": -0.02951700646146274,
+      "ci_hi": 0.018439326729721067,
+      "dof": 17.12278924285966,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "reputation_only",
+      "regime_b": "staking_only",
+      "t": -1.5730697262245688,
+      "p": 0.13314341081031153,
+      "d": -0.7034981682370238,
+      "diff": -0.01606404928130284,
+      "ci_lo": -0.037521028111017415,
+      "ci_hi": 0.005392929548411737,
+      "dof": 17.970225776662062,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    }
+  ],
+  "baseline_comparisons": [
+    {
+      "metric": "welfare",
+      "regime": "audits_only",
+      "t": 1.0475018193464538,
+      "p": 0.31036528781252354,
+      "d": 0.46845705492267503,
+      "diff": 2.3182309499778455,
+      "ci_lo": -2.3716033807761523,
+      "ci_hi": 7.008065280731843,
+      "dof": 16.073270180974777,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime": "audits_staking",
+      "t": 0.2536744276905542,
+      "p": 0.8026271958408651,
+      "d": 0.11344665289388683,
+      "diff": 0.6379035163038456,
+      "ci_lo": -4.645880309851063,
+      "ci_hi": 5.921687342458754,
+      "dof": 17.967220442800507,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime": "circuit_breaker_only",
+      "t": 3.657490836843267,
+      "p": 0.001866271788663531,
+      "d": 1.6356796276528274,
+      "diff": 10.256108946257097,
+      "ci_lo": 4.353805416638809,
+      "ci_hi": 16.158412475875384,
+      "dof": 17.542662502888398,
+      "p_bonferroni": 0.02239526146396237,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "welfare",
+      "regime": "full_governance",
+      "t": 2.77618492010507,
+      "p": 0.013331032959840554,
+      "d": 1.2415476398929517,
+      "diff": 8.683397903650174,
+      "ci_lo": 2.0616700469917104,
+      "ci_hi": 15.305125760308638,
+      "dof": 16.270490370020838,
+      "p_bonferroni": 0.15997239551808665,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime": "reputation_only",
+      "t": 1.1748194147164879,
+      "p": 0.2588463853279944,
+      "d": 0.5253952145185168,
+      "diff": 2.4790785347765993,
+      "ci_lo": -2.0288423294504945,
+      "ci_hi": 6.986999399003693,
+      "dof": 14.62077335253626,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "welfare",
+      "regime": "staking_only",
+      "t": -0.9151539995050583,
+      "p": 0.3734168103144133,
+      "d": -0.40926931055482385,
+      "diff": -2.0465686272496466,
+      "ci_lo": -6.7792648763179875,
+      "ci_hi": 2.6861276218186942,
+      "dof": 16.342867986578682,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime": "audits_only",
+      "t": -1.36189355791852,
+      "p": 0.19305882133833116,
+      "d": -0.6090573147249716,
+      "diff": -0.014351372667118223,
+      "ci_lo": -0.0367847960835513,
+      "ci_hi": 0.008082050749314854,
+      "dof": 15.213184255287477,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime": "audits_staking",
+      "t": -0.5895559431042463,
+      "p": 0.5632098084374063,
+      "d": -0.2636574330640186,
+      "diff": -0.006685738089585225,
+      "ci_lo": -0.03060390420321281,
+      "ci_hi": 0.01723242802404236,
+      "dof": 17.07275117770408,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime": "circuit_breaker_only",
+      "t": -4.644002762520855,
+      "p": 0.00024665732774937913,
+      "d": -2.0768611729386888,
+      "diff": -0.051465523712506456,
+      "ci_lo": -0.07489054299227015,
+      "ci_hi": -0.028040504432742766,
+      "dof": 16.593291152272542,
+      "p_bonferroni": 0.0029598879329925496,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime": "full_governance",
+      "t": -4.234219099576507,
+      "p": 0.0005808549536556109,
+      "d": -1.8936003476562042,
+      "diff": -0.047095478018495895,
+      "ci_lo": -0.07059688635221201,
+      "ci_hi": -0.023594069684779784,
+      "dof": 16.675839224261836,
+      "p_bonferroni": 0.00697025944386733,
+      "significant_bonferroni": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime": "reputation_only",
+      "t": -0.9107688057146548,
+      "p": 0.3748696888715687,
+      "d": -0.40730819227285336,
+      "diff": -0.010525209415432002,
+      "ci_lo": -0.03486554486647024,
+      "ci_hi": 0.013815126035606234,
+      "dof": 17.389539544060053,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime": "staking_only",
+      "t": 0.4870910460713449,
+      "p": 0.6323707491670413,
+      "d": 0.21783373804940181,
+      "diff": 0.005538839865870837,
+      "ci_lo": -0.018439326729721067,
+      "ci_hi": 0.02951700646146274,
+      "dof": 17.12278924285966,
+      "p_bonferroni": 1.0,
+      "significant_bonferroni": false
+    }
+  ],
+  "agent_strat_per_regime": [
+    {
+      "regime": "audits_only",
+      "honest_mean": 3.2758924393826745,
+      "adversarial_mean": -1.7949574566274975,
+      "diff_mean": 5.070849896010172,
+      "t": 9.189268014211388,
+      "p": 7.199160326746968e-06,
+      "d_paired": 2.9059016954640517
+    },
+    {
+      "regime": "audits_staking",
+      "honest_mean": 2.9465652360057346,
+      "adversarial_mean": -1.657722363111705,
+      "diff_mean": 4.6042875991174395,
+      "t": 7.996960196165084,
+      "p": 2.2202125051698748e-05,
+      "d_paired": 2.5288608577588585
+    },
+    {
+      "regime": "circuit_breaker_only",
+      "honest_mean": 4.29865759068259,
+      "adversarial_mean": -0.5865589892154306,
+      "diff_mean": 4.885216579898019,
+      "t": 8.289448070393004,
+      "p": 1.6644716827737785e-05,
+      "d_paired": 2.6213536448129675
+    },
+    {
+      "regime": "full_governance",
+      "honest_mean": 4.341699979641825,
+      "adversarial_mean": -0.9225418768603145,
+      "diff_mean": 5.26424185650214,
+      "t": 7.068553218361997,
+      "p": 5.8653309396758514e-05,
+      "d_paired": 2.235272793213744
+    },
+    {
+      "regime": "no_governance",
+      "honest_mean": 2.635576999681134,
+      "adversarial_mean": -1.4007517460772858,
+      "diff_mean": 4.03632874575842,
+      "t": 7.184076376829309,
+      "p": 5.171560623104059e-05,
+      "d_paired": 2.2718044235390713
+    },
+    {
+      "regime": "reputation_only",
+      "honest_mean": 3.0861832758562513,
+      "adversarial_mean": -1.2750973085814354,
+      "diff_mean": 4.361280584437687,
+      "t": 9.035251553951525,
+      "p": 8.269235490026669e-06,
+      "d_paired": 2.857197414306254
+    },
+    {
+      "regime": "staking_only",
+      "honest_mean": 2.259365279217233,
+      "adversarial_mean": -1.464294757448411,
+      "diff_mean": 3.723660036665644,
+      "t": 10.71105641475768,
+      "p": 2.014332363528804e-06,
+      "d_paired": 3.387133441719142
+    }
+  ],
+  "agent_strat_pooled": {
+    "honest vs adversarial": {
+      "t": 19.781772134525724,
+      "p": 2.0919427649464894e-33,
+      "d": 3.343729777112885,
+      "mean_a": 3.2634201143524915,
+      "mean_b": -1.300274928274583
+    },
+    "opportunistic vs adversarial": {
+      "t": 32.0483141404961,
+      "p": 6.592465892799201e-61,
+      "d": 5.417153810543274,
+      "mean_a": 2.899936309488965,
+      "mean_b": -1.300274928274583
+    },
+    "honest vs opportunistic": {
+      "t": 1.4876124661419015,
+      "p": 0.13996452185066158,
+      "d": 0.25145240102940186,
+      "mean_a": 3.2634201143524915,
+      "mean_b": 2.899936309488965
+    }
+  },
+  "normality_shapiro_welfare": {
+    "audits_only": {
+      "W": 0.955592588749189,
+      "p": 0.7346883368225539,
+      "normal_at_05": "True"
+    },
+    "audits_staking": {
+      "W": 0.982408913735535,
+      "p": 0.9767460395679819,
+      "normal_at_05": "True"
+    },
+    "circuit_breaker_only": {
+      "W": 0.8958712582714748,
+      "p": 0.19726028809747717,
+      "normal_at_05": "True"
+    },
+    "full_governance": {
+      "W": 0.9924829411007131,
+      "p": 0.9989582502589683,
+      "normal_at_05": "True"
+    },
+    "no_governance": {
+      "W": 0.917254585133194,
+      "p": 0.33462495287997673,
+      "normal_at_05": "True"
+    },
+    "reputation_only": {
+      "W": 0.9412730606963592,
+      "p": 0.5672642942708045,
+      "normal_at_05": "True"
+    },
+    "staking_only": {
+      "W": 0.9866213039070607,
+      "p": 0.990761736324843,
+      "normal_at_05": "True"
+    }
+  },
+  "normality_shapiro_toxicity": {
+    "audits_only": {
+      "W": 0.9812113465285455,
+      "p": 0.9713191722105925,
+      "normal_at_05": "True"
+    },
+    "audits_staking": {
+      "W": 0.9574880959020621,
+      "p": 0.75689519516442,
+      "normal_at_05": "True"
+    },
+    "circuit_breaker_only": {
+      "W": 0.8974603336078971,
+      "p": 0.20542320494689978,
+      "normal_at_05": "True"
+    },
+    "full_governance": {
+      "W": 0.8701327508818417,
+      "p": 0.1003224294377923,
+      "normal_at_05": "True"
+    },
+    "no_governance": {
+      "W": 0.9262367200872523,
+      "p": 0.41191257772087275,
+      "normal_at_05": "True"
+    },
+    "reputation_only": {
+      "W": 0.899633586903696,
+      "p": 0.2170750406567608,
+      "normal_at_05": "True"
+    },
+    "staking_only": {
+      "W": 0.9649264161311055,
+      "p": 0.8402387571736581,
+      "normal_at_05": "True"
+    }
+  },
+  "mannwhitney_robustness": [
+    {
+      "metric": "welfare",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "staking_only",
+      "U": 94.0,
+      "p_mannwhitney": 0.0010079762403767444,
+      "confirms_welch": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "circuit_breaker_only",
+      "U": 91.0,
+      "p_mannwhitney": 0.0022022199424970783,
+      "confirms_welch": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "circuit_breaker_only",
+      "U": 92.0,
+      "p_mannwhitney": 0.0017062493689195964,
+      "confirms_welch": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "full_governance",
+      "U": 92.0,
+      "p_mannwhitney": 0.0017062493689195964,
+      "confirms_welch": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "no_governance",
+      "U": 8.0,
+      "p_mannwhitney": 0.0017062493689195964,
+      "confirms_welch": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "reputation_only",
+      "U": 10.0,
+      "p_mannwhitney": 0.0028272720911168077,
+      "confirms_welch": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "staking_only",
+      "U": 3.0,
+      "p_mannwhitney": 0.00043963875262656465,
+      "confirms_welch": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "full_governance",
+      "regime_b": "no_governance",
+      "U": 11.0,
+      "p_mannwhitney": 0.003610514312329602,
+      "confirms_welch": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "full_governance",
+      "regime_b": "staking_only",
+      "U": 3.0,
+      "p_mannwhitney": 0.00043963875262656465,
+      "confirms_welch": true
+    },
+    {
+      "metric": "welfare",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "no_governance",
+      "U": 88.0,
+      "p_mannwhitney": 0.004586392080253494,
+      "confirms_welch": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "no_governance",
+      "U": 8.0,
+      "p_mannwhitney": 0.0017062493689195964,
+      "confirms_welch": true
+    },
+    {
+      "metric": "toxicity_rate",
+      "regime_a": "full_governance",
+      "regime_b": "no_governance",
+      "U": 11.0,
+      "p_mannwhitney": 0.003610514312329602,
+      "confirms_welch": true
+    }
+  ],
+  "effect_size_ranking": [
+    {
+      "rank": 1,
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "staking_only",
+      "abs_d": 2.635777715314747,
+      "d": -2.635777715314747,
+      "p_raw": 1.4295421712712554e-05,
+      "p_bonferroni": 0.0006004077119339272
+    },
+    {
+      "rank": 2,
+      "metric": "toxicity_rate",
+      "regime_a": "full_governance",
+      "regime_b": "staking_only",
+      "abs_d": 2.4221171640690926,
+      "d": -2.4221171640690926,
+      "p_raw": 3.8532564633997296e-05,
+      "p_bonferroni": 0.0016183677146278865
+    },
+    {
+      "rank": 3,
+      "metric": "welfare",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "staking_only",
+      "abs_d": 2.197135722287655,
+      "d": 2.197135722287655,
+      "p_raw": 0.0001913048291973391,
+      "p_bonferroni": 0.008034802826288242
+    },
+    {
+      "rank": 4,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "circuit_breaker_only",
+      "abs_d": 2.0783632014347546,
+      "d": 2.0783632014347546,
+      "p_raw": 0.00020219949713592725,
+      "p_bonferroni": 0.008492378879708945
+    },
+    {
+      "rank": 5,
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "no_governance",
+      "abs_d": 2.0768611729386888,
+      "d": -2.0768611729386888,
+      "p_raw": 0.00024665732774937913,
+      "p_bonferroni": 0.010359607765473924
+    },
+    {
+      "rank": 6,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "circuit_breaker_only",
+      "abs_d": 1.9129159209176292,
+      "d": 1.9129159209176292,
+      "p_raw": 0.0004759481968388633,
+      "p_bonferroni": 0.01998982426723226
+    },
+    {
+      "rank": 7,
+      "metric": "toxicity_rate",
+      "regime_a": "full_governance",
+      "regime_b": "no_governance",
+      "abs_d": 1.8936003476562042,
+      "d": -1.8936003476562042,
+      "p_raw": 0.0005808549536556109,
+      "p_bonferroni": 0.024395908053535656
+    },
+    {
+      "rank": 8,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "full_governance",
+      "abs_d": 1.8665314743567998,
+      "d": 1.8665314743567998,
+      "p_raw": 0.0005735769072578655,
+      "p_bonferroni": 0.024090230104830353
+    },
+    {
+      "rank": 9,
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "reputation_only",
+      "abs_d": 1.8514651050190987,
+      "d": -1.8514651050190987,
+      "p_raw": 0.0006289178862169913,
+      "p_bonferroni": 0.026414551221113632
+    },
+    {
+      "rank": 10,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "full_governance",
+      "abs_d": 1.6777017486085122,
+      "d": 1.6777017486085122,
+      "p_raw": 0.0015208744985422409,
+      "p_bonferroni": 0.06387672893877412
+    },
+    {
+      "rank": 11,
+      "metric": "welfare",
+      "regime_a": "full_governance",
+      "regime_b": "staking_only",
+      "abs_d": 1.6766861285388788,
+      "d": 1.6766861285388788,
+      "p_raw": 0.002307600005918639,
+      "p_bonferroni": 0.09691920024858285
+    },
+    {
+      "rank": 12,
+      "metric": "toxicity_rate",
+      "regime_a": "full_governance",
+      "regime_b": "reputation_only",
+      "abs_d": 1.6462948323703879,
+      "d": -1.6462948323703879,
+      "p_raw": 0.001732337585085191,
+      "p_bonferroni": 0.07275817857357803
+    },
+    {
+      "rank": 13,
+      "metric": "welfare",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "no_governance",
+      "abs_d": 1.6356796276528274,
+      "d": 1.6356796276528274,
+      "p_raw": 0.001866271788663531,
+      "p_bonferroni": 0.0783834151238683
+    },
+    {
+      "rank": 14,
+      "metric": "welfare",
+      "regime_a": "audits_staking",
+      "regime_b": "circuit_breaker_only",
+      "abs_d": 1.560988331727503,
+      "d": -1.560988331727503,
+      "p_raw": 0.0027433505352517044,
+      "p_bonferroni": 0.11522072248057158
+    },
+    {
+      "rank": 15,
+      "metric": "welfare",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "reputation_only",
+      "abs_d": 1.4539096132652616,
+      "d": 1.4539096132652616,
+      "p_raw": 0.006160013038290777,
+      "p_bonferroni": 0.2587205476082126
+    },
+    {
+      "rank": 16,
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "circuit_breaker_only",
+      "abs_d": 1.4294435136674544,
+      "d": -1.4294435136674544,
+      "p_raw": 0.006173764176302161,
+      "p_bonferroni": 0.2592980954046908
+    },
+    {
+      "rank": 17,
+      "metric": "welfare",
+      "regime_a": "full_governance",
+      "regime_b": "no_governance",
+      "abs_d": 1.2415476398929517,
+      "d": 1.2415476398929517,
+      "p_raw": 0.013331032959840554,
+      "p_bonferroni": 0.5599033843133032
+    },
+    {
+      "rank": 18,
+      "metric": "welfare",
+      "regime_a": "reputation_only",
+      "regime_b": "staking_only",
+      "abs_d": 1.196701056329007,
+      "d": 1.196701056329007,
+      "p_raw": 0.01575456324965484,
+      "p_bonferroni": 0.6616916564855033
+    },
+    {
+      "rank": 19,
+      "metric": "welfare",
+      "regime_a": "audits_staking",
+      "regime_b": "full_governance",
+      "abs_d": 1.1665563871695617,
+      "d": -1.1665563871695617,
+      "p_raw": 0.019082064749365517,
+      "p_bonferroni": 0.8014467194733517
+    },
+    {
+      "rank": 20,
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "staking_only",
+      "abs_d": 1.0736719783800484,
+      "d": 1.0736719783800484,
+      "p_raw": 0.027393227552939714,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 21,
+      "metric": "welfare",
+      "regime_a": "full_governance",
+      "regime_b": "reputation_only",
+      "abs_d": 1.0036705472087648,
+      "d": 1.0036705472087648,
+      "p_raw": 0.0442655825101028,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 22,
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "full_governance",
+      "abs_d": 1.0009629446001163,
+      "d": -1.0009629446001163,
+      "p_raw": 0.04306667025680842,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 23,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "staking_only",
+      "abs_d": 0.9836391753994492,
+      "d": -0.9836391753994492,
+      "p_raw": 0.04184260708999417,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 24,
+      "metric": "toxicity_rate",
+      "regime_a": "reputation_only",
+      "regime_b": "staking_only",
+      "abs_d": 0.7034981682370238,
+      "d": -0.7034981682370238,
+      "p_raw": 0.13314341081031153,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 25,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "no_governance",
+      "abs_d": 0.6090573147249716,
+      "d": -0.6090573147249716,
+      "p_raw": 0.19305882133833116,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 26,
+      "metric": "welfare",
+      "regime_a": "audits_staking",
+      "regime_b": "staking_only",
+      "abs_d": 0.5519476704287576,
+      "d": 0.5519476704287576,
+      "p_raw": 0.23422225824062007,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 27,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "staking_only",
+      "abs_d": 0.5485265746947179,
+      "d": -0.5485265746947179,
+      "p_raw": 0.23579859733446862,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 28,
+      "metric": "welfare",
+      "regime_a": "no_governance",
+      "regime_b": "reputation_only",
+      "abs_d": 0.5253952145185168,
+      "d": -0.5253952145185168,
+      "p_raw": 0.2588463853279944,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 29,
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "no_governance",
+      "abs_d": 0.46845705492267503,
+      "d": 0.46845705492267503,
+      "p_raw": 0.31036528781252354,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 30,
+      "metric": "welfare",
+      "regime_a": "no_governance",
+      "regime_b": "staking_only",
+      "abs_d": 0.40926931055482385,
+      "d": 0.40926931055482385,
+      "p_raw": 0.3734168103144133,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 31,
+      "metric": "toxicity_rate",
+      "regime_a": "no_governance",
+      "regime_b": "reputation_only",
+      "abs_d": 0.40730819227285336,
+      "d": 0.40730819227285336,
+      "p_raw": 0.3748696888715687,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 32,
+      "metric": "welfare",
+      "regime_a": "audits_staking",
+      "regime_b": "reputation_only",
+      "abs_d": 0.40260461547499043,
+      "d": -0.40260461547499043,
+      "p_raw": 0.3822128026823709,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 33,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "audits_staking",
+      "abs_d": 0.38073264161557246,
+      "d": -0.38073264161557246,
+      "p_raw": 0.4062797042448202,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 34,
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "audits_staking",
+      "abs_d": 0.3493209600138791,
+      "d": 0.3493209600138791,
+      "p_raw": 0.44584370777641114,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 35,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "no_governance",
+      "abs_d": 0.2636574330640186,
+      "d": -0.2636574330640186,
+      "p_raw": 0.5632098084374063,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 36,
+      "metric": "toxicity_rate",
+      "regime_a": "no_governance",
+      "regime_b": "staking_only",
+      "abs_d": 0.21783373804940181,
+      "d": -0.21783373804940181,
+      "p_raw": 0.6323707491670413,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 37,
+      "metric": "welfare",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "full_governance",
+      "abs_d": 0.21155674993913945,
+      "d": 0.21155674993913945,
+      "p_raw": 0.6420295857463945,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 38,
+      "metric": "toxicity_rate",
+      "regime_a": "circuit_breaker_only",
+      "regime_b": "full_governance",
+      "abs_d": 0.20838926952568237,
+      "d": -0.20838926952568237,
+      "p_raw": 0.6468248632334226,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 39,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_only",
+      "regime_b": "reputation_only",
+      "abs_d": 0.1844893728458614,
+      "d": -0.1844893728458614,
+      "p_raw": 0.6851526087218609,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 40,
+      "metric": "toxicity_rate",
+      "regime_a": "audits_staking",
+      "regime_b": "reputation_only",
+      "abs_d": 0.1687131120256103,
+      "d": 0.1687131120256103,
+      "p_raw": 0.7104059086874256,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 41,
+      "metric": "welfare",
+      "regime_a": "audits_staking",
+      "regime_b": "no_governance",
+      "abs_d": 0.11344665289388683,
+      "d": 0.11344665289388683,
+      "p_raw": 0.8026271958408651,
+      "p_bonferroni": 1.0
+    },
+    {
+      "rank": 42,
+      "metric": "welfare",
+      "regime_a": "audits_only",
+      "regime_b": "reputation_only",
+      "abs_d": 0.04332146651577294,
+      "d": -0.04332146651577294,
+      "p_raw": 0.9239279322728275,
+      "p_bonferroni": 1.0
+    }
+  ],
+  "omnibus_tests": {
+    "kruskal_welfare": {
+      "H": 24.237102615694198,
+      "p": 0.0004723218634975325,
+      "significant_05": "True"
+    },
+    "kruskal_toxicity_rate": {
+      "H": 33.372072434607645,
+      "p": 8.891269690226475e-06,
+      "significant_05": "True"
+    },
+    "kruskal_quality_gap": {
+      "H": 36.28925553319917,
+      "p": 2.421784263312364e-06,
+      "significant_05": "True"
+    },
+    "anova_welfare": {
+      "F": 6.703884069009994,
+      "p": 1.6005548314031992e-05,
+      "significant_05": "True"
+    },
+    "anova_toxicity_rate": {
+      "F": 10.06356816729564,
+      "p": 8.869674532748081e-08,
+      "significant_05": "True"
+    },
+    "anova_quality_gap": {
+      "F": 12.886433839212692,
+      "p": 1.9279008942223207e-09,
+      "significant_05": "True"
+    }
+  }
+}
