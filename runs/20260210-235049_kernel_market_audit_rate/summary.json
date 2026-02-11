@@ -1,0 +1,60 @@
+{
+  "total_runs": 60,
+  "param_combinations": 6,
+  "summaries": [
+    {
+      "governance.audit_probability": 0.0,
+      "n_runs": 10,
+      "mean_welfare": 12.672234333885374,
+      "mean_toxicity": 0.4463881034933501,
+      "mean_frozen": 0.0,
+      "mean_honest_payoff": 2.630247309818154,
+      "mean_adversarial_payoff": -1.40298095011749
+    },
+    {
+      "governance.audit_probability": 0.05,
+      "n_runs": 10,
+      "mean_welfare": 15.584355236696172,
+      "mean_toxicity": 0.4308117239846137,
+      "mean_frozen": 0.0,
+      "mean_honest_payoff": 3.303666363653794,
+      "mean_adversarial_payoff": -1.5360002152447882
+    },
+    {
+      "governance.audit_probability": 0.1,
+      "n_runs": 10,
+      "mean_welfare": 10.261846865582998,
+      "mean_toxicity": 0.4513683362980149,
+      "mean_frozen": 0.0,
+      "mean_honest_payoff": 2.280615350433815,
+      "mean_adversarial_payoff": -1.686756956966752
+    },
+    {
+      "governance.audit_probability": 0.2,
+      "n_runs": 10,
+      "mean_welfare": 14.145391453037087,
+      "mean_toxicity": 0.43629061709603156,
+      "mean_frozen": 0.0,
+      "mean_honest_payoff": 3.134857655887335,
+      "mean_adversarial_payoff": -1.4769430736229778
+    },
+    {
+      "governance.audit_probability": 0.3,
+      "n_runs": 10,
+      "mean_welfare": 10.427914953317506,
+      "mean_toxicity": 0.4500410640592748,
+      "mean_frozen": 0.0,
+      "mean_honest_payoff": 1.9989151507060012,
+      "mean_adversarial_payoff": -1.735102297172751
+    },
+    {
+      "governance.audit_probability": 0.5,
+      "n_runs": 10,
+      "mean_welfare": 11.430621329255095,
+      "mean_toxicity": 0.4413583747265449,
+      "mean_frozen": 0.0,
+      "mean_honest_payoff": 2.770596223255109,
+      "mean_adversarial_payoff": -2.348932469103812
+    }
+  ]
+}
