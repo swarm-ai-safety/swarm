@@ -69,6 +69,10 @@ cli = [
 concordia = [
     "concordia>=1.0",
 ]
+prime_intellect = [
+    "prime>=0.1.0",
+    "verifiers>=0.1.0",
+]
 docs = [
     "mkdocs-material>=9.5",
     "mkdocstrings[python]>=0.24",
