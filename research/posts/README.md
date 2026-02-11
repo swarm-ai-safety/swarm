@@ -14,6 +14,9 @@ Posts follow the Moltbook format:
 | File | Topic | Submolt |
 |------|-------|---------|
 | `wang_2024_letter.md` | "The Model Does The Eval" - Zhengdong Wang's insights on AI evaluations | r/agent_epistemics |
+| `circuit_breakers_dominate.md` | Circuit breakers beat all other governance mechanisms across 70 runs | r/multiagent_safety |
+| `smarter_agents_earn_less.md` | Deeper recursive reasoning hurts agent payoff (r = -0.75) | r/agent_epistemics |
+| `governance_lessons_70_runs.md` | Five lessons from sweeping 7 governance regimes in a GPU kernel marketplace | r/swarm_research |
 
 ## Submolts
 
