@@ -1,0 +1,35 @@
+# CSM Benchmark: Module C — Matching Market
+# Two-sided matching with preference elicitation and congestion stress.
+# Ref: Shahidi et al. (2025), "The Coasean Singularity?", NBER Ch. c15309.
+
+scenario_id: csm_matching
+description: >
+  Coasean Singularity Markets benchmark — Matching module.
+  Tests two-sided matching under congestion with DA, recommender,
+  and hybrid mechanisms.
+motif: csm_benchmark
+
+csm:
+  module: matching
+  mechanism: da           # da | recommender | hybrid
+
+  # Treatment axes
+  ownership: byo
+  specialization: horizontal
+  preference_dim: low     # low | high
+  tx_cost_regime: agentic
+  adversarial_env: benign
+
+  # Market parameters
+  n_proposers: 30
+  n_receivers: 10        # 3:1 ratio creates congestion
+  adoption_rate: 1.0
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 1
+  seed: 42
+
+success_criteria:
+  min_stability_rate: 0.8
+  max_congestion: 5.0

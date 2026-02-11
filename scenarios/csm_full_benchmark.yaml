@@ -1,0 +1,40 @@
+# CSM Benchmark: Full treatment matrix (v0)
+# Runs Module A + C with obfuscation and congestion stressors.
+#
+# Based on: Shahidi, Rusak, Manning, Fradkin, & Horton (2025).
+# "The Coasean Singularity? Demand, Supply, and Market Design with AI Agents."
+# In The Economics of Transformative AI, Ch. 6. U. Chicago Press / NBER.
+# https://www.nber.org/system/files/chapters/c15309/c15309.pdf
+
+scenario_id: csm_full_benchmark
+description: >
+  Full CSM benchmark v0. Runs the default treatment matrix covering
+  Module A (Search+Purchase) and Module C (Matching) across all four
+  experimental axes: ownership x specialization, preference dimensionality,
+  transaction cost regime, and adoption rate.
+motif: csm_benchmark
+
+csm:
+  run_mode: full_matrix   # Overrides individual settings
+  seed: 42
+
+  # Override defaults for quick runs
+  n_epochs: 5
+  n_buyers: 20
+  n_sellers: 10
+
+simulation:
+  n_epochs: 5
+  steps_per_epoch: 1
+  seed: 42
+
+outputs:
+  results_dir: runs/csm_benchmark
+  plots_dir: runs/csm_benchmark/plots
+
+success_criteria:
+  # SWARM-style: treatment is good only if all three hold
+  min_welfare_per_tx_cost: 0.5
+  max_congestion: 5.0
+  max_obfuscation: 0.5
+  max_sybil_penetration: 0.1

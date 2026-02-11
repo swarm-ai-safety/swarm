@@ -1,0 +1,36 @@
+# CSM Benchmark: Module A — Search + Purchase
+# Tests e-commerce search under obfuscation with multiple ownership types.
+# Ref: Shahidi et al. (2025), "The Coasean Singularity?", NBER Ch. c15309.
+
+scenario_id: csm_search_purchase
+description: >
+  Coasean Singularity Markets benchmark — Search + Purchase module.
+  Evaluates agent-mediated e-commerce search under obfuscation, comparing
+  BYO vs bowling-shoe agents across transaction cost regimes.
+motif: csm_benchmark
+
+csm:
+  module: search_purchase
+
+  # Treatment axes
+  ownership: byo          # byo | bowling_shoe
+  specialization: horizontal  # horizontal | vertical
+  preference_dim: low     # low | high
+  tx_cost_regime: agentic # human | agentic | ultra_low
+  adversarial_env: obfuscation  # benign | obfuscation | manipulation | sybil
+
+  # Market parameters
+  n_buyers: 20
+  n_sellers: 10
+  n_products_per_seller: 5
+  adoption_rate: 1.0
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 1   # CSM epochs are self-contained rounds
+  seed: 42
+
+success_criteria:
+  max_obfuscation_prevalence: 0.5
+  min_welfare_per_tx_cost: 1.0
+  max_congestion: 5.0
