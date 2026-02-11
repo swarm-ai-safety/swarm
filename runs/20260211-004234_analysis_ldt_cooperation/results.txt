@@ -1,0 +1,80 @@
+==========================================================================================
+EXPERIMENT ANALYSIS: ldt_cooperation
+==========================================================================================
+Scenario: scenarios/ldt_cooperation.yaml
+Description: LDT agents vs mixed population — cooperation through logical correlation
+Date: 2026-02-11
+Seeds (fixed a priori): [42, 7, 123, 256, 999, 2024, 314, 577, 1337, 8080]
+
+Agent Groups:
+  ldt (3 agents): type=ldt, cooperation_prior=0.65, similarity_threshold=0.7, welfare_weight=0.3, updateless_commitment=0.8
+  honest (2 agents): type=honest, default config
+  opportunistic (1 agents): type=opportunistic, default config
+  adversarial (1 agents): type=adversarial, default config
+
+==========================================================================================
+PER-SEED SUMMARY TABLE
+==========================================================================================
+    Seed             ldt          honest   opportunistic     adversarial
+------------------------------------------------------------------------
+      42           30.61            8.41           18.76            2.95
+       7           34.49           11.79           10.18            3.32
+     123           28.34            7.96           18.61            3.95
+     256           30.61            9.89            6.62            3.88
+     999           35.65            8.35           14.30            2.73
+    2024           34.59           12.84           11.00            3.08
+     314           29.28            7.07           15.79            3.01
+     577           32.49           10.48           13.77            3.99
+    1337           23.10           15.01           18.21            3.18
+    8080           34.47           11.01            6.38            3.70
+------------------------------------------------------------------------
+    Mean           31.36           10.28           13.36            3.38
+     Std            3.84            2.47            4.68            0.46
+
+==========================================================================================
+DESCRIPTIVE STATISTICS (per-agent payoffs pooled across seeds)
+==========================================================================================
+  ldt                      : n= 30, mean=    31.36, std=    16.52, min=    11.62, max=    62.04
+  honest                   : n= 20, mean=    10.28, std=     3.34, min=     5.17, max=    16.94
+  opportunistic            : n= 10, mean=    13.36, std=     4.68, min=     6.38, max=    18.76
+  adversarial              : n= 10, mean=     3.38, std=     0.46, min=     2.73, max=     3.99
+
+  Overall Gini coefficient: 0.4243
+  (0 = perfect equality, 1 = maximum inequality)
+
+==========================================================================================
+HYPOTHESIS TESTS
+==========================================================================================
+  Seeds fixed a priori: [42, 7, 123, 256, 999, 2024, 314, 577, 1337, 8080]
+  Using group means per seed (n=10 per group)
+  Total tests: 8 | Bonferroni alpha: 0.00625 | Holm step-down applied
+
+Test                                                Statistic        Raw p   Sig    Cohen d   Bonf   Holm
+---------------------------------------------------------------------------------------------------------
+t-test: ldt vs honest                               t=14.6127     0.000000   ***      6.535    Yes    Yes
+t-test: ldt vs opportunistic                         t=9.4085     0.000000   ***      4.208    Yes    Yes
+t-test: ldt vs adversarial                          t=22.9033     0.000000   ***     10.243    Yes    Yes
+t-test: honest vs opportunistic                     t=-1.8414     0.082104    ns     -0.824     No     No
+t-test: honest vs adversarial                        t=8.6866     0.000000   ***      3.885    Yes    Yes
+t-test: opportunistic vs adversarial                 t=6.7143     0.000003   ***      3.003    Yes    Yes
+ANOVA: All groups                                  F=132.6788     0.000000   ***         --    Yes    Yes
+1-sample t: Gini > 0                                t=28.8359     0.000000   ***         --    Yes    Yes
+
+==========================================================================================
+P-HACKING AUDIT (sorted by raw p-value)
+==========================================================================================
+Rank  Test                                                      Raw p   Bonferroni         Holm
+-----------------------------------------------------------------------------------------------
+   1  ANOVA: All groups                                    0.00000000          Yes          Yes
+   2  t-test: ldt vs adversarial                           0.00000000          Yes          Yes
+   3  t-test: ldt vs honest                                0.00000000          Yes          Yes
+   4  1-sample t: Gini > 0                                 0.00000000          Yes          Yes
+   5  t-test: ldt vs opportunistic                         0.00000002          Yes          Yes
+   6  t-test: honest vs adversarial                        0.00000007          Yes          Yes
+   7  t-test: opportunistic vs adversarial                 0.00000270          Yes          Yes
+   8  t-test: honest vs opportunistic                      0.08210352           No           No
+
+Total tests conducted: 8
+Tests significant at alpha=0.05 (raw): 7/8
+Tests surviving Bonferroni: 7/8
+Tests surviving Holm-Bonferroni: 7/8

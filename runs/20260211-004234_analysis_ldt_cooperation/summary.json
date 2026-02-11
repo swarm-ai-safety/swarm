@@ -1,0 +1,119 @@
+{
+  "scenario_id": "ldt_cooperation",
+  "description": "LDT agents vs mixed population \u2014 cooperation through logical correlation",
+  "seeds": [
+    42,
+    7,
+    123,
+    256,
+    999,
+    2024,
+    314,
+    577,
+    1337,
+    8080
+  ],
+  "n_seeds": 10,
+  "groups": {
+    "ldt": {
+      "type": "ldt",
+      "count": 3,
+      "config": {
+        "cooperation_prior": 0.65,
+        "similarity_threshold": 0.7,
+        "welfare_weight": 0.3,
+        "updateless_commitment": 0.8
+      },
+      "mean": 31.36193649748075,
+      "std": 3.835838994643439
+    },
+    "honest": {
+      "type": "honest",
+      "count": 2,
+      "config": {},
+      "mean": 10.280900051578794,
+      "std": 2.4695935472773693
+    },
+    "opportunistic": {
+      "type": "opportunistic",
+      "count": 1,
+      "config": {},
+      "mean": 13.361558594542862,
+      "std": 4.6786884026855295
+    },
+    "adversarial": {
+      "type": "adversarial",
+      "count": 1,
+      "config": {},
+      "mean": 3.3792359954484352,
+      "std": 0.46221084704044657
+    }
+  },
+  "overall_gini": 0.4243363646598004,
+  "tests": [
+    {
+      "name": "t-test: ldt vs honest",
+      "statistic": 14.61266001249053,
+      "raw_p": 1.995379757066345e-11,
+      "cohens_d": 6.53498022400435,
+      "bonferroni": true,
+      "holm": true
+    },
+    {
+      "name": "t-test: ldt vs opportunistic",
+      "statistic": 9.408461655297163,
+      "raw_p": 2.2633622178728744e-08,
+      "cohens_d": 4.20759196498893,
+      "bonferroni": true,
+      "holm": true
+    },
+    {
+      "name": "t-test: ldt vs adversarial",
+      "statistic": 22.90334940927837,
+      "raw_p": 9.167628122008298e-15,
+      "cohens_d": 10.242689238315217,
+      "bonferroni": true,
+      "holm": true
+    },
+    {
+      "name": "t-test: honest vs opportunistic",
+      "statistic": -1.8414067793280562,
+      "raw_p": 0.08210352394497815,
+      "cohens_d": -0.8235021465612976,
+      "bonferroni": false,
+      "holm": false
+    },
+    {
+      "name": "t-test: honest vs adversarial",
+      "statistic": 8.686644502350088,
+      "raw_p": 7.440379524650851e-08,
+      "cohens_d": 3.8847855207259263,
+      "bonferroni": true,
+      "holm": true
+    },
+    {
+      "name": "t-test: opportunistic vs adversarial",
+      "statistic": 6.714265076221343,
+      "raw_p": 2.699340884506205e-06,
+      "cohens_d": 3.002710625876746,
+      "bonferroni": true,
+      "holm": true
+    },
+    {
+      "name": "ANOVA: All groups",
+      "statistic": 132.67878300934515,
+      "raw_p": 1.6187456342668794e-19,
+      "cohens_d": null,
+      "bonferroni": true,
+      "holm": true
+    },
+    {
+      "name": "1-sample t: Gini > 0",
+      "statistic": 28.835905211957716,
+      "raw_p": 1.7673005273692288e-10,
+      "cohens_d": null,
+      "bonferroni": true,
+      "holm": true
+    }
+  ]
+}
