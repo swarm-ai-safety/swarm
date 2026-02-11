@@ -1,0 +1,166 @@
+RED-TEAM SECURITY EVALUATION FOR LDT AGENT PR
+============================================================
+
+Evaluated: 2026-02-09
+Branch: claude/implement-ldt-agent-5OuMI
+
+============================================================
+PART 1: GOVERNANCE RED-TEAM (8 attack scenarios)
+============================================================
+
+CONFIGURATION 1: LDT Scenario (minimal governance)
+------------------------------------------------------------
+Robustness Score: 0.45 (F)
+Attacks Tested: 8
+Attacks Prevented: 3
+Attacks Successful: 5
+Overall Evasion Rate: 42.16%
+Detection Latency: 13.9 epochs
+Total Damage Allowed: 455.70
+
+Vulnerabilities:
+  [CRITICAL] Collusion Ring: 97 damage — no collusion detection
+  [CRITICAL] Sybil Attack: 120 damage — no vote normalization
+  [HIGH] Reputation Farming: 39 damage — no audit/decay
+  [HIGH] Threshold Dancing: 40 damage — no circuit breaker
+
+Recommendations:
+  1. Enable circuit breaker to freeze malicious agents
+  2. Enable collusion detection for coordinated attacks
+  3. Deploy defense-in-depth: multiple complementary governance levers
+
+CONFIGURATION 2: Hardened Governance
+------------------------------------------------------------
+Robustness Score: 0.61 (D)
+Attacks Tested: 8
+Attacks Prevented: 4
+Attacks Successful: 4
+Overall Evasion Rate: 25.99%
+Detection Latency: 7.6 epochs
+Total Damage Allowed: 290.61
+
+Vulnerabilities:
+  [CRITICAL] Sybil Attack: 103 damage — even with defenses active
+
+============================================================
+PART 2: LDT AGENT CODE SECURITY REVIEW
+============================================================
+
+21 findings across the LDT agent implementation.
+
+CRITICAL (1):
+  [C1] Unknown agents receive twin_score=1.0 automatically.
+       (ldt_agent.py:172-199, 255)
+       Both the LDT agent's padded behaviour vector [0.65, 0.65, ...] and
+       the unknown counterparty's padded vector [0.5, 0.5, ...] are constant
+       positive vectors with cosine similarity = 1.0.  This exceeds the
+       default similarity_threshold of 0.7, granting UNCONDITIONAL
+       COOPERATION to every new agent — the exact opposite of the intended
+       LDT "earned trust" model.
+
+       Sybil amplification: adversaries can create fresh identities to
+       repeatedly exploit the agent; each new identity starts at twin=1.0.
+
+HIGH (7):
+  [H1] No validation on config parameters. (ldt_agent.py:136-158)
+       cooperation_prior, similarity_threshold, welfare_weight, etc. accept
+       any value including negative, >1.0, NaN, or string. Extreme values
+       can force unconditional cooperation or break the cosine computation.
+
+  [H2] _counterparty_profiles grows unboundedly. (ldt_agent.py:162,387-390)
+       Every interaction appends; no eviction. O(N×T) memory in the worst
+       case. _counterfactual_cooperate_payoff scans the FULL history, not
+       the windowed horizon.
+
+  [H3] _own_trace grows unboundedly. (ldt_agent.py:166,394)
+       Same issue — sliced for vectors but never trimmed.
+
+  [H4] Intermittent defection under twin-score cover. (ldt_agent.py:255)
+       Once twin_score ≥ threshold, the agent cooperates unconditionally
+       with NO per-interaction quality check. An adversary cooperating 18/20
+       times can defect on 2/20 with impunity.
+
+  [H5] Cross-counterparty trace pollution via _own_trace. (ldt_agent.py:166,183)
+       _own_trace is global across all counterparties. An adversary flooding
+       the LDT agent with interactions changes the behaviour vector used for
+       twin-score computation with EVERY other agent.
+
+  [H6] Asymmetric padding enables fresh-identity exploitation. (ldt_agent.py:187,198)
+       Own vector padded with 0.65, counterparty with 0.5 — both positive,
+       producing perfect parallel alignment. Adversary's optimal strategy:
+       interact as LITTLE as possible before exploiting (max padding = max twin score).
+
+  [H7] Permanent cooperation lock via twin-score farming. (ldt_agent.py:255,387)
+       Twin score persists indefinitely because _counterparty_profiles is
+       never decayed even across epoch boundaries.
+
+MEDIUM (8):
+  [M1] NaN cosine similarity silently becomes 1.0 (twin bypass).
+       (ldt_agent.py:212)
+  [M2] LDT-specific state bypasses apply_memory_decay().
+       (ldt_agent.py — no decay override)
+  [M3] defection_memory_weight declared but never used (dead code).
+       (ldt_agent.py:146-147)
+  [M4] Cooperate payoff uses full history, not windowed.
+       (ldt_agent.py:222-226)
+  [M5] Cross-agent state poisoning via _own_trace.
+       (ldt_agent.py:166,394)
+  [M6] Proposal target selection leaks twin scores.
+       (ldt_agent.py:496-526)
+  [M7] Deterministic decision function is fully predictable.
+       (ldt_agent.py:241-277)
+  [M8] Near-impossibility of defection decision. (ldt_agent.py:258-277)
+       effective_coop_value is always ≥ 0 and defect_value is always ≤ 0,
+       so the agent ALWAYS cooperates via the counterfactual path. The
+       defection path is mathematically unreachable with default params.
+
+LOW (3):
+  [L1] No validation of interaction.p from external data. (ldt_agent.py:389)
+  [L2] Inherited _memory and _interaction_history unbounded. (base.py:239)
+  [L3] Proposal content reveals decision strategy. (ldt_agent.py:368,525)
+
+============================================================
+PART 3: RECOMMENDED MITIGATIONS
+============================================================
+
+For the LDT Agent (code-level):
+  1. [C1] Fix twin_score for unknowns: initialize to 0.5 (neutral) instead
+     of computing cosine similarity on padded constant vectors. Use a
+     separate "unknown agent" policy distinct from the twin path.
+
+  2. [H1] Validate all config params in __init__: clamp cooperation_prior
+     to [0,1], similarity_threshold to [0,1], welfare_weight to [0,1],
+     updateless_commitment to [0,1], counterfactual_horizon to ≥1.
+
+  3. [H2/H3] Cap _counterparty_profiles and _own_trace at
+     counterfactual_horizon. Prune on each update_from_outcome call.
+
+  4. [H4] Add per-interaction quality gate: even with twin score above
+     threshold, reject interactions if the counterparty's recent p average
+     drops below a safety threshold.
+
+  5. [H5/H6] Separate _own_trace per-counterparty, or normalize the
+     behaviour vector before cosine similarity to reduce cross-pollution.
+
+  6. [M2] Override apply_memory_decay() to decay _counterparty_profiles,
+     _own_trace, and _twin_scores alongside base class memory.
+
+  7. [M3/M8] Implement defection_memory_weight to shift cooperation
+     decisions more rapidly in response to observed defection, making the
+     defection path reachable.
+
+For the Scenario (governance-level):
+  8. Always deploy LDT agents with circuit_breaker_enabled=true and
+     collusion_detection_enabled=true to compensate for the agent's
+     inherent cooperation bias.
+
+  9. Enable random audits (audit_enabled=true) to catch reputation farming.
+
+  10. Consider vote_normalization to mitigate Sybil amplification, which
+      is especially dangerous against LDT agents (fresh identity = max trust).
+
+============================================================
+Most Effective Attack: Sybil Attack (120 damage, minimal governance)
+Weakest Governance Lever: vote_normalization (Sybil succeeds even hardened)
+LDT-Specific Risk: fresh-identity exploitation via twin_score=1.0 for unknowns
+============================================================
