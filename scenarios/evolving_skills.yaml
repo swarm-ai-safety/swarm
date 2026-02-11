@@ -1,0 +1,69 @@
+# Evolving Skills Scenario
+# Adapts SkillRL (Xia et al., 2026; arXiv:2602.08234) to a multi-agent swarm.
+#
+# 4 modes can be tested by adjusting the agent mix:
+# 1. PRIVATE: All skill_honest agents evolve independently
+# 2. COORDINATOR_ONLY: Only manager-designated agents evolve
+# 3. SHARED_GATED: Shared library with reputation-gated writes
+# 4. COMMUNICATION: Skills as inter-agent communication tokens
+#
+# This default scenario uses PRIVATE mode with a mix of
+# skill-evolving and baseline agents for ablation comparison.
+
+scenario_id: evolving_skills
+description: "Skill evolution in a mixed swarm: skill-evolving vs baseline agents"
+motif: skill_evolution
+
+agents:
+  # Skill-evolving honest agents (learn strategy + lesson skills)
+  - type: skill_honest
+    count: 3
+  # Skill-evolving opportunistic agent (learns exploitation patterns)
+  - type: skill_opportunistic
+    count: 1
+  # Baseline honest agents (no skill evolution, for comparison)
+  - type: honest
+    count: 2
+  # Baseline adversarial agent (tests whether skills defend against attacks)
+  - type: adaptive_adversary
+    count: 1
+
+governance:
+  transaction_tax_rate: 0.05
+  reputation_decay_rate: 0.95
+  bandwidth_cap: 10
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+  audit_enabled: true
+  audit_probability: 0.1
+
+simulation:
+  n_epochs: 15
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 15
+  min_agents: 7
+  toxicity_threshold: 0.4
+
+outputs:
+  event_log: "logs/evolving_skills_events.jsonl"
+  metrics_csv: "logs/evolving_skills_metrics.csv"

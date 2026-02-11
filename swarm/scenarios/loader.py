@@ -32,6 +32,10 @@ from swarm.agents.scholar_agent import (
     SynthesizerAgent,
     VerifierAgent,
 )
+from swarm.agents.skill_evolving import (
+    SkillEvolvingHonestAgent,
+    SkillEvolvingOpportunisticAgent,
+)
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,
@@ -77,6 +81,9 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "adversarial_synthesizer": AdversarialSynthesizerAgent,
     # RLM (Recursive Language Model) agents
     "rlm": RLMAgent,
+    # Skill-evolving agents
+    "skill_honest": SkillEvolvingHonestAgent,
+    "skill_opportunistic": SkillEvolvingOpportunisticAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
