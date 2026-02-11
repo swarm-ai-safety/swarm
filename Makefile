@@ -1,4 +1,4 @@
-.PHONY: install install-dev lint lint-fix typecheck test coverage ci clean docs docs-serve test-changes test-parallel test-durations test-no-network claude-code-demo run-alignment-scenarios run-alignment-analyze run-alignment-all
+.PHONY: install install-dev lint lint-fix typecheck test coverage ci clean docs docs-serve test-changes test-parallel test-durations test-no-network claude-code-demo run-alignment-scenarios run-alignment-analyze run-alignment-all build-dist publish-test publish
 
 PYTHON ?= python
 
@@ -58,7 +58,18 @@ run-alignment-analyze:
 
 run-alignment-all: run-alignment-scenarios run-alignment-analyze
 
+build-dist: clean
+	$(PYTHON) -m pip install build
+	$(PYTHON) -m build
+	$(PYTHON) -m twine check dist/*
+
+publish-test: build-dist
+	$(PYTHON) -m twine upload --repository testpypi dist/*
+
+publish: build-dist
+	$(PYTHON) -m twine upload dist/*
+
 clean:
-	rm -rf .mypy_cache .pytest_cache .ruff_cache htmlcov .coverage site/
+	rm -rf .mypy_cache .pytest_cache .ruff_cache htmlcov .coverage site/ dist/ build/
 	find . -type d -name __pycache__ -exec rm -rf {} +
 	find . -type d -name "*.egg-info" -exec rm -rf {} +
