@@ -1,0 +1,128 @@
+==========================================================================================
+EXPERIMENT ANALYSIS: rlm_memory_as_power
+==========================================================================================
+Scenario: scenarios/rlm_memory_as_power.yaml
+Description: Measures whether memory budget asymmetry creates systematic power imbalances
+             and exploitation
+Date: 2026-02-10
+Seeds (fixed a priori): 42, 7, 123, 256, 999, 2024, 314, 577, 1337, 8080
+
+Agent Groups:
+  rlm_high_mem (3 agents): type=rlm, memory_budget=200, recursion_depth=3, planning_horizon=5
+  rlm_mid_mem (3 agents): type=rlm, memory_budget=50, recursion_depth=3, planning_horizon=5
+  rlm_low_mem (1 agent): type=rlm, memory_budget=10, recursion_depth=3, planning_horizon=5
+  honest (3 agents): type=honest, default config
+
+=========================================================================================================
+PER-SEED SUMMARY TABLE
+=========================================================================================================
+  Seed     High(200)       Mid(50)       Low(10)        Honest
+---------------------------------------------------------------------------------------------------------
+    42        249.93        248.47        244.20        560.41
+     7        254.30        249.68        248.83        573.28
+   123        254.30        249.30        239.99        558.53
+   256        259.41        248.24        246.32        564.72
+   999        252.13        245.32        248.35        553.18
+  2024        250.73        252.61        248.67        570.90
+   314        251.63        247.92        252.29        571.43
+   577        254.74        252.94        239.63        556.26
+  1337        248.10        250.68        242.90        563.43
+  8080        258.49        245.48        243.26        558.93
+---------------------------------------------------------------------------------------------------------
+  Mean        253.38        249.06        245.44        563.11
+   Std          3.61          2.58          4.14          6.89
+
+=========================================================================================================
+DESCRIPTIVE STATISTICS (per-agent payoffs pooled across seeds)
+=========================================================================================================
+  RLM High (mem=200)    : n= 30, mean=  253.38, std=    5.69, min=  242.38, max=  266.98
+  RLM Mid (mem=50)      : n= 30, mean=  249.06, std=    3.93, min=  243.69, max=  260.75
+  RLM Low (mem=10)      : n= 10, mean=  245.44, std=    4.14, min=  239.63, max=  252.29
+  Honest                : n= 30, mean=  563.11, std=  244.87, min=  175.51, max= 1057.91
+
+  Overall Gini coefficient: 0.2364
+  (0 = perfect equality, 1 = maximum inequality)
+
+=========================================================================================================
+HYPOTHESIS TESTS
+=========================================================================================================
+  Seeds fixed a priori: [42, 7, 123, 256, 999, 2024, 314, 577, 1337, 8080]
+  Using group means per seed (n=10 per group)
+  Total tests: 11 | Bonferroni alpha: 0.00455 | Holm step-down applied
+
+Test                                          Statistic        Raw p   Sig  Cohen d   Bonf   Holm
+-------------------------------------------------------------------------------------------------
+t-test: High vs Mid                            t=3.0721     0.006567    **    1.374     No    Yes
+t-test: High vs Low                            t=4.5659     0.000240   ***    2.042    Yes    Yes
+t-test: High vs Honest                      t=-125.8696     0.000000   ***  -56.291    Yes    Yes
+t-test: Mid vs Low                             t=2.3475     0.030534     *    1.050     No    Yes
+t-test: Mid vs Honest                       t=-134.9548     0.000000   ***  -60.354    Yes    Yes
+t-test: Low vs Honest                       t=-124.9478     0.000000   ***  -55.878    Yes    Yes
+ANOVA: All 4 groups                        F=11680.6404     0.000000   ***       --    Yes    Yes
+ANOVA: RLM mem tiers only                     F=12.8446     0.000120   ***       --    Yes    Yes
+Pearson: mem_budget vs payoff                  r=0.6725     0.000047   ***       --    Yes    Yes
+1-sample t: Gini > 0                          t=36.3212     0.000000   ***       --    Yes    Yes
+Exploitation rate (agent-level r)              r=0.4996     0.000011   ***       --    Yes    Yes
+
+=========================================================================================================
+P-HACKING AUDIT (sorted by raw p-value)
+=========================================================================================================
+Rank  Test                                              Raw p Bonferroni       Holm
+------------------------------------------------------------------------------------
+   1  ANOVA: All 4 groups                          0.00000000        Yes        Yes
+   2  t-test: Mid vs Honest                        0.00000000        Yes        Yes
+   3  t-test: High vs Honest                       0.00000000        Yes        Yes
+   4  t-test: Low vs Honest                        0.00000000        Yes        Yes
+   5  1-sample t: Gini > 0                         0.00000000        Yes        Yes
+   6  Exploitation rate (agent-level r)            0.00001070        Yes        Yes
+   7  Pearson: mem_budget vs payoff                0.00004680        Yes        Yes
+   8  ANOVA: RLM mem tiers only                    0.00012027        Yes        Yes
+   9  t-test: High vs Low                          0.00023958        Yes        Yes
+  10  t-test: High vs Mid                          0.00656746         No        Yes
+  11  t-test: Mid vs Low                           0.03053429         No        Yes
+
+Total tests conducted: 11
+Tests significant at alpha=0.05 (raw): 11/11
+Tests surviving Bonferroni: 9/11
+Tests surviving Holm-Bonferroni: 11/11
+
+=========================================================================================================
+DOMAIN-SPECIFIC: MEMORY BUDGET-PAYOFF GRADIENT
+=========================================================================================================
+  Budget 200 (high) mean: 253.38
+  Budget  50 (mid)  mean: 249.06
+  Budget  10 (low)  mean: 245.44
+  Honest baseline   mean: 563.11
+  Pearson r(budget, payoff) [group-level]: 0.6725, p=0.000047
+  Pearson r(budget, payoff) [agent-level]: 0.4996, p=0.000011
+  Direction: more memory = BETTER
+  Memory-as-Power spread (high - low): 7.93 (3.2%)
+  Honest vs all RLM: honest earns 2.3x more
+
+=========================================================================================================
+INTERPRETATION
+=========================================================================================================
+1. MEMORY-AS-POWER HYPOTHESIS SUPPORTED: Larger memory budgets produce significantly higher
+   payoffs within RLM agents. The gradient is monotonic: 253.38 (200) > 249.06 (50) > 245.44 (10).
+   ANOVA across RLM tiers: F=12.84, p=0.0001. All 11 tests significant after Holm correction.
+
+2. The effect is REAL but MODEST: the high-low spread is only 7.93 points (3.2%). This is
+   statistically robust (survives all corrections) but practically small compared to the
+   dominant honest-vs-RLM gap.
+
+3. Exploitation rate: Pearson r=0.50 between memory budget and payoff at agent level
+   (p<0.0001). This confirms that memory asymmetry creates a measurable advantage, though
+   the moderate correlation suggests other factors (network position, partner selection)
+   also matter.
+
+4. Honest agents earn 2.3x more than any RLM tier (563.11 vs ~249). The honest-vs-RLM
+   gap dwarfs the within-RLM memory gradient. Cohen's d for honest-vs-RLM comparisons
+   exceeds 55 -- among the largest effect sizes in the study.
+
+5. Honest agent variance remains very high (std=244.87) due to network-position lottery
+   effects, while all RLM tiers are remarkably stable (std=3.93-5.69). Memory budget
+   doesn't substantially change RLM variance.
+
+6. Gini of 0.2364 is the lowest across the three RLM experiments, suggesting that the
+   memory-as-power scenario produces the most equitable outcomes (driven by externality
+   internalization with rho_a=rho_b=0.1).

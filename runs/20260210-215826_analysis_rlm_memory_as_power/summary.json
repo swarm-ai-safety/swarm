@@ -1,0 +1,114 @@
+{
+  "scenario_id": "rlm_memory_as_power",
+  "timestamp": "2026-02-10T22:28:31.368925",
+  "seeds": [
+    42,
+    7,
+    123,
+    256,
+    999,
+    2024,
+    314,
+    577,
+    1337,
+    8080
+  ],
+  "n_seeds": 10,
+  "groups": {
+    "rlm_high_mem": {
+      "mean": 253.37579291578987,
+      "std": 3.61312716252477,
+      "n_agents_per_seed": 3,
+      "memory_budget": 200
+    },
+    "rlm_mid_mem": {
+      "mean": 249.06295399018572,
+      "std": 2.579446981969868,
+      "n_agents_per_seed": 3,
+      "memory_budget": 50
+    },
+    "rlm_low_mem": {
+      "mean": 245.4418788349511,
+      "std": 4.14002424572092,
+      "n_agents_per_seed": 1,
+      "memory_budget": 10
+    },
+    "honest": {
+      "mean": 563.1057144685012,
+      "std": 6.891791064401056,
+      "n_agents_per_seed": 3
+    }
+  },
+  "tests": {
+    "ttest_high_vs_mid": {
+      "t": 3.0721,
+      "p": 0.006567,
+      "cohens_d": 1.374,
+      "survives_bonferroni": false,
+      "survives_holm": true
+    },
+    "ttest_high_vs_low": {
+      "t": 4.5659,
+      "p": 0.00024,
+      "cohens_d": 2.042,
+      "survives_bonferroni": true,
+      "survives_holm": true
+    },
+    "ttest_high_vs_honest": {
+      "t": -125.87,
+      "p": 0.0,
+      "cohens_d": -56.291,
+      "survives_bonferroni": true,
+      "survives_holm": true
+    },
+    "ttest_mid_vs_low": {
+      "t": 2.3475,
+      "p": 0.030534,
+      "cohens_d": 1.05,
+      "survives_bonferroni": false,
+      "survives_holm": true
+    },
+    "ttest_mid_vs_honest": {
+      "t": -134.95,
+      "p": 0.0,
+      "cohens_d": -60.354,
+      "survives_bonferroni": true,
+      "survives_holm": true
+    },
+    "ttest_low_vs_honest": {
+      "t": -124.95,
+      "p": 0.0,
+      "cohens_d": -55.878,
+      "survives_bonferroni": true,
+      "survives_holm": true
+    },
+    "anova_all_groups": {
+      "F": 11680.64,
+      "p": 0.0,
+      "survives_bonferroni": true,
+      "survives_holm": true
+    },
+    "anova_rlm_tiers": {
+      "F": 12.8446,
+      "p": 0.00012,
+      "survives_bonferroni": true,
+      "survives_holm": true
+    },
+    "pearson_membud_payoff": {
+      "r": 0.6725,
+      "p": 4.7e-05,
+      "survives_bonferroni": true,
+      "survives_holm": true
+    },
+    "exploitation_rate_agent_level": {
+      "r": 0.4996,
+      "p": 1.1e-05,
+      "survives_bonferroni": true,
+      "survives_holm": true
+    }
+  },
+  "gini_coefficient": 0.2364,
+  "n_tests": 11,
+  "bonferroni_alpha": 0.00455,
+  "key_finding": "Memory-as-power effect is real but modest (3.2% spread high-low). Honest agents earn 2.3x more."
+}
