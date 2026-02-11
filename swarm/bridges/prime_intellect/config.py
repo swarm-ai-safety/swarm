@@ -13,7 +13,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 from swarm.core.payoff import PayoffConfig
 from swarm.governance.config import GovernanceConfig
@@ -74,7 +74,7 @@ class PrimeIntellectConfig(BaseModel):
     """Top-level configuration for the Prime Intellect bridge."""
 
     # --- API / auth ---
-    api_key: str = ""
+    api_key: str = Field(default="", exclude=True, repr=False)
     api_base_url: str = "https://api.primeintellect.ai/v1"
 
     # --- Training ---

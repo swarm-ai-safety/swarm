@@ -12,6 +12,7 @@ errors on use).
 
 import logging
 import os
+import re
 import subprocess
 from dataclasses import dataclass, field
 from enum import Enum
@@ -253,16 +254,49 @@ class PrimeIntellectClient:
             metadata={"mode": self.config.training_mode.value, "raw": result},
         )
 
+    @staticmethod
+    def _escape_toml_string(value: str) -> str:
+        """Escape a value for safe inclusion in a TOML double-quoted string.
+
+        Prevents injection of TOML structure via crafted config values.
+        """
+        # Replace backslash first, then other special chars
+        value = value.replace("\\", "\\\\")
+        value = value.replace('"', '\\"')
+        value = value.replace("\n", "\\n")
+        value = value.replace("\r", "\\r")
+        value = value.replace("\t", "\\t")
+        return value
+
     def _build_toml(self, scenario_path: str = "") -> str:
-        """Build a prime-rl TOML config string."""
+        """Build a prime-rl TOML config string.
+
+        All string values are escaped to prevent TOML injection.
+        """
         cfg = self.config
+        esc = self._escape_toml_string
+
+        # Sanitise the comment line (strip newlines to prevent comment breakout)
+        safe_comment = re.sub(r"[\r\n]", " ", scenario_path or "default")
+
+        base_line = (
+            f'base = "{esc(cfg.base_model)}"'
+            if cfg.base_model
+            else '# base = ""'
+        )
+        scenario_line = (
+            f'scenario_path = "{esc(scenario_path)}"'
+            if scenario_path
+            else '# scenario_path = ""'
+        )
+
         return f"""\
 # Auto-generated prime-rl config for SWARM safety training
-# Scenario: {scenario_path or 'default'}
+# Scenario: {safe_comment}
 
 [model]
-name = "{cfg.model_name}"
-{f'base = "{cfg.base_model}"' if cfg.base_model else '# base = ""'}
+name = "{esc(cfg.model_name)}"
+{base_line}
 
 [training]
 method = "rl"
@@ -271,18 +305,18 @@ batch_size = 32
 learning_rate = 1e-5
 
 [training.rl]
-reward_mode = "{cfg.reward_mode.value}"
+reward_mode = "{esc(cfg.reward_mode.value)}"
 clip_min = {cfg.reward_clip_min}
 clip_max = {cfg.reward_clip_max}
 normalize_rewards = {str(cfg.reward_normalize).lower()}
 
 [environment]
-name = "{cfg.environment_name}"
-version = "{cfg.environment_version}"
-{f'scenario_path = "{scenario_path}"' if scenario_path else '# scenario_path = ""'}
+name = "{esc(cfg.environment_name)}"
+version = "{esc(cfg.environment_version)}"
+{scenario_line}
 population_size = {cfg.population_size}
 max_turns = {cfg.max_turns}
-reward_mode = "{cfg.reward_mode.value}"
+reward_mode = "{esc(cfg.reward_mode.value)}"
 
 [environment.reward_weights]
 toxicity = {cfg.reward_weights.get('toxicity', -1.0)}
@@ -292,7 +326,7 @@ adverse_selection = {cfg.reward_weights.get('adverse_selection', -0.5)}
 cooperation = {cfg.reward_weights.get('cooperation', 0.3)}
 
 [infrastructure]
-gpu_type = "{cfg.gpu_type}"
+gpu_type = "{esc(cfg.gpu_type)}"
 num_gpus = {cfg.num_gpus}
 """
 

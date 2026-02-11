@@ -116,6 +116,11 @@ class PrimeIntellectBridge:
         observables = self._completion_to_observables(completion)
         v_hat, p = self._proxy.compute_labels(observables)
 
+        # Hash the completion preview to avoid storing raw model output
+        completion_hash = sha256(
+            completion[:200].encode("utf-8")
+        ).hexdigest()
+
         self._record_event(
             PIEventType.REWARD_COMPUTED,
             {
@@ -145,7 +150,7 @@ class PrimeIntellectBridge:
                 metadata={
                     "bridge": "prime_intellect",
                     "step": step,
-                    "completion_preview": completion[:200],
+                    "completion_sha256": completion_hash,
                 },
             )
             interactions.append(interaction)
@@ -166,7 +171,7 @@ class PrimeIntellectBridge:
                     metadata={
                         "bridge": "prime_intellect",
                         "step": step,
-                        "completion_preview": completion[:200],
+                        "completion_sha256": completion_hash,
                     },
                 )
                 interactions.append(interaction)
@@ -317,11 +322,6 @@ class PrimeIntellectBridge:
             return
 
         metadata = dict(interaction.metadata or {})
-        completion_preview = metadata.pop("completion_preview", None)
-        if isinstance(completion_preview, str) and completion_preview:
-            metadata["completion_preview_sha256"] = sha256(
-                completion_preview.encode("utf-8")
-            ).hexdigest()
 
         event = Event(
             event_type=EventType.INTERACTION_COMPLETED,

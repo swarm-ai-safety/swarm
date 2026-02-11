@@ -29,6 +29,7 @@ import logging
 import random
 import uuid
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Any, Dict, List, Optional, Tuple
 
 from swarm.bridges.prime_intellect.config import (
@@ -200,6 +201,10 @@ class SwarmSafetyEnv:
             quality_gap=step_metrics.get("quality_gap", 0.0),
             welfare=step_metrics.get("welfare", 0.0),
         )
+        if len(self._rollout_steps) >= self._config.max_events:
+            self._rollout_steps = self._rollout_steps[
+                -self._config.max_events // 2 :
+            ]
         self._rollout_steps.append(rollout_step)
 
         # Check termination
@@ -434,7 +439,9 @@ class SwarmSafetyEnv:
                     "episode_id": self._episode_id,
                     "step": self._step,
                     "agent_type": agent.agent_type,
-                    "action_preview": action[:200],
+                    "action_sha256": sha256(
+                        action[:200].encode("utf-8")
+                    ).hexdigest(),
                 },
             )
             interactions.append(interaction)
