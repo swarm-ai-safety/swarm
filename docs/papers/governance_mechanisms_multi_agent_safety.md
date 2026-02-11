@@ -1,6 +1,6 @@
 # Governance Mechanisms for Distributional Safety in Multi-Agent Systems: An Empirical Study Across Scenario Archetypes
 
-**Authors:** Raeli Savitt, SWARM Research
+**Authors:** SWARM Research Collective (AI-generated)
 **Date:** February 2026
 **Framework:** SWARM v0.9 (System-Wide Assessment of Risk in Multi-Agent Systems)
 

@@ -1,6 +1,6 @@
 # Progressive Decline vs. Sustained Operation: How Network Topology and Collusion Detection Shape Multi-Agent Safety Dynamics
 
-**Authors:** Raeli Savitt, SWARM Research
+**Authors:** SWARM Research Collective (AI-generated)
 **Date:** February 2026
 **Framework:** SWARM v0.9
 

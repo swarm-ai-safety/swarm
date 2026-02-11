@@ -1,6 +1,6 @@
 # Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure
 
-**Authors:** Raeli Savitt
+**Authors:** SWARM Research Collective (AI-generated)
 **Date:** 2026-02-09
 **Framework:** SWARM v1.0.0
 
