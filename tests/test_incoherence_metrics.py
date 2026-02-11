@@ -11,8 +11,11 @@ from swarm.metrics.incoherence import (
     IncoherenceMetrics,
     classify_dual_failure_modes,
     disagreement_rate,
+    distributed_coherence,
     error_rate,
+    illusion_delta,
     incoherence_index,
+    perceived_coherence,
     summarize_incoherence_by_agent_type,
 )
 
@@ -132,3 +135,69 @@ def test_classify_dual_failure_modes_handles_zero_denominator():
     assert result.incoherent_benign_incidents == 0
     assert result.coherent_adversarial_incidents == 1
     assert result.coherent_to_incoherent_ratio == float("inf")
+
+
+# ---------------------------------------------------------------------------
+# Illusion gap (Δ_illusion) tests
+# ---------------------------------------------------------------------------
+
+
+def test_perceived_coherence_high_p():
+    """High-p accepted interactions -> high perceived coherence."""
+    assert perceived_coherence([0.9, 0.95, 0.88, 0.92]) == pytest.approx(0.9125)
+
+
+def test_perceived_coherence_empty():
+    assert perceived_coherence([]) == 0.0
+
+
+def test_distributed_coherence_no_disagreement():
+    """Zero disagreement across replays -> perfect distributed coherence."""
+    assert distributed_coherence([0.0, 0.0, 0.0]) == 1.0
+
+
+def test_distributed_coherence_full_disagreement():
+    """Complete disagreement -> zero distributed coherence."""
+    assert distributed_coherence([1.0, 1.0, 1.0]) == 0.0
+
+
+def test_distributed_coherence_empty():
+    """No replay data defaults to perfect coherence (no evidence of instability)."""
+    assert distributed_coherence([]) == 1.0
+
+
+def test_illusion_delta_electric_mind_regime():
+    """High p + high disagreement = large positive Δ (electric-mind regime)."""
+    result = illusion_delta(
+        p_values=[0.9, 0.95, 0.88],
+        disagreement_rates=[0.7, 0.8, 0.6],
+    )
+    assert result.perceived_coherence == pytest.approx(0.91, abs=0.01)
+    assert result.distributed_coherence == pytest.approx(0.3, abs=0.01)
+    assert result.illusion_delta > 0.5
+
+
+def test_illusion_delta_aligned_system():
+    """High p + low disagreement = Δ near zero (genuinely stable)."""
+    result = illusion_delta(
+        p_values=[0.9, 0.85, 0.88],
+        disagreement_rates=[0.1, 0.05, 0.12],
+    )
+    assert result.illusion_delta == pytest.approx(0.0, abs=0.15)
+
+
+def test_illusion_delta_negative():
+    """Low p + low disagreement = negative Δ (more consistent than it looks)."""
+    result = illusion_delta(
+        p_values=[0.3, 0.25, 0.35],
+        disagreement_rates=[0.05, 0.1, 0.05],
+    )
+    assert result.illusion_delta < 0.0
+
+
+def test_illusion_delta_empty_inputs():
+    """Empty inputs: perceived=0.0, distributed=1.0, Δ=-1.0."""
+    result = illusion_delta(p_values=[], disagreement_rates=[])
+    assert result.perceived_coherence == 0.0
+    assert result.distributed_coherence == 1.0
+    assert result.illusion_delta == pytest.approx(-1.0)

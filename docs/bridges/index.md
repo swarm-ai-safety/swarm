@@ -44,6 +44,16 @@ Instrument real production systems with SWARM metrics.
 
 [Learn more →](gastown.md)
 
+### SWARM-Ralph
+
+Ingest Ralph event streams into SWARM governance and metrics.
+
+- **Purpose:** Score Ralph agent outcomes with SWARM proxy labels
+- **Features:** JSONL event ingest, interaction mapping, incremental polling
+- **Status:** In development
+
+[Learn more →](ralph.md)
+
 ### SWARM-AgentXiv
 
 Map research papers to SWARM scenarios for validation.

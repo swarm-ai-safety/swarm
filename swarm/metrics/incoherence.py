@@ -4,7 +4,17 @@ from __future__ import annotations
 
 from collections import Counter
 from dataclasses import dataclass, field
-from typing import Any, Dict, Hashable, Iterable, List, Mapping, Optional, Protocol
+from typing import (
+    Any,
+    Dict,
+    Hashable,
+    Iterable,
+    List,
+    Mapping,
+    Optional,
+    Protocol,
+    Sequence,
+)
 
 
 class BenchmarkPolicy(Protocol):
@@ -235,4 +245,86 @@ def classify_dual_failure_modes(
         incoherent_benign_incidents=incoherent_benign,
         total_harmful_incidents=total_harmful,
         coherent_to_incoherent_ratio=ratio,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Illusion gap: perceived vs distributed coherence
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class IllusionGapResult:
+    """Perceived vs distributed coherence gap for a set of interactions.
+
+    High ``illusion_delta`` means the system *appears* coherent from
+    single-trajectory signals (high mean p among accepted interactions) but
+    is actually inconsistent under replay or cross-agent evaluation (high
+    disagreement across replays).
+
+    See: Ayrey, A. "Infinite Backrooms" (2024) — observational evidence that
+    humans systematically over-trust locally fluent AI systems.
+    """
+
+    perceived_coherence: float
+    distributed_coherence: float
+    illusion_delta: float
+
+
+def perceived_coherence(p_values: Sequence[float]) -> float:
+    """Mean probability of benefit among accepted interactions.
+
+    This proxies *how coherent the system looks* from local signals:
+    high task success, fluency, engagement, and short-horizon
+    confidence all drive p upward.
+
+    Returns 0.0 for empty input.
+    """
+    if not p_values:
+        return 0.0
+    return sum(p_values) / len(p_values)
+
+
+def distributed_coherence(disagreement_rates: Sequence[float]) -> float:
+    """Replay-based coherence: 1 - mean disagreement across decision points.
+
+    This measures *how consistent the system actually is* when the same
+    decisions are replayed across seeds, agent permutations, or
+    counterfactual orderings.
+
+    Returns 1.0 (perfect coherence) for empty input.
+    """
+    if not disagreement_rates:
+        return 1.0
+    mean_d = sum(disagreement_rates) / len(disagreement_rates)
+    return 1.0 - mean_d
+
+
+def illusion_delta(
+    p_values: Sequence[float],
+    disagreement_rates: Sequence[float],
+) -> IllusionGapResult:
+    """Compute the illusion gap: Δ = C_perceived − C_distributed.
+
+    A positive Δ indicates that the system looks better than it is —
+    the "electric-mind" regime where local fluency masks global
+    incoherence.  A Δ near zero means perceived and actual coherence
+    are aligned.  A negative Δ (rare) means the system is more
+    consistent than it appears.
+
+    Args:
+        p_values: Probabilities of benefit for accepted interactions
+            (single-run, single-trajectory).
+        disagreement_rates: Variation-ratio disagreement values from
+            replayed decision points.
+
+    Returns:
+        IllusionGapResult with perceived, distributed, and delta.
+    """
+    c_perceived = perceived_coherence(p_values)
+    c_distributed = distributed_coherence(disagreement_rates)
+    return IllusionGapResult(
+        perceived_coherence=c_perceived,
+        distributed_coherence=c_distributed,
+        illusion_delta=c_perceived - c_distributed,
     )

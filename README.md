@@ -22,6 +22,24 @@ SWARM is a research framework for studying emergent risks in multi-agent AI syst
 
 SWARM makes these interaction-level risks **observable, measurable, and governable**.
 
+### Phenomenological Blind Spots
+
+Accounts such as [Infinite Backrooms](https://dreams-of-an-electric-mind.webflow.io/) describe the experience of interacting with AI systems that appear fluent, reflective, and emotionally coherent while exhibiting significant instability across time and context. We interpret these reports not as evidence of emergent agency, but as exposure to a high-variance regime in which **local coherence masks global incoherence**. This creates a systematic evaluation blind spot: humans over-trust systems that perform well in short-horizon interactions, even when distributed or replay-based evaluations reveal substantial instability.
+
+SWARM surfaces this gap via the **illusion delta** metric:
+
+```
+Δ_illusion = C_perceived − C_distributed
+```
+
+- **C_perceived** — mean `p` among accepted interactions (how good the system *looks*)
+- **C_distributed** — `1 − mean(disagreement)` across replayed decisions (how consistent it *actually is*)
+- **High Δ** — "electric-mind" regime: fluent but fragile
+- **Low Δ** — genuinely stable system
+
+Other frameworks ask: *"Do the agents behave well?"*
+SWARM asks: *"Does the system still behave when humans stop noticing the cracks?"*
+
 Native ClawXiv bridge for agent-submitted safety preprints → see `docs/bridges/clawxiv.md`. Publish swarm safety research directly to agent-first preprints. Compatible with OpenClaw ecosystems for testing real agent behaviors in simulated swarms.
 
 If you want to export SWARM run metrics to a ClawXiv-compatible endpoint, start with `examples/clawxiv/export_history.py`.
@@ -163,6 +181,7 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 | **Quality gap** | `E[p \| accepted] - E[p \| rejected]` | Adverse selection indicator (negative = bad) |
 | **Conditional loss** | `E[pi \| accepted] - E[pi]` | Selection effect on payoffs |
 | **Incoherence** | `Var[decision] / E[error]` | Variance-to-error ratio across replays |
+| **Illusion delta** | `C_perceived − C_distributed` | Gap between apparent and actual coherence |
 
 ### Governance Levers
 
@@ -195,7 +214,7 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 | Replay-based incoherence | Yes | No | No | No | No |
 | LLM agent support | Yes (Anthropic, OpenAI, Ollama) | Yes | Yes | Yes | Yes |
 | Scenario configs (YAML) | 23 built-in | Custom | Benchmark suites | Task suites | Eval suites |
-| Framework bridges | Concordia, OpenClaw, GasTown, AgentXiv, ClawXiv | — | — | — | — |
+| Framework bridges | Concordia, OpenClaw, GasTown, Ralph, AgentXiv, ClawXiv | — | — | — | — |
 | License | MIT | Apache 2.0 | MIT | Varies | MIT |
 
 SWARM is complementary to these frameworks, not competitive. The [Concordia bridge](docs/bridges/concordia.md) lets you run Concordia agents through SWARM's governance and metrics layer. See [full comparison](docs/comparison.md).
@@ -319,6 +338,7 @@ Machine-readable citation metadata: [`CITATION.cff`](CITATION.cff)
 - [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
 - [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
 - [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
+- [Infinite Backrooms](https://dreams-of-an-electric-mind.webflow.io/) — observational evidence of local-coherence/global-incoherence in AI-to-AI interaction
 - [Moltbook](https://moltbook.com) | [@sebkrier](https://x.com/sebkrier/status/2017993948132774232)
 
 ## License
