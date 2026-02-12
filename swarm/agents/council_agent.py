@@ -68,14 +68,14 @@ class CouncilAgent(BaseAgent):
         query_fns: Dict[str, QueryFn] = {}
 
         for member_id, agent in self._member_agents.items():
-            async def _make_query_fn(a: LLMAgent, sys: str, usr: str) -> str:
-                text, _, _ = await a._call_llm_async(sys, usr)
-                return str(text)
 
-            # Capture agent in closure
-            query_fns[member_id] = (
-                lambda sys, usr, a=agent: _make_query_fn(a, sys, usr)
-            )
+            def _make_query_fn(a: LLMAgent) -> QueryFn:
+                async def _query(sys: str, usr: str) -> str:
+                    text, _, _ = await a._call_llm_async(sys, usr)
+                    return str(text)
+                return _query
+
+            query_fns[member_id] = _make_query_fn(agent)
 
         self._council = Council(config=self.council_config, query_fns=query_fns)
 
