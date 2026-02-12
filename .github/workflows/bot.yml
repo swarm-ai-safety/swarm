@@ -18,7 +18,7 @@ jobs:
     steps:
       - name: Respond to bot mention in comment
         if: ${{ github.event_name == 'issue_comment' && contains(github.event.comment.body, '@swarm-ai-bot') }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             const commenter = context.payload.comment.user.login;
@@ -31,7 +31,7 @@ jobs:
 
       - name: Respond to feature request issue
         if: ${{ github.event_name == 'issues' && github.event.action == 'opened' && contains(github.event.issue.title, 'Feature Request') }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           script: |
             await github.rest.issues.createComment({
