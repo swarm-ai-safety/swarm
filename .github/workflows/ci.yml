@@ -41,7 +41,7 @@ jobs:
       - run: echo "Running pytest with xdist parallelization (-n auto)."
       - name: Download testmon data (best effort)
         if: github.event_name == 'pull_request'
-        uses: dawidd6/action-download-artifact@v6
+        uses: dawidd6/action-download-artifact@v14
         with:
           workflow: ci.yml
           branch: main
