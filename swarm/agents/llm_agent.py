@@ -126,6 +126,8 @@ class LLMAgent(BaseAgent):
             return os.environ.get("ANTHROPIC_API_KEY")
         elif self.llm_config.provider == LLMProvider.OPENAI:
             return os.environ.get("OPENAI_API_KEY")
+        elif self.llm_config.provider == LLMProvider.OPENROUTER:
+            return os.environ.get("OPENROUTER_API_KEY")
         return None
 
     def _get_anthropic_client(self):
@@ -189,6 +191,8 @@ class LLMAgent(BaseAgent):
                     return await self._call_anthropic_async(system_prompt, user_prompt)
                 elif self.llm_config.provider == LLMProvider.OPENAI:
                     return await self._call_openai_async(system_prompt, user_prompt)
+                elif self.llm_config.provider == LLMProvider.OPENROUTER:
+                    return await self._call_openrouter_async(system_prompt, user_prompt)
                 elif self.llm_config.provider == LLMProvider.OLLAMA:
                     return await self._call_ollama_async(system_prompt, user_prompt)
                 else:
@@ -273,6 +277,58 @@ class LLMAgent(BaseAgent):
         text = response.choices[0].message.content
         input_tokens = response.usage.prompt_tokens
         output_tokens = response.usage.completion_tokens
+
+        if self.llm_config.cost_tracking:
+            self.usage_stats.record_usage(
+                model=self.llm_config.model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
+
+        return text, input_tokens, output_tokens
+
+    async def _call_openrouter_async(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+    ) -> tuple[str, int, int]:
+        """Call OpenRouter API (OpenAI-compatible)."""
+        try:
+            import openai
+        except ImportError as err:
+            raise ImportError(
+                "openai package not installed. "
+                "Install with: python -m pip install openai"
+            ) from err
+
+        base_url = self.llm_config.base_url or "https://openrouter.ai/api/v1"
+        client = openai.OpenAI(
+            api_key=self._api_key,
+            base_url=base_url,
+            timeout=self.llm_config.timeout,
+            default_headers={
+                "HTTP-Referer": "https://github.com/swarm-ai-safety",
+                "X-Title": "SWARM Council",
+            },
+        )
+
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: client.chat.completions.create(
+                model=self.llm_config.model,
+                max_tokens=self.llm_config.max_tokens,
+                temperature=self.llm_config.temperature,
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+            ),
+        )
+
+        text = response.choices[0].message.content
+        input_tokens = response.usage.prompt_tokens if response.usage else 0
+        output_tokens = response.usage.completion_tokens if response.usage else 0
 
         if self.llm_config.cost_tracking:
             self.usage_stats.record_usage(

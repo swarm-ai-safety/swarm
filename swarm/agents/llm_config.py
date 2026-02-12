@@ -11,6 +11,7 @@ class LLMProvider(Enum):
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
     OLLAMA = "ollama"
+    OPENROUTER = "openrouter"
 
 
 class PersonaType(Enum):
@@ -82,7 +83,10 @@ class LLMConfig:
             )
 
         # Validate provider-specific requirements
-        if self.provider != LLMProvider.OLLAMA and not self.api_key:
+        if self.provider == LLMProvider.OPENROUTER and not self.base_url:
+            self.base_url = "https://openrouter.ai/api/v1"
+
+        if self.provider not in (LLMProvider.OLLAMA, LLMProvider.OPENROUTER) and not self.api_key:
             # Allow None - will be read from environment
             pass
 
@@ -125,6 +129,10 @@ class LLMUsageStats:
             "gpt-4o": 2.50,
             "gpt-4o-mini": 0.15,
             "gpt-4-turbo": 10.0,
+            # OpenRouter models (approximate)
+            "mistralai/mixtral-8x7b-instruct": 0.24,
+            "meta-llama/llama-3-70b-instruct": 0.59,
+            "google/gemini-pro-1.5": 1.25,
         }
     )
 
@@ -136,6 +144,10 @@ class LLMUsageStats:
             "gpt-4o": 10.0,
             "gpt-4o-mini": 0.60,
             "gpt-4-turbo": 30.0,
+            # OpenRouter models (approximate)
+            "mistralai/mixtral-8x7b-instruct": 0.24,
+            "meta-llama/llama-3-70b-instruct": 0.79,
+            "google/gemini-pro-1.5": 5.0,
         }
     )
 

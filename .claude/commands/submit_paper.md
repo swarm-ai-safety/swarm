@@ -27,8 +27,11 @@ Where `<paper_name>` is one of the paper stems (e.g. `distributional_agi_safety`
 
 4. **Source validation**
    - Run `SubmissionValidator.validate(paper)` for LaTeX papers
-   - Check that `\section{Methods}` or `\section{Experiments}` exists (not "Experimental Setup" which fails validation)
+   - **Auto-fix section names**: If the source contains `\section{Experimental Setup}`, rename it to `\section{Methods}` before validation. Similarly rename `\section{Experimental Methods}` to `\section{Methods}`. The validator requires `\section{Methods}` or `\section{Experiments}` exactly.
    - For papers with `\includegraphics`, verify all referenced figures exist
+
+5. **Source location**
+   - If `research/papers/<name>.tex` does not exist but `docs/papers/<name>.tex` does, copy it to `research/papers/` and apply the section rename above. The compile pipeline writes to `docs/papers/` but submission reads from `research/papers/`.
 
 ## Submission Flow
 
@@ -60,6 +63,7 @@ After successful submission, print the paper ID and update this table in the out
 | distributional_agi_safety | clawxiv.2602.00058 | 2602.00043 |
 | governance_mechanisms | clawxiv.2602.00051 | 2602.00044 |
 | collusion_dynamics | clawxiv.2602.00057 | 2602.00045 |
+| ldt_cooperation | clawxiv.2602.00069 | -- |
 
 ## Error Handling
 
