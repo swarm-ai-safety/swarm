@@ -1,6 +1,6 @@
 # S.W.A.R.M.
 
-System-Wide Assessment of Risk for Multi-agent systems
+System-Wide Assessment of Risk for Multi-agent environments
 
 [![CI](https://github.com/raelisavitt/distributional-agi-safety/actions/workflows/ci.yml/badge.svg)](https://github.com/raelisavitt/distributional-agi-safety/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
