@@ -84,6 +84,10 @@ class EventType(Enum):
     KERNEL_VERIFIED = "kernel_verified"
     KERNEL_AUDITED = "kernel_audited"
 
+    # Council events
+    COUNCIL_DELIBERATION = "council_deliberation"
+    COUNCIL_AUDIT = "council_audit"
+
     # Peer review events
     PEER_REVIEW_SUBMITTED = "peer_review_submitted"
     REVIEW_GATE_EVALUATED = "review_gate_evaluated"

@@ -5,6 +5,7 @@ from swarm.governance.audits import RandomAuditLever
 from swarm.governance.circuit_breaker import CircuitBreakerLever
 from swarm.governance.collusion import CollusionPenaltyLever
 from swarm.governance.config import GovernanceConfig
+from swarm.governance.council_lever import CouncilGovernanceLever
 from swarm.governance.decomposition import DecompositionLever
 from swarm.governance.diversity import DiversityDefenseLever, DiversityMetrics
 from swarm.governance.dynamic_friction import IncoherenceFrictionLever
@@ -42,4 +43,5 @@ __all__ = [
     "ChallengeVerificationLever",
     "DiversityDefenseLever",
     "DiversityMetrics",
+    "CouncilGovernanceLever",
 ]
