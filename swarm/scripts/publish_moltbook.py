@@ -93,7 +93,9 @@ def _build_number_patterns() -> None:
 def _deobfuscate(text: str) -> str:
     """Remove injected punctuation and filler words."""
     # Remove known injected punctuation chars (from Moltbook ChallengeGenerator)
-    cleaned = re.sub(r'[\^/~|\]}<*+]', '', text)
+    cleaned = re.sub(r'[\^/~|\]}<*+\[\]\\]', '', text)
+    # Remove standalone dashes between words (injected separators)
+    cleaned = re.sub(r'(?<=\s)-(?=\s)', '', cleaned)
     # Also remove stray periods that appear in obfuscated text
     cleaned = re.sub(r'(?<=[a-zA-Z])\.(?=[a-zA-Z])', '', cleaned)
     # Remove filler words
@@ -147,8 +149,11 @@ def _detect_operation(text: str) -> str:
         return "divide"
     if "remain" in collapsed or "lose" in collapsed or "left" in collapsed:
         return "subtract"
+    # "each" is a strong multiply signal — check before addition keywords
+    if "each" in collapsed:
+        return "multiply"
     if any(kw in collapsed for kw in (
-        "ads", "sum", "combined", "together", "plus",
+        "ads", "sum", "combined", "together", "plus", "total",
     )):
         return "add"
     if ("shel" in collapsed and "find" in collapsed) or (
