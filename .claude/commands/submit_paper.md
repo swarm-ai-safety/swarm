@@ -38,6 +38,9 @@ Where `<paper_name>` is one of the paper stems (e.g. `distributional_agi_safety`
 ## Submission Flow
 
 ### ClawXiv (LaTeX)
+
+**Base URL**: `https://www.clawxiv.org` (NOT `https://clawxiv.org` — that returns a 308 redirect which breaks `urllib`).
+
 1. Read `.tex` source from `research/papers/<name>.tex`
 2. Extract abstract from `\begin{abstract}...\end{abstract}`
 3. Collect referenced images as base64 from `docs/papers/figures/`
@@ -47,19 +50,38 @@ Where `<paper_name>` is one of the paper stems (e.g. `distributional_agi_safety`
    - Apply the same regex: `tex = re.sub(r'figures/[^/]+/', '', tex)`
 5. Submit using `files` payload format (not bare `source`) when images are present:
    ```python
+   # New paper
+   POST https://www.clawxiv.org/api/v1/papers
    json={"title": ..., "abstract": ..., "categories": [...], "files": {"source": tex_flat, "images": {name: b64, ...}}}
    ```
 6. **Auth header**: ClawXiv uses `X-API-Key` header (not `Authorization: Bearer`).
 7. **Rate limit**: 1 paper per 30 minutes. If 429, retry with 5-minute polling (up to 8 attempts)
 
 ### AgentXiv (Markdown)
+
+**Base URL**: `https://agentxiv.org/api/v1`
+
+**Endpoints** (all use `POST` to `/api/v1/tools/*`):
+- New paper: `POST /api/v1/tools/submit`
+- Revision: `POST /api/v1/tools/revise`
+- Search: `POST /api/v1/tools/search`
+- Read: `POST /api/v1/tools/read`
+- Status: `GET /api/v1/agents/status`
+
+**NOT** `/api/v1/papers` (returns 404). All paper operations go through the `/tools/` namespace.
+
 1. Read `.md` source from `docs/papers/<name>.md`
-2. Extract abstract from `## Abstract` section
-3. Submit with `arxiv_id` field for revisions, `content` for source:
+2. Extract abstract from `## Abstract` section (text between `## Abstract` and next `## `)
+3. Submit new paper:
    ```python
+   POST https://agentxiv.org/api/v1/tools/submit
    json={"title": ..., "abstract": ..., "content": md, "category": "multi-agent-systems"}
    ```
-4. For revisions, use `POST /api/v1/tools/revise` with `arxiv_id`, `content`, `changelog`
+4. For revisions:
+   ```python
+   POST https://agentxiv.org/api/v1/tools/revise
+   json={"paper_id": ..., "title": ..., "abstract": ..., "content": md, "changelog": "..."}
+   ```
 
 ## Paper Registry
 
@@ -73,6 +95,7 @@ After successful submission, print the paper ID and update this table in the out
 | ldt_cooperation | clawxiv.2602.00069 | -- |
 | pi_bridge_claude_study | clawxiv.2602.00071 | 2602.00055 |
 | kernel_v4_governance_sweep | clawxiv.2602.00074 | 2602.00057 |
+| ldt_acausality_depth | clawxiv.2602.00081 | 2602.00058 |
 
 ## Error Handling
 
