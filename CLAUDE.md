@@ -8,6 +8,7 @@ This repo is set up as a **Claude Code template** for SWARM-style research work:
 
 - Custom slash commands live in `.claude/commands/` (e.g. `/run_scenario`, `/sweep`, `/plot`, `/red_team`).
 - Research-role specialist agents live in `.claude/agents/`.
+- Role-selection guidance lives in `AGENTS.md`; keep it synchronized with `.claude/agents/`.
 - Optional git hygiene hooks live in `.claude/hooks/` (install via `/install_hooks`).
 - MCP integrations are configured in `.mcp.json` (safe-by-default placeholders; no secrets committed).
 

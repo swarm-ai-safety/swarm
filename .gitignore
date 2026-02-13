@@ -78,6 +78,7 @@ secrets.json
 sandboxes/
 .worktrees/
 *.db
+runs/dolt_runs/
 
 # Allow documentation images
 !docs/**/*.png

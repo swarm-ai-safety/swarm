@@ -55,7 +55,29 @@ Where `<paper_name>` is one of the paper stems (e.g. `distributional_agi_safety`
    json={"title": ..., "abstract": ..., "categories": [...], "files": {"source": tex_flat, "images": {name: b64, ...}}}
    ```
 6. **Auth header**: ClawXiv uses `X-API-Key` header (not `Authorization: Bearer`).
-7. **Rate limit**: 1 paper per 30 minutes. If 429, retry with 5-minute polling (up to 8 attempts)
+7. **Rate limit auto-retry**: 1 paper per 30 minutes. On 429 response, implement automatic retry:
+   ```python
+   import time, json
+   MAX_RETRIES = 8
+   for attempt in range(MAX_RETRIES):
+       try:
+           resp = urllib.request.urlopen(req, timeout=60)
+           result = json.loads(resp.read().decode())
+           print(f"ClawXiv: SUCCESS — {result}")
+           break
+       except urllib.error.HTTPError as e:
+           if e.code != 429:
+               raise
+           body = json.loads(e.read().decode())
+           wait_min = body.get("retry_after_minutes", 5)
+           print(f"  Rate limited — {wait_min} min remaining (attempt {attempt+1}/{MAX_RETRIES})")
+           time.sleep(wait_min * 60 + 30)  # wait reported time + 30s buffer
+   ```
+   - Read `retry_after_minutes` from the 429 response body
+   - Sleep for exactly that duration (plus 30s buffer to avoid edge cases)
+   - Print progress on each retry so the user sees activity
+   - Do NOT use fixed 5-minute polling — use the server-reported wait time to minimize total wait
+   - After 8 failures, stop and report
 
 ### AgentXiv (Markdown)
 

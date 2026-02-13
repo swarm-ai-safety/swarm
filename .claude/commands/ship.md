@@ -42,11 +42,15 @@ Examples:
   4. Re-verify with `git diff --cached --name-only`.
 - This prevents the shared git index race condition where parallel Claude/Codex sessions pollute each other's commits.
 
-6) Commit:
+6) Commit (with parallel session awareness):
 - If `<commit message>` is provided, use it.
 - Otherwise, analyze the diff and draft a concise commit message.
 - Always append `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`.
 - Let the pre-commit hook run (do not bypass with `SKIP_SWARM_HOOKS=1` unless the hook itself is being modified).
+- **If the commit exits non-zero but pre-commit hooks passed**: A parallel session likely committed the same files during the hook run. Run `git log --oneline -1` and `git diff --cached --stat` to check:
+  - If staged diff is now empty (all files match HEAD), report "parallel session committed these files" and skip to step 7 (push check).
+  - If staged diff is smaller (some files remain), report which files were taken by the parallel session, then re-commit only the remaining changes.
+  - Do NOT re-run `git add` on files that are already at HEAD — this stages empty diffs that produce confusing "nothing to commit" errors.
 
 7) Push (with auto-rebase on conflict):
 - Push to the current branch's upstream (`git push`).
@@ -60,7 +64,17 @@ Examples:
   6. If the commit is already on remote (e.g. another session pushed it), report success and skip the push.
 - Never retry more than once. If the second push also fails, stop and report.
 
-8) Print confirmation: commit SHA, branch, and remote status.
+8) Post-ship status report:
+- Print a compact summary so the user doesn't need to run `/status` afterward:
+  ```
+  Shipped:
+    Commit:    <sha> <first line of commit message>
+    Branch:    <branch>
+    Remote:    origin/<branch> — pushed (rebased N if applicable)
+    Remaining: <N files modified, M untracked> (or "clean")
+  ```
+- Run `git status --short` and `git diff --stat` to populate the "Remaining" line.
+- If everything is clean, say "Working tree clean".
 
 ## Constraints
 

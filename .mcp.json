@@ -10,6 +10,15 @@
     "sqlite_runs": {
       "command": "uvx",
       "args": ["mcp-server-sqlite", "--db-path", "runs/runs.db"]
+    },
+    "dolt_runs": {
+      "command": "/Users/raelisavitt/go/bin/dolt-mcp-server",
+      "args": [
+        "--stdio",
+        "--dolt-host", "127.0.0.1",
+        "--dolt-port", "3307",
+        "--dolt-user", "root"
+      ]
     }
   }
 }
