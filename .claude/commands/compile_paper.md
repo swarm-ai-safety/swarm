@@ -51,6 +51,16 @@ For `%AUTHOR%`, resolve in order:
 2. `git config user.name`
 3. Ask the user (do not guess from OS username)
 
+### Step 2b: Auto-copy figures
+
+Before compiling, ensure referenced figures are available:
+
+1. Scan the `.tex` for `\includegraphics{...}` paths
+2. For each referenced figure not found in `docs/papers/figures/`:
+   - Search `runs/*/plots/` for a file with the same name
+   - If found, copy it to `docs/papers/figures/<slug>/`
+3. This prevents "File not found" errors during tectonic compilation
+
 ### Step 3: Compile
 
 ```bash

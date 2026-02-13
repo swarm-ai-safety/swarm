@@ -84,9 +84,10 @@ Examples:
 ```
 
 4) If `--figures` is passed:
+   - **Auto-copy from runs/**: Search `runs/*/plots/` for PNGs matching the scenario or sweep. Copy them to `docs/papers/figures/<title_slug>/`, creating the directory if needed.
    - Check `docs/papers/figures/` for existing figures matching the scenario_ids.
    - If `docs/papers/generate_paper_plots.py` exists, suggest running it.
-   - Insert `![Figure N](figures/<filename>)` references into the Results section.
+   - Insert `![Figure N](figures/<title_slug>/<filename>)` references into the Results section.
 
 5) Print the paper path and a checklist:
    - [x] Methods tables populated

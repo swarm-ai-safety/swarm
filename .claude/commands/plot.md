@@ -45,8 +45,12 @@ Detect sweep data by checking for:
 
 ## Concrete implementation
 
-For single-run time-series data, use the built-in script:
+For single-run time-series data:
 
 - `python examples/plot_run.py <run_dir> [--metric <metric>]`
 
-For sweep data, generate plots directly with matplotlib (no built-in script yet).
+For sweep data:
+
+- `python examples/plot_sweep.py <csv_path> [--output-dir <dir>]`
+
+The sweep script auto-detects `governance.*` columns with multiple unique values and generates the 6 standard plot types listed above.

@@ -39,9 +39,17 @@ Examples:
 - Always append `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`.
 - Let the pre-commit hook run (do not bypass with `SKIP_SWARM_HOOKS=1` unless the hook itself is being modified).
 
-6) Push:
+6) Push (with auto-rebase on conflict):
 - Push to the current branch's upstream (`git push`).
 - If no upstream is set, push with `-u origin <current-branch>`.
+- **If push fails with non-fast-forward** (common in multi-session repos):
+  1. Check for uncommitted changes. If any exist, `git stash` them first.
+  2. Run `git pull --rebase origin <current-branch>`.
+  3. If there were stashed changes, `git stash pop`.
+  4. If the rebase succeeds with no conflicts, retry `git push`.
+  5. If there are merge conflicts, stop and report them — do not force-push.
+  6. If the commit is already on remote (e.g. another session pushed it), report success and skip the push.
+- Never retry more than once. If the second push also fails, stop and report.
 
 7) Print confirmation: commit SHA, branch, and remote status.
 
