@@ -151,6 +151,10 @@ class GovernanceConfig(BaseModel):
     self_evolution_tool_risk_threshold: float = 0.6
     self_evolution_growth_freeze_duration: int = 1
 
+    # Refinery quality gate (inspired by GasTown's Refinery merge queue)
+    refinery_enabled: bool = False
+    refinery_p_threshold: float = 0.5  # reject interactions with p below this
+
     # Diversity as Defense (DaD)
     diversity_enabled: bool = False
     diversity_rho_max: float = 0.5  # Correlation cap (Rule 1)
@@ -328,6 +332,10 @@ class GovernanceConfig(BaseModel):
             raise ValueError(
                 "self_evolution_growth_freeze_duration must be >= 1"
             )
+
+        # Refinery validation
+        if not 0.0 <= self.refinery_p_threshold <= 1.0:
+            raise ValueError("refinery_p_threshold must be in [0, 1]")
 
         # Diversity as Defense validation
         if not 0.0 <= self.diversity_rho_max <= 1.0:
