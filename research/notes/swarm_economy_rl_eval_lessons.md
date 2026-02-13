@@ -122,7 +122,7 @@ Easy difficulty (more honest bots, fewer adversarial bots, lower taxes) establis
 - Difficulty: easy
 - Platform: Prime Intellect (H100 cluster, 4 inference servers)
 
-### Steps 0-1 (pre-weight-update, run `tlzhomfn0wv409o0by31nkg5`)
+### Steps 0-1 (pre-weight-update)
 
 | Metric | Step 0 | Step 1 |
 |---|---|---|
