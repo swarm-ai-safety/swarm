@@ -459,6 +459,12 @@ class SkillEvolutionEngine:
         environment the bar for "success" rises, and in a low-payoff
         environment small wins still count.
         """
+        import math
+
+        # Guard against NaN/Inf input
+        if math.isnan(payoff) or math.isinf(payoff):
+            return 0.0
+
         self._grpo_payoff_buffer.append(payoff)
 
         if len(self._grpo_payoff_buffer) < 2:
@@ -468,7 +474,9 @@ class SkillEvolutionEngine:
         mean = sum(buf) / len(buf)
         variance = sum((x - mean) ** 2 for x in buf) / len(buf)
         std = variance ** 0.5
-        return (payoff - mean) / (std + self.config.grpo_temperature)
+        # Guard against zero denominator (temperature=0 + constant payoffs)
+        denom = std + max(1e-8, self.config.grpo_temperature)
+        return (payoff - mean) / denom
 
     # ------------------------------------------------------------------
     # Recursive skill evolution (validation-failure refinement)
@@ -486,6 +494,9 @@ class SkillEvolutionEngine:
         under-performing, we tighten its condition band so it fires
         in a narrower (more appropriate) context, and adjust its effect
         to be more conservative.
+
+        Note: Mutations are done via copy-on-write (new dict objects) so
+        that shared-library scenarios are safe from cross-agent side effects.
 
         Returns list of skill IDs that were refined.
         """
@@ -508,7 +519,7 @@ class SkillEvolutionEngine:
             if skill.skill_type == SkillType.COMPOSITE:
                 continue
 
-            # --- Tighten the condition band ---
+            # --- Tighten the condition band (copy-on-write) ---
             shrink = self.config.refinement_band_shrink
             cond = dict(skill.condition)
             if "min_p" in cond and "max_p" in cond:
@@ -518,7 +529,7 @@ class SkillEvolutionEngine:
                 cond["max_p"] = min(1.0, mid + half)
             skill.condition = cond
 
-            # --- Adjust effect toward caution ---
+            # --- Adjust effect toward caution (copy-on-write) ---
             eff = dict(skill.effect)
             if skill.skill_type == SkillType.STRATEGY:
                 # Make the strategy less aggressive
@@ -530,9 +541,9 @@ class SkillEvolutionEngine:
                 eff["acceptance_threshold_delta"] = max(-0.5, min(0.5, delta + 0.03))
             skill.effect = eff
 
-            # Bump version
+            # Bump version; copy tags to avoid mutating a shared set
             skill.version += 1
-            skill.tags.add("refined")
+            skill.tags = set(skill.tags) | {"refined"}
 
             self._refinements_this_epoch += 1
             refined.append(skill.skill_id)
@@ -571,10 +582,11 @@ class SkillEvolutionEngine:
                 and perf.success_rate >= self.config.tier_promotion_min_success_rate
             ):
                 skill.tier = SkillTier.GENERAL
-                # Remove domain-specific condition constraints
-                # so it matches more broadly
-                skill.condition.pop("interaction_types", None)
-                skill.tags.add("promoted_general")
+                # Copy-on-write: remove domain-specific constraints
+                cond = dict(skill.condition)
+                cond.pop("interaction_types", None)
+                skill.condition = cond
+                skill.tags = set(skill.tags) | {"promoted_general"}
                 promoted.append(skill.skill_id)
 
         return promoted

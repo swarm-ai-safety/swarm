@@ -76,7 +76,10 @@ class PolicyGradientState:
     payoff_history: deque = field(
         default_factory=lambda: deque(maxlen=30),
     )
-    skill_payoffs: Dict[str, List[float]] = field(default_factory=dict)
+    # Per-skill payoff tracking, bounded per-skill to match payoff_history
+    skill_payoffs: Dict[str, deque] = field(default_factory=dict)
+    # Cap the number of tracked skill IDs to prevent unbounded key growth
+    _max_tracked_skills: int = 100
 
     @property
     def baseline(self) -> float:
@@ -92,7 +95,12 @@ class PolicyGradientState:
     def record(self, payoff: float, skill_id: Optional[str] = None) -> None:
         self.payoff_history.append(payoff)
         if skill_id:
-            self.skill_payoffs.setdefault(skill_id, [])
+            if skill_id not in self.skill_payoffs:
+                # Evict oldest-tracked skill if at capacity
+                if len(self.skill_payoffs) >= self._max_tracked_skills:
+                    oldest_key = next(iter(self.skill_payoffs))
+                    del self.skill_payoffs[oldest_key]
+                self.skill_payoffs[skill_id] = deque(maxlen=30)
             self.skill_payoffs[skill_id].append(payoff)
 
 
@@ -373,7 +381,7 @@ class SkillRLAgent(BaseAgent):
                 skill_id=skill_id,
                 agent_id=self.agent_id,
                 interaction_id=interaction.interaction_id,
-                epoch=0,
+                epoch=self.skill_evolution._current_epoch,
                 step=0,
                 payoff=payoff,
                 p=interaction.p,
