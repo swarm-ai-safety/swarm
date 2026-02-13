@@ -350,4 +350,4 @@ ORDER BY scenario_id, governance_transaction_tax_rate, seed;
    Multi-Agent Systems Under Adversarial Pressure." SWARM Technical Report.
 2. Savitt, R. (2026). "Collusion Dynamics and Network Resilience in
    Multi-Agent Governance Systems." SWARM Technical Report.
-3. SWARM Framework. https://github.com/raelisavitt/distributional-agi-safety
+3. SWARM Framework. https://github.com/swarm-ai-safety/swarm
