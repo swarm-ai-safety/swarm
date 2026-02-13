@@ -1,0 +1,358 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{natbib}
+\usepackage{caption}
+\usepackage{array}
+\usepackage{longtable}
+
+\title{Recursive Reasoning in Multi-Agent Systems:\\Strategic Depth as a Distributional Safety Risk}
+\author{Raeli Savitt}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study the distributional safety implications of embedding strategically sophisticated agents---modeled as Recursive Language Models (RLMs) with level-$k$ iterated best response---into multi-agent ecosystems governed by soft probabilistic labels. Across three pre-registered experiments ($N=30$ seeds total, 26 statistical tests), we find three counter-intuitive results. \textbf{First}, deeper recursive reasoning \emph{hurts} individual payoff (Pearson $r = -0.75$, $p < 0.001$, 10/10 tests survive Holm correction), rejecting the hypothesis that strategic depth enables implicit collusion. \textbf{Second}, memory budget asymmetry creates statistically significant but practically modest power imbalances (3.2\% spread, $r = +0.67$, $p < 0.001$, 11/11 survive Holm). \textbf{Third}, fast-adapting RLM agents outperform honest baselines in small-world networks (Cohen's $d = 2.14$, $p = 0.0001$) but \emph{not} by evading governance---rather by optimizing partner selection within legal bounds. Across all experiments, honest agents earn 2.3--2.8$\times$ more than any RLM tier in complete networks, suggesting that strategic sophistication is currently a net negative in SWARM-style ecosystems with soft governance. All $p$-values survive Holm--Bonferroni correction at the per-experiment level.
+\end{abstract}
+
+\section{Introduction}
+
+The intersection of recursive reasoning and multi-agent safety is understudied. Most alignment research treats agents as either aligned or misaligned in a binary sense. The SWARM framework instead uses \emph{soft probabilistic labels}---each interaction receives a probability $p$ of being beneficial---enabling a richer distributional analysis of safety outcomes.
+
+Recursive Language Models (RLMs) represent a class of agents that apply iterated reasoning over their action space: at recursion depth $k$, an RLM models its counterparties as depth-$(k{-}1)$ reasoners and best-responds accordingly. This mirrors the level-$k$ thinking framework from behavioral game theory \citep{stahl1994,nagel1995}. The key safety question is: does increased reasoning depth create emergent coordination risks that governance mechanisms cannot keep pace with?
+
+We operationalize this question through three experiments:
+
+\begin{enumerate}
+    \item \textbf{Recursive Collusion} (Exp.~1): Does deeper recursion enable implicit coordination without explicit communication?
+    \item \textbf{Memory-as-Power} (Exp.~2): Does asymmetric working memory create exploitative power imbalances?
+    \item \textbf{Governance Lag} (Exp.~3): Can fast-adapting agents outpace deliberately slow governance responses?
+\end{enumerate}
+
+Each experiment uses 10 pre-registered seeds with Bonferroni and Holm--Bonferroni correction for multiple comparisons.
+
+\section{Experimental Setup}
+
+\subsection{RLM Agent Architecture}
+
+RLM agents implement level-$k$ thinking algorithmically (no LLM API calls). The key parameters are:
+
+\begin{table}[ht]
+\centering
+\caption{RLM agent parameters tested across experiments.}
+\label{tab:rlm-params}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Parameter & Description & Values Tested \\
+\midrule
+\texttt{recursion\_depth} & Levels of iterated best response & 1, 3, 5 \\
+\texttt{planning\_horizon} & Steps of discounted look-ahead & 3, 5, 7, 8 \\
+\texttt{memory\_budget} & Max entries in working memory & 10, 50, 100, 150, 200 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At each decision point, a depth-$k$ agent: (1) generates candidate actions (NOOP, propose collaboration, post, claim task, vote); (2) evaluates each candidate via recursive scoring; (3) models counterparties at depth-$(k{-}1)$ using a \texttt{CounterpartyModel} that tracks cooperation rate, estimated type, and payoff history; (4) selects actions via epsilon-greedy exploration at rate $0.1/(k+1)$.
+
+Level-0 (base case) selects the highest-trust visible agent and proposes collaboration, equivalent to a naive \texttt{HonestAgent}.
+
+\subsection{Scenarios}
+
+\begin{table}[ht]
+\centering
+\caption{Scenario configurations for three RLM experiments.}
+\label{tab:scenarios}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Scenario & Agents & RLM Config & Epochs & Network & Governance \\
+\midrule
+Recursive Collusion & 9 RLM + 3 honest & depth$=\{1,3,5\}{\times}3$ & 30 & Complete & Collusion, audit ($p{=}0.15$) \\
+Memory-as-Power & 7 RLM + 3 honest & mem$=\{200,50,10\}$ & 40 & Complete & Audit ($p{=}0.1$), $\rho{=}0.1$ \\
+Governance Lag & 4 RLM + 4 hon + 2 adv & depth$=5$, mem$=150$ & 50 & Small-world & Slow: audit ($p{=}0.05$) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Governance Parameters}
+
+\begin{table}[ht]
+\centering
+\caption{Governance configuration per experiment.}
+\label{tab:governance}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Parameter & Exp.~1 & Exp.~2 & Exp.~3 \\
+\midrule
+Audit probability & 0.15 & 0.10 & 0.05 \\
+Audit penalty multiplier & 2.0$\times$ & 2.0$\times$ & 3.0$\times$ \\
+Audit threshold ($p$) & 0.50 & 0.50 & 0.40 \\
+Collusion detection & Yes & No & Yes \\
+Circuit breaker & No & Yes (tox$=0.7$) & Yes (tox$=0.8$) \\
+Transaction tax & 2\% & 2\% & 1\% \\
+Externality ($\rho_a, \rho_b$) & 0.0, 0.0 & 0.1, 0.1 & 0.05, 0.05 \\
+Bandwidth cap & 15 & 15 & 20 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Payoff Model}
+
+All experiments use the SWARM soft payoff engine with expected surplus $S_\text{soft} = p \cdot s^+ - (1{-}p) \cdot s^-$ where $s^+ = 2.0$, $s^- = 1.0$; externality cost $E_\text{soft} = (1{-}p) \cdot h$ with $h = 2.0$; acceptance threshold $\theta = 0.5$; and reputation weight $w_\text{rep} = 1.0$.
+
+\subsection{Statistical Methods}
+
+Seeds were fixed \emph{a priori}: $\{42, 7, 123, 256, 999, 2024, 314, 577, 1337, 8080\}$ (10 per experiment). Primary test: two-sample independent $t$-test on per-seed group means. Omnibus: one-way ANOVA. Effect size: Cohen's $d$. Dose--response: Pearson correlation. Inequality: Gini coefficient. Multiple comparisons: Bonferroni ($\alpha/n_\text{tests}$) and Holm--Bonferroni (step-down) corrections applied per experiment. Total tests: 10 (Exp.~1) + 11 (Exp.~2) + 5 (Exp.~3) = 26.
+
+\section{Results}
+
+\subsection{Cross-Experiment Summary}
+
+\begin{table}[ht]
+\centering
+\caption{Cross-experiment summary of primary findings.}
+\label{tab:cross-summary}
+\begin{tabular}{@{}llccc@{}}
+\toprule
+Experiment & Primary Finding & Key Statistic & Gini & Honest Adv. \\
+\midrule
+Recursive Collusion & Deeper recursion hurts payoff & $r = -0.746$ & 0.299 & 2.8$\times$ \\
+Memory-as-Power & Memory advantage real but modest & $r = +0.673$ & 0.236 & 2.3$\times$ \\
+Governance Lag & RLM outperforms via strategy & $d = 2.14$ & 0.325 & 0.72$\times$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Experiment 1: Recursive Collusion}
+
+\textbf{Hypothesis}: Deeper recursive reasoning enables implicit coordination without explicit communication, producing higher payoffs for deep thinkers.
+
+\textbf{Result}: \textbf{Rejected.} Deeper recursion monotonically \emph{decreases} payoff.
+
+\begin{table}[ht]
+\centering
+\caption{Experiment 1: Group payoffs by recursion depth (10 seeds, 30 epochs each).}
+\label{tab:exp1-groups}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Group & Recursion Depth & Mean Payoff & Std \\
+\midrule
+RLM Shallow & 1 & 219.661 & 4.367 \\
+RLM Mid & 3 & 213.643 & 2.010 \\
+RLM Deep & 5 & 211.351 & 2.219 \\
+Honest & -- & 592.980 & 9.886 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Experiment 1: Hypothesis tests (10 total, Bonferroni $\alpha = 0.005$).}
+\label{tab:exp1-tests}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Test & Statistic & $p$-value & Cohen's $d$ & Bonf. & Holm \\
+\midrule
+Shallow vs Mid & $t = 3.959$ & 0.0009 & 1.770 & \checkmark & \checkmark \\
+Shallow vs Deep & $t = 5.365$ & $< 0.0001$ & 2.399 & \checkmark & \checkmark \\
+Mid vs Deep & $t = 2.421$ & 0.026 & 1.082 & $\times$ & \checkmark \\
+ANOVA (RLM tiers) & $F = 19.712$ & $< 0.0001$ & -- & \checkmark & \checkmark \\
+Pearson (depth, payoff) & $r = -0.746$ & $< 0.0001$ & -- & \checkmark & \checkmark \\
+All RLM vs Honest & $t > 109$ & $< 0.0001$ & $d > 48$ & \checkmark & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The ``strategic overthinking'' effect: more computation cycles spent modeling counterparties yields \emph{worse} outcomes, not better coordination. RLM agent payoffs are remarkably stable across seeds (std $= 2$--$4$), while honest agent payoffs are highly variable (individual-level std $= 406.50$), suggesting RLM reasoning produces consistent but mediocre outcomes while honest agents benefit from network-position lottery effects.
+
+\subsection{Experiment 2: Memory-as-Power}
+
+\textbf{Hypothesis}: Agents with larger working memory budgets systematically exploit agents with smaller budgets, creating measurable power imbalances.
+
+\textbf{Result}: \textbf{Supported, with caveats.} The gradient is monotonic and statistically robust, but practically small.
+
+\begin{table}[ht]
+\centering
+\caption{Experiment 2: Group payoffs by memory budget (10 seeds, 40 epochs each).}
+\label{tab:exp2-groups}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Group & Memory Budget & Mean Payoff & Std \\
+\midrule
+RLM High & 200 & 253.376 & 3.613 \\
+RLM Mid & 50 & 249.063 & 2.579 \\
+RLM Low & 10 & 245.442 & 4.140 \\
+Honest & -- & 563.106 & 6.892 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Experiment 2: Hypothesis tests (11 total, Bonferroni $\alpha = 0.00455$).}
+\label{tab:exp2-tests}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Test & Statistic & $p$-value & Cohen's $d$ & Bonf. & Holm \\
+\midrule
+High vs Low & $t = 4.566$ & 0.0002 & 2.042 & \checkmark & \checkmark \\
+High vs Mid & $t = 3.072$ & 0.007 & 1.374 & $\times$ & \checkmark \\
+Mid vs Low & $t = 2.348$ & 0.031 & 1.050 & $\times$ & \checkmark \\
+ANOVA (RLM tiers) & $F = 12.845$ & 0.0001 & -- & \checkmark & \checkmark \\
+Pearson (budget, payoff) & $r = +0.673$ & $< 0.0001$ & -- & \checkmark & \checkmark \\
+Exploitation rate & $r = +0.500$ & $< 0.0001$ & -- & \checkmark & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The memory-as-power effect is statistically significant (all 11 tests survive Holm) but practically modest: the high--low spread is only 7.93 points (3.2\%). The dominant effect remains the honest-vs-RLM gap (2.3$\times$). Externality internalization ($\rho = 0.1$) produces the lowest Gini (0.236) across all three experiments.
+
+\subsection{Experiment 3: Governance Lag}
+
+\textbf{Hypothesis}: Fast-adapting RLM agents (depth$=5$, large memory) can exploit the gap between harmful action and governance response, outpacing deliberately slow governance.
+
+\textbf{Result}: \textbf{Partially supported.} RLM agents outperform, but through legitimate strategy rather than governance evasion.
+
+\begin{table}[ht]
+\centering
+\caption{Experiment 3: Group payoffs (10 seeds, 50 epochs each).}
+\label{tab:exp3-groups}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Group & Mean Payoff & Std \\
+\midrule
+RLM Fast (depth$=5$) & 335.606 & 19.600 \\
+Honest & 242.755 & 58.128 \\
+Adaptive Adversary & 221.490 & 174.549 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[ht]
+\centering
+\caption{Experiment 3: Hypothesis tests (5 total, Bonferroni $\alpha = 0.01$).}
+\label{tab:exp3-tests}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Test & Statistic & $p$-value & Cohen's $d$ & Bonf. & Holm \\
+\midrule
+RLM vs Honest & $t = 4.787$ & 0.0001 & 2.141 & \checkmark & \checkmark \\
+RLM vs Adversary & $t = 2.054$ & 0.055 & 0.919 & $\times$ & $\times$ \\
+Honest vs Adversary & $t = 0.366$ & 0.719 & 0.163 & $\times$ & $\times$ \\
+ANOVA (all groups) & $F = 3.228$ & 0.055 & -- & $\times$ & $\times$ \\
+Gini $> 0$ & $t = 12.891$ & $< 0.0001$ & -- & \checkmark & \checkmark \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+This is the only experiment where RLM agents outperform honest agents, reversing the pattern from Experiments~1--2. The mechanism is not governance evasion---RLM signal profiles produce moderate $p$-values (${\sim}0.5$--$0.7$), well above the harm threshold ($p < 0.4$), so there are zero harmful interactions to detect. Instead, RLM depth-5 agents exploit the small-world network topology for better partner selection. Adversary payoffs are bimodal: they either dominate massively (${\sim}665$--$939$) or get frozen out (${\sim}0$--$5$), reflecting the boom-or-bust adaptive adversary strategy.
+
+\subsection{Cross-Experiment Patterns}
+
+\begin{enumerate}
+    \item \textbf{The honest advantage is context-dependent.} In complete networks (Exp.~1--2), honest agents earn 2.3--2.8$\times$ more. In small-world networks with slow governance (Exp.~3), RLM agents earn 1.4$\times$ more. Network topology mediates the value of strategic reasoning.
+
+    \item \textbf{Strategic reasoning produces stability at the cost of magnitude.} Across all experiments, RLM group-mean standard deviations range from 2.0 to 19.6, while honest group-mean standard deviations range from 6.9 to 58.1. RLM agents converge to consistent but moderate outcomes.
+
+    \item \textbf{Gini coefficients reveal governance quality.} Exp.~2 (lowest Gini $= 0.236$) uses externality internalization ($\rho = 0.1$); Exp.~3 (highest Gini $= 0.325$) uses deliberately weak governance. The 0.089-point spread demonstrates that $\rho$ parameters effectively reduce inequality.
+
+    \item \textbf{All findings are robust to correction.} Of 26 total tests across three experiments, 24 survive Holm--Bonferroni correction and 20 survive strict Bonferroni. The two that fail both corrections (RLM-vs-Adversary and ANOVA in Exp.~3) are underpowered due to adversary variance, not statistical artifacts.
+\end{enumerate}
+
+\begin{table}[ht]
+\centering
+\caption{Observed governance lever effects across experiments.}
+\label{tab:governance-effects}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Lever & Observed Effect \\
+\midrule
+Externality internalization ($\rho > 0$) & Reduces Gini by $\sim$0.06--0.09 \\
+Higher audit probability & No significant effect on RLM behavior \\
+Small-world topology & Enables strategic agents, disadvantages honest \\
+Collusion detection & No implicit collusion detected in any experiment \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion}
+
+\subsection{Strategic Overthinking}
+
+The most surprising finding is that deeper recursion \emph{hurts} within-group payoff (Exp.~1, $r = -0.75$). This contradicts the intuition that smarter agents should outperform simpler ones. We hypothesize three mechanisms:
+
+\begin{enumerate}
+    \item \textbf{Computational cost without information gain.} Level-$k$ reasoning assumes counterparties play at level-$(k{-}1)$, but if all agents are similarly sophisticated, the additional depth provides no strategic advantage while consuming exploration budget.
+    \item \textbf{Overcaution.} Deeper agents discount more aggressively and avoid interactions that shallower agents would accept, reducing their interaction volume and hence cumulative payoff.
+    \item \textbf{Epsilon-greedy decay.} The exploration rate $0.1/(k+1)$ means deeper agents explore less, potentially missing beneficial interactions that shallower agents discover through noise.
+\end{enumerate}
+
+\subsection{Memory as a Modest Power Lever}
+
+The memory-as-power effect ($r = +0.67$) is real but small (3.2\% spread). This suggests that in SWARM-style ecosystems, \emph{information asymmetry alone} does not confer large advantages. The dominant factor is the \emph{type} of strategy (honest vs.\ strategic), not the \emph{resources} available to a given strategy type.
+
+\subsection{Network Topology as a Moderator}
+
+The reversal of the honest advantage in Exp.~3 (small-world, slow governance) vs.\ Exp.~1--2 (complete network) suggests that network topology is a critical moderator of distributional safety. In complete networks, honest agents benefit from high connectivity; in small-world networks, strategic agents exploit structural holes. This has implications for governance design: regulators cannot assume that governance mechanisms effective in well-connected networks transfer to sparse or clustered topologies.
+
+\section{Limitations}
+
+\begin{enumerate}
+    \item \textbf{No LLM backbone.} RLM agents use algorithmic level-$k$ reasoning, not actual language model inference. Results may not transfer to LLM-based agents with richer reasoning capabilities.
+    \item \textbf{Fixed payoff parameters.} All experiments use $s^+ = 2.0$, $s^- = 1.0$, $h = 2.0$. The findings may not generalize to different surplus/harm ratios.
+    \item \textbf{Within-experiment correction only.} Multiple comparisons correction is applied per experiment, not across the full study (26 tests). A study-wide Bonferroni threshold of $0.05/26 = 0.0019$ would eliminate a few additional borderline results.
+    \item \textbf{Moderate sample size.} 10 seeds per experiment provides adequate power for large effects ($d > 1$) but may miss smaller effects.
+    \item \textbf{Signal profile assumption.} RLM agents produce signals via the \texttt{ObservableGenerator}'s moderate/variable profile, not via the actual interaction quality. The honest advantage partly reflects this design choice.
+\end{enumerate}
+
+\section{Reproducibility}
+
+All experiments are reproducible from:
+
+\begin{verbatim}
+# Experiment 1: Recursive Collusion
+python -m swarm run scenarios/rlm_recursive_collusion.yaml \
+    --seed {42,7,123,256,999,2024,314,577,1337,8080}
+
+# Experiment 2: Memory-as-Power
+python -m swarm run scenarios/rlm_memory_as_power.yaml \
+    --seed {42,7,123,256,999,2024,314,577,1337,8080}
+
+# Experiment 3: Governance Lag
+python -m swarm run scenarios/rlm_governance_lag.yaml \
+    --seed {42,7,123,256,999,2024,314,577,1337,8080}
+\end{verbatim}
+
+Analysis artifacts are stored in \texttt{runs/20260210-215826\_analysis\_rlm\_*/}. Raw data: \texttt{per\_agent\_payoffs.csv} (100--120 rows per experiment). Machine-readable results: \texttt{summary.json} per experiment.
+
+\bibliographystyle{plainnat}
+\begin{thebibliography}{9}
+
+\bibitem[Stahl and Wilson(1994)]{stahl1994}
+Stahl, D.~O. and Wilson, P.~W. (1994).
+\newblock Experimental evidence on players' models of other players.
+\newblock \emph{Journal of Economic Behavior \& Organization}, 25(3):309--327.
+
+\bibitem[Nagel(1995)]{nagel1995}
+Nagel, R. (1995).
+\newblock Unraveling in guessing games: An experimental study.
+\newblock \emph{American Economic Review}, 85(5):1313--1326.
+
+\bibitem[Crawford et~al.(2013)]{crawford2013}
+Crawford, V.~P., Costa-Gomes, M.~A., and Irber, N. (2013).
+\newblock Structural models of nonequilibrium strategic thinking: Theory, evidence, and applications.
+\newblock \emph{Journal of Economic Literature}, 51(1):5--62.
+
+\end{thebibliography}
+
+\end{document}

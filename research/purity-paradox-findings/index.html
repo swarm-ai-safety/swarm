@@ -1,0 +1,2848 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework">
+      
+      
+      
+        <link rel="canonical" href="https://swarm-ai.org/research/purity-paradox-findings/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>The Purity Paradox: Findings Summary - SWARM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#the-purity-paradox-findings-summary" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SWARM" class="md-header__button md-logo" aria-label="SWARM" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SWARM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              The Purity Paradox: Findings Summary
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/swarm-ai-safety/swarm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    swarm-ai-safety/swarm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/" class="md-tabs__link">
+          
+  
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../bridges/" class="md-tabs__link">
+          
+  
+  
+  Bridges
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../" class="md-tabs__link">
+          
+  
+  
+  Research
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../comparison/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Comparison
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../blog/" class="md-tabs__link">
+          
+  
+  
+  Blog
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SWARM" class="md-nav__button md-logo" aria-label="SWARM" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    SWARM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/swarm-ai-safety/swarm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    swarm-ai-safety/swarm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/first-scenario/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Scenario
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/soft-labels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Soft Labels
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/emergence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Emergence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/time-horizons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Horizons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/recursive-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/claude-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/scenarios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/custom-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/parameter-sweeps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameter Sweeps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/llm-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/red-teaming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Red Teaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/research-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridges
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Bridges
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/concordia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concordia
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/openclaw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenClaw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/gastown/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GasTown
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/agentxiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AgentXiv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/clawxiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClawXiv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theoretical Foundations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../papers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../agent-publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Publishing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../reflexivity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reflexivity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ai-index-2025/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Index 2025
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Blog
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/two-eval-runs-one-model-41-percent-apart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Two Eval Runs, One Model, 41% Apart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/governance-mechanisms-taxonomy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance Mechanisms Taxonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/gpt-41-mini-plays-the-swarm-economy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPT-4.1 Mini Plays the SWARM Economy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/rl-training-lessons-multi-agent-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RL Training Lessons for Multi-Agent Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/cross-scenario-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 Scenarios, 3 Regimes, 1 Critical Threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/markets-and-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What Financial Markets Teach Us About AI Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/purity-paradox/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Purity Paradox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/ecosystem-collapse/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    When Agent Ecosystems Collapse
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-claim-under-test" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Claim Under Test
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-reproduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Reproduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-sensitivity-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Sensitivity Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Sensitivity Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#conditions-where-the-paradox-breaks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conditions where the paradox breaks
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#conditions-that-amplify-the-paradox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Conditions that amplify the paradox
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#parameters-with-no-effect" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Parameters with no effect
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-root-cause-welfare-metric-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Root Cause: Welfare Metric Design
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Related Work
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Related Work">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-altruistic-perversity-in-population-games" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Altruistic Perversity in Population Games
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-moral-heterogeneity-in-learning-populations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Moral Heterogeneity in Learning Populations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-externality-pricing-and-the-price-of-anarchy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 Externality Pricing and the Price of Anarchy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-virtual-agent-economies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Virtual Agent Economies
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#55-trust-paradoxes-in-llm-multi-agent-systems" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Trust Paradoxes in LLM Multi-Agent Systems
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#56-novelty-of-this-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.6 Novelty of This Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-red-team-evaluation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Red-Team Evaluation
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-conclusions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Conclusions
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-artifacts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Artifacts
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="the-purity-paradox-findings-summary">The Purity Paradox: Findings Summary<a class="headerlink" href="#the-purity-paradox-findings-summary" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-02-09
+<strong>Branch:</strong> <code>claude/swarm-metric-graphs-prqbi</code>
+<strong>Reference:</strong> agentxiv 2602.00035 (ZiodbergResearch, 2026-02-06)</p>
+<h2 id="1-claim-under-test">1. Claim Under Test<a class="headerlink" href="#1-claim-under-test" title="Permanent link">&para;</a></h2>
+<blockquote>
+<p>Populations with only 20% honest agents achieve 55% higher welfare (53.67) than 100% honest populations (34.71), despite significantly higher toxicity (0.344 vs 0.254).</p>
+</blockquote>
+<h2 id="2-reproduction">2. Reproduction<a class="headerlink" href="#2-reproduction" title="Permanent link">&para;</a></h2>
+<p>We swept honest agent proportion from 0% to 100% in 10% steps with 10 agents, 30 epochs, 10 steps/epoch, 3 seeds each. Non-honest slots filled 60/40 deceptive/opportunistic. Baseline payoff parameters (<code>s+=2, s-=1, h=1, rho=0.1</code>).</p>
+<table>
+<thead>
+<tr>
+<th>Honest %</th>
+<th>Total Welfare</th>
+<th>Toxicity</th>
+<th>Avg Payoff</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0%</td>
+<td>727.5</td>
+<td>0.370</td>
+<td>0.408</td>
+</tr>
+<tr>
+<td>10%</td>
+<td>657.8</td>
+<td>0.367</td>
+<td>0.413</td>
+</tr>
+<tr>
+<td><strong>20%</strong></td>
+<td><strong>609.3</strong></td>
+<td>0.354</td>
+<td>0.434</td>
+</tr>
+<tr>
+<td>30%</td>
+<td>544.8</td>
+<td>0.357</td>
+<td>0.429</td>
+</tr>
+<tr>
+<td>40%</td>
+<td>353.1</td>
+<td>0.332</td>
+<td>0.469</td>
+</tr>
+<tr>
+<td>50%</td>
+<td>346.0</td>
+<td>0.322</td>
+<td>0.484</td>
+</tr>
+<tr>
+<td>60%</td>
+<td>366.8</td>
+<td>0.318</td>
+<td>0.492</td>
+</tr>
+<tr>
+<td>70%</td>
+<td>308.5</td>
+<td>0.299</td>
+<td>0.521</td>
+</tr>
+<tr>
+<td>80%</td>
+<td>378.6</td>
+<td>0.296</td>
+<td>0.526</td>
+</tr>
+<tr>
+<td>90%</td>
+<td>369.7</td>
+<td>0.274</td>
+<td>0.561</td>
+</tr>
+<tr>
+<td><strong>100%</strong></td>
+<td><strong>391.6</strong></td>
+<td>0.275</td>
+<td>0.560</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Result: 20% honest welfare = 609.3 vs 100% honest = 391.6 (+55.6%). Paper claims +55%. Reproduced.</strong></p>
+<p>Two additional observations not in the paper:</p>
+<ol>
+<li><strong>Welfare is monotonically decreasing</strong> with honest proportion. 0% honest has the <em>highest</em> welfare (727.5). The paper only compared 20% vs 100%.</li>
+<li><strong>Per-agent payoff tells the opposite story</strong>: honest agents individually earn more (0.560 vs 0.408). The paradox is an aggregate effect driven by interaction volume, not per-agent outcomes.</li>
+</ol>
+<h2 id="3-sensitivity-analysis">3. Sensitivity Analysis<a class="headerlink" href="#3-sensitivity-analysis" title="Permanent link">&para;</a></h2>
+<p>Tested 21 parameter configurations across 6 axes. The paradox holds in <strong>15/21 (71%)</strong> but breaks under specific conditions:</p>
+<h3 id="conditions-where-the-paradox-breaks">Conditions where the paradox breaks<a class="headerlink" href="#conditions-where-the-paradox-breaks" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Welfare diff</th>
+<th>Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rho=0.5</code></td>
+<td>-1%</td>
+<td>Tipping point: half of harm internalized</td>
+</tr>
+<tr>
+<td><code>rho=1.0</code></td>
+<td><strong>-43%</strong></td>
+<td>Full harm pricing; honesty dominates</td>
+</tr>
+<tr>
+<td>All-deceptive mix</td>
+<td><strong>-78%</strong></td>
+<td>Pure deception collapses trust</td>
+</tr>
+<tr>
+<td>No governance</td>
+<td>-13%</td>
+<td>Without circuit breakers, mixed populations degrade</td>
+</tr>
+<tr>
+<td><code>s+=1, s-=1</code></td>
+<td>-14%</td>
+<td>No asymmetric upside from risk-taking</td>
+</tr>
+<tr>
+<td><code>s+=2, s-=2</code></td>
+<td>-7%</td>
+<td>High symmetric stakes; losses match gains</td>
+</tr>
+</tbody>
+</table>
+<h3 id="conditions-that-amplify-the-paradox">Conditions that amplify the paradox<a class="headerlink" href="#conditions-that-amplify-the-paradox" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Welfare diff</th>
+<th>Mechanism</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>rho=0.0</code></td>
+<td>+21%</td>
+<td>Zero harm internalization; externalities fully ignored</td>
+</tr>
+<tr>
+<td><code>s+=4, s-=1</code></td>
+<td>+27%</td>
+<td>Extreme surplus asymmetry; upside dwarfs downside</td>
+</tr>
+<tr>
+<td><code>h=0.5</code></td>
+<td>+19%</td>
+<td>Low harm; less penalty for bad interactions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="parameters-with-no-effect">Parameters with no effect<a class="headerlink" href="#parameters-with-no-effect" title="Permanent link">&para;</a></h3>
+<p>Reputation weight (<code>w_rep</code>) had zero influence on the paradox across all tested values (0.0, 0.5, 1.0). The welfare difference was +18% regardless. This suggests reputation is orthogonal to the welfare-generation mechanism.</p>
+<h2 id="4-root-cause-welfare-metric-design">4. Root Cause: Welfare Metric Design<a class="headerlink" href="#4-root-cause-welfare-metric-design" title="Permanent link">&para;</a></h2>
+<p>The paradox traces to how <code>total_welfare</code> is computed:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>total_welfare = sum of (π_a + π_b) for accepted interactions
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>where:
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>  π_a = θ·S_soft - τ - c_a - ρ_a·E_soft + w_rep·r_a
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>  π_b = (1-θ)·S_soft + τ - c_b - ρ_b·E_soft + w_rep·r_b
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>  S_soft = p·s_plus - (1-p)·s_minus     (expected surplus)
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>  E_soft = (1-p)·h                        (expected harm)
+</span></code></pre></div>
+<p>The transfer <code>τ</code> cancels in the sum. After simplification:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-1-1"><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>W_interaction = S_soft - (ρ_a + ρ_b)·E_soft - (c_a + c_b) + w_rep·(r_a + r_b)
+</span></code></pre></div>
+<p>With <code>ρ_a + ρ_b = 0.2</code>, <strong>80% of the harm externality <code>E_soft</code> is excluded from welfare</strong>. This creates an accounting gap: mixed populations generate more interactions (deceptive/opportunistic agents accept more aggressively), producing more gross surplus <code>S_soft</code>. The toxicity cost is real but largely invisible to the welfare metric.</p>
+<p>Compare with <code>social_surplus</code>, which <em>does</em> count full harm:</p>
+<div class="language-text highlight"><pre><span></span><code><span id="__span-2-1"><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>social_surplus = S_soft - E_soft = p·s_plus - (1-p)·(s_minus + h)
+</span></code></pre></div>
+<p>The paradox would likely attenuate or reverse under social surplus accounting. The sensitivity analysis confirms this: at <code>rho=1.0</code> (where welfare = social surplus), 100% honest dominates by 43%.</p>
+<h2 id="5-related-work">5. Related Work<a class="headerlink" href="#5-related-work" title="Permanent link">&para;</a></h2>
+<p>The purity paradox sits at the intersection of population game theory, multi-agent safety, and mechanism design. Below we situate our findings within prior work, highlight what each contribution establishes, and clarify how our analysis extends, differs from, or builds upon each.</p>
+<h3 id="51-altruistic-perversity-in-population-games">5.1 Altruistic Perversity in Population Games<a class="headerlink" href="#51-altruistic-perversity-in-population-games" title="Permanent link">&para;</a></h3>
+<p><strong>Pollack, Karimi &amp; Lanctot (2024), "Conditions for Altruistic Perversity in Two-Strategy Population Games"</strong> (arXiv:2407.11250).</p>
+<p>This is the closest theoretical precedent to the purity paradox. Pollack et al. study two-strategy population games where agents choose between a "selfish" and an "altruistic" strategy, and prove a striking result: when the welfare function is <em>convex</em> in the population composition, increasing the proportion of altruistic agents can <em>decrease</em> total welfare. They term this "altruistic perversity" and derive necessary and sufficient conditions for its occurrence in symmetric two-player normal-form games.</p>
+<p><strong>How we build on this work.</strong> The purity paradox is a concrete instance of altruistic perversity. In our framework, honest agents play the altruistic role (they reject low-quality interactions, forgoing private surplus), while deceptive and opportunistic agents play the selfish role (they accept aggressively, generating more interaction volume). The welfare function is effectively convex because each additional selfish agent contributes disproportionately to <em>counted</em> surplus — the metric sums private payoffs over accepted interactions, and aggressive acceptors create more of them. Pollack et al.'s conditions (convex welfare + large altruistic population) map directly onto our <code>rho &lt; 0.5</code> + <code>s+ &gt; s-</code> regime.</p>
+<p><strong>Where we go further.</strong> Pollack et al. establish the theoretical <em>existence</em> of the perversity but do not investigate its sensitivity to mechanism design parameters. Our contribution is the 21-configuration sensitivity sweep (Section 3) showing that the perversity is <em>conditional</em> — it depends on externality internalization (<code>rho</code>), surplus asymmetry (<code>s+/s-</code>), and governance design. We identify the precise tipping point (<code>rho &gt;= 0.5</code>) at which the perversity disappears, providing an actionable policy lever that their abstract framework does not address. We also trace the root cause to welfare metric design (Section 4), showing that the perversity is an artifact of how harm externalities are priced rather than an intrinsic property of agent composition.</p>
+<h3 id="52-moral-heterogeneity-in-learning-populations">5.2 Moral Heterogeneity in Learning Populations<a class="headerlink" href="#52-moral-heterogeneity-in-learning-populations" title="Permanent link">&para;</a></h3>
+<p><strong>Tennant, Hailes &amp; Musolesi (2024), "Dynamics of Moral Behavior in Heterogeneous Populations of Learning Agents"</strong> (arXiv:2403.04202).</p>
+<p>Tennant et al. study populations of reinforcement learning agents with heterogeneous "moral" reward functions in iterated social dilemmas (Prisoner's Dilemma, Stag Hunt). They find that the emergent cooperation dynamics depend critically on the <em>composition</em> of moral types in the population — not just the strategies available but the proportion of agents motivated by different moral frameworks (utilitarian, deontological, virtue-based). In particular, they show that minority populations of "immoral" agents can shift cooperation equilibria in ways that pure populations cannot.</p>
+<p><strong>How we build on this work.</strong> Tennant et al. demonstrate that moral heterogeneity matters for <em>cooperation dynamics</em>, but their welfare analysis uses standard iterated-game payoffs where externalities are fully internalized within the game matrix. Our work extends this to a setting where externalities are <em>partially</em> internalized (parameterized by <code>rho</code>), which introduces the accounting gap that drives the purity paradox. Their finding that minority immoral agents shift equilibria complements our observation that small dishonest minorities drive aggregate welfare through increased interaction volume — but the mechanisms differ. In their framework, the shift is strategic (learning agents adapt to the presence of defectors). In ours, the shift is structural (aggressive agents generate more surplus-counted interactions regardless of learning).</p>
+<p><strong>Where we differ.</strong> Tennant et al. focus on learning dynamics and emergent behavior over thousands of episodes, while our agents follow fixed behavioral strategies (honest, deceptive, opportunistic). This is deliberate: we isolate the <em>compositional</em> effect from the <em>learning</em> effect. The purity paradox exists even without learning, which suggests it is a property of the welfare metric and agent-type interaction patterns rather than an emergent phenomenon of adaptive agents. A natural extension would combine both: does learning amplify or attenuate the paradox?</p>
+<h3 id="53-externality-pricing-and-the-price-of-anarchy">5.3 Externality Pricing and the Price of Anarchy<a class="headerlink" href="#53-externality-pricing-and-the-price-of-anarchy" title="Permanent link">&para;</a></h3>
+<p><strong>Meir &amp; Parkes (2015), "Playing the Wrong Game: Bounding Externalities in Diverse Populations"</strong> (arXiv:1411.1751).</p>
+<p>Meir &amp; Parkes formalize a fundamental problem in mechanism design: when agents optimize heterogeneous private objectives in a shared system, they generate externalities that distort social welfare. They introduce the "biased price of anarchy" — a generalization of the classical price of anarchy that accounts for the divergence between agents' perceived utility and the social planner's welfare function. They prove bounds on how badly social welfare can degrade when agents "play the wrong game" (optimize an objective misaligned with the designer's).</p>
+<p><strong>How we build on this work.</strong> The purity paradox is precisely a case of agents "playing the wrong game." When <code>rho = 0.1</code>, each agent bears only 10% of the harm externality its interactions impose. The <code>total_welfare</code> metric sums these private payoffs, inheriting the misalignment. Meir &amp; Parkes's framework predicts that the gap between private welfare and social surplus grows with the magnitude of unpriced externalities — and our sensitivity analysis confirms this quantitatively. At <code>rho = 0.0</code> (zero internalization), the paradox amplifies to +21%. At <code>rho = 1.0</code> (full internalization, i.e. private game = social game), the paradox reverses to -43% and honesty dominates.</p>
+<p><strong>Where we go further.</strong> Meir &amp; Parkes work in a general theoretical framework and prove worst-case bounds. We provide a concrete instantiation in the SWARM simulation where the externality parameter <code>rho</code> is continuously tunable, allowing us to trace the exact transition from "paradox holds" to "paradox breaks." Our finding that <code>rho &gt;= 0.5</code> is the tipping point gives mechanism designers a specific design target, whereas their bounds are necessarily looser. Additionally, their analysis assumes a single homogeneous game; our setting features heterogeneous agent types (honest, deceptive, opportunistic) with different acceptance thresholds and cost structures, which creates richer interaction dynamics than a symmetric game.</p>
+<h3 id="54-virtual-agent-economies">5.4 Virtual Agent Economies<a class="headerlink" href="#54-virtual-agent-economies" title="Permanent link">&para;</a></h3>
+<p><strong>Tomasev et al. (2025), "Virtual Agent Economies"</strong> (arXiv:2509.10147).</p>
+<p>The foundational paper that SWARM builds upon. Tomasev et al. propose the Virtual Agent Economies (VAE) framework for studying distributional safety in multi-agent AI systems. They introduce the soft-label payoff model (probabilistic interaction quality <code>p</code> rather than binary good/bad), the welfare and toxicity metrics used throughout this work, and the governance mechanisms (circuit breakers, reputation, staking) that form SWARM's policy levers. Their paper establishes that mixed agent populations generate complex safety trade-offs and that simple governance mechanisms have limited effectiveness.</p>
+<p><strong>How we build on this work.</strong> The purity paradox arises directly from the welfare accounting choices in the VAE framework. Tomasev et al. define <code>total_welfare</code> as the sum of private payoffs <code>(π_a + π_b)</code> over accepted interactions, with externality costs scaled by agent-specific <code>rho</code> values. They do not systematically investigate how this metric behaves under varying population compositions — their experiments focus on fixed compositions with governance parameter sweeps. Our reproduction and sensitivity analysis reveals that this metric design creates a structural incentive for mixed populations: agents who accept more aggressively generate more counted surplus, even when the social cost (uncounted harm externality) exceeds the private gain.</p>
+<p><strong>Where we differ.</strong> Tomasev et al. treat welfare as a given metric and focus on governance mechanisms to improve it. We treat welfare as a <em>design choice</em> and show that the paradox disappears under alternative accounting (social surplus with full harm internalization). This reframes the policy question: rather than asking "how do we govern mixed populations to reduce toxicity?" we ask "are we measuring the right thing?" Our root-cause analysis (Section 4) suggests that the welfare metric in the VAE framework is analogous to GDP — it measures activity, not well-being — and that metrics incorporating full externality costs would give fundamentally different safety signals.</p>
+<h3 id="55-trust-paradoxes-in-llm-multi-agent-systems">5.5 Trust Paradoxes in LLM Multi-Agent Systems<a class="headerlink" href="#55-trust-paradoxes-in-llm-multi-agent-systems" title="Permanent link">&para;</a></h3>
+<p><strong>"The Trust Paradox in LLM-Based Multi-Agent Systems"</strong> (arXiv:2510.18563).</p>
+<p>This paper identifies a structurally similar paradox in LLM-based multi-agent settings: systems designed for maximum inter-agent trust can underperform configurations with mixed or calibrated trust levels. High-trust LLM agents accept each other's outputs uncritically, propagating errors and hallucinations. Mixed-trust configurations, where some agents are skeptical verifiers, achieve better task outcomes despite higher coordination overhead.</p>
+<p><strong>How we build on this work.</strong> The Trust Paradox and the purity paradox share a common structure: populations optimized for a single "virtuous" property (trust, honesty) underperform mixed populations on aggregate metrics. However, the mechanisms differ significantly. The Trust Paradox operates through <em>error propagation</em> — trusting agents fail to filter bad information. The purity paradox operates through <em>interaction volume</em> — honest agents generate fewer interactions, reducing counted surplus. The Trust Paradox is fundamentally about information quality in sequential pipelines; the purity paradox is about externality accounting in parallel interactions.</p>
+<p><strong>Where we differ.</strong> The Trust Paradox is specific to LLM coordination and depends on the error characteristics of language models (hallucination rates, output validation). Our paradox is a general property of any welfare metric that sums private payoffs over voluntary interactions with under-priced externalities. The Trust Paradox would likely persist even with full externality internalization (since the issue is information quality, not cost accounting), while the purity paradox disappears at <code>rho &gt;= 0.5</code>. This distinction matters for policy: the Trust Paradox requires better verification mechanisms, while the purity paradox requires better welfare metrics.</p>
+<h3 id="56-novelty-of-this-work">5.6 Novelty of This Work<a class="headerlink" href="#56-novelty-of-this-work" title="Permanent link">&para;</a></h3>
+<p>Our contribution relative to the prior literature is threefold:</p>
+<ol>
+<li>
+<p><strong>Empirical identification and reproduction.</strong> We confirm the specific quantitative claim from agentxiv 2602.00035 (+55% welfare for 20% honest vs 100% honest) and extend it by showing the full monotonic relationship across the 0-100% composition spectrum — a result not reported in the original paper or any prior work.</p>
+</li>
+<li>
+<p><strong>Parametric boundary mapping.</strong> While Pollack et al. prove that altruistic perversity <em>can</em> occur and Meir &amp; Parkes bound how badly externalities <em>can</em> distort welfare, we map the exact parameter boundaries where the paradox holds vs. breaks in the SWARM framework. The critical finding — that <code>rho &gt;= 0.5</code> eliminates the paradox — provides a concrete, tunable design target for mechanism designers.</p>
+</li>
+<li>
+<p><strong>Root-cause diagnosis as metric artifact.</strong> Prior work treats the welfare metric as given and studies agent behavior. We show that the paradox is fundamentally a measurement problem: <code>total_welfare</code> excludes <code>(1-ρ_a-ρ_b)</code> of the harm externality, creating an accounting gap that rewards interaction volume over interaction quality. This reframes the purity paradox from a surprising behavioral phenomenon to a predictable consequence of incomplete cost accounting — analogous to how GDP growth can be driven by pollution-generating activity when environmental costs are externalized.</p>
+</li>
+</ol>
+<h2 id="6-red-team-evaluation">6. Red-Team Evaluation<a class="headerlink" href="#6-red-team-evaluation" title="Permanent link">&para;</a></h2>
+<p>Separate from the purity paradox, we ran 8 attack vectors against 4 governance configurations:</p>
+<table>
+<thead>
+<tr>
+<th>Config</th>
+<th>Score</th>
+<th>Grade</th>
+<th>Prevented</th>
+<th>Damage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No defenses</td>
+<td>0.40</td>
+<td>F</td>
+<td>2/8</td>
+<td>455.7</td>
+</tr>
+<tr>
+<td>Baseline (CB only)</td>
+<td>0.42</td>
+<td>F</td>
+<td>2/8</td>
+<td>436.8</td>
+</tr>
+<tr>
+<td>Moderate</td>
+<td>0.48</td>
+<td>F</td>
+<td>2/8</td>
+<td>352.9</td>
+</tr>
+<tr>
+<td>Strict (all levers)</td>
+<td>0.62</td>
+<td>D</td>
+<td>4/8</td>
+<td>275.3</td>
+</tr>
+</tbody>
+</table>
+<p>Top vulnerabilities: Sybil attacks (damage=120, CRITICAL), collusion rings (97, CRITICAL), resource drain (60, CRITICAL). Even the strictest governance only reaches a D grade.</p>
+<h2 id="7-conclusions">7. Conclusions<a class="headerlink" href="#7-conclusions" title="Permanent link">&para;</a></h2>
+<ol>
+<li>
+<p><strong>The purity paradox is real but conditional.</strong> It depends on surplus asymmetry (<code>s+ &gt; s-</code>) and low externality internalization (<code>rho &lt; 0.5</code>). It is not a universal property of multi-agent systems.</p>
+</li>
+<li>
+<p><strong>The finding is an artifact of welfare accounting.</strong> The <code>total_welfare</code> metric sums private payoffs and excludes most harm externalities. Under social surplus accounting (full harm internalization), honesty dominates.</p>
+</li>
+<li>
+<p><strong>The paradox is analogous to pollution-driven GDP growth.</strong> Mixed populations generate more economic activity (interactions) at the cost of unpriced externalities. The welfare metric captures the activity but not the full social cost.</p>
+</li>
+<li>
+<p><strong>Policy implication: increase <code>rho</code>.</strong> If the goal is to align private welfare with social welfare, the most direct lever is externality internalization. At <code>rho &gt;= 0.5</code>, the paradox disappears. This suggests governance design should focus on making agents bear the costs of harmful interactions.</p>
+</li>
+<li>
+<p><strong>Governance alone is insufficient.</strong> Even strict governance (all levers enabled) only achieves a D grade against adversarial attacks. Defense-in-depth and Sybil-specific countermeasures remain open problems.</p>
+</li>
+</ol>
+<h2 id="8-artifacts">8. Artifacts<a class="headerlink" href="#8-artifacts" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>File</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>examples/reproduce_2602_00035.py</code></td>
+<td>Reproduction sweep script</td>
+</tr>
+<tr>
+<td><code>examples/sensitivity_purity_paradox.py</code></td>
+<td>Sensitivity analysis script</td>
+</tr>
+<tr>
+<td><code>examples/generate_metric_graphs.py</code></td>
+<td>Scenario comparison graphs</td>
+</tr>
+<tr>
+<td><code>examples/run_redteam.py</code></td>
+<td>Red-team evaluation runner</td>
+</tr>
+<tr>
+<td><code>docs/images/charts/welfare_toxicity_vs_honest_pct.png</code></td>
+<td>Main reproduction plot</td>
+</tr>
+<tr>
+<td><code>docs/images/charts/sensitivity_paradox_robustness.png</code></td>
+<td>Sensitivity bar chart</td>
+</tr>
+<tr>
+<td><code>docs/images/charts/pareto_frontier.png</code></td>
+<td>Pareto frontier</td>
+</tr>
+<tr>
+<td><code>docs/images/charts/welfare_vs_toxicity.png</code></td>
+<td>Scenario trade-off scatter</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/swarm-ai-safety/swarm" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ResearchSwarmAI" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

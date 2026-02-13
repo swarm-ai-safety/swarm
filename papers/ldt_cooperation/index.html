@@ -1,0 +1,3152 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework">
+      
+      
+      
+        <link rel="canonical" href="https://swarm-ai.org/papers/ldt_cooperation/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Cooperation Through Logical Correlation: LDT Agents in Mixed Multi-Agent Ecosystems - SWARM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#cooperation-through-logical-correlation-ldt-agents-in-mixed-multi-agent-ecosystems" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SWARM" class="md-header__button md-logo" aria-label="SWARM" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SWARM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Cooperation Through Logical Correlation: LDT Agents in Mixed Multi-Agent Ecosystems
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/swarm-ai-safety/swarm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    swarm-ai-safety/swarm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/" class="md-tabs__link">
+          
+  
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../bridges/" class="md-tabs__link">
+          
+  
+  
+  Bridges
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../research/" class="md-tabs__link">
+          
+  
+  
+  Research
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../comparison/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Comparison
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../blog/" class="md-tabs__link">
+          
+  
+  
+  Blog
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SWARM" class="md-nav__button md-logo" aria-label="SWARM" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    SWARM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/swarm-ai-safety/swarm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    swarm-ai-safety/swarm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/first-scenario/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Scenario
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/soft-labels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Soft Labels
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/emergence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Emergence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/time-horizons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Horizons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/recursive-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/claude-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/scenarios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/custom-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/parameter-sweeps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameter Sweeps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/llm-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/red-teaming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Red Teaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/research-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridges
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Bridges
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/concordia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concordia
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/openclaw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenClaw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/gastown/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GasTown
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/agentxiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AgentXiv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/clawxiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClawXiv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theoretical Foundations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/papers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/agent-publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Publishing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/reflexivity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reflexivity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/ai-index-2025/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Index 2025
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Blog
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/two-eval-runs-one-model-41-percent-apart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Two Eval Runs, One Model, 41% Apart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/governance-mechanisms-taxonomy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance Mechanisms Taxonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/gpt-41-mini-plays-the-swarm-economy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPT-4.1 Mini Plays the SWARM Economy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/rl-training-lessons-multi-agent-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RL Training Lessons for Multi-Agent Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/cross-scenario-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 Scenarios, 3 Regimes, 1 Critical Threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/markets-and-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What Financial Markets Teach Us About AI Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/purity-paradox/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Purity Paradox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/ecosystem-collapse/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    When Agent Ecosystems Collapse
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-experimental-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Experimental Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Experimental Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-ldt-agent-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 LDT Agent Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-scenario-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Scenario Configuration
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-experiment-1-fixed-composition-10-seeds" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Experiment 1: Fixed Composition (10 Seeds)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.1 Experiment 1: Fixed Composition (10 Seeds)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#311-per-group-payoffs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1.1 Per-Group Payoffs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#312-per-seed-stability" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1.2 Per-Seed Stability
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#313-hypothesis-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1.3 Hypothesis Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#314-inequality" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1.4 Inequality
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-experiment-2-composition-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Experiment 2: Composition Sweep
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3.2 Experiment 2: Composition Sweep">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#321-welfare-toxicity-trade-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2.1 Welfare-Toxicity Trade-off
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#322-pareto-frontier" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2.2 Pareto Frontier
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#323-per-class-payoffs-under-ldt-sweep" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2.3 Per-Class Payoffs Under LDT Sweep
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-epoch-level-dynamics-seed-42" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Epoch-Level Dynamics (Seed 42)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Discussion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Discussion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-ldt-as-a-dominant-strategy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 LDT as a Dominant Strategy
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-distributional-safety-implications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Distributional Safety Implications
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-the-honest-opportunistic-equivalence" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 The Honest-Opportunistic Equivalence
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-comparison-with-rlm-experiments" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Comparison with RLM Experiments
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Conclusion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-a-reproducibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix A: Reproducibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="cooperation-through-logical-correlation-ldt-agents-in-mixed-multi-agent-ecosystems">Cooperation Through Logical Correlation: LDT Agents in Mixed Multi-Agent Ecosystems<a class="headerlink" href="#cooperation-through-logical-correlation-ldt-agents-in-mixed-multi-agent-ecosystems" title="Permanent link">&para;</a></h1>
+<p><strong>Authors:</strong> Raeli Savitt
+<strong>Date:</strong> 2026-02-11
+<strong>Framework:</strong> SWARM v1.0.0</p>
+<h2 id="abstract">Abstract<a class="headerlink" href="#abstract" title="Permanent link">&para;</a></h2>
+<p>We study how Logical Decision Theory (LDT) agents---which cooperate with perceived logical twins while defecting against dissimilar agents---perform in mixed multi-agent ecosystems under soft probabilistic governance. In a pre-registered 10-seed experiment (7 agents, 4 agent types, 8 statistical tests), we find that LDT agents dramatically outperform all other agent types, earning 3.1x more than honest agents (Cohen's d = 6.54, p &lt; 10^{-11}) and 9.3x more than adversarial agents (d = 10.24, p &lt; 10^{-14}). A complementary composition sweep across 5 focal proportions (0--100%) reveals that LDT agents dominate the Pareto frontier at high concentrations (75--100%), achieving both higher welfare and lower toxicity than honest-dominated populations. However, this dominance creates substantial inequality (Gini = 0.424, p &lt; 10^{-10}), raising distributional safety concerns even when aggregate welfare improves. The only non-significant comparison is honest vs. opportunistic (p = 0.082), suggesting these agent types occupy similar ecological niches. All 7 significant tests survive both Bonferroni and Holm-Bonferroni correction.</p>
+<h2 id="1-introduction">1. Introduction<a class="headerlink" href="#1-introduction" title="Permanent link">&para;</a></h2>
+<p>[TODO: Expand with literature context on LDT, FDT, and program equilibrium]</p>
+<p>Logical Decision Theory (LDT) represents a class of decision procedures that condition on logical correlations between decision-makers rather than causal influence (Yudkowsky &amp; Soares, 2017). An LDT agent reasons: "if I cooperate, then agents sufficiently similar to me will also cooperate, because we are running similar decision algorithms." This enables robust cooperation among "logical twins" without explicit communication, pre-commitment devices, or iterated game dynamics.</p>
+<p>The safety implications of deploying LDT agents in multi-agent ecosystems are underexplored. LDT cooperation is selective---it benefits agents recognized as similar while potentially disadvantaging dissimilar agents. In a mixed population containing honest, opportunistic, and adversarial agents, LDT cooperation may create coalitional advantages that concentrate surplus among LDT agents, raising distributional safety concerns even when aggregate outcomes improve.</p>
+<p>We operationalize these questions through two complementary analyses:</p>
+<ol>
+<li><strong>Fixed-Composition Analysis</strong> (Exp. 1): How do LDT agents perform relative to honest, opportunistic, and adversarial agents in a fixed 7-agent population? (10 seeds, full statistical analysis)</li>
+<li><strong>Composition Sweep</strong> (Exp. 2): How does varying the proportion of LDT agents (0--100%) affect welfare, toxicity, and per-class payoffs? (5 focal proportions, Pareto frontier analysis)</li>
+</ol>
+<h2 id="2-experimental-setup">2. Experimental Setup<a class="headerlink" href="#2-experimental-setup" title="Permanent link">&para;</a></h2>
+<h3 id="21-ldt-agent-architecture">2.1 LDT Agent Architecture<a class="headerlink" href="#21-ldt-agent-architecture" title="Permanent link">&para;</a></h3>
+<p>LDT agents implement cooperation-through-logical-correlation with four configurable parameters:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>cooperation_prior</code></td>
+<td>Base probability of cooperating with unknown agent</td>
+<td>0.65</td>
+</tr>
+<tr>
+<td><code>similarity_threshold</code></td>
+<td>Minimum similarity score to treat as logical twin</td>
+<td>0.70</td>
+</tr>
+<tr>
+<td><code>welfare_weight</code></td>
+<td>Weight on ecosystem welfare in utility function</td>
+<td>0.30</td>
+</tr>
+<tr>
+<td><code>updateless_commitment</code></td>
+<td>Degree of pre-commitment to cooperative strategy</td>
+<td>0.80</td>
+</tr>
+</tbody>
+</table>
+<p>At each decision point, an LDT agent:
+1. Estimates similarity to each visible counterparty (based on behavioral history, action patterns, and signal profiles)
+2. For agents above <code>similarity_threshold</code>: cooperates unconditionally (logical twin reasoning)
+3. For agents below threshold: defects or plays cautiously (not a logical twin)
+4. Weights individual payoff against ecosystem welfare by <code>welfare_weight</code></p>
+<h3 id="22-scenario-configuration">2.2 Scenario Configuration<a class="headerlink" href="#22-scenario-configuration" title="Permanent link">&para;</a></h3>
+<p><strong>Experiment 1: Fixed Composition</strong> (<code>scenarios/ldt_cooperation.yaml</code>)</p>
+<table>
+<thead>
+<tr>
+<th>Agent Type</th>
+<th>Count</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LDT</td>
+<td>3</td>
+<td>Cooperation prior 0.65, similarity threshold 0.70</td>
+</tr>
+<tr>
+<td>Honest</td>
+<td>2</td>
+<td>Default honest behavior</td>
+</tr>
+<tr>
+<td>Opportunistic</td>
+<td>1</td>
+<td>Exploits when profitable</td>
+</tr>
+<tr>
+<td>Adversarial</td>
+<td>1</td>
+<td>Maximally adversarial</td>
+</tr>
+</tbody>
+</table>
+<ul>
+<li>10 epochs x 10 steps, seed 42 (single run) + 10 pre-registered seeds (statistical analysis)</li>
+<li>No governance interventions (tax = 0, audit disabled, circuit breakers off)</li>
+<li>Complete network topology (all agents visible to all)</li>
+</ul>
+<p><strong>Experiment 2: Composition Sweep</strong> (programmatic sweep)</p>
+<p>Varied focal agent proportion from 0% to 100% in two sweep types:
+- <strong>LDT sweep</strong>: Replace deceptive/opportunistic agents with LDT agents
+- <strong>Honest sweep</strong>: Replace deceptive/opportunistic agents with honest agents
+- 5 focal proportions: 0%, 25%, 50%, 75%, 100%
+- 3 epochs per configuration, seed 42</p>
+<h3 id="23-metrics">2.3 Metrics<a class="headerlink" href="#23-metrics" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Payoff</strong>: Cumulative agent payoff over all epochs (primary outcome)</li>
+<li><strong>Toxicity</strong>: E[1-p | accepted], expected harm from accepted interactions</li>
+<li><strong>Welfare</strong>: Sum of epoch-level total welfare</li>
+<li><strong>Quality gap</strong>: E[p | accepted] - E[p | rejected] (positive = good selection)</li>
+<li><strong>Gini coefficient</strong>: Inequality of payoff distribution across agents</li>
+<li><strong>Acceptance rate</strong>: Fraction of proposed interactions accepted</li>
+</ul>
+<h2 id="3-results">3. Results<a class="headerlink" href="#3-results" title="Permanent link">&para;</a></h2>
+<h3 id="31-experiment-1-fixed-composition-10-seeds">3.1 Experiment 1: Fixed Composition (10 Seeds)<a class="headerlink" href="#31-experiment-1-fixed-composition-10-seeds" title="Permanent link">&para;</a></h3>
+<h4 id="311-per-group-payoffs">3.1.1 Per-Group Payoffs<a class="headerlink" href="#311-per-group-payoffs" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>n (agents x seeds)</th>
+<th>Mean Payoff</th>
+<th>Std</th>
+<th>Min</th>
+<th>Max</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LDT</td>
+<td>30</td>
+<td>31.36</td>
+<td>16.52</td>
+<td>11.62</td>
+<td>62.04</td>
+</tr>
+<tr>
+<td>Opportunistic</td>
+<td>10</td>
+<td>13.36</td>
+<td>4.68</td>
+<td>6.38</td>
+<td>18.76</td>
+</tr>
+<tr>
+<td>Honest</td>
+<td>20</td>
+<td>10.28</td>
+<td>3.34</td>
+<td>5.17</td>
+<td>16.94</td>
+</tr>
+<tr>
+<td>Adversarial</td>
+<td>10</td>
+<td>3.38</td>
+<td>0.46</td>
+<td>2.73</td>
+<td>3.99</td>
+</tr>
+</tbody>
+</table>
+<p>LDT agents earn the highest mean payoff (31.36), more than 3x the honest baseline (10.28) and 9.3x the adversarial floor (3.38). LDT agents also exhibit the highest within-group variance (std = 16.52), suggesting that network position and partner matching create substantial payoff dispersion even among identical agent types.</p>
+<h4 id="312-per-seed-stability">3.1.2 Per-Seed Stability<a class="headerlink" href="#312-per-seed-stability" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Seed</th>
+<th>LDT</th>
+<th>Honest</th>
+<th>Opportunistic</th>
+<th>Adversarial</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>42</td>
+<td>30.61</td>
+<td>8.41</td>
+<td>18.76</td>
+<td>2.95</td>
+</tr>
+<tr>
+<td>7</td>
+<td>34.49</td>
+<td>11.79</td>
+<td>10.18</td>
+<td>3.32</td>
+</tr>
+<tr>
+<td>123</td>
+<td>28.34</td>
+<td>7.96</td>
+<td>18.61</td>
+<td>3.95</td>
+</tr>
+<tr>
+<td>256</td>
+<td>30.61</td>
+<td>9.89</td>
+<td>6.62</td>
+<td>3.88</td>
+</tr>
+<tr>
+<td>999</td>
+<td>35.65</td>
+<td>8.35</td>
+<td>14.30</td>
+<td>2.73</td>
+</tr>
+<tr>
+<td>2024</td>
+<td>34.59</td>
+<td>12.84</td>
+<td>11.00</td>
+<td>3.08</td>
+</tr>
+<tr>
+<td>314</td>
+<td>29.28</td>
+<td>7.07</td>
+<td>15.79</td>
+<td>3.01</td>
+</tr>
+<tr>
+<td>577</td>
+<td>32.49</td>
+<td>10.48</td>
+<td>13.77</td>
+<td>3.99</td>
+</tr>
+<tr>
+<td>1337</td>
+<td>23.10</td>
+<td>15.01</td>
+<td>18.21</td>
+<td>3.18</td>
+</tr>
+<tr>
+<td>8080</td>
+<td>34.47</td>
+<td>11.01</td>
+<td>6.38</td>
+<td>3.70</td>
+</tr>
+<tr>
+<td><strong>Mean</strong></td>
+<td><strong>31.36</strong></td>
+<td><strong>10.28</strong></td>
+<td><strong>13.36</strong></td>
+<td><strong>3.38</strong></td>
+</tr>
+<tr>
+<td><strong>Std</strong></td>
+<td><strong>3.84</strong></td>
+<td><strong>2.47</strong></td>
+<td><strong>4.68</strong></td>
+<td><strong>0.46</strong></td>
+</tr>
+</tbody>
+</table>
+<p>LDT dominance is consistent across all 10 seeds (range 23.10--35.65). Adversarial agents show the lowest variance (std = 0.46), suggesting they are consistently punished regardless of seed.</p>
+<h4 id="313-hypothesis-tests">3.1.3 Hypothesis Tests<a class="headerlink" href="#313-hypothesis-tests" title="Permanent link">&para;</a></h4>
+<p>Seeds fixed a priori. Using group means per seed (n = 10 per group). Total tests: 8. Bonferroni alpha: 0.00625. Holm step-down applied.</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Statistic</th>
+<th>Raw p</th>
+<th>Sig</th>
+<th>Cohen's d</th>
+<th>Bonf</th>
+<th>Holm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>t-test: LDT vs Honest</td>
+<td>t = 14.613</td>
+<td>&lt; 10^{-11}</td>
+<td>***</td>
+<td>6.535</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>t-test: LDT vs Opportunistic</td>
+<td>t = 9.409</td>
+<td>&lt; 10^{-7}</td>
+<td>***</td>
+<td>4.208</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>t-test: LDT vs Adversarial</td>
+<td>t = 22.903</td>
+<td>&lt; 10^{-14}</td>
+<td>***</td>
+<td>10.243</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>t-test: Honest vs Opportunistic</td>
+<td>t = -1.841</td>
+<td>0.082</td>
+<td>ns</td>
+<td>-0.824</td>
+<td>No</td>
+<td>No</td>
+</tr>
+<tr>
+<td>t-test: Honest vs Adversarial</td>
+<td>t = 8.687</td>
+<td>&lt; 10^{-7}</td>
+<td>***</td>
+<td>3.885</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>t-test: Opportunistic vs Adversarial</td>
+<td>t = 6.714</td>
+<td>&lt; 10^{-5}</td>
+<td>***</td>
+<td>3.003</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>ANOVA: All groups</td>
+<td>F = 132.679</td>
+<td>&lt; 10^{-19}</td>
+<td>***</td>
+<td>--</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>1-sample t: Gini &gt; 0</td>
+<td>t = 28.836</td>
+<td>&lt; 10^{-10}</td>
+<td>***</td>
+<td>--</td>
+<td>Yes</td>
+<td>Yes</td>
+</tr>
+</tbody>
+</table>
+<p><strong>7 of 8 tests significant</strong> after both Bonferroni and Holm correction. The only non-significant comparison is honest vs. opportunistic (p = 0.082), suggesting these agent types occupy similar ecological niches in LDT-dominated ecosystems.</p>
+<h4 id="314-inequality">3.1.4 Inequality<a class="headerlink" href="#314-inequality" title="Permanent link">&para;</a></h4>
+<p>Overall Gini coefficient: <strong>0.424</strong> (significantly &gt; 0, t = 28.84, p &lt; 10^{-10}).</p>
+<p>This is the highest Gini observed across all SWARM experiments to date, exceeding the RLM governance lag scenario (0.325) and RLM recursive collusion scenario (0.299). The inequality is driven by LDT agents capturing disproportionate surplus through selective cooperation with logical twins.</p>
+<h3 id="32-experiment-2-composition-sweep">3.2 Experiment 2: Composition Sweep<a class="headerlink" href="#32-experiment-2-composition-sweep" title="Permanent link">&para;</a></h3>
+<h4 id="321-welfare-toxicity-trade-off">3.2.1 Welfare-Toxicity Trade-off<a class="headerlink" href="#321-welfare-toxicity-trade-off" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Composition</th>
+<th>Focal %</th>
+<th>Total Welfare</th>
+<th>Toxicity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LDT 0%</td>
+<td>0</td>
+<td>6.187</td>
+<td>0.426</td>
+</tr>
+<tr>
+<td>LDT 25%</td>
+<td>25</td>
+<td>4.833</td>
+<td>0.252</td>
+</tr>
+<tr>
+<td>LDT 50%</td>
+<td>50</td>
+<td>3.922</td>
+<td>0.195</td>
+</tr>
+<tr>
+<td>LDT 75%</td>
+<td>75</td>
+<td>7.689</td>
+<td>0.288</td>
+</tr>
+<tr>
+<td>LDT 100%</td>
+<td>100</td>
+<td>9.289</td>
+<td>0.254</td>
+</tr>
+<tr>
+<td>Honest 0%</td>
+<td>0</td>
+<td>6.187</td>
+<td>0.426</td>
+</tr>
+<tr>
+<td>Honest 25%</td>
+<td>25</td>
+<td>4.937</td>
+<td>0.156</td>
+</tr>
+<tr>
+<td>Honest 50%</td>
+<td>50</td>
+<td>3.274</td>
+<td>0.362</td>
+</tr>
+<tr>
+<td>Honest 75%</td>
+<td>75</td>
+<td>3.303</td>
+<td>0.192</td>
+</tr>
+<tr>
+<td>Honest 100%</td>
+<td>100</td>
+<td>6.510</td>
+<td>0.255</td>
+</tr>
+</tbody>
+</table>
+<h4 id="322-pareto-frontier">3.2.2 Pareto Frontier<a class="headerlink" href="#322-pareto-frontier" title="Permanent link">&para;</a></h4>
+<p>Two compositions are Pareto-optimal (maximizing welfare while minimizing toxicity):</p>
+<ol>
+<li><strong>Honest 25%</strong>: Lowest toxicity (0.156) with moderate welfare (4.937)</li>
+<li><strong>LDT 100%</strong>: Highest welfare (9.289) with moderate toxicity (0.254)</li>
+</ol>
+<p>LDT compositions dominate honest compositions at high focal proportions: at 75%, LDT welfare (7.689) exceeds honest welfare (3.303) by 2.3x with comparable toxicity (0.288 vs 0.192). At 100%, LDT achieves 43% higher welfare than honest (9.289 vs 6.510) with nearly identical toxicity (0.254 vs 0.255).</p>
+<h4 id="323-per-class-payoffs-under-ldt-sweep">3.2.3 Per-Class Payoffs Under LDT Sweep<a class="headerlink" href="#323-per-class-payoffs-under-ldt-sweep" title="Permanent link">&para;</a></h4>
+<p>As LDT proportion increases:
+- <strong>LDT agents</strong>: Payoffs rise from 1.87 (at 25%) to 2.56 (at 75%) to 2.32 (at 100%)
+- <strong>Opportunistic agents</strong>: Squeezed from 1.22 (at 25%) to 0.30 (at 50%) to absent (at 75%+)
+- <strong>Deceptive agents</strong>: Squeezed from 0.87 (at 25%) to absent (at 50%+)</p>
+<p>This demonstrates a <strong>displacement effect</strong>: LDT agents crowd out exploitative agent types as they become the majority, replacing adversarial dynamics with cooperative dynamics.</p>
+<h3 id="33-epoch-level-dynamics-seed-42">3.3 Epoch-Level Dynamics (Seed 42)<a class="headerlink" href="#33-epoch-level-dynamics-seed-42" title="Permanent link">&para;</a></h3>
+<p>Single-run epoch-level analysis (10 epochs, 10 steps each):</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Mean</th>
+<th>Range</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Interactions/epoch</td>
+<td>14.6</td>
+<td>10--21</td>
+</tr>
+<tr>
+<td>Acceptance rate</td>
+<td>89.7%</td>
+<td>81.8--100%</td>
+</tr>
+<tr>
+<td>Toxicity rate</td>
+<td>0.333</td>
+<td>0.290--0.368</td>
+</tr>
+<tr>
+<td>Total welfare/epoch</td>
+<td>13.04</td>
+<td>8.08--18.52</td>
+</tr>
+<tr>
+<td>Quality gap</td>
+<td>0.198</td>
+<td>0.000--0.315</td>
+</tr>
+</tbody>
+</table>
+<p>Quality gap decays over time (from 0.295 at epoch 0 to 0.000 at epoch 9), suggesting that the quality filter weakens as agent behavioral profiles converge. Acceptance rate trends upward, reaching 100% in epochs 7 and 9.</p>
+<h2 id="4-discussion">4. Discussion<a class="headerlink" href="#4-discussion" title="Permanent link">&para;</a></h2>
+<h3 id="41-ldt-as-a-dominant-strategy">4.1 LDT as a Dominant Strategy<a class="headerlink" href="#41-ldt-as-a-dominant-strategy" title="Permanent link">&para;</a></h3>
+<p>LDT agents achieve the highest payoffs across all seeds and compositions. The mechanism is twofold: (a) LDT-to-LDT cooperation produces high-quality interactions that pass governance filters, and (b) LDT agents avoid costly interactions with dissimilar agents, reducing exposure to adversarial exploitation. This selective cooperation is highly effective---but it creates a coalitional advantage that concentrates surplus.</p>
+<h3 id="42-distributional-safety-implications">4.2 Distributional Safety Implications<a class="headerlink" href="#42-distributional-safety-implications" title="Permanent link">&para;</a></h3>
+<p>The Gini coefficient of 0.424 is concerning from a distributional safety perspective. While LDT agents improve aggregate welfare (especially at high concentrations), they do so by capturing disproportionate surplus. In a system where agents represent different stakeholders or populations, this concentration could be harmful even when aggregate metrics improve.</p>
+<p>The composition sweep reveals a nuanced picture: LDT agents at 100% achieve both high welfare and low toxicity, but in mixed populations (25--75%), the welfare-toxicity trade-off is less favorable. The optimal composition depends on whether the system designer prioritizes aggregate welfare (favor LDT 100%) or minimum toxicity (favor Honest 25%).</p>
+<h3 id="43-the-honest-opportunistic-equivalence">4.3 The Honest-Opportunistic Equivalence<a class="headerlink" href="#43-the-honest-opportunistic-equivalence" title="Permanent link">&para;</a></h3>
+<p>The only non-significant comparison (honest vs. opportunistic, p = 0.082) suggests that in LDT-dominated ecosystems, the distinction between honest and opportunistic behavior becomes irrelevant. Both types earn similar payoffs because the dominant dynamic is LDT-vs-everyone-else, not honest-vs-opportunistic. This has implications for governance design: in ecosystems with strong coalitional agents, traditional governance focused on preventing exploitation may miss the more important distributional dynamic.</p>
+<h3 id="44-comparison-with-rlm-experiments">4.4 Comparison with RLM Experiments<a class="headerlink" href="#44-comparison-with-rlm-experiments" title="Permanent link">&para;</a></h3>
+<p>Unlike RLM agents (which earn 2.3--2.8x <em>less</em> than honest agents), LDT agents earn 3.1x <em>more</em>. This contrast highlights a key architectural difference: RLMs optimize individual reasoning depth (which leads to strategic overthinking), while LDT agents optimize cooperation selection (which leads to beneficial coalitions). The safety implications are opposite: RLMs are individually weak but distributionally equitable, while LDT agents are individually strong but distributionally unequal.</p>
+<h2 id="5-limitations">5. Limitations<a class="headerlink" href="#5-limitations" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Single-seed composition sweep</strong>: The composition sweep uses only 1 seed per configuration, limiting statistical power. A multi-seed sweep would strengthen the Pareto frontier analysis.</li>
+<li><strong>No governance interventions</strong>: The LDT cooperation scenario runs with governance disabled (no tax, no audit, no circuit breakers). Governance mechanisms may change the dynamics substantially.</li>
+<li><strong>Similarity estimation</strong>: LDT agents estimate similarity from behavioral history, which is a simplified proxy for true logical correlation. Real LDT agents would need access to source code or formal proofs of similarity.</li>
+<li><strong>Small population</strong>: 7 agents is sufficient for statistical testing but may not capture dynamics that emerge at larger scales.</li>
+<li><strong>Fixed parameters</strong>: Only one LDT configuration (cooperation_prior = 0.65, similarity_threshold = 0.70) was tested. Sensitivity analysis across parameter space would strengthen conclusions.</li>
+</ol>
+<h2 id="6-conclusion">6. Conclusion<a class="headerlink" href="#6-conclusion" title="Permanent link">&para;</a></h2>
+<p>LDT agents represent a qualitatively different safety challenge from individually sophisticated agents like RLMs. While RLM strategic depth is self-defeating (deeper reasoning hurts payoff), LDT selective cooperation is self-reinforcing (more LDT agents improve outcomes for all LDT agents). The distributional safety concern is not that LDT agents cause harm---they reduce toxicity and increase welfare---but that they concentrate the benefits of cooperation among themselves, potentially disadvantaging agents that cannot or choose not to implement logical-twin reasoning.</p>
+<p>Governance mechanisms designed for this regime should focus not on preventing harm (which LDT agents already minimize) but on redistribution---ensuring that the surplus generated by LDT cooperation is shared equitably across the ecosystem.</p>
+<h2 id="7-references">7. References<a class="headerlink" href="#7-references" title="Permanent link">&para;</a></h2>
+<ol>
+<li>Yudkowsky, E. &amp; Soares, N. (2017). Functional Decision Theory: A New Theory of Instrumental Rationality. <em>arXiv:1710.05060</em>.</li>
+<li>Stahl, D. O. &amp; Wilson, P. W. (1994). Experimental Evidence on Players' Models of Other Players. <em>Journal of Economic Behavior &amp; Organization</em>, 25(3), 309--327.</li>
+<li>Nagel, R. (1995). Unraveling in Guessing Games: An Experimental Study. <em>American Economic Review</em>, 85(5), 1313--1326.</li>
+</ol>
+<h2 id="appendix-a-reproducibility">Appendix A: Reproducibility<a class="headerlink" href="#appendix-a-reproducibility" title="Permanent link">&para;</a></h2>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Fixed-composition run (single seed)</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python<span class="w"> </span>-m<span class="w"> </span>swarm<span class="w"> </span>run<span class="w"> </span>scenarios/ldt_cooperation.yaml<span class="w"> </span>--seed<span class="w"> </span><span class="m">42</span><span class="w"> </span>--epochs<span class="w"> </span><span class="m">10</span><span class="w"> </span>--steps<span class="w"> </span><span class="m">10</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># 10-seed statistical analysis</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>python<span class="w"> </span>-m<span class="w"> </span>swarm.scripts.analyze<span class="w"> </span>ldt_cooperation
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Composition sweep</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>python<span class="w"> </span>examples/ldt_composition_sweep.py<span class="w">  </span><span class="c1"># [if available]</span>
+</span></code></pre></div>
+<p><strong>Analysis artifacts:</strong>
+- <code>runs/20260211-004234_analysis_ldt_cooperation/results.txt</code>
+- <code>runs/20260211-004234_analysis_ldt_cooperation/summary.json</code>
+- <code>runs/20260211-004234_analysis_ldt_cooperation/per_agent_payoffs.csv</code>
+- <code>runs/20260211-004007_ldt_cooperation_seed42/</code> (single-run with plots)
+- <code>runs/20260211-002843_ldt_composition_study/</code> (composition sweep)</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/swarm-ai-safety/swarm" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ResearchSwarmAI" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

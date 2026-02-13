@@ -1,0 +1,40 @@
+% SWARM Paper Template
+% Usage: copy this file, replace placeholders (marked with %PLACEHOLDER%), compile with tectonic.
+%
+% Placeholders:
+%   %TITLE%           — Paper title (can use \\ for line breaks)
+%   %AUTHOR%          — Author name (from $SWARM_AUTHOR or git config user.name)
+%   %ABSTRACT%        — Abstract text
+%   %BODY%            — All sections after abstract
+%
+% Standard preamble shared across all SWARM papers.
+% Do not modify the preamble unless adding a package needed by a specific paper.
+
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{verbatim}
+
+\title{%TITLE%}
+\author{%AUTHOR%}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+%ABSTRACT%
+\end{abstract}
+
+%BODY%
+
+\end{document}

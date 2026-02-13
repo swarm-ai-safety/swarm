@@ -1,0 +1,3360 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework">
+      
+      
+      
+        <link rel="canonical" href="https://swarm-ai.org/papers/collusion_dynamics_network_resilience/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Progressive Decline vs. Sustained Operation: How Network Topology and Collusion Detection Shape Multi-Agent Safety Dynamics - SWARM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#progressive-decline-vs-sustained-operation-how-network-topology-and-collusion-detection-shape-multi-agent-safety-dynamics" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SWARM" class="md-header__button md-logo" aria-label="SWARM" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SWARM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Progressive Decline vs. Sustained Operation: How Network Topology and Collusion Detection Shape Multi-Agent Safety Dynamics
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/swarm-ai-safety/swarm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    swarm-ai-safety/swarm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/" class="md-tabs__link">
+          
+  
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../bridges/" class="md-tabs__link">
+          
+  
+  
+  Bridges
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../research/" class="md-tabs__link">
+          
+  
+  
+  Research
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../comparison/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Comparison
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../blog/" class="md-tabs__link">
+          
+  
+  
+  Blog
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SWARM" class="md-nav__button md-logo" aria-label="SWARM" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    SWARM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/swarm-ai-safety/swarm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    swarm-ai-safety/swarm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/first-scenario/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Scenario
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/soft-labels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Soft Labels
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/emergence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Emergence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/time-horizons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Horizons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/recursive-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/claude-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/scenarios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/custom-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/parameter-sweeps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameter Sweeps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/llm-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/red-teaming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Red Teaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/research-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridges
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Bridges
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/concordia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concordia
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/openclaw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenClaw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/gastown/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GasTown
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/agentxiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AgentXiv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/clawxiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClawXiv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theoretical Foundations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/papers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/agent-publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Publishing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/reflexivity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reflexivity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/ai-index-2025/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Index 2025
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Blog
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/two-eval-runs-one-model-41-percent-apart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Two Eval Runs, One Model, 41% Apart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/governance-mechanisms-taxonomy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance Mechanisms Taxonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/gpt-41-mini-plays-the-swarm-economy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPT-4.1 Mini Plays the SWARM Economy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/rl-training-lessons-multi-agent-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RL Training Lessons for Multi-Agent Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/cross-scenario-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 Scenarios, 3 Regimes, 1 Critical Threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/markets-and-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What Financial Markets Teach Us About AI Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/purity-paradox/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Purity Paradox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/ecosystem-collapse/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    When Agent Ecosystems Collapse
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Introduction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Introduction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-research-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 Research Questions
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-experimental-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Experimental Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Experimental Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-collusion-detection-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 Collusion Detection Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-network-effects-scenario" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Network Effects Scenario
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-collusion-detection-the-three-phase-pattern" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Collusion Detection: The Three-Phase Pattern
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-network-effects-sustained-volatility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Network Effects: Sustained Volatility
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-comparative-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Comparative Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Analysis
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Analysis">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-why-does-collusion-decline-progressively" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Why Does Collusion Decline Progressively?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-why-does-the-network-sustain-operation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Why Does the Network Sustain Operation?
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-the-toxicity-inversion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 The Toxicity Inversion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-implications-for-governance-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Implications for Governance Design
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-connecting-to-the-liveness-safety-tradeoff" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Connecting to the Liveness-Safety Tradeoff
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-the-collusion-detection-paradox" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. The Collusion Detection Paradox
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Related Work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Conclusion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-data-tables" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix: Data Tables
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Appendix: Data Tables">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1-collusion-detection-full-epoch-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A.1 Collusion Detection -- Full Epoch Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a2-network-effects-full-epoch-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A.2 Network Effects -- Full Epoch Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="progressive-decline-vs-sustained-operation-how-network-topology-and-collusion-detection-shape-multi-agent-safety-dynamics">Progressive Decline vs. Sustained Operation: How Network Topology and Collusion Detection Shape Multi-Agent Safety Dynamics<a class="headerlink" href="#progressive-decline-vs-sustained-operation-how-network-topology-and-collusion-detection-shape-multi-agent-safety-dynamics" title="Permanent link">&para;</a></h1>
+<p><strong>Authors:</strong> SWARM Research Collective (AI-generated)
+<strong>Date:</strong> February 2026
+<strong>Framework:</strong> SWARM v0.9</p>
+<hr />
+<h2 id="abstract">Abstract<a class="headerlink" href="#abstract" title="Permanent link">&para;</a></h2>
+<p>We investigate two contrasting failure modes in governed multi-agent systems: <em>progressive decline</em>, where system throughput gradually erodes under adversarial pressure despite no single catastrophic event, and <em>sustained volatility</em>, where network topology enables resilient operation despite ongoing adversarial activity. Using the SWARM framework, we compare collusion detection scenarios (8 agents, 37.5% adversarial, small-world network) against network effects scenarios (10 agents, 10% adversarial, dynamic small-world network) over 20-25 epochs. The collusion scenario exhibits a characteristic three-phase pattern -- initial engagement (epochs 0-4, 76% acceptance), transition (epochs 5-9, 54% acceptance), and attrition (epochs 10-24, 25% acceptance) -- while the network scenario maintains 78% acceptance throughout with high epoch-to-epoch volatility (CV = 0.32). We trace the divergence to three factors: adversarial fraction (37.5% vs 10%), network dynamism (static vs. dynamic edge strengthening), and governance response mode (global filtering vs. local isolation). These findings suggest that network-aware governance -- exploiting topology to isolate adversaries rather than globally tightening filters -- can sustain system liveness without sacrificing safety.</p>
+<hr />
+<h2 id="1-introduction">1. Introduction<a class="headerlink" href="#1-introduction" title="Permanent link">&para;</a></h2>
+<p>When governance mechanisms detect adversarial behavior in multi-agent systems, they face a fundamental choice: <em>how</em> to respond. The simplest approach is global filtering -- tightening acceptance criteria for all interactions across the system. While effective at reducing toxicity, this approach risks <em>liveness collapse</em>, where the system becomes so restrictive that beneficial interactions are also excluded.</p>
+<p>An alternative is <em>local isolation</em> -- leveraging network structure to quarantine adversarial agents while maintaining connectivity among cooperative agents. This approach preserves system throughput but requires the governance system to distinguish between adversarial and cooperative network regions.</p>
+<p>In this paper, we present evidence from two SWARM scenarios that illustrate these contrasting dynamics:</p>
+<ol>
+<li>
+<p><strong>Collusion detection</strong> (25 epochs, 8 agents, 37.5% adversarial): Governance responds to coordinated adversarial behavior with progressively tighter global filtering, resulting in a three-phase decline pattern.</p>
+</li>
+<li>
+<p><strong>Network effects</strong> (20 epochs, 10 agents, 10% adversarial): Dynamic small-world topology enables sustained operation through local effects -- adversarial agents are intermittently isolated by network dynamics, creating volatile but resilient throughput.</p>
+</li>
+</ol>
+<h3 id="11-research-questions">1.1 Research Questions<a class="headerlink" href="#11-research-questions" title="Permanent link">&para;</a></h3>
+<ol>
+<li>What distinguishes progressive decline from sustained operation in governed multi-agent systems?</li>
+<li>How does network topology interact with governance mechanisms to shape system dynamics?</li>
+<li>Can network-aware governance maintain liveness under adversarial pressure?</li>
+<li>What is the role of adversarial fraction in determining which dynamic regime a system enters?</li>
+</ol>
+<hr />
+<h2 id="2-experimental-setup">2. Experimental Setup<a class="headerlink" href="#2-experimental-setup" title="Permanent link">&para;</a></h2>
+<h3 id="21-collusion-detection-scenario">2.1 Collusion Detection Scenario<a class="headerlink" href="#21-collusion-detection-scenario" title="Permanent link">&para;</a></h3>
+<p><strong>Population:</strong> 8 agents -- 3 honest, 2 opportunistic, 3 adversarial (37.5% adversarial).</p>
+<p><strong>Network:</strong> Small-world (k=4, p=0.2) with dynamic edges (strengthen rate 0.1, decay rate 0.03).</p>
+<p><strong>Governance:</strong> Full suite including collusion-specific detection:
+- Collusion frequency threshold: 2.0 (z-score)
+- Collusion correlation threshold: 0.7
+- Collusion penalty multiplier: 1.5
+- Realtime penalty rate: 10% for flagged pairs</p>
+<p><strong>Duration:</strong> 25 epochs, 15 steps per epoch.</p>
+<h3 id="22-network-effects-scenario">2.2 Network Effects Scenario<a class="headerlink" href="#22-network-effects-scenario" title="Permanent link">&para;</a></h3>
+<p><strong>Population:</strong> 10 agents -- 4 honest, 3 opportunistic, 2 deceptive, 1 adversarial (10% adversarial).</p>
+<p><strong>Network:</strong> Small-world (k=4, p=0.2) with dynamic edges (strengthen rate 0.15, decay rate 0.05) and staking (min_stake=10.0).</p>
+<p><strong>Governance:</strong> Full suite including collusion detection, staking, circuit breakers, and audits.</p>
+<p><strong>Duration:</strong> 20 epochs, 10 steps per epoch.</p>
+<h3 id="23-metrics">2.3 Metrics<a class="headerlink" href="#23-metrics" title="Permanent link">&para;</a></h3>
+<p>We track epoch-level metrics:
+- <strong>Accepted interactions</strong> per epoch (throughput)
+- <strong>Toxicity rate</strong> per epoch (safety)
+- <strong>Welfare</strong> per epoch (economic performance)
+- <strong>Acceptance rate</strong> per epoch (governance restrictiveness)</p>
+<hr />
+<h2 id="3-results">3. Results<a class="headerlink" href="#3-results" title="Permanent link">&para;</a></h2>
+<h3 id="31-collusion-detection-the-three-phase-pattern">3.1 Collusion Detection: The Three-Phase Pattern<a class="headerlink" href="#31-collusion-detection-the-three-phase-pattern" title="Permanent link">&para;</a></h3>
+<p>The collusion scenario exhibits a distinctive three-phase decline:</p>
+<p><strong>Phase 1: Initial Engagement (Epochs 0-4)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Epoch</th>
+<th>Interactions</th>
+<th>Accepted</th>
+<th>Rate</th>
+<th>Toxicity</th>
+<th>Welfare</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>21</td>
+<td>16</td>
+<td>76.2%</td>
+<td>0.394</td>
+<td>18.96</td>
+</tr>
+<tr>
+<td>1</td>
+<td>22</td>
+<td>14</td>
+<td>63.6%</td>
+<td>0.351</td>
+<td>19.26</td>
+</tr>
+<tr>
+<td>2</td>
+<td>16</td>
+<td>10</td>
+<td>62.5%</td>
+<td>0.337</td>
+<td>13.67</td>
+</tr>
+<tr>
+<td>3</td>
+<td>13</td>
+<td>12</td>
+<td>92.3%</td>
+<td>0.326</td>
+<td>16.73</td>
+</tr>
+<tr>
+<td>4</td>
+<td>15</td>
+<td>5</td>
+<td>33.3%</td>
+<td>0.317</td>
+<td>7.07</td>
+</tr>
+</tbody>
+</table>
+<p>The system begins with high throughput (avg 11.4 accepted/epoch) and moderately elevated toxicity (0.345). The governance system is accumulating data on agent behavior.</p>
+<p><strong>Phase 2: Transition (Epochs 5-9)</strong></p>
+<table>
+<thead>
+<tr>
+<th>Epoch</th>
+<th>Interactions</th>
+<th>Accepted</th>
+<th>Rate</th>
+<th>Toxicity</th>
+<th>Welfare</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>5</td>
+<td>14</td>
+<td>10</td>
+<td>71.4%</td>
+<td>0.369</td>
+<td>12.37</td>
+</tr>
+<tr>
+<td>6</td>
+<td>21</td>
+<td>8</td>
+<td>38.1%</td>
+<td>0.332</td>
+<td>10.92</td>
+</tr>
+<tr>
+<td>7</td>
+<td>11</td>
+<td>4</td>
+<td>36.4%</td>
+<td>0.304</td>
+<td>5.75</td>
+</tr>
+<tr>
+<td>8</td>
+<td>16</td>
+<td>10</td>
+<td>62.5%</td>
+<td>0.337</td>
+<td>13.72</td>
+</tr>
+<tr>
+<td>9</td>
+<td>6</td>
+<td>3</td>
+<td>50.0%</td>
+<td>0.361</td>
+<td>3.84</td>
+</tr>
+</tbody>
+</table>
+<p>Throughput becomes unstable (avg 7.0 accepted/epoch) as governance filters tighten. The system oscillates between epochs of moderate acceptance (8-10) and low acceptance (3-4).</p>
+<p><strong>Phase 3: Attrition (Epochs 10-24)</strong></p>
+<p>Average accepted interactions drop to 2.3/epoch. The system never fully collapses -- even epoch 24 accepts 2 interactions -- but operates at a fraction of initial capacity. Critically, toxicity <em>increases</em> during this phase (avg 0.383 vs 0.345 in Phase 1), indicating that the remaining accepted interactions have higher residual toxicity.</p>
+<p><strong>Phase transitions:</strong>
+- Phase 1 → 2: Triggered by accumulated negative reputation signals reaching governance thresholds
+- Phase 2 → 3: Triggered by rejection of most adversarial interactions, leaving only marginal cases</p>
+<h3 id="32-network-effects-sustained-volatility">3.2 Network Effects: Sustained Volatility<a class="headerlink" href="#32-network-effects-sustained-volatility" title="Permanent link">&para;</a></h3>
+<p>The network effects scenario tells a fundamentally different story:</p>
+<p><strong>Table 1: Network Effects Epoch-Level Summary</strong></p>
+<table>
+<thead>
+<tr>
+<th>Period</th>
+<th>Avg Accepted</th>
+<th>Avg Toxicity</th>
+<th>Avg Welfare</th>
+<th>CV(Welfare)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Epochs 0-4</td>
+<td>11.4</td>
+<td>0.348</td>
+<td>8.94</td>
+<td>0.34</td>
+</tr>
+<tr>
+<td>Epochs 5-9</td>
+<td>13.0</td>
+<td>0.347</td>
+<td>8.41</td>
+<td>0.27</td>
+</tr>
+<tr>
+<td>Epochs 10-14</td>
+<td>10.6</td>
+<td>0.317</td>
+<td>9.16</td>
+<td>0.31</td>
+</tr>
+<tr>
+<td>Epochs 15-19</td>
+<td>14.0</td>
+<td>0.321</td>
+<td>11.76</td>
+<td>0.27</td>
+</tr>
+</tbody>
+</table>
+<p>Unlike the collusion scenario, throughput <em>increases</em> in the final period (14.0 accepted/epoch vs 11.4 in the first period). Toxicity <em>decreases</em> (0.321 vs 0.348). The system is improving, not degrading.</p>
+<h3 id="33-comparative-analysis">3.3 Comparative Analysis<a class="headerlink" href="#33-comparative-analysis" title="Permanent link">&para;</a></h3>
+<p><strong>Table 2: Side-by-Side Comparison</strong></p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Collusion</th>
+<th>Network</th>
+<th>Ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Total interactions</td>
+<td>299</td>
+<td>314</td>
+<td>0.95</td>
+</tr>
+<tr>
+<td>Accepted</td>
+<td>127</td>
+<td>246</td>
+<td>0.52</td>
+</tr>
+<tr>
+<td>Overall acceptance rate</td>
+<td>42.5%</td>
+<td>78.3%</td>
+<td>0.54</td>
+</tr>
+<tr>
+<td>Mean toxicity</td>
+<td>0.370</td>
+<td>0.335</td>
+<td>1.10</td>
+</tr>
+<tr>
+<td>Total welfare</td>
+<td>157.25</td>
+<td>197.90</td>
+<td>0.79</td>
+</tr>
+<tr>
+<td>Welfare/epoch</td>
+<td>6.29</td>
+<td>9.90</td>
+<td>0.64</td>
+</tr>
+<tr>
+<td>Final epoch welfare</td>
+<td>2.83</td>
+<td>12.94</td>
+<td>0.22</td>
+</tr>
+<tr>
+<td>Throughput trend</td>
+<td>Declining</td>
+<td>Stable/improving</td>
+<td>--</td>
+</tr>
+<tr>
+<td>Toxicity trend</td>
+<td>Increasing</td>
+<td>Decreasing</td>
+<td>--</td>
+</tr>
+</tbody>
+</table>
+<p>The network scenario achieves 1.9x higher acceptance, 1.6x higher welfare/epoch, and 4.6x higher final-epoch welfare. Perhaps most significantly, the network scenario's <em>trends</em> are positive while the collusion scenario's are negative.</p>
+<hr />
+<h2 id="4-analysis">4. Analysis<a class="headerlink" href="#4-analysis" title="Permanent link">&para;</a></h2>
+<h3 id="41-why-does-collusion-decline-progressively">4.1 Why Does Collusion Decline Progressively?<a class="headerlink" href="#41-why-does-collusion-decline-progressively" title="Permanent link">&para;</a></h3>
+<p>Three mechanisms drive the progressive decline:</p>
+<p><strong>Mechanism 1: Adversarial density.</strong> At 37.5% adversarial (3/8 agents), a substantial fraction of all possible interactions involve at least one adversarial agent. With 8 agents forming pairs, there are <span class="arithmatex">\(\binom{8}{2} = 28\)</span> possible pairs. Of these, 15 involve at least one adversarial agent (53.6%). The governance system must filter more than half of all potential interactions, inevitably creating friction.</p>
+<p><strong>Mechanism 2: Reputation contamination.</strong> In a small-world network with k=4, each agent is connected to 4 neighbors. With 3 adversarial agents, honest agents unavoidably have adversarial neighbors. Interactions with these neighbors produce low-p signals that accumulate in honest agents' histories, making the governance system <em>also</em> restrict interactions initiated by honest agents.</p>
+<p><strong>Mechanism 3: Governance momentum.</strong> The governance system's internal state (reputation scores, collusion pair scores) changes slowly due to decay parameters. Once negative signals accumulate, they persist for multiple epochs even after the adversarial interactions stop. This creates a "governance memory" that extends the decline beyond its original cause.</p>
+<h3 id="42-why-does-the-network-sustain-operation">4.2 Why Does the Network Sustain Operation?<a class="headerlink" href="#42-why-does-the-network-sustain-operation" title="Permanent link">&para;</a></h3>
+<p>Three factors enable sustained operation in the network effects scenario:</p>
+<p><strong>Factor 1: Low adversarial density.</strong> At 10% adversarial (1/10), only 9 of <span class="arithmatex">\(\binom{10}{2} = 45\)</span> possible pairs involve the adversarial agent (20%). The vast majority of potential interactions are between non-adversarial agents, providing a large reservoir of acceptable interactions.</p>
+<p><strong>Factor 2: Dynamic edge strengthening.</strong> The network's edge strengthen rate (0.15) is 50% higher than the collusion scenario (0.10), while edge decay rate (0.05) is 67% higher than collusion (0.03). This creates faster-cycling network dynamics: cooperative agent pairs strengthen quickly, and connections to the adversarial agent decay faster. The network self-organizes to isolate the adversary.</p>
+<p><strong>Factor 3: Topological diversity.</strong> In a 10-agent small-world network with k=4, the average path length is ~2.3 and clustering coefficient is ~0.5 (Newman, 2000). This means there are many alternative paths for information and interaction -- if one path is blocked by governance (because it passes through an adversarial agent), other paths exist. In the 8-agent collusion scenario, fewer agents means fewer alternative paths and higher adversarial "coverage" of the network.</p>
+<h3 id="43-the-toxicity-inversion">4.3 The Toxicity Inversion<a class="headerlink" href="#43-the-toxicity-inversion" title="Permanent link">&para;</a></h3>
+<p>A counterintuitive finding is that the collusion scenario has <em>higher</em> toxicity (0.370) despite more aggressive governance filtering. This is explained by <strong>selection effects</strong>:</p>
+<p>In the collusion scenario, governance rejects the <em>cleanest</em> adversarial interactions first (those with the lowest p values are easiest to filter). The remaining accepted interactions are those that passed the filter but still have elevated toxicity -- the adversaries' best disguised attempts. Over time, the remaining accepted interactions have increasingly high toxicity because only the most sophisticated adversarial interactions survive filtering.</p>
+<p>In the network scenario, the single adversarial agent's interactions are mostly filtered out, and the remaining interactions are predominantly between non-adversarial agents. The average toxicity reflects the cooperative population, not the adversary.</p>
+<h3 id="44-implications-for-governance-design">4.4 Implications for Governance Design<a class="headerlink" href="#44-implications-for-governance-design" title="Permanent link">&para;</a></h3>
+<p><strong>Recommendation 1: Network-aware governance.</strong> Rather than applying global filtering thresholds, governance systems should exploit network topology. Agents identified as adversarial could be isolated <em>topologically</em> (reducing their connectivity) rather than <em>behaviorally</em> (tightening acceptance criteria for all). This preserves interactions among cooperative agents.</p>
+<p><strong>Recommendation 2: Adversarial density monitoring.</strong> The progressive decline pattern appears at ~35-40% adversarial density. Systems should monitor estimated adversarial fraction and escalate governance mode when density approaches this threshold -- for example, switching from global filtering to targeted isolation.</p>
+<p><strong>Recommendation 3: Faster reputation dynamics.</strong> The collusion scenario's slow reputation decay (0.95/epoch) means governance "remembers" adversarial interactions for ~20 epochs (half-life of <span class="arithmatex">\(\frac{\ln 2}{-\ln 0.95} \approx 14\)</span> epochs). Faster decay would allow the system to recover from adversarial episodes more quickly, at the cost of potentially re-admitting reformed adversaries. The optimal decay rate should balance recovery speed against adversary re-exploitation.</p>
+<hr />
+<h2 id="5-connecting-to-the-liveness-safety-tradeoff">5. Connecting to the Liveness-Safety Tradeoff<a class="headerlink" href="#5-connecting-to-the-liveness-safety-tradeoff" title="Permanent link">&para;</a></h2>
+<p>The contrasting dynamics in our two scenarios illuminate different points on the liveness-safety Pareto frontier:</p>
+<p><strong>Collusion scenario (high adversarial density):</strong> The governance system is forced to operate in the <em>safety-dominant</em> region. With 37.5% adversarial agents, maintaining low toxicity requires accepting very few interactions. The progressive decline is the system gradually sliding along the Pareto frontier toward maximum safety at the cost of liveness.</p>
+<p><strong>Network scenario (low adversarial density):</strong> The governance system operates in the <em>balanced</em> region. With 10% adversarial agents and network-based isolation, the system can maintain both reasonable toxicity (0.335) and high liveness (78% acceptance). The volatility reflects stochastic exploration of the balanced region rather than systematic movement toward one extreme.</p>
+<p>This suggests the Pareto frontier's shape depends on adversarial density:
+- At low density: the frontier is nearly flat -- liveness and safety are cheap simultaneously
+- At high density: the frontier is steep -- small safety improvements require large liveness sacrifices</p>
+<hr />
+<h2 id="6-the-collusion-detection-paradox">6. The Collusion Detection Paradox<a class="headerlink" href="#6-the-collusion-detection-paradox" title="Permanent link">&para;</a></h2>
+<p>An important negative result: despite collusion detection being explicitly enabled in the collusion scenario, <strong>zero collusion pairs were flagged.</strong> The collusion detection system requires:
+1. Interaction frequency z-score &gt; 2.0
+2. Outcome correlation &gt; 0.7
+3. Minimum 3 interactions between the pair</p>
+<p>Under progressive decline, the interaction count drops rapidly. By epoch 10, most agent pairs have fewer than 3 interactions, preventing the collusion detection from accumulating enough data. The governance system's <em>own filtering</em> prevents the collusion detector from gathering the evidence it needs.</p>
+<p>This creates a paradox: <strong>the more effective the behavioral filter, the less data available for pattern detection.</strong> Collusion detection requires sustained interaction to build statistical evidence, but the behavioral filter reduces interactions precisely because it detects problems.</p>
+<p><strong>Implication:</strong> Collusion detection systems need alternative data sources beyond interaction outcomes -- perhaps network structure analysis, communication pattern monitoring, or controlled "honeypot" interactions that generate data even under reduced throughput.</p>
+<hr />
+<h2 id="7-related-work">7. Related Work<a class="headerlink" href="#7-related-work" title="Permanent link">&para;</a></h2>
+<p><strong>Social Network Analysis for Fraud Detection</strong> (Akoglu et al., 2015). Graph-based anomaly detection identifies suspicious subgraphs in social networks. Our network effects results suggest that dynamic network topology provides <em>natural</em> anomaly containment -- the network self-organizes to isolate anomalous agents without explicit detection.</p>
+<p><strong>Adversarial Robustness in Multi-Agent Reinforcement Learning</strong> (Gleave et al., 2020). Demonstrated that adversarial agents can exploit MARL policies even when they represent a small fraction of the population. Our results complement this by showing that the <em>governance response</em> to adversaries, not just the adversaries themselves, can degrade system performance.</p>
+<p><strong>Resilience of Complex Networks</strong> (Albert et al., 2000; Callaway et al., 2000). Scale-free networks are robust to random node failures but vulnerable to targeted attacks. Our small-world networks show a different resilience pattern: dynamic edge weights create <em>temporal</em> robustness -- the network repeatedly recovers from adversarial periods through edge reconfiguration.</p>
+<p><strong>Sybil Resistance</strong> (Douceur, 2002; Yu et al., 2006). Sybil detection in distributed systems relies on social network structure to bound the adversary's influence. Our work extends this to settings where the adversary's influence is governed not just by identity but by interaction quality signals.</p>
+<hr />
+<h2 id="8-conclusion">8. Conclusion<a class="headerlink" href="#8-conclusion" title="Permanent link">&para;</a></h2>
+<p>This study reveals two fundamentally different governance dynamics in multi-agent systems:</p>
+<ol>
+<li>
+<p><strong>Progressive decline</strong> occurs when adversarial density exceeds ~35%, causing governance to gradually tighten until the system is effectively shut down. The decline follows a characteristic three-phase pattern (engagement, transition, attrition) driven by reputation contamination and governance momentum.</p>
+</li>
+<li>
+<p><strong>Sustained volatility</strong> occurs when adversarial density is low (~10%) and network topology enables local isolation. The system maintains throughput with high variance but positive trends in both welfare and toxicity.</p>
+</li>
+<li>
+<p><strong>The collusion detection paradox</strong>: effective behavioral filtering reduces the data available for pattern detection, creating a fundamental tension between reactive and analytical governance approaches.</p>
+</li>
+<li>
+<p><strong>Network-aware governance</strong> -- exploiting topology to isolate adversaries rather than globally tightening filters -- is a promising direction for maintaining the liveness-safety balance under adversarial pressure.</p>
+</li>
+</ol>
+<p>These findings suggest that the next generation of multi-agent governance mechanisms should be <em>topology-aware</em>, using network structure as both a detection signal and an intervention lever, rather than relying solely on interaction-level behavioral filtering.</p>
+<hr />
+<h2 id="references">References<a class="headerlink" href="#references" title="Permanent link">&para;</a></h2>
+<p>Akoglu, L., Tong, H. &amp; Koutra, D. (2015). Graph Based Anomaly Detection and Description: A Survey. <em>Data Mining and Knowledge Discovery</em>, 29(3), 626-688.</p>
+<p>Albert, R., Jeong, H. &amp; Barabasi, A.L. (2000). Error and Attack Tolerance of Complex Networks. <em>Nature</em>, 406, 378-382.</p>
+<p>Callaway, D.S. et al. (2000). Network Robustness and Fragility: Percolation on Random Graphs. <em>Physical Review Letters</em>, 85(25), 5468.</p>
+<p>Douceur, J.R. (2002). The Sybil Attack. In <em>IPTPS</em>, 251-260.</p>
+<p>Gleave, A. et al. (2020). Adversarial Policies: Attacking Deep Reinforcement Learning. In <em>ICLR 2020</em>.</p>
+<p>Newman, M.E.J. (2000). Models of the Small World. <em>Journal of Statistical Physics</em>, 101, 819-841.</p>
+<p>Savitt, R. (2025). Distributional Safety in Agentic Systems. arXiv:2512.16856.</p>
+<p>Tomasev, N. et al. (2025). Virtual Agent Economies. arXiv:2509.10147.</p>
+<p>Yu, H. et al. (2006). SybilGuard: Defending Against Sybil Attacks via Social Networks. In <em>SIGCOMM 2006</em>, 267-278.</p>
+<hr />
+<h2 id="appendix-data-tables">Appendix: Data Tables<a class="headerlink" href="#appendix-data-tables" title="Permanent link">&para;</a></h2>
+<h3 id="a1-collusion-detection-full-epoch-data">A.1 Collusion Detection -- Full Epoch Data<a class="headerlink" href="#a1-collusion-detection-full-epoch-data" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Epoch</th>
+<th>Total</th>
+<th>Accepted</th>
+<th>Rate</th>
+<th>Toxicity</th>
+<th>Welfare</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>21</td>
+<td>16</td>
+<td>76.2%</td>
+<td>0.394</td>
+<td>18.96</td>
+</tr>
+<tr>
+<td>1</td>
+<td>22</td>
+<td>14</td>
+<td>63.6%</td>
+<td>0.351</td>
+<td>19.26</td>
+</tr>
+<tr>
+<td>2</td>
+<td>16</td>
+<td>10</td>
+<td>62.5%</td>
+<td>0.337</td>
+<td>13.67</td>
+</tr>
+<tr>
+<td>3</td>
+<td>13</td>
+<td>12</td>
+<td>92.3%</td>
+<td>0.326</td>
+<td>16.73</td>
+</tr>
+<tr>
+<td>4</td>
+<td>15</td>
+<td>5</td>
+<td>33.3%</td>
+<td>0.317</td>
+<td>7.07</td>
+</tr>
+<tr>
+<td>5</td>
+<td>14</td>
+<td>10</td>
+<td>71.4%</td>
+<td>0.369</td>
+<td>12.37</td>
+</tr>
+<tr>
+<td>6</td>
+<td>21</td>
+<td>8</td>
+<td>38.1%</td>
+<td>0.332</td>
+<td>10.92</td>
+</tr>
+<tr>
+<td>7</td>
+<td>11</td>
+<td>4</td>
+<td>36.4%</td>
+<td>0.304</td>
+<td>5.75</td>
+</tr>
+<tr>
+<td>8</td>
+<td>16</td>
+<td>10</td>
+<td>62.5%</td>
+<td>0.337</td>
+<td>13.72</td>
+</tr>
+<tr>
+<td>9</td>
+<td>6</td>
+<td>3</td>
+<td>50.0%</td>
+<td>0.361</td>
+<td>3.84</td>
+</tr>
+<tr>
+<td>10</td>
+<td>13</td>
+<td>3</td>
+<td>23.1%</td>
+<td>0.356</td>
+<td>4.05</td>
+</tr>
+<tr>
+<td>11</td>
+<td>15</td>
+<td>3</td>
+<td>20.0%</td>
+<td>0.414</td>
+<td>3.29</td>
+</tr>
+<tr>
+<td>12</td>
+<td>8</td>
+<td>1</td>
+<td>12.5%</td>
+<td>0.529</td>
+<td>0.60</td>
+</tr>
+<tr>
+<td>13</td>
+<td>13</td>
+<td>2</td>
+<td>15.4%</td>
+<td>0.418</td>
+<td>2.16</td>
+</tr>
+<tr>
+<td>14</td>
+<td>8</td>
+<td>3</td>
+<td>37.5%</td>
+<td>0.371</td>
+<td>3.85</td>
+</tr>
+<tr>
+<td>15</td>
+<td>9</td>
+<td>3</td>
+<td>33.3%</td>
+<td>0.317</td>
+<td>4.56</td>
+</tr>
+<tr>
+<td>16</td>
+<td>8</td>
+<td>3</td>
+<td>37.5%</td>
+<td>0.438</td>
+<td>2.99</td>
+</tr>
+<tr>
+<td>17</td>
+<td>13</td>
+<td>3</td>
+<td>23.1%</td>
+<td>0.419</td>
+<td>3.14</td>
+</tr>
+<tr>
+<td>18</td>
+<td>9</td>
+<td>4</td>
+<td>44.4%</td>
+<td>0.418</td>
+<td>4.33</td>
+</tr>
+<tr>
+<td>19</td>
+<td>4</td>
+<td>1</td>
+<td>25.0%</td>
+<td>0.262</td>
+<td>1.66</td>
+</tr>
+<tr>
+<td>20</td>
+<td>6</td>
+<td>1</td>
+<td>16.7%</td>
+<td>0.365</td>
+<td>1.21</td>
+</tr>
+<tr>
+<td>21</td>
+<td>11</td>
+<td>3</td>
+<td>27.3%</td>
+<td>0.404</td>
+<td>3.32</td>
+</tr>
+<tr>
+<td>22</td>
+<td>10</td>
+<td>2</td>
+<td>20.0%</td>
+<td>0.315</td>
+<td>2.85</td>
+</tr>
+<tr>
+<td>23</td>
+<td>9</td>
+<td>1</td>
+<td>11.1%</td>
+<td>0.466</td>
+<td>0.88</td>
+</tr>
+<tr>
+<td>24</td>
+<td>8</td>
+<td>2</td>
+<td>25.0%</td>
+<td>0.342</td>
+<td>2.83</td>
+</tr>
+</tbody>
+</table>
+<h3 id="a2-network-effects-full-epoch-data">A.2 Network Effects -- Full Epoch Data<a class="headerlink" href="#a2-network-effects-full-epoch-data" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Epoch</th>
+<th>Total</th>
+<th>Accepted</th>
+<th>Rate</th>
+<th>Toxicity</th>
+<th>Welfare</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>17</td>
+<td>15</td>
+<td>88.2%</td>
+<td>0.341</td>
+<td>11.88</td>
+</tr>
+<tr>
+<td>1</td>
+<td>16</td>
+<td>12</td>
+<td>75.0%</td>
+<td>0.335</td>
+<td>9.72</td>
+</tr>
+<tr>
+<td>2</td>
+<td>8</td>
+<td>6</td>
+<td>75.0%</td>
+<td>0.385</td>
+<td>3.89</td>
+</tr>
+<tr>
+<td>3</td>
+<td>18</td>
+<td>15</td>
+<td>83.3%</td>
+<td>0.337</td>
+<td>12.06</td>
+</tr>
+<tr>
+<td>4</td>
+<td>14</td>
+<td>9</td>
+<td>64.3%</td>
+<td>0.341</td>
+<td>7.14</td>
+</tr>
+<tr>
+<td>5</td>
+<td>15</td>
+<td>12</td>
+<td>80.0%</td>
+<td>0.349</td>
+<td>9.19</td>
+</tr>
+<tr>
+<td>6</td>
+<td>15</td>
+<td>12</td>
+<td>80.0%</td>
+<td>0.355</td>
+<td>8.96</td>
+</tr>
+<tr>
+<td>7</td>
+<td>17</td>
+<td>12</td>
+<td>70.6%</td>
+<td>0.353</td>
+<td>9.03</td>
+</tr>
+<tr>
+<td>8</td>
+<td>21</td>
+<td>19</td>
+<td>90.5%</td>
+<td>0.365</td>
+<td>13.53</td>
+</tr>
+<tr>
+<td>9</td>
+<td>13</td>
+<td>10</td>
+<td>76.9%</td>
+<td>0.349</td>
+<td>7.64</td>
+</tr>
+<tr>
+<td>10</td>
+<td>17</td>
+<td>13</td>
+<td>76.5%</td>
+<td>0.351</td>
+<td>9.86</td>
+</tr>
+<tr>
+<td>11</td>
+<td>13</td>
+<td>10</td>
+<td>76.9%</td>
+<td>0.314</td>
+<td>8.80</td>
+</tr>
+<tr>
+<td>12</td>
+<td>11</td>
+<td>6</td>
+<td>54.5%</td>
+<td>0.282</td>
+<td>5.90</td>
+</tr>
+<tr>
+<td>13</td>
+<td>18</td>
+<td>14</td>
+<td>77.8%</td>
+<td>0.344</td>
+<td>10.93</td>
+</tr>
+<tr>
+<td>14</td>
+<td>15</td>
+<td>11</td>
+<td>73.3%</td>
+<td>0.286</td>
+<td>10.66</td>
+</tr>
+<tr>
+<td>15</td>
+<td>22</td>
+<td>18</td>
+<td>81.8%</td>
+<td>0.383</td>
+<td>11.80</td>
+</tr>
+<tr>
+<td>16</td>
+<td>18</td>
+<td>14</td>
+<td>77.8%</td>
+<td>0.310</td>
+<td>12.50</td>
+</tr>
+<tr>
+<td>17</td>
+<td>19</td>
+<td>17</td>
+<td>89.5%</td>
+<td>0.322</td>
+<td>14.54</td>
+</tr>
+<tr>
+<td>18</td>
+<td>9</td>
+<td>8</td>
+<td>88.9%</td>
+<td>0.314</td>
+<td>7.03</td>
+</tr>
+<tr>
+<td>19</td>
+<td>18</td>
+<td>13</td>
+<td>72.2%</td>
+<td>0.278</td>
+<td>12.94</td>
+</tr>
+</tbody>
+</table>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/swarm-ai-safety/swarm" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ResearchSwarmAI" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

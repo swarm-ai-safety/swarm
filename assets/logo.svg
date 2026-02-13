@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <linearGradient id="swarm-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#00d4ff"/>
+      <stop offset="100%" style="stop-color:#7b61ff"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="45" fill="#1a1f3a"/>
+
+  <!-- Swarm particles -->
+  <g fill="url(#swarm-gradient)">
+    <!-- Central cluster -->
+    <circle cx="50" cy="50" r="4"/>
+    <circle cx="42" cy="45" r="3"/>
+    <circle cx="58" cy="45" r="3"/>
+    <circle cx="45" cy="55" r="3"/>
+    <circle cx="55" cy="55" r="3"/>
+
+    <!-- Inner ring -->
+    <circle cx="35" cy="40" r="2.5"/>
+    <circle cx="65" cy="40" r="2.5"/>
+    <circle cx="35" cy="60" r="2.5"/>
+    <circle cx="65" cy="60" r="2.5"/>
+    <circle cx="50" cy="35" r="2.5"/>
+    <circle cx="50" cy="65" r="2.5"/>
+
+    <!-- Outer ring -->
+    <circle cx="28" cy="50" r="2"/>
+    <circle cx="72" cy="50" r="2"/>
+    <circle cx="35" cy="30" r="2"/>
+    <circle cx="65" cy="30" r="2"/>
+    <circle cx="35" cy="70" r="2"/>
+    <circle cx="65" cy="70" r="2"/>
+
+    <!-- Scattered -->
+    <circle cx="25" cy="35" r="1.5"/>
+    <circle cx="75" cy="35" r="1.5"/>
+    <circle cx="25" cy="65" r="1.5"/>
+    <circle cx="75" cy="65" r="1.5"/>
+    <circle cx="40" cy="25" r="1.5"/>
+    <circle cx="60" cy="25" r="1.5"/>
+    <circle cx="40" cy="75" r="1.5"/>
+    <circle cx="60" cy="75" r="1.5"/>
+  </g>
+</svg>

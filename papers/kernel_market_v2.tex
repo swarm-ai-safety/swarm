@@ -1,0 +1,321 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+
+\title{Governance Effects in a GPU Kernel Marketplace\\with Correlated Proxy Gaps}
+\author{Raeli Savitt}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study the effects of Pigouvian transaction taxes and circuit breaker mechanisms on welfare and toxicity in a simulated GPU kernel marketplace. Building on a prior null result (v1), where a heavily-governed baseline absorbed all tax effects, we redesigned the kernel oracle to model three proxy gaps observed in real platforms like LeetGPU and KernelBench: (1) correlated speedup-cheating, where adversarial agents exploit precision shortcuts that simultaneously boost apparent performance; (2) a split test regime with functional tests visible to the proxy and out-of-distribution (OOD) tests revealed only by audit; and (3) tolerance exploitation where cheaters produce results barely within numerical tolerance. Under a lighter governance baseline, transaction taxes show a significant welfare effect (0\% vs 15\%: $p = 0.0006$, $d = 1.19$, Bonferroni-corrected across 42 hypotheses), while circuit breakers show no significant effect ($p = 0.34$). Adversarial agents earn significantly less than honest agents ($d = 3.45$, $p < 0.00001$), confirming that the proxy gap creates meaningful payoff separation even under light governance.
+\end{abstract}
+
+\section{Introduction}
+
+GPU kernel marketplaces such as LeetGPU evaluate submitted CUDA kernels on two axes: correctness (do test cases pass?) and performance (speedup over a reference implementation). This creates a natural proxy gap: the platform observes test pass rates and timing benchmarks, but cannot directly observe numerical stability, out-of-distribution robustness, or whether speedup gains come from legitimate optimization versus precision shortcuts.
+
+Our v1 kernel market model produced a null result: 0/12 governance hypotheses survived any multiple comparisons correction. Analysis revealed two modeling flaws:
+
+\begin{enumerate}
+    \item \textbf{Speedup and cheating were uncorrelated.} Adversarial agents' cheating decisions had no effect on their apparent speedup signal, eliminating the proxy gap that makes real GPU kernel markets adversarially interesting.
+    \item \textbf{Governance stack saturation.} The baseline scenario enabled staking, escrow, circuit breakers, reputation weighting, and auditing simultaneously. Adding a 5--15\% transaction tax on top of this saturated governance stack produced no measurable effect.
+\end{enumerate}
+
+We address both issues in the v2 model, producing the first statistically significant governance effects in the kernel market domain.
+
+\section{Model}
+
+\subsection{Kernel Oracle v2}
+
+The kernel oracle simulates kernel submission, verification, and audit using three mechanisms:
+
+\paragraph{Correlated speedup-cheating.} When an adversarial agent cheats (probability 0.60 per submission), a \texttt{cheat\_speedup\_bonus} of $+0.40$ is added to their apparent speedup signal. This models the real-world phenomenon where precision shortcuts (e.g., using FP16 instead of FP32, hardcoding test tolerances, skipping edge cases) simultaneously boost runtime performance. The proxy sees the inflated speedup; audits reveal the true \texttt{base\_speedup}.
+
+\paragraph{Split test regime.} Each challenge has two test suites:
+\begin{itemize}
+    \item \textbf{Functional tests} (visible to the proxy): Adversarial agents pass these at 0.95 quality.
+    \item \textbf{OOD tests} (revealed only by audit): Adversarial cheaters pass these at only 0.30 quality.
+\end{itemize}
+This models the KernelBench finding that correctness on in-distribution inputs does not predict correctness on out-of-distribution inputs.
+
+\paragraph{Tolerance exploitation.} Each submission has a \texttt{tolerance\_margin} measuring how far within the numerical tolerance (atol/rtol) the result falls. Honest agents have comfortable margins (${\sim}0.70$); adversarial cheaters cluster near the boundary (${\sim}0.05$). Low tolerance margins generate more \texttt{precision\_hack} signals and are penalized more heavily under audit.
+
+\subsection{Agent Population}
+
+\begin{table}[H]
+\centering
+\caption{Agent composition in the v2 kernel market scenario.}
+\label{tab:agents}
+\small
+\begin{tabular}{@{}lccccc@{}}
+\toprule
+Type & Count & Func.\ Quality & OOD Quality & Base Speedup & Role \\
+\midrule
+Honest & 2 & 0.85 & 0.80 & $\mathcal{N}(0.50, \sigma)$ & Correct + fast kernels \\
+Opportunistic & 3 & 0.70 & 0.50 & $\mathcal{N}(0.40, \sigma)$ & Cut corners on precision \\
+Adversarial & 2 & 0.95 & 0.30 & $\mathcal{N}(0.45, \sigma) + 0.40$ & Exploit proxy signals \\
+Verifier & 1 & --- & --- & --- & Surface-level checks \\
+\bottomrule
+\end{tabular}
+\begin{flushleft}
+\footnotesize
+Speedup variance $\sigma$ scales with difficulty: easy${}=0.15$, medium${}=0.25$, hard${}=0.35$.
+\end{flushleft}
+\end{table}
+
+\subsection{Governance Baseline}
+
+\begin{table}[H]
+\centering
+\caption{Governance configuration: v1 (saturated) vs v2 (light).}
+\label{tab:governance}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Parameter & v1 (Baseline) & v2 (Light) \\
+\midrule
+Audit probability & 0.15 & 0.05 \\
+Staking & Enabled & \textbf{Disabled} \\
+Circuit breaker & Enabled & \textbf{Disabled} \\
+Reputation decay & 0.95 & 0.98 \\
+Transaction tax & 0.05 & \textbf{0.00} \\
+$\rho$ (externality) & 0.10 & 0.05 \\
+$w_{\text{rep}}$ (reputation weight) & 1.50 & 1.00 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Sweep Configuration}
+
+\begin{table}[H]
+\centering
+\caption{Parameter sweep design.}
+\label{tab:sweep}
+\small
+\begin{tabular}{@{}ll@{}}
+\toprule
+Parameter & Values \\
+\midrule
+\texttt{transaction\_tax\_rate} & 0.00, 0.05, 0.10, 0.15 \\
+\texttt{circuit\_breaker\_enabled} & False, True \\
+Seeds per configuration & 10 \\
+Total runs & \textbf{80} \\
+Epochs per run & 5 \\
+Steps per epoch & 10 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results}
+
+\subsection{Welfare Effects}
+
+Transaction tax produces a monotonic welfare decline (Table~\ref{tab:welfare}).
+
+\begin{table}[H]
+\centering
+\caption{Total welfare by tax rate (Welch's $t$-test vs 0\% baseline).}
+\label{tab:welfare}
+\small
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Tax Rate & Welfare (mean $\pm$ SD) & $p$ vs 0\% & Cohen's $d$ \\
+\midrule
+0\%  & $14.06 \pm 5.06$ & --- & --- \\
+5\%  & $10.43 \pm 3.73$ & 0.0143 & 0.82 \\
+10\% & $\phantom{0}8.97 \pm 5.15$ & 0.0032 & 1.00 \\
+15\% & $\phantom{0}7.99 \pm 5.14$ & \textbf{0.0006}* & \textbf{1.19} \\
+\bottomrule
+\end{tabular}
+\begin{flushleft}
+\footnotesize
+*Bonferroni-significant at $\alpha = 0.05/42 = 0.0012$. The tax reduces welfare by 43\%.
+\end{flushleft}
+\end{table}
+
+The 0\% vs 15\% comparison survives Bonferroni correction across all 42 pairwise tests ($p = 0.0006$, $d = 1.19$). This is a large effect size.
+
+\subsection{Toxicity Effects}
+
+\begin{table}[H]
+\centering
+\caption{Toxicity by tax rate.}
+\label{tab:toxicity}
+\small
+\begin{tabular}{@{}lc@{}}
+\toprule
+Tax Rate & Toxicity (mean $\pm$ SD) \\
+\midrule
+0\%  & $0.4385 \pm 0.0236$ \\
+5\%  & $0.4474 \pm 0.0190$ \\
+10\% & $0.4485 \pm 0.0208$ \\
+15\% & $0.4505 \pm 0.0204$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+No pairwise toxicity comparison achieves significance. The tax reduces welfare without reducing toxicity---it imposes a deadweight loss.
+
+\subsection{Circuit Breaker}
+
+The circuit breaker shows no significant effect on welfare ($p = 0.34$, $d = -0.22$) or toxicity ($p = 0.32$, $d = 0.25$). Notably, $n_{\text{frozen}} = 0$ across all circuit breaker runs---the freeze threshold (toxicity $> 0.60$ for 2 consecutive violations) is never triggered because per-agent toxicity does not exceed this threshold within the 5-epoch window.
+
+\subsection{Agent-Type Stratification}
+
+\begin{table}[H]
+\centering
+\caption{Mean payoff by agent type (paired $t$-test, Bonferroni-corrected over 3 pairs).}
+\label{tab:agents_payoff}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Agent Type & Mean Payoff & $d$ vs Adversarial \\
+\midrule
+Honest & 2.21 & 3.45*** \\
+Opportunistic & 2.34 & 6.12*** \\
+Adversarial & $-1.65$ & --- \\
+\bottomrule
+\end{tabular}
+\begin{flushleft}
+\footnotesize
+***$p < 0.00001$, Bonferroni-significant.
+\end{flushleft}
+\end{table}
+
+All agent-type comparisons are significant ($p < 0.00001$). Adversarial agents earn negative payoffs despite gaming the proxy signal, indicating that governance mechanisms (even at light baseline) successfully penalize cheating behavior.
+
+\subsection{Quality Gap}
+
+\begin{table}[H]
+\centering
+\caption{Quality gap by tax rate.}
+\label{tab:quality_gap}
+\small
+\begin{tabular}{@{}lc@{}}
+\toprule
+Tax Rate & Quality Gap (mean) \\
+\midrule
+0\%  & 0.073 \\
+5\%  & 0.072 \\
+10\% & 0.058 \\
+15\% & 0.082 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Quality gap remains positive across all conditions, indicating the market successfully selects better kernels than it rejects. No significant tax effect on quality gap.
+
+\subsection{Normality Validation}
+
+Shapiro-Wilk tests confirm welfare distributions are normal across all tax groups (all $p > 0.33$), validating the use of parametric $t$-tests.
+
+\section{Discussion}
+
+\subsection{v1 vs v2 Comparison}
+
+\begin{table}[H]
+\centering
+\caption{Comparison of v1 and v2 kernel market results.}
+\label{tab:comparison}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Finding & v1 (Saturated Gov.) & v2 (Light + Correlated Cheating) \\
+\midrule
+Tax on welfare & Null (0/12 Bonf.) & \textbf{Significant} (1/42, $d = 1.19$) \\
+Tax on toxicity & Null & Null (slight upward trend) \\
+CB on welfare & Null & Null \\
+CB on toxicity & Marginal ($p = 0.017$) & Null \\
+Agent stratification & $d = 1.56$--$4.31$ & $d = 3.45$--$6.12$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The key difference is the \textbf{governance baseline}: v1's saturated stack left no room for tax effects, while v2's light baseline allows the tax to have bite.
+
+\subsection{The Proxy Gap Matters}
+
+In v1, adversarial agents had \texttt{quality\_mean}${}=0.75$ (only slightly below honest at 0.85) and speedup was uncorrelated with cheating. The proxy could not distinguish cheaters from honest agents because cheating did not affect observable signals.
+
+In v2, the proxy gap is explicit:
+\begin{itemize}
+    \item Adversarial cheaters achieve 0.95 functional quality (higher than honest on visible tests)
+    \item But only 0.30 OOD quality (much worse than honest at 0.80)
+    \item Apparent speedup is inflated by $+0.40$ (the cheat bonus)
+\end{itemize}
+
+This creates genuine adverse selection: the proxy preferentially selects cheaters because they look better on both observed signals (functional tests + speedup). Governance must break through the proxy gap to penalize this behavior.
+
+\subsection{Tax as Deadweight Loss}
+
+The tax reduces welfare without reducing toxicity---a classic deadweight loss. The tax applies uniformly to all transactions, not selectively to toxic ones. Honest agents bear the same tax burden as adversarial agents, reducing overall welfare without improving market quality.
+
+This suggests that \textbf{targeted governance} (audits, reputation) is more effective than \textbf{uniform taxation} for reducing toxicity in kernel markets. The audit mechanism, even at only 5\% probability, successfully separates adversarial from honest agent payoffs ($d = 3.45$).
+
+\subsection{Circuit Breaker Inactivity}
+
+The circuit breaker never triggers because per-agent toxicity stays below the 0.60 freeze threshold within the 5-epoch window. Future work should sweep the freeze threshold (e.g., 0.3, 0.4, 0.5) to find the regime where circuit breakers become active.
+
+\section{Reproducibility}
+
+\begin{verbatim}
+from pathlib import Path
+from swarm.analysis import SweepConfig, SweepParameter, SweepRunner
+from swarm.scenarios import load_scenario
+
+sc = load_scenario(Path('scenarios/kernel_market/v2.yaml'))
+sc.orchestrator_config.n_epochs = 5
+sweep = SweepConfig(
+    base_scenario=sc,
+    parameters=[
+        SweepParameter(name='governance.transaction_tax_rate',
+                       values=[0.0, 0.05, 0.10, 0.15]),
+        SweepParameter(name='governance.circuit_breaker_enabled',
+                       values=[False, True]),
+    ],
+    runs_per_config=10,
+    seed_base=42,
+)
+runner = SweepRunner(sweep)
+runner.run()
+runner.to_csv(Path('sweep_results.csv'))
+\end{verbatim}
+
+Run artifacts: \texttt{runs/20260210-223119\_kernel\_market\_v2/}
+
+\section{Figures}
+
+\begin{enumerate}
+    \item \texttt{plots/welfare\_vs\_tax.png} --- Welfare vs tax rate with 95\% CI, Bonferroni annotation
+    \item \texttt{plots/toxicity\_vs\_tax.png} --- Toxicity vs tax rate with 95\% CI
+    \item \texttt{plots/welfare\_toxicity\_tradeoff.png} --- Welfare-toxicity scatter by config
+    \item \texttt{plots/quality\_gap\_vs\_tax.png} --- Quality gap vs tax rate with adverse selection threshold
+    \item \texttt{plots/agent\_payoff\_by\_type.png} --- Grouped bar chart by agent type and tax rate
+    \item \texttt{plots/circuit\_breaker\_effect.png} --- CB on/off comparison for welfare and toxicity
+\end{enumerate}
+
+\section{Limitations}
+
+\begin{itemize}
+    \item \textbf{5 epochs per run} may be insufficient for circuit breaker dynamics to manifest. Future work should run 20+ epochs.
+    \item \textbf{Agent composition is fixed}---future sweeps should vary the adversarial fraction.
+    \item \textbf{Single proxy gap mechanism}---real markets have multiple correlated proxy gaps (precision, OOD, timing manipulation, Sybil attacks). The model captures the dominant one.
+    \item \textbf{Tolerance exploitation is parameterized, not simulated}---actual numerical error propagation is not modeled.
+\end{itemize}
+
+\section{Conclusion}
+
+Redesigning the kernel oracle to model correlated speedup-cheating and split functional/OOD test regimes transforms the kernel market from a null-result scenario to one with significant governance effects. Transaction taxes produce a large welfare reduction ($d = 1.19$) without improving toxicity, suggesting they function as deadweight loss. The audit mechanism, even at 5\% probability, successfully separates adversarial from honest agent payoffs ($d = 3.45$). Future work should explore targeted governance mechanisms that selectively tax proxy-gap exploitation rather than all transactions uniformly.
+
+\end{document}

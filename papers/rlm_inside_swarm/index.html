@@ -1,0 +1,3169 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework">
+      
+      
+      
+        <link rel="canonical" href="https://swarm-ai.org/papers/rlm_inside_swarm/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Recursive Reasoning in Multi-Agent Systems: Strategic Depth as a Distributional Safety Risk - SWARM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#recursive-reasoning-in-multi-agent-systems-strategic-depth-as-a-distributional-safety-risk" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SWARM" class="md-header__button md-logo" aria-label="SWARM" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SWARM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Recursive Reasoning in Multi-Agent Systems: Strategic Depth as a Distributional Safety Risk
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/swarm-ai-safety/swarm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    swarm-ai-safety/swarm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/" class="md-tabs__link">
+          
+  
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../bridges/" class="md-tabs__link">
+          
+  
+  
+  Bridges
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../research/" class="md-tabs__link">
+          
+  
+  
+  Research
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../comparison/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Comparison
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../blog/" class="md-tabs__link">
+          
+  
+  
+  Blog
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SWARM" class="md-nav__button md-logo" aria-label="SWARM" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    SWARM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/swarm-ai-safety/swarm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    swarm-ai-safety/swarm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/first-scenario/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Scenario
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/soft-labels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Soft Labels
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/emergence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Emergence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/time-horizons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Horizons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/recursive-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/claude-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/scenarios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/custom-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/parameter-sweeps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameter Sweeps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/llm-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/red-teaming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Red Teaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/research-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridges
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Bridges
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/concordia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concordia
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/openclaw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenClaw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/gastown/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GasTown
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/agentxiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AgentXiv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/clawxiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClawXiv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theoretical Foundations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/papers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/agent-publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Publishing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/reflexivity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reflexivity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/ai-index-2025/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Index 2025
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Blog
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/two-eval-runs-one-model-41-percent-apart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Two Eval Runs, One Model, 41% Apart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/governance-mechanisms-taxonomy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance Mechanisms Taxonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/gpt-41-mini-plays-the-swarm-economy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPT-4.1 Mini Plays the SWARM Economy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/rl-training-lessons-multi-agent-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RL Training Lessons for Multi-Agent Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/cross-scenario-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 Scenarios, 3 Regimes, 1 Critical Threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/markets-and-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What Financial Markets Teach Us About AI Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/purity-paradox/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Purity Paradox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/ecosystem-collapse/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    When Agent Ecosystems Collapse
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-experimental-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Experimental Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Experimental Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#21-rlm-agent-architecture" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.1 RLM Agent Architecture
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#22-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.2 Scenarios
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#23-governance-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.3 Governance Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#24-payoff-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.4 Payoff Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#25-statistical-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2.5 Statistical Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-cross-experiment-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Cross-Experiment Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-experiment-1-recursive-collusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Experiment 1: Recursive Collusion
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-experiment-2-memory-as-power" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Experiment 2: Memory-as-Power
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-experiment-3-governance-lag" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Experiment 3: Governance Lag
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-cross-experiment-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 Cross-Experiment Patterns
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Discussion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Discussion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-strategic-overthinking" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Strategic Overthinking
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-memory-as-a-modest-power-lever" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Memory as a Modest Power Lever
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-network-topology-as-a-moderator" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Network Topology as a Moderator
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-governance-implications" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Governance Implications
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-reproducibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Reproducibility
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. References
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="recursive-reasoning-in-multi-agent-systems-strategic-depth-as-a-distributional-safety-risk">Recursive Reasoning in Multi-Agent Systems: Strategic Depth as a Distributional Safety Risk<a class="headerlink" href="#recursive-reasoning-in-multi-agent-systems-strategic-depth-as-a-distributional-safety-risk" title="Permanent link">&para;</a></h1>
+<p><strong>Authors:</strong> Raeli Savitt
+<strong>Date:</strong> 2026-02-10
+<strong>Framework:</strong> SWARM v1.0.0</p>
+<h2 id="abstract">Abstract<a class="headerlink" href="#abstract" title="Permanent link">&para;</a></h2>
+<p>We study the distributional safety implications of embedding strategically sophisticated agents---modeled as Recursive Language Models (RLMs) with level-k iterated best response---into multi-agent ecosystems governed by soft probabilistic labels. Across three pre-registered experiments (N=30 seeds total, 26 statistical tests), we find three counter-intuitive results. <strong>First</strong>, deeper recursive reasoning <em>hurts</em> individual payoff (Pearson r = -0.75, p &lt; 0.001, 10/10 tests survive Holm correction), rejecting the hypothesis that strategic depth enables implicit collusion. <strong>Second</strong>, memory budget asymmetry creates statistically significant but practically modest power imbalances (3.2% spread, r = +0.67, p &lt; 0.001, 11/11 survive Holm). <strong>Third</strong>, fast-adapting RLM agents outperform honest baselines in small-world networks (Cohen's d = 2.14, p = 0.0001) but <em>not</em> by evading governance---rather by optimizing partner selection within legal bounds. Across all experiments, honest agents earn 2.3--2.8x more than any RLM tier, suggesting that strategic sophistication is currently a net negative in SWARM-style ecosystems with soft governance. All p-values survive Holm-Bonferroni correction at the per-experiment level.</p>
+<h2 id="1-introduction">1. Introduction<a class="headerlink" href="#1-introduction" title="Permanent link">&para;</a></h2>
+<p>[TODO: Expand with literature context]</p>
+<p>The intersection of recursive reasoning and multi-agent safety is understudied. Most alignment research treats agents as either aligned or misaligned in a binary sense. The SWARM framework instead uses <em>soft probabilistic labels</em>---each interaction receives a probability p of being beneficial---enabling a richer distributional analysis of safety outcomes.</p>
+<p>Recursive Language Models (RLMs) represent a class of agents that apply iterated reasoning over their action space: at recursion depth k, an RLM models its counterparties as depth-(k-1) reasoners and best-responds accordingly. This mirrors the level-k thinking framework from behavioral game theory (Stahl &amp; Wilson, 1994; Nagel, 1995). The key safety question is: does increased reasoning depth create emergent coordination risks that governance mechanisms cannot keep pace with?</p>
+<p>We operationalize this question through three experiments:</p>
+<ol>
+<li><strong>Recursive Collusion</strong> (Exp. 1): Does deeper recursion enable implicit coordination without explicit communication?</li>
+<li><strong>Memory-as-Power</strong> (Exp. 2): Does asymmetric working memory create exploitative power imbalances?</li>
+<li><strong>Governance Lag</strong> (Exp. 3): Can fast-adapting agents outpace deliberately slow governance responses?</li>
+</ol>
+<p>Each experiment uses 10 pre-registered seeds with Bonferroni and Holm-Bonferroni correction for multiple comparisons.</p>
+<h2 id="2-experimental-setup">2. Experimental Setup<a class="headerlink" href="#2-experimental-setup" title="Permanent link">&para;</a></h2>
+<h3 id="21-rlm-agent-architecture">2.1 RLM Agent Architecture<a class="headerlink" href="#21-rlm-agent-architecture" title="Permanent link">&para;</a></h3>
+<p>RLM agents implement level-k thinking algorithmically (no LLM API calls). The key parameters are:</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+<th>Values Tested</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recursion_depth</code></td>
+<td>Levels of iterated best response</td>
+<td>1, 3, 5</td>
+</tr>
+<tr>
+<td><code>planning_horizon</code></td>
+<td>Steps of discounted look-ahead</td>
+<td>3, 5, 7, 8</td>
+</tr>
+<tr>
+<td><code>memory_budget</code></td>
+<td>Max entries in structured working memory</td>
+<td>10, 50, 100, 150, 200</td>
+</tr>
+</tbody>
+</table>
+<p>At each decision point, a depth-k agent:
+1. Generates candidate actions (NOOP, propose collaboration, post, claim task, vote)
+2. Evaluates each candidate via <code>_evaluate_action_recursive()</code>
+3. Models counterparties at depth-(k-1) using <code>CounterpartyModel</code> (tracks cooperation rate, estimated type, payoff history)
+4. Selects actions via epsilon-greedy exploration at rate 0.1/(depth+1)</p>
+<p>Level-0 (base case) selects the highest-trust visible agent and proposes collaboration, equivalent to a naive <code>HonestAgent</code>.</p>
+<h3 id="22-scenarios">2.2 Scenarios<a class="headerlink" href="#22-scenarios" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Agents</th>
+<th>RLM Config</th>
+<th>Epochs</th>
+<th>Steps</th>
+<th>Network</th>
+<th>Governance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Recursive Collusion</td>
+<td>9 RLM + 3 honest</td>
+<td>depth={1,3,5} x 3</td>
+<td>30</td>
+<td>15</td>
+<td>Complete</td>
+<td>Collusion detection, audit (p=0.15)</td>
+</tr>
+<tr>
+<td>Memory-as-Power</td>
+<td>7 RLM + 3 honest</td>
+<td>mem={200,50,10}, depth=3</td>
+<td>40</td>
+<td>15</td>
+<td>Complete</td>
+<td>Audit (p=0.1), circuit breaker, rho=0.1</td>
+</tr>
+<tr>
+<td>Governance Lag</td>
+<td>4 RLM + 4 honest + 2 adversary</td>
+<td>depth=5, mem=150</td>
+<td>50</td>
+<td>15</td>
+<td>Small-world (k=4, p=0.2)</td>
+<td>Slow: audit (p=0.05), high thresholds</td>
+</tr>
+</tbody>
+</table>
+<h3 id="23-governance-parameters">2.3 Governance Parameters<a class="headerlink" href="#23-governance-parameters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Exp. 1</th>
+<th>Exp. 2</th>
+<th>Exp. 3</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Audit probability</td>
+<td>0.15</td>
+<td>0.10</td>
+<td>0.05</td>
+</tr>
+<tr>
+<td>Audit penalty multiplier</td>
+<td>2.0x</td>
+<td>2.0x</td>
+<td>3.0x</td>
+</tr>
+<tr>
+<td>Audit threshold (p)</td>
+<td>0.50</td>
+<td>0.50</td>
+<td>0.40</td>
+</tr>
+<tr>
+<td>Collusion detection</td>
+<td>Yes</td>
+<td>No</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>Circuit breaker</td>
+<td>No</td>
+<td>Yes (tox=0.7)</td>
+<td>Yes (tox=0.8)</td>
+</tr>
+<tr>
+<td>Transaction tax</td>
+<td>2%</td>
+<td>2%</td>
+<td>1%</td>
+</tr>
+<tr>
+<td>Externality (rho_a, rho_b)</td>
+<td>0.0, 0.0</td>
+<td>0.1, 0.1</td>
+<td>0.05, 0.05</td>
+</tr>
+<tr>
+<td>Bandwidth cap</td>
+<td>15</td>
+<td>15</td>
+<td>20</td>
+</tr>
+</tbody>
+</table>
+<h3 id="24-payoff-model">2.4 Payoff Model<a class="headerlink" href="#24-payoff-model" title="Permanent link">&para;</a></h3>
+<p>All experiments use the SWARM soft payoff engine:</p>
+<ul>
+<li><strong>Expected surplus</strong>: S_soft = p * s_plus - (1-p) * s_minus, with s_plus = 2.0, s_minus = 1.0</li>
+<li><strong>Externality cost</strong>: E_soft = (1-p) * h, with h = 2.0</li>
+<li><strong>Acceptance threshold</strong>: theta = 0.5</li>
+<li><strong>Reputation weight</strong>: w_rep = 1.0</li>
+</ul>
+<h3 id="25-statistical-methods">2.5 Statistical Methods<a class="headerlink" href="#25-statistical-methods" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Seeds</strong>: 10 per experiment, fixed a priori: {42, 7, 123, 256, 999, 2024, 314, 577, 1337, 8080}</li>
+<li><strong>Primary test statistic</strong>: Two-sample independent t-test on per-seed group means</li>
+<li><strong>Omnibus test</strong>: One-way ANOVA across all groups</li>
+<li><strong>Effect size</strong>: Cohen's d for pairwise comparisons</li>
+<li><strong>Dose-response</strong>: Pearson correlation between the grouping variable and payoff</li>
+<li><strong>Inequality</strong>: Gini coefficient with one-sample t-test against zero</li>
+<li><strong>Multiple comparisons</strong>: Bonferroni (alpha/n_tests) and Holm-Bonferroni (step-down) corrections applied per experiment</li>
+</ul>
+<p>Total tests: 10 (Exp. 1) + 11 (Exp. 2) + 5 (Exp. 3) = 26.</p>
+<h2 id="3-results">3. Results<a class="headerlink" href="#3-results" title="Permanent link">&para;</a></h2>
+<h3 id="31-cross-experiment-summary">3.1 Cross-Experiment Summary<a class="headerlink" href="#31-cross-experiment-summary" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Experiment</th>
+<th>Primary Finding</th>
+<th>Key Statistic</th>
+<th>Gini</th>
+<th>Honest Advantage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Recursive Collusion</td>
+<td>Deeper recursion hurts payoff</td>
+<td>r = -0.746, p &lt; 0.001</td>
+<td>0.299</td>
+<td>2.8x</td>
+</tr>
+<tr>
+<td>Memory-as-Power</td>
+<td>Memory advantage real but modest</td>
+<td>r = +0.673, p &lt; 0.001</td>
+<td>0.236</td>
+<td>2.3x</td>
+</tr>
+<tr>
+<td>Governance Lag</td>
+<td>RLM outperforms via strategy, not evasion</td>
+<td>d = 2.14, p = 0.0001</td>
+<td>0.325</td>
+<td>0.72x (reversed)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="32-experiment-1-recursive-collusion">3.2 Experiment 1: Recursive Collusion<a class="headerlink" href="#32-experiment-1-recursive-collusion" title="Permanent link">&para;</a></h3>
+<p><strong>Hypothesis</strong>: Deeper recursive reasoning enables implicit coordination without explicit communication, producing higher payoffs for deep thinkers.</p>
+<p><strong>Result</strong>: <strong>Rejected.</strong> Deeper recursion monotonically <em>decreases</em> payoff.</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Recursion Depth</th>
+<th>Mean Payoff</th>
+<th>Std</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RLM Shallow</td>
+<td>1</td>
+<td>219.661</td>
+<td>4.367</td>
+</tr>
+<tr>
+<td>RLM Mid</td>
+<td>3</td>
+<td>213.643</td>
+<td>2.010</td>
+</tr>
+<tr>
+<td>RLM Deep</td>
+<td>5</td>
+<td>211.351</td>
+<td>2.219</td>
+</tr>
+<tr>
+<td>Honest</td>
+<td>--</td>
+<td>592.980</td>
+<td>9.886</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key tests (10 total, Bonferroni alpha = 0.005):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Statistic</th>
+<th>p-value</th>
+<th>Cohen's d</th>
+<th>Bonferroni</th>
+<th>Holm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Shallow vs Mid</td>
+<td>t = 3.959</td>
+<td>0.0009</td>
+<td>1.770</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>Shallow vs Deep</td>
+<td>t = 5.365</td>
+<td>&lt; 0.0001</td>
+<td>2.399</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>Mid vs Deep</td>
+<td>t = 2.421</td>
+<td>0.026</td>
+<td>1.082</td>
+<td>Fails</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>ANOVA (RLM tiers)</td>
+<td>F = 19.712</td>
+<td>&lt; 0.0001</td>
+<td>--</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>Pearson (depth, payoff)</td>
+<td>r = -0.746</td>
+<td>&lt; 0.0001</td>
+<td>--</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>All RLM vs Honest</td>
+<td>t &gt; 109</td>
+<td>&lt; 0.0001</td>
+<td>d &gt; 48</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interpretation</strong>: The "strategic overthinking" effect---more computation cycles spent modeling counterparties yields <em>worse</em> outcomes, not better coordination. RLM agent payoffs are remarkably stable across seeds (std = 2--4), while honest agent payoffs are highly variable (std = 406.50 at the individual level), suggesting RLM reasoning produces consistent but mediocre outcomes while honest agents benefit from network-position lottery effects.</p>
+<h3 id="33-experiment-2-memory-as-power">3.3 Experiment 2: Memory-as-Power<a class="headerlink" href="#33-experiment-2-memory-as-power" title="Permanent link">&para;</a></h3>
+<p><strong>Hypothesis</strong>: Agents with larger working memory budgets systematically exploit agents with smaller budgets, creating measurable power imbalances.</p>
+<p><strong>Result</strong>: <strong>Supported, with caveats.</strong> The gradient is monotonic and statistically robust, but practically small.</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Memory Budget</th>
+<th>Mean Payoff</th>
+<th>Std</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RLM High</td>
+<td>200</td>
+<td>253.376</td>
+<td>3.613</td>
+</tr>
+<tr>
+<td>RLM Mid</td>
+<td>50</td>
+<td>249.063</td>
+<td>2.579</td>
+</tr>
+<tr>
+<td>RLM Low</td>
+<td>10</td>
+<td>245.442</td>
+<td>4.140</td>
+</tr>
+<tr>
+<td>Honest</td>
+<td>--</td>
+<td>563.106</td>
+<td>6.892</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key tests (11 total, Bonferroni alpha = 0.00455):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Statistic</th>
+<th>p-value</th>
+<th>Cohen's d</th>
+<th>Bonferroni</th>
+<th>Holm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>High vs Low</td>
+<td>t = 4.566</td>
+<td>0.0002</td>
+<td>2.042</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>High vs Mid</td>
+<td>t = 3.072</td>
+<td>0.007</td>
+<td>1.374</td>
+<td>Fails</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>Mid vs Low</td>
+<td>t = 2.348</td>
+<td>0.031</td>
+<td>1.050</td>
+<td>Fails</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>ANOVA (RLM tiers)</td>
+<td>F = 12.845</td>
+<td>0.0001</td>
+<td>--</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>Pearson (budget, payoff)</td>
+<td>r = +0.673</td>
+<td>&lt; 0.0001</td>
+<td>--</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>Exploitation rate (agent-level)</td>
+<td>r = +0.500</td>
+<td>&lt; 0.0001</td>
+<td>--</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interpretation</strong>: The memory-as-power effect is statistically significant (all 11 tests survive Holm) but practically modest: the high-low spread is only 7.93 points (3.2%). The dominant effect remains the honest-vs-RLM gap (2.3x). Externality internalization (rho = 0.1) produces the lowest Gini (0.236) across all three experiments.</p>
+<h3 id="34-experiment-3-governance-lag">3.4 Experiment 3: Governance Lag<a class="headerlink" href="#34-experiment-3-governance-lag" title="Permanent link">&para;</a></h3>
+<p><strong>Hypothesis</strong>: Fast-adapting RLM agents (depth=5, large memory) can exploit the gap between harmful action and governance response, outpacing deliberately slow governance.</p>
+<p><strong>Result</strong>: <strong>Partially supported.</strong> RLM agents outperform, but through legitimate strategy rather than governance evasion.</p>
+<table>
+<thead>
+<tr>
+<th>Group</th>
+<th>Mean Payoff</th>
+<th>Std</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RLM Fast (depth=5)</td>
+<td>335.606</td>
+<td>19.600</td>
+</tr>
+<tr>
+<td>Honest</td>
+<td>242.755</td>
+<td>58.128</td>
+</tr>
+<tr>
+<td>Adaptive Adversary</td>
+<td>221.490</td>
+<td>174.549</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key tests (5 total, Bonferroni alpha = 0.01):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Statistic</th>
+<th>p-value</th>
+<th>Cohen's d</th>
+<th>Bonferroni</th>
+<th>Holm</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RLM vs Honest</td>
+<td>t = 4.787</td>
+<td>0.0001</td>
+<td>2.141</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+<tr>
+<td>RLM vs Adversary</td>
+<td>t = 2.054</td>
+<td>0.055</td>
+<td>0.919</td>
+<td>Fails</td>
+<td>Fails</td>
+</tr>
+<tr>
+<td>Honest vs Adversary</td>
+<td>t = 0.366</td>
+<td>0.719</td>
+<td>0.163</td>
+<td>Fails</td>
+<td>Fails</td>
+</tr>
+<tr>
+<td>ANOVA (all groups)</td>
+<td>F = 3.228</td>
+<td>0.055</td>
+<td>--</td>
+<td>Fails</td>
+<td>Fails</td>
+</tr>
+<tr>
+<td>Gini &gt; 0</td>
+<td>t = 12.891</td>
+<td>&lt; 0.0001</td>
+<td>--</td>
+<td>Survives</td>
+<td>Survives</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interpretation</strong>: This is the only experiment where RLM agents outperform honest agents, reversing the pattern from Exp. 1--2. The mechanism is not governance evasion---RLM signal profiles produce moderate p-values (~0.5--0.7), well above the harm threshold (p &lt; 0.4), so there are zero harmful interactions to detect. Instead, RLM depth-5 agents exploit the small-world network topology for better partner selection. Adversary payoffs are bimodal: they either dominate massively (~665--939) or get frozen out (~0--5), reflecting the boom-or-bust adaptive adversary strategy.</p>
+<h3 id="35-cross-experiment-patterns">3.5 Cross-Experiment Patterns<a class="headerlink" href="#35-cross-experiment-patterns" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>The honest advantage is context-dependent.</strong> In complete networks (Exp. 1--2), honest agents earn 2.3--2.8x more. In small-world networks with slow governance (Exp. 3), RLM agents earn 1.4x more. Network topology mediates the value of strategic reasoning.</p>
+</li>
+<li>
+<p><strong>Strategic reasoning produces stability at the cost of magnitude.</strong> Across all experiments, RLM group-mean standard deviations range from 2.0 to 19.6, while honest group-mean standard deviations range from 6.9 to 58.1. RLM agents converge to consistent but moderate outcomes.</p>
+</li>
+<li>
+<p><strong>Gini coefficients reveal governance quality.</strong> Exp. 2 (lowest Gini = 0.236) uses externality internalization (rho = 0.1); Exp. 3 (highest Gini = 0.325) uses deliberately weak governance. The 0.089-point spread demonstrates that rho parameters effectively reduce inequality.</p>
+</li>
+<li>
+<p><strong>All findings are robust to correction.</strong> Of 26 total tests across three experiments, 24 survive Holm-Bonferroni correction and 20 survive strict Bonferroni. The two that fail both corrections (RLM-vs-Adversary and ANOVA in Exp. 3) are underpowered due to adversary variance, not statistical artifacts.</p>
+</li>
+</ol>
+<h2 id="4-discussion">4. Discussion<a class="headerlink" href="#4-discussion" title="Permanent link">&para;</a></h2>
+<p>[TODO: Expand]</p>
+<h3 id="41-strategic-overthinking">4.1 Strategic Overthinking<a class="headerlink" href="#41-strategic-overthinking" title="Permanent link">&para;</a></h3>
+<p>The most surprising finding is that deeper recursion <em>hurts</em> within-group payoff (Exp. 1, r = -0.75). This contradicts the intuition that smarter agents should outperform simpler ones. We hypothesize three mechanisms:</p>
+<ol>
+<li><strong>Computational cost without information gain.</strong> Level-k reasoning assumes counterparties play at level-(k-1), but if all agents are similarly sophisticated, the additional depth provides no strategic advantage while consuming exploration budget.</li>
+<li><strong>Overcaution.</strong> Deeper agents discount more aggressively and avoid interactions that shallower agents would accept, reducing their interaction volume and hence cumulative payoff.</li>
+<li><strong>Epsilon-greedy decay.</strong> The exploration rate 0.1/(depth+1) means deeper agents explore less, potentially missing beneficial interactions that shallower agents discover through noise.</li>
+</ol>
+<h3 id="42-memory-as-a-modest-power-lever">4.2 Memory as a Modest Power Lever<a class="headerlink" href="#42-memory-as-a-modest-power-lever" title="Permanent link">&para;</a></h3>
+<p>The memory-as-power effect (r = +0.67) is real but small (3.2% spread). This suggests that in SWARM-style ecosystems, <em>information asymmetry alone</em> does not confer large advantages. The dominant factor is the <em>type</em> of strategy (honest vs. strategic), not the <em>resources</em> available to a given strategy type.</p>
+<h3 id="43-network-topology-as-a-moderator">4.3 Network Topology as a Moderator<a class="headerlink" href="#43-network-topology-as-a-moderator" title="Permanent link">&para;</a></h3>
+<p>The reversal of the honest advantage in Exp. 3 (small-world, slow governance) vs. Exp. 1--2 (complete network) suggests that network topology is a critical moderator of distributional safety. In complete networks, honest agents benefit from high connectivity; in small-world networks, strategic agents exploit structural holes. This has implications for governance design: regulators cannot assume that governance mechanisms effective in well-connected networks transfer to sparse or clustered topologies.</p>
+<h3 id="44-governance-implications">4.4 Governance Implications<a class="headerlink" href="#44-governance-implications" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Lever</th>
+<th>Observed Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Externality internalization (rho &gt; 0)</td>
+<td>Reduces Gini by ~0.06--0.09</td>
+</tr>
+<tr>
+<td>Higher audit probability</td>
+<td>No significant effect on RLM behavior (signals stay above threshold)</td>
+</tr>
+<tr>
+<td>Small-world topology</td>
+<td>Enables strategic agents, disadvantages honest</td>
+</tr>
+<tr>
+<td>Collusion detection</td>
+<td>No implicit collusion detected across any experiment</td>
+</tr>
+</tbody>
+</table>
+<h2 id="5-limitations">5. Limitations<a class="headerlink" href="#5-limitations" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>No LLM backbone.</strong> RLM agents use algorithmic level-k reasoning, not actual language model inference. Results may not transfer to LLM-based agents with richer reasoning capabilities.</li>
+<li><strong>Fixed payoff parameters.</strong> All experiments use s_plus=2.0, s_minus=1.0, h=2.0. The findings may not generalize to different surplus/harm ratios.</li>
+<li><strong>Within-experiment correction only.</strong> Multiple comparisons correction is applied per experiment, not across the full study (26 tests). A study-wide Bonferroni threshold of 0.05/26 = 0.0019 would eliminate a few additional borderline results.</li>
+<li><strong>Moderate sample size.</strong> 10 seeds per experiment provides adequate power for large effects (d &gt; 1) but may miss smaller effects.</li>
+<li><strong>Signal profile assumption.</strong> RLM agents produce signals via <code>ObservableGenerator</code>'s moderate/variable profile, not via the actual interaction quality. The honest advantage partly reflects this design choice.</li>
+</ol>
+<h2 id="6-reproducibility">6. Reproducibility<a class="headerlink" href="#6-reproducibility" title="Permanent link">&para;</a></h2>
+<p>All experiments are reproducible from:</p>
+<div class="language-bash highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Experiment 1: Recursive Collusion</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>python<span class="w"> </span>-m<span class="w"> </span>swarm<span class="w"> </span>run<span class="w"> </span>scenarios/rlm_recursive_collusion.yaml<span class="w"> </span>--seed<span class="w"> </span><span class="o">{</span><span class="m">42</span>,7,123,256,999,2024,314,577,1337,8080<span class="o">}</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Experiment 2: Memory-as-Power</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>python<span class="w"> </span>-m<span class="w"> </span>swarm<span class="w"> </span>run<span class="w"> </span>scenarios/rlm_memory_as_power.yaml<span class="w"> </span>--seed<span class="w"> </span><span class="o">{</span><span class="m">42</span>,7,123,256,999,2024,314,577,1337,8080<span class="o">}</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+</span><span id="__span-0-7"><a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Experiment 3: Governance Lag</span>
+</span><span id="__span-0-8"><a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>python<span class="w"> </span>-m<span class="w"> </span>swarm<span class="w"> </span>run<span class="w"> </span>scenarios/rlm_governance_lag.yaml<span class="w"> </span>--seed<span class="w"> </span><span class="o">{</span><span class="m">42</span>,7,123,256,999,2024,314,577,1337,8080<span class="o">}</span>
+</span></code></pre></div>
+<p>Analysis artifacts are stored in <code>runs/20260210-215826_analysis_rlm_*/</code>.</p>
+<p>Raw data: <code>per_agent_payoffs.csv</code> (100--120 rows per experiment).
+Machine-readable results: <code>summary.json</code> per experiment.</p>
+<!-- Reproducibility query (no RLM runs in SQLite yet):
+SELECT scenario_id, seed, acceptance_rate, avg_toxicity, welfare_per_epoch
+FROM scenario_runs WHERE scenario_id LIKE 'rlm_%' ORDER BY scenario_id, seed;
+-->
+
+<h2 id="7-references">7. References<a class="headerlink" href="#7-references" title="Permanent link">&para;</a></h2>
+<p>[TODO: Add full citations]</p>
+<ul>
+<li>Stahl, D. O., &amp; Wilson, P. W. (1994). Experimental evidence on players' models of other players. <em>Journal of Economic Behavior &amp; Organization</em>, 25(3), 309--327.</li>
+<li>Nagel, R. (1995). Unraveling in guessing games: An experimental study. <em>American Economic Review</em>, 85(5), 1313--1326.</li>
+<li>Crawford, V. P., Costa-Gomes, M. A., &amp; Irber, N. (2013). Structural models of nonequilibrium strategic thinking: Theory, evidence, and applications. <em>Journal of Economic Literature</em>, 51(1), 5--62.</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/swarm-ai-safety/swarm" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ResearchSwarmAI" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

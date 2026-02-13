@@ -1,0 +1,41 @@
+{
+  "generated_at": "2026-02-09",
+  "style": "paper",
+  "scenarios": [
+    "Baseline",
+    "Adversarial v1",
+    "Adversarial (opt)",
+    "Adversarial v2",
+    "Adversarial v3"
+  ],
+  "figures": [
+    {
+      "filename": "fig1_scenario_comparison.png",
+      "caption": "Cross-scenario comparison of acceptance rate, toxicity, and welfare"
+    },
+    {
+      "filename": "fig2_collusion_timeline.png",
+      "caption": "Collusion detection scenario: epoch-by-epoch metrics"
+    },
+    {
+      "filename": "fig3_regime_scatter.png",
+      "caption": "Adversarial fraction vs acceptance rate by regime"
+    },
+    {
+      "filename": "fig4_incoherence_scaling.png",
+      "caption": "Incoherence metrics across network sizes"
+    },
+    {
+      "filename": "fig5_welfare_comparison.png",
+      "caption": "Welfare distribution across scenarios"
+    },
+    {
+      "filename": "fig6_network_vs_collusion.png",
+      "caption": "Pairwise comparison: network effects vs collusion detection"
+    },
+    {
+      "filename": "fig7_timeline_overlay.png",
+      "caption": "Welfare and acceptance rate trajectories across adversarial escalation scenarios"
+    }
+  ]
+}

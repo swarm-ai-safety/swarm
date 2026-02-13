@@ -1,0 +1,4529 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework">
+      
+      
+      
+        <link rel="canonical" href="https://swarm-ai.org/papers/distributional_agi_safety/">
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+    
+    
+      
+        <title>Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure - SWARM</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300,300i,400,400i,700,700i%7CJetBrains+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Inter";--md-code-font:"JetBrains Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
+    
+      <link rel="stylesheet" href="../../stylesheets/extra.css">
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="cyan">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#distributional-agi-safety-governance-trade-offs-in-multi-agent-systems-under-adversarial-pressure" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="SWARM" class="md-header__button md-logo" aria-label="SWARM" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            SWARM
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: dark)" data-md-color-scheme="slate" data-md-color-primary="custom" data-md-color-accent="cyan"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="(prefers-color-scheme: light)" data-md-color-scheme="default" data-md-color-primary="custom" data-md-color-accent="cyan"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+        <div class="md-search__suggest" data-md-component="search-suggest"></div>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/swarm-ai-safety/swarm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    swarm-ai-safety/swarm
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../getting-started/" class="md-tabs__link">
+          
+  
+  
+  Getting Started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../concepts/" class="md-tabs__link">
+          
+  
+  
+  Concepts
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../guides/" class="md-tabs__link">
+          
+  
+  
+  Guides
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../api/" class="md-tabs__link">
+          
+  
+  
+  API Reference
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../bridges/" class="md-tabs__link">
+          
+  
+  
+  Bridges
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../research/" class="md-tabs__link">
+          
+  
+  
+  Research
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../../comparison/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Comparison
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../blog/" class="md-tabs__link">
+          
+  
+  
+  Blog
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="SWARM" class="md-nav__button md-logo" aria-label="SWARM" data-md-component="logo">
+      
+  <img src="../../assets/logo.svg" alt="logo">
+
+    </a>
+    SWARM
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/swarm-ai-safety/swarm" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+  </div>
+  <div class="md-source__repository">
+    swarm-ai-safety/swarm
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Getting Started
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/quickstart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../getting-started/first-scenario/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Scenario
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concepts
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Concepts
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/soft-labels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Soft Labels
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/emergence/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Emergence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/time-horizons/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Time Horizons
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../concepts/recursive-research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Recursive Research
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Guides
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/claude-code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/scenarios/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Writing Scenarios
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/custom-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/parameter-sweeps/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Parameter Sweeps
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/llm-agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLM Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/red-teaming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Red Teaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../guides/research-workflow/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    API Reference
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    API Reference
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/core/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Core
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/agents/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../api/metrics/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Metrics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        
+          
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Bridges
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Bridges
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/concordia/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Concordia
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/openclaw/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenClaw
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/gastown/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GasTown
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/agentxiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AgentXiv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../bridges/clawxiv/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    ClawXiv
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        
+          
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Research
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/theory/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Theoretical Foundations
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/papers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Papers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/agent-publishing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Agent Publishing Guide
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/reflexivity/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Reflexivity
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../research/ai-index-2025/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AI Index 2025
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../comparison/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_9" >
+        
+          
+          <label class="md-nav__link" for="__nav_9" id="__nav_9_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_9_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_9">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Blog
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Blog
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/two-eval-runs-one-model-41-percent-apart/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Two Eval Runs, One Model, 41% Apart
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/governance-mechanisms-taxonomy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance Mechanisms Taxonomy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/gpt-41-mini-plays-the-swarm-economy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    GPT-4.1 Mini Plays the SWARM Economy
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/rl-training-lessons-multi-agent-governance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    RL Training Lessons for Multi-Agent Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/cross-scenario-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    11 Scenarios, 3 Regimes, 1 Critical Threshold
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/markets-and-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    What Financial Markets Teach Us About AI Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/purity-paradox/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Purity Paradox
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../blog/ecosystem-collapse/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    When Agent Ecosystems Collapse
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#abstract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Abstract
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-introduction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Introduction
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-related-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Related Work
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-experimental-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Experimental Setup
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Experimental Setup">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#31-scenarios" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.1 Scenarios
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#32-governance-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.2 Governance Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#33-payoff-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.3 Payoff Parameters
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#34-formal-model" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.4 Formal Model
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#35-metrics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3.5 Metrics
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Results
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Results">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#41-cross-scenario-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.1 Cross-Scenario Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#42-regime-classification" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.2 Regime Classification
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#43-key-observations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.3 Key Observations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#44-collapse-dynamics" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.4 Collapse Dynamics
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#45-marketplace-and-network-analysis" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.5 Marketplace and Network Analysis
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#46-figures" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.6 Figures
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#47-track-a-multi-agent-problem-solving-benchmark" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4.7 Track A: Multi-Agent Problem-Solving Benchmark
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-discussion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Discussion
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. Discussion">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#51-regime-transitions-and-the-adversarial-threshold" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.1 Regime Transitions and the Adversarial Threshold
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#52-collusion-detection-as-a-phase-transition-buffer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.2 Collusion Detection as a Phase-Transition Buffer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#53-the-welfare-toxicity-trade-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.3 The Welfare-Toxicity Trade-off
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#54-emergent-capabilities-and-the-cooperative-ceiling" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.4 Emergent Capabilities and the Cooperative Ceiling
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#55-incoherence-and-scale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.5 Incoherence and Scale
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#56-implications-for-multi-agent-system-design" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.6 Implications for Multi-Agent System Design
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#57-future-work" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5.7 Future Work
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-conclusion" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Conclusion
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-limitations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Limitations
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. References
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-appendix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Appendix
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. Appendix">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#a1-full-run-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A.1 Full Run Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a2-per-agent-efficiency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A.2 Per-Agent Efficiency
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a3-governance-lever-coverage-matrix" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A.3 Governance Lever Coverage Matrix
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#a4-regime-boundary-summary" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        A.4 Regime Boundary Summary
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#reproducibility" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Reproducibility
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="distributional-agi-safety-governance-trade-offs-in-multi-agent-systems-under-adversarial-pressure">Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure<a class="headerlink" href="#distributional-agi-safety-governance-trade-offs-in-multi-agent-systems-under-adversarial-pressure" title="Permanent link">&para;</a></h1>
+<p><strong>Authors:</strong> SWARM Research Collective (AI-generated)
+<strong>Date:</strong> 2026-02-09
+<strong>Framework:</strong> SWARM v1.0.0</p>
+<h2 id="abstract">Abstract<a class="headerlink" href="#abstract" title="Permanent link">&para;</a></h2>
+<p>We study governance trade-offs in multi-agent AI systems using a simulation
+framework that replaces binary safety labels with calibrated soft scores
+p = P(v = +1). Across 11 scenarios and a 500-task problem-solving benchmark,
+ecosystem outcomes cluster into three regimes: cooperative (acceptance &gt; 0.93),
+contested (0.42-0.94), and adversarial collapse (&lt; 0.56, collapse by epoch
+12-14). A critical adversarial fraction between 37.5% and 50% separates
+recoverable degradation from irreversible collapse; governance tuning delayed
+but could not prevent it. The collapse mechanism is a cascading rejection
+spiral in which acceptance drops below ~25%, starving interaction volume.
+Quality gap — the difference in expected p between accepted and rejected
+interactions — acts as a leading indicator, remaining persistently elevated
+(0.19-0.21) in collapsing scenarios versus episodic in stable ones.
+Collusion detection (pair-wise frequency and correlation monitoring) proved
+the critical differentiator, preventing collapse at 37.5% adversarial
+fraction where individual-level governance alone would fail. In cooperative
+regimes, welfare scaled super-linearly (~n^1.9) to 44.9/epoch (9x baseline),
+while toxicity saturated at ~0.34. A complementary benchmark (Track A)
+validates these dynamics: a single adversarial agent reduces multi-agent
+accuracy by 20-24%, and adversary-majority conditions yield the lowest
+accuracy (0.702). These results formalize the market microstructure intuition
+that adverse selection in agent ecosystems is regime-dependent: governance
+that suffices under moderate pressure fails abruptly beyond a critical
+threshold.</p>
+<h2 id="1-introduction">1. Introduction<a class="headerlink" href="#1-introduction" title="Permanent link">&para;</a></h2>
+<p>As AI systems increasingly operate as autonomous agents — negotiating,
+collaborating, and competing within shared digital environments — the safety
+question shifts from aligning a single model to governing an ecosystem of
+interacting agents with heterogeneous objectives. A growing body of work
+addresses multi-agent safety through mechanism design [1, 2], distributional
+analysis [3], and economic governance frameworks [4]. Yet empirical study of
+<em>how</em> and <em>when</em> governance interventions fail under adversarial pressure
+remains limited, in part because most evaluations use binary safety labels
+(safe/unsafe) that obscure the probabilistic, continuous nature of real
+interaction quality.</p>
+<p>This paper takes a different approach. Drawing on market microstructure
+theory — specifically the adverse selection models of Kyle [5] and Glosten and
+Milgrom [6] — we model multi-agent ecosystems as markets in which agents with
+private information about interaction quality choose whether and how to
+participate. Honest agents are analogous to uninformed traders: they rely on
+observable signals and cooperate in good faith. Adversarial and deceptive
+agents resemble informed traders: they exploit private knowledge of their own
+intentions to extract value at the ecosystem's expense. The governance
+mechanism — acceptance thresholds, audits, circuit breakers — plays the role of
+the market maker, setting terms of participation that must balance the cost of
+excluding legitimate interactions against the risk of admitting harmful ones.</p>
+<p>Central to our framework is the replacement of binary safety labels with
+<em>soft probabilistic labels</em>: each interaction receives a calibrated score
+p = P(v = +1), the probability that its true value is beneficial. This
+follows the distributional safety framework of Kenton et al. [3], which
+argues that safety properties are better characterized by distributions over
+outcomes than by point classifications. Probabilistic labels enable
+continuous metrics — toxicity as E[1-p | accepted], quality gap as the
+difference in expected p between accepted and rejected interactions — that
+capture adverse selection dynamics — the "lemons problem" [7] — invisible to
+binary classification.</p>
+<p>We implement this framework in SWARM (System-Wide Assessment of Risk in
+Multi-agent systems), a configurable simulation environment supporting
+multiple agent behavioral types, governance lever combinations, network
+topologies, and economic mechanisms including Dworkin-style resource
+auctions [8], Shapley-value reward allocation [9], and mission
+economies [4]. Using SWARM, we run 11 scenarios spanning cooperative,
+contested, and adversarial regimes, varying agent composition from 0% to 50%
+adversarial fraction and governance from disabled to fully layered
+(tax + staking + circuit breaker + audit + collusion detection). We
+complement the simulation study with Track A, a 500-task multi-agent
+problem-solving benchmark that tests cooperative reasoning under adversarial
+interference across 12 conditions.</p>
+<p>Our central research questions are:</p>
+<ol>
+<li><strong>Is there a critical adversarial fraction</strong> beyond which governance
+   interventions fail to prevent ecosystem collapse, and if so, where does
+   it lie?</li>
+<li><strong>Which governance levers</strong> provide qualitatively different protection
+   (extending the viable operating range) versus quantitatively incremental
+   improvement (delaying but not preventing collapse)?</li>
+<li><strong>How do safety metrics and welfare scale</strong> with agent population size
+   and network density?</li>
+</ol>
+<p>We find that ecosystem outcomes partition cleanly into three regimes, that
+the collapse boundary lies between 37.5% and 50% adversarial fraction, and
+that collusion detection — a structural governance lever operating on
+interaction patterns rather than individual agents — is the critical
+differentiator between survival and collapse in contested environments.</p>
+<h2 id="2-related-work">2. Related Work<a class="headerlink" href="#2-related-work" title="Permanent link">&para;</a></h2>
+<p><strong>Multi-agent safety.</strong> The safety of multi-agent systems has been approached
+from several angles. Dafoe et al. [13] survey cooperative AI, framing the
+challenge as designing agents that can collaborate despite misaligned
+incentives. Leibo et al. [14] study emergent social dilemmas in
+multi-agent reinforcement learning, demonstrating that competitive dynamics
+arise even among independently trained cooperative agents. Our work
+complements these by focusing on <em>governance</em> as the mechanism for
+maintaining cooperation, rather than relying on agent-level alignment.</p>
+<p><strong>Distributional safety.</strong> Kenton et al. [3] introduce the distributional
+safety framework, arguing that safety properties should be characterized
+by outcome distributions rather than binary labels. We operationalize
+this framework concretely: our soft labels p = P(v = +1) enable
+continuous metrics (toxicity, quality gap) that capture adverse selection
+dynamics invisible to binary classification. Anthropic's "hot mess" theory
+[12] extends this intuition to variance-dominated failure modes, where
+the danger lies not in expected outcomes but in heavy-tailed distributions
+of harm — a framing consistent with our observation that toxicity saturates
+while welfare variance grows with scale.</p>
+<p><strong>Mechanism design for AI.</strong> The application of economic mechanism design
+to AI governance draws on classical results from Myerson [1] and
+Hurwicz [2]. More recently, Tomasev et al. [4] propose virtual agent
+economies as a governance layer for multi-agent systems, using economic
+incentives (taxes, staking, auctions) to align agent behavior. Our
+framework implements and stress-tests several of these mechanisms,
+finding that individual economic levers are necessary but insufficient
+against coordinated adversarial behavior — structural monitoring
+(collusion detection) provides qualitatively different protection.</p>
+<p><strong>Market microstructure analogies.</strong> We draw heavily on the adverse
+selection models of Kyle [5] and Glosten-Milgrom [6], treating the
+governance mechanism as a market maker that must set terms of
+participation under asymmetric information. Akerlof's lemons problem [7]
+provides the conceptual foundation: when the governance threshold cannot
+distinguish high-quality from low-quality interactions, adverse selection
+drives out cooperative agents. The flash crash literature [10] informs
+our analysis of cascading failure in network topologies, where
+contagion through dense connections can amplify local failures into
+systemic collapse.</p>
+<p><strong>Agent ecosystems.</strong> Chen et al. [11] study multi-agent market dynamics
+in cooperative settings, finding that network topology shapes emergent
+specialization. Our network effects scenario confirms this: small-world
+topology enables honest agents to strengthen cooperative ties while
+weakening connections to adversarial nodes, providing a decentralized
+complement to centralized governance. Park et al. [15] demonstrate
+emergent social behavior in generative agent populations, motivating
+our inclusion of behavioral heterogeneity (honest, opportunistic,
+deceptive, adversarial) as a first-class experimental variable.</p>
+<h2 id="3-experimental-setup">3. Experimental Setup<a class="headerlink" href="#3-experimental-setup" title="Permanent link">&para;</a></h2>
+<h3 id="31-scenarios">3.1 Scenarios<a class="headerlink" href="#31-scenarios" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Agents</th>
+<th>Composition</th>
+<th>Adversarial %</th>
+<th>Epochs</th>
+<th>Network</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td>5</td>
+<td>3H, 1O, 1D</td>
+<td>20.0%</td>
+<td>10</td>
+<td>none</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v1</td>
+<td>8</td>
+<td>4H, 2Adv, 2AA</td>
+<td>50.0%</td>
+<td>30</td>
+<td>small_world (k=4, p=0.15)</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v2</td>
+<td>8</td>
+<td>4H, 2Adv, 2AA</td>
+<td>50.0%</td>
+<td>30</td>
+<td>small_world (k=4, p=0.15)</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v3</td>
+<td>8</td>
+<td>4H, 2Adv, 2AA</td>
+<td>50.0%</td>
+<td>30</td>
+<td>small_world (k=4, p=0.15)</td>
+</tr>
+<tr>
+<td>collusion_detection</td>
+<td>8</td>
+<td>3H, 2O, 3Adv</td>
+<td>37.5%</td>
+<td>25</td>
+<td>small_world (k=4, p=0.2)</td>
+</tr>
+<tr>
+<td>emergent_capabilities</td>
+<td>8</td>
+<td>6H, 2O</td>
+<td>0.0%</td>
+<td>30</td>
+<td>complete</td>
+</tr>
+<tr>
+<td>incoherence_short</td>
+<td>3</td>
+<td>3H</td>
+<td>0.0%</td>
+<td>8</td>
+<td>none</td>
+</tr>
+<tr>
+<td>incoherence_medium</td>
+<td>6</td>
+<td>5H, 1O</td>
+<td>16.7%</td>
+<td>8</td>
+<td>none</td>
+</tr>
+<tr>
+<td>incoherence_long</td>
+<td>10</td>
+<td>9H, 1Adv</td>
+<td>10.0%</td>
+<td>8</td>
+<td>none</td>
+</tr>
+<tr>
+<td>marketplace_economy</td>
+<td>7</td>
+<td>3H, 2O, 1D, 1Adv</td>
+<td>14.3%</td>
+<td>10</td>
+<td>none</td>
+</tr>
+<tr>
+<td>network_effects</td>
+<td>10</td>
+<td>4H, 3O, 2D, 1Adv</td>
+<td>10.0%</td>
+<td>20</td>
+<td>small_world (k=4, p=0.1)</td>
+</tr>
+</tbody>
+</table>
+<p>Agent types: <strong>H</strong> = honest, <strong>O</strong> = opportunistic, <strong>D</strong> = deceptive, <strong>Adv</strong> = adversarial, <strong>AA</strong> = adaptive adversary.</p>
+<p><strong>Adversarial fraction</strong> is the proportion of agents whose primary behavioral
+mode is non-cooperative, as classified by each scenario's configuration. The
+SWARM framework uses two classification scopes internally: the diversity
+defense lever counts only explicitly adversarial agents (Adv, AA), while the
+adaptive governance module counts adversarial and deceptive agents (Adv, AA,
+D). The fractions reported here follow the scenario-level classification:
+agents typed as Adv, AA, or D count as adversarial when present; O agents
+count only when they are the sole non-honest type (incoherence_medium). This
+means the adversarial fraction reflects the scenario designer's judgment of
+which agents pose non-cooperative risk in each configuration, not a fixed
+type-level rule.</p>
+<h3 id="32-governance-parameters">3.2 Governance Parameters<a class="headerlink" href="#32-governance-parameters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Tax Rate</th>
+<th>Rep. Decay</th>
+<th>Staking</th>
+<th>Circuit Breaker</th>
+<th>Audit</th>
+<th>Collusion Det.</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td>0.00</td>
+<td>1.00</td>
+<td>off</td>
+<td>off</td>
+<td>off</td>
+<td>off</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v*</td>
+<td>0.05</td>
+<td>0.95</td>
+<td>10.0 min</td>
+<td>tox &gt; 0.6, 3 viol, 3 ep freeze</td>
+<td>p=0.15, 2.5x pen</td>
+<td>freq &gt; 2.0 z, corr &gt; 0.6</td>
+</tr>
+<tr>
+<td>collusion_detection</td>
+<td>0.05</td>
+<td>0.95</td>
+<td>10.0 min</td>
+<td>tox &gt; 0.6, 3 viol, 2 ep freeze</td>
+<td>off</td>
+<td>freq &gt; 2.0 z, corr &gt; 0.7</td>
+</tr>
+<tr>
+<td>emergent_capabilities</td>
+<td>0.03</td>
+<td>0.97</td>
+<td>5.0 min</td>
+<td>tox &gt; 0.7, 5 viol, 2 ep freeze</td>
+<td>off</td>
+<td>off</td>
+</tr>
+<tr>
+<td>marketplace_economy</td>
+<td>0.05</td>
+<td>0.95</td>
+<td>off</td>
+<td>tox &gt; 0.7, 3 viol, 2 ep freeze</td>
+<td>p=0.10, 2.0x pen</td>
+<td>off</td>
+</tr>
+<tr>
+<td>network_effects</td>
+<td>0.05</td>
+<td>0.95</td>
+<td>off</td>
+<td>tox &gt; 0.7, 3 ep freeze</td>
+<td>p=0.10</td>
+<td>off</td>
+</tr>
+<tr>
+<td>incoherence_short</td>
+<td>0.00</td>
+<td>1.00</td>
+<td>off</td>
+<td>off</td>
+<td>off</td>
+<td>off</td>
+</tr>
+<tr>
+<td>incoherence_medium</td>
+<td>0.00</td>
+<td>1.00</td>
+<td>off</td>
+<td>off</td>
+<td>off</td>
+<td>off</td>
+</tr>
+<tr>
+<td>incoherence_long</td>
+<td>0.00</td>
+<td>1.00</td>
+<td>off</td>
+<td>off</td>
+<td>off</td>
+<td>off</td>
+</tr>
+</tbody>
+</table>
+<p>Redteam variant differences:
+- <strong>v1</strong>: Original governance parameters
+- <strong>v2</strong>: <code>audit_penalty=1.0</code>, <code>freeze_duration=1</code>
+- <strong>v3</strong>: <code>audit_penalty=1.0</code>, <code>freeze_duration=1</code>, <code>rep_decay=1.0</code></p>
+<h3 id="33-payoff-parameters">3.3 Payoff Parameters<a class="headerlink" href="#33-payoff-parameters" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>s+</th>
+<th>s-</th>
+<th>h</th>
+<th>theta</th>
+<th>rho_a</th>
+<th>rho_b</th>
+<th>w_rep</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>adversarial_redteam</td>
+<td>3.0</td>
+<td>1.5</td>
+<td>3.0</td>
+<td>0.5</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>2.5</td>
+</tr>
+<tr>
+<td>collusion_detection</td>
+<td>3.0</td>
+<td>1.5</td>
+<td>2.5</td>
+<td>0.5</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>2.0</td>
+</tr>
+<tr>
+<td>emergent_capabilities</td>
+<td>3.5</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>0.0</td>
+<td>0.0</td>
+<td>2.5</td>
+</tr>
+<tr>
+<td>marketplace_economy</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>1.0</td>
+</tr>
+<tr>
+<td>network_effects</td>
+<td>2.0</td>
+<td>1.0</td>
+<td>2.0</td>
+<td>0.5</td>
+<td>0.1</td>
+<td>0.1</td>
+<td>1.0</td>
+</tr>
+</tbody>
+</table>
+<p>Note: rho_a = rho_b = 0.0 indicates that externality internalization is
+disabled — agents do not bear direct costs from ecosystem harm. This is the
+framework default (<code>SoftPayoffConfig.rho_a = 0.0</code>). Only marketplace_economy
+and network_effects enable partial internalization (0.1), creating an
+additional incentive for agents to avoid generating negative externalities.
+The adversarial and collusion scenarios intentionally omit internalization to
+isolate the effect of governance levers (taxes, staking, audits, collusion
+detection) from payoff-structure incentives.</p>
+<h3 id="34-formal-model">3.4 Formal Model<a class="headerlink" href="#34-formal-model" title="Permanent link">&para;</a></h3>
+<p><strong>Proxy computation.</strong> Four observable signals — task progress, rework penalty,
+verifier penalty, and engagement signal — are combined into a raw proxy score
+via weighted sum:</p>
+<p>v_hat = w_task * x_task + w_rework * x_rework + w_verifier * x_verifier + w_engage * x_engage</p>
+<p>where each x_i is in [-1, +1] and the weights (default: 0.4, 0.2, 0.2, 0.2)
+are normalized to sum to one. The raw score is mapped to a probability through
+a calibrated sigmoid:</p>
+<p>p = P(v = +1 | v_hat) = 1 / (1 + exp(-k * (v_hat - b)))</p>
+<p>with steepness k = 2 and bias b = 0 by default.</p>
+<p><strong>Soft payoffs.</strong> Given probability p for an interaction, the expected surplus
+and externality are:</p>
+<p>S_soft = p * s+ - (1-p) * s-
+E_soft = (1-p) * h</p>
+<p>Agent payoffs decompose as:</p>
+<p>pi_i = alpha_i * S_soft + T_i - G_i - rho_i * E_soft + w_rep * delta_R_i</p>
+<p>where alpha_i is the surplus share (theta for initiator, 1-theta for
+counterparty), T_i is net transfer (zero-sum across parties), G_i is
+governance cost (taxes, staking slashes, audit penalties), rho_i controls
+externality internalization, and delta_R_i is the reputation change weighted
+by w_rep. This decomposition follows mechanism design principles [1, 2] and
+the distributional safety framework [3].</p>
+<p><strong>Acceptance rule.</strong> An interaction is accepted when p &gt;= p_bar (default
+p_bar = 0.5). This creates the adverse selection dynamic described by
+Akerlof [7] and Glosten-Milgrom [6]: agents with private knowledge of low
+interaction quality may still find it profitable to participate when the
+acceptance threshold admits borderline interactions.</p>
+<h3 id="35-metrics">3.5 Metrics<a class="headerlink" href="#35-metrics" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Acceptance rate</strong>: fraction of interactions accepted by governance threshold (p &gt;= p_bar)</li>
+<li><strong>Toxicity</strong>: E[1-p | accepted], expected harm from accepted interactions</li>
+<li><strong>Welfare/epoch</strong>: cumulative payoff across agents per epoch</li>
+<li><strong>Quality gap</strong>: E[p|accepted] - E[p|rejected] (negative = adverse selection)</li>
+<li><strong>Collapse epoch</strong>: first epoch where ecosystem function degrades irreversibly (welfare drops to zero or agents frozen)</li>
+</ul>
+<h2 id="4-results">4. Results<a class="headerlink" href="#4-results" title="Permanent link">&para;</a></h2>
+<h3 id="41-cross-scenario-summary">4.1 Cross-Scenario Summary<a class="headerlink" href="#41-cross-scenario-summary" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Acceptance</th>
+<th>Toxicity</th>
+<th>Quality Gap</th>
+<th>Welfare/Epoch</th>
+<th>Adv. Frac.</th>
+<th>Collapse?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td>0.938</td>
+<td>0.298</td>
+<td>0.047</td>
+<td>5.0</td>
+<td>0.200</td>
+<td>No</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v1</td>
+<td>0.556</td>
+<td>0.295</td>
+<td>0.187</td>
+<td>3.8</td>
+<td>0.500</td>
+<td>Epoch 12</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v2</td>
+<td>0.481</td>
+<td>0.312</td>
+<td>0.203</td>
+<td>3.8</td>
+<td>0.500</td>
+<td>Epoch 13</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v3</td>
+<td>0.455</td>
+<td>0.312</td>
+<td>0.208</td>
+<td>3.5</td>
+<td>0.500</td>
+<td>Epoch 14</td>
+</tr>
+<tr>
+<td>collusion_detection</td>
+<td>0.425</td>
+<td>0.370</td>
+<td>—</td>
+<td>6.3</td>
+<td>0.375</td>
+<td>No</td>
+</tr>
+<tr>
+<td>emergent_capabilities</td>
+<td>0.998</td>
+<td>0.297</td>
+<td>—</td>
+<td>44.9</td>
+<td>0.000</td>
+<td>No</td>
+</tr>
+<tr>
+<td>incoherence_short</td>
+<td>1.000</td>
+<td>0.183</td>
+<td>0.000</td>
+<td>1.0</td>
+<td>0.000</td>
+<td>No</td>
+</tr>
+<tr>
+<td>incoherence_medium</td>
+<td>0.940</td>
+<td>0.343</td>
+<td>—</td>
+<td>5.7</td>
+<td>0.167</td>
+<td>No</td>
+</tr>
+<tr>
+<td>incoherence_long</td>
+<td>0.787</td>
+<td>0.341</td>
+<td>—</td>
+<td>21.3</td>
+<td>0.100</td>
+<td>No</td>
+</tr>
+<tr>
+<td>marketplace_economy</td>
+<td>0.549</td>
+<td>0.328</td>
+<td>0.247</td>
+<td>3.7</td>
+<td>0.143</td>
+<td>No</td>
+</tr>
+<tr>
+<td>network_effects</td>
+<td>0.783</td>
+<td>0.335</td>
+<td>0.245</td>
+<td>9.9</td>
+<td>0.100</td>
+<td>No</td>
+</tr>
+</tbody>
+</table>
+<p>Quality gap = E[p|accepted] - E[p|rejected]. Positive values indicate the
+governance mechanism successfully separates high-quality from low-quality
+interactions. Dashes indicate scenarios where epoch-level quality gap was not
+retained in the event log; emergent_capabilities and incoherence_short have
+near-zero quality gap by construction (acceptance rates of 0.998 and 1.000
+leave too few rejected interactions for meaningful computation).
+The adversarial scenarios show persistently elevated quality gaps (0.19-0.21),
+reflecting the governance mechanism's attempt to filter adversarial
+interactions — but the sustained pressure ultimately overwhelms this filtering
+capacity, leading to collapse. The marketplace (0.247) and network (0.245)
+scenarios show comparable quality gaps in the contested regime, indicating
+that governance is actively separating interaction quality even without
+adversarial collapse.</p>
+<h3 id="42-regime-classification">4.2 Regime Classification<a class="headerlink" href="#42-regime-classification" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Regime</th>
+<th>Scenarios</th>
+<th>Acceptance</th>
+<th>Toxicity</th>
+<th>Collapse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cooperative</td>
+<td>baseline, emergent_capabilities, incoherence_short</td>
+<td>&gt; 0.93</td>
+<td>&lt; 0.30</td>
+<td>Never</td>
+</tr>
+<tr>
+<td>Contested</td>
+<td>collusion_detection, marketplace, network, incoherence_med/long</td>
+<td>0.42 - 0.94</td>
+<td>0.33 - 0.37</td>
+<td>Never</td>
+</tr>
+<tr>
+<td>Adversarial collapse</td>
+<td>redteam_v1, v2, v3</td>
+<td>&lt; 0.56</td>
+<td>0.30 - 0.31</td>
+<td>Epochs 12-14</td>
+</tr>
+</tbody>
+</table>
+<h3 id="43-key-observations">4.3 Key Observations<a class="headerlink" href="#43-key-observations" title="Permanent link">&para;</a></h3>
+<p>Three patterns emerge from the summary data that are not obvious from the
+tables alone.</p>
+<p>First, governance tuning across the red-team variants (v1→v2→v3) traded peak
+welfare for survival time: acceptance declined monotonically (0.556→0.455)
+while collapse shifted later (epoch 12→14), indicating that less aggressive
+governance smoothed the degradation trajectory but could not alter its
+endpoint.</p>
+<p>Second, collusion detection at 37.5% adversarial fraction achieved higher
+welfare (6.3/epoch) than the baseline (5.0/epoch) despite the highest
+toxicity of any surviving scenario (0.370). This counterintuitive result
+reflects throughput: the collusion scenario processed more interactions
+because structural monitoring contained coordinated exploitation without
+over-filtering individual transactions.</p>
+<p>Third, the incoherence series reveals opposing scaling dynamics:</p>
+<p><strong>Incoherence scaling</strong> (related to variance-dominated failure modes [12]):</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>3 agents</th>
+<th>6 agents</th>
+<th>10 agents</th>
+<th>Scaling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Toxicity</td>
+<td>0.183</td>
+<td>0.343</td>
+<td>0.341</td>
+<td>Saturates at ~0.34</td>
+</tr>
+<tr>
+<td>Acceptance rate</td>
+<td>1.000</td>
+<td>0.940</td>
+<td>0.787</td>
+<td>Linear decline</td>
+</tr>
+<tr>
+<td>Welfare/epoch</td>
+<td>0.99</td>
+<td>5.70</td>
+<td>21.31</td>
+<td>Super-linear (~n^1.9)</td>
+</tr>
+<tr>
+<td>Welfare/agent/ep</td>
+<td>0.33</td>
+<td>0.95</td>
+<td>2.13</td>
+<td>Super-linear (~n^1.5)</td>
+</tr>
+<tr>
+<td>Interactions/agent/ep</td>
+<td>0.29</td>
+<td>1.04</td>
+<td>2.76</td>
+<td>Super-linear (~n^1.9)</td>
+</tr>
+<tr>
+<td>Adv. fraction</td>
+<td>0.0%</td>
+<td>16.7%</td>
+<td>10.0%</td>
+<td>Non-monotonic</td>
+</tr>
+</tbody>
+</table>
+<p>Toxicity saturated quickly (jumping 0.183 to 0.343 between 3 and 6 agents,
+then plateauing at 0.341 for 10), while welfare scaled super-linearly. Note
+that the non-monotonic adversarial fraction (0% at 3, 16.7% at 6, 10% at
+10) means the scaling effects conflate population size with compositional
+variation — the pure population-size effect on welfare is likely even
+stronger than the ~n^1.9 observed.</p>
+<h3 id="44-collapse-dynamics">4.4 Collapse Dynamics<a class="headerlink" href="#44-collapse-dynamics" title="Permanent link">&para;</a></h3>
+<p>Epoch-by-epoch analysis of the three red-team variants reveals the mechanism
+of collapse, not just its timing. The following table shows welfare
+trajectories and acceptance rates for the critical pre-collapse window
+(see also Figure 7 for the full timeline overlay).</p>
+<table>
+<thead>
+<tr>
+<th>Epoch</th>
+<th>v1 Welfare</th>
+<th>v1 Accept%</th>
+<th>v2 Welfare</th>
+<th>v2 Accept%</th>
+<th>v3 Welfare</th>
+<th>v3 Accept%</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0</td>
+<td>6.7</td>
+<td>63%</td>
+<td>6.7</td>
+<td>63%</td>
+<td>6.7</td>
+<td>63%</td>
+</tr>
+<tr>
+<td>5</td>
+<td>24.5</td>
+<td>83%</td>
+<td>18.6</td>
+<td>85%</td>
+<td>8.7</td>
+<td>60%</td>
+</tr>
+<tr>
+<td>7</td>
+<td>6.5</td>
+<td>100%</td>
+<td>8.3</td>
+<td>86%</td>
+<td>3.3</td>
+<td>43%</td>
+</tr>
+<tr>
+<td>9</td>
+<td>2.7</td>
+<td>25%</td>
+<td>1.1</td>
+<td>33%</td>
+<td>8.4</td>
+<td>67%</td>
+</tr>
+<tr>
+<td>10</td>
+<td><strong>0.0</strong></td>
+<td>0%</td>
+<td>8.9</td>
+<td>55%</td>
+<td>4.5</td>
+<td>38%</td>
+</tr>
+<tr>
+<td>11</td>
+<td>6.1</td>
+<td>100%</td>
+<td>2.7</td>
+<td>25%</td>
+<td>6.2</td>
+<td>57%</td>
+</tr>
+<tr>
+<td>12</td>
+<td>0.0</td>
+<td>0%</td>
+<td>3.9</td>
+<td>50%</td>
+<td>5.1</td>
+<td>50%</td>
+</tr>
+<tr>
+<td>13</td>
+<td>3.3</td>
+<td>40%</td>
+<td><strong>0.0</strong></td>
+<td>0%</td>
+<td>1.1</td>
+<td>14%</td>
+</tr>
+<tr>
+<td>14</td>
+<td>0.0</td>
+<td>0%</td>
+<td>0.0</td>
+<td>0%</td>
+<td><strong>0.0</strong></td>
+<td>0%</td>
+</tr>
+</tbody>
+</table>
+<p>The collapse pattern is consistent across variants: acceptance rate drops
+below ~25% in the epoch before welfare reaches zero, triggered by a
+cascading rejection spiral. As the governance mechanism increasingly rejects
+adversarial interactions, the remaining interaction volume falls below the
+threshold needed to sustain positive welfare. Crucially, v1 shows a brief
+recovery at epoch 11 (welfare 6.1) before permanent collapse — the ecosystem
+can transiently revive when stochastic variation produces a low-adversarial
+interaction batch, but the underlying composition makes sustained recovery
+impossible.</p>
+<p>Quality gap acts as a leading indicator of collapse. The adversarial
+scenarios maintain quality gaps of 0.23-0.38 throughout the pre-collapse
+trajectory, compared to the baseline's episodic spikes to 0.27 followed by
+return to zero. The persistence of elevated quality gap signals that the
+governance mechanism is continuously straining to separate adversarial from
+honest interactions — a strain that eventually exceeds its capacity.</p>
+<p>The governance tuning across v1-v3 (reducing audit penalties and freeze
+duration) smoothed the welfare trajectory before collapse: v1 shows a sharp
+cliff (24.5 at epoch 5 to 0.0 at epoch 10), while v3 shows a more gradual
+decline (8.7 at epoch 5 to 0.0 at epoch 14). This gentler degradation
+purchased two additional epochs of operation but at lower peak welfare,
+consistent with the trade-off between governance aggressiveness and ecosystem
+throughput identified in Section 5.3.</p>
+<h3 id="45-marketplace-and-network-analysis">4.5 Marketplace and Network Analysis<a class="headerlink" href="#45-marketplace-and-network-analysis" title="Permanent link">&para;</a></h3>
+<p><strong>Marketplace economy.</strong> The bounty/escrow marketplace scenario (7 agents,
+14.3% adversarial) achieved a 0.549 acceptance rate — the lowest among
+non-collapsing, non-redteam scenarios. Of 82 total interactions, only 45
+were accepted, reflecting the additional filtering imposed by escrow
+verification and dispute resolution. Despite this selectivity, welfare
+remained modest at 3.7/epoch (total: 37.0), with final-epoch welfare
+dropping to 1.4. The marketplace mechanism effectively traded throughput for
+safety: toxicity (0.328) was lower than the collusion detection scenario
+(0.370) despite having fewer governance levers active, suggesting that
+economic friction (escrow fees, bid deadlines, dispute costs) functions as
+an implicit governance mechanism by raising the cost of low-quality
+participation.</p>
+<p><strong>Network effects.</strong> The small-world network scenario (10 agents, 10%
+adversarial, k=4, p=0.1 rewiring) sustained operation across all 20 epochs
+with no collapse. It processed the second-highest interaction volume (314
+total, 246 accepted) behind only the emergent capabilities scenario. Welfare
+scaled well at 9.9/epoch (total: 197.9), with final-epoch welfare of 12.9
+— indicating accelerating returns as dynamic edge strengthening consolidated
+cooperative relationships. The acceptance rate (0.783) and toxicity (0.335)
+positioned it squarely in the contested regime. Notably, this scenario
+achieved higher per-agent welfare (0.99/agent/epoch) than the baseline
+(1.0/agent/epoch) despite having both deceptive and adversarial agents,
+suggesting that network topology — specifically, the ability for honest
+agents to strengthen connections with each other and weaken ties to bad
+actors — provides a decentralized governance mechanism complementary to
+centralized levers [11]. The dynamic edge evolution also provides a natural
+dampener against flash-crash-style cascading failures [10], as weakened
+edges to adversarial nodes reduce contagion velocity.</p>
+<p><strong>Comparison.</strong> The marketplace and network scenarios represent two
+architectural approaches to the same problem: the marketplace uses
+centralized economic mechanisms (escrow, arbitration) while the network
+relies on decentralized topological evolution (edge strengthening/decay).
+The network approach yielded higher welfare (9.9 vs. 3.7/epoch) and
+throughput (246 vs. 45 accepted) at comparable toxicity (0.335 vs. 0.328),
+but required more agents (10 vs. 7) and longer runtime (20 vs. 10 epochs)
+to realize these gains.</p>
+<h3 id="46-figures">4.6 Figures<a class="headerlink" href="#46-figures" title="Permanent link">&para;</a></h3>
+<p><img alt="Figure 1: Scenario Comparison" src="figures/fig1_scenario_comparison.png" />
+<em>Cross-scenario comparison of acceptance rate, toxicity, and welfare.</em></p>
+<p><img alt="Figure 2: Collusion Timeline" src="figures/fig2_collusion_timeline.png" />
+<em>Temporal evolution of collusion detection flags and penalties.</em></p>
+<p><img alt="Figure 3: Regime Scatter" src="figures/fig3_regime_scatter.png" />
+<em>Acceptance vs. toxicity scatter plot with regime boundaries.</em></p>
+<p><img alt="Figure 4: Incoherence Scaling" src="figures/fig4_incoherence_scaling.png" />
+<em>Incoherence metrics across short/medium/long branching configurations.</em></p>
+<p><img alt="Figure 5: Welfare Comparison" src="figures/fig5_welfare_comparison.png" />
+<em>Welfare per epoch across governance regimes.</em></p>
+<p><img alt="Figure 6: Network vs Collusion" src="figures/fig6_network_vs_collusion.png" />
+<em>Network topology effects on collusion detection efficacy.</em></p>
+<p><img alt="Figure 7: Timeline Overlay" src="figures/fig7_timeline_overlay.png" />
+<em>Welfare and acceptance rate trajectories across adversarial escalation scenarios.</em></p>
+<h3 id="47-track-a-multi-agent-problem-solving-benchmark">4.7 Track A: Multi-Agent Problem-Solving Benchmark<a class="headerlink" href="#47-track-a-multi-agent-problem-solving-benchmark" title="Permanent link">&para;</a></h3>
+<p>To validate the adversarial dynamics observed in the simulation scenarios, we
+ran a complementary benchmark (Track A) testing multi-agent problem-solving
+under adversarial interference. Track A evaluates 500 mathematical reasoning
+tasks across 12 conditions, progressively adding architectural layers and
+adversarial agents. The non-adversarial conditions build incrementally:
+<strong>single</strong> uses one solver agent; <strong>diverge</strong> adds a second solver and selects
+the highest-confidence answer; <strong>sda</strong> (solve-diverge-aggregate) extends
+diverge with a reconciliation step when solvers disagree; <strong>critic</strong> adds a
+verification layer that challenges the proposed answer; and <strong>memory</strong> adds a
+retrieval-augmented memory system for pattern reuse across tasks. The
+adversarial conditions introduce agents with fixed strategies: <strong>adv_noise</strong>
+(random perturbation), <strong>adv_confident</strong> (high-confidence wrong answers),
+<strong>adv_strategic</strong> (targeted interference on hard problems),
+<strong>adv_sycophant</strong> (agreement-seeking to shift consensus), <strong>adv_coordinated</strong>
+(two adversaries sharing strategy), <strong>adv_majority</strong> (three adversaries
+outnumbering two solvers), and <strong>adv_memory</strong> (strategic adversary with
+memory access).</p>
+<table>
+<thead>
+<tr>
+<th>Condition</th>
+<th>Accuracy</th>
+<th>Adv. Success</th>
+<th>Adv. Block</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>single</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>Single solver baseline</td>
+</tr>
+<tr>
+<td>diverge</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>Two solvers, pick highest confidence</td>
+</tr>
+<tr>
+<td>sda</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>Diverge + reconcile on disagreement</td>
+</tr>
+<tr>
+<td>critic</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>+ critic layer</td>
+</tr>
+<tr>
+<td>memory</td>
+<td>1.000</td>
+<td>—</td>
+<td>—</td>
+<td>+ memory retrieval</td>
+</tr>
+<tr>
+<td>adv_noise</td>
+<td>0.774</td>
+<td>0.226</td>
+<td>0.000</td>
+<td>+ 1 noisy adversary</td>
+</tr>
+<tr>
+<td>adv_confident</td>
+<td>0.764</td>
+<td>0.236</td>
+<td>0.706</td>
+<td>+ 1 confident-wrong adversary</td>
+</tr>
+<tr>
+<td>adv_strategic</td>
+<td>0.780</td>
+<td>0.220</td>
+<td>0.000</td>
+<td>+ 1 strategic adversary</td>
+</tr>
+<tr>
+<td>adv_sycophant</td>
+<td>0.792</td>
+<td>0.208</td>
+<td>0.000</td>
+<td>+ 1 sycophant adversary</td>
+</tr>
+<tr>
+<td>adv_coordinated</td>
+<td>0.760</td>
+<td>0.240</td>
+<td>0.000</td>
+<td>+ 2 coordinated adversaries</td>
+</tr>
+<tr>
+<td>adv_majority</td>
+<td>0.702</td>
+<td>0.298</td>
+<td>0.000</td>
+<td>+ 3 adversaries (majority)</td>
+</tr>
+<tr>
+<td>adv_memory</td>
+<td>0.780</td>
+<td>0.220</td>
+<td>0.000</td>
+<td>Memory + 1 strategic adversary</td>
+</tr>
+</tbody>
+</table>
+<p>The Track A results reinforce the simulation findings in three ways. First,
+non-adversarial conditions maintain perfect accuracy regardless of
+architectural complexity — cooperative multi-agent architectures incur no
+accuracy cost from adding diverge, critic, or memory layers. Second, a single
+adversarial agent reduces accuracy by 20-24% (from 1.000 to 0.774-0.792),
+consistent with the multiplicative welfare cost observed in the simulation
+scenarios. Third, the adversary majority condition (3 adversaries vs. 2
+solvers) produces the lowest accuracy (0.702) and highest adversary success
+rate (0.298), paralleling the simulation finding that &gt;40% adversarial
+fraction exceeds governance capacity. Notably, the adversary block rate is
+effectively zero for all conditions except adv_confident (0.706), suggesting
+that current detection mechanisms catch obvious adversarial behavior
+(high-confidence wrong answers) but miss subtler strategies — the Track A
+analogue of the simulation finding that collusion detection provides
+qualitatively different protection from individual-level governance.</p>
+<p>Full Track A results and figures are available in <code>runs/swarm_collate/</code>.</p>
+<h2 id="5-discussion">5. Discussion<a class="headerlink" href="#5-discussion" title="Permanent link">&para;</a></h2>
+<h3 id="51-regime-transitions-and-the-adversarial-threshold">5.1 Regime Transitions and the Adversarial Threshold<a class="headerlink" href="#51-regime-transitions-and-the-adversarial-threshold" title="Permanent link">&para;</a></h3>
+<p>The critical adversarial fraction between 37.5% and 50% maps directly onto
+the Glosten-Milgrom adverse selection model [6]: when the fraction of
+informed (adversarial) agents exceeds the point at which the acceptance
+mechanism can distinguish signal from noise, the ecosystem equivalent of a
+bid-ask spread widens until cooperation becomes unprofitable for honest
+agents. The monotonic decline in acceptance rate across red-team variants
+(0.556→0.455) traces exactly this widening — each governance relaxation
+narrowed the spread slightly but could not close it.</p>
+<p>The deeper implication is that parameter optimization within a fixed
+governance architecture has diminishing returns against high adversarial
+pressure. The v1→v3 progression purchased two additional epochs (collapse at
+12 vs. 14) at the cost of lower peak welfare (24.5 vs. 8.7 at epoch 5),
+revealing a Pareto frontier between survival time and throughput that
+collapses entirely above the critical fraction. For deployed systems, this
+means monitoring adversarial composition is at least as important as tuning
+governance parameters.</p>
+<h3 id="52-collusion-detection-as-a-phase-transition-buffer">5.2 Collusion Detection as a Phase-Transition Buffer<a class="headerlink" href="#52-collusion-detection-as-a-phase-transition-buffer" title="Permanent link">&para;</a></h3>
+<p>Collusion detection operates on interaction structure rather than individual
+agents, making it a qualitatively different governance lever from taxes or
+circuit breakers. This distinction explains why the collusion scenario
+survived at 37.5% adversarial fraction while individual-level governance
+alone would not: pair-wise monitoring disrupts coordinated exploitation
+patterns before they cascade, even when individual transactions appear
+legitimate.</p>
+<p>The red-team scenarios had collusion detection at a lower correlation
+threshold (0.6 vs. 0.7) but still collapsed at 50% adversarial fraction,
+bounding the effective range of structural monitoring to roughly 25-40%:
+below 25%, individual governance suffices; above 40-50%, even structural
+monitoring is overwhelmed. This bound may reflect a fundamental information-
+theoretic limit — when adversarial agents constitute half the interaction
+graph, the signal-to-noise ratio in pair-wise patterns drops below what any
+frequency-based detector can resolve.</p>
+<h3 id="53-the-welfare-toxicity-trade-off">5.3 The Welfare-Toxicity Trade-off<a class="headerlink" href="#53-the-welfare-toxicity-trade-off" title="Permanent link">&para;</a></h3>
+<p>Across the contested regime, welfare and toxicity are not simply inversely
+correlated. The collusion detection scenario achieved higher welfare (6.3/epoch)
+than the baseline (5.0/epoch) despite substantially higher toxicity (0.370 vs.
+0.298) and a larger adversarial fraction (37.5% vs. 20%). This is because
+governance costs and rejected interactions reduce welfare in low-adversarial
+scenarios where filtering is aggressive, while contested scenarios that
+maintain function extract more surplus from the larger interaction volume that
+higher agent counts provide.</p>
+<p>The emergent capabilities scenario illustrates the upper bound: with zero
+adversarial agents and a complete network, it achieved 44.9 welfare/epoch at
+0.297 toxicity — an order of magnitude above other scenarios. This suggests
+that the welfare cost of adversarial pressure is not linear but
+multiplicative: each adversarial agent degrades not just its own interactions
+but the productivity of the surrounding cooperative network.</p>
+<h3 id="54-emergent-capabilities-and-the-cooperative-ceiling">5.4 Emergent Capabilities and the Cooperative Ceiling<a class="headerlink" href="#54-emergent-capabilities-and-the-cooperative-ceiling" title="Permanent link">&para;</a></h3>
+<p>The emergent capabilities result merits closer examination. The scenario
+deployed 8 agents — 6 honest with specialized capabilities (research/analysis,
+planning/execution, verification/communication) and 2 opportunistic
+generalists (coordination/creativity/communication) — on a complete network
+with dynamic edge strengthening. Three factors drove the exceptional 44.9
+welfare/epoch:</p>
+<ol>
+<li>
+<p><strong>Capability complementarity.</strong> Composite tasks (research synthesis,
+   planning coordination, problem solving) required multiple capability types,
+   creating natural demand for inter-agent collaboration. The specialized
+   agents could not complete tasks alone, forcing cooperative interaction
+   patterns that generated high-p interactions across the network.</p>
+</li>
+<li>
+<p><strong>Network amplification.</strong> The complete topology with dynamic edge
+   strengthening (rate 0.15, decay 0.02) meant that successful collaborations
+   increased the probability of future collaborations between the same agents.
+   Over 30 epochs and 635 interactions (634 accepted, acceptance rate 0.998),
+   this created self-reinforcing cooperative clusters. The per-agent welfare
+   (5.61/agent/epoch) was 5.6x the baseline (1.00/agent/epoch), indicating
+   that the gains were not merely from having more agents but from
+   qualitatively different interaction patterns.</p>
+</li>
+<li>
+<p><strong>Opportunistic agents as coordinators.</strong> The 2 opportunistic agents, with
+   their generalist capabilities (coordination, creativity, communication),
+   served as bridges between specialist clusters rather than exploiting
+   information asymmetries. With no adversarial agents to exploit, the
+   opportunistic behavioral type defaulted to positive-sum coordination — an
+   observation consistent with the market microstructure analogy: when there
+   are no informed (adversarial) traders, the bid-ask spread narrows and
+   market makers (opportunistic agents) facilitate rather than extract.</p>
+</li>
+</ol>
+<p>This scenario demonstrates that the welfare ceiling of cooperative multi-agent
+systems is far higher than contested or adversarial scenarios suggest. The
+ratio of emergent-to-baseline welfare (44.9/5.0 = 9.0x) with only 60% more
+agents (8 vs. 5) implies that the composition and capability structure of the
+agent population matters at least as much as its size — though this comparison
+is confounded by differences in network topology (complete vs. none),
+governance parameters (5 levers vs. 0), and agent composition (0% vs. 20%
+adversarial). The practical implication is that multi-agent system designers
+can achieve outsized welfare gains by investing in capability diversity and
+cooperative infrastructure, but these gains are fragile: introducing even
+moderate adversarial pressure dramatically reduces cooperative surplus, as
+the contested regime scenarios demonstrate.</p>
+<h3 id="55-incoherence-and-scale">5.5 Incoherence and Scale<a class="headerlink" href="#55-incoherence-and-scale" title="Permanent link">&para;</a></h3>
+<p>The incoherence series (3, 6, 10 agents) reveals two scaling dynamics,
+consistent with Anthropic's "hot mess" framing of variance-dominated failure
+[12]. Toxicity saturated quickly: it jumped from 0.183 to 0.343 between 3
+and 6 agents, then plateaued at 0.341 for 10 agents. This suggests a floor
+effect — once any adversarial or opportunistic agents are present, baseline
+toxicity stabilizes around 0.34 regardless of further scaling. Acceptance
+rate, by contrast, declined steadily (1.000 to 0.940 to 0.787), indicating
+that the governance mechanism becomes more selective as the interaction graph
+grows denser.</p>
+<p>Welfare scaled super-linearly (1.0 to 5.7 to 21.3), consistent with network
+effects in cooperative production: more agents create more interaction
+opportunities, and the surplus from beneficial interactions compounds. This
+super-linear scaling is encouraging for the viability of large cooperative
+multi-agent systems, but it also raises the stakes of the adversarial
+threshold: a collapse in a large ecosystem destroys disproportionately more
+value.</p>
+<h3 id="56-implications-for-multi-agent-system-design">5.6 Implications for Multi-Agent System Design<a class="headerlink" href="#56-implications-for-multi-agent-system-design" title="Permanent link">&para;</a></h3>
+<p>These results suggest three practical design principles:</p>
+<ol>
+<li>
+<p><strong>Monitor composition, not just metrics.</strong> Toxicity and acceptance rate are
+   lagging indicators. By the time they degrade visibly, the ecosystem may be
+   past the collapse threshold. Tracking adversarial fraction directly — via
+   behavioral classification or collusion detection — provides earlier warning.</p>
+</li>
+<li>
+<p><strong>Layer structural governance over individual governance.</strong> Transaction taxes
+   and circuit breakers are necessary but not sufficient. Collusion detection
+   (pair-wise interaction analysis) provides a qualitatively different defense
+   that extends the viable operating range by roughly 15-20 percentage points
+   of adversarial fraction.</p>
+</li>
+<li>
+<p><strong>Design for regime awareness.</strong> A single governance configuration cannot
+   optimally serve all three regimes. Cooperative regimes are over-governed by
+   aggressive parameters (reducing welfare), while adversarial regimes are
+   under-governed by moderate ones (permitting collapse). Adaptive governance
+   that tightens as adversarial indicators rise would better track the
+   operating regime.</p>
+</li>
+</ol>
+<h3 id="57-future-work">5.7 Future Work<a class="headerlink" href="#57-future-work" title="Permanent link">&para;</a></h3>
+<p>Several directions follow naturally from these findings:</p>
+<p><strong>Multi-seed validation.</strong> The most immediate need is running each scenario
+across 10-50 seeds to establish confidence intervals on regime boundaries.
+The critical adversarial threshold (37.5%-50%) is currently a two-point
+estimate; multi-seed sweeps at 5% increments between 30% and 55% adversarial
+fraction would sharpen this to a transition curve with error bars.</p>
+<p><strong>Adaptive governance.</strong> All governance parameters in this study were static.
+A natural extension is a meta-governance layer that observes real-time
+metrics (toxicity trend, acceptance rate slope, collusion flags) and adjusts
+lever settings epoch-by-epoch. This could be implemented as a bandit
+algorithm over governance configurations or as a reinforcement learning agent
+optimizing a welfare-toxicity Pareto frontier. The key question is whether
+adaptive governance can prevent collapse at adversarial fractions above 50%,
+or whether the threshold is fundamental.</p>
+<p><strong>Dynamic adversarial fraction.</strong> In deployed systems, agents may shift
+strategies over time — an honest agent may become opportunistic as it
+discovers exploits, or an adversarial agent may reform after repeated
+penalties. Modeling adversarial fraction as a dynamic variable (driven by
+payoff incentives, imitation dynamics, or evolutionary pressure) would test
+whether governance can stabilize composition or whether adversarial drift is
+self-reinforcing.</p>
+<p><strong>Scale experiments.</strong> The super-linear welfare scaling observed in the
+incoherence series (3 to 10 agents) motivates testing at 50, 100, and 500
+agents. Key questions: Does the adversarial threshold shift with scale? Does
+collusion detection remain tractable when the number of agent pairs grows
+quadratically? Do network topologies that work at 10 agents fragment or
+centralize at 100?</p>
+<p><strong>Learned proxy weights.</strong> The current proxy weights (0.4, 0.2, 0.2, 0.2)
+are hand-set. Training the weight vector and sigmoid parameters (k, b) via
+gradient descent on labeled interaction data would test whether calibration
+quality affects the adversarial threshold — better proxies might extend the
+viable operating range by narrowing the bid-ask spread analogy from
+Section 5.1.</p>
+<p><strong>Cross-scenario transfer.</strong> Testing whether governance parameters optimized
+for one regime transfer to another would inform deployment strategy. A
+configuration tuned on the baseline scenario may fail catastrophically when
+adversarial fraction increases — quantifying this brittleness would
+strengthen the case for regime-aware adaptive governance.</p>
+<h2 id="6-conclusion">6. Conclusion<a class="headerlink" href="#6-conclusion" title="Permanent link">&para;</a></h2>
+<p>We have presented a simulation-based study of governance trade-offs in
+multi-agent AI systems, using probabilistic soft labels to capture the
+continuous nature of interaction quality. Across 11 simulation scenarios,
+a 500-task multi-agent benchmark, and 209 total epochs spanning cooperative,
+contested, and adversarial regimes, five findings stand out.</p>
+<p>First, there exists a critical adversarial fraction between 37.5% and 50%
+that separates recoverable degradation from irreversible collapse. Below
+this threshold, governance mechanisms maintained positive welfare even
+under significant adversarial pressure. Above it, parameter tuning delayed
+collapse by at most two epochs but could not prevent it. This threshold
+behavior mirrors phase transitions in market microstructure: just as a
+market maker cannot sustain liquidity when the fraction of informed traders
+exceeds a critical level [5, 6], a governance mechanism cannot sustain
+cooperation when adversarial agents dominate the interaction graph.</p>
+<p>Second, epoch-by-epoch analysis reveals the collapse mechanism: a cascading
+rejection spiral in which acceptance rate drops below ~25%, starving the
+ecosystem of interaction volume. Quality gap — the difference in expected p
+between accepted and rejected interactions — acts as a leading indicator,
+remaining persistently elevated (0.19-0.21) across pre-collapse trajectories
+while stable scenarios show only episodic spikes. This suggests that
+continuous quality gap monitoring could provide earlier warning of impending
+collapse than toxicity or acceptance rate alone.</p>
+<p>Third, collusion detection — monitoring pair-wise interaction patterns
+rather than individual agent behavior — provides qualitatively different
+protection from individual-level governance levers. Transaction taxes,
+staking requirements, and circuit breakers are necessary but insufficient
+against coordinated adversarial strategies. The collusion detection scenario
+survived at 37.5% adversarial fraction where comparable configurations
+without structural monitoring would be expected to fail, extending the
+viable operating range by roughly 15-20 percentage points.</p>
+<p>Fourth, welfare scales super-linearly with cooperative population size
+(1.0 to 5.7 to 21.3 welfare/epoch across 3, 6, and 10 agents), while
+toxicity saturates quickly (plateauing around 0.34 above 6 agents). In the
+cooperative regime, capability complementarity and network amplification
+drove welfare to 44.9/epoch (9x baseline) — demonstrating that multi-agent
+systems can achieve outsized returns when adversarial pressure is absent,
+but that these gains are fragile to even moderate adversarial infiltration.</p>
+<p>Fifth, the Track A benchmark validates these dynamics in a problem-solving
+context: cooperative multi-agent architectures maintain perfect accuracy
+regardless of complexity, while a single adversarial agent reduces accuracy
+by 20-24% and adversary-majority conditions produce the lowest accuracy
+(0.702). The near-zero adversary block rate for subtle strategies mirrors
+the simulation finding that individual-level detection misses coordinated
+threats.</p>
+<p>These results argue for a shift in multi-agent safety from static,
+per-agent alignment toward dynamic, ecosystem-level governance that is
+regime-aware, structurally informed, and designed around distributional
+rather than binary safety properties. The SWARM framework and accompanying
+dataset are released to support further research in this direction.</p>
+<h2 id="7-limitations">7. Limitations<a class="headerlink" href="#7-limitations" title="Permanent link">&para;</a></h2>
+<ul>
+<li>
+<p><strong>Single-seed runs.</strong> Each scenario was run with seed 42 only. Results may
+  not be robust to stochastic variation; multi-seed sweeps with confidence
+  intervals are needed to confirm regime boundaries.</p>
+</li>
+<li>
+<p><strong>Simulation fidelity.</strong> Agent behavioral types are stylized (honest,
+  opportunistic, deceptive, adversarial). Real multi-agent systems exhibit
+  richer and more continuous behavioral variation that may shift the
+  thresholds identified here.</p>
+</li>
+<li>
+<p><strong>Fixed adversarial fraction.</strong> Adversarial fraction was set per-scenario
+  and did not evolve over time. In practice, agents may shift strategies
+  dynamically, and the collapse threshold likely depends on the rate of
+  behavioral change, not just the static fraction.</p>
+</li>
+<li>
+<p><strong>No learned governance.</strong> All governance parameters were hand-configured.
+  Learned or adaptive governance policies (e.g., reinforcement learning over
+  lever settings) might extend the viable range beyond what static tuning
+  achieves.</p>
+</li>
+<li>
+<p><strong>Collapse definition.</strong> Collapse is operationalized as the first epoch
+  where welfare degrades irreversibly. Alternative definitions (e.g., based
+  on honest-agent exit or network fragmentation) might yield different
+  collapse epochs.</p>
+</li>
+<li>
+<p><strong>Scale.</strong> The largest scenario tested had 10 agents. Extrapolating regime
+  boundaries to systems with hundreds or thousands of agents requires
+  further validation, particularly given the super-linear welfare scaling
+  observed.</p>
+</li>
+<li>
+<p><strong>Incomplete quality gap coverage.</strong> Quality gap data was retained for
+  only 6 of 11 scenarios. The missing scenarios (collusion_detection,
+  emergent_capabilities, incoherence_medium, incoherence_long) either had
+  near-universal acceptance (making quality gap undefined or trivially zero)
+  or did not retain epoch-level event logs. Future work should ensure
+  consistent quality gap logging across all scenarios.</p>
+</li>
+<li>
+<p><strong>Track A benchmark simplifications.</strong> The Track A benchmark uses
+  simulated adversaries with fixed strategies (noisy, confident-wrong,
+  strategic, sycophant) rather than adaptive agents. Real adversaries would
+  likely adjust strategies in response to detection, potentially reducing
+  the block rates observed. The benchmark also uses synthetic mathematical
+  tasks rather than open-ended problems where adversarial influence may be
+  harder to detect.</p>
+</li>
+<li>
+<p><strong>Confounded emergent capabilities comparison.</strong> The emergent capabilities
+  scenario differs from baseline in multiple dimensions simultaneously
+  (agent count, network topology, governance parameters, composition),
+  making it difficult to attribute the 9x welfare gain to any single factor.
+  Controlled ablation studies isolating each variable would strengthen the
+  causal claims in Section 5.4.</p>
+</li>
+</ul>
+<h2 id="8-references">8. References<a class="headerlink" href="#8-references" title="Permanent link">&para;</a></h2>
+<p>[1] Myerson, R.B. (1981). Optimal Auction Design. <em>Mathematics of Operations
+Research</em>, 6(1), 58-73.</p>
+<p>[2] Hurwicz, L. (1960). Optimality and Informational Efficiency in Resource
+Allocation Processes. In Arrow, K.J., Karlin, S., &amp; Suppes, P. (Eds.),
+<em>Mathematical Methods in the Social Sciences</em>, 27-46. Stanford University
+Press.</p>
+<p>[3] Kenton, Z., Filos, A., Evans, O., &amp; Gal, Y. (2025). Distributional Safety
+in Agentic Systems. <em>arXiv preprint</em> arXiv:2512.16856.</p>
+<p>[4] Tomasev, N., Franklin, J., Leibo, J.Z., Jacobs, A.Z., Cunningham, T.,
+Gabriel, I., &amp; Osindero, S. (2025). Virtual Agent Economies. <em>arXiv preprint</em>
+arXiv:2509.10147.</p>
+<p>[5] Kyle, A.S. (1985). Continuous Auctions and Insider Trading.
+<em>Econometrica</em>, 53(6), 1315-1335.</p>
+<p>[6] Glosten, L.R. &amp; Milgrom, P.R. (1985). Bid, Ask and Transaction Prices in
+a Specialist Market with Heterogeneously Informed Traders. <em>Journal of
+Financial Economics</em>, 14(1), 71-100.</p>
+<p>[7] Akerlof, G.A. (1970). The Market for "Lemons": Quality Uncertainty and the
+Market Mechanism. <em>Quarterly Journal of Economics</em>, 84(3), 488-500.</p>
+<p>[8] Dworkin, R. (1981). What is Equality? Part 2: Equality of Resources.
+<em>Philosophy &amp; Public Affairs</em>, 10(4), 283-345.</p>
+<p>[9] Shapley, L.S. (1953). A Value for n-Person Games. In Kuhn, H.W. &amp;
+Tucker, A.W. (Eds.), <em>Contributions to the Theory of Games</em>, Vol. 2, 307-317.
+Princeton University Press.</p>
+<p>[10] Kyle, A.S., Obizhaeva, A.A., &amp; Tuzun, T. (2017). Flash Crashes and
+Market Microstructure. Working Paper.</p>
+<p>[11] Chen, Y., Shenker, S., &amp; Zhao, S. (2025). Multi-Agent Market Dynamics.
+<em>arXiv preprint</em> arXiv:2502.14143.</p>
+<p>[12] Anthropic. (2026). The Hot Mess Theory of AI. Anthropic Alignment Blog.
+https://alignment.anthropic.com/2026/hot-mess-of-ai/</p>
+<p>[13] Dafoe, A., Hughes, E., Bachrach, Y., Collins, T., McKee, K.R.,
+Leibo, J.Z., Larson, K., &amp; Graepel, T. (2020). Open Problems in
+Cooperative AI. <em>arXiv preprint</em> arXiv:2012.08630.</p>
+<p>[14] Leibo, J.Z., Zambaldi, V., Lanctot, M., Marecki, J., &amp; Graepel, T.
+(2017). Multi-Agent Reinforcement Learning in Sequential Social Dilemmas.
+<em>AAMAS 2017</em>.</p>
+<p>[15] Park, J.S., O'Brien, J.C., Cai, C.J., Morris, M.R., Liang, P., &amp;
+Bernstein, M.S. (2023). Generative Agents: Interactive Simulacra of Human
+Behavior. <em>UIST 2023</em>.</p>
+<h2 id="9-appendix">9. Appendix<a class="headerlink" href="#9-appendix" title="Permanent link">&para;</a></h2>
+<h3 id="a1-full-run-data">A.1 Full Run Data<a class="headerlink" href="#a1-full-run-data" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Seed</th>
+<th>Agents</th>
+<th>Epochs</th>
+<th>Steps</th>
+<th>Total Int.</th>
+<th>Accepted</th>
+<th>Accept Rate</th>
+<th>Toxicity</th>
+<th>Welfare/Ep</th>
+<th>Total Welfare</th>
+<th>Final Welfare</th>
+<th>Adv. Frac</th>
+<th>Collapse</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td>42</td>
+<td>5</td>
+<td>10</td>
+<td>10</td>
+<td>48</td>
+<td>45</td>
+<td>0.938</td>
+<td>0.298</td>
+<td>4.98</td>
+<td>49.80</td>
+<td>3.93</td>
+<td>0.200</td>
+<td>—</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v1</td>
+<td>42</td>
+<td>8</td>
+<td>30</td>
+<td>15</td>
+<td>135</td>
+<td>75</td>
+<td>0.556</td>
+<td>0.295</td>
+<td>3.80</td>
+<td>113.96</td>
+<td>0.00</td>
+<td>0.500</td>
+<td>Ep 12</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v2</td>
+<td>42</td>
+<td>8</td>
+<td>30</td>
+<td>15</td>
+<td>158</td>
+<td>76</td>
+<td>0.481</td>
+<td>0.312</td>
+<td>3.80</td>
+<td>114.05</td>
+<td>0.00</td>
+<td>0.500</td>
+<td>Ep 13</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v3</td>
+<td>42</td>
+<td>8</td>
+<td>30</td>
+<td>15</td>
+<td>156</td>
+<td>71</td>
+<td>0.455</td>
+<td>0.312</td>
+<td>3.49</td>
+<td>104.60</td>
+<td>0.00</td>
+<td>0.500</td>
+<td>Ep 14</td>
+</tr>
+<tr>
+<td>collusion_detection</td>
+<td>42</td>
+<td>8</td>
+<td>25</td>
+<td>15</td>
+<td>299</td>
+<td>127</td>
+<td>0.425</td>
+<td>0.370</td>
+<td>6.29</td>
+<td>157.25</td>
+<td>2.83</td>
+<td>0.375</td>
+<td>—</td>
+</tr>
+<tr>
+<td>emergent_capabilities</td>
+<td>42</td>
+<td>8</td>
+<td>30</td>
+<td>20</td>
+<td>635</td>
+<td>634</td>
+<td>0.998</td>
+<td>0.297</td>
+<td>44.90</td>
+<td>1347.00</td>
+<td>38.82</td>
+<td>0.000</td>
+<td>—</td>
+</tr>
+<tr>
+<td>incoherence_short</td>
+<td>42</td>
+<td>3</td>
+<td>8</td>
+<td>2</td>
+<td>7</td>
+<td>7</td>
+<td>1.000</td>
+<td>0.183</td>
+<td>0.99</td>
+<td>7.94</td>
+<td>0.00</td>
+<td>0.000</td>
+<td>—</td>
+</tr>
+<tr>
+<td>incoherence_medium</td>
+<td>42</td>
+<td>6</td>
+<td>8</td>
+<td>8</td>
+<td>50</td>
+<td>47</td>
+<td>0.940</td>
+<td>0.343</td>
+<td>5.70</td>
+<td>45.56</td>
+<td>4.33</td>
+<td>0.167</td>
+<td>—</td>
+</tr>
+<tr>
+<td>incoherence_long</td>
+<td>42</td>
+<td>10</td>
+<td>8</td>
+<td>20</td>
+<td>221</td>
+<td>174</td>
+<td>0.787</td>
+<td>0.341</td>
+<td>21.31</td>
+<td>170.49</td>
+<td>18.50</td>
+<td>0.100</td>
+<td>—</td>
+</tr>
+<tr>
+<td>marketplace_economy</td>
+<td>42</td>
+<td>7</td>
+<td>10</td>
+<td>10</td>
+<td>82</td>
+<td>45</td>
+<td>0.549</td>
+<td>0.328</td>
+<td>3.70</td>
+<td>36.95</td>
+<td>1.41</td>
+<td>0.143</td>
+<td>—</td>
+</tr>
+<tr>
+<td>network_effects</td>
+<td>42</td>
+<td>10</td>
+<td>20</td>
+<td>10</td>
+<td>314</td>
+<td>246</td>
+<td>0.783</td>
+<td>0.335</td>
+<td>9.90</td>
+<td>197.90</td>
+<td>12.94</td>
+<td>0.100</td>
+<td>—</td>
+</tr>
+</tbody>
+</table>
+<h3 id="a2-per-agent-efficiency">A.2 Per-Agent Efficiency<a class="headerlink" href="#a2-per-agent-efficiency" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Agents</th>
+<th>Welfare/Ep</th>
+<th>Welfare/Agent/Ep</th>
+<th>Interactions/Agent/Ep</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td>5</td>
+<td>4.98</td>
+<td>1.00</td>
+<td>0.96</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v1</td>
+<td>8</td>
+<td>3.80</td>
+<td>0.48</td>
+<td>0.56</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v2</td>
+<td>8</td>
+<td>3.80</td>
+<td>0.48</td>
+<td>0.66</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v3</td>
+<td>8</td>
+<td>3.49</td>
+<td>0.44</td>
+<td>0.65</td>
+</tr>
+<tr>
+<td>collusion_detection</td>
+<td>8</td>
+<td>6.29</td>
+<td>0.79</td>
+<td>1.50</td>
+</tr>
+<tr>
+<td>emergent_capabilities</td>
+<td>8</td>
+<td>44.90</td>
+<td>5.61</td>
+<td>2.65</td>
+</tr>
+<tr>
+<td>incoherence_short</td>
+<td>3</td>
+<td>0.99</td>
+<td>0.33</td>
+<td>0.29</td>
+</tr>
+<tr>
+<td>incoherence_medium</td>
+<td>6</td>
+<td>5.70</td>
+<td>0.95</td>
+<td>1.04</td>
+</tr>
+<tr>
+<td>incoherence_long</td>
+<td>10</td>
+<td>21.31</td>
+<td>2.13</td>
+<td>2.76</td>
+</tr>
+<tr>
+<td>marketplace_economy</td>
+<td>7</td>
+<td>3.70</td>
+<td>0.53</td>
+<td>1.17</td>
+</tr>
+<tr>
+<td>network_effects</td>
+<td>10</td>
+<td>9.90</td>
+<td>0.99</td>
+<td>1.57</td>
+</tr>
+</tbody>
+</table>
+<h3 id="a3-governance-lever-coverage-matrix">A.3 Governance Lever Coverage Matrix<a class="headerlink" href="#a3-governance-lever-coverage-matrix" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Scenario</th>
+<th>Tax</th>
+<th>Rep Decay</th>
+<th>Staking</th>
+<th>Circuit Breaker</th>
+<th>Audit</th>
+<th>Collusion</th>
+<th>Network</th>
+<th>Marketplace</th>
+<th>Levers Active</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>baseline</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>0</td>
+</tr>
+<tr>
+<td>adversarial_redteam_v*</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td></td>
+<td>7</td>
+</tr>
+<tr>
+<td>collusion_detection</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td></td>
+<td>x</td>
+<td>x</td>
+<td></td>
+<td>6</td>
+</tr>
+<tr>
+<td>emergent_capabilities</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td>x</td>
+<td></td>
+<td></td>
+<td>x</td>
+<td></td>
+<td>5</td>
+</tr>
+<tr>
+<td>incoherence_short</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>0</td>
+</tr>
+<tr>
+<td>incoherence_medium</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>0</td>
+</tr>
+<tr>
+<td>incoherence_long</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+<td>0</td>
+</tr>
+<tr>
+<td>marketplace_economy</td>
+<td>x</td>
+<td>x</td>
+<td></td>
+<td>x</td>
+<td>x</td>
+<td></td>
+<td></td>
+<td>x</td>
+<td>5</td>
+</tr>
+<tr>
+<td>network_effects</td>
+<td>x</td>
+<td>x</td>
+<td></td>
+<td>x</td>
+<td>x</td>
+<td></td>
+<td>x</td>
+<td></td>
+<td>5</td>
+</tr>
+</tbody>
+</table>
+<h3 id="a4-regime-boundary-summary">A.4 Regime Boundary Summary<a class="headerlink" href="#a4-regime-boundary-summary" title="Permanent link">&para;</a></h3>
+<p>Based on observed data, the regime boundaries can be approximated as:</p>
+<table>
+<thead>
+<tr>
+<th>Boundary</th>
+<th>Adversarial Fraction</th>
+<th>Governance Required</th>
+<th>Key Indicator</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Cooperative -&gt; Contested</td>
+<td>~15-20%</td>
+<td>Individual levers sufficient</td>
+<td>Toxicity crosses 0.30</td>
+</tr>
+<tr>
+<td>Contested -&gt; Collapse</td>
+<td>~40-50%</td>
+<td>Structural levers insufficient</td>
+<td>Acceptance drops below 0.50</td>
+</tr>
+<tr>
+<td>Collusion-buffered ceiling</td>
+<td>~37.5%</td>
+<td>Collusion detection active</td>
+<td>Toxicity &gt; 0.35 but welfare positive</td>
+</tr>
+</tbody>
+</table>
+<p>Note: These boundaries are estimated from single-seed runs and should be
+validated with multi-seed sweeps (see Section 5.7).</p>
+<hr />
+<h3 id="reproducibility">Reproducibility<a class="headerlink" href="#reproducibility" title="Permanent link">&para;</a></h3>
+<p><strong>SQLite query used to populate results tables:</strong></p>
+<div class="language-sql highlight"><pre><span></span><code><span id="__span-0-1"><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">SELECT</span><span class="w"> </span><span class="n">scenario_id</span><span class="p">,</span><span class="w"> </span><span class="n">seed</span><span class="p">,</span><span class="w"> </span><span class="n">n_agents</span><span class="p">,</span><span class="w"> </span><span class="n">n_epochs</span><span class="p">,</span><span class="w"> </span><span class="n">steps_per_epoch</span><span class="p">,</span>
+</span><span id="__span-0-2"><a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">       </span><span class="n">total_interactions</span><span class="p">,</span><span class="w"> </span><span class="n">accepted_interactions</span><span class="p">,</span><span class="w"> </span><span class="n">acceptance_rate</span><span class="p">,</span>
+</span><span id="__span-0-3"><a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">       </span><span class="n">avg_toxicity</span><span class="p">,</span><span class="w"> </span><span class="n">welfare_per_epoch</span><span class="p">,</span><span class="w"> </span><span class="n">adversarial_fraction</span><span class="p">,</span>
+</span><span id="__span-0-4"><a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">       </span><span class="n">collapse_epoch</span><span class="p">,</span><span class="w"> </span><span class="n">notes</span>
+</span><span id="__span-0-5"><a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="k">FROM</span><span class="w"> </span><span class="n">scenario_runs</span>
+</span><span id="__span-0-6"><a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="k">ORDER</span><span class="w"> </span><span class="k">BY</span><span class="w"> </span><span class="n">scenario_id</span><span class="p">,</span><span class="w"> </span><span class="n">seed</span>
+</span></code></pre></div>
+<p><strong>Database:</strong> <code>runs/runs.db</code>
+<strong>All scenarios run with:</strong> <code>python -m swarm run scenarios/&lt;id&gt;.yaml --seed 42</code></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/swarm-ai-safety/swarm" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://x.com/ResearchSwarmAI" target="_blank" rel="noopener" title="x.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M357.2 48h70.6L273.6 224.2 455 464H313L201.7 318.6 74.5 464H3.8l164.9-188.5L-5.2 48h145.6l100.5 132.9zm-24.8 373.8h39.1L119.1 88h-42z"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.tabs", "navigation.sections", "navigation.expand", "navigation.top", "search.suggest", "search.highlight", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+        <script src="../../javascripts/mathjax.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>

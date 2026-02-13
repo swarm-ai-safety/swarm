@@ -1,0 +1,121 @@
+/* SWARM Custom Styles */
+
+:root {
+  /* Primary colors */
+  --swarm-deep-blue: #1a1f3a;
+  --swarm-cyan: #00d4ff;
+  --swarm-purple: #7b61ff;
+
+  /* Semantic colors */
+  --swarm-success: #10b981;
+  --swarm-warning: #f59e0b;
+  --swarm-error: #ef4444;
+}
+
+/* Dark mode overrides */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: var(--swarm-deep-blue);
+  --md-accent-fg-color: var(--swarm-cyan);
+  --md-default-bg-color: #0d1117;
+  --md-code-bg-color: #161b22;
+}
+
+/* Light mode overrides */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--swarm-deep-blue);
+  --md-accent-fg-color: var(--swarm-purple);
+}
+
+/* Header styling */
+.md-header {
+  background: linear-gradient(135deg, var(--swarm-deep-blue) 0%, #2a2e4a 100%);
+}
+
+/* Code block styling */
+.highlight code {
+  border-radius: 0.25rem;
+}
+
+/* Admonition styling */
+.md-typeset .admonition.warning,
+.md-typeset details.warning {
+  border-color: var(--swarm-warning);
+}
+
+.md-typeset .admonition.tip,
+.md-typeset details.tip {
+  border-color: var(--swarm-success);
+}
+
+/* Table styling */
+.md-typeset table:not([class]) {
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.md-typeset table:not([class]) th {
+  background: var(--md-code-bg-color);
+}
+
+/* Link styling */
+.md-typeset a {
+  color: var(--swarm-cyan);
+}
+
+.md-typeset a:hover {
+  color: var(--swarm-purple);
+}
+
+/* Navigation tabs */
+.md-tabs__link--active {
+  border-bottom: 2px solid var(--swarm-cyan);
+}
+
+/* Search highlight */
+.md-search-result__meta {
+  color: var(--swarm-cyan);
+}
+
+/* Footer */
+.md-footer {
+  background: var(--swarm-deep-blue);
+}
+
+/* Cards grid */
+.grid.cards > ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1rem;
+  padding: 0;
+  list-style: none;
+}
+
+.grid.cards > ul > li {
+  background: var(--md-code-bg-color);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+}
+
+/* Gradient text for headers */
+.md-typeset h1 {
+  font-weight: 800;
+}
+
+/* MathJax display math: allow horizontal scroll on narrow screens */
+.MathJax {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+}
+
+mjx-container[jax="CHTML"][display="true"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  max-width: 100%;
+  padding: 0.25rem 0;
+}
+
+/* Hero section on homepage */
+.md-content__inner > h1:first-child {
+  display: none;
+}
