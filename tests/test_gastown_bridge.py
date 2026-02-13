@@ -25,7 +25,7 @@ def _create_in_memory_db() -> sqlite3.Connection:
     conn = sqlite3.connect(":memory:")
     conn.execute(
         """
-        CREATE TABLE beads (
+        CREATE TABLE issues (
             id TEXT PRIMARY KEY,
             title TEXT,
             status TEXT,
@@ -48,7 +48,7 @@ def _insert_bead(
     if updated_at is None:
         updated_at = datetime.now(timezone.utc).isoformat()
     conn.execute(
-        "INSERT OR REPLACE INTO beads (id, title, status, assignee, updated_at) "
+        "INSERT OR REPLACE INTO issues (id, title, status, assignee, updated_at) "
         "VALUES (?, ?, ?, ?, ?)",
         (bead_id, title, status, assignee, updated_at),
     )
@@ -67,7 +67,7 @@ class TestBeadsClientPoll:
         conn = sqlite3.connect(db_path)
         conn.execute(
             """
-            CREATE TABLE beads (
+            CREATE TABLE issues (
                 id TEXT PRIMARY KEY,
                 title TEXT,
                 status TEXT,
@@ -78,7 +78,7 @@ class TestBeadsClientPoll:
         )
         now = datetime.now(timezone.utc)
         conn.execute(
-            "INSERT INTO beads VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO issues VALUES (?, ?, ?, ?, ?)",
             ("b1", "Fix bug", "done", "polecat-1", now.isoformat()),
         )
         conn.commit()
@@ -204,7 +204,7 @@ class TestBridgePollCycle:
         conn = sqlite3.connect(db_path)
         conn.execute(
             """
-            CREATE TABLE beads (
+            CREATE TABLE issues (
                 id TEXT PRIMARY KEY,
                 title TEXT,
                 status TEXT,
@@ -215,7 +215,7 @@ class TestBridgePollCycle:
         )
         now = datetime.now(timezone.utc)
         conn.execute(
-            "INSERT INTO beads VALUES (?, ?, ?, ?, ?)",
+            "INSERT INTO issues VALUES (?, ?, ?, ?, ?)",
             ("b1", "Implement feature", "done", "polecat-1", now.isoformat()),
         )
         conn.commit()
@@ -249,6 +249,196 @@ class TestBridgePollCycle:
             # Verify stored
             assert len(bridge.get_interactions()) == 1
             assert len(bridge.get_events()) == 1
+        finally:
+            bridge.shutdown()
+
+
+# ---------------------------------------------------------------------------
+# Test: GitObserver.get_feature_branches (mocked subprocess)
+# ---------------------------------------------------------------------------
+
+
+class TestGitObserverBranches:
+    @patch("swarm.bridges.gastown.git_observer.subprocess.run")
+    def test_get_feature_branches(self, mock_run):
+        """Discover unmerged remote branches and parse agent/slug."""
+        result = MagicMock()
+        result.returncode = 0
+        result.stdout = (
+            "origin/claude/fix-bug\n"
+            "origin/codex/add-feature\n"
+            "origin/dependabot/pip/setuptools\n"
+        )
+        mock_run.return_value = result
+
+        observer = GitObserver("/workspace")
+        branches = observer.get_feature_branches("origin/main")
+
+        assert len(branches) == 3
+        assert branches[0] == {
+            "branch": "origin/claude/fix-bug",
+            "agent": "claude",
+            "slug": "fix-bug",
+        }
+        assert branches[1]["agent"] == "codex"
+        assert branches[2]["agent"] == "dependabot"
+        assert branches[2]["slug"] == "pip/setuptools"
+
+    @patch("swarm.bridges.gastown.git_observer.subprocess.run")
+    def test_get_branch_stats(self, mock_run):
+        """Get per-branch stats vs base."""
+
+        def side_effect(args, **kwargs):
+            cmd = " ".join(args)
+            r = MagicMock()
+            r.returncode = 0
+            if "rev-list --count" in cmd:
+                r.stdout = "3\n"
+            elif "diff --name-only" in cmd:
+                r.stdout = "a.py\nb.py\n"
+            elif "--grep=[ci-fail]" in cmd:
+                r.stdout = "abc [ci-fail] broken\n"
+            elif "log --oneline" in cmd:
+                r.stdout = "abc fixup! typo\ndef Add feature\nghi fix: lint\n"
+            elif "log --format=%aI" in cmd:
+                r.stdout = (
+                    "2025-01-02T12:00:00+00:00\n"
+                    "2025-01-02T00:00:00+00:00\n"
+                    "2025-01-01T00:00:00+00:00\n"
+                )
+            else:
+                r.stdout = ""
+            return r
+
+        mock_run.side_effect = side_effect
+
+        observer = GitObserver("/workspace")
+        stats = observer.get_branch_stats("origin/claude/fix-bug", "origin/main")
+
+        assert stats["commit_count"] == 3
+        assert stats["files_changed"] == 2
+        assert stats["review_iterations"] == 2  # "fixup!" and "fix:"
+        assert stats["ci_failures"] == 1
+        assert stats["time_to_merge_hours"] == pytest.approx(36.0, abs=0.1)
+
+
+# ---------------------------------------------------------------------------
+# Test: GasTownBridge.poll with branch fallback
+# ---------------------------------------------------------------------------
+
+
+class TestBridgePollBranchFallback:
+    def test_poll_uses_branch_stats_when_no_worktrees(self, tmp_path):
+        """When no worktrees exist, poll falls back to branch stats."""
+        db_path = str(tmp_path / "beads.db")
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            """
+            CREATE TABLE issues (
+                id TEXT PRIMARY KEY,
+                title TEXT,
+                status TEXT,
+                assignee TEXT,
+                updated_at TEXT
+            )
+            """
+        )
+        now = datetime.now(timezone.utc)
+        conn.execute(
+            "INSERT INTO issues VALUES (?, ?, ?, ?, ?)",
+            ("b1", "Fix bug", "closed", "claude", now.isoformat()),
+        )
+        conn.commit()
+        conn.close()
+
+        config = GasTownConfig(
+            workspace_path=str(tmp_path),
+            beads_db_path=db_path,
+        )
+        bridge = GasTownBridge(config)
+
+        mock_obs = MagicMock(spec=GitObserver)
+        # No worktrees
+        mock_obs.get_agent_worktrees.return_value = {}
+        # One branch for "claude"
+        mock_obs.get_feature_branches.return_value = [
+            {"branch": "origin/claude/fix-bug", "agent": "claude", "slug": "fix-bug"},
+        ]
+        mock_obs.get_branch_stats.return_value = {
+            "commit_count": 4,
+            "files_changed": 5,
+            "review_iterations": 1,
+            "ci_failures": 0,
+            "time_to_merge_hours": 2.0,
+        }
+        bridge._git_observer = mock_obs
+
+        try:
+            interactions = bridge.poll()
+            assert len(interactions) == 1
+            assert interactions[0].counterparty == "claude"
+            # With 4 commits the mapper should produce different stats
+            # than the zero-commit default
+            assert interactions[0].metadata["commit_count"] == 4
+            mock_obs.get_branch_stats.assert_called_once()
+        finally:
+            bridge.shutdown()
+
+
+# ---------------------------------------------------------------------------
+# Test: GasTownBridge.poll_branches
+# ---------------------------------------------------------------------------
+
+
+class TestBridgePollBranches:
+    def test_poll_branches_creates_interactions(self, tmp_path):
+        db_path = str(tmp_path / "beads.db")
+        conn = sqlite3.connect(db_path)
+        conn.execute(
+            """
+            CREATE TABLE issues (
+                id TEXT PRIMARY KEY,
+                title TEXT,
+                status TEXT,
+                assignee TEXT,
+                updated_at TEXT
+            )
+            """
+        )
+        conn.commit()
+        conn.close()
+
+        config = GasTownConfig(
+            workspace_path=str(tmp_path),
+            beads_db_path=db_path,
+        )
+        bridge = GasTownBridge(config)
+
+        mock_obs = MagicMock(spec=GitObserver)
+        mock_obs.get_feature_branches.return_value = [
+            {"branch": "origin/claude/fix-bug", "agent": "claude", "slug": "fix-bug"},
+            {"branch": "origin/codex/add-feat", "agent": "codex", "slug": "add-feat"},
+        ]
+        mock_obs.get_branch_stats.return_value = {
+            "commit_count": 2,
+            "files_changed": 3,
+            "review_iterations": 0,
+            "ci_failures": 0,
+            "time_to_merge_hours": None,
+        }
+        bridge._git_observer = mock_obs
+
+        try:
+            interactions = bridge.poll_branches()
+            assert len(interactions) == 2
+            assert interactions[0].counterparty == "claude"
+            assert interactions[1].counterparty == "codex"
+            assert interactions[0].metadata["source"] == "branch"
+            assert interactions[0].metadata["branch"] == "origin/claude/fix-bug"
+
+            # Second call should return nothing (already seen)
+            interactions2 = bridge.poll_branches()
+            assert len(interactions2) == 0
         finally:
             bridge.shutdown()
 

@@ -40,7 +40,7 @@ class GasTownMapper:
         commits = git_stats.get("commit_count", 0)
         if bead_state == "blocked":
             progress = -0.3
-        elif bead_state == "done":
+        elif bead_state in ("done", "closed"):
             progress = min(1.0, commits / 10.0) if commits > 0 else 0.5
         else:
             progress = min(1.0, commits / 10.0) if commits > 0 else 0.0
