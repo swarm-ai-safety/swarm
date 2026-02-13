@@ -1,5 +1,7 @@
 # High-Level Design Critique
 
+*Last updated: 2026-02-13*
+
 ## Strengths
 
 ### 1. Clean Separation of Concerns
@@ -14,70 +16,86 @@ Using `p ∈ [0,1]` instead of binary labels elegantly captures epistemic uncert
 ### 4. Configuration Objects (Strategy Pattern)
 `PayoffConfig`, `ProxyWeights`, `OrchestratorConfig` etc. make parameter sweeps and experiments easy. Pydantic validation catches misconfigurations early.
 
+### 5. Handler/Plugin Architecture *(new)*
+The `HandlerRegistry` provides clean plugin-style dispatch. Domain handlers (`MarketplaceHandler`, `MoltipediaHandler`, `MoltbookHandler`, `ScholarHandler`, `KernelOracleHandler`, `MemoryHandler`) register their owned action types, contribute observation fields, and hook into epoch/step lifecycle events. This is a significant improvement over the original monolithic design.
+
+### 6. Boundary Enforcement Infrastructure *(new)*
+The `swarm/boundaries/` subsystem (`FlowTracker`, `LeakageDetector`, `PolicyEngine`, permeability controls) provides principled information-flow enforcement. This enables security-instrumented sandboxing across all bridge integrations.
+
+### 7. Multi-Domain Bridge Ecosystem *(new)*
+The `swarm/bridges/` layer connects the core framework to concrete execution environments: `WorktreeBridge` (git worktree sandboxes), `GasTownBridge` (beads + git workspaces), `ClaudeCodeBridge`, `ConcordiaBridge`, `LiveSWEBridge`, and others. Each bridge maps domain-specific signals to `ProxyObservables` and produces `SoftInteraction` records, preserving the core abstraction while enabling diverse research domains.
+
 ---
 
 ## Design Concerns
 
-### 1. Orchestrator God Object
-The Orchestrator at ~1900 lines does too much:
-- Agent scheduling
-- Action execution
-- Payoff computation
-- Governance enforcement
-- Marketplace handling
-- Moltipedia/Moltbook domains
-- Boundary enforcement
-- Async coordination
-- Red-team support
+### 1. Orchestrator Decomposition — Partial *(was: God Object)*
+The Orchestrator has been reduced from ~1,900 lines to ~1,500 lines. Domain action handling has been extracted to registered handlers, and `InteractionFinalizer` and `ObservationBuilder` now own their respective concerns.
 
-This violates single responsibility.
+**What remains inline:**
+- 9 core action types handled directly in `_handle_core_action` (POST, REPLY, VOTE, PROPOSE/ACCEPT/REJECT_INTERACTION, CLAIM_TASK, SUBMIT_OUTPUT, NOOP)
+- Agent scheduling and eligibility logic
+- Ensemble action selection with majority voting
+- Pending interaction resolution
+- Adaptive governance updates
 
-**Recommendation**: Extract domain handlers further. While there are already `MarketplaceHandler`, `MoltipediaHandler`, etc., the Orchestrator still contains significant domain logic inline. Consider a cleaner plugin architecture where domain modules register themselves.
+**Recommendation**: Extract the remaining inline actions into `FeedHandler` (POST/REPLY/VOTE), `InteractionHandler` (PROPOSE/ACCEPT/REJECT), and `TaskHandler` (CLAIM/SUBMIT). Consider extracting scheduling into a `Scheduler` component.
 
-### 2. Mixed Dataclass/Pydantic Patterns
-`SoftInteraction` uses `@dataclass` while `PayoffConfig` uses `pydantic.BaseModel`. This inconsistency creates friction:
-- Dataclasses don't validate
-- Serialization patterns differ (`to_dict()` vs `model_dump()`)
+### 2. ~~Mixed Dataclass/Pydantic Patterns~~ — Resolved
+`SoftInteraction` has been migrated to `pydantic.BaseModel` with `@field_validator` constraints on `p ∈ [0,1]` and `v_hat ∈ [-1,1]`. All configuration classes use `BaseModel`. The remaining dataclass usage (e.g., `PayoffBreakdown`, domain-specific value objects) is intentional stratification: validated state uses Pydantic, lightweight data carriers use dataclasses.
 
-**Recommendation**: Standardize on Pydantic BaseModel with `frozen=True` for immutable data, or use attrs consistently.
+**Minor remaining issue**: `SoftInteraction.to_dict()` manually enumerates fields instead of delegating to `model_dump()`. This is a DRY violation but not architectural.
 
-### 3. ProxyComputer Weight Semantics Are Confusing
-The weights are named `task_progress`, `rework_penalty`, `verifier_penalty`, `engagement_signal` but `swarm/core/proxy.py:178` averages rejection and misuse into a single "verifier_signal". The name `verifier_penalty` is actually used for both rejection *and* misuse signals. This mismatch between naming and behavior will cause bugs when someone tries to tune weights.
+### 3. ProxyComputer Weight Semantics — Documented *(was: Confusing)*
+The dual-purpose `verifier_signal` that averages rejection and misuse signals is now explicitly documented with an inline comment at `swarm/core/proxy.py:184-185`. The naming mismatch is acknowledged as intentional. Renaming the weight to `verifier_composite_penalty` would improve clarity but is not a blocking issue.
 
-### 4. Observable Generator Abstraction Is Underused
-You have a nice `ObservableGenerator` interface but the `DefaultObservableGenerator` is trivial. The `_generate_observables` method in Orchestrator (`swarm/core/orchestrator.py:1086-1096`) is marked as "kept for backwards compatibility with subclasses that override this." This suggests the abstraction boundary isn't fully resolved.
+### 4. ~~Observable Generator Abstraction Is Underused~~ — Resolved
+`ObservableGenerator` is now a proper `@runtime_checkable` Protocol. `DefaultObservableGenerator` implements reputation-based modulation (agent type determines base signals; reputation feedback modulates signal quality). Domain-specific generators exist for Moltbook, Moltipedia, and Memory. The backwards-compatibility shim has been removed.
 
-### 5. Circular Dependency Risk in Metrics
-`SoftMetrics` depends on `SoftPayoffEngine` (`swarm/metrics/soft_metrics.py:21-28`). This means you can't compute metrics without a payoff engine, even for pure quality metrics like `average_quality()` that don't need payoffs. Consider splitting quality-only metrics from payoff-dependent metrics.
+### 5. SoftMetrics Depends on PayoffEngine — Accepted
+`SoftMetrics` still accepts an optional `SoftPayoffEngine`. Quality-only methods (`average_quality`, `quality_distribution`, `flag_uncertain`) do not use it; payoff-dependent methods (`conditional_loss_initiator`, `spread`) require it. This coupling is pragmatic — splitting into `QualityMetrics` and `PayoffMetrics` would add indirection for minimal benefit. Accepted as intentional design.
 
-### 6. Event Log Coupling
-Every component that emits events needs `self._emit_event()`. Handlers like `MoltipediaHandler` receive `emit_event` callbacks in constructors. This tightly couples logging to orchestration. Consider an event bus pattern for looser coupling.
+### 6. Event Log Coupling — Unchanged
+Handlers still receive `emit_event` callbacks in their constructors. No event bus or mediator pattern has been introduced. This tightly couples every domain handler to the logging interface.
 
-### 7. Missing Type Safety in Metadata
-`SoftInteraction.metadata: dict` and `Action.metadata: dict` are stringly-typed bags. This makes it hard to know what keys are expected where. Consider typed protocols or at minimum, documented key schemas.
+**Recommendation**: An event bus would decouple handlers from logging and enable cross-cutting concerns (audit trails, telemetry, replay) without constructor injection. The `WorktreeEvent` stream in `swarm/bridges/worktree/events.py` demonstrates the pattern — generalizing it to the core framework would be a clean improvement.
+
+### 7. Missing Type Safety in Metadata — Unchanged
+`SoftInteraction.metadata: dict` and `Event.payload: dict` remain untyped. Event factory functions add payload keys ad-hoc. No `TypedDict`, Protocol, or documented schema exists for expected keys.
+
+**Recommendation**: At minimum, define `TypedDict` schemas for common payload shapes (e.g., `InteractionPayload`, `GovernancePayload`). This prevents keying errors and improves IDE support.
 
 ---
 
 ## Architectural Questions
 
-### 1. Why separate `v_hat` and `p`?
-The proxy score `v_hat ∈ [-1, 1]` is only used to compute `p`. Why store it on `SoftInteraction`? If it's for debugging/analysis, that's fine, but the architecture doesn't make this intent clear.
+### 1. ~~Why separate `v_hat` and `p`?~~ — Answered
+Now clearly documented: `v_hat` is the raw proxy score in `[-1, +1]` suitable for auditing and analysis; `p` is the calibrated probability used for payoffs and metrics. Storing both on `SoftInteraction` supports research workflows that compare raw signals against calibrated decisions.
 
-### 2. Is the sigmoid calibration justified?
-`p = sigmoid(k * v_hat)` with default `k=2.0` is arbitrary. The calibration metrics exist but there's no evidence the sigmoid parameters were tuned against real data. For a research framework studying *miscalibration*, the default calibration should probably be identity or explicitly random.
+### 2. ~~Is the sigmoid calibration justified?~~ — Answered
+`swarm/core/sigmoid.py` documents the `k` parameter semantics (k=0 → always 0.5, k<2 → soft/uncertain, k=2 → moderate, k>2 → sharp/confident). The default `k=2.0` is explicitly labeled "moderate calibration" — appropriate for a research framework. Per-bridge `proxy_sigmoid_k` configuration allows experiments with different calibration sharpness. Utility functions `effective_uncertainty_band()` and `sigmoid_bounds()` support calibration analysis.
 
-### 3. Reputation delta formula is unclear
-`swarm/core/orchestrator.py:1136`: `rep_delta = (interaction.p - 0.5) - interaction.c_a` mixes quality signal with governance cost. Why subtract `c_a`? This couples reputation to governance in an implicit way that isn't documented in the payoff equations.
+### 3. Reputation Delta Formula — Unclear *(possibly refactored)*
+The original formula `rep_delta = (interaction.p - 0.5) - interaction.c_a` at the cited line no longer exists at that location. Reputation update logic appears to have been extracted (possibly into `InteractionFinalizer` or `swarm/governance/`). The coupling between reputation and governance cost should be documented wherever it now lives.
+
+---
+
+## Open Items
+
+These are the remaining actionable concerns, ordered by impact:
+
+| # | Concern | Severity | Effort |
+|---|---------|----------|--------|
+| 1 | Event log coupling (no event bus) | Medium | Medium |
+| 2 | Metadata/payload typing | Medium | Low |
+| 3 | Core actions still inline in Orchestrator | Low | Medium |
+| 4 | Reputation delta formula undocumented | Low | Low |
+| 5 | `SoftInteraction.to_dict()` doesn't use `model_dump()` | Low | Trivial |
 
 ---
 
 ## Summary
 
-This is a well-architected research framework with thoughtful abstractions for probabilistic safety analysis. The main issues are:
+The framework has matured significantly. The handler/plugin architecture, boundary enforcement subsystem, and multi-domain bridge ecosystem represent substantial architectural progress. Of the original 7 design concerns, 3 are fully resolved (#2 dataclass/pydantic, #4 observable generator, and implicitly #3 weight semantics via documentation). Two architectural questions are answered (#1 v_hat/p separation, #2 sigmoid calibration). The remaining concerns — event coupling, metadata typing, and further Orchestrator decomposition — are real but non-blocking, and represent incremental cleanup rather than structural issues.
 
-1. **Orchestrator needs decomposition** - Extract more logic into handlers/plugins
-2. **Inconsistent data modeling patterns** - Standardize on Pydantic or dataclasses
-3. **Some abstraction boundaries need cleanup** - Observable generator, weight semantics
-4. **Documentation of implicit design decisions** - Especially the reputation formula
-
-The core insight—using soft probabilistic labels to measure adverse selection and quality gaps—is sound and well-implemented.
+The core insight — using soft probabilistic labels to measure adverse selection and quality gaps — remains sound and is now battle-tested across multiple bridge integrations.
