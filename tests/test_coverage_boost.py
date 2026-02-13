@@ -1,6 +1,7 @@
 """Targeted tests to boost coverage for deceptive, opportunistic, and honest agents."""
 
 import random
+from typing import Any
 
 import pytest
 
@@ -21,7 +22,7 @@ pytestmark = pytest.mark.slow
 
 def obs(**kwargs) -> Observation:
     """Create a test observation with defaults."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "agent_state": AgentState(agent_id="test", reputation=0.5, resources=100.0),
         "current_epoch": 1,
         "current_step": 5,

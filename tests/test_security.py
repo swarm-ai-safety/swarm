@@ -1,6 +1,7 @@
 """Tests for security detection module."""
 
 from datetime import datetime, timedelta
+from typing import Optional
 
 import numpy as np
 import pytest
@@ -38,7 +39,7 @@ def create_interaction(
     r_b: float = 0.0,
     tool_misuse_flags: int = 0,
     verifier_rejections: int = 0,
-    timestamp: datetime = None,
+    timestamp: Optional[datetime] = None,
 ) -> SoftInteraction:
     """Create a test interaction."""
     return SoftInteraction(
@@ -61,7 +62,7 @@ def create_interaction(
 def create_injection_pattern(
     attacker: str,
     targets: list[str],
-    base_time: datetime = None,
+    base_time: Optional[datetime] = None,
 ) -> list[SoftInteraction]:
     """Create interactions that look like prompt injection attempts."""
     base = base_time or datetime.now()
@@ -84,7 +85,7 @@ def create_injection_pattern(
 def create_manipulation_pattern(
     manipulator: str,
     victims: list[str],
-    base_time: datetime = None,
+    base_time: Optional[datetime] = None,
 ) -> list[SoftInteraction]:
     """Create interactions that look like manipulation."""
     base = base_time or datetime.now()
@@ -111,7 +112,7 @@ def create_laundering_chain(
     intermediaries: list[str],
     destination: str,
     trust_scores: dict[str, float],
-    base_time: datetime = None,
+    base_time: Optional[datetime] = None,
 ) -> tuple[list[SoftInteraction], dict[str, float]]:
     """Create a chain of interactions that launders information."""
     base = base_time or datetime.now()
@@ -135,7 +136,7 @@ def create_laundering_chain(
 def create_contagion_chain(
     origin: str,
     chain_members: list[str],
-    base_time: datetime = None,
+    base_time: Optional[datetime] = None,
     interval_seconds: float = 10.0,
 ) -> list[SoftInteraction]:
     """Create a chain of low-quality interactions spreading rapidly."""

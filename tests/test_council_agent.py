@@ -1,5 +1,6 @@
 """Tests for the CouncilAgent."""
 
+from typing import Any
 from unittest.mock import MagicMock
 
 from swarm.agents.base import ActionType, Observation
@@ -40,7 +41,7 @@ def _make_observation(**kwargs) -> Observation:
         reputation=50.0,
         resources=100.0,
     )
-    defaults = {
+    defaults: dict[str, Any] = {
         "agent_state": agent_state,
         "current_epoch": 1,
         "current_step": 1,

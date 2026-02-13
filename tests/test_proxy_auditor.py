@@ -1,5 +1,6 @@
 """Tests for the CouncilProxyAuditor."""
 
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -32,7 +33,7 @@ def _make_council() -> Council:
 
 def _make_observables(**kwargs) -> ProxyObservables:
     """Create test observables."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "task_progress_delta": 0.5,
         "rework_count": 0,
         "verifier_rejections": 0,

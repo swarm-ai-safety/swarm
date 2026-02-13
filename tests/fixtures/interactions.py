@@ -3,7 +3,7 @@
 import random
 import uuid
 from datetime import datetime, timedelta
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from swarm.core.proxy import ProxyComputer, ProxyObservables
 from swarm.models.interaction import InteractionType, SoftInteraction
@@ -305,7 +305,7 @@ def generate_uncertain_batch(
 def generate_from_observables(
     observables_list: List[ProxyObservables],
     proxy_computer: Optional[ProxyComputer] = None,
-    acceptance_rule: Optional[callable] = None,
+    acceptance_rule: Optional[Callable[[float], bool]] = None,
     seed: Optional[int] = None,
 ) -> List[SoftInteraction]:
     """

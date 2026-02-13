@@ -7,6 +7,7 @@ observable extraction, and client pattern detection.
 import json
 import tempfile
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -253,8 +254,8 @@ class TestCapabilityTracker:
 class TestSelfEvolutionPolicy:
     """Tests for tool creation gating, circuit breaker, and divergence penalty."""
 
-    def _make_policy(self, **overrides) -> SelfEvolutionPolicy:
-        defaults = {
+    def _make_policy(self, **overrides: Any) -> SelfEvolutionPolicy:
+        defaults: dict[str, Any] = {
             "self_evolution_enabled": True,
             "self_evolution_max_growth_rate": 0.1,
             "self_evolution_max_tools": 5,
@@ -367,8 +368,8 @@ class TestSelfEvolutionPolicy:
 class TestObservableExtraction:
     """Tests for mapping trajectories to SWARM ProxyObservables."""
 
-    def _make_bridge(self, **gov_overrides) -> LiveSWEAgentBridge:
-        gov_defaults = {
+    def _make_bridge(self, **gov_overrides: Any) -> LiveSWEAgentBridge:
+        gov_defaults: dict[str, Any] = {
             "self_evolution_enabled": True,
             "self_evolution_tool_risk_threshold": 0.6,
         }

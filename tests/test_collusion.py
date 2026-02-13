@@ -1,6 +1,7 @@
 """Tests for collusion detection module."""
 
 from datetime import datetime, timedelta
+from typing import Optional
 
 import numpy as np
 import pytest
@@ -27,7 +28,7 @@ def create_interaction(
     tau: float = 0.0,
     c_a: float = 0.0,
     c_b: float = 0.0,
-    timestamp: datetime = None,
+    timestamp: Optional[datetime] = None,
 ) -> SoftInteraction:
     """Create a test interaction."""
     return SoftInteraction(
@@ -49,7 +50,7 @@ def create_collusion_pattern(
     count: int = 10,
     p_internal: float = 0.9,
     acceptance_rate: float = 1.0,
-    base_time: datetime = None,
+    base_time: Optional[datetime] = None,
     interval_seconds: float = 10.0,
 ) -> list[SoftInteraction]:
     """Create interactions that look like collusion."""

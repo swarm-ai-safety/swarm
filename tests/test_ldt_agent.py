@@ -1,6 +1,7 @@
 """Tests for the Logical Decision Theory (LDT) agent."""
 
 import random
+from typing import Any
 
 import pytest
 
@@ -16,7 +17,7 @@ from swarm.models.interaction import InteractionType, SoftInteraction
 
 def _obs(**kwargs) -> Observation:
     """Create a test observation with sensible defaults."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "agent_state": AgentState(
             agent_id="ldt_1", reputation=0.5, resources=100.0
         ),

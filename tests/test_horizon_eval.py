@@ -8,6 +8,8 @@ Verifies that SystemHorizonEvaluator correctly detects:
     - Temporal risk accumulation (harm acceleration)
 """
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -33,7 +35,7 @@ from tests.fixtures.horizon_fixtures import (
 
 def _default_evaluator(**overrides) -> SystemHorizonEvaluator:
     """Create evaluator with sensible test defaults."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "agent_horizon_steps": 1,
         "discount_factor": 0.95,
         "coherence_lag_max": 10,

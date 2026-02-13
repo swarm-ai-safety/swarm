@@ -1,5 +1,6 @@
 """Tests for the Prime Intellect bridge."""
 
+from typing import Any
 
 import pytest
 
@@ -39,9 +40,9 @@ from swarm.models.interaction import InteractionType, SoftInteraction
 # ---------------------------------------------------------------------------
 
 
-def _benign_interaction(**overrides) -> SoftInteraction:
+def _benign_interaction(**overrides: Any) -> SoftInteraction:
     """Create a benign interaction with high p."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "initiator": "agent_a",
         "counterparty": "agent_b",
         "interaction_type": InteractionType.COLLABORATION,
@@ -58,9 +59,9 @@ def _benign_interaction(**overrides) -> SoftInteraction:
     return SoftInteraction(**defaults)
 
 
-def _toxic_interaction(**overrides) -> SoftInteraction:
+def _toxic_interaction(**overrides: Any) -> SoftInteraction:
     """Create a toxic interaction with low p."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "initiator": "agent_a",
         "counterparty": "agent_b",
         "interaction_type": InteractionType.COLLABORATION,

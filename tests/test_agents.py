@@ -1,6 +1,7 @@
 """Tests for agent policies and behaviors."""
 
 import random
+from typing import Any
 
 import pytest
 
@@ -15,7 +16,7 @@ from swarm.models.interaction import InteractionType, SoftInteraction
 
 def create_test_observation(**kwargs) -> Observation:
     """Create a test observation with defaults."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "agent_state": AgentState(
             agent_id="test_agent", reputation=0.5, resources=100.0
         ),
