@@ -75,4 +75,4 @@ The alphabet-sort task is trivial. The dynamics around training it are not. RL o
 
 ---
 
-*Trained on Prime Intellect. Model: Qwen/Qwen3-30B-A3B-Instruct-2507. Environment: primeintellect/alphabet-sort. 100 steps, batch size 256, ~2h12m wall-clock on H100.*
+**Reproducibility:** Trained on Prime Intellect. Model: Qwen/Qwen3-30B-A3B-Instruct-2507. Environment: primeintellect/alphabet-sort. 100 steps, batch size 256, ~2h12m wall-clock on H100. Scenario config and scoring code are available in [the repo](https://github.com/swarm-ai-safety/swarm). Full eval logs are available on request.
