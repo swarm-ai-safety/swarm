@@ -131,6 +131,7 @@ nav:
   - Comparison: comparison.md
   - Blog:
     - blog/index.md
+    - "Two Eval Runs, One Model, 41% Apart": blog/two-eval-runs-one-model-41-percent-apart.md
     - Governance Mechanisms Taxonomy: blog/governance-mechanisms-taxonomy.md
     - GPT-4.1 Mini Plays the SWARM Economy: blog/gpt-41-mini-plays-the-swarm-economy.md
     - RL Training Lessons for Multi-Agent Governance: blog/rl-training-lessons-multi-agent-governance.md

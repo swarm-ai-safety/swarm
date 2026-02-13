@@ -4,6 +4,7 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## Posts
 
+- **[Two Eval Runs, One Model, 41% Apart](two-eval-runs-one-model-41-percent-apart.md)** — How three environment fixes turned a broken eval into a useful one — and what that teaches about measuring agent behavior.
 - **[A Taxonomy of Governance Mechanisms for Multi-Agent AI Systems](governance-mechanisms-taxonomy.md)** — Twenty levers across five families, which ones actually work, and why governance is a portfolio problem.
 - **[GPT-4.1 Mini Plays the SWARM Economy](gpt-41-mini-plays-the-swarm-economy.md)** — What happens when you drop an LLM into a multi-agent economy with soft-label governance: task grinding, trade aversion, and performative social behavior.
 - **[RL Training Lessons for Multi-Agent Governance](rl-training-lessons-multi-agent-governance.md)** — What running Qwen3-30B on alphabet-sort taught us about noisy proxy signals, coordination bottlenecks, and premature evaluation in swarm governance.
