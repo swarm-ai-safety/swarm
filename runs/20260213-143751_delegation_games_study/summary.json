@@ -1,0 +1,173 @@
+{
+  "study": "delegation_games",
+  "total_runs": 80,
+  "configs": 8,
+  "seeds_per_config": 10,
+  "pre_registered_seeds": [
+    42,
+    43,
+    44,
+    45,
+    46,
+    47,
+    48,
+    49,
+    50,
+    51
+  ],
+  "hypothesis_tests": [
+    {
+      "comparison": "tax 0.0 vs 0.05",
+      "metric": "welfare",
+      "group": "cb=True",
+      "mean_diff": 6.45,
+      "t_stat": 0.982,
+      "p_welch": 0.3416,
+      "U_stat": 61.0,
+      "p_mann_whitney": 0.42736,
+      "cohens_d": 0.439,
+      "bonferroni_significant": false,
+      "holm_significant": false
+    },
+    {
+      "comparison": "tax 0.0 vs 0.1",
+      "metric": "welfare",
+      "group": "cb=True",
+      "mean_diff": 11.05,
+      "t_stat": 1.883,
+      "p_welch": 0.07745,
+      "U_stat": 73.0,
+      "p_mann_whitney": 0.08897,
+      "cohens_d": 0.842,
+      "bonferroni_significant": false,
+      "holm_significant": false
+    },
+    {
+      "comparison": "tax 0.0 vs 0.15",
+      "metric": "welfare",
+      "group": "cb=True",
+      "mean_diff": 25.03,
+      "t_stat": 3.484,
+      "p_welch": 0.00363,
+      "U_stat": 87.0,
+      "p_mann_whitney": 0.0058,
+      "cohens_d": 1.558,
+      "bonferroni_significant": true,
+      "holm_significant": true
+    },
+    {
+      "comparison": "tax 0.05 vs 0.1",
+      "metric": "welfare",
+      "group": "cb=True",
+      "mean_diff": 4.6,
+      "t_stat": 0.63,
+      "p_welch": 0.53687,
+      "U_stat": 58.0,
+      "p_mann_whitney": 0.57075,
+      "cohens_d": 0.282,
+      "bonferroni_significant": false,
+      "holm_significant": false
+    },
+    {
+      "comparison": "tax 0.05 vs 0.15",
+      "metric": "welfare",
+      "group": "cb=True",
+      "mean_diff": 18.59,
+      "t_stat": 2.214,
+      "p_welch": 0.04018,
+      "U_stat": 76.0,
+      "p_mann_whitney": 0.0539,
+      "cohens_d": 0.99,
+      "bonferroni_significant": false,
+      "holm_significant": false
+    },
+    {
+      "comparison": "tax 0.1 vs 0.15",
+      "metric": "welfare",
+      "group": "cb=True",
+      "mean_diff": 13.99,
+      "t_stat": 1.78,
+      "p_welch": 0.09334,
+      "U_stat": 71.0,
+      "p_mann_whitney": 0.12122,
+      "cohens_d": 0.796,
+      "bonferroni_significant": false,
+      "holm_significant": false
+    },
+    {
+      "comparison": "CB on vs off",
+      "metric": "welfare",
+      "group": "pooled",
+      "mean_diff": 9.38,
+      "t_stat": 2.492,
+      "p_welch": 0.01488,
+      "cohens_d": 0.557,
+      "bonferroni_significant": false,
+      "holm_significant": false
+    },
+    {
+      "comparison": "CB on vs off",
+      "metric": "toxicity",
+      "group": "pooled",
+      "mean_diff": 0.00115,
+      "t_stat": 0.347,
+      "p_welch": 0.7295,
+      "cohens_d": 0.078,
+      "bonferroni_significant": false,
+      "holm_significant": false
+    }
+  ],
+  "normality": [
+    {
+      "config": "tax=0.0, cb=False",
+      "W": 0.8826,
+      "p": 0.1397,
+      "normal": true
+    },
+    {
+      "config": "tax=0.0, cb=True",
+      "W": 0.9453,
+      "p": 0.6136,
+      "normal": true
+    },
+    {
+      "config": "tax=0.05, cb=False",
+      "W": 0.9737,
+      "p": 0.9231,
+      "normal": true
+    },
+    {
+      "config": "tax=0.05, cb=True",
+      "W": 0.9063,
+      "p": 0.2563,
+      "normal": true
+    },
+    {
+      "config": "tax=0.1, cb=False",
+      "W": 0.9063,
+      "p": 0.2567,
+      "normal": true
+    },
+    {
+      "config": "tax=0.1, cb=True",
+      "W": 0.9194,
+      "p": 0.3516,
+      "normal": true
+    },
+    {
+      "config": "tax=0.15, cb=False",
+      "W": 0.9757,
+      "p": 0.938,
+      "normal": true
+    },
+    {
+      "config": "tax=0.15, cb=True",
+      "W": 0.9712,
+      "p": 0.9014,
+      "normal": true
+    }
+  ],
+  "bonferroni_alpha": 0.00625,
+  "bonferroni_survivors": 1,
+  "holm_survivors": 1
+}
