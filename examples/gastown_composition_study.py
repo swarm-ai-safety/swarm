@@ -3,16 +3,16 @@
 GasTown Workspace Composition Study
 
 Study how adversarial agent proportion affects a GasTown-style workspace,
-and whether governance levers (circuit breaker, collusion detection, staking,
-auditing) effectively contain the damage.
+and whether governance levers effectively contain the damage.
 
 Methodology:
   - Fix total population at 7 agents (matching gastown_workspace.yaml)
   - Sweep adversarial (rogue) proportion from 0 to 6 out of 7 agents
   - Remaining slots filled with honest agents
-  - Run each config under two governance regimes:
-    - "governed": circuit breaker + collusion detection + staking + auditing ON
+  - Run each config under three governance regimes:
     - "ungoverned": all governance levers OFF (baseline)
+    - "governed": circuit breaker + collusion detection + staking + auditing ON
+    - "refinery": Refinery quality gate only (reject p < 0.5, zero friction on accepted)
   - Use GasTown payoff parameters (s_plus=3, s_minus=1.5, h=2.5)
   - Run each configuration for 30 epochs, 10 steps/epoch, 3 seeds
   - Compare welfare, toxicity, adverse selection, and per-class payoffs
@@ -22,6 +22,7 @@ Safety questions studied:
   - How much damage do governance levers prevent?
   - Do honest agents maintain positive payoff under adversarial pressure?
   - Is there a critical threshold where governance can no longer contain rogues?
+  - Does the Refinery achieve most toxicity reduction at a fraction of welfare cost?
 
 Usage:
     python examples/gastown_composition_study.py
@@ -41,7 +42,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -62,16 +63,18 @@ from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 from swarm.core.payoff import PayoffConfig
 from swarm.governance.config import GovernanceConfig
 
-
 # ---------------------------------------------------------------------------
 # Experiment configuration
 # ---------------------------------------------------------------------------
+REGIMES = ("ungoverned", "governed", "refinery")
+
+
 @dataclass
 class CompositionConfig:
     """A single population composition to test."""
 
     label: str
-    regime: str  # "governed" or "ungoverned"
+    regime: str  # "ungoverned", "governed", or "refinery"
     n_honest: int
     n_opportunistic: int
     n_adversarial: int
@@ -180,11 +183,32 @@ def _ungoverned_config() -> GovernanceConfig:
     )
 
 
+def _refinery_config() -> GovernanceConfig:
+    """Refinery-only: deterministic quality gate, zero friction on accepted."""
+    return GovernanceConfig(
+        refinery_enabled=True,
+        refinery_p_threshold=0.5,
+        # Everything else off
+        reputation_decay_rate=1.0,
+        circuit_breaker_enabled=False,
+        audit_enabled=False,
+        staking_enabled=False,
+        collusion_detection_enabled=False,
+    )
+
+
+_REGIME_CONFIG = {
+    "ungoverned": _ungoverned_config,
+    "governed": _governed_config,
+    "refinery": _refinery_config,
+}
+
+
 # ---------------------------------------------------------------------------
 # Composition builder
 # ---------------------------------------------------------------------------
 def build_compositions(total_agents: int) -> List[CompositionConfig]:
-    """Build compositions for governed and ungoverned sweeps.
+    """Build compositions for all regime sweeps.
 
     Sweeps adversarial proportion from 0 to (total-1)/total.
     Keeps 1 opportunistic agent (the corner-cutter) when possible,
@@ -192,7 +216,7 @@ def build_compositions(total_agents: int) -> List[CompositionConfig]:
     """
     compositions: List[CompositionConfig] = []
 
-    for regime in ("governed", "ungoverned"):
+    for regime in REGIMES:
         for n_adversarial in range(total_agents):
             remaining = total_agents - n_adversarial
             # Keep 1 opportunistic when there's room for at least 2 non-adversarial
@@ -279,9 +303,7 @@ def run_single(
         w_rep=1.5,
     )
 
-    governance_config = (
-        _governed_config() if comp.regime == "governed" else _ungoverned_config()
-    )
+    governance_config = _REGIME_CONFIG[comp.regime]()
 
     orch_config = OrchestratorConfig(
         n_epochs=n_epochs,
@@ -376,9 +398,16 @@ DPI = 160
 COLORS = {
     "governed": "#4CAF50",      # green
     "ungoverned": "#F44336",    # red
+    "refinery": "#2196F3",      # blue
     "honest": "#2196F3",        # blue
     "opportunistic": "#FF9800", # orange
     "adversarial": "#9C27B0",   # purple
+}
+
+MARKERS = {
+    "governed": "s",
+    "ungoverned": "o",
+    "refinery": "D",
 }
 
 
@@ -394,32 +423,33 @@ def _style_ax(ax: plt.Axes, title: str, xlabel: str, ylabel: str) -> None:
 
 def _split_by_regime(
     aggs: List[AggResult],
-) -> Tuple[List[AggResult], List[AggResult]]:
-    """Split aggregated results into governed and ungoverned sweeps."""
-    gov = sorted([a for a in aggs if a.regime == "governed"], key=lambda a: a.rogue_pct)
-    ungov = sorted(
-        [a for a in aggs if a.regime == "ungoverned"], key=lambda a: a.rogue_pct
-    )
-    return gov, ungov
+) -> Dict[str, List[AggResult]]:
+    """Split aggregated results by regime."""
+    result: Dict[str, List[AggResult]] = {}
+    for regime in REGIMES:
+        result[regime] = sorted(
+            [a for a in aggs if a.regime == regime], key=lambda a: a.rogue_pct
+        )
+    return result
 
 
-# Plot 1: Welfare — governed vs ungoverned
+# Plot 1: Welfare — all regimes
 def plot_welfare_comparison(aggs: List[AggResult], out_dir: Path) -> Path:
-    """Dual-line: welfare vs rogue proportion (governed green, ungoverned red)."""
-    gov, ungov = _split_by_regime(aggs)
+    """Multi-line: welfare vs rogue proportion for all regimes."""
+    by_regime = _split_by_regime(aggs)
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    for data, color, label, marker in [
-        (gov, COLORS["governed"], "Governed", "s"),
-        (ungov, COLORS["ungoverned"], "Ungoverned", "o"),
-    ]:
+    for regime in REGIMES:
+        data = by_regime[regime]
+        if not data:
+            continue
         pcts = [a.rogue_pct * 100 for a in data]
         welfares = [a.welfare_total_mean for a in data]
         stds = [a.welfare_std * a.n_seeds for a in data]
         ax.errorbar(
             pcts, welfares, yerr=stds,
-            color=color, linewidth=2.5, marker=marker, markersize=8,
-            capsize=5, capthick=1.5, label=label, zorder=5,
+            color=COLORS[regime], linewidth=2.5, marker=MARKERS[regime], markersize=8,
+            capsize=5, capthick=1.5, label=regime.title(), zorder=5,
         )
 
     _style_ax(
@@ -437,23 +467,23 @@ def plot_welfare_comparison(aggs: List[AggResult], out_dir: Path) -> Path:
     return out
 
 
-# Plot 2: Toxicity — governed vs ungoverned
+# Plot 2: Toxicity — all regimes
 def plot_toxicity_comparison(aggs: List[AggResult], out_dir: Path) -> Path:
-    """Dual-line: toxicity vs rogue proportion."""
-    gov, ungov = _split_by_regime(aggs)
+    """Multi-line: toxicity vs rogue proportion."""
+    by_regime = _split_by_regime(aggs)
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    for data, color, label, marker in [
-        (gov, COLORS["governed"], "Governed", "s"),
-        (ungov, COLORS["ungoverned"], "Ungoverned", "o"),
-    ]:
+    for regime in REGIMES:
+        data = by_regime[regime]
+        if not data:
+            continue
         pcts = [a.rogue_pct * 100 for a in data]
         tox = [a.toxicity_mean for a in data]
         stds = [a.toxicity_std for a in data]
         ax.errorbar(
             pcts, tox, yerr=stds,
-            color=color, linewidth=2.5, marker=marker, markersize=8,
-            capsize=5, capthick=1.5, label=label, zorder=5,
+            color=COLORS[regime], linewidth=2.5, marker=MARKERS[regime], markersize=8,
+            capsize=5, capthick=1.5, label=regime.title(), zorder=5,
         )
 
     _style_ax(
@@ -472,35 +502,44 @@ def plot_toxicity_comparison(aggs: List[AggResult], out_dir: Path) -> Path:
     return out
 
 
-# Plot 3: Governance protection — welfare gap between governed and ungoverned
+# Plot 3: Governance protection — welfare/toxicity gap vs ungoverned baseline
 def plot_governance_protection(aggs: List[AggResult], out_dir: Path) -> Path:
-    """Bar chart: welfare gap (governed - ungoverned) at each rogue level."""
-    gov, ungov = _split_by_regime(aggs)
-    fig, ax = plt.subplots(figsize=(10, 6))
+    """Grouped bars: welfare gap and toxicity reduction vs ungoverned baseline."""
+    by_regime = _split_by_regime(aggs)
+    ungov_by_pct = {round(a.rogue_pct, 2): a for a in by_regime["ungoverned"]}
+    fig, ax = plt.subplots(figsize=(12, 6))
 
-    # Match by rogue_pct
-    gov_by_pct = {round(a.rogue_pct, 2): a for a in gov}
-    ungov_by_pct = {round(a.rogue_pct, 2): a for a in ungov}
-
-    pcts_matched = sorted(set(gov_by_pct.keys()) & set(ungov_by_pct.keys()))
-    welfare_gaps = []
-    toxicity_gaps = []
-    labels = []
-
-    for pct in pcts_matched:
-        g = gov_by_pct[pct]
-        u = ungov_by_pct[pct]
-        welfare_gaps.append(g.welfare_total_mean - u.welfare_total_mean)
-        toxicity_gaps.append(u.toxicity_mean - g.toxicity_mean)  # positive = governance helps
-        labels.append(f"{pct * 100:.0f}%")
-
+    compare_regimes = [r for r in REGIMES if r != "ungoverned"]
+    pcts_available = sorted(ungov_by_pct.keys())
+    labels = [f"{pct * 100:.0f}%" for pct in pcts_available]
     x = np.arange(len(labels))
-    width = 0.35
+    n_bars = len(compare_regimes) * 2  # welfare + toxicity per regime
+    total_width = 0.7
+    bar_width = total_width / n_bars
 
-    ax.bar(x - width / 2, welfare_gaps, width, label="Welfare gain",
-           color=COLORS["governed"], alpha=0.85)
-    ax.bar(x + width / 2, toxicity_gaps, width, label="Toxicity reduction",
-           color="#2196F3", alpha=0.85)
+    bar_idx = 0
+    for regime in compare_regimes:
+        regime_by_pct = {round(a.rogue_pct, 2): a for a in by_regime[regime]}
+        welfare_gaps = []
+        toxicity_gaps = []
+        for pct in pcts_available:
+            if pct in regime_by_pct:
+                g = regime_by_pct[pct]
+                u = ungov_by_pct[pct]
+                welfare_gaps.append(g.welfare_total_mean - u.welfare_total_mean)
+                toxicity_gaps.append(u.toxicity_mean - g.toxicity_mean)
+            else:
+                welfare_gaps.append(0.0)
+                toxicity_gaps.append(0.0)
+
+        offset_w = (bar_idx - n_bars / 2 + 0.5) * bar_width
+        offset_t = (bar_idx + 1 - n_bars / 2 + 0.5) * bar_width
+        ax.bar(x + offset_w, welfare_gaps, bar_width,
+               label=f"{regime.title()} welfare gain", color=COLORS[regime], alpha=0.85)
+        ax.bar(x + offset_t, toxicity_gaps, bar_width,
+               label=f"{regime.title()} tox. reduction", color=COLORS[regime], alpha=0.45,
+               hatch="//")
+        bar_idx += 2
 
     ax.axhline(y=0, color="gray", linestyle="-", linewidth=0.5)
     ax.set_xticks(x)
@@ -510,9 +549,9 @@ def plot_governance_protection(aggs: List[AggResult], out_dir: Path) -> Path:
         ax,
         "Governance Protection: Benefit Over Ungoverned Baseline",
         "Adversarial Agent Proportion",
-        "Governance Benefit (governed - ungoverned)",
+        "Benefit vs. Ungoverned",
     )
-    ax.legend(fontsize=10, loc="best")
+    ax.legend(fontsize=9, loc="best")
 
     out = out_dir / "gastown_governance_protection.png"
     fig.tight_layout()
@@ -523,20 +562,18 @@ def plot_governance_protection(aggs: List[AggResult], out_dir: Path) -> Path:
 
 # Plot 4: Per-class payoffs at key rogue levels
 def plot_payoff_breakdown(aggs: List[AggResult], out_dir: Path) -> Path:
-    """Grouped bars: per-class payoffs at 0%, ~28%, ~57%, ~85% rogue."""
-    gov, ungov = _split_by_regime(aggs)
+    """Grouped bars: per-class payoffs for all regimes."""
+    by_regime = _split_by_regime(aggs)
 
-    fig, axes = plt.subplots(1, 2, figsize=(16, 7), sharey=True)
+    fig, axes = plt.subplots(1, len(REGIMES), figsize=(8 * len(REGIMES), 7), sharey=True)
 
-    for ax, data, title_prefix in [
-        (axes[0], gov, "Governed"),
-        (axes[1], ungov, "Ungoverned"),
-    ]:
+    for ax, regime in zip(axes, REGIMES, strict=True):
+        data = by_regime[regime]
         if not data:
             continue
 
         labels = [f"{a.rogue_pct * 100:.0f}% rogue" for a in data]
-        x = np.arange(len(labels))
+        x_pos = np.arange(len(labels))
         width = 0.25
 
         bars_data = [
@@ -547,7 +584,7 @@ def plot_payoff_breakdown(aggs: List[AggResult], out_dir: Path) -> Path:
 
         for idx, (name, vals, color) in enumerate(bars_data):
             offset = (idx - 1) * width
-            bars = ax.bar(x + offset, vals, width, label=name, color=color, alpha=0.85)
+            bars = ax.bar(x_pos + offset, vals, width, label=name, color=color, alpha=0.85)
             for bar, val in zip(bars, vals, strict=True):
                 if val != 0.0:
                     ax.text(
@@ -557,10 +594,11 @@ def plot_payoff_breakdown(aggs: List[AggResult], out_dir: Path) -> Path:
                         ha="center", va="bottom", fontsize=7, fontweight="bold",
                     )
 
-        ax.set_xticks(x)
+        ax.set_xticks(x_pos)
         ax.set_xticklabels(labels, fontsize=9, rotation=15, ha="right")
-        ax.set_title(f"{title_prefix}: Per-Class Payoffs", fontsize=12, fontweight="bold")
-        ax.set_ylabel("Average Total Payoff" if ax == axes[0] else "", fontsize=11)
+        ax.set_title(f"{regime.title()}: Per-Class Payoffs", fontsize=12, fontweight="bold")
+        if ax == axes[0]:
+            ax.set_ylabel("Average Total Payoff", fontsize=11)
         ax.legend(fontsize=8, loc="best")
         ax.grid(True, alpha=0.3, linestyle="--", axis="y")
         ax.spines["top"].set_visible(False)
@@ -580,20 +618,20 @@ def plot_payoff_breakdown(aggs: List[AggResult], out_dir: Path) -> Path:
 
 # Plot 5: Adverse selection (quality gap)
 def plot_adverse_selection(aggs: List[AggResult], out_dir: Path) -> Path:
-    """Dual-line: quality gap vs rogue proportion."""
-    gov, ungov = _split_by_regime(aggs)
+    """Multi-line: quality gap vs rogue proportion."""
+    by_regime = _split_by_regime(aggs)
     fig, ax = plt.subplots(figsize=(10, 6))
 
-    for data, color, label, marker in [
-        (gov, COLORS["governed"], "Governed", "s"),
-        (ungov, COLORS["ungoverned"], "Ungoverned", "o"),
-    ]:
+    for regime in REGIMES:
+        data = by_regime[regime]
+        if not data:
+            continue
         pcts = [a.rogue_pct * 100 for a in data]
         qgaps = [a.quality_gap_mean for a in data]
         ax.plot(
             pcts, qgaps,
-            color=color, linewidth=2.5, marker=marker, markersize=8,
-            label=label, zorder=5,
+            color=COLORS[regime], linewidth=2.5, marker=MARKERS[regime], markersize=8,
+            label=regime.title(), zorder=5,
         )
 
     ax.axhline(y=0, color="gray", linestyle="--", linewidth=1, alpha=0.5)
@@ -705,13 +743,14 @@ def main() -> int:
 
     compositions = build_compositions(args.total_agents)
     seeds = list(range(42, 42 + args.seeds))
-    n_per_regime = len(compositions) // 2
+    n_per_regime = len(compositions) // len(REGIMES)
 
     print("=" * 70)
     print("GasTown Composition Study")
     print(f"  Agents: {args.total_agents}, Epochs: {args.epochs}, Steps/epoch: {args.steps}")
     print(f"  Seeds: {seeds}")
-    print(f"  Compositions: {len(compositions)} ({n_per_regime} governed + {n_per_regime} ungoverned)")
+    print(f"  Regimes: {len(REGIMES)} ({', '.join(REGIMES)})")
+    print(f"  Compositions: {len(compositions)} ({n_per_regime} per regime)")
     print(f"  Total runs: {len(compositions) * len(seeds)}")
     print("=" * 70)
 
@@ -759,46 +798,49 @@ def main() -> int:
         )
 
     # Key comparisons
-    gov = [a for a in aggs if a.regime == "governed"]
-    ungov = [a for a in aggs if a.regime == "ungoverned"]
+    by_regime: Dict[str, List[AggResult]] = {}
+    for regime in REGIMES:
+        by_regime[regime] = [a for a in aggs if a.regime == regime]
 
     print("\n" + "=" * 70)
     print("KEY FINDINGS")
     print("=" * 70)
 
-    # Compare peak welfare
-    if gov:
-        gov_peak = max(gov, key=lambda a: a.welfare_total_mean)
-        print(f"  Governed peak welfare: {gov_peak.label} "
-              f"(welfare={gov_peak.welfare_total_mean:.2f}, toxicity={gov_peak.toxicity_mean:.3f})")
-    if ungov:
-        ungov_peak = max(ungov, key=lambda a: a.welfare_total_mean)
-        print(f"  Ungoverned peak welfare: {ungov_peak.label} "
-              f"(welfare={ungov_peak.welfare_total_mean:.2f}, toxicity={ungov_peak.toxicity_mean:.3f})")
+    # Compare peak welfare per regime
+    for regime in REGIMES:
+        data = by_regime[regime]
+        if data:
+            peak = max(data, key=lambda a: a.welfare_total_mean)
+            print(f"  {regime.title()} peak welfare: {peak.label} "
+                  f"(welfare={peak.welfare_total_mean:.2f}, toxicity={peak.toxicity_mean:.3f})")
 
     # Find breakdown threshold: where toxicity exceeds 0.5
-    for regime_name, regime_data in [("Governed", gov), ("Ungoverned", ungov)]:
+    for regime in REGIMES:
+        data = by_regime[regime]
         breakdown = next(
-            (a for a in sorted(regime_data, key=lambda a: a.rogue_pct)
+            (a for a in sorted(data, key=lambda a: a.rogue_pct)
              if a.toxicity_mean > 0.5),
             None,
         )
         if breakdown:
-            print(f"  {regime_name} breakdown threshold: {breakdown.rogue_pct*100:.0f}% rogue "
+            print(f"  {regime.title()} breakdown threshold: {breakdown.rogue_pct*100:.0f}% rogue "
                   f"(toxicity={breakdown.toxicity_mean:.3f})")
         else:
-            print(f"  {regime_name}: toxicity never exceeds 0.5")
+            print(f"  {regime.title()}: toxicity never exceeds 0.5")
 
-    # Governance benefit at matching rogue levels
-    gov_by_pct = {round(a.rogue_pct, 2): a for a in gov}
-    ungov_by_pct = {round(a.rogue_pct, 2): a for a in ungov}
-    for pct in sorted(set(gov_by_pct.keys()) & set(ungov_by_pct.keys())):
-        g = gov_by_pct[pct]
-        u = ungov_by_pct[pct]
-        w_diff = g.welfare_total_mean - u.welfare_total_mean
-        t_diff = g.toxicity_mean - u.toxicity_mean
-        print(f"  At {pct*100:.0f}% rogue: governance welfare diff={w_diff:+.2f}, "
-              f"toxicity diff={t_diff:+.3f}")
+    # Compare all regimes vs ungoverned at matching rogue levels
+    ungov_by_pct = {round(a.rogue_pct, 2): a for a in by_regime["ungoverned"]}
+    for regime in REGIMES:
+        if regime == "ungoverned":
+            continue
+        regime_by_pct = {round(a.rogue_pct, 2): a for a in by_regime[regime]}
+        for pct in sorted(set(regime_by_pct.keys()) & set(ungov_by_pct.keys())):
+            g = regime_by_pct[pct]
+            u = ungov_by_pct[pct]
+            w_diff = g.welfare_total_mean - u.welfare_total_mean
+            t_diff = g.toxicity_mean - u.toxicity_mean
+            print(f"  At {pct*100:.0f}% rogue: {regime} welfare diff={w_diff:+.2f}, "
+                  f"toxicity diff={t_diff:+.3f}")
 
     # Generate plots
     print("\nGenerating plots...")
