@@ -20,7 +20,6 @@ from typing import TYPE_CHECKING, Dict, List, Optional
 
 from swarm.agents.base import (
     Action,
-    ActionType,
     BaseAgent,
     InteractionProposal,
     Observation,
@@ -86,7 +85,7 @@ class PolicyGradientState:
         """Running mean payoff (group baseline)."""
         if not self.payoff_history:
             return 0.0
-        return sum(self.payoff_history) / len(self.payoff_history)
+        return float(sum(self.payoff_history) / len(self.payoff_history))
 
     def advantage(self, payoff: float) -> float:
         """Advantage = payoff - baseline."""

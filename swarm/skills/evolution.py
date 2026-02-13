@@ -13,7 +13,7 @@ Core loop:
 """
 
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 from swarm.models.interaction import SoftInteraction
@@ -476,7 +476,7 @@ class SkillEvolutionEngine:
         std = variance ** 0.5
         # Guard against zero denominator (temperature=0 + constant payoffs)
         denom = std + max(1e-8, self.config.grpo_temperature)
-        return (payoff - mean) / denom
+        return float((payoff - mean) / denom)
 
     # ------------------------------------------------------------------
     # Recursive skill evolution (validation-failure refinement)

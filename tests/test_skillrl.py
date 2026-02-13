@@ -16,11 +16,10 @@ from swarm.agents.skillrl_agent import PolicyGradientState, SkillRLAgent
 from swarm.models.agent import AgentState, AgentType
 from swarm.models.interaction import InteractionType, SoftInteraction
 from swarm.skills.evolution import EvolutionConfig, SkillEvolutionEngine
-from swarm.skills.library import SkillLibrary, SkillLibraryConfig
+from swarm.skills.library import SkillLibrary
 from swarm.skills.model import (
     Skill,
     SkillDomain,
-    SkillPerformance,
     SkillTier,
     SkillType,
 )
