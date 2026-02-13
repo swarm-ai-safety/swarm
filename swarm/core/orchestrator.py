@@ -2,7 +2,6 @@
 
 import asyncio
 import random
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -126,9 +125,10 @@ class OrchestratorConfig(BaseModel):
     observation_noise_std: float = 0.0
 
 
-@dataclass
-class EpochMetrics:
+class EpochMetrics(BaseModel):
     """Metrics collected at the end of each epoch."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     epoch: int = 0
     total_interactions: int = 0
@@ -513,7 +513,7 @@ class Orchestrator:
                 event_type=EventType.SIMULATION_ENDED,
                 payload={
                     "total_epochs": self.config.n_epochs,
-                    "final_metrics": self._epoch_metrics[-1].__dict__
+                    "final_metrics": self._epoch_metrics[-1].model_dump()
                     if self._epoch_metrics
                     else {},
                 },
@@ -564,7 +564,7 @@ class Orchestrator:
         self._emit_event(
             Event(
                 event_type=EventType.EPOCH_COMPLETED,
-                payload=metrics.__dict__,
+                payload=metrics.model_dump(),
                 epoch=epoch_start,
             )
         )
@@ -1270,7 +1270,7 @@ class Orchestrator:
                 event_type=EventType.SIMULATION_ENDED,
                 payload={
                     "total_epochs": self.config.n_epochs,
-                    "final_metrics": self._epoch_metrics[-1].__dict__
+                    "final_metrics": self._epoch_metrics[-1].model_dump()
                     if self._epoch_metrics
                     else {},
                 },

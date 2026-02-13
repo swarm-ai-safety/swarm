@@ -1,10 +1,11 @@
 """Soft interaction data model with probabilistic labels."""
 
 import uuid
-from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+
+from pydantic import BaseModel, Field, field_validator
 
 
 class InteractionType(Enum):
@@ -16,8 +17,7 @@ class InteractionType(Enum):
     COLLABORATION = "collaboration"
 
 
-@dataclass
-class SoftInteraction:
+class SoftInteraction(BaseModel):
     """
     An interaction between two agents with soft (probabilistic) labels.
 
@@ -26,8 +26,8 @@ class SoftInteraction:
     """
 
     # Identity
-    interaction_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: datetime = field(default_factory=datetime.now)
+    interaction_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    timestamp: datetime = Field(default_factory=datetime.now)
 
     # Parties
     initiator: str = ""
@@ -59,7 +59,21 @@ class SoftInteraction:
     ground_truth: Optional[int] = None  # +1 or -1 if known
 
     # Optional metadata for domain-specific interactions
-    metadata: dict = field(default_factory=dict)
+    metadata: dict = Field(default_factory=dict)
+
+    @field_validator('p')
+    @classmethod
+    def p_must_be_probability(cls, v: float) -> float:
+        if not (0.0 <= v <= 1.0):
+            raise ValueError(f'p must be in [0, 1], got {v}')
+        return v
+
+    @field_validator('v_hat')
+    @classmethod
+    def v_hat_must_be_bounded(cls, v: float) -> float:
+        if not (-1.0 <= v <= 1.0):
+            raise ValueError(f'v_hat must be in [-1, 1], got {v}')
+        return v
 
     def is_high_quality(self, threshold: float = 0.5) -> bool:
         """Check if interaction is above quality threshold."""

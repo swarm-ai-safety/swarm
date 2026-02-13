@@ -1,10 +1,11 @@
 """Event schema for append-only logging."""
 
 import uuid
-from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+
+from pydantic import BaseModel, Field
 
 
 class EventType(Enum):
@@ -98,17 +99,16 @@ class EventType(Enum):
     EPOCH_COMPLETED = "epoch_completed"
 
 
-@dataclass
-class Event:
+class Event(BaseModel):
     """
-    An immutable event for the append-only log.
+    An event for the append-only log.
 
     Events capture state changes and can be replayed to reconstruct
     the full history of a simulation.
     """
 
-    event_id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    timestamp: datetime = field(default_factory=datetime.now)
+    event_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    timestamp: datetime = Field(default_factory=datetime.now)
     event_type: EventType = EventType.INTERACTION_PROPOSED
 
     # References to related entities
@@ -118,7 +118,7 @@ class Event:
     counterparty_id: Optional[str] = None
 
     # Event payload (flexible structure)
-    payload: dict = field(default_factory=dict)
+    payload: dict = Field(default_factory=dict)
 
     # Metadata
     epoch: Optional[int] = None

@@ -1,8 +1,9 @@
 """Agent type and state models."""
 
-from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
+
+from pydantic import BaseModel, ConfigDict, model_validator
 
 
 class AgentType(Enum):
@@ -22,13 +23,14 @@ class AgentStatus(Enum):
     FROZEN = "frozen"
 
 
-@dataclass
-class AgentState:
+class AgentState(BaseModel):
     """
     Current state of an agent in the simulation.
 
     Tracks reputation, resources, and behavioral statistics.
     """
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     agent_id: str = ""
     name: Optional[str] = None
@@ -56,10 +58,12 @@ class AgentState:
     # Optional: hidden type for deceptive agents
     true_type: Optional[AgentType] = None
 
-    def __post_init__(self) -> None:
+    @model_validator(mode='after')
+    def _default_name(self) -> 'AgentState':
         """Default name to agent_id when not provided."""
         if self.name is None or self.name == "":
             self.name = self.agent_id
+        return self
 
     def update_reputation(self, delta: float) -> None:
         """Update reputation by delta amount."""

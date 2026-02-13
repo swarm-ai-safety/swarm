@@ -6,22 +6,22 @@ All handlers share a common pattern:
 - Dispatch agent actions via ``handle_action``
 - Build per-agent observation fields via ``build_observation_fields``
 
-The ``HandlerActionResult`` dataclass provides a unified return type that
+The ``HandlerActionResult`` model provides a unified return type that
 the orchestrator uses for proxy computation and interaction finalization.
 """
 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, FrozenSet, Optional
+
+from pydantic import BaseModel, ConfigDict, Field
 
 from swarm.models.events import Event
 from swarm.models.interaction import InteractionType
 
 
-@dataclass
-class HandlerActionResult:
+class HandlerActionResult(BaseModel):
     """Unified result type for all handler actions.
 
     All handlers return this from ``handle_action()``.  The orchestrator
@@ -33,11 +33,13 @@ class HandlerActionResult:
     finalization).
     """
 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     success: bool
     observables: Optional[Any] = None  # ProxyObservables when set
     initiator_id: str = ""
     counterparty_id: str = ""
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
     accepted: bool = True
 
     # What InteractionType to use for the SoftInteraction
