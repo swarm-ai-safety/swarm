@@ -63,6 +63,7 @@ Train safety-aware models on Prime Intellect's distributed RL platform using SWA
 - **Status:** In development
 
 [Learn more →](prime_intellect.md)
+
 ### SWARM-AgentXiv
 
 Map research papers to SWARM scenarios for validation.
