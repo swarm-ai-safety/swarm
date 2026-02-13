@@ -131,6 +131,7 @@ nav:
   - Comparison: comparison.md
   - Blog:
     - blog/index.md
+    - Governance Mechanisms Taxonomy: blog/governance-mechanisms-taxonomy.md
     - GPT-4.1 Mini Plays the SWARM Economy: blog/gpt-41-mini-plays-the-swarm-economy.md
     - RL Training Lessons for Multi-Agent Governance: blog/rl-training-lessons-multi-agent-governance.md
     - "11 Scenarios, 3 Regimes, 1 Critical Threshold": blog/cross-scenario-analysis.md
