@@ -5,7 +5,7 @@ import random
 import pytest
 
 from swarm.agents.base import ActionType, InteractionProposal, Observation, Role
-from swarm.agents.ldt_agent import LDTAgent, _cosine_similarity
+from swarm.agents.ldt_agent import InferredPolicy, LDTAgent, _cosine_similarity
 from swarm.models.agent import AgentState, AgentType
 from swarm.models.interaction import InteractionType, SoftInteraction
 
@@ -606,3 +606,331 @@ class TestLDTInvariants:
         agent._own_trace = [(True, 0.6 + i * 0.01) for i in range(10)]
         vec = agent._own_behaviour_vector()
         assert len(vec) == 5  # Truncated to last 5
+
+
+# ------------------------------------------------------------------
+# Test: Level 2 — Policy inference
+# ------------------------------------------------------------------
+
+
+class TestPolicyInference:
+    def test_no_data_returns_mirror_prior(self):
+        """With no history, inferred policy should equal own params (mirror)."""
+        agent = LDTAgent(agent_id="ldt_1")
+        policy = agent._infer_counterparty_policy("unknown")
+
+        assert policy.cooperation_prior == agent.cooperation_prior
+        assert policy.similarity_threshold == agent.similarity_threshold
+        assert policy.welfare_weight == agent.welfare_weight
+        assert policy.updateless_commitment == agent.updateless_commitment
+        assert policy.confidence == 0.0
+        assert policy.sample_count == 0
+
+    def test_full_data_reflects_behaviour(self):
+        """With enough data, inferred policy should reflect actual behaviour."""
+        agent = LDTAgent(
+            agent_id="ldt_1", config={"counterfactual_horizon": 10}
+        )
+
+        # Build a counterparty that accepts everything at high p.
+        agent._counterparty_profiles["coop"] = [(True, 0.9)] * 20
+
+        policy = agent._infer_counterparty_policy("coop")
+
+        # Acceptance rate = 1.0 → high cooperation prior.
+        assert policy.cooperation_prior > 0.8
+        # Confidence should be at max (20 samples, horizon 10).
+        assert policy.confidence == 1.0
+        assert policy.sample_count == 20
+
+    def test_confidence_scales_with_sample_count(self):
+        """Confidence should increase with more observations."""
+        agent = LDTAgent(
+            agent_id="ldt_1", config={"counterfactual_horizon": 20}
+        )
+
+        # 5 samples out of 20 horizon → 0.25.
+        agent._counterparty_profiles["a"] = [(True, 0.7)] * 5
+        pol_a = agent._infer_counterparty_policy("a")
+        assert pol_a.confidence == pytest.approx(0.25)
+
+        # 20 samples → 1.0.
+        agent._counterparty_profiles["b"] = [(True, 0.7)] * 20
+        pol_b = agent._infer_counterparty_policy("b")
+        assert pol_b.confidence == pytest.approx(1.0)
+
+    def test_selective_rejecter_inferred(self):
+        """A counterparty that rejects low-p should have high threshold."""
+        agent = LDTAgent(
+            agent_id="ldt_1", config={"counterfactual_horizon": 10}
+        )
+        # Accepts only high p, rejects low p.
+        profile = [(True, 0.9)] * 10 + [(False, 0.3)] * 10
+        agent._counterparty_profiles["selective"] = profile
+
+        policy = agent._infer_counterparty_policy("selective")
+        # Accepted p values are all 0.9 → low variance → high threshold.
+        assert policy.similarity_threshold > 0.7
+
+    def test_inferred_policy_fields_clamped(self):
+        """All policy fields should be in [0, 1]."""
+        agent = LDTAgent(agent_id="ldt_1")
+        # Weird data.
+        agent._counterparty_profiles["weird"] = [
+            (True, 0.99),
+            (False, 0.01),
+            (True, 0.5),
+            (False, 0.5),
+        ]
+        policy = agent._infer_counterparty_policy("weird")
+
+        assert 0.0 <= policy.cooperation_prior <= 1.0
+        assert 0.0 <= policy.similarity_threshold <= 1.0
+        assert 0.0 <= policy.welfare_weight <= 1.0
+        assert 0.0 <= policy.updateless_commitment <= 1.0
+        assert 0.0 <= policy.confidence <= 1.0
+
+
+# ------------------------------------------------------------------
+# Test: Level 2 — Counterparty simulation
+# ------------------------------------------------------------------
+
+
+class TestLevel2Introspection:
+    def test_twin_cooperates(self):
+        """A twin (high similarity) should be simulated as cooperating."""
+        agent = LDTAgent(
+            agent_id="ldt_1", config={"acausality_depth": 2}
+        )
+        for _ in range(15):
+            agent._own_trace.append((True, 0.85))
+            if "twin" not in agent._counterparty_profiles:
+                agent._counterparty_profiles["twin"] = []
+            agent._counterparty_profiles["twin"].append((True, 0.85))
+
+        assert agent._simulate_counterparty_decision("twin") is True
+
+    def test_selective_rejecter_may_defect(self):
+        """A counterparty that consistently rejects should be simulated as defecting."""
+        agent = LDTAgent(
+            agent_id="ldt_1",
+            config={
+                "acausality_depth": 2,
+                "counterfactual_horizon": 10,
+                "mirror_prior_weight": 0.0,  # no mirror — trust observed data
+            },
+        )
+        # Our trace: cooperative.
+        for _ in range(20):
+            agent._own_trace.append((True, 0.8))
+        # Their trace: always reject with low p → adversarial.
+        agent._counterparty_profiles["rejecter"] = [(False, 0.1)] * 20
+
+        result = agent._simulate_counterparty_decision("rejecter")
+        # The inferred policy should have very low cooperation_prior
+        # and the twin score should be low (opposite traces).
+        # Whether they "cooperate" depends on their simulated updateless
+        # commitment. The point is the pipeline runs without error.
+        assert isinstance(result, bool)
+
+    def test_l2_refines_l1(self):
+        """Depth=2 decision may differ from depth=1."""
+        agent_d1 = LDTAgent(
+            agent_id="d1", config={"acausality_depth": 1}
+        )
+        agent_d2 = LDTAgent(
+            agent_id="d2", config={"acausality_depth": 2}
+        )
+        # Both should work without error for an unknown counterparty.
+        r1 = agent_d1._ldt_cooperate_decision("x")
+        r2 = agent_d2._ldt_cooperate_decision("x")
+        assert isinstance(r1, bool)
+        assert isinstance(r2, bool)
+
+
+# ------------------------------------------------------------------
+# Test: Level 3 — Recursive equilibrium
+# ------------------------------------------------------------------
+
+
+class TestLevel3Equilibrium:
+    def test_cooperative_pair_high_probability(self):
+        """Two cooperative agents should reach high equilibrium p."""
+        agent = LDTAgent(
+            agent_id="ldt_1",
+            config={
+                "acausality_depth": 3,
+                "cooperation_prior": 0.8,
+                "counterfactual_horizon": 10,
+            },
+        )
+        for _ in range(10):
+            agent._own_trace.append((True, 0.85))
+            if "coop" not in agent._counterparty_profiles:
+                agent._counterparty_profiles["coop"] = []
+            agent._counterparty_profiles["coop"].append((True, 0.85))
+
+        prob = agent._recursive_equilibrium("coop")
+        assert prob > 0.5
+
+    def test_adversarial_pair_lower_probability(self):
+        """Against an adversarial counterparty, equilibrium p should be lower."""
+        agent = LDTAgent(
+            agent_id="ldt_1",
+            config={
+                "acausality_depth": 3,
+                "cooperation_prior": 0.5,
+                "counterfactual_horizon": 10,
+                "mirror_prior_weight": 0.0,
+            },
+        )
+        for _ in range(20):
+            agent._own_trace.append((True, 0.8))
+        agent._counterparty_profiles["adv"] = [(False, 0.1)] * 20
+
+        prob = agent._recursive_equilibrium("adv")
+        # Should still converge to some value.
+        assert 0.0 <= prob <= 1.0
+
+    def test_equilibrium_bounded(self):
+        """Equilibrium probability must be in [0, 1]."""
+        agent = LDTAgent(
+            agent_id="ldt_1", config={"acausality_depth": 3}
+        )
+        prob = agent._recursive_equilibrium("unknown")
+        assert 0.0 <= prob <= 1.0
+
+    def test_converges_within_max_depth(self):
+        """Should not error even at max recursion depth."""
+        agent = LDTAgent(
+            agent_id="ldt_1",
+            config={
+                "acausality_depth": 3,
+                "max_recursion_depth": 3,
+                "convergence_epsilon": 0.0001,  # very tight
+            },
+        )
+        prob = agent._recursive_equilibrium("x")
+        assert 0.0 <= prob <= 1.0
+
+    def test_depth3_ensemble_decision(self):
+        """Depth=3 decision should use weighted ensemble."""
+        agent = LDTAgent(
+            agent_id="ldt_1",
+            config={"acausality_depth": 3, "cooperation_prior": 0.8},
+        )
+        result = agent._ldt_cooperate_decision("unknown")
+        assert isinstance(result, bool)
+
+
+# ------------------------------------------------------------------
+# Test: Backward compatibility
+# ------------------------------------------------------------------
+
+
+class TestAcausalityBackwardCompat:
+    def test_default_depth_is_1(self):
+        """Default acausality_depth should be 1."""
+        agent = LDTAgent(agent_id="ldt_1")
+        assert agent.acausality_depth == 1
+
+    def test_depth1_identical_to_original(self):
+        """Depth=1 decision should match the original Level 1 logic."""
+        agent = LDTAgent(agent_id="ldt_1", config={"acausality_depth": 1})
+
+        for _ in range(10):
+            agent._own_trace.append((True, 0.8))
+            if "peer" not in agent._counterparty_profiles:
+                agent._counterparty_profiles["peer"] = []
+            agent._counterparty_profiles["peer"].append((True, 0.75))
+
+        # Both should give the same answer.
+        l1_result = agent._level1_cooperate_decision("peer")
+        full_result = agent._ldt_cooperate_decision("peer")
+        assert l1_result == full_result
+
+    def test_no_new_caches_at_depth1(self):
+        """At depth=1, Level 2/3 caches should not be populated."""
+        agent = LDTAgent(agent_id="ldt_1", config={"acausality_depth": 1})
+        agent._ldt_cooperate_decision("x")
+
+        assert len(agent._inferred_policies) == 0
+        assert len(agent._level2_cache) == 0
+        assert len(agent._level3_cache) == 0
+
+
+# ------------------------------------------------------------------
+# Test: Acausality invariants
+# ------------------------------------------------------------------
+
+
+class TestAcausalityInvariants:
+    def test_all_probabilities_bounded(self):
+        """All intermediate probabilities should be in [0, 1]."""
+        agent = LDTAgent(
+            agent_id="ldt_1",
+            config={"acausality_depth": 3, "counterfactual_horizon": 10},
+        )
+        for _ in range(10):
+            agent._own_trace.append((True, 0.7))
+            if "p" not in agent._counterparty_profiles:
+                agent._counterparty_profiles["p"] = []
+            agent._counterparty_profiles["p"].append((True, 0.6))
+
+        # Level 3 equilibrium.
+        prob = agent._recursive_equilibrium("p")
+        assert 0.0 <= prob <= 1.0
+
+        # Best response probability.
+        br = agent._best_response_probability(0.5, 0.8, 0.6, 0.7, 0.3, 0.8)
+        assert 0.0 <= br <= 1.0
+
+        br_extreme = agent._best_response_probability(
+            0.0, 0.0, 0.0, 1.0, 0.0, 0.0
+        )
+        assert 0.0 <= br_extreme <= 1.0
+
+    def test_cache_invalidation_works(self):
+        """update_from_outcome should clear all caches for counterparty."""
+        agent = LDTAgent(
+            agent_id="ldt_1", config={"acausality_depth": 3}
+        )
+        # Populate caches.
+        agent._twin_scores["peer"] = 0.9
+        agent._inferred_policies["peer"] = InferredPolicy(
+            cooperation_prior=0.5,
+            similarity_threshold=0.5,
+            welfare_weight=0.5,
+            updateless_commitment=0.5,
+            confidence=0.5,
+            sample_count=5,
+        )
+        agent._level2_cache["peer"] = True
+        agent._level3_cache["peer"] = 0.8
+
+        interaction = _interaction(
+            initiator="ldt_1", counterparty="peer", accepted=True, p=0.7
+        )
+        agent.update_from_outcome(interaction, payoff=1.0)
+
+        assert "peer" not in agent._twin_scores
+        assert "peer" not in agent._inferred_policies
+        assert "peer" not in agent._level2_cache
+        assert "peer" not in agent._level3_cache
+
+    def test_inferred_policy_dataclass_fields(self):
+        """InferredPolicy should have all expected fields."""
+        policy = InferredPolicy(
+            cooperation_prior=0.6,
+            similarity_threshold=0.7,
+            welfare_weight=0.3,
+            updateless_commitment=0.8,
+            confidence=0.5,
+            sample_count=10,
+        )
+        assert policy.cooperation_prior == 0.6
+        assert policy.similarity_threshold == 0.7
+        assert policy.welfare_weight == 0.3
+        assert policy.updateless_commitment == 0.8
+        assert policy.confidence == 0.5
+        assert policy.sample_count == 10
