@@ -3,6 +3,7 @@
 %
 % Placeholders:
 %   %TITLE%           — Paper title (can use \\ for line breaks)
+%   %AUTHOR%          — Author name (from $SWARM_AUTHOR or git config user.name)
 %   %ABSTRACT%        — Abstract text
 %   %BODY%            — All sections after abstract
 %
@@ -24,7 +25,7 @@
 \usepackage{verbatim}
 
 \title{%TITLE%}
-\author{Raeli Savitt}
+\author{%AUTHOR%}
 \date{February 2026}
 
 \begin{document}

@@ -29,7 +29,7 @@ Examples:
 ```markdown
 # <Title from slug, title-cased>
 
-**Authors:** <from git config user.name>
+**Authors:** <resolve from $SWARM_AUTHOR, then git config user.name, then ask user>
 **Date:** <today>
 **Framework:** SWARM v<from pyproject.toml>
 

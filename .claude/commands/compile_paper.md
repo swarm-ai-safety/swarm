@@ -44,7 +44,12 @@ If the `.tex` file does not exist or the `.md` is newer:
    - `%` → `\%`, `_` in prose → `\_`
 4. Write `docs/papers/<slug>.tex`
 
-Use the template preamble exactly. Replace `%TITLE%`, `%ABSTRACT%`, and `%BODY%` placeholders with converted content.
+Use the template preamble exactly. Replace `%TITLE%`, `%AUTHOR%`, `%ABSTRACT%`, and `%BODY%` placeholders with converted content.
+
+For `%AUTHOR%`, resolve in order:
+1. `$SWARM_AUTHOR` environment variable
+2. `git config user.name`
+3. Ask the user (do not guess from OS username)
 
 ### Step 3: Compile
 

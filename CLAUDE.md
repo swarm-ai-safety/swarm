@@ -135,6 +135,16 @@ Each session pane has these env vars set via `scripts/detect-session.sh`:
 
 Use `bd --sandbox` in worktrees to avoid contention with the main repo's beads daemon. The `/commit_push` command does this automatically.
 
+## Paper Author Resolution
+
+When `/write_paper` or `/compile_paper` needs an author name, resolve in this order:
+
+1. `$SWARM_AUTHOR` environment variable (if set)
+2. `git config user.name` (if set)
+3. Prompt the user
+
+Never guess or infer from the OS username.
+
 ## Safety / invariants (do not break)
 
 - `p` must remain in `[0, 1]` everywhere it is surfaced or logged.
