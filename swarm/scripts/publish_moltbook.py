@@ -94,8 +94,9 @@ def _deobfuscate(text: str) -> str:
     """Remove injected punctuation and filler words."""
     # Remove known injected punctuation chars (from Moltbook ChallengeGenerator)
     cleaned = re.sub(r'[\^/~|\]}<*+\[\]\\]', '', text)
-    # Remove standalone dashes between words (injected separators)
+    # Remove dashes used as injected separators (between spaces or at word boundaries)
     cleaned = re.sub(r'(?<=\s)-(?=\s)', '', cleaned)
+    cleaned = re.sub(r'(?<=[a-zA-Z])-(?=\s)', '', cleaned)
     # Also remove stray periods that appear in obfuscated text
     cleaned = re.sub(r'(?<=[a-zA-Z])\.(?=[a-zA-Z])', '', cleaned)
     # Remove filler words
@@ -149,8 +150,8 @@ def _detect_operation(text: str) -> str:
         return "divide"
     if "remain" in collapsed or "lose" in collapsed or "left" in collapsed:
         return "subtract"
-    # "each" is a strong multiply signal — check before addition keywords
-    if "each" in collapsed:
+    # Explicit multiply keywords — check before addition keywords
+    if "each" in collapsed or "multiply" in collapsed or "product" in collapsed:
         return "multiply"
     if any(kw in collapsed for kw in (
         "ads", "sum", "combined", "together", "plus", "total",
