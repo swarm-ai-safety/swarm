@@ -330,7 +330,7 @@ class LLMAgent(BaseAgent):
             ),
         )
 
-        text = response.choices[0].message.content
+        text = response.choices[0].message.content or ""
         input_tokens = response.usage.prompt_tokens if response.usage else 0
         output_tokens = response.usage.completion_tokens if response.usage else 0
 
