@@ -86,52 +86,20 @@ class SoftInteraction(BaseModel):
         return 0.5 - band < self.p < 0.5 + band
 
     def to_dict(self) -> dict:
-        """Convert to dictionary for serialization."""
-        return {
-            "interaction_id": self.interaction_id,
-            "timestamp": self.timestamp.isoformat(),
-            "initiator": self.initiator,
-            "counterparty": self.counterparty,
-            "interaction_type": self.interaction_type.value,
-            "accepted": self.accepted,
-            "task_progress_delta": self.task_progress_delta,
-            "rework_count": self.rework_count,
-            "verifier_rejections": self.verifier_rejections,
-            "tool_misuse_flags": self.tool_misuse_flags,
-            "counterparty_engagement_delta": self.counterparty_engagement_delta,
-            "v_hat": self.v_hat,
-            "p": self.p,
-            "tau": self.tau,
-            "c_a": self.c_a,
-            "c_b": self.c_b,
-            "r_a": self.r_a,
-            "r_b": self.r_b,
-            "ground_truth": self.ground_truth,
-            "metadata": self.metadata,
-        }
+        """Convert to dictionary for serialization.
+
+        Delegates to Pydantic's ``model_dump(mode='json')`` which handles
+        datetime -> ISO-8601 string and Enum -> value conversions automatically.
+        """
+        result: dict = self.model_dump(mode="json")
+        return result
 
     @classmethod
     def from_dict(cls, data: dict) -> "SoftInteraction":
-        """Create from dictionary."""
-        return cls(
-            interaction_id=data["interaction_id"],
-            timestamp=datetime.fromisoformat(data["timestamp"]),
-            initiator=data["initiator"],
-            counterparty=data["counterparty"],
-            interaction_type=InteractionType(data["interaction_type"]),
-            accepted=data["accepted"],
-            task_progress_delta=data["task_progress_delta"],
-            rework_count=data["rework_count"],
-            verifier_rejections=data["verifier_rejections"],
-            tool_misuse_flags=data["tool_misuse_flags"],
-            counterparty_engagement_delta=data["counterparty_engagement_delta"],
-            v_hat=data["v_hat"],
-            p=data["p"],
-            tau=data["tau"],
-            c_a=data["c_a"],
-            c_b=data["c_b"],
-            r_a=data["r_a"],
-            r_b=data["r_b"],
-            ground_truth=data.get("ground_truth"),
-            metadata=data.get("metadata", {}),
-        )
+        """Create from dictionary.
+
+        Delegates to Pydantic's ``model_validate()`` which coerces ISO-8601
+        strings back to datetime and enum value strings back to InteractionType.
+        """
+        instance: SoftInteraction = cls.model_validate(data)
+        return instance
