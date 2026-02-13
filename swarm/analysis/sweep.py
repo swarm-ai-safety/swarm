@@ -124,24 +124,45 @@ def _set_nested_attr(obj: Any, path: str, value: Any) -> None:
 
 
 def _apply_params(scenario: ScenarioConfig, params: Dict[str, Any]) -> ScenarioConfig:
-    """Apply parameter overrides to a scenario config."""
+    """Apply parameter overrides to a scenario config.
+
+    Supported parameter name patterns:
+    - ``governance.<attr>`` — governance config attribute
+    - ``payoff.<attr>`` — payoff config attribute
+    - ``simulation.<attr>`` — orchestrator config attribute
+    - ``agents.<type>.config.<attr>`` — agent config for all agents of ``<type>``
+    - ``n_epochs``, ``steps_per_epoch`` — simulation parameters
+    - Any direct orchestrator config attribute (fallback)
+    """
     # Map parameter names to config paths
     config = scenario.orchestrator_config
 
     for name, value in params.items():
         if name.startswith("governance."):
-            attr = name[len("governance.") :]
+            attr = name[len("governance."):]
             if config.governance_config is None:
                 config.governance_config = GovernanceConfig()
             setattr(config.governance_config, attr, value)
 
         elif name.startswith("payoff."):
-            attr = name[len("payoff.") :]
+            attr = name[len("payoff."):]
             setattr(config.payoff_config, attr, value)
 
         elif name.startswith("simulation."):
-            attr = name[len("simulation.") :]
+            attr = name[len("simulation."):]
             setattr(config, attr, value)
+
+        elif name.startswith("agents."):
+            # agents.<type>.config.<attr>  e.g. agents.ldt.config.acausality_depth
+            parts = name.split(".")
+            if len(parts) >= 4 and parts[2] == "config":
+                agent_type = parts[1]
+                attr = ".".join(parts[3:])
+                for spec in scenario.agent_specs:
+                    if spec.get("type") == agent_type:
+                        if "config" not in spec:
+                            spec["config"] = {}
+                        spec["config"][attr] = value
 
         elif name == "n_epochs":
             config.n_epochs = value
