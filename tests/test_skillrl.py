@@ -601,6 +601,49 @@ class TestSkillRLAgent:
         assert summary["total_skills"] > 0
         assert summary["strategies"] > 0
 
+    def test_epoch_reset_via_act(self):
+        """on_epoch_start must be called when act() sees a new epoch.
+
+        Without this, per-epoch rate limiters (max_extractions_per_epoch,
+        max_refinements_per_epoch) never reset and the agent permanently
+        stops extracting/refining after the first epoch fills the quota.
+        """
+        agent = SkillRLAgent(
+            agent_id="rl_alice",
+            evolution_config=EvolutionConfig(
+                recursive_evolution_enabled=True,
+                grpo_enabled=False,  # raw payoff, easier to reason about
+                auto_tier_promotion=False,
+                success_payoff_threshold=0.3,
+                min_p_for_strategy=0.5,
+                max_extractions_per_epoch=1,  # tight limit
+            ),
+        )
+
+        # Epoch 0: one extraction allowed, fill the quota via act() + update
+        obs_e0 = make_observation(agent_id="rl_alice", epoch=0)
+        agent.act(obs_e0)  # triggers on_epoch_start(0)
+        ix0 = make_interaction(initiator="rl_alice", p=0.8)
+        agent.update_from_outcome(ix0, payoff=1.5)
+        size_after_e0 = agent.skill_library.size
+        assert size_after_e0 >= 1, "Should extract at least one skill in epoch 0"
+
+        # Still epoch 0: quota should be exhausted
+        ix0b = make_interaction(initiator="rl_alice", p=0.8)
+        agent.update_from_outcome(ix0b, payoff=1.5)
+        assert agent.skill_library.size == size_after_e0, (
+            "Quota exhausted, no new skill expected in same epoch"
+        )
+
+        # Epoch 1: act() with new epoch should reset the counter
+        obs_e1 = make_observation(agent_id="rl_alice", epoch=1)
+        agent.act(obs_e1)  # triggers on_epoch_start(1)
+        ix1 = make_interaction(initiator="rl_alice", p=0.8)
+        agent.update_from_outcome(ix1, payoff=1.5)
+        assert agent.skill_library.size > size_after_e0, (
+            "New epoch should reset extraction quota, allowing a new skill"
+        )
+
     def test_tiered_skill_selection(self):
         """Agent should use tiered retrieval for skill selection."""
         agent = SkillRLAgent(agent_id="rl_alice")

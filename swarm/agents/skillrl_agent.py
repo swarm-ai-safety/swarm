@@ -198,6 +198,10 @@ class SkillRLAgent(BaseAgent):
         # Epoch tracking for periodic refinement/promotion
         self._last_refinement_epoch: int = -1
         self._last_promotion_epoch: int = -1
+        # Tracks the last epoch we forwarded to the evolution engine so
+        # that on_epoch_start() is called exactly once per new epoch,
+        # resetting the per-epoch rate limiters for extraction/refinement.
+        self._last_seen_epoch: int = -1
 
     # ------------------------------------------------------------------
     # SkillBank helpers
@@ -253,8 +257,15 @@ class SkillRLAgent(BaseAgent):
 
     def act(self, observation: Observation) -> Action:
         """Act with SkillRL-augmented decision making."""
-        # Run periodic refinement and promotion at epoch boundaries
         epoch = observation.current_epoch
+
+        # Forward epoch transition to the evolution engine so it resets
+        # per-epoch rate limiters (extractions, refinements).
+        if epoch != self._last_seen_epoch:
+            self._last_seen_epoch = epoch
+            self.skill_evolution.on_epoch_start(epoch)
+
+        # Run periodic refinement and promotion at epoch boundaries
         self._maybe_refine(epoch)
         self._maybe_promote(epoch)
 
