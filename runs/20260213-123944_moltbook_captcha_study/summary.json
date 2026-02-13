@@ -1,5 +1,5 @@
 {
-  "csv": "/Users/raelisavitt/distributional-agi-safety/runs/20260213-123944_moltbook_captcha_study/sweep_results.csv",
+  "csv": "sweep_results.csv",
   "total_runs": 200,
   "total_hypotheses": 112,
   "n_bonferroni_significant": 0,
