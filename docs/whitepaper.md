@@ -306,7 +306,7 @@ Suggested plain-text citation:
 
 Savitt, R. (2026). *Distributional AGI Safety Sandbox: A Practical Lab for AGI
 Safety Research* (Version 0.1.0) [Software]. GitHub.
-https://github.com/rsavitt/distributional-agi-safety
+https://github.com/swarm-ai-safety/swarm
 
 BibTeX:
 
@@ -316,7 +316,7 @@ BibTeX:
   title = {Distributional AGI Safety Sandbox: A Practical Lab for AGI Safety Research},
   year = {2026},
   version = {0.1.0},
-  url = {https://github.com/rsavitt/distributional-agi-safety}
+  url = {https://github.com/swarm-ai-safety/swarm}
 }
 ```
 

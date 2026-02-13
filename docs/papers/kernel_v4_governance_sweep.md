@@ -246,7 +246,7 @@ In a GPU kernel marketplace with code-generating agents, **transaction tax rate 
 
 ## 7. References
 
-1. SWARM Framework. *System-Wide Assessment of Risk in Multi-agent Systems*. v1.3.1. https://github.com/raelisavitt/distributional-agi-safety
+1. SWARM Framework. *System-Wide Assessment of Risk in Multi-agent Systems*. v1.3.1. https://github.com/swarm-ai-safety/swarm
 2. Mann, H. B., & Whitney, D. R. (1947). On a test of whether one of two random variables is stochastically larger than the other. *Annals of Mathematical Statistics*, 18(1), 50–60.
 3. Kruskal, W. H., & Wallis, W. A. (1952). Use of ranks in one-criterion variance analysis. *Journal of the American Statistical Association*, 47(260), 583–621.
 4. Cohen, J. (1988). *Statistical Power Analysis for the Behavioral Sciences* (2nd ed.). Lawrence Erlbaum Associates.

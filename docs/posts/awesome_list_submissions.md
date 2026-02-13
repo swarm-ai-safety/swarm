@@ -13,7 +13,7 @@ Drafts for submitting SWARM to curated awesome lists. Each section includes the 
 **Entry:**
 
 ```
-* [SWARM: Distributional Safety for Multi-Agent AI Systems](https://github.com/raelisavitt/distributional-agi-safety) (Savitt, 2026) `#Safety` `#MultiAgent` `#Robustness`
+* [SWARM: Distributional Safety for Multi-Agent AI Systems](https://github.com/swarm-ai-safety/swarm) (Savitt, 2026) `#Safety` `#MultiAgent` `#Robustness`
 ```
 
 **PR title:** Add SWARM: multi-agent AI safety simulation framework
@@ -27,7 +27,7 @@ SWARM (System-Wide Assessment of Risk in Multi-agent systems) is an open-source 
 
 Key features: 20+ governance mechanisms, 51 scenario configs, 2800+ tests, factorial sweep infrastructure with built-in statistical analysis. Findings include sharp phase transitions at ~40-50% adversarial agent fraction and that transaction tax is a stronger governance lever than circuit breakers (eta2=0.324 vs d=-0.02).
 
-GitHub: https://github.com/raelisavitt/distributional-agi-safety
+GitHub: https://github.com/swarm-ai-safety/swarm
 ```
 
 **Command:**
@@ -47,7 +47,7 @@ GitHub: https://github.com/raelisavitt/distributional-agi-safety
 **Entry:**
 
 ```
-- [SWARM](https://github.com/raelisavitt/distributional-agi-safety) - Simulation framework
+- [SWARM](https://github.com/swarm-ai-safety/swarm) - Simulation framework
   for studying emergent safety failures in multi-agent AI systems
 
   Python · MIT
@@ -70,7 +70,7 @@ SWARM is a simulation framework for studying when multi-agent AI systems fail. U
 
 2800+ tests, 51 scenario configs, 7 framework bridges, MIT license.
 
-GitHub: https://github.com/raelisavitt/distributional-agi-safety
+GitHub: https://github.com/swarm-ai-safety/swarm
 ```
 
 **Command:**

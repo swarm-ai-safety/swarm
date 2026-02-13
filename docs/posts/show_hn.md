@@ -32,7 +32,7 @@ Technical details:
 - SQLite database of all runs for reproducibility
 - No API keys needed for the core simulation (LLM agents optional)
 
-GitHub: https://github.com/raelisavitt/distributional-agi-safety
+GitHub: https://github.com/swarm-ai-safety/swarm
 Quickstart notebook: 5 min, no API keys
 
 ---

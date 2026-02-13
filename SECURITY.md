@@ -12,7 +12,7 @@ If you discover a security vulnerability in this project, please report it respo
 
 **Do not open a public GitHub issue for security vulnerabilities.**
 
-Instead, please email the maintainers directly at the address listed in the repository contact information, or use [GitHub's private vulnerability reporting](https://github.com/rsavitt/distributional-agi-safety/security/advisories/new).
+Instead, please email the maintainers directly at the address listed in the repository contact information, or use [GitHub's private vulnerability reporting](https://github.com/swarm-ai-safety/swarm/security/advisories/new).
 
 ### What to include
 
