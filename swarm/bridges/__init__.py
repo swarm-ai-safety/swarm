@@ -2,6 +2,7 @@
 
 Available bridge subpackages (lazy import to avoid pulling in optional deps):
 
+    swarm.bridges.agent_lab         — AgentLaboratory autonomous research bridge
     swarm.bridges.claude_code       — Claude Code controller bridge
     swarm.bridges.concordia         — Concordia LLM agent simulation bridge
     swarm.bridges.openclaw          — REST service layer bridge

@@ -63,6 +63,33 @@ Additionally, compute sweep-level statistics from the sweep CSV:
 - Shapiro-Wilk normality validation
 - Report which findings survive Bonferroni correction across all pairwise comparisons
 
+### Phase 2b: Council Review (optional)
+
+**Activated by**: `--council-review` flag or `SWARM_COUNCIL_REVIEW=1` environment variable.
+
+Run a multi-LLM council evaluation on the sweep results using `StudyEvaluator`:
+
+```python
+from swarm.council.study_evaluator import StudyEvaluator, save_evaluation
+
+try:
+    evaluator = StudyEvaluator()
+    evaluation = evaluator.evaluate_sweep(run_dir)
+    save_evaluation(evaluation, f"{run_dir}/council_review.json")
+    council_summary = f"Council: {len(evaluation.findings)} findings, {len(evaluation.concerns)} concerns"
+except Exception as e:
+    council_summary = f"Council: skipped ({e})"
+```
+
+Three expert personas deliberate on the results:
+- **Mechanism designer** (chairman): incentive compatibility, equilibria, welfare
+- **Statistician**: sample size, effect sizes, multiple comparisons
+- **Red-teamer**: exploitable loopholes, adversarial gaming, unconsidered scenarios
+
+Output: `<run_dir>/council_review.json` with full deliberation trace.
+
+**This phase never blocks the pipeline** — wrapped in try/except. If it fails, the study continues normally.
+
 ### Phase 3: Plots
 
 Generate plots from the sweep results:
@@ -105,6 +132,7 @@ Print a completion report:
 Full Study Complete: <title_slug>
   Sweep:    <N> runs across <M> configurations × <K> seeds
   Analysis: <T> hypothesis tests, <S> survive Bonferroni
+  Council:  <council_summary if Phase 2b ran, otherwise omit this line>
   Plots:    <P> figures generated
   Paper:    docs/papers/<title_slug>.md
 
