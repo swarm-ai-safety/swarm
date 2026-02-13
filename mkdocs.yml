@@ -131,6 +131,7 @@ nav:
   - Comparison: comparison.md
   - Blog:
     - blog/index.md
+    - RL Training Lessons for Multi-Agent Governance: blog/rl-training-lessons-multi-agent-governance.md
     - "11 Scenarios, 3 Regimes, 1 Critical Threshold": blog/cross-scenario-analysis.md
     - What Financial Markets Teach Us About AI Safety: blog/markets-and-safety.md
     - The Purity Paradox: blog/purity-paradox.md
