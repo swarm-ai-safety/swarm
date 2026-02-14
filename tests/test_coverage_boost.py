@@ -748,7 +748,10 @@ class TestHonestActPaths:
     def test_act_works_on_active_task(self):
         """Should work on in-progress tasks."""
         agent = HonestAgent(agent_id="h1")
-        observation = obs(active_tasks=[{"task_id": "t1_abc", "status": "in_progress"}])
+        observation = obs(
+            agent_state=AgentState(agent_id="h1", reputation=0.5, resources=10.0),
+            active_tasks=[{"task_id": "t1_abc", "status": "in_progress"}],
+        )
         action = agent.act(observation)
         assert action.action_type == ActionType.SUBMIT_OUTPUT
 
