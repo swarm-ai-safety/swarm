@@ -1,5 +1,9 @@
 """Analysis tools for simulation results."""
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from swarm.analysis.dashboard import (
     AgentSnapshot,
     DashboardConfig,
@@ -20,16 +24,16 @@ from swarm.analysis.sweep import (
     quick_sweep,
 )
 
-# Visual upgrade modules (lazy-importable via swarm.analysis.<module>)
-from swarm.analysis.theme import (  # noqa: F401
-    COLORS,
-    SWARM_LIGHT_STYLE,
-    SWARM_STYLE,
-    agent_color,
-    apply_theme,
-    metric_color,
-    swarm_theme,
-)
+if TYPE_CHECKING:
+    from swarm.analysis.theme import (
+        COLORS as COLORS,
+        SWARM_LIGHT_STYLE as SWARM_LIGHT_STYLE,
+        SWARM_STYLE as SWARM_STYLE,
+        agent_color as agent_color,
+        apply_theme as apply_theme,
+        metric_color as metric_color,
+        swarm_theme as swarm_theme,
+    )
 
 __all__ = [
     # Sweep
@@ -61,3 +65,16 @@ __all__ = [
     "agent_color",
     "metric_color",
 ]
+
+
+def __getattr__(name: str) -> object:
+    """Lazy-load theme symbols so matplotlib is not required at import time."""
+    _theme_names = {
+        "COLORS", "SWARM_STYLE", "SWARM_LIGHT_STYLE",
+        "apply_theme", "swarm_theme", "agent_color", "metric_color",
+    }
+    if name in _theme_names:
+        from swarm.analysis import theme  # noqa: F811
+
+        return getattr(theme, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
