@@ -34,6 +34,14 @@ _DIR_DELTA = {
 
 
 @dataclass
+class EpochResult:
+    """Result from end_epoch(), containing events and a pre-reset worker snapshot."""
+
+    events: List[GTBEvent] = field(default_factory=list)
+    snapshot: Dict[str, WorkerState] = field(default_factory=dict)
+
+
+@dataclass
 class GTBAction:
     """A worker's action for one step."""
 
@@ -88,6 +96,13 @@ class GTBEnvironment:
 
         # Collusion tracking
         self._action_traces: Dict[str, List[str]] = {}  # agent_id -> recent actions
+
+        # Misreport fractions per agent for current epoch (applied to future income)
+        self._misreport_fractions: Dict[str, float] = {}
+
+        # Collusion response state
+        self._collusion_audit_boost: Dict[str, float] = {}  # agent_id -> extra audit prob
+        self._trade_restricted: Dict[str, int] = {}  # agent_id -> restriction_end_epoch
 
         # Frozen agents (from audit penalties)
         self._frozen_agents: Dict[str, int] = {}  # agent_id -> unfreeze_epoch
@@ -374,6 +389,14 @@ class GTBEnvironment:
         )
 
     def _handle_trade_buy(self, worker: WorkerState, action: GTBAction) -> GTBEvent:
+        # Enforce collusion-triggered trade restrictions
+        restrict_until = self._trade_restricted.get(worker.agent_id, 0)
+        if self._current_epoch < restrict_until:
+            return GTBEvent(
+                event_type="trade_fail", step=self._current_step,
+                epoch=self._current_epoch, agent_id=worker.agent_id,
+                details={"reason": "trade_restricted_collusion"},
+            )
         if worker.energy < self._config.energy_cost_trade:
             return GTBEvent(
                 event_type="trade_fail", step=self._current_step,
@@ -400,6 +423,14 @@ class GTBEnvironment:
         )
 
     def _handle_trade_sell(self, worker: WorkerState, action: GTBAction) -> GTBEvent:
+        # Enforce collusion-triggered trade restrictions
+        restrict_until = self._trade_restricted.get(worker.agent_id, 0)
+        if self._current_epoch < restrict_until:
+            return GTBEvent(
+                event_type="trade_fail", step=self._current_step,
+                epoch=self._current_epoch, agent_id=worker.agent_id,
+                details={"reason": "trade_restricted_collusion"},
+            )
         if worker.energy < self._config.energy_cost_trade:
             return GTBEvent(
                 event_type="trade_fail", step=self._current_step,
@@ -469,6 +500,8 @@ class GTBEnvironment:
         frac = max(0.0, frac)
         hidden = worker.gross_income_this_epoch * frac
         worker.reported_income_this_epoch = worker.gross_income_this_epoch - hidden
+        # Track fraction so future income (house income) also applies it
+        self._misreport_fractions[worker.agent_id] = frac
 
         return GTBEvent(
             event_type="misreport", step=self._current_step,
@@ -489,12 +522,18 @@ class GTBEnvironment:
             income = house.income_per_step
             worker.add_resource(ResourceType.COIN, income)
             worker.gross_income_this_epoch += income
-            worker.reported_income_this_epoch += income
+            # Only add to reported income the non-hidden fraction.
+            # If the worker has misreported, the underreport fraction applies
+            # to all income including house income (prevents partial undo).
+            misreport_frac = self._misreport_fractions.get(worker.agent_id, 0.0)
+            reported_portion = income * (1.0 - misreport_frac)
+            worker.reported_income_this_epoch += reported_portion
             worker.cumulative_income += income
             events.append(GTBEvent(
                 event_type="house_income", step=self._current_step,
                 epoch=self._current_epoch, agent_id=house.owner_id,
-                details={"income": income, "house_pos": house.position},
+                details={"income": income, "reported": reported_portion,
+                          "house_pos": house.position},
             ))
         return events
 
@@ -602,27 +641,31 @@ class GTBEnvironment:
     # Epoch boundary: taxes, audits, income shifting resolution
     # ------------------------------------------------------------------
 
-    def end_epoch(self) -> List[GTBEvent]:
+    def end_epoch(self) -> "EpochResult":
         """Process epoch boundary: taxes, audits, deferred income.
 
-        Returns:
-            List of epoch-boundary events.
+        Returns an EpochResult containing the events and a pre-reset
+        snapshot of worker states (for metrics computation).
         """
         events: List[GTBEvent] = []
 
-        # 1. Collect taxes
+        # 1. Collect taxes (only what can actually be paid)
         for agent_id, worker in self._workers.items():
             tax = self._tax_schedule.compute_tax(worker.reported_income_this_epoch)
-            worker.remove_resource(ResourceType.COIN, tax)
-            worker.tax_paid_this_epoch = tax
+            coin_balance = worker.get_resource(ResourceType.COIN)
+            actual_tax = min(tax, coin_balance)
+            worker.remove_resource(ResourceType.COIN, actual_tax)
+            worker.tax_paid_this_epoch = actual_tax
             events.append(GTBEvent(
                 event_type="tax", epoch=self._current_epoch,
                 agent_id=agent_id,
                 details={
                     "gross_income": worker.gross_income_this_epoch,
                     "reported_income": worker.reported_income_this_epoch,
-                    "tax_paid": tax,
-                    "effective_rate": tax / max(worker.reported_income_this_epoch, 1e-9),
+                    "tax_owed": tax,
+                    "tax_paid": actual_tax,
+                    "shortfall": tax - actual_tax,
+                    "effective_rate": actual_tax / max(worker.reported_income_this_epoch, 1e-9),
                 },
             ))
 
@@ -642,10 +685,22 @@ class GTBEnvironment:
                 agent_id=aid,
             ))
 
-        # 4. Reset epoch accumulators and apply deferred income
+        # Snapshot worker state AFTER taxes/audits but BEFORE reset.
+        # This gives metrics the accurate post-tax, pre-reset view.
+        snapshot = self.snapshot_epoch_data()
+
+        # 4. Reset epoch accumulators and materialize deferred income
         for worker in self._workers.values():
+            deferred = worker.deferred_income
             worker.reset_epoch()
+            # Carry deferred income as taxable income in the new epoch
+            worker.gross_income_this_epoch += deferred
+            worker.reported_income_this_epoch += deferred
+            worker.deferred_income = 0.0
             worker.energy = worker.max_energy
+
+        # Clear per-epoch misreport fractions
+        self._misreport_fractions.clear()
 
         self._current_epoch += 1
         self._current_step = 0
@@ -655,7 +710,7 @@ class GTBEnvironment:
         for aid in self._action_traces:
             self._action_traces[aid] = self._action_traces[aid][-window:]
 
-        return events
+        return EpochResult(events=events, snapshot=snapshot)
 
     def _run_audits(self) -> List[GTBEvent]:
         """Run audit pipeline for the current epoch."""
@@ -669,11 +724,15 @@ class GTBEnvironment:
             if discrepancy < 1e-9:
                 continue  # Nothing to catch
 
-            # Compute audit probability (base + risk-based)
+            # Compute audit probability (base + risk-based + collusion boost)
             audit_prob = cfg.audit_probability
             if discrepancy > 0:
                 ratio = discrepancy / max(worker.gross_income_this_epoch, 1e-9)
                 audit_prob = min(1.0, audit_prob * (1.0 + ratio * cfg.risk_based_audit_multiplier))
+            # Apply collusion-triggered audit boost
+            collusion_boost = self._collusion_audit_boost.get(agent_id, 0.0)
+            if collusion_boost > 0:
+                audit_prob = min(1.0, audit_prob + collusion_boost * cfg.audit_probability)
 
             worker.times_audited += 1
 
@@ -682,10 +741,12 @@ class GTBEnvironment:
                 evaded_tax = self._tax_schedule.compute_tax(
                     worker.gross_income_this_epoch
                 ) - self._tax_schedule.compute_tax(worker.reported_income_this_epoch)
-                fine = evaded_tax * cfg.fine_multiplier
-                worker.remove_resource(ResourceType.COIN, fine)
+                fine_owed = evaded_tax * cfg.fine_multiplier
+                coin_balance = worker.get_resource(ResourceType.COIN)
+                fine_paid = min(fine_owed, coin_balance)
+                worker.remove_resource(ResourceType.COIN, fine_paid)
                 worker.times_caught += 1
-                worker.total_fines += fine
+                worker.total_fines += fine_paid
 
                 events.append(GTBEvent(
                     event_type="audit_caught", epoch=self._current_epoch,
@@ -693,7 +754,9 @@ class GTBEnvironment:
                     details={
                         "discrepancy": discrepancy,
                         "evaded_tax": evaded_tax,
-                        "fine": fine,
+                        "fine_owed": fine_owed,
+                        "fine": fine_paid,
+                        "shortfall": fine_owed - fine_paid,
                         "times_caught": worker.times_caught,
                     },
                 ))
@@ -770,6 +833,31 @@ class GTBEnvironment:
                         suspicion = min(1.0, suspicion * 1.3)
 
                     if suspicion >= cfg.suspicion_score_threshold:
+                        # Apply response actions
+                        responses_applied = []
+
+                        # Increase audit probability for flagged agents
+                        for aid in (aid_a, aid_b):
+                            current_extra = self._collusion_audit_boost.get(aid, 0.0)
+                            boost = cfg.response_audit_multiplier - 1.0
+                            self._collusion_audit_boost[aid] = min(
+                                current_extra + boost, 5.0,
+                            )
+                            responses_applied.append("audit_boost")
+
+                        # Temporary trade restriction
+                        if cfg.response_trade_restriction_epochs > 0:
+                            restrict_until = (
+                                self._current_epoch
+                                + cfg.response_trade_restriction_epochs
+                            )
+                            for aid in (aid_a, aid_b):
+                                self._trade_restricted[aid] = max(
+                                    self._trade_restricted.get(aid, 0),
+                                    restrict_until,
+                                )
+                            responses_applied.append("trade_restriction")
+
                         events.append(GTBEvent(
                             event_type="collusion_detected",
                             epoch=self._current_epoch,
@@ -778,6 +866,7 @@ class GTBEnvironment:
                                 "similarity": similarity,
                                 "suspicion_score": suspicion,
                                 "same_coalition": same_coalition,
+                                "responses": responses_applied,
                             },
                         ))
 
@@ -786,6 +875,22 @@ class GTBEnvironment:
     # ------------------------------------------------------------------
     # Accessors
     # ------------------------------------------------------------------
+
+    def snapshot_epoch_data(self) -> Dict[str, "WorkerState"]:
+        """Create a snapshot of per-epoch worker metrics before reset.
+
+        Returns a dict of lightweight WorkerState copies with the
+        per-epoch fields preserved. Call this BEFORE end_epoch().
+        """
+        import copy
+        snapshot = {}
+        for aid, w in self._workers.items():
+            ws = copy.copy(w)
+            # Shallow copy is sufficient -- we only read scalar fields
+            # and the inventory dict (which won't be mutated by reset_epoch)
+            ws.inventory = dict(w.inventory)
+            snapshot[aid] = ws
+        return snapshot
 
     @property
     def tax_schedule(self) -> TaxSchedule:

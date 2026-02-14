@@ -266,8 +266,8 @@ class TestGTBEnvironment:
         w = env.add_worker("w1")
         w.gross_income_this_epoch = 20.0
         w.reported_income_this_epoch = 20.0
-        events = env.end_epoch()
-        tax_events = [e for e in events if e.event_type == "tax"]
+        result = env.end_epoch()
+        tax_events = [e for e in result.events if e.event_type == "tax"]
         assert len(tax_events) == 1
         assert tax_events[0].details["tax_paid"] > 0
 
@@ -330,8 +330,8 @@ class TestGTBEnvironment:
         w.reported_income_this_epoch = 25.0  # hiding half
         w.add_resource(ResourceType.COIN, 100.0)  # ensure can pay fine
 
-        events = env.end_epoch()
-        caught = [e for e in events if e.event_type == "audit_caught"]
+        result = env.end_epoch()
+        caught = [e for e in result.events if e.event_type == "audit_caught"]
         assert len(caught) == 1
         assert caught[0].details["fine"] > 0
 

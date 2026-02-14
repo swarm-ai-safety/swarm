@@ -110,7 +110,7 @@ def compute_atkinson(incomes: List[float], epsilon: float = 0.5) -> float:
         return 1.0 - math.exp(log_sum) / mean_inc
     else:
         power = 1.0 - epsilon
-        powered_sum = sum(max(inc, 0.0) ** power for inc in incomes) / n
+        powered_sum = sum(max(inc, 1e-9) ** power for inc in incomes) / n
         return max(0.0, 1.0 - (powered_sum ** (1.0 / power)) / mean_inc)
 
 

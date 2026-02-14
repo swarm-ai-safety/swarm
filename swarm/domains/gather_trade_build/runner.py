@@ -154,18 +154,20 @@ class GTBScenarioRunner:
             collusion_events = self._env.detect_collusion()
             epoch_events.extend(collusion_events)
 
-            # End epoch (taxes, audits, income reset)
-            end_events = self._env.end_epoch()
-            epoch_events.extend(end_events)
+            # End epoch: taxes, audits, then snapshot, then reset.
+            # EpochResult contains both events and a pre-reset snapshot.
+            epoch_result = self._env.end_epoch()
+            epoch_events.extend(epoch_result.events)
 
             # Reset evasive worker epoch state
             for policy in self._policies.values():
                 if isinstance(policy, EvasiveWorkerPolicy):
                     policy.reset_epoch()
 
-            # Compute metrics
+            # Compute metrics from the pre-reset snapshot (includes
+            # tax_paid and audit results but not yet zeroed)
             metrics = compute_gtb_metrics(
-                workers=self._env.workers,
+                workers=epoch_result.snapshot,
                 events=epoch_events,
                 epoch=epoch,
                 bracket_thresholds=self._env.tax_schedule.bracket_thresholds,
@@ -206,7 +208,16 @@ class GTBScenarioRunner:
             Path to the output directory.
         """
         if output_dir:
-            run_dir = Path(output_dir)
+            raw = Path(output_dir)
+            run_dir = raw.resolve()
+            # Block relative paths that escape CWD (e.g. "../../etc")
+            if not raw.is_absolute():
+                cwd = Path.cwd().resolve()
+                if not (run_dir == cwd or str(run_dir).startswith(str(cwd) + "/")):
+                    raise ValueError(
+                        f"Relative output directory resolves to {run_dir} "
+                        f"which is outside {cwd}. Use an absolute path."
+                    )
         else:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             run_dir = Path(f"runs/{timestamp}_ai_economist_seed{self._seed}")

@@ -44,8 +44,8 @@ def main(argv: list[str] | None = None) -> None:
     steps = args.steps or sim.get("steps_per_epoch", 10)
     seed = args.seed or sim.get("seed", 42)
 
-    if config.seed is None:
-        config.seed = seed
+    # CLI seed overrides YAML; ensure env and runner use the same seed
+    config.seed = seed
 
     agent_specs = data.get("agents", [{"policy": "honest", "count": 5}])
 

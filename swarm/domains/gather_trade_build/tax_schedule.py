@@ -70,7 +70,7 @@ class TaxSchedule:
 
     def _compute_tax_smooth(self, income: float) -> float:
         sigma = self._smoothing
-        n_steps = max(100, int(income * 10))
+        n_steps = min(max(100, int(income * 10)), 10000)  # cap to prevent CPU bomb
         dx = income / n_steps
         total_tax = 0.0
         for step_i in range(n_steps):
