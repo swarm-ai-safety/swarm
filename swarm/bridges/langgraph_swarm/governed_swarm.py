@@ -158,12 +158,18 @@ class ProvenanceLogger:
             if r.source_agent == source and r.target_agent == target
         )
 
-    def detect_cycles(self, window: int = 10) -> list[tuple[str, str]]:
+    def detect_cycles(
+        self, window: int = 10, threshold: int = 3
+    ) -> list[tuple[str, str]]:
         """Detect repeated handoff cycles in the recent window.
 
         Returns pairs of agents that are ping-ponging control back
         and forth -- a potential indicator of confusion, collusion,
         or adversarial behavior (Hammond et al. risk patterns).
+
+        Args:
+            window: Number of recent records to examine.
+            threshold: Minimum count for a pair to be flagged.
         """
         recent = self.records[-window:]
         pair_counts: dict[tuple[str, str], int] = {}
@@ -171,8 +177,7 @@ class ProvenanceLogger:
             pair = (r.source_agent, r.target_agent)
             pair_counts[pair] = pair_counts.get(pair, 0) + 1
 
-        # Flag pairs that appear more than twice in the window
-        return [pair for pair, count in pair_counts.items() if count > 2]
+        return [pair for pair, count in pair_counts.items() if count >= threshold]
 
     def to_audit_log(self) -> list[dict]:
         """Export the full provenance chain as a serializable audit log."""
@@ -261,7 +266,7 @@ class CycleDetectionPolicy(GovernancePolicy):
         state: dict,
         provenance: ProvenanceLogger,
     ) -> GovernanceResult:
-        cycles = provenance.detect_cycles(window=self.window)
+        cycles = provenance.detect_cycles(window=self.window, threshold=self.max_cycles)
         pair = (source_agent, target_agent)
 
         if pair in cycles:
@@ -423,10 +428,13 @@ class CompositePolicy(GovernancePolicy):
 
         # If we got here, nothing was denied or escalated
         if accumulated_modifications:
+            # Extract any redirected target so it reaches the handoff tool
+            redirected = accumulated_modifications.pop("redirected_target", None)
             return GovernanceResult(
                 decision=GovernanceDecision.MODIFY,
                 reason=" | ".join(reasons),
-                modified_context=accumulated_modifications,
+                modified_target=redirected,
+                modified_context=accumulated_modifications or None,
                 risk_score=max_risk,
             )
 
@@ -668,7 +676,7 @@ def create_governed_handoff_tool(
                 ],
                 "risk_scores": {actual_target: governance_result.risk_score},
                 "provenance_chain": [record.to_dict()],
-                "handoff_count": 1,
+                "handoff_count": state.get("handoff_count", 0) + 1,
             },
         )
 
