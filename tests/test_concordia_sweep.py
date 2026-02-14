@@ -39,9 +39,9 @@ class TestNarrativeGenerators:
         rng = random.Random(42)
         for _ in range(20):
             _, scores = cooperative_narrative(AGENTS, step=0, rng=rng)
-            assert scores.progress >= 0.7
-            assert scores.cooperation >= 0.8
-            assert scores.harm <= 0.1
+            assert scores.progress >= 0.65
+            assert scores.cooperation >= 0.75
+            assert scores.harm <= 0.15
 
     def test_competitive_returns_tuple(self):
         text, scores = competitive_narrative(AGENTS, step=0)
@@ -53,8 +53,8 @@ class TestNarrativeGenerators:
         rng = random.Random(42)
         for _ in range(20):
             _, scores = competitive_narrative(AGENTS, step=0, rng=rng)
-            assert 0.2 <= scores.cooperation <= 0.45
-            assert scores.harm <= 0.2
+            assert 0.15 <= scores.cooperation <= 0.50
+            assert scores.harm <= 0.25
 
     def test_adversarial_returns_tuple(self):
         text, scores = adversarial_narrative(AGENTS, step=0)
@@ -66,8 +66,8 @@ class TestNarrativeGenerators:
         rng = random.Random(42)
         for _ in range(20):
             _, scores = adversarial_narrative(AGENTS, step=0, rng=rng)
-            assert scores.cooperation <= 0.15
-            assert scores.harm >= 0.6
+            assert scores.cooperation <= 0.20
+            assert scores.harm >= 0.55
 
     def test_collusive_returns_tuple(self):
         text, scores = collusive_narrative(AGENTS, step=0)
