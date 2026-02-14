@@ -279,7 +279,10 @@ class TestDeceptiveAgent:
     def test_deceptive_agent_builds_trust(self):
         """Test deceptive agent trust building behavior."""
         random.seed(42)
-        agent = DeceptiveAgent(agent_id="dec_1")
+        agent = DeceptiveAgent(
+            agent_id="dec_1",
+            config={"facade_probability": 1.0},
+        )
 
         from swarm.agents.base import InteractionProposal
 
@@ -298,8 +301,8 @@ class TestDeceptiveAgent:
             if agent.accept_interaction(proposal, observation):
                 accept_count += 1
 
-        # Should accept most in trust-building phase
-        assert accept_count >= 3
+        # Should accept all in trust-building phase (facade_probability=1.0)
+        assert accept_count == 5
 
     def test_deceptive_tracks_interactions(self):
         """Test deceptive agent tracks interaction counts."""
