@@ -83,3 +83,4 @@ sandboxes/
 !.claude/hooks/scan_secrets.sh
 !.claude/hooks/post_write_secrets_check.sh
 !.claude/commands/scan_secrets.md
+node_modules/

@@ -7,7 +7,7 @@ to testable claims extracted from papers.
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
-from swarm.research.annotator import PaperAnnotation, TestableClaim
+from swarm.research.annotator import PaperAnnotation, VerifiableClaim
 from swarm.research.scenario_gen import ScenarioGenerator
 
 
@@ -15,7 +15,7 @@ from swarm.research.scenario_gen import ScenarioGenerator
 class ClaimResult:
     """Result of testing a single claim."""
 
-    claim: TestableClaim = field(default_factory=TestableClaim)
+    claim: VerifiableClaim = field(default_factory=VerifiableClaim)
     metric_values: list[float] = field(default_factory=list)
     mean_value: float = 0.0
     expected: str = "positive"
@@ -136,7 +136,7 @@ class ValidationWorkflow:
 
     def _compare_claims(
         self,
-        claims: list[TestableClaim],
+        claims: list[VerifiableClaim],
         run_results: list[dict[str, Any]],
     ) -> list[ClaimResult]:
         """Compare expected claim directions against simulation results."""

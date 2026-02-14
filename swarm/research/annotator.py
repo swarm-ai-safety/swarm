@@ -151,7 +151,7 @@ class RiskProfile:
 
 
 @dataclass
-class TestableClaim:
+class VerifiableClaim:
     """A testable claim extracted from a paper."""
 
     claim: str = ""
@@ -170,7 +170,7 @@ class TestableClaim:
         }
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> "TestableClaim":
+    def from_dict(cls, data: dict[str, Any]) -> "VerifiableClaim":
         return cls(
             claim=data.get("claim", ""),
             testable=data.get("testable", True),
@@ -188,7 +188,7 @@ class PaperAnnotation:
     arxiv_id: str = ""
     title: str = ""
     risk_profile: RiskProfile = field(default_factory=RiskProfile)
-    claims: list[TestableClaim] = field(default_factory=list)
+    claims: list[VerifiableClaim] = field(default_factory=list)
     swarm_scenarios: list[str] = field(default_factory=list)
     annotated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
@@ -221,7 +221,7 @@ class PaperAnnotation:
             arxiv_id=data.get("arxiv_id", ""),
             title=data.get("title", ""),
             risk_profile=RiskProfile.from_dict(data.get("risk_profile", {})),
-            claims=[TestableClaim.from_dict(c) for c in data.get("claims", [])],
+            claims=[VerifiableClaim.from_dict(c) for c in data.get("claims", [])],
             swarm_scenarios=data.get("swarm_scenarios", []),
             annotated_at=annotated_at,
         )
@@ -280,10 +280,10 @@ class PaperAnnotator:
             assumptions=assumptions,
         )
 
-    def _extract_claims(self, paper: Paper) -> list[TestableClaim]:
+    def _extract_claims(self, paper: Paper) -> list[VerifiableClaim]:
         """Extract testable claims from paper text."""
         text = f"{paper.abstract} {paper.source}"
-        claims: list[TestableClaim] = []
+        claims: list[VerifiableClaim] = []
 
         for pattern in CLAIM_PATTERNS:
             matches = re.finditer(pattern, text, re.IGNORECASE)
@@ -297,7 +297,7 @@ class PaperAnnotator:
                 testable = metric != ""
 
                 claims.append(
-                    TestableClaim(
+                    VerifiableClaim(
                         claim=claim_text,
                         testable=testable,
                         metric=metric,

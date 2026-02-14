@@ -25,7 +25,7 @@ from swarm.research.annotator import (
     PaperAnnotation,
     PaperAnnotator,
     RiskProfile,
-    TestableClaim,
+    VerifiableClaim,
 )
 from swarm.research.pdf_export import (
     PDFExportError,
@@ -119,7 +119,7 @@ __all__ = [
     "PaperAnnotator",
     "PaperAnnotation",
     "RiskProfile",
-    "TestableClaim",
+    "VerifiableClaim",
     "ScenarioGenerator",
     "ValidationWorkflow",
     "PaperValidationResult",

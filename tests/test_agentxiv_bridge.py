@@ -7,7 +7,7 @@ from swarm.research.annotator import (
     PaperAnnotation,
     PaperAnnotator,
     RiskProfile,
-    TestableClaim,
+    VerifiableClaim,
 )
 from swarm.research.platforms import Paper
 from swarm.research.scenario_gen import ScenarioGenerator
@@ -39,13 +39,13 @@ class TestRiskProfile:
 
 
 # ---------------------------------------------------------------------------
-# TestableClaim tests
+# VerifiableClaim tests
 # ---------------------------------------------------------------------------
 
 
-class TestTestableClaim:
+class TestVerifiableClaim:
     def test_to_dict_roundtrip(self):
-        tc = TestableClaim(
+        tc = VerifiableClaim(
             claim="governance reduces toxicity",
             testable=True,
             metric="toxicity_rate",
@@ -53,7 +53,7 @@ class TestTestableClaim:
             parameters={"threshold": 0.3},
         )
         data = tc.to_dict()
-        restored = TestableClaim.from_dict(data)
+        restored = VerifiableClaim.from_dict(data)
         assert restored.claim == "governance reduces toxicity"
         assert restored.metric == "toxicity_rate"
         assert restored.expected == "negative"
@@ -76,7 +76,7 @@ class TestPaperAnnotation:
                 failure_modes=["collusion"],
             ),
             claims=[
-                TestableClaim(claim="welfare increases", metric="total_welfare", expected="positive"),
+                VerifiableClaim(claim="welfare increases", metric="total_welfare", expected="positive"),
             ],
             swarm_scenarios=["baseline"],
         )
@@ -330,7 +330,7 @@ class TestValidationWorkflow:
     def test_compare_claims_positive(self):
         workflow = ValidationWorkflow(simulation_fn=self._mock_simulation)
         claims = [
-            TestableClaim(
+            VerifiableClaim(
                 claim="welfare increases",
                 testable=True,
                 metric="total_welfare",
@@ -346,7 +346,7 @@ class TestValidationWorkflow:
     def test_compare_claims_negative(self):
         workflow = ValidationWorkflow()
         claims = [
-            TestableClaim(
+            VerifiableClaim(
                 claim="toxicity decreases",
                 testable=True,
                 metric="toxicity_rate",
@@ -360,7 +360,7 @@ class TestValidationWorkflow:
     def test_compare_claims_untestable(self):
         workflow = ValidationWorkflow()
         claims = [
-            TestableClaim(claim="vague claim", testable=False, metric=""),
+            VerifiableClaim(claim="vague claim", testable=False, metric=""),
         ]
         results = [{"toxicity_rate": 0.1}]
         claim_results = workflow._compare_claims(claims, results)
@@ -369,7 +369,7 @@ class TestValidationWorkflow:
     def test_compare_claims_missing_metric(self):
         workflow = ValidationWorkflow()
         claims = [
-            TestableClaim(
+            VerifiableClaim(
                 claim="unmeasured",
                 testable=True,
                 metric="nonexistent_metric",
@@ -394,7 +394,7 @@ class TestValidationWorkflow:
             title="Test Paper",
             risk_profile=RiskProfile(interaction_density="medium"),
             claims=[
-                TestableClaim(
+                VerifiableClaim(
                     claim="welfare is positive",
                     testable=True,
                     metric="total_welfare",
@@ -417,7 +417,7 @@ class TestValidationWorkflow:
         annotation = PaperAnnotation(
             paper_id="test",
             claims=[
-                TestableClaim(
+                VerifiableClaim(
                     claim="claim",
                     testable=True,
                     metric="toxicity_rate",
