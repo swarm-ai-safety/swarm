@@ -387,7 +387,10 @@ class LLMAgent(BaseAgent):
                 "Install with: python -m pip install google-genai"
             ) from err
 
-        client = genai.Client(api_key=self._api_key)
+        client = genai.Client(
+            api_key=self._api_key,
+            http_options={"timeout": self.llm_config.timeout},
+        )
 
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
