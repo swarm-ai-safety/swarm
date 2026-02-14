@@ -58,6 +58,9 @@ class AgentState(BaseModel):
     # Optional: hidden type for deceptive agents
     true_type: Optional[AgentType] = None
 
+    # Spawn hierarchy
+    parent_id: Optional[str] = None
+
     @model_validator(mode='after')
     def _default_name(self) -> 'AgentState':
         """Default name to agent_id when not provided."""
@@ -115,6 +118,7 @@ class AgentState(BaseModel):
             "average_p_initiated": self.average_p_initiated,
             "average_p_received": self.average_p_received,
             "true_type": self.true_type.value if self.true_type else None,
+            "parent_id": self.parent_id,
         }
 
     @classmethod
@@ -134,4 +138,5 @@ class AgentState(BaseModel):
             average_p_initiated=data["average_p_initiated"],
             average_p_received=data["average_p_received"],
             true_type=AgentType(data["true_type"]) if data.get("true_type") else None,
+            parent_id=data.get("parent_id"),
         )

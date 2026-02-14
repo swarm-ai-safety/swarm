@@ -87,6 +87,10 @@ class EventType(Enum):
     KERNEL_VERIFIED = "kernel_verified"
     KERNEL_AUDITED = "kernel_audited"
 
+    # Spawn events
+    AGENT_SPAWNED = "agent_spawned"
+    SPAWN_REJECTED = "spawn_rejected"
+
     # Council events
     COUNCIL_DELIBERATION = "council_deliberation"
     COUNCIL_AUDIT = "council_audit"

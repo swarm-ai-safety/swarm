@@ -69,6 +69,9 @@ class ActionType(Enum):
     VERIFY_KERNEL = "verify_kernel"
     AUDIT_KERNEL = "audit_kernel"
 
+    # Spawn actions
+    SPAWN_SUBAGENT = "spawn_subagent"
+
     # Special actions
     NOOP = "noop"  # Do nothing this turn
 
@@ -200,6 +203,11 @@ class Observation:
     kernel_pending_submissions: List[Dict] = field(default_factory=list)
     kernel_submissions_to_verify: List[Dict] = field(default_factory=list)
     kernel_submission_history: List[Dict] = field(default_factory=list)
+
+    # Spawn observations
+    can_spawn: bool = False
+    spawn_depth: int = 0
+    spawn_children_count: int = 0
 
 
 @dataclass
@@ -764,6 +772,26 @@ class BaseAgent(ABC):
             agent_id=self.agent_id,
             target_id=entry_id,
             content=reason,
+        )
+
+    def create_spawn_subagent_action(
+        self,
+        child_type: Optional[str] = None,
+        child_config: Optional[Dict] = None,
+    ) -> Action:
+        """Create an action to spawn a child subagent.
+
+        Args:
+            child_type: Agent type key for the child (defaults to parent's type).
+            child_config: Optional config dict for the child agent.
+        """
+        return Action(
+            action_type=ActionType.SPAWN_SUBAGENT,
+            agent_id=self.agent_id,
+            metadata={
+                "child_type": child_type,
+                "child_config": child_config or {},
+            },
         )
 
     def __repr__(self) -> str:

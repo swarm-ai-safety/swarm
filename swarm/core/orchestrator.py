@@ -31,6 +31,7 @@ from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.core.proxy import ProxyComputer, ProxyObservables
 from swarm.core.redteam_inspector import RedTeamInspector
 from swarm.core.scholar_handler import ScholarConfig, ScholarHandler
+from swarm.core.spawn import SpawnConfig, SpawnTree
 from swarm.core.task_handler import TaskHandler
 from swarm.env.composite_tasks import (
     CompositeTask,
@@ -105,6 +106,9 @@ class OrchestratorConfig(BaseModel):
     # Kernel oracle configuration
     kernel_oracle_config: Optional[KernelOracleConfig] = None
 
+    # Spawn configuration
+    spawn_config: Optional[SpawnConfig] = None
+
     # Composite task configuration
     enable_composite_tasks: bool = False
 
@@ -144,6 +148,7 @@ class EpochMetrics(BaseModel):
     total_welfare: float = 0.0
     network_metrics: Optional[Dict[str, float]] = None
     capability_metrics: Optional[EmergentCapabilityMetrics] = None
+    spawn_metrics: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -167,6 +172,7 @@ class EpochMetrics(BaseModel):
             )
         else:
             result["capability_metrics"] = None
+        result["spawn_metrics"] = self.spawn_metrics
         return result
 
 
@@ -447,6 +453,14 @@ class Orchestrator:
         )
         self._handler_registry.register(self._task_handler)
 
+        # Spawn tree (must be initialized before observation builder)
+        if self.config.spawn_config is not None and self.config.spawn_config.enabled:
+            self._spawn_tree: Optional[SpawnTree] = SpawnTree(self.config.spawn_config)
+            self._spawn_counter: int = 0
+        else:
+            self._spawn_tree = None
+            self._spawn_counter = 0
+
         # Observation building (extracted component)
         self._obs_builder = ObservationBuilder(
             config=self.config,
@@ -456,6 +470,7 @@ class Orchestrator:
             network=self.network,
             handler_registry=self._handler_registry,
             rng=self._rng,
+            spawn_tree=self._spawn_tree,
         )
 
         # Red-team inspection (extracted component)
@@ -482,6 +497,10 @@ class Orchestrator:
             name=getattr(agent, "name", agent.agent_id),
             agent_type=agent.agent_type,
         )
+
+        # Register as root in spawn tree
+        if self._spawn_tree is not None:
+            self._spawn_tree.register_root(agent.agent_id)
 
         # Log event
         self._emit_event(
@@ -888,7 +907,129 @@ class Orchestrator:
         if action.action_type == ActionType.NOOP:
             return True
 
+        if action.action_type == ActionType.SPAWN_SUBAGENT:
+            return self._handle_spawn_subagent(action)
+
         return None  # Dispatched via handler registry
+
+    def _handle_spawn_subagent(self, action: Action) -> bool:
+        """Handle a SPAWN_SUBAGENT action.
+
+        Validates the spawn request, deducts cost, instantiates child,
+        registers it, and emits events.
+        """
+        if self._spawn_tree is None:
+            return False
+
+        parent_id = action.agent_id
+        parent_state = self.state.get_agent(parent_id)
+        if parent_state is None:
+            return False
+
+        global_step = (
+            self.state.current_epoch * self.config.steps_per_epoch
+            + self.state.current_step
+        )
+
+        can, reason = self._spawn_tree.can_spawn(
+            parent_id, global_step, parent_state.resources
+        )
+        if not can:
+            self._emit_event(
+                Event(
+                    event_type=EventType.SPAWN_REJECTED,
+                    agent_id=parent_id,
+                    payload={"reason": reason},
+                    epoch=self.state.current_epoch,
+                    step=self.state.current_step,
+                )
+            )
+            return False
+
+        spawn_cfg = self._spawn_tree.config
+
+        # Deduct spawn cost
+        parent_state.update_resources(-spawn_cfg.spawn_cost)
+
+        # Determine child type
+        child_type_key = action.metadata.get("child_type")
+        if not child_type_key:
+            child_type_key = parent_state.agent_type.value
+        child_config = action.metadata.get("child_config", {})
+
+        # Import AGENT_TYPES lazily to avoid circular imports
+        from swarm.scenarios.loader import AGENT_TYPES
+
+        agent_class = AGENT_TYPES.get(child_type_key)
+        if agent_class is None:
+            self._emit_event(
+                Event(
+                    event_type=EventType.SPAWN_REJECTED,
+                    agent_id=parent_id,
+                    payload={"reason": f"unknown_agent_type:{child_type_key}"},
+                    epoch=self.state.current_epoch,
+                    step=self.state.current_step,
+                )
+            )
+            return False
+
+        # Generate child ID
+        self._spawn_counter += 1
+        child_id = f"{parent_id}_child{self._spawn_counter}"
+
+        # Instantiate child agent
+        child_agent = agent_class(
+            agent_id=child_id,
+            name=child_id,
+            config=child_config if child_config else None,
+        )
+        self._agents[child_id] = child_agent
+
+        # Register child in env state with inherited reputation
+        inherited_rep = parent_state.reputation * spawn_cfg.reputation_inheritance_factor
+        child_state = self.state.add_agent(
+            agent_id=child_id,
+            name=child_id,
+            agent_type=child_agent.agent_type,
+            initial_reputation=inherited_rep,
+            initial_resources=spawn_cfg.initial_child_resources,
+        )
+        child_state.parent_id = parent_id
+
+        # Register in spawn tree
+        self._spawn_tree.register_spawn(
+            parent_id=parent_id,
+            child_id=child_id,
+            epoch=self.state.current_epoch,
+            step=self.state.current_step,
+            global_step=global_step,
+        )
+
+        # Add to network if present
+        if self.network is not None:
+            self.network.add_node(child_id)
+            # Connect child to parent
+            self.network.add_edge(parent_id, child_id)
+
+        # Emit event
+        self._emit_event(
+            Event(
+                event_type=EventType.AGENT_SPAWNED,
+                agent_id=child_id,
+                payload={
+                    "parent_id": parent_id,
+                    "child_type": child_type_key,
+                    "depth": self._spawn_tree.get_depth(child_id),
+                    "inherited_reputation": inherited_rep,
+                    "initial_resources": spawn_cfg.initial_child_resources,
+                    "spawn_cost": spawn_cfg.spawn_cost,
+                },
+                epoch=self.state.current_epoch,
+                step=self.state.current_step,
+            )
+        )
+
+        return True
 
     def _resolve_pending_interactions(self) -> None:
         """Resolve any remaining pending interactions."""
@@ -1000,11 +1141,22 @@ class Orchestrator:
         if self.capability_analyzer is not None:
             capability_metrics = self.capability_analyzer.compute_metrics()
 
+        # Collect spawn metrics if spawn tree exists
+        spawn_metrics_dict = None
+        if self._spawn_tree is not None:
+            spawn_metrics_dict = {
+                "total_spawned": self._spawn_tree.total_spawned,
+                "max_depth": self._spawn_tree.max_tree_depth(),
+                "depth_distribution": self._spawn_tree.depth_distribution(),
+                "tree_sizes": self._spawn_tree.tree_size_distribution(),
+            }
+
         if not interactions:
             return EpochMetrics(
                 epoch=self.state.current_epoch,
                 network_metrics=network_metrics,
                 capability_metrics=capability_metrics,
+                spawn_metrics=spawn_metrics_dict,
             )
 
         accepted = [i for i in interactions if i.accepted]
@@ -1026,6 +1178,7 @@ class Orchestrator:
             total_welfare=welfare.get("total_welfare", 0),
             network_metrics=network_metrics,
             capability_metrics=capability_metrics,
+            spawn_metrics=spawn_metrics_dict,
         )
 
     def _emit_event(self, event: Event) -> None:
@@ -1341,6 +1494,10 @@ class Orchestrator:
     def get_network(self) -> Optional[AgentNetwork]:
         """Get the network object for direct manipulation."""
         return self.network
+
+    def get_spawn_tree(self) -> Optional[SpawnTree]:
+        """Get the spawn tree for inspection."""
+        return self._spawn_tree
 
     # =========================================================================
     # Red-Team Support

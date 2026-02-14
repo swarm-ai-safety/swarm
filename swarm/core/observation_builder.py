@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional
 
 from swarm.agents.base import Observation
 from swarm.core.handler_registry import HandlerRegistry
+from swarm.core.spawn import SpawnTree
 from swarm.env.feed import Feed
 from swarm.env.network import AgentNetwork
 from swarm.env.state import EnvState
@@ -39,6 +40,7 @@ class ObservationBuilder:
         network: Optional[AgentNetwork],
         handler_registry: HandlerRegistry,
         rng: random.Random,
+        spawn_tree: Optional[SpawnTree] = None,
     ) -> None:
         self._config = config
         self._state = state
@@ -47,6 +49,7 @@ class ObservationBuilder:
         self._network = network
         self._handler_registry = handler_registry
         self._rng = rng
+        self._spawn_tree = spawn_tree
 
     # ------------------------------------------------------------------
     # Public API
@@ -126,6 +129,24 @@ class ObservationBuilder:
                     )
                 handler_fields[obs_key] = value
 
+        # Compute spawn fields
+        can_spawn = False
+        spawn_depth = 0
+        spawn_children_count = 0
+        if self._spawn_tree is not None:
+            spawn_depth = self._spawn_tree.get_depth(agent_id)
+            spawn_children_count = len(self._spawn_tree.get_children(agent_id))
+            global_step = (
+                self._state.current_epoch * self._config.steps_per_epoch
+                + self._state.current_step
+            )
+            can_spawn_result, _ = self._spawn_tree.can_spawn(
+                agent_id,
+                global_step,
+                agent_state.resources if agent_state else 0.0,
+            )
+            can_spawn = can_spawn_result
+
         return Observation(
             agent_state=agent_state or AgentState(),
             current_epoch=self._state.current_epoch,
@@ -185,6 +206,10 @@ class ObservationBuilder:
             kernel_pending_submissions=handler_fields.get("kernel_pending_submissions", []),
             kernel_submissions_to_verify=handler_fields.get("kernel_submissions_to_verify", []),
             kernel_submission_history=handler_fields.get("kernel_submission_history", []),
+            # Spawn fields
+            can_spawn=can_spawn,
+            spawn_depth=spawn_depth,
+            spawn_children_count=spawn_children_count,
         )
 
     def apply_noise(self, record: Dict[str, Any]) -> Dict[str, Any]:
