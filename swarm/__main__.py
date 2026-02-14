@@ -156,10 +156,15 @@ def cmd_run(args: argparse.Namespace) -> int:
             try:
                 from swarm.analysis.dolt_export import export_to_dolt
 
+                # Resolve Dolt dir relative to repo root (swarm package parent)
+                dolt_dir = Path(args.export_dolt)
+                if not dolt_dir.is_absolute():
+                    repo_root = Path(__file__).resolve().parent.parent
+                    dolt_dir = repo_root / dolt_dir
                 # Derive a run_dir name from scenario + seed
                 seed = scenario.orchestrator_config.seed
                 run_dir_name = f"{scenario.scenario_id}_seed{seed}"
-                export_to_dolt(history, run_dir_name, args.export_dolt)
+                export_to_dolt(history, run_dir_name, str(dolt_dir))
             except Exception as exc:
                 print(f"Warning: Dolt export failed: {exc}")
 

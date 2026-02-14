@@ -2,7 +2,7 @@
 
 import random
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, model_validator
 
@@ -22,12 +22,10 @@ from swarm.env.wiki import (
     WikiTaskPool,
 )
 from swarm.governance.engine import GovernanceEffect
+from swarm.logging.event_bus import EventBus
 from swarm.models.agent import AgentType
 from swarm.models.events import Event, EventType
 from swarm.models.interaction import SoftInteraction
-
-if TYPE_CHECKING:
-    from swarm.logging.event_bus import EventBus
 
 
 class MoltipediaConfig(BaseModel):
@@ -106,11 +104,10 @@ class MoltipediaHandler(Handler):
     def __init__(
         self,
         config: MoltipediaConfig,
-        emit_event: Optional[Callable[[Event], None]] = None,
         *,
-        event_bus: Optional["EventBus"] = None,
+        event_bus: EventBus,
     ):
-        super().__init__(emit_event=emit_event, event_bus=event_bus)
+        super().__init__(event_bus=event_bus)
         self.config = config
         self._rng = random.Random(config.seed)
         self.task_pool = WikiTaskPool(seed=config.seed)

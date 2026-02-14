@@ -26,9 +26,13 @@ class _EventCollector:
 
 
 def _make_handler(seed: int = 42, **kwargs) -> tuple[KernelOracleHandler, _EventCollector]:
+    from swarm.logging.event_bus import EventBus
+
     collector = _EventCollector()
+    bus = EventBus()
+    bus.subscribe(collector)
     config = KernelOracleConfig(seed=seed, **kwargs)
-    handler = KernelOracleHandler(config=config, emit_event=collector)
+    handler = KernelOracleHandler(config=config, event_bus=bus)
     return handler, collector
 
 

@@ -9,6 +9,7 @@ import pytest
 from swarm.agents.base import ActionType
 from swarm.core.handler import Handler, HandlerActionResult
 from swarm.core.handler_registry import HandlerRegistry
+from swarm.logging.event_bus import EventBus
 
 
 class _StubHandler(Handler):
@@ -17,7 +18,7 @@ class _StubHandler(Handler):
     _action_types: FrozenSet[ActionType]
 
     def __init__(self, action_types: FrozenSet[ActionType], *, name: str = "stub"):
-        super().__init__(emit_event=lambda e: None)
+        super().__init__(event_bus=EventBus())
         self._action_types = action_types
         self.name = name
         self.epoch_starts = 0
@@ -158,7 +159,7 @@ class TestHandlerLifecycleHooks:
             def handle_action(self, action: Any, state: Any) -> Any:
                 return HandlerActionResult(success=False)
 
-        h = MinimalHandler(emit_event=lambda e: None)
+        h = MinimalHandler(event_bus=EventBus())
         # Should not raise
         h.on_step(None, 0)
         h.on_pre_observation("agent_1", None)
@@ -173,6 +174,6 @@ class TestHandlerLifecycleHooks:
             def handle_action(self, action: Any, state: Any) -> Any:
                 return HandlerActionResult(success=False)
 
-        h = MinimalHandler(emit_event=lambda e: None)
+        h = MinimalHandler(event_bus=EventBus())
         assert h.observation_field_mapping() == {}
         assert h.build_observation_fields("a", None) == {}

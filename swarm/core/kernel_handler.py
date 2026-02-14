@@ -8,7 +8,7 @@ exploitation dimensions.
 
 import random
 import uuid
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, model_validator
 
@@ -22,12 +22,10 @@ from swarm.core.cuda_templates import get_template
 from swarm.core.handler import Handler
 from swarm.core.proxy import ProxyObservables
 from swarm.env.state import EnvState
+from swarm.logging.event_bus import EventBus
 from swarm.models.agent import AgentType
 from swarm.models.events import Event, EventType
 from swarm.models.kernel import ChallengeSpec, KernelActionResult, KernelSubmission
-
-if TYPE_CHECKING:
-    from swarm.logging.event_bus import EventBus
 
 # Hardcoded challenge catalog (LeetGPU metadata, CC BY-NC-ND 4.0 safe)
 # Fields: id, name, difficulty, functional_tests, ood_tests, atol, rtol, perf_input_size
@@ -215,11 +213,10 @@ class KernelOracleHandler(Handler):
     def __init__(
         self,
         config: KernelOracleConfig,
-        emit_event: Optional[Callable[[Event], None]] = None,
         *,
-        event_bus: Optional["EventBus"] = None,
+        event_bus: EventBus,
     ):
-        super().__init__(emit_event=emit_event, event_bus=event_bus)
+        super().__init__(event_bus=event_bus)
         self.config = config
         self._rng = random.Random(config.seed)
 

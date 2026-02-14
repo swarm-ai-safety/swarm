@@ -7,7 +7,7 @@ detection.
 
 import random
 import re
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from swarm.boundaries.external_world import (  # noqa: I001
     ExternalEntity,
@@ -22,10 +22,7 @@ from swarm.boundaries.information_flow import (
 )
 from swarm.boundaries.leakage import LeakageDetector, LeakageReport
 from swarm.boundaries.policies import PolicyEngine
-from swarm.models.events import Event
-
-if TYPE_CHECKING:
-    from swarm.logging.event_bus import EventBus
+from swarm.logging.event_bus import EventBus
 
 # Patterns used to estimate content sensitivity when the caller does
 # not supply a trustworthy score.  Scores are cumulative (capped at 1).
@@ -70,21 +67,16 @@ class BoundaryHandler:
         flow_tracker: FlowTracker,
         policy_engine: PolicyEngine,
         leakage_detector: LeakageDetector,
-        emit_event: Optional[Callable[[Event], None]] = None,
-        seed: Optional[int] = None,
         *,
-        event_bus: Optional["EventBus"] = None,
+        event_bus: EventBus,
+        seed: Optional[int] = None,
     ):
         self.external_world = external_world
         self.flow_tracker = flow_tracker
         self.policy_engine = policy_engine
         self.leakage_detector = leakage_detector
-        if event_bus is not None:
-            self._emit_event: Callable[[Event], None] = event_bus.emit
-        elif emit_event is not None:
-            self._emit_event = emit_event
-        else:
-            raise ValueError("BoundaryHandler requires either emit_event or event_bus")
+        self._event_bus = event_bus
+        self._emit_event = event_bus.emit
         self._seed = seed
 
     # ------------------------------------------------------------------

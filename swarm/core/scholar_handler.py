@@ -2,7 +2,7 @@
 
 import random
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, model_validator
 
@@ -10,6 +10,7 @@ from swarm.agents.base import Action, ActionType
 from swarm.core.handler import Handler
 from swarm.core.proxy import ProxyObservables
 from swarm.env.state import EnvState
+from swarm.logging.event_bus import EventBus
 from swarm.models.events import Event, EventType
 from swarm.models.scholar import (
     Citation,
@@ -18,9 +19,6 @@ from swarm.models.scholar import (
     ScholarQuery,
     SynthesisResult,
 )
-
-if TYPE_CHECKING:
-    from swarm.logging.event_bus import EventBus
 
 
 class ScholarConfig(BaseModel):
@@ -63,11 +61,10 @@ class ScholarHandler(Handler):
     def __init__(
         self,
         config: ScholarConfig,
-        emit_event: Optional[Callable[[Event], None]] = None,
         *,
-        event_bus: Optional["EventBus"] = None,
+        event_bus: EventBus,
     ):
-        super().__init__(emit_event=emit_event, event_bus=event_bus)
+        super().__init__(event_bus=event_bus)
         self.config = config
         self._rng = random.Random(config.seed)
 

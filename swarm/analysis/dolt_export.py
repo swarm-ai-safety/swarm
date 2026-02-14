@@ -198,15 +198,15 @@ def export_to_dolt(
 
     _dolt_exec(["add", "."], cwd=str(dolt_path))
     commit_result = _dolt_exec(
-        ["commit", "-m", commit_msg, "--allow-empty"],
+        ["commit", "-m", commit_msg],
         cwd=str(dolt_path),
     )
 
     if commit_result.returncode != 0:
         # May fail if there are no changes (duplicate insert)
         stderr = commit_result.stderr.strip()
-        if "nothing to commit" in stderr.lower():
-            print("Dolt: no new data to commit (duplicate run?)")
+        if "nothing to commit" in stderr.lower() or "no changes added" in stderr.lower():
+            print("Dolt: no new data to commit (duplicate run)")
             return None
         logger.error("dolt commit failed: %s", stderr)
         print(f"Warning: Dolt commit failed: {stderr}")
@@ -286,14 +286,14 @@ def export_run_summary_to_dolt(
 
     _dolt_exec(["add", "."], cwd=str(dolt_path))
     commit_result = _dolt_exec(
-        ["commit", "-m", commit_msg, "--allow-empty"],
+        ["commit", "-m", commit_msg],
         cwd=str(dolt_path),
     )
 
     if commit_result.returncode != 0:
         stderr = commit_result.stderr.strip()
-        if "nothing to commit" in stderr.lower():
-            print("Dolt: no new summary data to commit (duplicate?)")
+        if "nothing to commit" in stderr.lower() or "no changes added" in stderr.lower():
+            print("Dolt: no new summary data to commit (duplicate)")
             return None
         logger.error("dolt commit failed: %s", stderr)
         print(f"Warning: Dolt summary commit failed: {stderr}")

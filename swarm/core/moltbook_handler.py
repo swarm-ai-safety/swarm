@@ -2,7 +2,7 @@
 
 import random
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Callable, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from pydantic import BaseModel, model_validator
 
@@ -21,12 +21,10 @@ from swarm.env.moltbook import (
 )
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.moltbook import ChallengeVerificationLever, MoltbookRateLimitLever
+from swarm.logging.event_bus import EventBus
 from swarm.models.agent import AgentType
 from swarm.models.events import Event, EventType
 from swarm.models.interaction import InteractionType
-
-if TYPE_CHECKING:
-    from swarm.logging.event_bus import EventBus
 
 
 class MoltbookConfig(BaseModel):
@@ -122,14 +120,13 @@ class MoltbookHandler(Handler):
     def __init__(
         self,
         config: MoltbookConfig,
-        emit_event: Optional[Callable[[Event], None]] = None,
         governance_config: Optional[GovernanceConfig] = None,
         rate_limit_lever: Optional[MoltbookRateLimitLever] = None,
         challenge_lever: Optional[ChallengeVerificationLever] = None,
         *,
-        event_bus: Optional["EventBus"] = None,
+        event_bus: EventBus,
     ) -> None:
-        super().__init__(emit_event=emit_event, event_bus=event_bus)
+        super().__init__(event_bus=event_bus)
         self.config = config
         self._rng = random.Random(config.seed)
         self.feed = MoltbookFeed(max_content_length=config.max_content_length)

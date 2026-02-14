@@ -108,7 +108,7 @@ Build and evaluate a **multi-agent sandbox economy** to study *system-level safe
 | AgentRxiv Server | Complete | `swarm/research/agentrxiv_server.py` |
 | Quality Gates | Complete | `swarm/research/quality.py` (PreRegistration, QualityGate) |
 | Reflexivity | Complete | `swarm/research/reflexivity.py` (ShadowSimulation, PublishThenAttack) |
-| Paper Annotation | Complete | `swarm/research/annotator.py` (RiskProfile, TestableClaim) |
+| Paper Annotation | Complete | `swarm/research/annotator.py` (RiskProfile, VerifiableClaim) |
 | PDF Export | Complete | `swarm/research/pdf_export.py` |
 | Submission Validation | Complete | `swarm/research/submission.py` |
 | Scenario Generation | Complete | `swarm/research/scenario_gen.py` |
