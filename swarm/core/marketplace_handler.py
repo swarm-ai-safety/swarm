@@ -5,18 +5,20 @@ management, escrow settlement, dispute handling, and epoch
 maintenance.
 """
 
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
-from swarm.agents.base import Action
+from swarm.agents.base import Action, ActionType
+from swarm.core.handler import Handler, HandlerActionResult
 from swarm.env.marketplace import EscrowStatus, Marketplace
 from swarm.env.state import EnvState
 from swarm.env.tasks import TaskPool
 from swarm.governance.engine import GovernanceEngine
+from swarm.logging.event_bus import EventBus
 from swarm.models.events import Event, EventType
 from swarm.models.interaction import InteractionType, SoftInteraction
 
 
-class MarketplaceHandler:
+class MarketplaceHandler(Handler):
     """Handles all marketplace actions and lifecycle events.
 
     Operates on shared state objects owned by the orchestrator.
@@ -24,15 +26,53 @@ class MarketplaceHandler:
     maintenance to this handler.
     """
 
+    @staticmethod
+    def handled_action_types() -> frozenset:
+        return frozenset({
+            ActionType.POST_BOUNTY,
+            ActionType.PLACE_BID,
+            ActionType.ACCEPT_BID,
+            ActionType.REJECT_BID,
+            ActionType.WITHDRAW_BID,
+            ActionType.FILE_DISPUTE,
+        })
+
     def __init__(
         self,
         marketplace: Marketplace,
         task_pool: TaskPool,
-        emit_event: Callable[[Event], None],
+        *,
+        event_bus: EventBus,
+        enable_rate_limits: bool = True,
     ):
+        super().__init__(event_bus=event_bus)
         self.marketplace = marketplace
         self.task_pool = task_pool
-        self._emit_event = emit_event
+        self._enable_rate_limits = enable_rate_limits
+
+    def handle_action(self, action: Action, state: Any) -> HandlerActionResult:
+        """Dispatch a marketplace action and return a unified result.
+
+        Marketplace actions don't generate interactions/observables, so the
+        result always has ``observables=None``.
+        """
+        dispatch = {
+            ActionType.POST_BOUNTY: lambda: self.handle_post_bounty(
+                action, state, enable_rate_limits=self._enable_rate_limits
+            ),
+            ActionType.PLACE_BID: lambda: self.handle_place_bid(
+                action, state, enable_rate_limits=self._enable_rate_limits
+            ),
+            ActionType.ACCEPT_BID: lambda: self.handle_accept_bid(action, state),
+            ActionType.REJECT_BID: lambda: self.handle_reject_bid(action, state),
+            ActionType.WITHDRAW_BID: lambda: self.handle_withdraw_bid(action),
+            ActionType.FILE_DISPUTE: lambda: self.handle_file_dispute(action, state),
+        }
+        handler_fn = dispatch.get(action.action_type)
+        if handler_fn is None:
+            return HandlerActionResult(success=False)
+        success = handler_fn()
+        return HandlerActionResult(success=success)
 
     # ------------------------------------------------------------------
     # Action handlers
@@ -189,7 +229,7 @@ class MarketplaceHandler:
 
     def handle_reject_bid(self, action: Action, state: EnvState) -> bool:
         """Handle REJECT_BID action."""
-        success = self.marketplace.reject_bid(
+        success: bool = self.marketplace.reject_bid(
             bid_id=action.target_id,
             poster_id=action.agent_id,
         )
@@ -209,10 +249,10 @@ class MarketplaceHandler:
 
     def handle_withdraw_bid(self, action: Action) -> bool:
         """Handle WITHDRAW_BID action."""
-        return self.marketplace.withdraw_bid(
+        return bool(self.marketplace.withdraw_bid(
             bid_id=action.target_id,
             bidder_id=action.agent_id,
-        )
+        ))
 
     def handle_file_dispute(self, action: Action, state: EnvState) -> bool:
         """Handle FILE_DISPUTE action."""
@@ -273,7 +313,7 @@ class MarketplaceHandler:
         if not bounty or not bounty.escrow_id:
             return None
 
-        settlement = self.marketplace.settle_escrow(
+        settlement: Optional[Dict] = self.marketplace.settle_escrow(
             escrow_id=bounty.escrow_id,
             success=success,
             quality_score=quality_score,

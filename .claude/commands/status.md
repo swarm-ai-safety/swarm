@@ -10,6 +10,24 @@ Quick orientation command for session start or mid-session check-in. Answers "wh
 
 Run all of the following in parallel and present a single consolidated summary:
 
+### 0. Session Detection (run first)
+
+Detect worktree context:
+```bash
+git rev-parse --git-dir
+git rev-parse --git-common-dir
+git rev-parse --show-toplevel
+```
+
+If `--git-dir` and `--git-common-dir` resolve to different paths, this is a linked worktree. Extract the session identity from the worktree directory name (e.g. `session-2` -> `pane-2`). Include this at the top of the output:
+
+```
+  Session:     pane-2 (session/pane-2)
+  Main repo:   /path/to/main/repo
+```
+
+If not in a worktree, omit the session line.
+
 ### 1. Branch & Remote State
 ```bash
 git branch --show-current
@@ -65,6 +83,9 @@ Only if there are staged files:
 ```
 Session Status
 ══════════════════════════════════════════
+  Session:     pane-2 (session/pane-2)      ← only if in a worktree
+  Main repo:   /path/to/main/repo           ← only if in a worktree
+
   Branch:      feature/my-branch
   Remote:      2 ahead, 0 behind origin
   Stashes:     0

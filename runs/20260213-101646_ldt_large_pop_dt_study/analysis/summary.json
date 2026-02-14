@@ -1,0 +1,193 @@
+{
+  "scenario": "ldt_large_population",
+  "parameter": "decision_theory",
+  "values": [
+    "tdt",
+    "fdt",
+    "udt"
+  ],
+  "seeds_per_config": 10,
+  "total_runs": 30,
+  "descriptive": {
+    "tdt": {
+      "welfare_mean": 366.381,
+      "welfare_std": 19.6869,
+      "toxicity_rate_mean": 0.3425,
+      "toxicity_rate_std": 0.0081,
+      "quality_gap_mean": 0.1546,
+      "quality_gap_std": 0.0278,
+      "honest_payoff_mean": 22.4664,
+      "honest_payoff_std": 1.918,
+      "adversarial_payoff_mean": 3.336,
+      "adversarial_payoff_std": 0.8904
+    },
+    "fdt": {
+      "welfare_mean": 371.4095,
+      "welfare_std": 16.3289,
+      "toxicity_rate_mean": 0.3434,
+      "toxicity_rate_std": 0.0074,
+      "quality_gap_mean": 0.1601,
+      "quality_gap_std": 0.0397,
+      "honest_payoff_mean": 23.4101,
+      "honest_payoff_std": 1.1635,
+      "adversarial_payoff_mean": 3.1469,
+      "adversarial_payoff_std": 0.3417
+    },
+    "udt": {
+      "welfare_mean": 387.6776,
+      "welfare_std": 16.6092,
+      "toxicity_rate_mean": 0.3411,
+      "toxicity_rate_std": 0.0057,
+      "quality_gap_mean": 0.1707,
+      "quality_gap_std": 0.0272,
+      "honest_payoff_mean": 24.5655,
+      "honest_payoff_std": 1.3907,
+      "adversarial_payoff_mean": 3.2216,
+      "adversarial_payoff_std": 0.44
+    }
+  },
+  "pairwise_tests": [
+    {
+      "comparison": "tdt vs fdt",
+      "metric": "welfare",
+      "t_stat": -0.6217,
+      "p_value": 0.542198,
+      "cohens_d": -0.278,
+      "mw_u_p": 0.384673,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "tdt vs fdt",
+      "metric": "toxicity_rate",
+      "t_stat": -0.261,
+      "p_value": 0.797065,
+      "cohens_d": -0.1167,
+      "mw_u_p": 0.623176,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "tdt vs fdt",
+      "metric": "quality_gap",
+      "t_stat": -0.355,
+      "p_value": 0.72718,
+      "cohens_d": -0.1588,
+      "mw_u_p": 0.520523,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "tdt vs fdt",
+      "metric": "honest_payoff",
+      "t_stat": -1.3303,
+      "p_value": 0.20352,
+      "cohens_d": -0.5949,
+      "mw_u_p": 0.185877,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "tdt vs fdt",
+      "metric": "adversarial_payoff",
+      "t_stat": 0.6269,
+      "p_value": 0.542853,
+      "cohens_d": 0.2804,
+      "mw_u_p": 0.96985,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "tdt vs udt",
+      "metric": "welfare",
+      "t_stat": -2.6146,
+      "p_value": 0.017826,
+      "cohens_d": -1.1693,
+      "mw_u_p": 0.021134,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "tdt vs udt",
+      "metric": "toxicity_rate",
+      "t_stat": 0.4522,
+      "p_value": 0.657083,
+      "cohens_d": 0.2022,
+      "mw_u_p": 0.850107,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "tdt vs udt",
+      "metric": "quality_gap",
+      "t_stat": -1.3024,
+      "p_value": 0.209221,
+      "cohens_d": -0.5824,
+      "mw_u_p": 0.384673,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "tdt vs udt",
+      "metric": "honest_payoff",
+      "t_stat": -2.8018,
+      "p_value": 0.012563,
+      "cohens_d": -1.253,
+      "mw_u_p": 0.025748,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "tdt vs udt",
+      "metric": "adversarial_payoff",
+      "t_stat": 0.3641,
+      "p_value": 0.721607,
+      "cohens_d": 0.1628,
+      "mw_u_p": 0.677585,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "fdt vs udt",
+      "metric": "welfare",
+      "t_stat": -2.2087,
+      "p_value": 0.040405,
+      "cohens_d": -0.9878,
+      "mw_u_p": 0.037635,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "fdt vs udt",
+      "metric": "toxicity_rate",
+      "t_stat": 0.7835,
+      "p_value": 0.444158,
+      "cohens_d": 0.3504,
+      "mw_u_p": 0.307489,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "fdt vs udt",
+      "metric": "quality_gap",
+      "t_stat": -0.6949,
+      "p_value": 0.497146,
+      "cohens_d": -0.3108,
+      "mw_u_p": 0.344704,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "fdt vs udt",
+      "metric": "honest_payoff",
+      "t_stat": -2.015,
+      "p_value": 0.059566,
+      "cohens_d": -0.9012,
+      "mw_u_p": 0.037635,
+      "bonferroni_sig": false
+    },
+    {
+      "comparison": "fdt vs udt",
+      "metric": "adversarial_payoff",
+      "t_stat": -0.4242,
+      "p_value": 0.676724,
+      "cohens_d": -0.1897,
+      "mw_u_p": 0.73373,
+      "bonferroni_sig": false
+    }
+  ],
+  "bonferroni_survivors": [],
+  "p_hacking_audit": {
+    "total_hypotheses": 15,
+    "pre_registered": true,
+    "nominally_significant": 3,
+    "bonferroni_significant": 0
+  }
+}

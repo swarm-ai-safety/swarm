@@ -35,12 +35,24 @@ Examples:
   - Everything else → "Other"
 - Include a "Quick Start" section with install + run instructions.
 
-4) **Create tag and release**:
+4) **Update CHANGELOG.md**:
+- Read `CHANGELOG.md`.
+- Convert the `## [Unreleased]` section into a versioned entry: `## [<version>] - <YYYY-MM-DD>`.
+- Organize entries under Keep a Changelog categories (`### Added`, `### Changed`, `### Fixed`, `### Removed`). Use the grouped commits from step 3 as a starting point, but **read the actual diffs** to write human-quality descriptions rather than echoing raw commit messages. Highlight:
+  - New modules, handlers, bridges, or agent types
+  - New scenario configs or governance levers
+  - Test count changes (e.g. "2922 tests" → "2950 tests")
+  - Breaking changes or renamed APIs
+- Add a fresh empty `## [Unreleased]` section above the new entry.
+- Commit the CHANGELOG update: `git add CHANGELOG.md && git commit -m "Update CHANGELOG for <version>"`.
+- If pyproject.toml version doesn't match `<version>` (without the `v` prefix), update it and amend the commit.
+
+5) **Create tag and release**:
 - `git tag <version> <commit> -m "<version>: <summary>"`
 - `git push origin <version>`
 - `gh release create <version> --title "<version>: <summary>" --notes "<generated notes>"`
 
-5) **Print the release URL**.
+6) **Print the release URL**.
 
 ## Constraints
 

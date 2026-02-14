@@ -7,14 +7,15 @@ import argparse
 import os
 import re
 import sys
-from urllib.parse import urlparse
 from pathlib import Path
 from typing import Dict, List
+from urllib.parse import urlparse
 
 from swarm.bridges.claude_code import ClaudeCodeBridge, ClientConfig
-from swarm.bridges.claude_code.bridge import BridgeConfig
 from swarm.bridges.claude_code.agent import ClaudeCodeAgent
+from swarm.bridges.claude_code.bridge import BridgeConfig
 from swarm.core.orchestrator import Orchestrator
+from swarm.governance.config import GovernanceConfig
 from swarm.scenarios.loader import load_scenario
 
 
@@ -152,7 +153,7 @@ def main() -> int:
     )
     bridge_config = BridgeConfig(
         client_config=client_config,
-        governance_config=scenario.orchestrator_config.governance_config,
+        governance_config=scenario.orchestrator_config.governance_config or GovernanceConfig(),
         auto_respond_governance=auto_approve,
     )
     bridge = ClaudeCodeBridge(bridge_config, event_log=orchestrator.event_log)

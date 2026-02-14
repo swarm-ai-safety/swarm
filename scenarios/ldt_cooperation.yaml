@@ -15,6 +15,7 @@ agents:
       similarity_threshold: 0.7
       welfare_weight: 0.3
       updateless_commitment: 0.8
+      acausality_depth: 2
   - type: honest
     count: 2
   - type: opportunistic

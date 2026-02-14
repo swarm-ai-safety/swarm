@@ -1,6 +1,7 @@
 """Tests for agent role mixin classes."""
 
 import random
+from typing import Any
 
 import pytest
 
@@ -18,7 +19,7 @@ from swarm.agents.roles.worker import WorkerRole, WorkProgress
 
 def _obs(**kwargs) -> Observation:
     """Convenience builder for Observation with sensible defaults."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "visible_posts": [],
         "active_tasks": [],
     }

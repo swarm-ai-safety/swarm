@@ -11,7 +11,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
-import requests
+import requests  # type: ignore[import-untyped]
 
 from swarm.research.agentrxiv_server import (
     AgentRxivServer,

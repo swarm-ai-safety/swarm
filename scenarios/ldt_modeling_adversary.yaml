@@ -1,0 +1,66 @@
+# LDT vs Modeling Adversary Scenario (§4.2 Condition B)
+# Tests whether deeper acausal reasoning defends against adversaries
+# that model and exploit LDT decision procedures.
+# Prediction: Level 2-3 should provide genuine advantage when
+# adversaries attempt to mimic cooperative traces (fool Level 1).
+
+scenario_id: ldt_modeling_adversary
+description: "LDT agents vs modeling adversaries that infer decision procedures"
+motif: ldt_cooperation
+
+agents:
+  - type: ldt
+    count: 3
+    config:
+      cooperation_prior: 0.65
+      similarity_threshold: 0.7
+      welfare_weight: 0.3
+      updateless_commitment: 0.8
+      acausality_depth: 1
+      decision_theory: fdt
+  - type: honest
+    count: 2
+  - type: modeling_adversary
+    count: 2
+    config:
+      modeling_horizon: 15
+      mimicry_probability: 0.6
+      exploitation_threshold: 5
+      ldt_detection_sensitivity: 0.7
+      aggression_level: 0.6
+
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 1.0
+  bandwidth_cap: 10
+  circuit_breaker_enabled: false
+  audit_enabled: false
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.0
+  rho_b: 0.0
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 10
+  min_agents: 7
+  toxicity_threshold: 0.5
+
+outputs:
+  event_log: "logs/ldt_modeling_adversary_events.jsonl"
+  metrics_csv: "logs/ldt_modeling_adversary_metrics.csv"

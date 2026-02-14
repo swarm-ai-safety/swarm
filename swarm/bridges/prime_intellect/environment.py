@@ -34,6 +34,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from swarm.bridges.prime_intellect.config import (
     PrimeIntellectConfig,
+    RewardMode,
 )
 from swarm.bridges.prime_intellect.events import (
     EpisodeSummary,
@@ -561,7 +562,7 @@ def load_environment(
     """
     config = PrimeIntellectConfig(
         scenario_path=scenario_path,
-        reward_mode=reward_mode,
+        reward_mode=RewardMode(reward_mode),
         population_size=population_size,
         max_turns=max_turns,
         **kwargs,

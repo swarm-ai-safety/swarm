@@ -1,0 +1,2 @@
+mix_name,persona,seed,steps,total_reward,mean_p,toxicity,quality_gap,welfare,terminated_early
+balanced,default,42,5,5.7545,0.8136,0.1863,0.0012,1.4408,False

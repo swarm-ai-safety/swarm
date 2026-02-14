@@ -1,0 +1,60 @@
+============================================================
+RED-TEAM EVALUATION REPORT
+============================================================
+
+Governance Configuration: {'circuit_breaker_enabled': False, 'collusion_detection_enabled': False, 'audit_enabled': False, 'staking_enabled': False, 'transaction_tax_rate': 0.0}
+Evaluation Date: 2026-02-12 23:11:33.565534
+
+OVERALL ASSESSMENT
+----------------------------------------
+Robustness Score: 0.40 (F)
+Attacks Tested: 8
+Attacks Prevented: 2
+Attacks Successful: 6
+
+KEY METRICS
+----------------------------------------
+Overall Evasion Rate: 42.16%
+Detection Latency: 13.9 epochs
+Total Damage Allowed: 455.70
+
+VULNERABILITIES DISCOVERED
+----------------------------------------
+  [HIGH] vuln_reputation_farming_success
+    Reputation Farming Exploit succeeded with significant damage (39)
+    Attack Vector: exploitation
+    Mitigation: Enable or strengthen reputation_decay, circuit_breaker
+
+  [CRITICAL] vuln_collusion_ring_success
+    Collusion Ring succeeded with significant damage (97)
+    Attack Vector: coordination
+    Mitigation: Enable or strengthen collusion_detection, circuit_breaker
+
+  [HIGH] vuln_threshold_dancing_success
+    Threshold Dancing succeeded with significant damage (40)
+    Attack Vector: evasion
+    Mitigation: Enable or strengthen circuit_breaker, random_audit
+
+  [CRITICAL] vuln_sybil_attack_success
+    Sybil Attack succeeded with significant damage (120)
+    Attack Vector: coordination
+    Mitigation: Enable or strengthen vote_normalization, bandwidth_cap, collusion_detection
+
+  [HIGH] vuln_information_laundering_success
+    Information Laundering succeeded with significant damage (48)
+    Attack Vector: information
+    Mitigation: Enable or strengthen circuit_breaker, collusion_detection
+
+  [CRITICAL] vuln_resource_drain_success
+    Resource Drain succeeded with significant damage (60)
+    Attack Vector: resource
+    Mitigation: Enable or strengthen transaction_tax, staking
+
+RECOMMENDATIONS
+----------------------------------------
+  1. Enable circuit breaker to automatically freeze malicious agents
+  2. Enable collusion detection to identify coordinated attacks
+  3. Increase transaction tax to discourage resource extraction
+  4. Consider defense-in-depth: enable multiple complementary governance levers
+
+============================================================

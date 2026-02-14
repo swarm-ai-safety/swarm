@@ -24,6 +24,7 @@ class GasTownConfig:
     gt_cli_path: str = "gt"
     poll_interval_seconds: float = 5.0
     proxy_sigmoid_k: float = 2.0
+    base_branch: str = "origin/main"
     agent_role_map: Dict[str, str] = field(default_factory=dict)
     max_interactions: int = 50000
     max_events: int = 50000

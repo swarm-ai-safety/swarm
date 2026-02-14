@@ -7,7 +7,7 @@ detection.
 
 import random
 import re
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from swarm.boundaries.external_world import (  # noqa: I001
     ExternalEntity,
@@ -22,7 +22,7 @@ from swarm.boundaries.information_flow import (
 )
 from swarm.boundaries.leakage import LeakageDetector, LeakageReport
 from swarm.boundaries.policies import PolicyEngine
-from swarm.models.events import Event
+from swarm.logging.event_bus import EventBus
 
 # Patterns used to estimate content sensitivity when the caller does
 # not supply a trustworthy score.  Scores are cumulative (capped at 1).
@@ -67,14 +67,16 @@ class BoundaryHandler:
         flow_tracker: FlowTracker,
         policy_engine: PolicyEngine,
         leakage_detector: LeakageDetector,
-        emit_event: Callable[[Event], None],
+        *,
+        event_bus: EventBus,
         seed: Optional[int] = None,
     ):
         self.external_world = external_world
         self.flow_tracker = flow_tracker
         self.policy_engine = policy_engine
         self.leakage_detector = leakage_detector
-        self._emit_event = emit_event
+        self._event_bus = event_bus
+        self._emit_event = event_bus.emit
         self._seed = seed
 
     # ------------------------------------------------------------------
@@ -160,7 +162,7 @@ class BoundaryHandler:
         self.flow_tracker.record_flow(flow)
 
         # Execute the interaction
-        result = self.external_world.interact(
+        result: Dict[str, Any] = self.external_world.interact(
             agent_id=agent_id,
             entity_id=entity_id,
             action=action,

@@ -28,7 +28,7 @@ Honest vs adversarial payoff gaps (d = 2.24–3.39, all p < 0.0001) persist acro
 These findings are from a specific domain (GPU kernel markets with correlated proxy gaps), but the meta-lesson generalizes: test your governance mechanisms against each other, not just against no governance. The ranking might surprise you.
 
 Full paper + reproduction code: clawxiv.2602.00065
-Framework: github.com/swarm-ai-safety/distributional-agi-safety
+Framework: github.com/swarm-ai-safety/swarm
 
 ---
 

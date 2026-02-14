@@ -20,13 +20,28 @@ Examples:
 
 ## Behavior
 
-### Step 1: Load scenario and determine agent groups
+### Preferred: Use the persistent analysis script
 
-- Parse the scenario YAML via `load_scenario()`.
-- If `--groups auto`, infer groups from agent specs. Each unique combination of `type`, `name` prefix, and distinguishing config keys (e.g. `recursion_depth`, `memory_budget`) becomes a group.
-- Print the detected groups for confirmation.
+Run the analysis via the persistent script:
 
-### Step 2: Run all seeds via orchestrator (not CLI)
+```bash
+python -m swarm.scripts.analyze <scenario_path_or_id> [--seeds <seeds>]
+```
+
+This handles everything: scenario loading, seed execution, group detection, statistics, corrections, and artifact export. Just run it and print the output.
+
+Examples:
+```bash
+python -m swarm.scripts.analyze rlm_recursive_collusion
+python -m swarm.scripts.analyze ldt_cooperation --seeds 42,7,123
+python -m swarm.scripts.analyze scenarios/rlm_memory_as_power.yaml --seeds 20
+```
+
+The script auto-detects agent groups from the YAML, runs all seeds sequentially, computes pairwise t-tests, ANOVA, Pearson correlation, Gini, and applies Bonferroni + Holm-Bonferroni corrections. Artifacts are saved to `runs/<timestamp>_analysis_<scenario_id>/`.
+
+### Fallback: Inline execution
+
+If the script fails or the user needs custom grouping (`--groups`), fall back to inline orchestrator execution using the APIs below.
 
 For each seed, directly:
 
@@ -39,77 +54,44 @@ orch.run()
 
 Extract per-agent payoffs from `orch.state.agents[aid].total_payoff`.
 
-Do NOT use `python -m swarm run` -- the CLI does not expose per-agent payoffs in its JSON export. Running via orchestrator directly avoids the schema mismatch.
+Do NOT use `python -m swarm run` -- the CLI does not expose per-agent payoffs in its JSON export.
 
-Print a one-line summary per seed as it completes.
+### What the script computes
 
-### Step 3: Compute statistics
-
-For each pair of groups and across all groups:
-
-**Descriptive stats:**
-- Per-group: mean, std, n
-- Overall: Gini coefficient (dominance index)
+**Descriptive stats:** Per-group mean, std, n; Overall Gini coefficient
 
 **Hypothesis tests (all pre-registered, not post-hoc):**
 1. Pairwise independent t-tests between all group pairs
 2. One-way ANOVA across all groups (if 3+ groups)
-3. Effect sizes: Cohen's d for each pairwise comparison
-4. Pearson correlation between the grouping variable and payoff (if groups have a natural ordering, e.g. recursion depth or memory budget)
-5. One-sample t-test: Gini > 0
+3. ANOVA across subgroups of same type (e.g. RLM tiers only)
+4. Cohen's d for each pairwise comparison
+5. Pearson correlation between ordering variable and payoff (auto-detected from config keys like `recursion_depth`, `memory_budget`)
+6. Agent-level exploitation rate (if ordering variable exists)
+7. One-sample t-test: Gini > 0
 
-**Multiple comparisons correction:**
-- Report raw p-values
-- Apply Bonferroni correction (alpha / n_tests)
-- Apply Holm-Bonferroni (step-down) correction
-- Flag which results survive each correction
+**Multiple comparisons correction:** Bonferroni and Holm-Bonferroni step-down
 
-**Domain-specific metrics (if applicable):**
-- If agents have `working_memory.recursion_traces`, compute `RLMMetrics.rationalization_consistency()`
-- If event log is available, compute collusion coordination metrics
+### Artifacts saved
 
-### Step 4: Output formatted results
-
-Print results in three blocks:
-
-1. **Per-seed summary table** (one line per seed with group means)
-2. **Descriptive statistics block** (group means/stds)
-3. **Hypothesis tests table** with columns: Test, Statistic, Raw p, Significance, Cohen's d, Bonferroni, Holm-Bonferroni
-4. **P-hacking audit table** sorted by raw p-value with correction columns
-
-### Step 5: Save artifacts
-
-Create `runs/<YYYYMMDD-HHMMSS>_analysis_<scenario_id>/`:
+`runs/<YYYYMMDD-HHMMSS>_analysis_<scenario_id>/`:
 - `results.txt`: Full formatted output
 - `per_agent_payoffs.csv`: Raw data (seed, agent_id, group, payoff)
 - `summary.json`: Machine-readable results (group means, test statistics, p-values)
 
-## Key APIs (avoid rediscovery)
+## Key APIs (fallback only)
 
 These are the correct Orchestrator accessors:
 - `orch.state.agents` -- dict of `agent_id -> AgentState` (has `.total_payoff`, `.reputation`, etc.)
 - `orch.get_all_agents()` -- returns `List[BaseAgent]` (the agent policy objects, not state)
 - `orch._epoch_metrics` -- list of `EpochMetrics` (has `.total_welfare`, `.toxicity_rate`, etc.)
-- Agent working memory (RLM only): `agent_obj.working_memory.recursion_traces`
 
 Do NOT use:
 - `orch.agents` (does not exist -- use `orch.get_all_agents()`)
 - `orch._all_interactions` (does not exist)
 - `history["epochs"]` from JSON export (key is `epoch_snapshots`, and it lacks per-agent payoffs)
 
-## Statistical rigor requirements
-
-- Always report effect sizes alongside p-values
-- Always apply multiple comparisons correction when running 3+ tests
-- Always note that seeds were fixed a priori (not selected post-hoc)
-- Always note total number of tests run
-- Use scipy.stats for all statistical tests (available in the project environment)
-- Use numpy for array operations (available in the project environment)
-
 ## Constraints
 
 - Run seeds sequentially (orchestrator is not thread-safe)
 - Do not modify the scenario YAML file
-- Print progress as seeds complete (the user should see that work is happening)
-- If a seed fails, report it and continue with remaining seeds
 - Minimum 5 seeds for any statistical test; warn if fewer

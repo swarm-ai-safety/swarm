@@ -93,7 +93,10 @@ def _build_number_patterns() -> None:
 def _deobfuscate(text: str) -> str:
     """Remove injected punctuation and filler words."""
     # Remove known injected punctuation chars (from Moltbook ChallengeGenerator)
-    cleaned = re.sub(r'[\^/~|\]}<*+]', '', text)
+    cleaned = re.sub(r'[\^/~|\]}<*+\[\]\\]', '', text)
+    # Remove dashes used as injected separators (between spaces or at word boundaries)
+    cleaned = re.sub(r'(?<=\s)-(?=\s)', '', cleaned)
+    cleaned = re.sub(r'(?<=[a-zA-Z])-(?=\s)', '', cleaned)
     # Also remove stray periods that appear in obfuscated text
     cleaned = re.sub(r'(?<=[a-zA-Z])\.(?=[a-zA-Z])', '', cleaned)
     # Remove filler words
@@ -147,8 +150,11 @@ def _detect_operation(text: str) -> str:
         return "divide"
     if "remain" in collapsed or "lose" in collapsed or "left" in collapsed:
         return "subtract"
+    # Explicit multiply keywords — check before addition keywords
+    if "each" in collapsed or "multiply" in collapsed or "product" in collapsed:
+        return "multiply"
     if any(kw in collapsed for kw in (
-        "ads", "sum", "combined", "together", "plus",
+        "ads", "sum", "combined", "together", "plus", "total",
     )):
         return "add"
     if ("shel" in collapsed and "find" in collapsed) or (
@@ -439,6 +445,7 @@ def publish_post(
     if verification:
         challenge = verification.get("challenge", "")
         verify_code = verification.get("code", "")
+        print(f"Challenge: {challenge}")
         print("Solving verification challenge...")
 
         answer = solve_captcha(challenge)
@@ -448,15 +455,25 @@ def publish_post(
             return post_id
 
         print(f"Answer: {answer:.2f}")
-        verify_result = api_call("POST", "/verify", creds["api_key"], {
+        url = f"{BASE_URL}/verify"
+        body = json.dumps({
             "verification_code": verify_code,
             "answer": f"{answer:.2f}",
-        })
+        }).encode()
+        req = Request(url, data=body, method="POST")
+        req.add_header("Authorization", f"Bearer {creds['api_key']}")
+        req.add_header("Content-Type", "application/json")
+        try:
+            with urlopen(req, timeout=30) as resp:
+                verify_result: dict = json.loads(resp.read())
+        except HTTPError as e:
+            err_body = e.read().decode() if e.fp else ""
+            print(f"Verification error {e.code}: {err_body}", file=sys.stderr)
+            verify_result = {"success": False}
 
         if verify_result.get("success"):
             print("Verified and published!")
         else:
-            print(f"Verification failed: {verify_result}", file=sys.stderr)
             print("Post created but not verified.", file=sys.stderr)
     else:
         print("No verification required.")

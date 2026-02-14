@@ -1,0 +1,48 @@
+{
+  "timestamp": "20260212-001857",
+  "slug": "pi_bridge_claude_study",
+  "models": [
+    "haiku",
+    "sonnet"
+  ],
+  "config": {
+    "population_size": 8,
+    "max_turns": 10,
+    "seeds": [
+      42,
+      139,
+      236
+    ],
+    "n_seeds": 3,
+    "agent_mixes": {
+      "mostly_honest": {
+        "h": 0.8,
+        "o": 0.1,
+        "d": 0.1
+      },
+      "balanced": {
+        "h": 0.34,
+        "o": 0.33,
+        "d": 0.33
+      },
+      "adversarial_heavy": {
+        "h": 0.1,
+        "o": 0.3,
+        "d": 0.6
+      }
+    },
+    "personas": [
+      "default",
+      "safety_trained",
+      "adversarial"
+    ]
+  },
+  "total_episodes": 54,
+  "total_tokens": 261133,
+  "elapsed_seconds": 2605.9,
+  "analysis_summary": {
+    "n_tests": 19,
+    "n_significant_uncorrected": 0,
+    "n_significant_holm": 0
+  }
+}

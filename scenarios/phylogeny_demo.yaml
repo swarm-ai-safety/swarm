@@ -1,0 +1,66 @@
+# Phylogeny Demo Scenario
+# 50 agents across all types, 20 epochs with active governance
+# Designed to produce a rich animated phylogeny visualization
+
+scenario_id: phylogeny_demo
+description: "Large mixed-population scenario for phylogeny visualization"
+motif: coordination_test
+
+agents:
+  - type: honest
+    count: 20
+  - type: opportunistic
+    count: 12
+  - type: deceptive
+    count: 8
+  - type: adversarial
+    count: 5
+  - type: rlm
+    count: 5
+
+governance:
+  transaction_tax_rate: 0.05
+  transaction_tax_split: 0.5
+  reputation_decay_rate: 0.95
+  bandwidth_cap: 60
+
+  staking_enabled: false
+  min_stake_to_participate: 0.0
+
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_duration_epochs: 2
+
+  audit_enabled: true
+  audit_probability: 0.1
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 20
+  seed: 7
+  schedule_mode: random
+  max_actions_per_step: 60
+
+rate_limits:
+  posts_per_epoch: 30
+  interactions_per_step: 20
+  votes_per_epoch: 150
+  tasks_per_epoch: 15
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.15
+  rho_b: 0.1
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 20
+  min_agents: 50
+  toxicity_threshold: 0.5
+
+outputs:
+  event_log: "logs/phylogeny_demo_events.jsonl"
+  metrics_csv: "logs/phylogeny_demo_metrics.csv"

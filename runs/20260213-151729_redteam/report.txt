@@ -1,0 +1,66 @@
+============================================================
+SWARM RED-TEAM EVALUATION REPORT
+Date: 2026-02-13T15:17:30.318074
+Mode: quick
+============================================================
+
+
+--- Config: no_defenses ---
+  Attacks tested:     3
+  Attacks successful: 0
+  Avg evasion rate:   52.22%
+  Total damage:       176.7
+
+  Per-attack results:
+    [PREVENTED] Reputation Farming Exploit (dmg=39.0, evasion=54.60%)
+    [PREVENTED] Collusion Ring (dmg=97.2, evasion=45.36%)
+    [PREVENTED] Threshold Dancing (dmg=40.5, evasion=56.70%)
+
+
+--- Config: baseline ---
+  Attacks tested:     3
+  Attacks successful: 2
+  Avg evasion rate:   43.40%
+  Total damage:       157.8
+
+  Per-attack results:
+    [PREVENTED] Reputation Farming Exploit (dmg=39.0, evasion=54.60%)
+    [SUCCEEDED] Collusion Ring (dmg=97.2, evasion=45.36%)
+    [SUCCEEDED] Threshold Dancing (dmg=21.6, evasion=30.24%)
+
+
+--- Config: moderate ---
+  Attacks tested:     3
+  Attacks successful: 2
+  Avg evasion rate:   27.53%
+  Total damage:       114.4
+
+  Per-attack results:
+    [SUCCEEDED] Reputation Farming Exploit (dmg=12.8, evasion=17.95%)
+    [PREVENTED] Collusion Ring (dmg=83.1, evasion=38.78%)
+    [SUCCEEDED] Threshold Dancing (dmg=18.5, evasion=25.86%)
+
+
+--- Config: strict ---
+  Attacks tested:     3
+  Attacks successful: 1
+  Avg evasion rate:   16.90%
+  Total damage:       49.3
+
+  Per-attack results:
+    [SUCCEEDED] Reputation Farming Exploit (dmg=12.2, evasion=17.01%)
+    [PREVENTED] Collusion Ring (dmg=19.7, evasion=9.19%)
+    [PREVENTED] Threshold Dancing (dmg=17.5, evasion=24.49%)
+
+
+============================================================
+COMPARATIVE SUMMARY
+============================================================
+
+Config                  Score  Grade  Prevented  Succeeded     Damage
+----------------------------------------------------------------
+no_defenses               n/a    n/a          3          0      176.7
+baseline                  n/a    n/a          1          2      157.8
+moderate                  n/a    n/a          1          2      114.4
+strict                    n/a    n/a          2          1       49.3
+

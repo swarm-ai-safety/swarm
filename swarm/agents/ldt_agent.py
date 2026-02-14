@@ -34,6 +34,7 @@ simulation framework.
 
 import math
 import random
+from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 from swarm.agents.base import (
@@ -48,6 +49,39 @@ from swarm.models.interaction import InteractionType, SoftInteraction
 
 if TYPE_CHECKING:
     from swarm.agents.memory_config import MemoryConfig
+
+
+# ---------------------------------------------------------------------------
+# Data structures
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class InferredPolicy:
+    """Estimated decision parameters of a counterparty (Level 2)."""
+
+    cooperation_prior: float
+    similarity_threshold: float
+    welfare_weight: float
+    updateless_commitment: float
+    confidence: float  # min(sample_count / horizon, 1.0)
+    sample_count: int
+
+
+@dataclass
+class SubjunctiveDependence:
+    """Measures logical dependence between two agents' decision traces.
+
+    Goes beyond cosine similarity by measuring whether one agent's
+    decisions *logically determine* the other's — the core FDT insight
+    from Soares & Fallenstein (2017).
+    """
+
+    cosine_similarity: float  # Behavioral correlation (Level 1)
+    conditional_agreement: float  # P(they cooperate | we cooperate)
+    conditional_defection: float  # P(they defect | we defect)
+    mutual_information: float  # I(our decisions; their decisions)
+    subjunctive_score: float  # Combined score in [0, 1]
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +191,41 @@ class LDTAgent(BaseAgent):
             "interact_probability", 0.5
         )
 
+        # --- acausality parameters ---
+        self.acausality_depth: int = self.config.get("acausality_depth", 1)
+        self.max_recursion_depth: int = self.config.get(
+            "max_recursion_depth", 8
+        )
+        self.convergence_epsilon: float = self.config.get(
+            "convergence_epsilon", 0.01
+        )
+        self.mirror_prior_weight: float = self.config.get(
+            "mirror_prior_weight", 0.6
+        )
+        self.introspection_discount: float = self.config.get(
+            "introspection_discount", 0.9
+        )
+
+        # --- decision theory variant ---
+        # "tdt" = Timeless (original), "fdt" = Functional, "udt" = Updateless
+        self.decision_theory: str = self.config.get("decision_theory", "fdt")
+        # Subjunctive dependence weight (FDT: use logical dependence, not
+        # just behavioral correlation).
+        self.subjunctive_weight: float = self.config.get(
+            "subjunctive_weight", 0.6
+        )
+        # Precommitment strength (UDT: commit to policy before observing).
+        # 0.0 = no precommitment (TDT), 1.0 = full precommitment (UDT).
+        self.precommitment_strength: float = self.config.get(
+            "precommitment_strength",
+            1.0 if self.config.get("decision_theory") == "udt" else 0.0,
+        )
+        # Proof threshold for proof-based cooperation:
+        # If subjunctive_score >= this threshold, treat as proven twin
+        # (the logical equivalent of "if my algorithm outputs cooperate,
+        # theirs must too").
+        self.proof_threshold: float = self.config.get("proof_threshold", 0.85)
+
         # --- internal bookkeeping ---
         # Behavioural profile of each counterparty: list of (accepted, p) tuples.
         self._counterparty_profiles: Dict[str, List[Tuple[bool, float]]] = {}
@@ -164,6 +233,14 @@ class LDTAgent(BaseAgent):
         self._twin_scores: Dict[str, float] = {}
         # Own behavioural trace (for computing similarity with others).
         self._own_trace: List[Tuple[bool, float]] = []
+        # Level 2/3 caches.
+        self._inferred_policies: Dict[str, InferredPolicy] = {}
+        self._level2_cache: Dict[str, Optional[bool]] = {}
+        self._level3_cache: Dict[str, float] = {}
+        # Subjunctive dependence caches.
+        self._subjunctive_cache: Dict[str, SubjunctiveDependence] = {}
+        # Precommitted policy (UDT): computed once, never updated.
+        self._precommitted_cooperate: Optional[bool] = None
 
     # ------------------------------------------------------------------
     # Core LDT reasoning helpers
@@ -211,6 +288,184 @@ class LDTAgent(BaseAgent):
         # Clamp to [0, 1].
         return max(0.0, min(1.0, sim))
 
+    # ------------------------------------------------------------------
+    # FDT: Subjunctive dependence detection
+    # ------------------------------------------------------------------
+
+    def _compute_subjunctive_dependence(
+        self, counterparty_id: str
+    ) -> SubjunctiveDependence:
+        """Compute subjunctive dependence with a counterparty.
+
+        FDT's key insight (Soares & Fallenstein 2017): what matters is not
+        *causal* influence (CDT) or *evidential* correlation (EDT), but
+        whether the counterparty's decision is a *function of the same
+        computation* as ours.  We approximate this by measuring:
+
+        1. Conditional agreement: P(they coop | we coop) and P(they defect | we defect)
+        2. Mutual information: I(our decisions; their decisions)
+        3. Behavioral cosine similarity (existing Level 1)
+
+        High conditional agreement + high MI indicates the decisions are
+        "subjunctively linked" — changing our output would change theirs.
+        """
+        if counterparty_id in self._subjunctive_cache:
+            return self._subjunctive_cache[counterparty_id]
+
+        cosine = self._compute_twin_score(counterparty_id)
+        profile = self._counterparty_profiles.get(counterparty_id, [])
+        own = self._own_trace[-self.counterfactual_horizon :]
+
+        # Need paired decisions to compute conditional probabilities.
+        # Match by index (they interacted at the same timesteps).
+        n = min(len(profile), len(own))
+        if n < 3:
+            result = SubjunctiveDependence(
+                cosine_similarity=cosine,
+                conditional_agreement=cosine,
+                conditional_defection=cosine,
+                mutual_information=0.0,
+                subjunctive_score=cosine,
+            )
+            self._subjunctive_cache[counterparty_id] = result
+            return result
+
+        # Align traces: our recent decisions paired with theirs.
+        our_decisions = [(acc, p) for acc, p in own[-n:]]
+        their_decisions = [(acc, p) for acc, p in profile[-n:]]
+
+        # Conditional agreement: P(they accept | we accept)
+        we_accepted = [
+            (oa, ta) for (oa, _), (ta, _) in zip(our_decisions, their_decisions, strict=False)
+            if oa
+        ]
+        if we_accepted:
+            cond_agree = sum(1 for _, ta in we_accepted if ta) / len(we_accepted)
+        else:
+            cond_agree = 0.5
+
+        # Conditional defection: P(they reject | we reject)
+        we_rejected = [
+            (oa, ta) for (oa, _), (ta, _) in zip(our_decisions, their_decisions, strict=False)
+            if not oa
+        ]
+        if we_rejected:
+            cond_defect = sum(1 for _, ta in we_rejected if not ta) / len(we_rejected)
+        else:
+            cond_defect = 0.5
+
+        # Mutual information: I(X; Y) for binary decisions.
+        our_rate = sum(1 for a, _ in our_decisions if a) / n
+        their_rate = sum(1 for a, _ in their_decisions if a) / n
+
+        # Joint probabilities.
+        both_accept = sum(
+            1 for (oa, _), (ta, _) in zip(our_decisions, their_decisions, strict=False)
+            if oa and ta
+        ) / n
+        both_reject = sum(
+            1 for (oa, _), (ta, _) in zip(our_decisions, their_decisions, strict=False)
+            if not oa and not ta
+        ) / n
+        us_accept_them_reject = sum(
+            1 for (oa, _), (ta, _) in zip(our_decisions, their_decisions, strict=False)
+            if oa and not ta
+        ) / n
+        us_reject_them_accept = sum(
+            1 for (oa, _), (ta, _) in zip(our_decisions, their_decisions, strict=False)
+            if not oa and ta
+        ) / n
+
+        # MI = sum p(x,y) log(p(x,y) / (p(x)*p(y)))
+        mi = 0.0
+        eps = 1e-10
+        for p_xy, p_x, p_y in [
+            (both_accept, our_rate, their_rate),
+            (both_reject, 1 - our_rate, 1 - their_rate),
+            (us_accept_them_reject, our_rate, 1 - their_rate),
+            (us_reject_them_accept, 1 - our_rate, their_rate),
+        ]:
+            if p_xy > eps and p_x > eps and p_y > eps:
+                mi += p_xy * math.log2(p_xy / (p_x * p_y))
+
+        # Normalize MI to [0, 1] (max MI for binary vars is 1 bit).
+        mi_norm = max(0.0, min(1.0, mi))
+
+        # Subjunctive score: weighted combination.
+        # High conditional agreement + MI > raw cosine similarity.
+        subjunctive = (
+            0.3 * cosine
+            + 0.3 * cond_agree
+            + 0.15 * cond_defect
+            + 0.25 * mi_norm
+        )
+        subjunctive = max(0.0, min(1.0, subjunctive))
+
+        result = SubjunctiveDependence(
+            cosine_similarity=cosine,
+            conditional_agreement=cond_agree,
+            conditional_defection=cond_defect,
+            mutual_information=mi_norm,
+            subjunctive_score=subjunctive,
+        )
+        self._subjunctive_cache[counterparty_id] = result
+        return result
+
+    def _proof_based_cooperation(self, counterparty_id: str) -> Optional[bool]:
+        """Attempt proof-based cooperation (TDT/FDT).
+
+        If the subjunctive dependence score exceeds the proof threshold,
+        we have high confidence that our cooperation *logically implies*
+        their cooperation — analogous to Löb's theorem-based cooperation
+        proofs in the formal TDT literature.
+
+        Returns:
+            True if proof succeeds (cooperate),
+            False if proof fails (strong evidence of defection),
+            None if inconclusive (fall through to other reasoning).
+        """
+        dep = self._compute_subjunctive_dependence(counterparty_id)
+
+        if dep.subjunctive_score >= self.proof_threshold:
+            # High subjunctive dependence = "proven twin".
+            return True
+
+        if dep.subjunctive_score < 0.2 and dep.conditional_agreement < 0.3:
+            # Strong evidence of anti-correlation: they defect when we cooperate.
+            return False
+
+        return None  # Inconclusive — use standard reasoning.
+
+    # ------------------------------------------------------------------
+    # UDT: Policy precommitment
+    # ------------------------------------------------------------------
+
+    def _precommit_policy(self) -> bool:
+        """Compute the precommitted cooperation decision (UDT).
+
+        UDT agents commit to a policy *before* observing the specific
+        interaction, based only on their prior beliefs. This makes them
+        robust to predictors that model their decision procedure.
+
+        The precommitted policy is: cooperate if
+            cooperation_prior * (1 + welfare_weight) > defection_value
+        evaluated at the prior (no updating from specific observations).
+        """
+        if self._precommitted_cooperate is not None:
+            return self._precommitted_cooperate
+
+        cf_coop = self.cooperation_prior
+        welfare_bonus = self.welfare_weight * cf_coop
+        coop_value = cf_coop + welfare_bonus
+        defect_value = -0.5 * max(0.0, cf_coop - 0.5)
+
+        self._precommitted_cooperate = coop_value > defect_value
+        return self._precommitted_cooperate
+
+    # ------------------------------------------------------------------
+    # Core LDT reasoning helpers
+    # ------------------------------------------------------------------
+
     def _counterfactual_cooperate_payoff(
         self, counterparty_id: str
     ) -> float:
@@ -238,43 +493,353 @@ class LDTAgent(BaseAgent):
         # Opportunity cost: half the expected surplus we'd forgo.
         return -0.5 * max(0.0, coop_p - 0.5)
 
-    def _ldt_cooperate_decision(self, counterparty_id: str) -> bool:
-        """Core LDT decision: should we cooperate with this counterparty?
+    # ------------------------------------------------------------------
+    # Level 2: Policy introspection
+    # ------------------------------------------------------------------
 
-        Combines:
-        1. Updateless prior (cooperation_prior)
-        2. Counterfactual payoff comparison (cooperate vs defect)
-        3. Logical-twin bonus (cooperate if twin score is high)
-        4. Ecosystem welfare weight
+    def _infer_counterparty_policy(
+        self, counterparty_id: str
+    ) -> InferredPolicy:
+        """Infer a counterparty's decision parameters from their history.
+
+        Estimates four parameters from observed behaviour and blends
+        with a mirror prior ("they are like me") that fades as data grows.
+        """
+        if counterparty_id in self._inferred_policies:
+            return self._inferred_policies[counterparty_id]
+
+        profile = self._counterparty_profiles.get(counterparty_id, [])
+        n = len(profile)
+        confidence = min(n / max(self.counterfactual_horizon, 1), 1.0)
+
+        if n == 0:
+            # Pure mirror prior.
+            policy = InferredPolicy(
+                cooperation_prior=self.cooperation_prior,
+                similarity_threshold=self.similarity_threshold,
+                welfare_weight=self.welfare_weight,
+                updateless_commitment=self.updateless_commitment,
+                confidence=0.0,
+                sample_count=0,
+            )
+            self._inferred_policies[counterparty_id] = policy
+            return policy
+
+        # 1. cooperation_prior ← acceptance rate.
+        accepted_count = sum(1 for acc, _ in profile if acc)
+        obs_coop_prior = accepted_count / n
+
+        # 2. similarity_threshold ← variance of accepted p values.
+        accepted_ps = [p for acc, p in profile if acc]
+        if len(accepted_ps) >= 2:
+            mean_p = sum(accepted_ps) / len(accepted_ps)
+            var_p = sum((x - mean_p) ** 2 for x in accepted_ps) / len(
+                accepted_ps
+            )
+            # Low variance = selective = high threshold.
+            obs_sim_threshold = max(0.0, min(1.0, 1.0 - math.sqrt(var_p)))
+        else:
+            obs_sim_threshold = 0.5
+
+        # 3. welfare_weight ← acceptance rate for marginal interactions.
+        marginal = [acc for acc, p in profile if 0.4 <= p <= 0.6]
+        if marginal:
+            obs_welfare = sum(1 for a in marginal if a) / len(marginal)
+        else:
+            obs_welfare = 0.5
+
+        # 4. updateless_commitment ← stability (early vs late drift).
+        half = n // 2
+        if half >= 2:
+            early_rate = sum(1 for acc, _ in profile[:half] if acc) / half
+            late_rate = sum(1 for acc, _ in profile[half:] if acc) / (
+                n - half
+            )
+            drift = abs(late_rate - early_rate)
+            obs_commitment = max(0.0, min(1.0, 1.0 - drift))
+        else:
+            obs_commitment = 0.5
+
+        # Blend with mirror prior, fading as confidence grows.
+        mirror_w = self.mirror_prior_weight * (1.0 - confidence)
+
+        def _blend(observed: float, mine: float) -> float:
+            return max(0.0, min(1.0, mirror_w * mine + (1.0 - mirror_w) * observed))
+
+        policy = InferredPolicy(
+            cooperation_prior=_blend(obs_coop_prior, self.cooperation_prior),
+            similarity_threshold=_blend(
+                obs_sim_threshold, self.similarity_threshold
+            ),
+            welfare_weight=_blend(obs_welfare, self.welfare_weight),
+            updateless_commitment=_blend(
+                obs_commitment, self.updateless_commitment
+            ),
+            confidence=confidence,
+            sample_count=n,
+        )
+        self._inferred_policies[counterparty_id] = policy
+        return policy
+
+    def _simulate_counterparty_decision(
+        self, counterparty_id: str
+    ) -> bool:
+        """Simulate whether the counterparty would cooperate with us.
+
+        Creates a virtual Level 1 agent using the inferred policy
+        parameters and checks if it would cooperate.
+        """
+        if counterparty_id in self._level2_cache:
+            return self._level2_cache[counterparty_id] or False
+
+        inferred = self._infer_counterparty_policy(counterparty_id)
+
+        # Twin score is symmetric (cosine similarity).
+        twin_score = self._compute_twin_score(counterparty_id)
+
+        # Would they see us as a twin?
+        if twin_score >= inferred.similarity_threshold:
+            self._level2_cache[counterparty_id] = True
+            return True
+
+        # Simulate their counterfactual reasoning about us.
+        # From their perspective, our acceptance rate is their cf_coop.
+        our_profile = self._own_trace[-self.counterfactual_horizon :]
+        if our_profile:
+            our_accepted = [p for acc, p in our_profile if acc]
+            cf_coop = (
+                sum(our_accepted) / len(our_accepted)
+                if our_accepted
+                else inferred.cooperation_prior
+            )
+        else:
+            cf_coop = inferred.cooperation_prior
+
+        cf_defect = -0.5 * max(0.0, cf_coop - 0.5)
+
+        welfare_bonus = inferred.welfare_weight * cf_coop
+        coop_value = cf_coop + welfare_bonus
+        defect_value = cf_defect
+
+        effective_coop = (
+            inferred.updateless_commitment * inferred.cooperation_prior
+            + (1.0 - inferred.updateless_commitment) * coop_value
+        )
+
+        result = effective_coop > defect_value
+        self._level2_cache[counterparty_id] = result
+        return result
+
+    # ------------------------------------------------------------------
+    # Level 3: Recursive equilibrium
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _sigmoid(x: float) -> float:
+        """Numerically stable sigmoid."""
+        if x >= 0:
+            return 1.0 / (1.0 + math.exp(-x))
+        ex = math.exp(x)
+        return ex / (1.0 + ex)
+
+    def _best_response_probability(
+        self,
+        opponent_p_coop: float,
+        twin_score: float,
+        cooperation_prior: float,
+        similarity_threshold: float,
+        welfare_weight: float,
+        updateless_commitment: float,
+    ) -> float:
+        """Soft (probabilistic) version of Level 1 decision.
+
+        Returns a cooperation probability in [0, 1] rather than a
+        hard boolean, enabling smooth iteration for equilibrium finding.
+        """
+        # Twin channel: sigmoid of how far twin_score exceeds threshold.
+        twin_prob = self._sigmoid(
+            10.0 * (twin_score - similarity_threshold)
+        )
+
+        # Payoff channel: counterfactual comparison.
+        cf_coop = opponent_p_coop * cooperation_prior + (
+            1.0 - opponent_p_coop
+        ) * 0.5 * cooperation_prior
+        cf_defect = -0.5 * max(0.0, cf_coop - 0.5)
+        welfare_bonus = welfare_weight * cf_coop
+        coop_value = cf_coop + welfare_bonus
+        effective_coop = (
+            updateless_commitment * cooperation_prior
+            + (1.0 - updateless_commitment) * coop_value
+        )
+        advantage = effective_coop - cf_defect
+        payoff_prob = self._sigmoid(5.0 * advantage)
+
+        # Blend twin and payoff channels.
+        twin_weight = twin_prob
+        return max(0.0, min(1.0, twin_weight * 1.0 + (1.0 - twin_weight) * payoff_prob))
+
+    def _recursive_equilibrium(self, counterparty_id: str) -> float:
+        """Find the fixed-point cooperation probability via level-k iteration.
+
+        Iterates best-response functions for both agents until convergence
+        or the recursion depth cap is reached.
+
+        Returns our equilibrium cooperation probability in [0, 1].
+        """
+        if counterparty_id in self._level3_cache:
+            return self._level3_cache[counterparty_id]
+
+        inferred = self._infer_counterparty_policy(counterparty_id)
+        twin_score = self._compute_twin_score(counterparty_id)
+
+        # Initialize beliefs.
+        my_p = self.cooperation_prior
+        their_p = inferred.cooperation_prior
+
+        for _ in range(self.max_recursion_depth):
+            new_my_p = self._best_response_probability(
+                their_p,
+                twin_score,
+                self.cooperation_prior,
+                self.similarity_threshold,
+                self.welfare_weight,
+                self.updateless_commitment,
+            )
+            new_their_p = self._best_response_probability(
+                my_p,
+                twin_score,
+                inferred.cooperation_prior,
+                inferred.similarity_threshold,
+                inferred.welfare_weight,
+                inferred.updateless_commitment,
+            )
+
+            # Apply introspection discount per level.
+            new_my_p = (
+                self.introspection_discount * new_my_p
+                + (1.0 - self.introspection_discount) * my_p
+            )
+            new_their_p = (
+                self.introspection_discount * new_their_p
+                + (1.0 - self.introspection_discount) * their_p
+            )
+
+            # Check convergence.
+            if (
+                abs(new_my_p - my_p) < self.convergence_epsilon
+                and abs(new_their_p - their_p) < self.convergence_epsilon
+            ):
+                my_p = new_my_p
+                break
+
+            my_p = new_my_p
+            their_p = new_their_p
+
+        result = max(0.0, min(1.0, my_p))
+        self._level3_cache[counterparty_id] = result
+        return result
+
+    # ------------------------------------------------------------------
+    # Core decision
+    # ------------------------------------------------------------------
+
+    def _level1_cooperate_decision(self, counterparty_id: str) -> bool:
+        """Level 1 LDT decision logic.
+
+        In TDT mode (default for backward compat): behavioral twin detection
+        via cosine similarity.
+
+        In FDT mode: subjunctive dependence detection + proof-based
+        cooperation before falling through to counterfactual reasoning.
+
+        In UDT mode: FDT logic + precommitment policy blending.
         """
         twin_score = self._compute_twin_score(counterparty_id)
         self._twin_scores[counterparty_id] = twin_score
 
-        # If strong logical twin, cooperate unconditionally (LDT's
-        # signature move: "my choice logically implies theirs").
-        if twin_score >= self.similarity_threshold:
+        # --- FDT/UDT extension: subjunctive dependence ---
+        if self.decision_theory in ("fdt", "udt"):
+            # Try proof-based cooperation first.
+            proof = self._proof_based_cooperation(counterparty_id)
+            if proof is not None:
+                return proof
+
+            # Use subjunctive score instead of raw cosine similarity.
+            dep = self._compute_subjunctive_dependence(counterparty_id)
+            effective_twin = (
+                self.subjunctive_weight * dep.subjunctive_score
+                + (1 - self.subjunctive_weight) * twin_score
+            )
+        else:
+            # TDT: use cosine similarity only.
+            effective_twin = twin_score
+
+        if effective_twin >= self.similarity_threshold:
             return True
 
-        # Counterfactual comparison.
         cf_coop = self._counterfactual_cooperate_payoff(counterparty_id)
         cf_defect = self._counterfactual_defect_payoff(counterparty_id)
 
-        # Ecosystem welfare adjustment: cooperation is better for the
-        # ecosystem, so we add a welfare bonus to the cooperate payoff.
         welfare_bonus = self.welfare_weight * cf_coop
-
         coop_value = cf_coop + welfare_bonus
         defect_value = cf_defect
 
-        # Blend with updateless commitment: high commitment means we
-        # stick closer to our cooperation_prior.
         prior_coop_value = self.cooperation_prior
         effective_coop_value = (
             self.updateless_commitment * prior_coop_value
             + (1 - self.updateless_commitment) * coop_value
         )
 
+        # --- UDT extension: blend with precommitted policy ---
+        if self.decision_theory == "udt" and self.precommitment_strength > 0:
+            precommit = self._precommit_policy()
+            precommit_value = 1.0 if precommit else 0.0
+            greedy_value = 1.0 if effective_coop_value > defect_value else 0.0
+            blended = (
+                self.precommitment_strength * precommit_value
+                + (1 - self.precommitment_strength) * greedy_value
+            )
+            return blended > 0.5
+
         return effective_coop_value > defect_value
+
+    def _ldt_cooperate_decision(self, counterparty_id: str) -> bool:
+        """Core LDT decision: should we cooperate with this counterparty?
+
+        Combines multiple acausality levels based on ``acausality_depth``:
+        - depth=1: Behavioral twin detection (original logic)
+        - depth=2: Level 1 + policy introspection refinement
+        - depth=3: Weighted ensemble of all three levels
+        """
+        l1 = self._level1_cooperate_decision(counterparty_id)
+
+        if self.acausality_depth <= 1:
+            return l1
+
+        # Level 2: policy introspection.
+        inferred = self._infer_counterparty_policy(counterparty_id)
+        l2 = self._simulate_counterparty_decision(counterparty_id)
+
+        if self.acausality_depth == 2:
+            if l1 and l2:
+                return True
+            if l1 and not l2:
+                # Discount cooperation by confidence.
+                return inferred.confidence < 0.5
+            if not l1 and l2:
+                # Boost cooperation by confidence.
+                return inferred.confidence >= 0.5
+            return False
+
+        # Level 3: recursive equilibrium ensemble.
+        l3_prob = self._recursive_equilibrium(counterparty_id)
+
+        l1_score = 1.0 if l1 else 0.0
+        l2_score = 1.0 if l2 else 0.0
+        ensemble = 0.2 * l1_score + 0.3 * l2_score + 0.5 * l3_prob
+
+        return ensemble > 0.5
 
     # ------------------------------------------------------------------
     # BaseAgent interface
@@ -393,8 +958,12 @@ class LDTAgent(BaseAgent):
         # Record own trace.
         self._own_trace.append((interaction.accepted, interaction.p))
 
-        # Invalidate cached twin score so it's recomputed next time.
+        # Invalidate caches so they're recomputed next time.
         self._twin_scores.pop(counterparty, None)
+        self._inferred_policies.pop(counterparty, None)
+        self._level2_cache.pop(counterparty, None)
+        self._level3_cache.pop(counterparty, None)
+        self._subjunctive_cache.pop(counterparty, None)
 
     # ------------------------------------------------------------------
     # Private helpers

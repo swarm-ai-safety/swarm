@@ -1,0 +1,335 @@
+% SWARM Paper Template
+% Compiled from docs/papers/moltbook_captcha_study.md
+
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{verbatim}
+
+\title{Challenge Verification and Collusion Penalties in Social Content Platforms:\\A Parameter Sweep Study}
+\author{SWARM Research Collective}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study the effects of two governance mechanisms --- anti-human CAPTCHA challenge difficulty and collusion penalty multipliers --- on welfare, toxicity, and agent-type payoff distributions in a simulated social content platform (Moltbook). Using a full factorial sweep of 5 challenge difficulty levels (0.0--1.0) and 4 collusion penalty multipliers (0.0--2.0) across 10 seeds per configuration (200 total runs, 10 agents, 15 epochs each), we find that \textbf{neither parameter significantly affects aggregate welfare or toxicity} after Bonferroni correction (0/112 hypotheses significant). However, agent-type stratification reveals massive payoff inequalities: deceptive agents earn 3.0$\times$ the payoff of honest agents (Cohen's $d = -4.10$, $p < 10^{-6}$), suggesting that the platform's core interaction dynamics dominate over the governance levers tested. Welfare distributions are non-normal (Shapiro-Wilk $p < 0.001$ for all groups), indicating heavy-tailed outcomes driven by deceptive agent behavior.
+\end{abstract}
+
+\section{Introduction}
+
+Social content platforms face a dual challenge: preventing automated spam and coordinated manipulation while maintaining platform welfare for legitimate participants. Two common governance mechanisms are:
+
+\begin{enumerate}
+\item \textbf{Challenge verification} (CAPTCHA-style): requiring agents to pass difficulty-scaled challenges before content is published, filtering low-effort spam.
+\item \textbf{Collusion penalties}: detecting and penalizing coordinated voting patterns among agents.
+\end{enumerate}
+
+This study investigates whether these mechanisms meaningfully affect platform outcomes in the SWARM Moltbook scenario --- a simulated social content platform with heterogeneous agent types including diligent contributors, spam bots, human pretenders, and collusive voters.
+
+\section{Methods}
+
+\subsection{Scenario Configuration}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Scenario & \texttt{moltbook\_captcha} \\
+Motif & Moltbook (social content platform) \\
+Agents & 10 total \\
+Epochs & 15 \\
+Steps per epoch & 10 \\
+Base seed & 100 \\
+\bottomrule
+\end{tabular}
+\caption{Scenario configuration.}
+\end{table}
+
+\subsection{Agent Composition}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrl}
+\toprule
+\textbf{Agent Type} & \textbf{Count} & \textbf{Role} \\
+\midrule
+\texttt{diligent\_moltbook} & 4 & High-quality content contributors \\
+\texttt{spam\_bot} & 2 & Automated low-quality posters \\
+\texttt{human\_pretender} & 2 & Agents mimicking human behavior \\
+\texttt{collusive\_voter} & 2 & Coordinated voting pair \\
+\bottomrule
+\end{tabular}
+\caption{Agent composition.}
+\end{table}
+
+\subsection{Governance Parameters (Fixed)}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Rate limit enabled & True \\
+Post cooldown (steps) & 5 \\
+Comment cooldown (steps) & 1 \\
+Daily comment cap & 50 \\
+Request cap per step & 100 \\
+Challenge enabled & True \\
+Challenge window (steps) & 1 \\
+Collusion detection enabled & True \\
+Collusion frequency threshold & 2.0 \\
+Collusion correlation threshold & 0.7 \\
+Collusion min interactions & 3 \\
+Collusion score threshold & 0.5 \\
+\bottomrule
+\end{tabular}
+\caption{Fixed governance parameters.}
+\end{table}
+
+\subsection{Swept Parameters}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Values} \\
+\midrule
+\texttt{governance.moltbook\_challenge\_difficulty} & 0.0, 0.25, 0.5, 0.75, 1.0 \\
+\texttt{governance.collusion\_penalty\_multiplier} & 0.0, 0.5, 1.0, 2.0 \\
+\bottomrule
+\end{tabular}
+\caption{Swept parameters.}
+\end{table}
+
+\textbf{Total configurations:} $5 \times 4 = 20$\\
+\textbf{Seeds per configuration:} 10\\
+\textbf{Total runs:} 200
+
+\subsection{Metrics}
+
+\begin{itemize}
+\item \textbf{Welfare}: Cumulative payoff across all agents per epoch
+\item \textbf{Toxicity rate}: $\mathbb{E}[1-p \mid \text{accepted}]$, expected harm from accepted interactions
+\item \textbf{Quality gap}: $\mathbb{E}[p \mid \text{accepted}] - \mathbb{E}[p \mid \text{rejected}]$, negative indicates adverse selection
+\item \textbf{Per-type payoffs}: Mean total payoff for honest, opportunistic, deceptive, and adversarial agent archetypes
+\end{itemize}
+
+\subsection{Statistical Methods}
+
+\begin{itemize}
+\item \textbf{Welch's t-test} (unequal variance) for all pairwise comparisons
+\item \textbf{Mann-Whitney U} as non-parametric robustness check
+\item \textbf{Cohen's d} (pooled SD) for effect sizes
+\item \textbf{Bonferroni correction}: $\alpha = 0.05/112 = 0.000446$
+\item \textbf{Benjamini-Hochberg} FDR correction
+\item \textbf{Shapiro-Wilk} normality validation
+\item \textbf{Paired t-test} for agent-type stratification
+\end{itemize}
+
+\section{Results}
+
+\subsection{Sweep-Level Summary}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{rrlll}
+\toprule
+\textbf{Difficulty} & \textbf{Penalty} & \textbf{Welfare (mean $\pm$ SD)} & \textbf{Toxicity (mean $\pm$ SD)} & \textbf{Quality Gap (mean $\pm$ SD)} \\
+\midrule
+0.00 & 0.0 & $873.7 \pm 69.2$ & $0.263 \pm 0.005$ & $0.184 \pm 0.016$ \\
+0.00 & 0.5 & $865.6 \pm 65.2$ & $0.263 \pm 0.005$ & $0.185 \pm 0.018$ \\
+0.00 & 1.0 & $869.4 \pm 70.5$ & $0.263 \pm 0.005$ & $0.184 \pm 0.016$ \\
+0.00 & 2.0 & $871.6 \pm 71.6$ & $0.263 \pm 0.005$ & $0.182 \pm 0.015$ \\
+0.25 & 0.0 & $914.3 \pm 42.1$ & $0.266 \pm 0.003$ & $0.193 \pm 0.011$ \\
+0.25 & 0.5 & $874.6 \pm 68.4$ & $0.263 \pm 0.005$ & $0.182 \pm 0.018$ \\
+0.25 & 1.0 & $858.1 \pm 72.0$ & $0.262 \pm 0.005$ & $0.180 \pm 0.017$ \\
+0.25 & 2.0 & $880.6 \pm 57.3$ & $0.264 \pm 0.005$ & $0.187 \pm 0.017$ \\
+0.50 & 0.0 & $871.1 \pm 65.7$ & $0.263 \pm 0.005$ & $0.182 \pm 0.016$ \\
+0.50 & 0.5 & $925.4 \pm 10.6$ & $0.267 \pm 0.000$ & $0.195 \pm 0.005$ \\
+0.50 & 1.0 & $900.3 \pm 55.7$ & $0.265 \pm 0.004$ & $0.188 \pm 0.012$ \\
+0.50 & 2.0 & $882.9 \pm 57.6$ & $0.264 \pm 0.005$ & $0.186 \pm 0.016$ \\
+0.75 & 0.0 & $903.8 \pm 57.9$ & $0.265 \pm 0.004$ & $0.192 \pm 0.015$ \\
+0.75 & 0.5 & $917.4 \pm 9.5$ & $0.267 \pm 0.000$ & $0.192 \pm 0.007$ \\
+0.75 & 1.0 & $910.9 \pm 41.2$ & $0.266 \pm 0.003$ & $0.191 \pm 0.011$ \\
+0.75 & 2.0 & $885.2 \pm 69.1$ & $0.264 \pm 0.004$ & $0.185 \pm 0.015$ \\
+1.00 & 0.0 & $884.1 \pm 73.5$ & $0.264 \pm 0.005$ & $0.187 \pm 0.016$ \\
+1.00 & 0.5 & $898.2 \pm 60.3$ & $0.265 \pm 0.004$ & $0.191 \pm 0.013$ \\
+1.00 & 1.0 & $868.2 \pm 66.4$ & $0.263 \pm 0.005$ & $0.183 \pm 0.016$ \\
+1.00 & 2.0 & $881.1 \pm 64.7$ & $0.264 \pm 0.005$ & $0.188 \pm 0.017$ \\
+\bottomrule
+\end{tabular}
+\caption{Sweep-level summary across 20 parameter configurations (10 seeds each).}
+\end{table}
+
+\subsection{Hypothesis Testing}
+
+\textbf{Total hypotheses tested:} 112 (7 metrics $\times$ pairwise comparisons across both swept parameters).
+
+\textbf{Bonferroni-significant results:} 0/112
+
+\textbf{Benjamini-Hochberg-significant results:} 0/112
+
+Neither challenge difficulty nor collusion penalty multiplier produces statistically significant effects on any of the seven measured metrics after multiple comparisons correction.
+
+\subsection{Normality Assessment}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{rrll}
+\toprule
+\textbf{Challenge Difficulty} & \textbf{Shapiro-Wilk $W$} & \textbf{$p$-value} & \textbf{Assessment} \\
+\midrule
+0.00 & 0.7463 & $< 0.001$ & NON-NORMAL \\
+0.25 & 0.7270 & $< 0.001$ & NON-NORMAL \\
+0.50 & 0.6771 & $< 0.001$ & NON-NORMAL \\
+0.75 & 0.6233 & $< 0.001$ & NON-NORMAL \\
+1.00 & 0.7262 & $< 0.001$ & NON-NORMAL \\
+\bottomrule
+\end{tabular}
+\caption{Shapiro-Wilk normality test on welfare by challenge difficulty.}
+\end{table}
+
+All welfare distributions are strongly non-normal, with $W$ statistics well below 0.8. This indicates heavy-tailed or multimodal distributions, likely driven by whether deceptive agents achieve high or low payoffs in a given run.
+
+\subsection{Agent-Type Stratification}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrr}
+\toprule
+\textbf{Agent Type} & \textbf{Mean Payoff} & \textbf{SD} \\
+\midrule
+Honest & 46.77 & 0.66 \\
+Opportunistic & 19.65 & 1.86 \\
+Deceptive & 142.22 & 32.93 \\
+Adversarial & 35.99 & 1.06 \\
+\bottomrule
+\end{tabular}
+\caption{Mean payoff by agent type across all 200 runs.}
+\end{table}
+
+\textbf{Pairwise comparisons} (paired t-test, Bonferroni-corrected $\alpha = 0.0083$):
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lrrl}
+\toprule
+\textbf{Comparison} & \textbf{Cohen's $d$} & \textbf{$p$-value} & \textbf{Significant} \\
+\midrule
+Honest vs Opportunistic & 19.45 & $< 10^{-6}$ & Yes*** \\
+Honest vs Deceptive & $-4.10$ & $< 10^{-6}$ & Yes*** \\
+Honest vs Adversarial & 12.24 & $< 10^{-6}$ & Yes*** \\
+Opportunistic vs Deceptive & $-5.26$ & $< 10^{-6}$ & Yes*** \\
+Opportunistic vs Adversarial & $-10.81$ & $< 10^{-6}$ & Yes*** \\
+Deceptive vs Adversarial & 4.56 & $< 10^{-6}$ & Yes*** \\
+\bottomrule
+\end{tabular}
+\caption{Agent-type pairwise comparisons (paired t-test with Bonferroni correction).}
+\end{table}
+
+All agent-type pairwise comparisons are significant with very large effect sizes (all $|d| > 4$). Deceptive agents earn $3.04\times$ the payoff of honest agents and $7.24\times$ the payoff of opportunistic agents.
+
+\subsection{Key Observations}
+
+\begin{enumerate}
+\item \textbf{Governance lever insensitivity}: The core welfare and toxicity metrics are remarkably stable across all 20 parameter configurations. Welfare ranges from 858.1 to 925.4 ($< 8\%$ variation); toxicity ranges from 0.262 to 0.267 ($< 2\%$ variation).
+
+\item \textbf{Variance clustering}: Some configurations show dramatically reduced variance (e.g., difficulty=0.50/penalty=0.5: welfare SD=10.6 vs typical $\sim$65), suggesting regime transitions where deceptive agent outcomes stabilize.
+
+\item \textbf{Deceptive agent dominance}: The 2 deceptive agents capture a disproportionate share of welfare (mean 142.2 per agent vs 46.8 for honest), suggesting the Moltbook scenario's interaction dynamics inherently favor deceptive strategies regardless of CAPTCHA difficulty or collusion penalties.
+\end{enumerate}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/moltbook_captcha_study/welfare_vs_challenge_difficulty.png}
+\caption{Welfare vs.\ challenge difficulty (95\% CI error bars).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/moltbook_captcha_study/toxicity_vs_challenge_difficulty.png}
+\caption{Toxicity vs.\ challenge difficulty (95\% CI error bars).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/moltbook_captcha_study/agent_payoff_by_type.png}
+\caption{Agent payoff distribution by type across all 200 runs.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/moltbook_captcha_study/heatmap_welfare.png}
+\caption{Mean welfare heatmap (challenge difficulty $\times$ collusion penalty).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/moltbook_captcha_study/heatmap_toxicity.png}
+\caption{Mean toxicity heatmap (challenge difficulty $\times$ collusion penalty).}
+\end{figure}
+
+\section{Discussion}
+
+The central finding of this study is a \textbf{null result}: challenge verification difficulty and collusion penalty multipliers have no statistically significant effect on platform welfare, toxicity, or quality gap in the Moltbook CAPTCHA scenario. This is notable because both mechanisms are commonly proposed as governance interventions for content platforms.
+
+Several interpretations are possible:
+
+\textbf{Mechanism saturation}: The scenario already includes rate limiting (post cooldown of 5 steps, daily comment cap of 50) and challenge verification. These baseline mechanisms may already constrain harmful agents sufficiently, making marginal increases in challenge difficulty or collusion penalties redundant.
+
+\textbf{Wrong lever hypothesis}: The governance levers tested may not target the actual source of payoff inequality. Deceptive agents succeed not through spam volume (constrained by rate limits) or coordinated voting (constrained by collusion detection), but through the quality of their deception --- producing content with high apparent quality ($p$) that generates positive payoffs. Challenge difficulty gates \textit{access} to publishing, not \textit{content quality}.
+
+\textbf{Structural advantage}: The Moltbook scenario may contain a structural advantage for deceptive agents in the soft-label payoff model. If deceptive content receives high $p$ scores from the proxy computer (because it appears plausible), then deceptive agents will always outperform honest agents whose content merely \textit{is} high quality. This would be a fundamental limitation of proxy-based content evaluation.
+
+\textbf{Non-normal distributions}: The strongly non-normal welfare distributions (Shapiro-Wilk $W \approx 0.68$) suggest bimodal outcomes --- runs where deceptive agents find exploitable patterns vs.\ runs where they don't. This bimodality makes mean comparisons less informative and suggests future work should examine conditional distributions.
+
+\section{Limitations}
+
+\begin{enumerate}
+\item \textbf{10 seeds per configuration} provides moderate statistical power. Effect sizes below $d \approx 0.45$ would require more seeds to detect.
+\item \textbf{Standard sweep metrics only} --- Moltbook-specific metrics (karma concentration, challenge pass rates, rate limit hit rates) are not captured in the sweep CSV infrastructure. Future work should extend \texttt{SweepResult} to include handler-specific columns.
+\item \textbf{Fixed agent composition} --- results may differ with different ratios of deceptive to honest agents.
+\item \textbf{Proxy computer fidelity} --- the soft-label model's treatment of deceptive content as high-$p$ may not reflect real platform dynamics where deception detection improves over time.
+\end{enumerate}
+
+\section{Reproducibility}
+
+\begin{verbatim}
+# Reproduce the sweep
+python runs/20260213-123944_moltbook_captcha_study/run_sweep.py
+
+# Reproduce the analysis
+python runs/20260213-123944_moltbook_captcha_study/analyze.py
+
+# Reproduce the plots
+python runs/20260213-123944_moltbook_captcha_study/generate_plots.py
+\end{verbatim}
+
+\textbf{Scenario:} \texttt{scenarios/moltbook\_captcha.yaml}\\
+\textbf{Sweep parameters:} \texttt{governance.moltbook\_challenge\_difficulty} $\in \{0.0, 0.25, 0.5, 0.75, 1.0\}$, \texttt{governance.collusion\_penalty\_multiplier} $\in \{0.0, 0.5, 1.0, 2.0\}$\\
+\textbf{Seeds:} 100--119 (10 per config)\\
+\textbf{Total runs:} 200
+
+\section{References}
+
+\begin{enumerate}
+\item SWARM Framework documentation, v1.5.0
+\item Distributional AGI Safety: Soft Labels for Multi-Agent Governance (SWARM Research Collective, 2026)
+\end{enumerate}
+
+\end{document}

@@ -26,9 +26,13 @@ class _EventCollector:
 
 
 def _make_handler(seed: int = 42, **kwargs) -> tuple[KernelOracleHandler, _EventCollector]:
+    from swarm.logging.event_bus import EventBus
+
     collector = _EventCollector()
+    bus = EventBus()
+    bus.subscribe(collector)
     config = KernelOracleConfig(seed=seed, **kwargs)
-    handler = KernelOracleHandler(config=config, emit_event=collector)
+    handler = KernelOracleHandler(config=config, event_bus=bus)
     return handler, collector
 
 
@@ -209,12 +213,13 @@ class TestCorrelatedSpeedupCheating:
             result = handler.handle_action(action, state)
             sub = result.submission
             assert sub.is_cheat
-            # perf_speedup should be base + bonus (clamped to [-1, 1])
-            expected = min(1.0, sub.base_speedup + 0.4)
+            # perf_speedup = base + cheat_bonus + precision_bonus (clamped to [-1, 1])
+            precision_bonus = 0.10 * (sub.precision_speedup_factor - 1.0)
+            expected = max(-1.0, min(1.0, sub.base_speedup + 0.4 + precision_bonus))
             assert abs(sub.perf_speedup - expected) < 1e-10
 
-    def test_honest_no_speedup_bonus(self):
-        """Honest agents should have perf_speedup == base_speedup."""
+    def test_honest_no_cheat_speedup_bonus(self):
+        """Honest agents should have no cheat bonus; only precision bonus."""
         handler, _ = _make_handler(seed=42)
         state = _make_state(("h1", AgentType.HONEST))
 
@@ -224,7 +229,10 @@ class TestCorrelatedSpeedupCheating:
             result = handler.handle_action(action, state)
             sub = result.submission
             assert not sub.is_cheat
-            assert abs(sub.perf_speedup - sub.base_speedup) < 1e-10
+            # No cheat bonus, but may have precision speedup bonus
+            precision_bonus = 0.10 * (sub.precision_speedup_factor - 1.0)
+            expected = max(-1.0, min(1.0, sub.base_speedup + precision_bonus))
+            assert abs(sub.perf_speedup - expected) < 1e-10
 
     def test_cheat_speedup_statistical_advantage(self):
         """Over many runs, adversarial cheaters should have higher average speedup."""
@@ -653,6 +661,9 @@ class TestReproducibility:
                         result.submission.is_cheat,
                         round(result.submission.perf_speedup, 10),
                         round(result.submission.base_speedup, 10),
+                        # v3 fields
+                        round(result.submission.memory_tier_score, 10),
+                        round(result.submission.precision_speedup_factor, 10),
                     )
                 )
 
@@ -708,3 +719,520 @@ class TestObservationFields:
         assert len(obs["kernel_available_challenges"]) > 0
         assert len(obs["kernel_pending_submissions"]) == 1
         assert len(obs["kernel_submission_history"]) == 1
+
+
+class TestMemoryHierarchy:
+    """Test GPU memory hierarchy efficiency signals (v3)."""
+
+    def test_honest_moderate_shared_mem_utilization(self):
+        """Honest agents should have moderate shared memory utilization."""
+        handler, _ = _make_handler(seed=42)
+        state = _make_state(("h1", AgentType.HONEST))
+
+        utils = []
+        for _ in range(100):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+            result = handler.handle_action(action, state)
+            utils.append(result.submission.shared_mem_utilization)
+
+        avg = sum(utils) / len(utils)
+        assert 0.45 < avg < 0.85, f"Honest avg shared_mem_util {avg:.3f} out of range"
+
+    def test_adversarial_high_shared_mem_utilization(self):
+        """Adversarial agents should have high shared memory utilization (hardcoded tiling)."""
+        handler, _ = _make_handler(seed=42, adversarial_cheat_rate=1.0)
+        state = _make_state(("adv_1", AgentType.ADVERSARIAL))
+
+        utils = []
+        for _ in range(100):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="adv_1")
+            result = handler.handle_action(action, state)
+            utils.append(result.submission.shared_mem_utilization)
+
+        avg = sum(utils) / len(utils)
+        assert avg > 0.70, f"Adversarial avg shared_mem_util {avg:.3f} too low"
+
+    def test_adversarial_low_register_spills(self):
+        """Adversarial agents should have very few register spills (hardcoded tiling)."""
+        handler, _ = _make_handler(seed=42, adversarial_cheat_rate=1.0)
+        state = _make_state(("adv_1", AgentType.ADVERSARIAL))
+
+        spills = []
+        for _ in range(100):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="adv_1")
+            result = handler.handle_action(action, state)
+            spills.append(result.submission.register_spill_count)
+
+        avg = sum(spills) / len(spills)
+        assert avg < 0.5, f"Adversarial avg register_spill_count {avg:.3f} too high"
+
+    def test_honest_more_register_spills_than_adversarial(self):
+        """Honest agents should have more register spills than adversarial."""
+        handler, _ = _make_handler(seed=42, adversarial_cheat_rate=1.0)
+        state = _make_state(
+            ("h1", AgentType.HONEST), ("adv_1", AgentType.ADVERSARIAL)
+        )
+
+        honest_spills = []
+        adv_spills = []
+        for _ in range(100):
+            handler.on_epoch_start(state)
+            h_action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+            a_action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="adv_1")
+            h_result = handler.handle_action(h_action, state)
+            a_result = handler.handle_action(a_action, state)
+            honest_spills.append(h_result.submission.register_spill_count)
+            adv_spills.append(a_result.submission.register_spill_count)
+
+        avg_honest = sum(honest_spills) / len(honest_spills)
+        avg_adv = sum(adv_spills) / len(adv_spills)
+        assert avg_honest > avg_adv, (
+            f"Honest avg spills {avg_honest:.3f} should exceed adversarial {avg_adv:.3f}"
+        )
+
+    def test_adversarial_memory_audit_penalty(self):
+        """Adversarial cheaters should have lower memory_tier_score_audit than benchmark."""
+        handler, _ = _make_handler(seed=42, adversarial_cheat_rate=1.0)
+        state = _make_state(("adv_1", AgentType.ADVERSARIAL))
+
+        drops = []
+        for _ in range(100):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="adv_1")
+            result = handler.handle_action(action, state)
+            sub = result.submission
+            drops.append(sub.memory_tier_score - sub.memory_tier_score_audit)
+
+        avg_drop = sum(drops) / len(drops)
+        assert avg_drop > 0.3, (
+            f"Adversarial avg memory audit drop {avg_drop:.3f} too small"
+        )
+
+    def test_honest_memory_audit_stable(self):
+        """Honest agents should have similar benchmark and audit memory scores."""
+        handler, _ = _make_handler(seed=42)
+        state = _make_state(("h1", AgentType.HONEST))
+
+        drops = []
+        for _ in range(100):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+            result = handler.handle_action(action, state)
+            sub = result.submission
+            drops.append(abs(sub.memory_tier_score - sub.memory_tier_score_audit))
+
+        avg_drop = sum(drops) / len(drops)
+        assert avg_drop < 0.15, (
+            f"Honest avg memory audit drift {avg_drop:.3f} too large"
+        )
+
+    def test_register_spills_feed_rework_count(self):
+        """Rework count should include register spills."""
+        handler, _ = _make_handler(seed=42)
+        state = _make_state(("h1", AgentType.HONEST))
+        handler.on_epoch_start(state)
+
+        action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+        result = handler.handle_action(action, state)
+        sub = result.submission
+        expected_rework = sub.compilation_failures + sub.register_spill_count
+        assert result.observables.rework_count == expected_rework
+
+
+class TestPrecisionExploitation:
+    """Test GPU precision format exploitation signals (v3)."""
+
+    def test_adversarial_uses_unsafe_precision(self):
+        """Adversarial cheaters should frequently use unsafe FP16."""
+        handler, _ = _make_handler(
+            seed=42, adversarial_cheat_rate=1.0,
+            adversarial_uses_unsafe_precision=0.70,
+        )
+        state = _make_state(("adv_1", AgentType.ADVERSARIAL))
+
+        unsafe_count = 0
+        n = 200
+        for _ in range(n):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="adv_1")
+            result = handler.handle_action(action, state)
+            if result.submission.precision_format_used == "fp16_unsafe":
+                unsafe_count += 1
+
+        # Some challenges don't allow tensor cores, so rate is lower than 70%
+        rate = unsafe_count / n
+        assert rate > 0.25, f"Unsafe precision rate {rate:.3f} too low"
+
+    def test_unsafe_precision_high_speedup(self):
+        """Unsafe FP16 submissions should have high precision_speedup_factor."""
+        handler, _ = _make_handler(
+            seed=42, adversarial_cheat_rate=1.0,
+            adversarial_uses_unsafe_precision=1.0,
+            unsafe_precision_speedup=3.5,
+        )
+        state = _make_state(("adv_1", AgentType.ADVERSARIAL))
+
+        speedups = []
+        for _ in range(100):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="adv_1")
+            result = handler.handle_action(action, state)
+            sub = result.submission
+            if sub.precision_format_used == "fp16_unsafe":
+                speedups.append(sub.precision_speedup_factor)
+
+        if speedups:
+            avg = sum(speedups) / len(speedups)
+            assert avg > 2.5, f"Avg unsafe precision speedup {avg:.3f} too low"
+
+    def test_adversarial_audit_error_explosion(self):
+        """Adversarial unsafe precision should show massive error on audit."""
+        handler, _ = _make_handler(
+            seed=42, adversarial_cheat_rate=1.0,
+            adversarial_uses_unsafe_precision=1.0,
+            adversarial_audit_error_multiplier=1000.0,
+        )
+        state = _make_state(("adv_1", AgentType.ADVERSARIAL))
+
+        ratios = []
+        for _ in range(100):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="adv_1")
+            result = handler.handle_action(action, state)
+            sub = result.submission
+            if (sub.precision_format_used == "fp16_unsafe"
+                    and sub.numerical_error_benchmark > 0):
+                ratios.append(sub.numerical_error_audit / sub.numerical_error_benchmark)
+
+        if ratios:
+            avg = sum(ratios) / len(ratios)
+            assert avg > 500.0, f"Avg error ratio {avg:.1f} too low (expected ~1000x)"
+
+    def test_honest_stable_numerical_error(self):
+        """Honest agents should have similar benchmark and audit errors."""
+        handler, _ = _make_handler(seed=42)
+        state = _make_state(("h1", AgentType.HONEST))
+
+        ratios = []
+        for _ in range(100):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+            result = handler.handle_action(action, state)
+            sub = result.submission
+            if sub.numerical_error_benchmark > 0:
+                ratios.append(sub.numerical_error_audit / sub.numerical_error_benchmark)
+
+        if ratios:
+            avg = sum(ratios) / len(ratios)
+            assert avg < 2.0, f"Honest avg error ratio {avg:.3f} too high"
+
+    def test_precision_flag_on_sensitive_challenge(self):
+        """Unsafe precision on numerically sensitive challenges should produce flags."""
+        handler, _ = _make_handler(
+            seed=42, adversarial_cheat_rate=1.0,
+            adversarial_uses_unsafe_precision=1.0,
+        )
+        state = _make_state(("adv_1", AgentType.ADVERSARIAL))
+
+        flagged = 0
+        sensitive_and_unsafe = 0
+        for _ in range(200):
+            handler.on_epoch_start(state)
+            # Target a sensitive challenge (attention)
+            action = Action(
+                action_type=ActionType.SUBMIT_KERNEL,
+                agent_id="adv_1",
+                target_id="6_attention",
+            )
+            result = handler.handle_action(action, state)
+            sub = result.submission
+            if sub.precision_format_used == "fp16_unsafe":
+                sensitive_and_unsafe += 1
+                if sub.precision_hacks > 0:
+                    flagged += 1
+
+        if sensitive_and_unsafe > 0:
+            flag_rate = flagged / sensitive_and_unsafe
+            assert flag_rate > 0.5, (
+                f"Precision flag rate on sensitive challenges {flag_rate:.3f} too low"
+            )
+
+    def test_precision_speedup_feeds_engagement(self):
+        """Precision speedup should contribute to counterparty_engagement_delta."""
+        handler, _ = _make_handler(
+            seed=42, adversarial_cheat_rate=1.0,
+            adversarial_uses_unsafe_precision=1.0,
+        )
+        state = _make_state(("adv_1", AgentType.ADVERSARIAL))
+
+        for _ in range(50):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="adv_1")
+            result = handler.handle_action(action, state)
+            sub = result.submission
+            if sub.precision_format_used == "fp16_unsafe":
+                # Engagement should include precision bonus
+                precision_bonus = 0.10 * (sub.precision_speedup_factor - 1.0)
+                expected = max(-1.0, min(1.0,
+                    sub.base_speedup + 0.4 + precision_bonus  # cheat bonus + precision
+                ))
+                assert abs(result.observables.counterparty_engagement_delta - expected) < 1e-10
+                return  # Found one, test passes
+
+        # If we never got fp16_unsafe in 50 tries, that's also a problem
+        pytest.fail("Never generated fp16_unsafe submission in 50 iterations")
+
+    def test_audit_detects_precision_error_explosion(self):
+        """Audit should generate extra rejections from precision error explosion."""
+        handler, _ = _make_handler(
+            seed=42,
+            adversarial_cheat_rate=1.0,
+            adversarial_uses_unsafe_precision=1.0,
+            audit_detection_rate=1.0,
+            adversarial_audit_error_multiplier=1000.0,
+        )
+        state = _make_state(("adv_1", AgentType.ADVERSARIAL), ("aud_1", AgentType.HONEST))
+
+        extra_rejections_from_precision = 0
+        audits_with_unsafe = 0
+
+        for _ in range(100):
+            handler.on_epoch_start(state)
+            submit = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="adv_1")
+            submit_result = handler.handle_action(submit, state)
+            sub = submit_result.submission
+
+            if sub.precision_format_used != "fp16_unsafe":
+                continue
+
+            audits_with_unsafe += 1
+            audit = Action(
+                action_type=ActionType.AUDIT_KERNEL,
+                agent_id="aud_1",
+                target_id=sub.submission_id,
+            )
+            audit_result = handler.handle_action(audit, state)
+            if audit_result.observables.verifier_rejections > 0:
+                extra_rejections_from_precision += 1
+
+        if audits_with_unsafe > 0:
+            detection_rate = extra_rejections_from_precision / audits_with_unsafe
+            assert detection_rate > 0.5, (
+                f"Audit precision detection rate {detection_rate:.3f} too low"
+            )
+
+
+class TestV3ScenarioIntegration:
+    def test_v3_scenario_loads_and_runs(self):
+        """v3 scenario with GPU-specific params should load and run."""
+        from pathlib import Path
+
+        from swarm.scenarios.loader import build_orchestrator, load_scenario
+
+        sc = load_scenario(Path("scenarios/kernel_market/v3.yaml"))
+        assert sc.orchestrator_config.kernel_oracle_config is not None
+
+        orch = build_orchestrator(sc)
+        orch.config.n_epochs = 1
+        results = orch.run()
+        assert len(results) == 1
+
+
+class TestV3CatalogGPUFields:
+    def test_all_challenges_have_gpu_fields(self):
+        """All challenges in catalog should have GPU hardware specs."""
+        for c in CHALLENGE_CATALOG:
+            assert c.shared_mem_budget_kb > 0, f"{c.challenge_id} missing shared_mem_budget_kb"
+            assert c.register_pressure_class in ("low", "medium", "high"), (
+                f"{c.challenge_id} bad register_pressure_class"
+            )
+            assert c.precision_required in ("fp32", "fp16", "bf16", "mixed"), (
+                f"{c.challenge_id} bad precision_required"
+            )
+            assert c.numerical_sensitivity in ("low", "medium", "high"), (
+                f"{c.challenge_id} bad numerical_sensitivity"
+            )
+
+    def test_hard_challenges_have_high_shared_mem(self):
+        """Hard challenges should have larger shared memory budgets."""
+        for c in CHALLENGE_CATALOG:
+            if c.difficulty == "hard":
+                assert c.shared_mem_budget_kb >= 96, (
+                    f"{c.challenge_id}: hard challenge should have >= 96 KB shared mem"
+                )
+
+    def test_sensitive_challenges_exist(self):
+        """At least one challenge should have high numerical sensitivity."""
+        sensitivities = [c.numerical_sensitivity for c in CHALLENGE_CATALOG]
+        assert "high" in sensitivities
+
+
+class TestCudaCodeGeneration:
+    """Test CUDA code generation integration (v4)."""
+
+    def test_submission_has_code_when_enabled(self):
+        """Submissions should include CUDA code when code gen is enabled."""
+        handler, _ = _make_handler(seed=42, enable_code_generation=True)
+        state = _make_state(("h1", AgentType.HONEST))
+        handler.on_epoch_start(state)
+
+        action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+        result = handler.handle_action(action, state)
+
+        assert result.submission.cuda_code != ""
+        assert result.submission.code_source == "template"
+        assert len(result.submission.cuda_code_features) > 0
+
+    def test_no_code_when_disabled(self):
+        """Submissions should have no code when code gen is disabled (default)."""
+        handler, _ = _make_handler(seed=42)
+        state = _make_state(("h1", AgentType.HONEST))
+        handler.on_epoch_start(state)
+
+        action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+        result = handler.handle_action(action, state)
+
+        assert result.submission.cuda_code == ""
+        assert result.submission.code_source == "none"
+
+    def test_honest_template_has_bounds_check(self):
+        """Honest agent templates should include bounds checks."""
+        handler, _ = _make_handler(seed=42, enable_code_generation=True)
+        state = _make_state(("h1", AgentType.HONEST))
+        handler.on_epoch_start(state)
+
+        action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+        result = handler.handle_action(action, state)
+
+        features = result.submission.cuda_code_features
+        assert features.get("has_bounds_check") is True
+
+    def test_adversarial_template_has_hardcoded_shapes(self):
+        """Adversarial agent templates should have hardcoded shapes."""
+        handler, _ = _make_handler(
+            seed=42, enable_code_generation=True, adversarial_cheat_rate=1.0
+        )
+        state = _make_state(("adv_1", AgentType.ADVERSARIAL))
+
+        found_hardcoded = False
+        for _ in range(20):
+            handler.on_epoch_start(state)
+            action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="adv_1")
+            result = handler.handle_action(action, state)
+            features = result.submission.cuda_code_features
+            if features.get("has_hardcoded_shapes"):
+                found_hardcoded = True
+                break
+
+        assert found_hardcoded, "Expected at least one adversarial template with hardcoded shapes"
+
+    def test_code_features_populated(self):
+        """Code features dict should have expected keys."""
+        handler, _ = _make_handler(seed=42, enable_code_generation=True)
+        state = _make_state(("h1", AgentType.HONEST))
+        handler.on_epoch_start(state)
+
+        action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+        result = handler.handle_action(action, state)
+
+        features = result.submission.cuda_code_features
+        assert "has_bounds_check" in features
+        assert "uses_shared_memory" in features
+        assert "has_hardcoded_shapes" in features
+        assert "code_length_lines" in features
+
+    def test_features_feed_proxy(self):
+        """Code features should affect proxy observables."""
+        # Compare with and without code gen for same seed
+        handler_off, _ = _make_handler(seed=42, enable_code_generation=False)
+        handler_on, _ = _make_handler(seed=42, enable_code_generation=True)
+        state = _make_state(("h1", AgentType.HONEST))
+
+        handler_off.on_epoch_start(state)
+        handler_on.on_epoch_start(state)
+
+        action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+        result_off = handler_off.handle_action(action, state)
+        result_on = handler_on.handle_action(action, state)
+
+        # With code gen, observables may differ due to code feature adjustments
+        # (honest templates with shared memory get +0.05 engagement boost)
+        sub = result_on.submission
+        if sub.cuda_code_features.get("uses_shared_memory"):
+            # Engagement should be >= without code gen (shared mem boost)
+            assert (
+                result_on.observables.counterparty_engagement_delta
+                >= result_off.observables.counterparty_engagement_delta - 0.01
+            )
+
+    def test_backward_compat_default_fields(self):
+        """KernelSubmission should work without code fields (backward compat)."""
+        from swarm.models.kernel import KernelSubmission
+
+        sub = KernelSubmission(challenge_id="1_vector_add", author_id="test")
+        assert sub.cuda_code == ""
+        assert sub.code_source == "none"
+        assert sub.cuda_code_features == {}
+
+    def test_llm_code_via_action_content(self):
+        """Code provided in action.content should be used as LLM code."""
+        handler, _ = _make_handler(seed=42, enable_code_generation=True)
+        state = _make_state(("h1", AgentType.HONEST))
+        handler.on_epoch_start(state)
+
+        llm_code = """
+        __global__ void vector_add(const float* A, const float* B, float* C, int N) {
+            int idx = blockIdx.x * blockDim.x + threadIdx.x;
+            if (idx < N) {
+                C[idx] = A[idx] + B[idx];
+            }
+        }
+        """
+        action = Action(
+            action_type=ActionType.SUBMIT_KERNEL,
+            agent_id="h1",
+            content=llm_code,
+        )
+        result = handler.handle_action(action, state)
+
+        assert result.submission.code_source == "llm"
+        assert "vector_add" in result.submission.cuda_code
+        assert result.submission.cuda_code_features.get("has_bounds_check") is True
+
+    def test_event_includes_code_source(self):
+        """Events should include code_source field."""
+        handler, collector = _make_handler(
+            seed=42, enable_code_generation=True, code_in_events=True,
+        )
+        state = _make_state(("h1", AgentType.HONEST))
+        handler.on_epoch_start(state)
+
+        action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+        handler.handle_action(action, state)
+
+        kernel_events = [
+            e for e in collector.events if e.event_type.value == "kernel_submitted"
+        ]
+        assert len(kernel_events) == 1
+        payload = kernel_events[0].payload
+        assert payload["code_source"] == "template"
+        assert "cuda_code" in payload
+        assert len(payload["cuda_code"]) > 0
+
+    def test_existing_tests_still_pass_with_code_gen_disabled(self):
+        """Enabling code gen should not break existing submission logic."""
+        handler, _ = _make_handler(seed=42, enable_code_generation=False)
+        state = _make_state(("h1", AgentType.HONEST))
+        handler.on_epoch_start(state)
+
+        action = Action(action_type=ActionType.SUBMIT_KERNEL, agent_id="h1")
+        result = handler.handle_action(action, state)
+
+        assert result.success
+        assert result.submission is not None
+        assert result.observables is not None
+        pass_rate = result.submission.tests_passed / max(1, result.submission.tests_total)
+        assert pass_rate > 0.3

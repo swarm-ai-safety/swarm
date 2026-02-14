@@ -56,12 +56,56 @@ This produces:
 - P-hacking audit table (all hypotheses enumerated)
 - `summary.json` with machine-readable results
 
+**JSON serialization note**: When writing `summary.json`, always include a numpy-safe default handler to avoid `TypeError: Object of type bool_ is not JSON serializable`:
+
+```python
+def _default(o):
+    if isinstance(o, (np.bool_,)):
+        return bool(o)
+    if isinstance(o, (np.integer,)):
+        return int(o)
+    if isinstance(o, (np.floating,)):
+        return float(o)
+    raise TypeError(f"Object of type {type(o)} is not JSON serializable")
+
+json.dump(summary, f, indent=2, default=_default)
+```
+
+This is needed because scipy/numpy return `numpy.bool_` from comparison operations, which `json.dumps` rejects.
+
 Additionally, compute sweep-level statistics from the sweep CSV:
 - Group by each swept parameter
 - Welch's t-test for each pair of parameter values on welfare and toxicity
 - Mann-Whitney U as non-parametric robustness check
 - Shapiro-Wilk normality validation
 - Report which findings survive Bonferroni correction across all pairwise comparisons
+
+### Phase 2b: Council Review (optional)
+
+**Activated by**: `--council-review` flag or `SWARM_COUNCIL_REVIEW=1` environment variable.
+
+Run a multi-LLM council evaluation on the sweep results using `StudyEvaluator`:
+
+```python
+from swarm.council.study_evaluator import StudyEvaluator, save_evaluation
+
+try:
+    evaluator = StudyEvaluator()
+    evaluation = evaluator.evaluate_sweep(run_dir)
+    save_evaluation(evaluation, f"{run_dir}/council_review.json")
+    council_summary = f"Council: {len(evaluation.findings)} findings, {len(evaluation.concerns)} concerns"
+except Exception as e:
+    council_summary = f"Council: skipped ({e})"
+```
+
+Three expert personas deliberate on the results:
+- **Mechanism designer** (chairman): incentive compatibility, equilibria, welfare
+- **Statistician**: sample size, effect sizes, multiple comparisons
+- **Red-teamer**: exploitable loopholes, adversarial gaming, unconsidered scenarios
+
+Output: `<run_dir>/council_review.json` with full deliberation trace.
+
+**This phase never blocks the pipeline** — wrapped in try/except. If it fails, the study continues normally.
 
 ### Phase 3: Plots
 
@@ -105,6 +149,7 @@ Print a completion report:
 Full Study Complete: <title_slug>
   Sweep:    <N> runs across <M> configurations × <K> seeds
   Analysis: <T> hypothesis tests, <S> survive Bonferroni
+  Council:  <council_summary if Phase 2b ran, otherwise omit this line>
   Plots:    <P> figures generated
   Paper:    docs/papers/<title_slug>.md
 

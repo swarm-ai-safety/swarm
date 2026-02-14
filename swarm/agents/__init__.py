@@ -29,6 +29,7 @@ from swarm.agents.rain_river import (
     RainAgent,
     RiverAgent,
 )
+from swarm.agents.self_optimizer import SelfOptimizerAgent
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,
@@ -65,6 +66,8 @@ __all__ = [
     "ConfigurableMemoryAgent",
     "AdversarialRainAgent",
     "AdversarialRiverAgent",
+    # Self-optimizing agent
+    "SelfOptimizerAgent",
     # Attack strategies
     "AttackStrategy",
 ]

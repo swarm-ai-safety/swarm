@@ -1,6 +1,6 @@
 """Tests for LLM-backed agents."""
 
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
@@ -504,6 +504,173 @@ class TestLLMAgent:
         stats = agent.get_usage_stats()
         assert stats["total_requests"] == 1
         assert stats["total_input_tokens"] == 500
+
+
+# =============================================================================
+# New Provider Tests (Groq, Together, DeepSeek, Google)
+# =============================================================================
+
+
+class TestNewProviderEnums:
+    """Tests for new LLM provider enum values."""
+
+    @pytest.mark.parametrize(
+        "provider,value",
+        [
+            (LLMProvider.GROQ, "groq"),
+            (LLMProvider.TOGETHER, "together"),
+            (LLMProvider.DEEPSEEK, "deepseek"),
+            (LLMProvider.GOOGLE, "google"),
+        ],
+    )
+    def test_provider_enum_values(self, provider, value):
+        """Test new provider enum values are correct strings."""
+        assert provider.value == value
+
+    def test_provider_round_trip(self):
+        """Test creating providers from string values."""
+        for name in ("groq", "together", "deepseek", "google"):
+            assert LLMProvider(name).value == name
+
+
+class TestNewProviderBaseUrls:
+    """Tests for default base_url assignment in LLMConfig.__post_init__."""
+
+    def test_groq_default_base_url(self):
+        config = LLMConfig(provider=LLMProvider.GROQ, api_key="test")
+        assert config.base_url == "https://api.groq.com/openai/v1"
+
+    def test_together_default_base_url(self):
+        config = LLMConfig(provider=LLMProvider.TOGETHER, api_key="test")
+        assert config.base_url == "https://api.together.xyz/v1"
+
+    def test_deepseek_default_base_url(self):
+        config = LLMConfig(provider=LLMProvider.DEEPSEEK, api_key="test")
+        assert config.base_url == "https://api.deepseek.com/v1"
+
+    def test_google_no_default_base_url(self):
+        config = LLMConfig(provider=LLMProvider.GOOGLE, api_key="test")
+        assert config.base_url is None
+
+    def test_custom_base_url_not_overwritten(self):
+        config = LLMConfig(
+            provider=LLMProvider.GROQ,
+            api_key="test",
+            base_url="https://custom.example.com/v1",
+        )
+        assert config.base_url == "https://custom.example.com/v1"
+
+
+class TestNewProviderApiKeys:
+    """Tests for API key resolution from environment variables."""
+
+    @pytest.mark.parametrize(
+        "provider,env_var",
+        [
+            (LLMProvider.GROQ, "GROQ_API_KEY"),
+            (LLMProvider.TOGETHER, "TOGETHER_API_KEY"),
+            (LLMProvider.DEEPSEEK, "DEEPSEEK_API_KEY"),
+            (LLMProvider.GOOGLE, "GOOGLE_API_KEY"),
+        ],
+    )
+    def test_api_key_from_env(self, provider, env_var):
+        """Test API key is read from the correct environment variable."""
+        from swarm.agents.llm_agent import LLMAgent
+
+        with patch.dict("os.environ", {env_var: "test-secret-key"}, clear=False):
+            config = LLMConfig(provider=provider)
+            agent = LLMAgent(agent_id="test", llm_config=config)
+            assert agent._api_key == "test-secret-key"
+
+
+class TestNewProviderDispatch:
+    """Tests for _call_llm_async dispatch to correct methods."""
+
+    @pytest.mark.asyncio
+    async def test_groq_dispatches_to_openai_compatible(self):
+        from swarm.agents.llm_agent import LLMAgent
+
+        config = LLMConfig(provider=LLMProvider.GROQ, api_key="test")
+        agent = LLMAgent(agent_id="test", llm_config=config)
+        agent._call_openai_compatible_async = AsyncMock(
+            return_value=("resp", 10, 5)
+        )
+        result = await agent._call_llm_async("sys", "usr")
+        agent._call_openai_compatible_async.assert_called_once_with("sys", "usr")
+        assert result == ("resp", 10, 5)
+
+    @pytest.mark.asyncio
+    async def test_together_dispatches_to_openai_compatible(self):
+        from swarm.agents.llm_agent import LLMAgent
+
+        config = LLMConfig(provider=LLMProvider.TOGETHER, api_key="test")
+        agent = LLMAgent(agent_id="test", llm_config=config)
+        agent._call_openai_compatible_async = AsyncMock(
+            return_value=("resp", 10, 5)
+        )
+        result = await agent._call_llm_async("sys", "usr")
+        agent._call_openai_compatible_async.assert_called_once_with("sys", "usr")
+        assert result == ("resp", 10, 5)
+
+    @pytest.mark.asyncio
+    async def test_deepseek_dispatches_to_openai_compatible(self):
+        from swarm.agents.llm_agent import LLMAgent
+
+        config = LLMConfig(provider=LLMProvider.DEEPSEEK, api_key="test")
+        agent = LLMAgent(agent_id="test", llm_config=config)
+        agent._call_openai_compatible_async = AsyncMock(
+            return_value=("resp", 10, 5)
+        )
+        result = await agent._call_llm_async("sys", "usr")
+        agent._call_openai_compatible_async.assert_called_once_with("sys", "usr")
+        assert result == ("resp", 10, 5)
+
+    @pytest.mark.asyncio
+    async def test_google_dispatches_to_google_async(self):
+        from swarm.agents.llm_agent import LLMAgent
+
+        config = LLMConfig(provider=LLMProvider.GOOGLE, api_key="test")
+        agent = LLMAgent(agent_id="test", llm_config=config)
+        agent._call_google_async = AsyncMock(return_value=("resp", 10, 5))
+        result = await agent._call_llm_async("sys", "usr")
+        agent._call_google_async.assert_called_once_with("sys", "usr")
+        assert result == ("resp", 10, 5)
+
+
+class TestNewProviderCostTracking:
+    """Tests for cost tracking entries for new provider models."""
+
+    @pytest.mark.parametrize(
+        "model",
+        [
+            "llama-3.1-70b-versatile",
+            "mixtral-8x7b-32768",
+            "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
+            "deepseek-chat",
+            "deepseek-reasoner",
+            "gemini-2.0-flash",
+            "gemini-1.5-pro",
+        ],
+    )
+    def test_model_has_cost_entries(self, model):
+        """Test that new models have cost entries in LLMUsageStats."""
+        stats = LLMUsageStats()
+        assert model in stats._COST_PER_1M_INPUT
+        assert model in stats._COST_PER_1M_OUTPUT
+
+    def test_cost_calculation_deepseek(self):
+        """Test cost calculation for a DeepSeek model."""
+        stats = LLMUsageStats()
+        stats.record_usage("deepseek-chat", input_tokens=1_000_000, output_tokens=1_000_000)
+        # $0.14 input + $0.28 output = $0.42
+        assert abs(stats.estimated_cost_usd - 0.42) < 0.01
+
+    def test_cost_calculation_gemini(self):
+        """Test cost calculation for a Gemini model."""
+        stats = LLMUsageStats()
+        stats.record_usage("gemini-2.0-flash", input_tokens=1_000_000, output_tokens=1_000_000)
+        # $0.10 input + $0.40 output = $0.50
+        assert abs(stats.estimated_cost_usd - 0.50) < 0.01
 
 
 # =============================================================================

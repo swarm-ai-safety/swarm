@@ -1,0 +1,774 @@
+{
+  "large_population": {
+    "scenario": "large_population",
+    "parameter": "acausality_depth",
+    "values": [
+      1,
+      2,
+      3
+    ],
+    "seeds_per_config": 10,
+    "total_runs": 30,
+    "descriptive": {
+      "1": {
+        "welfare_mean": 366.381,
+        "welfare_std": 19.6869,
+        "toxicity_rate_mean": 0.3425,
+        "toxicity_rate_std": 0.0081,
+        "quality_gap_mean": 0.1546,
+        "quality_gap_std": 0.0278,
+        "honest_payoff_mean": 22.4664,
+        "honest_payoff_std": 1.918,
+        "adversarial_payoff_mean": 3.336,
+        "adversarial_payoff_std": 0.8904
+      },
+      "2": {
+        "welfare_mean": 371.4095,
+        "welfare_std": 16.3289,
+        "toxicity_rate_mean": 0.3434,
+        "toxicity_rate_std": 0.0074,
+        "quality_gap_mean": 0.1601,
+        "quality_gap_std": 0.0397,
+        "honest_payoff_mean": 23.4101,
+        "honest_payoff_std": 1.1635,
+        "adversarial_payoff_mean": 3.1469,
+        "adversarial_payoff_std": 0.3417
+      },
+      "3": {
+        "welfare_mean": 387.6776,
+        "welfare_std": 16.6092,
+        "toxicity_rate_mean": 0.3411,
+        "toxicity_rate_std": 0.0057,
+        "quality_gap_mean": 0.1707,
+        "quality_gap_std": 0.0272,
+        "honest_payoff_mean": 24.5655,
+        "honest_payoff_std": 1.3907,
+        "adversarial_payoff_mean": 3.2216,
+        "adversarial_payoff_std": 0.44
+      }
+    },
+    "pairwise_tests": [
+      {
+        "comparison": "1 vs 2",
+        "metric": "welfare",
+        "t_stat": -0.6217,
+        "p_value": 0.542198,
+        "cohens_d": -0.278,
+        "mw_u_p": 0.384673,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "toxicity_rate",
+        "t_stat": -0.261,
+        "p_value": 0.797065,
+        "cohens_d": -0.1167,
+        "mw_u_p": 0.623176,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "quality_gap",
+        "t_stat": -0.355,
+        "p_value": 0.72718,
+        "cohens_d": -0.1588,
+        "mw_u_p": 0.520523,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "honest_payoff",
+        "t_stat": -1.3303,
+        "p_value": 0.20352,
+        "cohens_d": -0.5949,
+        "mw_u_p": 0.185877,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "adversarial_payoff",
+        "t_stat": 0.6269,
+        "p_value": 0.542853,
+        "cohens_d": 0.2804,
+        "mw_u_p": 0.96985,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "welfare",
+        "t_stat": -2.6146,
+        "p_value": 0.017826,
+        "cohens_d": -1.1693,
+        "mw_u_p": 0.021134,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "toxicity_rate",
+        "t_stat": 0.4522,
+        "p_value": 0.657083,
+        "cohens_d": 0.2022,
+        "mw_u_p": 0.850107,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "quality_gap",
+        "t_stat": -1.3024,
+        "p_value": 0.209221,
+        "cohens_d": -0.5824,
+        "mw_u_p": 0.384673,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "honest_payoff",
+        "t_stat": -2.8018,
+        "p_value": 0.012563,
+        "cohens_d": -1.253,
+        "mw_u_p": 0.025748,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "adversarial_payoff",
+        "t_stat": 0.3641,
+        "p_value": 0.721607,
+        "cohens_d": 0.1628,
+        "mw_u_p": 0.677585,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "welfare",
+        "t_stat": -2.2087,
+        "p_value": 0.040405,
+        "cohens_d": -0.9878,
+        "mw_u_p": 0.037635,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "toxicity_rate",
+        "t_stat": 0.7835,
+        "p_value": 0.444158,
+        "cohens_d": 0.3504,
+        "mw_u_p": 0.307489,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "quality_gap",
+        "t_stat": -0.6949,
+        "p_value": 0.497146,
+        "cohens_d": -0.3108,
+        "mw_u_p": 0.344704,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "honest_payoff",
+        "t_stat": -2.015,
+        "p_value": 0.059566,
+        "cohens_d": -0.9012,
+        "mw_u_p": 0.037635,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "adversarial_payoff",
+        "t_stat": -0.4242,
+        "p_value": 0.676724,
+        "cohens_d": -0.1897,
+        "mw_u_p": 0.73373,
+        "bonferroni_sig": false
+      }
+    ],
+    "bonferroni_survivors": [],
+    "p_hacking_audit": {
+      "total_hypotheses": 15,
+      "pre_registered": true,
+      "nominally_significant": 3,
+      "bonferroni_significant": 0
+    }
+  },
+  "modeling_adversary": {
+    "scenario": "modeling_adversary",
+    "parameter": "acausality_depth",
+    "values": [
+      1,
+      2,
+      3
+    ],
+    "seeds_per_config": 10,
+    "total_runs": 30,
+    "descriptive": {
+      "1": {
+        "welfare_mean": 107.6217,
+        "welfare_std": 9.7021,
+        "toxicity_rate_mean": 0.2521,
+        "toxicity_rate_std": 0.0054,
+        "quality_gap_mean": 0.0,
+        "quality_gap_std": 0.0,
+        "honest_payoff_mean": 21.5191,
+        "honest_payoff_std": 1.945,
+        "adversarial_payoff_mean": 0.0132,
+        "adversarial_payoff_std": 0.0312
+      },
+      "2": {
+        "welfare_mean": 107.4387,
+        "welfare_std": 9.9442,
+        "toxicity_rate_mean": 0.2568,
+        "toxicity_rate_std": 0.0052,
+        "quality_gap_mean": 0.0,
+        "quality_gap_std": 0.0,
+        "honest_payoff_mean": 21.483,
+        "honest_payoff_std": 1.9889,
+        "adversarial_payoff_mean": 0.0119,
+        "adversarial_payoff_std": 0.0376
+      },
+      "3": {
+        "welfare_mean": 108.186,
+        "welfare_std": 11.2236,
+        "toxicity_rate_mean": 0.2578,
+        "toxicity_rate_std": 0.0071,
+        "quality_gap_mean": 0.0,
+        "quality_gap_std": 0.0,
+        "honest_payoff_mean": 21.6276,
+        "honest_payoff_std": 2.2405,
+        "adversarial_payoff_mean": 0.0239,
+        "adversarial_payoff_std": 0.0504
+      }
+    },
+    "pairwise_tests": [
+      {
+        "comparison": "1 vs 2",
+        "metric": "welfare",
+        "t_stat": 0.0417,
+        "p_value": 0.967229,
+        "cohens_d": 0.0186,
+        "mw_u_p": 0.909722,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "toxicity_rate",
+        "t_stat": -1.9709,
+        "p_value": 0.064326,
+        "cohens_d": -0.8814,
+        "mw_u_p": 0.121225,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "quality_gap",
+        "t_stat": NaN,
+        "p_value": NaN,
+        "cohens_d": 0.0,
+        "mw_u_p": 1.0,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "honest_payoff",
+        "t_stat": 0.041,
+        "p_value": 0.967742,
+        "cohens_d": 0.0183,
+        "mw_u_p": 0.909722,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "adversarial_payoff",
+        "t_stat": 0.0861,
+        "p_value": 0.932331,
+        "cohens_d": 0.0385,
+        "mw_u_p": 0.670405,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "welfare",
+        "t_stat": -0.1203,
+        "p_value": 0.905622,
+        "cohens_d": -0.0538,
+        "mw_u_p": 0.850107,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "toxicity_rate",
+        "t_stat": -2.0101,
+        "p_value": 0.060695,
+        "cohens_d": -0.8989,
+        "mw_u_p": 0.088973,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "quality_gap",
+        "t_stat": NaN,
+        "p_value": NaN,
+        "cohens_d": 0.0,
+        "mw_u_p": 1.0,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "honest_payoff",
+        "t_stat": -0.1157,
+        "p_value": 0.909173,
+        "cohens_d": -0.0518,
+        "mw_u_p": 0.850107,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "adversarial_payoff",
+        "t_stat": -0.5701,
+        "p_value": 0.577036,
+        "cohens_d": -0.255,
+        "mw_u_p": 0.871151,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "welfare",
+        "t_stat": -0.1576,
+        "p_value": 0.876554,
+        "cohens_d": -0.0705,
+        "mw_u_p": 0.850107,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "toxicity_rate",
+        "t_stat": -0.3455,
+        "p_value": 0.734057,
+        "cohens_d": -0.1545,
+        "mw_u_p": 0.96985,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "quality_gap",
+        "t_stat": NaN,
+        "p_value": NaN,
+        "cohens_d": 0.0,
+        "mw_u_p": 1.0,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "honest_payoff",
+        "t_stat": -0.1527,
+        "p_value": 0.880364,
+        "cohens_d": -0.0683,
+        "mw_u_p": 0.850107,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "adversarial_payoff",
+        "t_stat": -0.6043,
+        "p_value": 0.553812,
+        "cohens_d": -0.2702,
+        "mw_u_p": 0.584249,
+        "bonferroni_sig": false
+      }
+    ],
+    "bonferroni_survivors": [],
+    "p_hacking_audit": {
+      "total_hypotheses": 15,
+      "pre_registered": true,
+      "nominally_significant": 0,
+      "bonferroni_significant": 0
+    }
+  },
+  "low_prior": {
+    "scenario": "low_prior",
+    "parameter": "acausality_depth",
+    "values": [
+      1,
+      2,
+      3
+    ],
+    "seeds_per_config": 10,
+    "total_runs": 30,
+    "descriptive": {
+      "1": {
+        "welfare_mean": 125.2184,
+        "welfare_std": 7.9312,
+        "toxicity_rate_mean": 0.3363,
+        "toxicity_rate_std": 0.006,
+        "quality_gap_mean": 0.1591,
+        "quality_gap_std": 0.0482,
+        "honest_payoff_mean": 21.3896,
+        "honest_payoff_std": 2.3012,
+        "adversarial_payoff_mean": 3.2743,
+        "adversarial_payoff_std": 0.5887
+      },
+      "2": {
+        "welfare_mean": 132.16,
+        "welfare_std": 8.4667,
+        "toxicity_rate_mean": 0.3264,
+        "toxicity_rate_std": 0.0151,
+        "quality_gap_mean": 0.1565,
+        "quality_gap_std": 0.0534,
+        "honest_payoff_mean": 22.9535,
+        "honest_payoff_std": 2.1558,
+        "adversarial_payoff_mean": 3.4349,
+        "adversarial_payoff_std": 0.7633
+      },
+      "3": {
+        "welfare_mean": 127.7232,
+        "welfare_std": 13.5278,
+        "toxicity_rate_mean": 0.3325,
+        "toxicity_rate_std": 0.0055,
+        "quality_gap_mean": 0.1629,
+        "quality_gap_std": 0.0314,
+        "honest_payoff_mean": 22.5838,
+        "honest_payoff_std": 2.9037,
+        "adversarial_payoff_mean": 3.1827,
+        "adversarial_payoff_std": 0.8824
+      }
+    },
+    "pairwise_tests": [
+      {
+        "comparison": "1 vs 2",
+        "metric": "welfare",
+        "t_stat": -1.8921,
+        "p_value": 0.074741,
+        "cohens_d": -0.8462,
+        "mw_u_p": 0.10411,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "toxicity_rate",
+        "t_stat": 1.9178,
+        "p_value": 0.079725,
+        "cohens_d": 0.8577,
+        "mw_u_p": 0.10411,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "quality_gap",
+        "t_stat": 0.1132,
+        "p_value": 0.911129,
+        "cohens_d": 0.0506,
+        "mw_u_p": 0.909722,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "honest_payoff",
+        "t_stat": -1.5684,
+        "p_value": 0.134275,
+        "cohens_d": -0.7014,
+        "mw_u_p": 0.140465,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "adversarial_payoff",
+        "t_stat": -0.5268,
+        "p_value": 0.605171,
+        "cohens_d": -0.2356,
+        "mw_u_p": 0.677585,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "welfare",
+        "t_stat": -0.5051,
+        "p_value": 0.621058,
+        "cohens_d": -0.2259,
+        "mw_u_p": 0.677585,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "toxicity_rate",
+        "t_stat": 1.4719,
+        "p_value": 0.158425,
+        "cohens_d": 0.6582,
+        "mw_u_p": 0.307489,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "quality_gap",
+        "t_stat": -0.2097,
+        "p_value": 0.836629,
+        "cohens_d": -0.0938,
+        "mw_u_p": 0.677585,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "honest_payoff",
+        "t_stat": -1.0193,
+        "p_value": 0.32227,
+        "cohens_d": -0.4558,
+        "mw_u_p": 0.57075,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "adversarial_payoff",
+        "t_stat": 0.273,
+        "p_value": 0.788403,
+        "cohens_d": 0.1221,
+        "mw_u_p": 0.96985,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "welfare",
+        "t_stat": 0.8792,
+        "p_value": 0.393079,
+        "cohens_d": 0.3932,
+        "mw_u_p": 0.427355,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "toxicity_rate",
+        "t_stat": -1.1892,
+        "p_value": 0.25857,
+        "cohens_d": -0.5318,
+        "mw_u_p": 0.307489,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "quality_gap",
+        "t_stat": -0.3261,
+        "p_value": 0.748965,
+        "cohens_d": -0.1459,
+        "mw_u_p": 0.73373,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "honest_payoff",
+        "t_stat": 0.3233,
+        "p_value": 0.750513,
+        "cohens_d": 0.1446,
+        "mw_u_p": 0.677585,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "adversarial_payoff",
+        "t_stat": 0.6835,
+        "p_value": 0.503187,
+        "cohens_d": 0.3057,
+        "mw_u_p": 0.307489,
+        "bonferroni_sig": false
+      }
+    ],
+    "bonferroni_survivors": [],
+    "p_hacking_audit": {
+      "total_hypotheses": 15,
+      "pre_registered": true,
+      "nominally_significant": 0,
+      "bonferroni_significant": 0
+    }
+  },
+  "short_horizon": {
+    "scenario": "short_horizon",
+    "parameter": "acausality_depth",
+    "values": [
+      1,
+      2,
+      3
+    ],
+    "seeds_per_config": 10,
+    "total_runs": 30,
+    "descriptive": {
+      "1": {
+        "welfare_mean": 125.8669,
+        "welfare_std": 10.1376,
+        "toxicity_rate_mean": 0.3287,
+        "toxicity_rate_std": 0.0112,
+        "quality_gap_mean": 0.1779,
+        "quality_gap_std": 0.0605,
+        "honest_payoff_mean": 21.8354,
+        "honest_payoff_std": 2.5648,
+        "adversarial_payoff_mean": 3.0959,
+        "adversarial_payoff_std": 0.5593
+      },
+      "2": {
+        "welfare_mean": 134.4021,
+        "welfare_std": 12.3576,
+        "toxicity_rate_mean": 0.3247,
+        "toxicity_rate_std": 0.0105,
+        "quality_gap_mean": 0.1617,
+        "quality_gap_std": 0.0408,
+        "honest_payoff_mean": 23.3399,
+        "honest_payoff_std": 2.7545,
+        "adversarial_payoff_mean": 3.6861,
+        "adversarial_payoff_std": 0.762
+      },
+      "3": {
+        "welfare_mean": 130.4319,
+        "welfare_std": 11.7141,
+        "toxicity_rate_mean": 0.3315,
+        "toxicity_rate_std": 0.0111,
+        "quality_gap_mean": 0.176,
+        "quality_gap_std": 0.0417,
+        "honest_payoff_mean": 22.4893,
+        "honest_payoff_std": 2.3698,
+        "adversarial_payoff_mean": 3.259,
+        "adversarial_payoff_std": 0.6665
+      }
+    },
+    "pairwise_tests": [
+      {
+        "comparison": "1 vs 2",
+        "metric": "welfare",
+        "t_stat": -1.6886,
+        "p_value": 0.109193,
+        "cohens_d": -0.7552,
+        "mw_u_p": 0.121225,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "toxicity_rate",
+        "t_stat": 0.8304,
+        "p_value": 0.417218,
+        "cohens_d": 0.3714,
+        "mw_u_p": 0.344704,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "quality_gap",
+        "t_stat": 0.7047,
+        "p_value": 0.491292,
+        "cohens_d": 0.3151,
+        "mw_u_p": 0.344704,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "honest_payoff",
+        "t_stat": -1.2641,
+        "p_value": 0.222395,
+        "cohens_d": -0.5653,
+        "mw_u_p": 0.241322,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 2",
+        "metric": "adversarial_payoff",
+        "t_stat": -1.9743,
+        "p_value": 0.06531,
+        "cohens_d": -0.8829,
+        "mw_u_p": 0.053903,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "welfare",
+        "t_stat": -0.9319,
+        "p_value": 0.363994,
+        "cohens_d": -0.4167,
+        "mw_u_p": 0.273036,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "toxicity_rate",
+        "t_stat": -0.5668,
+        "p_value": 0.577845,
+        "cohens_d": -0.2535,
+        "mw_u_p": 0.909722,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "quality_gap",
+        "t_stat": 0.0827,
+        "p_value": 0.935149,
+        "cohens_d": 0.037,
+        "mw_u_p": 0.791337,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "honest_payoff",
+        "t_stat": -0.5922,
+        "p_value": 0.561155,
+        "cohens_d": -0.2648,
+        "mw_u_p": 0.73373,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "1 vs 3",
+        "metric": "adversarial_payoff",
+        "t_stat": -0.5927,
+        "p_value": 0.560994,
+        "cohens_d": -0.2651,
+        "mw_u_p": 0.677585,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "welfare",
+        "t_stat": 0.7373,
+        "p_value": 0.470451,
+        "cohens_d": 0.3297,
+        "mw_u_p": 0.472676,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "toxicity_rate",
+        "t_stat": -1.4186,
+        "p_value": 0.173154,
+        "cohens_d": -0.6344,
+        "mw_u_p": 0.273036,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "quality_gap",
+        "t_stat": -0.777,
+        "p_value": 0.447269,
+        "cohens_d": -0.3475,
+        "mw_u_p": 0.57075,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "honest_payoff",
+        "t_stat": 0.7403,
+        "p_value": 0.468876,
+        "cohens_d": 0.3311,
+        "mw_u_p": 0.472676,
+        "bonferroni_sig": false
+      },
+      {
+        "comparison": "2 vs 3",
+        "metric": "adversarial_payoff",
+        "t_stat": 1.3341,
+        "p_value": 0.199086,
+        "cohens_d": 0.5966,
+        "mw_u_p": 0.185877,
+        "bonferroni_sig": false
+      }
+    ],
+    "bonferroni_survivors": [],
+    "p_hacking_audit": {
+      "total_hypotheses": 15,
+      "pre_registered": true,
+      "nominally_significant": 0,
+      "bonferroni_significant": 0
+    }
+  }
+}

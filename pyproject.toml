@@ -1,10 +1,10 @@
 [build-system]
-requires = ["setuptools>=61.0,<75", "wheel"]
+requires = ["setuptools>=61.0,<83", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "swarm-safety"
-version = "1.3.1"
+version = "1.5.0"
 description = "SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -55,6 +55,7 @@ llm = [
     "anthropic>=0.40.0",
     "openai>=1.50.0",
     "httpx>=0.27.0",
+    "google-genai>=1.0.0",
 ]
 dashboard = [
     "streamlit>=1.30",
@@ -68,6 +69,10 @@ cli = [
 ]
 concordia = [
     "concordia>=1.0",
+]
+langgraph = [
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
 ]
 prime_intellect = [
     "prime>=0.1.0",

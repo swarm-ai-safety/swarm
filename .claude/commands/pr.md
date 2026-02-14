@@ -13,13 +13,18 @@ Examples:
 
 ## Behavior
 
-1) Ensure we are on `main` and up to date:
-- `git checkout main && git pull origin main`
+1) Determine the starting point:
+- Detect worktree context: run `git rev-parse --git-dir` vs `git rev-parse --git-common-dir`. If they differ and the current branch starts with `session/`, you are in a session worktree.
+- **Session worktree** (`session/*` branch): do NOT `git checkout main` (it will fail because main is checked out in the main worktree). Instead: `git fetch origin main`.
+- **Main worktree on `main`**: `git pull origin main` as before.
+- **Other branch**: use it directly as the base for the feature branch.
 - If there are no uncommitted changes and no untracked files, abort with a message.
 
 2) Create and switch to a feature branch:
 - If `<branch-name>` is provided, use it.
 - Otherwise, generate one from the change summary (e.g. `fix/pre-commit-scoped-lint`).
+- **Session worktree**: `git checkout -b <branch-name> origin/main` (branch from remote main without switching to it).
+- **Main worktree**: `git checkout -b <branch-name>` (already on updated main).
 
 3) Stage changes:
 - Run `git status` to identify modified and untracked files.

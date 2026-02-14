@@ -21,6 +21,13 @@ class ConcordiaEventType(Enum):
     STEP_COMPLETED = "step_completed"
     ERROR = "error"
 
+    # Social Simulacra events
+    PERSONA_EXPANDED = "persona_expanded"
+    THREAD_GENERATED = "thread_generated"
+    WHATIF_INJECTED = "whatif_injected"
+    MULTIVERSE_UNIVERSE_COMPLETED = "multiverse_universe_completed"
+    MULTIVERSE_ANALYSIS_COMPLETED = "multiverse_analysis_completed"
+
 
 @dataclass
 class ConcordiaEvent:

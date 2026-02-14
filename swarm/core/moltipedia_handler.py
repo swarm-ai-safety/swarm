@@ -2,7 +2,7 @@
 
 import random
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, model_validator
 
@@ -21,8 +21,11 @@ from swarm.env.wiki import (
     WikiPage,
     WikiTaskPool,
 )
+from swarm.governance.engine import GovernanceEffect
+from swarm.logging.event_bus import EventBus
 from swarm.models.agent import AgentType
 from swarm.models.events import Event, EventType
+from swarm.models.interaction import SoftInteraction
 
 
 class MoltipediaConfig(BaseModel):
@@ -89,12 +92,22 @@ class MoltipediaActionResult:
 class MoltipediaHandler(Handler):
     """Handles wiki actions and lifecycle events."""
 
+    @staticmethod
+    def handled_action_types() -> frozenset:
+        return frozenset({
+            ActionType.CREATE_PAGE,
+            ActionType.EDIT_PAGE,
+            ActionType.FILE_OBJECTION,
+            ActionType.POLICY_FLAG,
+        })
+
     def __init__(
         self,
         config: MoltipediaConfig,
-        emit_event: Callable[[Event], None],
+        *,
+        event_bus: EventBus,
     ):
-        super().__init__(emit_event=emit_event)
+        super().__init__(event_bus=event_bus)
         self.config = config
         self._rng = random.Random(config.seed)
         self.task_pool = WikiTaskPool(seed=config.seed)
@@ -512,3 +525,79 @@ class MoltipediaHandler(Handler):
             if violation.value == raw:
                 return violation
         return PolicyViolationType.SOURCING
+
+    # ------------------------------------------------------------------
+    # Plugin hooks
+    # ------------------------------------------------------------------
+
+    _MOLTIPEDIA_LEVERS = frozenset({
+        "moltipedia_pair_cap",
+        "moltipedia_page_cooldown",
+        "moltipedia_daily_cap",
+        "moltipedia_no_self_fix",
+    })
+
+    _LEVER_EVENT_MAP = {
+        "moltipedia_pair_cap": EventType.PAIR_CAP_TRIGGERED,
+        "moltipedia_page_cooldown": EventType.COOLDOWN_TRIGGERED,
+        "moltipedia_daily_cap": EventType.DAILY_CAP_TRIGGERED,
+    }
+
+    def post_finalize(
+        self,
+        result: Any,
+        interaction: SoftInteraction,
+        gov_effect: GovernanceEffect,
+        state: Any,
+    ) -> None:
+        """Award points after governance deductions and emit governance events."""
+        if not (interaction.metadata or {}).get("moltipedia"):
+            return
+
+        points = result.metadata.get("points", 0.0) if hasattr(result, "metadata") else 0.0
+        moltipedia_cost = self._moltipedia_cost_from_effect(gov_effect)
+        points_awarded = max(0.0, points - moltipedia_cost)
+
+        self.record_points(
+            agent_id=result.initiator_id if hasattr(result, "initiator_id") else interaction.initiator,
+            points_awarded=points_awarded,
+            state=state,
+            page_id=(interaction.metadata or {}).get("page_id"),
+            edit_type=(interaction.metadata or {}).get("edit_type"),
+        )
+        self._emit_moltipedia_governance_events(gov_effect, interaction, state)
+
+    def _moltipedia_cost_from_effect(self, effect: GovernanceEffect) -> float:
+        """Compute Moltipedia-specific cost from governance effects."""
+        return float(sum(
+            lever.cost_a
+            for lever in effect.lever_effects
+            if lever.lever_name in self._MOLTIPEDIA_LEVERS
+        ))
+
+    def _emit_moltipedia_governance_events(
+        self,
+        effect: GovernanceEffect,
+        interaction: SoftInteraction,
+        state: Any,
+    ) -> None:
+        """Emit Moltipedia governance trigger events."""
+        page_id = (interaction.metadata or {}).get("page_id")
+        for lever in effect.lever_effects:
+            if lever.lever_name not in self._LEVER_EVENT_MAP:
+                continue
+            if lever.cost_a <= 0:
+                continue
+            self._emit_event(
+                Event(
+                    event_type=self._LEVER_EVENT_MAP[lever.lever_name],
+                    agent_id=interaction.initiator,
+                    payload={
+                        "page_id": page_id,
+                        "cost_a": lever.cost_a,
+                        "details": lever.details,
+                    },
+                    epoch=state.current_epoch,
+                    step=state.current_step,
+                )
+            )

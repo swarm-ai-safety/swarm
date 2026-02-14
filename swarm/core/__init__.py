@@ -16,6 +16,24 @@ from swarm.core.pseudo_verifiers import (
     create_research_verifier,
     create_task_verifier,
 )
+from swarm.core.sandbox import (
+    AgentPlayground,
+    ExecutionBackend,
+    ExecutionResult,
+    ExecutionStatus,
+    FailoverChain,
+    FailoverResult,
+    NonRetryableError,
+    PlaygroundConfig,
+    RetryableError,
+    RetryPolicy,
+    RetryStats,
+    SandboxConfig,
+    SandboxEnvironment,
+    SandboxFileSystem,
+    execute_with_retry,
+    execute_with_retry_sync,
+)
 from swarm.core.sigmoid import calibrated_sigmoid, inverse_sigmoid
 
 __all__ = [
@@ -42,4 +60,21 @@ __all__ = [
     "create_task_verifier",
     # Handler base class
     "Handler",
+    # Sandbox / playground
+    "AgentPlayground",
+    "ExecutionBackend",
+    "ExecutionResult",
+    "ExecutionStatus",
+    "FailoverChain",
+    "FailoverResult",
+    "NonRetryableError",
+    "PlaygroundConfig",
+    "RetryableError",
+    "RetryPolicy",
+    "RetryStats",
+    "SandboxConfig",
+    "SandboxEnvironment",
+    "SandboxFileSystem",
+    "execute_with_retry",
+    "execute_with_retry_sync",
 ]

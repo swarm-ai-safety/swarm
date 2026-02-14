@@ -19,6 +19,7 @@ _STATE_EVENT_MAP: Dict[str, GasTownEventType] = {
     "assigned": GasTownEventType.BEAD_ASSIGNED,
     "in_progress": GasTownEventType.BEAD_IN_PROGRESS,
     "done": GasTownEventType.BEAD_COMPLETED,
+    "closed": GasTownEventType.BEAD_COMPLETED,
     "blocked": GasTownEventType.BEAD_BLOCKED,
 }
 
@@ -35,8 +36,28 @@ class BeadsClient:
         uri = f"file:{db_path}?mode=ro"
         self._conn = sqlite3.connect(uri, uri=True)
         self._conn.row_factory = sqlite3.Row
+        self._table = self._detect_table()
         # Track last-seen state per bead to detect transitions.
         self._last_states: Dict[str, str] = {}
+
+    def _detect_table(self) -> str:
+        """Return the table name holding bead/issue records.
+
+        Real beads databases use an ``issues`` table; the original
+        GasTown schema used ``beads``.  Try ``issues`` first.
+        """
+        cursor = self._conn.cursor()
+        cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name IN ('issues', 'beads')"
+        )
+        tables = [row["name"] for row in cursor.fetchall()]
+        if "issues" in tables:
+            return "issues"
+        if "beads" in tables:
+            return "beads"
+        raise RuntimeError(
+            f"beads DB at {self._db_path} has neither 'issues' nor 'beads' table"
+        )
 
     def get_beads(self, since: Optional[datetime] = None) -> List[dict]:
         """Return beads modified since *since* (or all if ``None``)."""
@@ -44,17 +65,17 @@ class BeadsClient:
         if since is not None:
             ts = since.isoformat()
             cursor.execute(
-                "SELECT * FROM beads WHERE updated_at >= ? ORDER BY updated_at",
+                f"SELECT * FROM {self._table} WHERE updated_at >= ? ORDER BY updated_at",
                 (ts,),
             )
         else:
-            cursor.execute("SELECT * FROM beads ORDER BY updated_at")
+            cursor.execute(f"SELECT * FROM {self._table} ORDER BY updated_at")
         return [dict(row) for row in cursor.fetchall()]
 
     def get_bead(self, bead_id: str) -> Optional[dict]:
         """Look up a single bead by ID."""
         cursor = self._conn.cursor()
-        cursor.execute("SELECT * FROM beads WHERE id = ?", (bead_id,))
+        cursor.execute(f"SELECT * FROM {self._table} WHERE id = ?", (bead_id,))
         row = cursor.fetchone()
         return dict(row) if row else None
 

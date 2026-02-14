@@ -18,6 +18,7 @@ from swarm.agents.memory_agent import (
     DiligentRecorderAgent,
     MemoryPoisonerAgent,
 )
+from swarm.agents.modeling_adversary import ModelingAdversary
 from swarm.agents.moltbook_agent import (
     CollusiveVoterAgent,
     DiligentMoltbookAgent,
@@ -33,10 +34,12 @@ from swarm.agents.scholar_agent import (
     SynthesizerAgent,
     VerifierAgent,
 )
+from swarm.agents.self_optimizer import SelfOptimizerAgent
 from swarm.agents.skill_evolving import (
     SkillEvolvingHonestAgent,
     SkillEvolvingOpportunisticAgent,
 )
+from swarm.agents.skillrl_agent import SkillRLAgent
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,
@@ -63,6 +66,7 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "deceptive": DeceptiveAgent,
     "adversarial": AdversarialAgent,
     "adaptive_adversary": AdaptiveAdversary,
+    "modeling_adversary": ModelingAdversary,
     "diligent_editor": DiligentEditorAgent,
     "point_farmer": PointFarmerAgent,
     "collusive_editor": CollusiveEditorAgent,
@@ -86,11 +90,16 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     # Skill-evolving agents
     "skill_honest": SkillEvolvingHonestAgent,
     "skill_opportunistic": SkillEvolvingOpportunisticAgent,
+    # SkillRL agent (Xia et al., 2026)
+    "skillrl": SkillRLAgent,
+    # Self-optimizing agent (recursive cost-cutting)
+    "self_optimizer": SelfOptimizerAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
 _LLM_AGENT_CLASS = None
 _LLM_CONFIG_CLASSES = None
+_COUNCIL_AGENT_CLASS = None
 
 
 def _get_llm_classes():
@@ -107,6 +116,16 @@ def _get_llm_classes():
             "PersonaType": PersonaType,
         }
     return _LLM_AGENT_CLASS, _LLM_CONFIG_CLASSES
+
+
+def _get_council_agent_class():
+    """Lazy import CouncilAgent class."""
+    global _COUNCIL_AGENT_CLASS
+    if _COUNCIL_AGENT_CLASS is None:
+        from swarm.agents.council_agent import CouncilAgent
+
+        _COUNCIL_AGENT_CLASS = CouncilAgent
+    return _COUNCIL_AGENT_CLASS
 
 
 @dataclass
@@ -208,6 +227,14 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         security_realtime_rate=data.get("security_realtime_rate", 0.2),
         security_clear_history_on_epoch=data.get(
             "security_clear_history_on_epoch", False
+        ),
+        # Council governance lever
+        council_lever_enabled=data.get("council_lever_enabled", False),
+        council_lever_review_probability=data.get(
+            "council_lever_review_probability", 0.3
+        ),
+        council_lever_penalty_multiplier=data.get(
+            "council_lever_penalty_multiplier", 1.0
         ),
         # Variance-aware governance
         self_ensemble_enabled=data.get("self_ensemble_enabled", False),
@@ -593,6 +620,8 @@ def load_scenario(path: Path) -> ScenarioConfig:
         steps_per_epoch=sim_data.get("steps_per_epoch", 10),
         seed=sim_data.get("seed"),
         scenario_id=data.get("scenario_id"),
+        schedule_mode=sim_data.get("schedule_mode", "round_robin"),
+        max_actions_per_step=sim_data.get("max_actions_per_step", 20),
         observation_noise_probability=sim_data.get(
             "observation_noise_probability", 0.0
         ),
@@ -626,6 +655,46 @@ def load_scenario(path: Path) -> ScenarioConfig:
         metrics_csv_path=Path(outputs_data["metrics_csv"])
         if outputs_data.get("metrics_csv")
         else None,
+    )
+
+
+def parse_council_agent_config(data: Dict[str, Any]) -> Any:
+    """Parse council agent configuration from YAML.
+
+    Args:
+        data: The council section from YAML agent spec
+
+    Returns:
+        CouncilConfig instance
+    """
+    from swarm.council.config import CouncilConfig, CouncilMemberConfig
+
+    members: list[CouncilMemberConfig] = []
+    for member_data in data.get("members", []):
+        llm_config = parse_llm_config(member_data.get("llm", {}))
+        member = CouncilMemberConfig(
+            member_id=member_data.get("member_id", f"member_{len(members)}"),
+            llm_config=llm_config,
+            weight=member_data.get("weight", 1.0),
+        )
+        members.append(member)
+
+    chairman = None
+    if data.get("chairman"):
+        chairman_llm = parse_llm_config(data["chairman"].get("llm", {}))
+        chairman = CouncilMemberConfig(
+            member_id=data["chairman"].get("member_id", "chairman"),
+            llm_config=chairman_llm,
+            weight=data["chairman"].get("weight", 1.0),
+        )
+
+    return CouncilConfig(
+        members=members,
+        chairman=chairman,
+        min_members_required=data.get("min_members_required", 2),
+        timeout_per_member=data.get("timeout_per_member", 30.0),
+        anonymize_responses=data.get("anonymize_responses", True),
+        seed=data.get("seed"),
     )
 
 
@@ -721,6 +790,27 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
                 agent = LLMAgent(
                     agent_id=agent_id,
                     llm_config=llm_config,
+                    name=agent_name,
+                )
+                agents.append(agent)
+
+        # Handle council agents
+        elif agent_type == "council":
+            CouncilAgent = _get_council_agent_class()
+            council_config = parse_council_agent_config(spec.get("council", {}))
+
+            for _ in range(count):
+                counters["council"] = counters.get("council", 0) + 1
+                agent_id = f"council_{counters['council']}"
+                agent_name = (
+                    f"{base_name}_{counters['council']}"
+                    if base_name and count > 1
+                    else base_name
+                )
+
+                agent = CouncilAgent(
+                    agent_id=agent_id,
+                    council_config=council_config,
                     name=agent_name,
                 )
                 agents.append(agent)

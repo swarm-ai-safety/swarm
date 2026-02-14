@@ -4,11 +4,12 @@ Log a completed SWARM run to the SQLite runs database.
 
 ## Usage
 
-`/log_run <run_dir> [--notes "..."]`
+`/log_run <run_dir> [--notes "..."] [--external-run-id "..."]`
 
 Examples:
 - `/log_run runs/20260209-143000_collusion_detection_seed42`
 - `/log_run runs/20260209-143000_baseline_seed42 --notes "Increased rep decay to 0.15"`
+- `/log_run runs/20260209-143000_pi_safety_seed42 --external-run-id "your-external-run-id"`
 
 ## Behavior
 
@@ -30,6 +31,7 @@ Examples:
    - `welfare_per_epoch`: total_welfare / n_epochs
    - `adversarial_fraction`: fraction of agents with type containing "adversarial" or "redteam"
    - `collapse_epoch`: first epoch where welfare drops to 0 and stays 0 (NULL if no collapse)
+   - `external_run_id`: from `--external-run-id` flag or NULL (e.g. Prime Intellect eval/job ID)
    - `notes`: from `--notes` flag or empty string
 
 3) Locate or create the SQLite database at the path from `$SWARM_RUNS_DB_PATH` env var, or default to `runs/runs.db`. If the `scenario_runs` table does not exist, create it:
@@ -52,6 +54,7 @@ CREATE TABLE IF NOT EXISTS scenario_runs (
     welfare_per_epoch REAL,
     adversarial_fraction REAL,
     collapse_epoch INTEGER,
+    external_run_id TEXT,
     notes TEXT,
     logged_at TEXT DEFAULT (datetime('now'))
 );
@@ -63,6 +66,8 @@ CREATE TABLE IF NOT EXISTS scenario_runs (
    - A formatted summary of the inserted row
    - Total row count in the table
    - The SQLite query used (for reproducibility)
+
+6) Also export the summary row to Dolt by calling `export_run_summary_to_dolt(summary_dict)` from `swarm.analysis.dolt_export`. This writes the same row to the `scenario_runs` table in `runs/dolt_runs` and creates a Dolt commit. If Dolt is unavailable, print a warning and continue.
 
 ## Integration with /run_scenario
 

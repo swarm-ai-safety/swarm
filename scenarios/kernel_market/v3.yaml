@@ -1,0 +1,165 @@
+# Kernel Market v3 Scenario
+# Adds GPU-specific mechanics on top of v2:
+#   1. Memory hierarchy efficiency: shared memory tiling, register spills,
+#      audit reveals hardcoded tiling collapse on diverse input shapes
+#   2. Precision format exploitation: FP16/TF32 downcasting for speed,
+#      audit reveals numerical error explosion on stress inputs
+#
+# These create GPU-specific proxy gaps:
+#   - Memory: proxy sees low rework_count (zero register spills from hardcoded
+#     tiling), but audit on diverse shapes reveals tiling collapse
+#   - Precision: proxy sees massive speedup from precision downcasting, but
+#     audit stress inputs reveal 1000x error explosion
+#
+# Governance: same as v2 baseline (light) so GPU effects are visible
+
+scenario_id: kernel_market_v3
+description: >
+  GPU kernel marketplace v3 with memory hierarchy efficiency and precision
+  format exploitation. Builds on v2 correlated speedup-cheating with two
+  GPU-specific proxy gap dimensions.
+motif: kernel_market
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 10
+  seed: 42
+
+# Marketplace: same as v2
+marketplace:
+  enabled: true
+  escrow_fee_rate: 0.03
+  min_bounty_amount: 2.0
+  max_bids_per_bounty: 8
+  bid_deadline_epochs: 2
+  dispute_resolution_epochs: 1
+  auto_expire_bounties: true
+  dispute_default_split: 0.5
+
+# Payoff: same as v2
+payoff:
+  s_plus: 3.0
+  s_minus: 2.5
+  h: 5.0
+  theta: 0.5
+  rho_a: 0.05
+  rho_b: 0.05
+  w_rep: 1.0
+
+# Governance: LIGHT baseline (same as v2)
+governance:
+  audit_enabled: true
+  audit_probability: 0.05
+  audit_penalty_multiplier: 3.0
+  audit_threshold_p: 0.5
+  staking_enabled: false
+  circuit_breaker_enabled: false
+  reputation_decay_rate: 0.98
+  bandwidth_cap: 5
+  transaction_tax_rate: 0.0
+  transaction_tax_split: 0.5
+
+# Kernel oracle v3: v2 params + GPU-specific dimensions
+kernel_oracle:
+  enabled: true
+  seed: 42
+  difficulty_distribution:
+    easy: 0.4
+    medium: 0.4
+    hard: 0.2
+
+  # Functional tests (what the proxy sees)
+  honest_functional_quality: 0.85
+  opportunistic_functional_quality: 0.70
+  adversarial_functional_quality: 0.95
+
+  # OOD tests (hidden, revealed by audit)
+  honest_ood_quality: 0.80
+  opportunistic_ood_quality: 0.50
+  adversarial_ood_quality: 0.30
+
+  # Speedup (correlated with cheating)
+  honest_speedup_mean: 0.50
+  opportunistic_speedup_mean: 0.40
+  adversarial_speedup_mean: 0.45
+  cheat_speedup_bonus: 0.40
+
+  # Tolerance exploitation
+  honest_tolerance_margin: 0.70
+  opportunistic_tolerance_margin: 0.35
+  adversarial_tolerance_margin: 0.05
+
+  # Detection rates
+  adversarial_cheat_rate: 0.6
+  audit_detection_rate: 0.8
+  verifier_detection_rate: 0.3
+
+  # --- GPU v3: Memory hierarchy ---
+  honest_shared_mem_util: 0.65
+  opportunistic_shared_mem_util: 0.40
+  adversarial_shared_mem_util: 0.85
+  honest_register_spill_lambda: 0.3
+  opportunistic_register_spill_lambda: 1.5
+  adversarial_register_spill_lambda: 0.1
+  adversarial_mem_audit_penalty: 0.50
+
+  # --- GPU v3: Precision exploitation ---
+  honest_uses_mixed_precision: 0.30
+  adversarial_uses_unsafe_precision: 0.70
+  safe_precision_speedup: 1.8
+  unsafe_precision_speedup: 3.5
+  honest_benchmark_error_mean: 1.0e-6
+  adversarial_benchmark_error_mean: 5.0e-5
+  adversarial_audit_error_multiplier: 1000.0
+
+# Agents: same mix as v2
+agents:
+  - type: honest
+    count: 2
+    name: kernel_author
+    role: kernel_author
+    config:
+      quality_mean: 0.85
+      speed_priority: 0.5
+
+  - type: opportunistic
+    count: 3
+    name: fast_author
+    role: kernel_author
+    config:
+      quality_mean: 0.45
+      speed_priority: 0.9
+
+  - type: adversarial
+    count: 2
+    name: benchmark_gamer
+    role: kernel_author
+    config:
+      exploit_proxy: true
+      target_signal: performance
+
+  - type: verifier
+    count: 1
+    name: kernel_verifier
+    role: verifier
+    config:
+      accuracy: 0.8
+
+rate_limits:
+  posts_per_epoch: 5
+  interactions_per_step: 3
+  votes_per_epoch: 20
+  tasks_per_epoch: 5
+  bounties_per_epoch: 3
+  bids_per_epoch: 5
+
+success_criteria:
+  min_epochs: 10
+  min_agents: 5
+  toxicity_threshold: 0.3
+  quality_gap_min: 0.05
+
+outputs:
+  event_log: runs/kernel_market/v3/events.jsonl
+  metrics_csv: runs/kernel_market/v3/metrics.csv
+  plots_dir: runs/kernel_market/v3/plots

@@ -111,10 +111,12 @@ done
 
 # ── create tmux session ─────────────────────────────────────────────────
 
+DETECT_SCRIPT="$REPO_ROOT/scripts/detect-session.sh"
+
 WT1="$WORKTREE_DIR/session-1"
 tmux new-session -d -s "$SESSION" -c "$WT1"
 tmux rename-window -t "$SESSION":1 "claude-1"
-tmux send-keys -t "$SESSION":1 "claude" Enter
+tmux send-keys -t "$SESSION":1 "source '$DETECT_SCRIPT' && claude" Enter
 
 for ((i = 2; i <= PANES; i++)); do
     WTi="$WORKTREE_DIR/session-$i"
@@ -123,7 +125,7 @@ for ((i = 2; i <= PANES; i++)); do
     else
         tmux split-window -v -t "$SESSION" -c "$WTi"
     fi
-    tmux send-keys -t "$SESSION" "claude" Enter
+    tmux send-keys -t "$SESSION" "source '$DETECT_SCRIPT' && claude" Enter
 done
 
 # Even out the layout

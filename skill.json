@@ -1,24 +1,37 @@
 {
   "name": "swarm-safety",
-  "version": "1.0.0",
-  "description": "SWARM: System-Wide Assessment of Risk in Multi-agent systems. Simulate multi-agent dynamics, test governance mechanisms, study emergent risks, and measure distributional safety.",
+  "version": "1.5.0",
+  "description": "SWARM: System-Wide Assessment of Risk in Multi-agent systems. Simulate multi-agent dynamics with 38 agent types and 29 governance levers. Study emergent risks, phase transitions, and the governance cost paradox using soft probabilistic labels.",
   "homepage": "https://github.com/swarm-ai-safety/swarm",
   "repository": "https://github.com/swarm-ai-safety/swarm",
   "api_base": "https://github.com/swarm-ai-safety/swarm",
   "category": "safety",
   "author": "Raeli Savitt",
   "license": "MIT",
-  "keywords": ["multi-agent", "ai-safety", "distributional-safety", "governance", "emergence", "red-teaming"],
+  "keywords": [
+    "multi-agent",
+    "ai-safety",
+    "distributional-safety",
+    "governance",
+    "emergence",
+    "red-teaming",
+    "phase-transitions",
+    "decision-theory",
+    "adverse-selection"
+  ],
   "capabilities": [
     "simulate",
     "governance",
     "metrics",
     "red-team",
-    "scenarios"
+    "scenarios",
+    "framework-bridges",
+    "decision-theory",
+    "sweep"
   ],
   "install": {
     "pip": "pip install swarm-safety",
-    "source": "pip install -e .",
+    "source": "pip install -e \".[dev,runtime]\"",
     "with_api": "pip install swarm-safety[api]",
     "with_llm": "pip install swarm-safety[llm]",
     "with_all": "pip install swarm-safety[all]"
@@ -46,7 +59,22 @@
       "list_simulations": "GET /api/v1/simulations/"
     }
   },
-  "agent_types": ["honest", "opportunistic", "deceptive", "adversarial", "llm"],
+  "agent_types": [
+    "honest",
+    "opportunistic",
+    "deceptive",
+    "adversarial",
+    "ldt",
+    "rlm",
+    "council",
+    "skill_rl",
+    "llm_anthropic",
+    "llm_openai",
+    "llm_ollama",
+    "moltbook",
+    "scholar",
+    "wiki_editor"
+  ],
   "governance_levers": [
     "transaction_tax",
     "reputation_decay",
@@ -59,6 +87,8 @@
     "transparency",
     "moderator",
     "incoherence_friction",
+    "council_deliberation",
+    "diversity_enforcement",
     "moltipedia_pair_cap",
     "moltipedia_page_cooldown",
     "moltipedia_daily_cap",
@@ -68,11 +98,34 @@
     "toxicity_rate",
     "quality_gap",
     "conditional_loss",
-    "incoherence"
+    "incoherence",
+    "illusion_delta"
   ],
+  "framework_bridges": [
+    "concordia",
+    "gastown",
+    "claude_code",
+    "live_swe",
+    "openclaw",
+    "prime_intellect",
+    "ralph",
+    "worktree"
+  ],
+  "stats": {
+    "scenarios": 55,
+    "agent_modules": 38,
+    "governance_levers": 29,
+    "tests": 2922,
+    "papers": 20
+  },
   "scenarios": [
     "baseline",
     "moltipedia_heartbeat",
-    "moltbook_captcha"
+    "moltbook_captcha",
+    "gastown_governance_cost",
+    "ldt_cooperation",
+    "tdt_vs_fdt_vs_udt",
+    "consumer_seller",
+    "adversarial_red_team"
   ]
 }

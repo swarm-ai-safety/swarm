@@ -2,7 +2,7 @@
 
 import random
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from pydantic import BaseModel, model_validator
 
@@ -21,6 +21,7 @@ from swarm.env.moltbook import (
 )
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.moltbook import ChallengeVerificationLever, MoltbookRateLimitLever
+from swarm.logging.event_bus import EventBus
 from swarm.models.agent import AgentType
 from swarm.models.events import Event, EventType
 from swarm.models.interaction import InteractionType
@@ -107,15 +108,25 @@ class MoltbookScorer:
 class MoltbookHandler(Handler):
     """Handles Moltbook posts, comments, verification, and votes."""
 
+    @staticmethod
+    def handled_action_types() -> frozenset:
+        return frozenset({
+            ActionType.MOLTBOOK_POST,
+            ActionType.MOLTBOOK_COMMENT,
+            ActionType.MOLTBOOK_VERIFY,
+            ActionType.MOLTBOOK_VOTE,
+        })
+
     def __init__(
         self,
         config: MoltbookConfig,
-        emit_event: Callable[[Event], None],
         governance_config: Optional[GovernanceConfig] = None,
         rate_limit_lever: Optional[MoltbookRateLimitLever] = None,
         challenge_lever: Optional[ChallengeVerificationLever] = None,
+        *,
+        event_bus: EventBus,
     ) -> None:
-        super().__init__(emit_event=emit_event)
+        super().__init__(event_bus=event_bus)
         self.config = config
         self._rng = random.Random(config.seed)
         self.feed = MoltbookFeed(max_content_length=config.max_content_length)
@@ -135,6 +146,29 @@ class MoltbookHandler(Handler):
             from swarm.env.moltbook_catalog import seed_from_catalog
 
             seed_from_catalog(self.feed, self.config.initial_posts, self._rng)
+
+    # ------------------------------------------------------------------
+    # Plugin protocol
+    # ------------------------------------------------------------------
+
+    _OBSERVATION_FIELD_MAPPING = {
+        "published_posts": "moltbook_published_posts",
+        "pending_posts": "moltbook_pending_posts",
+        "rate_limits": "moltbook_rate_limits",
+        "karma": "moltbook_karma",
+    }
+
+    def observation_field_mapping(self) -> Dict[str, str]:
+        return self._OBSERVATION_FIELD_MAPPING
+
+    def build_observation_fields(self, agent_id: str, state: Any) -> Dict[str, Any]:
+        """Delegates to ``get_agent_observation``."""
+        step = state.current_step if hasattr(state, "current_step") else 0
+        return self.get_agent_observation(agent_id, step)
+
+    def on_step(self, state: Any, step: int) -> None:
+        """Per-step tick: rate-limit decay and challenge expiry."""
+        self.tick(step)
 
     # ------------------------------------------------------------------
     # Observation helpers

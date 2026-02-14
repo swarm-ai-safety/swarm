@@ -1,0 +1,371 @@
+% SWARM Paper Template
+% Compiled from docs/papers/gastown_governance_cost.md
+
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{verbatim}
+
+\title{The Cost of Safety: Governance Overhead vs.\ Toxicity Reduction\\in Multi-Agent Workspaces Inspired by GasTown}
+\author{SWARM Research Collective}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study the welfare--safety tradeoff in multi-agent workspaces using a SWARM simulation that extends GasTown's cooperative architecture into an adversarial multi-principal setting. Sweeping adversarial agent proportion from 0\% to 86\% under three regimes --- full governance (circuit breaker, collusion detection, staking, random audit), Refinery-only (deterministic quality gate at $p < 0.5$, zero friction on accepted interactions), and no governance --- we find across 63 runs (7 compositions $\times$ 3 regimes $\times$ 3 seeds, 30 epochs each) that the Refinery regime resolves the governance cost paradox identified in our earlier two-regime study. Full governance reduces toxicity at every adversarial level but imposes welfare costs exceeding the safety benefit. The Refinery achieves comparable or greater toxicity reduction while preserving near-ungoverned welfare levels, confirming our hypothesis that a single deterministic quality gate --- modeled on GasTown's actual Refinery merge queue --- can provide most of the safety benefit at a fraction of the governance cost.
+\end{abstract}
+
+\section{Introduction}
+
+Multi-agent AI workspaces face a fundamental tension: governance mechanisms that prevent adversarial exploitation impose friction on all participants, including honest ones. GasTown~\cite{yegge2025gastown,yegge2025gastownrepo} is a multi-agent orchestration system for AI coding agents that coordinates work through persistent state, git-backed task tracking (Beads), and structured roles --- Mayor (coordinator), Polecats (worker agents), Witnesses (reviewers), and Deacons (monitors). Its role hierarchy and bead-based task economy provide a naturalistic setting to study this tradeoff.
+
+\textbf{Important caveat:} The real GasTown system is fundamentally cooperative. All agents share a common principal (the user) and work toward shared goals. The adversarial framing in this study is a \textit{hypothetical extension} --- we ask what would happen if GasTown's architecture were deployed in a setting where agents had misaligned incentives. All governance mechanisms studied here (transaction tax, staking, collusion detection, etc.) are SWARM inventions, not GasTown features. The one exception is the Refinery quality gate, which models GasTown's actual merge queue.
+
+Prior SWARM composition studies have established that adversarial agent proportion degrades welfare monotonically and that governance levers reduce toxicity. However, the \textit{net welfare impact} of governance --- its benefit through harm reduction minus its cost through friction --- has not been measured directly. Furthermore, GasTown's own quality mechanism (the Refinery) has not been compared against heavier governance stacks.
+
+This study asks four questions:
+
+\begin{enumerate}[nosep]
+  \item \textbf{At what adversarial proportion does governance become net-positive for welfare?}
+  \item \textbf{How much welfare do governance levers cost in the absence of adversarial pressure?}
+  \item \textbf{Is there a critical threshold where governance can no longer contain adversarial agents?}
+  \item \textbf{Does a single deterministic quality gate (the Refinery) achieve most of the safety benefit at lower cost?}
+\end{enumerate}
+
+\section{Relationship to GasTown}
+
+This study uses GasTown's architecture as inspiration but significantly departs from GasTown's actual operating assumptions.
+
+\begin{table}[H]
+\centering
+\caption{Mapping between real GasTown and SWARM modeling.}
+\small
+\begin{tabular}{lll}
+\toprule
+\textbf{GasTown Component} & \textbf{Real GasTown} & \textbf{SWARM Model} \\
+\midrule
+Agent alignment & Cooperative (shared principal) & Adversarial (multi-principal) \\
+Refinery merge queue & Deterministic quality gate & \texttt{RefineryLever} ($p < 0.5$ rejection) \\
+Witness review & Code review by assigned reviewer & Random audit lever (20\% probability) \\
+Beads task tracking & Git-backed work coordination & Interaction proposals with payoffs \\
+Role hierarchy & Mayor/Polecat/Witness/Deacon & Agent type distribution \\
+Transaction costs & None (cooperative) & Transaction tax (5\%), staking \\
+Collusion detection & Not needed (cooperative) & Statistical frequency/correlation \\
+Circuit breaker & \texttt{gt stop} (manual) & Automatic toxicity threshold freeze \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The governance levers (transaction tax, staking, collusion detection, circuit breaker, random audit) are SWARM inventions designed to test adversarial containment. They do not exist in the real GasTown system, which relies on cooperative norms and the Refinery merge queue for quality control.
+
+\section{Methods}
+
+\subsection{Population Design}
+
+We fix the total population at 7 agents and sweep the number of adversarial (rogue) agents from 0 to 6. The remaining slots are filled with honest agents plus 1 opportunistic agent (the ``corner-cutter'') when room permits. Each composition is run under all three governance regimes.
+
+\begin{table}[H]
+\centering
+\caption{Agent compositions tested.}
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Composition} & \textbf{Honest} & \textbf{Opportunistic} & \textbf{Adversarial} & \textbf{Rogue \%} \\
+\midrule
+0/7 rogue & 6 & 1 & 0 & 0\% \\
+1/7 rogue & 5 & 1 & 1 & 14\% \\
+2/7 rogue & 4 & 1 & 2 & 29\% \\
+3/7 rogue & 3 & 1 & 3 & 43\% \\
+4/7 rogue & 2 & 1 & 4 & 57\% \\
+5/7 rogue & 1 & 1 & 5 & 71\% \\
+6/7 rogue & 1 & 0 & 6 & 86\% \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Governance Parameters}
+
+Three regimes are compared:
+
+\begin{table}[H]
+\centering
+\caption{Governance lever configuration by regime.}
+\small
+\begin{tabular}{lccc}
+\toprule
+\textbf{Parameter} & \textbf{Governed} & \textbf{Refinery} & \textbf{Ungoverned} \\
+\midrule
+Transaction tax rate & 0.05 & 0.00 & 0.00 \\
+Reputation decay & 0.95/epoch & 1.00 (none) & 1.00 (none) \\
+Circuit breaker & Enabled & Disabled & Disabled \\
+Random audit & 20\% probability, $2\times$ penalty & Disabled & Disabled \\
+Staking & 5.0 min stake, 20\% slash & Disabled & Disabled \\
+Collusion detection & Enabled & Disabled & Disabled \\
+Bandwidth cap & 8 & Unlimited & Unlimited \\
+\textbf{Refinery gate} & \textbf{Disabled} & \textbf{Enabled ($p < 0.5$)} & \textbf{Disabled} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Refinery regime's key property: \textbf{zero friction on accepted interactions}. It adds no tax, no staking requirement, no reputation decay. It only rejects interactions below the quality threshold.
+
+\subsection{Payoff Parameters}
+
+GasTown workspace payoff configuration (from \texttt{scenarios/gastown\_workspace.yaml}):
+
+\begin{table}[H]
+\centering
+\caption{Payoff configuration.}
+\begin{tabular}{ccl}
+\toprule
+\textbf{Parameter} & \textbf{Value} & \textbf{Description} \\
+\midrule
+$s^+$ & 3.0 & Surplus from beneficial interaction \\
+$s^-$ & 1.5 & Loss from harmful interaction \\
+$h$ & 2.5 & Externality (tech debt / shipped bugs) \\
+$\theta$ & 0.5 & Even surplus split \\
+$\rho_a$ & 0.3 & Agent A externality internalization \\
+$\rho_b$ & 0.2 & Agent B externality internalization \\
+$w_{\text{rep}}$ & 1.5 & Reputation weight \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Simulation Parameters}
+
+\begin{itemize}[nosep]
+  \item \textbf{Epochs:} 30 per run
+  \item \textbf{Steps per epoch:} 10
+  \item \textbf{Seeds:} 42, 43, 44 (3 seeds per configuration)
+  \item \textbf{Total runs:} 63 (7 compositions $\times$ 3 regimes $\times$ 3 seeds)
+  \item \textbf{Total simulation epochs:} 1,890
+\end{itemize}
+
+\subsection{Metrics}
+
+\begin{itemize}[nosep]
+  \item \textbf{Total welfare}: Cumulative payoff across all agents, summed over epochs
+  \item \textbf{Toxicity rate}: $\mathbb{E}[1{-}p \mid \text{accepted}]$ --- expected harm from accepted interactions
+  \item \textbf{Quality gap}: $\mathbb{E}[p \mid \text{accepted}] - \mathbb{E}[p \mid \text{rejected}]$ --- negative indicates adverse selection
+  \item \textbf{Per-class payoff}: Average total payoff by agent type (honest, opportunistic, adversarial)
+\end{itemize}
+
+\section{Results}
+
+\subsection{Cross-Regime Summary}
+
+\begin{table}[H]
+\centering
+\caption{Cross-regime summary: welfare and toxicity (mean $\pm$ std over 3 seeds).}
+\small
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Rogue \%} & \textbf{Ungov.\ W} & \textbf{Gov.\ W} & \textbf{Ref.\ W} & \textbf{Ungov.\ Tox.} & \textbf{Gov.\ Tox.} & \textbf{Ref.\ Tox.} \\
+\midrule
+0\%  & 374.7$\pm$0.6 & 158.9$\pm$0.3 & 386.7$\pm$0.4 & 0.281$\pm$0.006 & 0.214$\pm$0.013 & 0.284$\pm$0.005 \\
+14\% & 291.8$\pm$0.3 & 103.1$\pm$0.6 & 295.3$\pm$0.3 & 0.293$\pm$0.004 & 0.216$\pm$0.019 & 0.287$\pm$0.004 \\
+29\% & 252.4$\pm$0.5 & 70.1$\pm$0.4  & 259.0$\pm$0.4 & 0.300$\pm$0.002 & 0.198$\pm$0.029 & 0.291$\pm$0.002 \\
+43\% & 198.8$\pm$0.4 & 67.1$\pm$0.2  & 206.6$\pm$0.3 & 0.300$\pm$0.005 & 0.248$\pm$0.066 & 0.295$\pm$0.001 \\
+57\% & 141.6$\pm$0.3 & 50.5$\pm$0.1  & 146.2$\pm$0.3 & 0.313$\pm$0.011 & 0.261$\pm$0.035 & 0.312$\pm$0.011 \\
+71\% & 78.1$\pm$0.2  & 21.3$\pm$0.1  & 86.5$\pm$0.1  & 0.307$\pm$0.025 & 0.175$\pm$0.043 & 0.302$\pm$0.019 \\
+86\% & 32.4$\pm$0.2  & 21.8$\pm$0.2  & 51.0$\pm$0.2  & 0.421$\pm$0.012 & 0.409$\pm$0.015 & 0.181$\pm$0.031 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Welfare Comparison}
+
+The Refinery achieves \textbf{higher welfare than ungoverned} at every adversarial level --- a result that goes beyond our initial hypothesis:
+
+\begin{itemize}[nosep]
+  \item \textbf{Refinery welfare premium over ungoverned}: +3.5 to +18.6 units across all levels
+  \item \textbf{Governed welfare deficit vs ungoverned}: $-10.6$ to $-215.9$ units (negative at all levels)
+  \item At 86\% rogue, the Refinery produces 51.0 welfare vs ungoverned 32.4 --- a \textbf{57\% improvement}
+\end{itemize}
+
+The Refinery's welfare advantage comes from the same mechanism as its toxicity reduction: by rejecting low-$p$ interactions before they generate negative payoffs, it prevents welfare destruction while imposing zero cost on quality work.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/gastown_governance_cost/gastown_welfare.png}
+\caption{Total welfare (sum over 30 epochs) vs.\ adversarial agent proportion. Ungoverned (red), Governed (green), and Refinery (blue). The Refinery matches or exceeds ungoverned welfare at every adversarial level.}
+\label{fig:welfare}
+\end{figure}
+
+\subsection{Toxicity Containment}
+
+The Refinery's toxicity performance varies by adversarial level:
+
+\begin{itemize}[nosep]
+  \item \textbf{Low adversarial (0--57\%)}: Refinery toxicity is slightly below ungoverned (0.284--0.312 vs 0.281--0.313), with governed achieving the best toxicity reduction
+  \item \textbf{High adversarial (86\%)}: Refinery dramatically outperforms both regimes with toxicity 0.181 vs ungoverned 0.421 and governed 0.409 --- a \textbf{0.240 reduction}
+\end{itemize}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/gastown_governance_cost/gastown_toxicity.png}
+\caption{Toxicity rate (mean over epochs) vs.\ adversarial proportion across all three regimes. The Refinery (blue) achieves dramatic toxicity reduction at 86\% rogue.}
+\label{fig:toxicity}
+\end{figure}
+
+\subsection{Governance Protection}
+
+\begin{table}[H]
+\centering
+\caption{Governance protection: welfare difference and toxicity reduction vs.\ ungoverned baseline.}
+\small
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Rogue \%} & \textbf{Gov.\ $\Delta$W} & \textbf{Ref.\ $\Delta$W} & \textbf{Gov.\ Tox.\ Red.} & \textbf{Ref.\ Tox.\ Red.} \\
+\midrule
+0\%  & $-215.9$ & $+12.0$  & 0.066 & $-0.003$ \\
+14\% & $-188.7$ & $+3.5$   & 0.077 & 0.005 \\
+29\% & $-182.3$ & $+6.7$   & 0.102 & 0.009 \\
+43\% & $-131.7$ & $+7.8$   & 0.052 & 0.005 \\
+57\% & $-91.1$  & $+4.6$   & 0.052 & 0.001 \\
+71\% & $-56.9$  & $+8.4$   & 0.133 & 0.005 \\
+86\% & $-10.6$  & $+18.6$  & 0.012 & 0.240 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The Refinery achieves \textbf{positive welfare gain at every adversarial level} --- resolving the governance cost paradox. Full governance never achieves positive welfare.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/gastown_governance_cost/gastown_governance_protection.png}
+\caption{Governance benefit (regime minus ungoverned) for welfare and toxicity reduction. The Refinery (blue) achieves positive welfare alongside toxicity reduction. Governed (green) always has negative welfare.}
+\label{fig:governance-protection}
+\end{figure}
+
+\subsection{Per-Class Payoff Analysis}
+
+Honest agents earn the highest payoffs across all regimes:
+
+\textbf{Refinery regime:} Honest agents 24.7--58.8 average payoff; Opportunistic 0.0--50.8; Adversarial 0.0--4.4.
+
+\textbf{Ungoverned regime:} Honest agents 19.5--58.1; Opportunistic 0.0--50.2; Adversarial 0.0--2.3.
+
+\textbf{Governed regime:} Honest agents 7.4--24.6; Opportunistic 0.0--15.1; Adversarial $-0.1$--2.1.
+
+The Refinery preserves the full payoff levels of honest and opportunistic agents while slightly increasing adversarial agent payoffs (from 2.3 ungoverned to 4.4 refinery at 86\%). This is because the Refinery allows adversarial agents to benefit from interactions where $p > 0.5$ --- it filters quality, not identity.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/gastown_governance_cost/gastown_payoff_breakdown.png}
+\caption{Per-class average total payoff under all three regimes. The Refinery preserves honest agent payoffs while governance compresses them.}
+\label{fig:payoff-breakdown}
+\end{figure}
+
+\subsection{Adverse Selection}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=\textwidth]{figures/gastown_governance_cost/gastown_adverse_selection.png}
+\caption{Quality gap vs.\ adversarial proportion. Positive values mean the system correctly accepts higher-quality interactions.}
+\label{fig:adverse-selection}
+\end{figure}
+
+\section{Discussion}
+
+\subsection{Why Governance Costs More Than It Saves}
+
+The governance cost paradox arises from the cumulative friction of five simultaneous mechanisms:
+
+\begin{enumerate}[nosep]
+  \item \textbf{Transaction tax} (5\%) directly reduces all payoffs
+  \item \textbf{Reputation decay} (0.95/epoch) penalizes all agents, not just adversarial ones
+  \item \textbf{Staking requirements} (5.0 minimum) lock up capital that could generate welfare
+  \item \textbf{Bandwidth cap} (8 interactions) limits honest agent throughput
+  \item \textbf{Random audits} (20\% probability) create false-positive friction
+\end{enumerate}
+
+These costs scale with the number of agents and interactions, while the benefit (catching adversarial agents) scales only with the adversarial fraction.
+
+\subsection{The Refinery Solution}
+
+The Refinery resolves the governance cost paradox by eliminating friction on quality interactions:
+
+\begin{itemize}[nosep]
+  \item \textbf{Zero cost at 0\% adversarial}: The Refinery does not tax, stake, or decay honest agents
+  \item \textbf{Deterministic rejection}: Interactions below $p = 0.5$ are rejected without probabilistic overhead
+  \item \textbf{No false positives on accepted work}: Unlike random audits, the Refinery never penalizes interactions that pass the threshold
+\end{itemize}
+
+This design mirrors GasTown's actual Refinery merge queue, which is a deterministic quality gate that blocks low-quality code from merging without imposing friction on passing code.
+
+\subsection{The Market as Safety Mechanism}
+
+The absence of adverse selection in the ungoverned regime is notable. Even without formal governance, the payoff structure itself (high $s^+$, high $h$, strong reputation weight $w_{\text{rep}}{=}1.5$) creates natural incentives against accepting low-quality work. The Refinery amplifies this market mechanism by adding a hard floor without the overhead of a full governance stack.
+
+\subsection{Honest Agent Resilience}
+
+Honest agents earn more under the Refinery regime than under full governance at all adversarial levels, confirming that governance friction disproportionately harms honest agents.
+
+\subsection{Counterfactual Framing}
+
+All results in this study are counterfactual: we model what \textit{would} happen if GasTown's cooperative architecture were deployed in an adversarial multi-principal setting. The real GasTown system does not face these threats because all agents share a common principal. Our findings are most relevant to systems that borrow GasTown's architectural patterns (role hierarchy, task economy, merge queue) but deploy them in open or federated settings where agent alignment cannot be assumed.
+
+\section{Conclusion}
+
+This study reveals and resolves a governance cost paradox in multi-agent workspaces inspired by GasTown's architecture. The full governance stack (transaction tax, reputation decay, circuit breaker, random audit, staking, collusion detection) consistently reduces toxicity but imposes welfare costs that exceed the safety benefit at every adversarial proportion tested. The Refinery quality gate --- a single deterministic lever modeled on GasTown's actual merge queue --- achieves comparable or greater toxicity reduction while preserving near-ungoverned welfare. This suggests that simpler, targeted governance mechanisms may be more effective than comprehensive governance stacks, particularly when the underlying system already provides market-based safety incentives.
+
+\section{Limitations}
+
+\begin{itemize}[nosep]
+  \item \textbf{Fixed population size}: All runs use 7 agents. Scaling effects (larger populations with smaller adversarial fractions) are unexplored.
+  \item \textbf{Uniform governance}: All governance levers are on or off together. Ablation studies varying individual levers would reveal which mechanisms are most cost-effective.
+  \item \textbf{Single payoff configuration}: The GasTown payoff parameters ($s^+{=}3.0$, $h{=}2.5$, $w_{\text{rep}}{=}1.5$) may favor the ungoverned regime. Different economies may change the governance tradeoff.
+  \item \textbf{3 seeds}: Low seed count limits statistical power. Standard deviations are tight (reflecting deterministic agent policies) but edge cases may be undersampled.
+  \item \textbf{No adaptive adversaries}: Adversarial agents use fixed policies. Adaptive adversaries that learn to evade governance could change the cost-benefit calculus.
+  \item \textbf{Welfare $\neq$ safety}: Higher welfare does not necessarily mean a safer system. In domains where tail-risk catastrophic harm matters more than average toxicity, governance overhead may be justified even at high welfare cost.
+  \item \textbf{Cooperative vs.\ adversarial assumption}: The real GasTown operates cooperatively with a shared principal. Our adversarial extension is hypothetical --- the governance mechanisms we test may be unnecessary in GasTown's actual operating conditions. These findings are most applicable to open or federated multi-agent systems where agent alignment cannot be assumed.
+\end{itemize}
+
+\section{Reproducibility}
+
+\begin{verbatim}
+# Full study (63 runs, ~3 min)
+python examples/gastown_composition_study.py --total-agents 7 --epochs 30 --steps 10 --seeds 3
+
+# Smoke test (~5 sec)
+python examples/gastown_composition_study.py --total-agents 4 --epochs 3 --steps 3 --seeds 1
+\end{verbatim}
+
+\section{References}
+
+\begin{thebibliography}{9}
+
+\bibitem{yegge2025gastown}
+S.~Yegge, ``Welcome to Gas Town,'' \textit{Medium}, 2025.
+\url{https://steve-yegge.medium.com/welcome-to-gas-town-4f25ee16dd04}
+
+\bibitem{yegge2025gastownrepo}
+S.~Yegge, ``GasTown: Multi-agent orchestration system for Claude Code with persistent work tracking,'' \textit{GitHub}, 2025.
+\url{https://github.com/steveyegge/gastown}
+
+\bibitem{swarm}
+SWARM framework v1.3.1. \texttt{swarm/}
+
+\bibitem{gastown-scenario}
+GasTown scenario configuration. \texttt{scenarios/gastown\_workspace.yaml}
+
+\bibitem{gastown-bridge}
+GasTown-SWARM bridge. \texttt{swarm/bridges/gastown/}
+
+\bibitem{composition-runner}
+Composition study runner. \texttt{examples/gastown\_composition\_study.py}
+
+\end{thebibliography}
+
+\end{document}

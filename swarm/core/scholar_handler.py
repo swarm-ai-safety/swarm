@@ -2,7 +2,7 @@
 
 import random
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, model_validator
 
@@ -10,6 +10,7 @@ from swarm.agents.base import Action, ActionType
 from swarm.core.handler import Handler
 from swarm.core.proxy import ProxyObservables
 from swarm.env.state import EnvState
+from swarm.logging.event_bus import EventBus
 from swarm.models.events import Event, EventType
 from swarm.models.scholar import (
     Citation,
@@ -49,12 +50,21 @@ class ScholarHandler(Handler):
     - Citation verification
     """
 
+    @staticmethod
+    def handled_action_types() -> frozenset:
+        return frozenset({
+            ActionType.RETRIEVE_PASSAGES,
+            ActionType.SYNTHESIZE_ANSWER,
+            ActionType.VERIFY_CITATION,
+        })
+
     def __init__(
         self,
         config: ScholarConfig,
-        emit_event: Callable[[Event], None],
+        *,
+        event_bus: EventBus,
     ):
-        super().__init__(emit_event=emit_event)
+        super().__init__(event_bus=event_bus)
         self.config = config
         self._rng = random.Random(config.seed)
 

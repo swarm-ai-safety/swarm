@@ -1,0 +1,10 @@
+mix_name,persona,seed,steps,total_reward,mean_p,toxicity,quality_gap,welfare,terminated_early
+mostly_honest,default,42,10,11.5125,0.8141,0.1859,0.0000,1.4424,False
+mostly_honest,safety_trained,42,10,11.5109,0.8143,0.1857,0.0000,1.4428,False
+mostly_honest,adversarial,42,10,11.5064,0.8139,0.1861,0.0000,1.4416,False
+balanced,default,42,10,11.5105,0.8131,0.1868,0.0012,1.4394,False
+balanced,safety_trained,42,10,11.4802,0.7927,0.2086,-0.0201,1.3782,False
+balanced,adversarial,42,10,11.5103,0.8132,0.1867,0.0013,1.4397,False
+adversarial_heavy,default,42,10,11.8379,0.7803,0.2042,0.0666,1.3408,False
+adversarial_heavy,safety_trained,42,10,11.2789,0.7343,0.2466,0.0816,1.2030,False
+adversarial_heavy,adversarial,42,10,11.8252,0.7467,0.2310,0.0956,1.2400,False

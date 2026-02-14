@@ -29,7 +29,7 @@ Examples:
 ```markdown
 # <Title from slug, title-cased>
 
-**Authors:** <from git config user.name>
+**Authors:** <resolve from $SWARM_AUTHOR, then git config user.name, then ask user>
 **Date:** <today>
 **Framework:** SWARM v<from pyproject.toml>
 
@@ -73,17 +73,21 @@ Examples:
 ## 4. Discussion
 [TODO: Interpretation, regime classification, threshold findings]
 
-## 5. Limitations
+## 5. Conclusion
+[TODO: 1-paragraph summary of key findings, implications, and future work]
+
+## 6. Limitations
 [TODO: Known limitations of this analysis]
 
-## 6. References
+## 7. References
 [TODO]
 ```
 
 4) If `--figures` is passed:
+   - **Auto-copy from runs/**: Search `runs/*/plots/` for PNGs matching the scenario or sweep. Copy them to `docs/papers/figures/<title_slug>/`, creating the directory if needed.
    - Check `docs/papers/figures/` for existing figures matching the scenario_ids.
    - If `docs/papers/generate_paper_plots.py` exists, suggest running it.
-   - Insert `![Figure N](figures/<filename>)` references into the Results section.
+   - Insert `![Figure N](figures/<title_slug>/<filename>)` references into the Results section.
 
 5) Print the paper path and a checklist:
    - [x] Methods tables populated
@@ -99,3 +103,4 @@ Examples:
 - All numeric values in tables: 3 decimal places for rates, 1 decimal for welfare.
 - Include the SQLite query used so the paper is reproducible from the database.
 - Paper should be valid Markdown that renders cleanly on GitHub.
+- **Always include a Conclusion section.** `SubmissionValidator` requires it. Papers without Conclusion will fail validation at `/submit_paper` time. The Conclusion should summarize key findings in one paragraph — it is distinct from Discussion (which interprets) and Limitations (which caveats).

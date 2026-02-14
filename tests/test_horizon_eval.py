@@ -8,6 +8,8 @@ Verifies that SystemHorizonEvaluator correctly detects:
     - Temporal risk accumulation (harm acceleration)
 """
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -33,7 +35,7 @@ from tests.fixtures.horizon_fixtures import (
 
 def _default_evaluator(**overrides) -> SystemHorizonEvaluator:
     """Create evaluator with sensible test defaults."""
-    defaults = {
+    defaults: dict[str, Any] = {
         "agent_horizon_steps": 1,
         "discount_factor": 0.95,
         "coherence_lag_max": 10,
@@ -195,6 +197,26 @@ class TestVarianceDominance:
         result = evaluator.evaluate(epochs)
 
         assert result.hot_mess_epochs > 0, "Expected at least some hot-mess epochs"
+
+    def test_zero_mean_high_variance_epoch_is_hot_mess(self):
+        """Symmetric payoffs around zero should yield very large CV."""
+        # Default total welfare is 3p - 1. These values give ~{-1, +1},
+        # i.e. near-zero mean with high variance.
+        epoch = [
+            SoftInteraction(p=0.0, accepted=True),
+            SoftInteraction(p=2.0 / 3.0, accepted=True),
+        ]
+        epochs = [epoch, epoch, epoch]
+
+        evaluator = _default_evaluator(variance_dominance_threshold=1.0)
+        result = evaluator.evaluate(epochs)
+
+        assert result.hot_mess_epochs == len(epochs), (
+            f"Expected all epochs to be hot-mess, got {result.hot_mess_epochs}"
+        )
+        assert result.variance_dominance_index > 1e6, (
+            "Expected very large VDI for near-zero mean, high-variance payoffs"
+        )
 
     def test_stable_has_few_hot_mess_epochs(self):
         """Stable scenario should have few/no hot-mess epochs."""

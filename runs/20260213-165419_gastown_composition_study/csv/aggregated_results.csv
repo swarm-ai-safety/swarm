@@ -1,0 +1,13 @@
+composition,regime,rogue_pct,n_seeds,welfare_total_mean,welfare_std,toxicity_mean,toxicity_std,quality_gap_mean,avg_payoff_mean,honest_payoff_mean,opportunistic_payoff_mean,adversarial_payoff_mean
+Governed 0/4 rogue,governed,0.00,1,5.8341,0.0000,0.2154,0.0000,0.0000,0.3335,1.7551,0.5689,0.0000
+Governed 1/4 rogue,governed,0.25,1,1.8809,0.0000,0.3940,0.0000,-0.0532,0.2666,0.5787,1.1933,-0.4697
+Governed 2/4 rogue,governed,0.50,1,-0.3187,0.0000,0.3620,0.0000,0.0081,-0.0921,0.0420,0.0087,-0.1847
+Governed 3/4 rogue,governed,0.75,1,-0.2090,0.0000,0.4866,0.0000,0.1169,-0.0124,0.2130,0.0000,-0.1407
+Refinery 0/4 rogue,refinery,0.00,1,6.1787,0.0000,0.1996,0.0000,0.0608,0.4013,1.8160,0.7308,0.0000
+Refinery 1/4 rogue,refinery,0.25,1,1.6625,0.0000,0.2514,0.0000,0.0337,0.2457,0.4628,0.7370,0.0000
+Refinery 2/4 rogue,refinery,0.50,1,1.6467,0.0000,0.1262,0.0000,0.0666,0.1215,0.9180,0.7287,0.0000
+Refinery 3/4 rogue,refinery,0.75,1,2.6593,0.0000,0.0968,0.0000,0.1084,0.2095,1.2570,0.0000,0.4674
+Ungoverned 0/4 rogue,ungoverned,0.00,1,6.1894,0.0000,0.2148,0.0000,0.0000,0.3555,1.8394,0.6712,0.0000
+Ungoverned 1/4 rogue,ungoverned,0.25,1,1.0860,0.0000,0.4592,0.0000,-0.0850,0.1223,0.3901,0.7370,-0.4312
+Ungoverned 2/4 rogue,ungoverned,0.50,1,1.2199,0.0000,0.3330,0.0000,0.0491,0.0009,0.8443,0.7287,-0.1766
+Ungoverned 3/4 rogue,ungoverned,0.75,1,1.1075,0.0000,0.5062,0.0000,0.1019,-0.0186,0.7105,0.0000,0.1323

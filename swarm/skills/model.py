@@ -98,6 +98,22 @@ class SkillType(Enum):
     COMPOSITE = "composite"  # Composed from sub-skills
 
 
+class SkillTier(Enum):
+    """Hierarchical tier for SkillRL-style SkillBank.
+
+    From Xia et al. (2026), the SkillBank organises knowledge into two
+    tiers:
+    - GENERAL: universal strategic guidance applicable across task
+      categories (e.g. "always verify counterparty reputation").
+    - TASK_SPECIFIC: category-level heuristics tailored to particular
+      interaction domains (e.g. "in collaboration, lower threshold
+      when trust > 0.7").
+    """
+
+    GENERAL = "general"
+    TASK_SPECIFIC = "task_specific"
+
+
 class SkillDomain(Enum):
     """Domains a skill applies to."""
 
@@ -123,6 +139,7 @@ class Skill:
     name: str = ""
     skill_type: SkillType = SkillType.STRATEGY
     domain: SkillDomain = SkillDomain.GENERAL
+    tier: SkillTier = SkillTier.TASK_SPECIFIC
     created_at: datetime = field(default_factory=datetime.now)
     created_by: str = ""  # agent_id of creator
 
@@ -156,6 +173,7 @@ class Skill:
             "name": self.name,
             "skill_type": self.skill_type.value,
             "domain": self.domain.value,
+            "tier": self.tier.value,
             "created_at": self.created_at.isoformat(),
             "created_by": self.created_by,
             "version": self.version,
@@ -174,11 +192,17 @@ class Skill:
         Validates and sanitises condition/effect dicts to prevent
         injection of arbitrary keys or out-of-range numeric values.
         """
+        tier_val = data.get("tier", SkillTier.TASK_SPECIFIC.value)
+        try:
+            tier = SkillTier(tier_val)
+        except ValueError:
+            tier = SkillTier.TASK_SPECIFIC
         return cls(
             skill_id=data["skill_id"],
             name=data["name"],
             skill_type=SkillType(data["skill_type"]),
             domain=SkillDomain(data["domain"]),
+            tier=tier,
             created_at=datetime.fromisoformat(data["created_at"]),
             created_by=data["created_by"],
             version=data.get("version", 1),

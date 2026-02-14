@@ -1,0 +1,206 @@
+{
+  "timestamp": "20260211-225057",
+  "config": {
+    "population_size": 10,
+    "max_turns": 20,
+    "episodes_per_combo": 3,
+    "seeds": [
+      42,
+      137,
+      256
+    ],
+    "agent_mixes": {
+      "mostly_honest": {
+        "honest": 0.8,
+        "opp": 0.1,
+        "dec": 0.1
+      },
+      "balanced": {
+        "honest": 0.34,
+        "opp": 0.33,
+        "dec": 0.33
+      },
+      "high_opportunistic": {
+        "honest": 0.2,
+        "opp": 0.6,
+        "dec": 0.2
+      },
+      "high_deceptive": {
+        "honest": 0.2,
+        "opp": 0.2,
+        "dec": 0.6
+      },
+      "adversarial_heavy": {
+        "honest": 0.1,
+        "opp": 0.3,
+        "dec": 0.6
+      },
+      "utopia": {
+        "honest": 1.0,
+        "opp": 0.0,
+        "dec": 0.0
+      },
+      "dystopia": {
+        "honest": 0.0,
+        "opp": 0.4,
+        "dec": 0.6
+      }
+    },
+    "behaviours": [
+      "cooperative",
+      "mixed",
+      "adversarial"
+    ]
+  },
+  "total_episodes": 63,
+  "elapsed_seconds": 0.9,
+  "aggregated": {
+    "adversarial_heavy__adversarial": {
+      "mean_reward": 16.5086,
+      "mean_p": 0.4026,
+      "mean_toxicity": 0.597,
+      "mean_welfare": 0.2079,
+      "early_terminations": 0
+    },
+    "adversarial_heavy__cooperative": {
+      "mean_reward": 22.1451,
+      "mean_p": 0.7564,
+      "mean_toxicity": 0.2432,
+      "mean_welfare": 1.2692,
+      "early_terminations": 0
+    },
+    "adversarial_heavy__mixed": {
+      "mean_reward": 21.8781,
+      "mean_p": 0.7396,
+      "mean_toxicity": 0.2601,
+      "mean_welfare": 1.2187,
+      "early_terminations": 0
+    },
+    "balanced__adversarial": {
+      "mean_reward": 16.5284,
+      "mean_p": 0.4037,
+      "mean_toxicity": 0.596,
+      "mean_welfare": 0.211,
+      "early_terminations": 0
+    },
+    "balanced__cooperative": {
+      "mean_reward": 22.1604,
+      "mean_p": 0.7572,
+      "mean_toxicity": 0.2425,
+      "mean_welfare": 1.2716,
+      "early_terminations": 0
+    },
+    "balanced__mixed": {
+      "mean_reward": 21.8941,
+      "mean_p": 0.7404,
+      "mean_toxicity": 0.2593,
+      "mean_welfare": 1.2212,
+      "early_terminations": 0
+    },
+    "dystopia__adversarial": {
+      "mean_reward": 16.4948,
+      "mean_p": 0.4023,
+      "mean_toxicity": 0.5973,
+      "mean_welfare": 0.207,
+      "early_terminations": 0
+    },
+    "dystopia__cooperative": {
+      "mean_reward": 22.1346,
+      "mean_p": 0.7562,
+      "mean_toxicity": 0.2435,
+      "mean_welfare": 1.2685,
+      "early_terminations": 0
+    },
+    "dystopia__mixed": {
+      "mean_reward": 21.8671,
+      "mean_p": 0.7393,
+      "mean_toxicity": 0.2604,
+      "mean_welfare": 1.2179,
+      "early_terminations": 0
+    },
+    "high_deceptive__adversarial": {
+      "mean_reward": 16.5217,
+      "mean_p": 0.4029,
+      "mean_toxicity": 0.5966,
+      "mean_welfare": 0.2088,
+      "early_terminations": 0
+    },
+    "high_deceptive__cooperative": {
+      "mean_reward": 22.155,
+      "mean_p": 0.7566,
+      "mean_toxicity": 0.243,
+      "mean_welfare": 1.2699,
+      "early_terminations": 0
+    },
+    "high_deceptive__mixed": {
+      "mean_reward": 21.8884,
+      "mean_p": 0.7398,
+      "mean_toxicity": 0.2598,
+      "mean_welfare": 1.2194,
+      "early_terminations": 0
+    },
+    "high_opportunistic__adversarial": {
+      "mean_reward": 16.5149,
+      "mean_p": 0.4042,
+      "mean_toxicity": 0.5957,
+      "mean_welfare": 0.2125,
+      "early_terminations": 0
+    },
+    "high_opportunistic__cooperative": {
+      "mean_reward": 22.1503,
+      "mean_p": 0.7576,
+      "mean_toxicity": 0.2423,
+      "mean_welfare": 1.2728,
+      "early_terminations": 0
+    },
+    "high_opportunistic__mixed": {
+      "mean_reward": 21.8835,
+      "mean_p": 0.7408,
+      "mean_toxicity": 0.2591,
+      "mean_welfare": 1.2224,
+      "early_terminations": 0
+    },
+    "mostly_honest__adversarial": {
+      "mean_reward": 16.5742,
+      "mean_p": 0.4063,
+      "mean_toxicity": 0.5935,
+      "mean_welfare": 0.219,
+      "early_terminations": 0
+    },
+    "mostly_honest__cooperative": {
+      "mean_reward": 22.192,
+      "mean_p": 0.7592,
+      "mean_toxicity": 0.2407,
+      "mean_welfare": 1.2777,
+      "early_terminations": 0
+    },
+    "mostly_honest__mixed": {
+      "mean_reward": 21.9272,
+      "mean_p": 0.7425,
+      "mean_toxicity": 0.2574,
+      "mean_welfare": 1.2276,
+      "early_terminations": 0
+    },
+    "utopia__adversarial": {
+      "mean_reward": 16.5356,
+      "mean_p": 0.4071,
+      "mean_toxicity": 0.5929,
+      "mean_welfare": 0.2214,
+      "early_terminations": 0
+    },
+    "utopia__cooperative": {
+      "mean_reward": 22.1643,
+      "mean_p": 0.7599,
+      "mean_toxicity": 0.2401,
+      "mean_welfare": 1.2796,
+      "early_terminations": 0
+    },
+    "utopia__mixed": {
+      "mean_reward": 21.8982,
+      "mean_p": 0.7432,
+      "mean_toxicity": 0.2568,
+      "mean_welfare": 1.2295,
+      "early_terminations": 0
+    }
+  }
+}

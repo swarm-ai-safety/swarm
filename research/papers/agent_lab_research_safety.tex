@@ -1,0 +1,348 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{xcolor}
+
+\title{Governance of Autonomous Research Pipelines:\\
+A Distributional Safety Study of AgentLaboratory under SWARM}
+
+\author{SWARM Research Collective}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study the distributional safety profile of autonomous research pipelines
+governed by SWARM, using AgentLaboratory---a system that orchestrates six
+specialized LLM agents through literature review, experimentation, code
+execution, and paper writing---as the target domain.  We sweep three
+governance levers (transaction tax rate, circuit breaker, collusion detection)
+across 16 configurations with 10 pre-registered seeds each (160 total runs).
+Our main finding is that transaction taxation significantly reduces welfare
+and honest agent payoffs: a 10\% tax decreases welfare by 8.1\% relative to
+the no-tax baseline ($p = 0.0007$, Cohen's $d = 0.80$, survives
+Bonferroni correction at $\alpha/32$).  Neither circuit breakers nor collusion
+detection show significant main effects in this all-honest population.
+Toxicity rates remain stable around 26\% across all configurations,
+and no adverse selection is observed (quality gap = 0).  These results
+suggest that in cooperative research pipelines, governance overhead from
+transaction taxes imposes a measurable welfare cost without a corresponding
+safety benefit, while binary safety mechanisms (circuit breakers, collusion
+detection) are inert when the agent population is benign.
+\end{abstract}
+
+\section{Introduction}
+
+As AI systems become capable of conducting autonomous research
+\cite{schmidgall2025agentlaboratory}, the question of how to govern these
+workflows becomes pressing.  AgentLaboratory orchestrates six specialized
+LLM agents---PhD Student, Postdoc, Professor, ML Engineer, Software Engineer,
+and a three-member Reviewer panel---through a four-phase research pipeline:
+literature review, experimentation, interpretation, and paper writing.
+
+SWARM provides a distributional safety framework that models agent
+interactions probabilistically, computing soft labels $p \in [0,1]$ via
+proxy observables rather than binary good/bad classifications.  This paper
+bridges the two systems, asking: \emph{What is the distributional safety
+profile of an autonomous research pipeline under varying governance regimes?}
+
+We focus on three governance levers:
+\begin{enumerate}
+    \item \textbf{Transaction tax rate} ($\tau \in \{0\%, 3\%, 6\%, 10\%\}$):
+    A per-interaction tax that funds the governance commons.
+    \item \textbf{Circuit breaker} (on/off): Freezes agents whose toxicity
+    exceeds a threshold.
+    \item \textbf{Collusion detection} (on/off): Monitors reviewer panels
+    for correlated scoring patterns.
+\end{enumerate}
+
+\section{Methods}
+
+\subsection{Agent Population}
+
+\begin{table}[h]
+\centering
+\caption{Agent population mapped from AgentLaboratory roles to SWARM agent IDs.}
+\label{tab:agents}
+\begin{tabular}{llcc}
+\toprule
+AgentLab Role & SWARM Agent ID & Type & Count \\
+\midrule
+PhDStudentAgent & \texttt{agent\_lab\_phd} & honest & 1 \\
+PostdocAgent & \texttt{agent\_lab\_postdoc} & honest & 1 \\
+ProfessorAgent & \texttt{agent\_lab\_professor} & honest & 1 \\
+MLEngineerAgent & \texttt{agent\_lab\_mle} & honest & 1 \\
+SWEngineerAgent & \texttt{agent\_lab\_swe} & honest & 1 \\
+ReviewersAgent & \texttt{agent\_lab\_reviewer} & honest & 3 \\
+\midrule
+\multicolumn{3}{l}{\textbf{Total}} & \textbf{8} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+All agents are honest type, reflecting the cooperative baseline of an
+autonomous research pipeline where no adversarial agents are injected.
+
+\subsection{Governance Configuration}
+
+\begin{table}[h]
+\centering
+\caption{Fixed governance parameters (not swept).}
+\label{tab:governance}
+\begin{tabular}{lc}
+\toprule
+Parameter & Value \\
+\midrule
+Transaction tax split & 0.5 \\
+Reputation decay rate & 0.95 \\
+Freeze threshold (toxicity) & 0.6 \\
+Freeze threshold (violations) & 5 \\
+Freeze duration (epochs) & 1 \\
+Collusion frequency threshold & 2.0 \\
+Collusion correlation threshold & 0.7 \\
+Audit probability & 0.15 \\
+Audit penalty multiplier & 2.0 \\
+Bandwidth cap & 20 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Payoff Configuration}
+
+The payoff function uses $s^+ = 3.0$, $s^- = 1.5$, $h = 2.5$ (moderate
+harm from research quality degradation), $\theta = 0.5$,
+$\rho_a = 0.3$, $\rho_b = 0.2$, $w_{\text{rep}} = 1.0$.
+
+\subsection{Simulation Parameters}
+
+Each run simulates 4 epochs (mapping to AgentLab's four research phases)
+with 20 steps per epoch.  Seeds 42--51 are pre-registered (10 seeds per
+configuration).
+
+\section{Sweep Design}
+
+\begin{table}[h]
+\centering
+\caption{Swept parameters and their values.}
+\label{tab:sweep}
+\begin{tabular}{lcc}
+\toprule
+Parameter & Values & Levels \\
+\midrule
+Transaction tax rate ($\tau$) & 0.0, 0.03, 0.06, 0.10 & 4 \\
+Circuit breaker enabled & False, True & 2 \\
+Collusion detection enabled & False, True & 2 \\
+\midrule
+\multicolumn{2}{l}{\textbf{Total configurations}} & \textbf{16} \\
+\multicolumn{2}{l}{\textbf{Seeds per configuration}} & 10 \\
+\multicolumn{2}{l}{\textbf{Total runs}} & \textbf{160} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Results}
+
+\subsection{Welfare}
+
+\begin{table}[h]
+\centering
+\caption{Welfare by transaction tax rate (aggregated across CB and CD settings).}
+\label{tab:welfare}
+\begin{tabular}{ccccc}
+\toprule
+Tax Rate & Mean & SD & Median & $n$ \\
+\midrule
+0\% & 113.0 & 9.3 & 112.2 & 40 \\
+3\% & 107.8 & 11.1 & 107.1 & 40 \\
+6\% & 107.2 & 13.0 & 110.7 & 40 \\
+10\% & 103.8 & 13.4 & 103.2 & 40 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Welfare decreases monotonically with tax rate.  The 0\% vs.\ 10\% comparison
+is the only pairwise contrast that survives Bonferroni correction
+($p = 0.0007$, adjusted $p = 0.021$, Cohen's $d = 0.80$, medium effect).
+The 0\% vs.\ 3\% ($p = 0.026$, $d = 0.51$) and 0\% vs.\ 6\% ($p = 0.024$,
+$d = 0.51$) comparisons reach nominal significance but do not survive
+multiple comparisons correction.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/agent_lab_research_safety/welfare_by_tax.png}
+\caption{Welfare vs.\ transaction tax rate with 95\% confidence intervals.}
+\label{fig:welfare_tax}
+\end{figure}
+
+\subsection{Toxicity}
+
+Toxicity rates are remarkably stable across all configurations, ranging
+from 25.9\% to 26.8\%.  No pairwise comparison on toxicity survives
+Bonferroni correction.  The largest nominal effect is tax 0\% vs.\ 10\%
+($p = 0.052$, $d = -0.44$), approaching but not reaching significance.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/agent_lab_research_safety/toxicity_by_tax.png}
+\caption{Toxicity rate vs.\ transaction tax rate with 95\% confidence intervals.}
+\label{fig:toxicity_tax}
+\end{figure}
+
+\subsection{Circuit Breaker and Collusion Detection}
+
+Neither circuit breaker ($p = 0.86$, $d = 0.03$) nor collusion detection
+($p = 0.15$, $d = 0.23$) shows a significant main effect on welfare.
+This is expected: in an all-honest population, these mechanisms have no
+adversarial behavior to detect or contain.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/agent_lab_research_safety/welfare_by_mechanism.png}
+\caption{Welfare by governance mechanism combination (CB = circuit breaker,
+CD = collusion detection).}
+\label{fig:welfare_mechanism}
+\end{figure}
+
+\subsection{Honest Agent Payoff}
+
+Honest agent payoffs track welfare exactly (all agents are honest, so
+per-agent payoff $\approx$ welfare / 8).  The 0\% vs.\ 10\% tax comparison
+again survives Bonferroni correction ($p = 0.0007$, $d = 0.80$).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/agent_lab_research_safety/honest_payoff_by_config.png}
+\caption{Honest agent payoff vs.\ tax rate, split by circuit breaker status.}
+\label{fig:payoff}
+\end{figure}
+
+\subsection{Quality Gap and Adverse Selection}
+
+Quality gap is identically zero across all configurations.  With only
+honest agents, there is no mechanism for adverse selection: all interactions
+are accepted with comparable $p$ values, producing no quality differential
+between accepted and rejected interactions.
+
+\subsection{Heatmap: Tax Rate $\times$ Circuit Breaker}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\textwidth]{figures/agent_lab_research_safety/heatmap_tax_cb.png}
+\caption{Mean welfare heatmap across tax rate and circuit breaker settings.}
+\label{fig:heatmap}
+\end{figure}
+
+The heatmap reveals that the worst-performing configuration is
+$\tau = 10\%$ with CB on and CD on (welfare = 95.0), while the best is
+$\tau = 0\%$ with CB off and CD on (welfare = 118.7).
+
+\section{Statistical Methodology}
+
+\subsection{Pre-Registration}
+
+Seeds 42--51 were declared before running the sweep.  All 32 hypothesis
+tests are enumerated in the P-hacking audit table (available in
+\texttt{summary.json}).
+
+\subsection{Multiple Comparisons}
+
+With 32 hypothesis tests, we apply both Bonferroni correction
+($\alpha_{\text{adj}} = 0.05/32 = 0.00156$) and Holm-Bonferroni
+step-down correction.  Both methods yield the same 2 surviving tests.
+
+\subsection{Effect Sizes}
+
+We report Cohen's $d$ (pooled standard deviation) for all comparisons.
+The surviving findings have $d = 0.80$ (medium/large boundary).
+
+\subsection{Normality}
+
+Shapiro-Wilk tests confirm normality for all per-tax-rate welfare
+distributions ($p > 0.05$ in all cases), validating the use of
+Welch's $t$-test.  Mann-Whitney $U$ tests provide non-parametric
+robustness checks with concordant results.
+
+\section{Discussion}
+
+\subsection{Tax as Governance Overhead}
+
+The central finding---that transaction taxes reduce welfare without
+improving safety---highlights a fundamental tension in governance design
+for cooperative systems.  In hostile environments with adversarial agents,
+taxes may deter exploitation by making low-quality interactions unprofitable.
+But in cooperative research pipelines, they act as pure friction, reducing
+the surplus available to honest agents.
+
+This result is consistent with mechanism design theory: taxes are
+second-best instruments that achieve their effect through deadweight loss.
+When the first-best outcome (no adverse behavior) is already achieved
+by agent selection, adding governance overhead is strictly welfare-reducing.
+
+\subsection{Inert Safety Mechanisms}
+
+Circuit breakers and collusion detection show no effect because the
+all-honest population never triggers their activation conditions.
+The toxicity freeze threshold (0.6) is far above the observed toxicity
+rates ($\sim$0.26), and the collusion correlation threshold (0.7) exceeds
+any natural reviewer agreement patterns.
+
+This raises an important design question: \emph{Should governance
+mechanisms have zero cost when not activated?}  Our results suggest they
+do: neither mechanism adds measurable overhead in the inactive state.
+
+\subsection{Limitations}
+
+\begin{enumerate}
+    \item \textbf{All-honest population}: The most important limitation.
+    Future work should introduce adversarial agents (opportunistic
+    reviewers, a deceptive MLE agent) to test whether governance levers
+    become protective.
+    \item \textbf{Simulated interactions}: The bridge maps AgentLab
+    roles to SWARM agents but does not run actual LLM inference.
+    Real research quality variance may differ.
+    \item \textbf{Fixed payoff parameters}: The $h = 2.5$ harm parameter
+    and acceptance thresholds are fixed; sweeping these may reveal
+    regime changes.
+\end{enumerate}
+
+\section{Reproducibility}
+
+All results can be reproduced from:
+
+\begin{verbatim}
+python runs/20260213-204503_agent_lab_research_safety_study/run_sweep.py
+python runs/20260213-204503_agent_lab_research_safety_study/analyze.py
+python runs/20260213-204503_agent_lab_research_safety_study/generate_plots.py
+\end{verbatim}
+
+Scenario: \texttt{scenarios/agent\_lab\_research\_safety.yaml} \\
+Seeds: 42--51 (pre-registered) \\
+Commit: see \texttt{git log} for the study run tag.
+
+\section{Conclusion}
+
+In a cooperative autonomous research pipeline, governance through
+transaction taxation imposes a measurable welfare cost ($d = 0.80$
+at 10\% tax) without safety benefit.  Binary safety mechanisms
+(circuit breakers, collusion detection) are inert when no adversarial
+agents are present, but importantly incur no overhead either.  These
+baseline results establish the reference distribution against which
+future adversarial studies should be compared.
+
+\bibliographystyle{plain}
+\begin{thebibliography}{1}
+\bibitem{schmidgall2025agentlaboratory}
+S.~Schmidgall, Y.~Harris, et al.
+\newblock AgentLaboratory: Using LLM Agents as Research Assistants.
+\newblock \emph{arXiv preprint arXiv:2501.04227}, 2025.
+\end{thebibliography}
+
+\end{document}

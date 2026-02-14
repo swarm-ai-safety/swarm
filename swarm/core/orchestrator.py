@@ -2,7 +2,6 @@
 
 import asyncio
 import random
-from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
@@ -14,6 +13,10 @@ from swarm.boundaries.information_flow import FlowTracker
 from swarm.boundaries.leakage import LeakageDetector, LeakageReport
 from swarm.boundaries.policies import PolicyEngine
 from swarm.core.boundary_handler import BoundaryHandler
+from swarm.core.core_interaction_handler import CoreInteractionHandler
+from swarm.core.feed_handler import FeedHandler
+from swarm.core.handler_registry import HandlerRegistry
+from swarm.core.interaction_finalizer import InteractionFinalizer
 from swarm.core.kernel_handler import KernelOracleConfig, KernelOracleHandler
 from swarm.core.marketplace_handler import MarketplaceHandler
 from swarm.core.memory_handler import MemoryHandler, MemoryTierConfig
@@ -23,18 +26,21 @@ from swarm.core.observable_generator import (
     DefaultObservableGenerator,
     ObservableGenerator,
 )
+from swarm.core.observation_builder import ObservationBuilder
 from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.core.proxy import ProxyComputer, ProxyObservables
+from swarm.core.redteam_inspector import RedTeamInspector
 from swarm.core.scholar_handler import ScholarConfig, ScholarHandler
+from swarm.core.task_handler import TaskHandler
 from swarm.env.composite_tasks import (
     CompositeTask,
     CompositeTaskPool,
 )
-from swarm.env.feed import Feed, VoteType
+from swarm.env.feed import Feed
 from swarm.env.marketplace import Marketplace, MarketplaceConfig
 from swarm.env.network import AgentNetwork, NetworkConfig
 from swarm.env.state import EnvState, InteractionProposal
-from swarm.env.tasks import TaskPool, TaskStatus
+from swarm.env.tasks import TaskPool
 from swarm.forecaster.features import (
     combine_feature_dicts,
     extract_behavioral_features,
@@ -42,6 +48,7 @@ from swarm.forecaster.features import (
 )
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.engine import GovernanceEffect, GovernanceEngine
+from swarm.logging.event_bus import EventBus
 from swarm.logging.event_log import EventLog
 from swarm.metrics.capabilities import CapabilityAnalyzer, EmergentCapabilityMetrics
 from swarm.metrics.soft_metrics import SoftMetrics
@@ -49,10 +56,6 @@ from swarm.models.agent import AgentState, AgentType
 from swarm.models.events import (
     Event,
     EventType,
-    interaction_completed_event,
-    interaction_proposed_event,
-    payoff_computed_event,
-    reputation_updated_event,
 )
 from swarm.models.interaction import InteractionType, SoftInteraction
 
@@ -125,9 +128,10 @@ class OrchestratorConfig(BaseModel):
     observation_noise_std: float = 0.0
 
 
-@dataclass
-class EpochMetrics:
+class EpochMetrics(BaseModel):
     """Metrics collected at the end of each epoch."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     epoch: int = 0
     total_interactions: int = 0
@@ -271,6 +275,17 @@ class Orchestrator:
         else:
             self.governance_engine = None
 
+        # Event bus (central publish-subscribe for all events)
+        self._event_bus = EventBus()
+        self._event_bus.set_enrichment(
+            seed=self.config.seed,
+            scenario_id=self.config.scenario_id,
+            replay_k=self.config.replay_k,
+        )
+
+        # Handler registry (plugin architecture)
+        self._handler_registry = HandlerRegistry()
+
         # Marketplace handler
         if self.config.marketplace_config is not None:
             marketplace = Marketplace(self.config.marketplace_config)
@@ -279,9 +294,11 @@ class Orchestrator:
                 MarketplaceHandler(
                     marketplace=marketplace,
                     task_pool=self.task_pool,
-                    emit_event=self._emit_event,
+                    event_bus=self._event_bus,
+                    enable_rate_limits=self.config.enable_rate_limits,
                 )
             )
+            self._handler_registry.register(self._marketplace_handler)
         else:
             self.marketplace = None
             self._marketplace_handler = None
@@ -290,8 +307,9 @@ class Orchestrator:
         if self.config.moltipedia_config is not None:
             self._moltipedia_handler: Optional[MoltipediaHandler] = MoltipediaHandler(
                 config=self.config.moltipedia_config,
-                emit_event=self._emit_event,
+                event_bus=self._event_bus,
             )
+            self._handler_registry.register(self._moltipedia_handler)
         else:
             self._moltipedia_handler = None
 
@@ -306,11 +324,12 @@ class Orchestrator:
                 challenge_lever = self.governance_engine.get_moltbook_challenge_lever()
             self._moltbook_handler: Optional[MoltbookHandler] = MoltbookHandler(
                 config=self.config.moltbook_config,
-                emit_event=self._emit_event,
                 governance_config=self.config.governance_config,
                 rate_limit_lever=rate_limit_lever,
                 challenge_lever=challenge_lever,
+                event_bus=self._event_bus,
             )
+            self._handler_registry.register(self._moltbook_handler)
         else:
             self._moltbook_handler = None
 
@@ -318,8 +337,9 @@ class Orchestrator:
         if self.config.memory_tier_config is not None:
             self._memory_handler: Optional[MemoryHandler] = MemoryHandler(
                 config=self.config.memory_tier_config,
-                emit_event=self._emit_event,
+                event_bus=self._event_bus,
             )
+            self._handler_registry.register(self._memory_handler)
         else:
             self._memory_handler = None
 
@@ -327,8 +347,9 @@ class Orchestrator:
         if self.config.scholar_config is not None:
             self._scholar_handler: Optional[ScholarHandler] = ScholarHandler(
                 config=self.config.scholar_config,
-                emit_event=self._emit_event,
+                event_bus=self._event_bus,
             )
+            self._handler_registry.register(self._scholar_handler)
         else:
             self._scholar_handler = None
 
@@ -337,9 +358,10 @@ class Orchestrator:
             self._kernel_handler: Optional[KernelOracleHandler] = (
                 KernelOracleHandler(
                     config=self.config.kernel_oracle_config,
-                    emit_event=self._emit_event,
+                    event_bus=self._event_bus,
                 )
             )
+            self._handler_registry.register(self._kernel_handler)
         else:
             self._kernel_handler = None
 
@@ -362,7 +384,7 @@ class Orchestrator:
                 flow_tracker=flow_tracker,
                 policy_engine=policy_engine,
                 leakage_detector=leakage_detector,
-                emit_event=self._emit_event,
+                event_bus=self._event_bus,
                 seed=self.config.seed,
             )
         else:
@@ -378,6 +400,10 @@ class Orchestrator:
         else:
             self.event_log = None
 
+        # Subscribe EventLog to the bus
+        if self.event_log is not None and self.config.log_events:
+            self._event_bus.subscribe(self.event_log.append)
+
         # Epoch metrics history
         self._epoch_metrics: List[EpochMetrics] = []
 
@@ -386,6 +412,54 @@ class Orchestrator:
         self._on_interaction_complete: List[
             Callable[[SoftInteraction, float, float], None]
         ] = []
+
+        # Interaction finalization (extracted component)
+        self._finalizer = InteractionFinalizer(
+            state=self.state,
+            payoff_engine=self.payoff_engine,
+            proxy_computer=self.proxy_computer,
+            observable_generator=self._observable_generator,
+            governance_engine=self.governance_engine,
+            network=self.network,
+            agents=self._agents,
+            on_interaction_complete=self._on_interaction_complete,
+            event_bus=self._event_bus,
+        )
+
+        # Core action handlers (extracted from _handle_core_action)
+        self._feed_handler = FeedHandler(
+            feed=self.feed,
+            max_content_length=self.config.max_content_length,
+            event_bus=self._event_bus,
+        )
+        self._handler_registry.register(self._feed_handler)
+
+        self._core_interaction_handler = CoreInteractionHandler(
+            finalizer=self._finalizer,
+            network=self.network,
+            event_bus=self._event_bus,
+        )
+        self._handler_registry.register(self._core_interaction_handler)
+
+        self._task_handler = TaskHandler(
+            task_pool=self.task_pool,
+            event_bus=self._event_bus,
+        )
+        self._handler_registry.register(self._task_handler)
+
+        # Observation building (extracted component)
+        self._obs_builder = ObservationBuilder(
+            config=self.config,
+            state=self.state,
+            feed=self.feed,
+            task_pool=self.task_pool,
+            network=self.network,
+            handler_registry=self._handler_registry,
+            rng=self._rng,
+        )
+
+        # Red-team inspection (extracted component)
+        self._redteam = RedTeamInspector(self._agents, self.state)
 
     def register_agent(self, agent: BaseAgent) -> AgentState:
         """
@@ -475,7 +549,7 @@ class Orchestrator:
                 event_type=EventType.SIMULATION_ENDED,
                 payload={
                     "total_epochs": self.config.n_epochs,
-                    "final_metrics": self._epoch_metrics[-1].__dict__
+                    "final_metrics": self._epoch_metrics[-1].model_dump()
                     if self._epoch_metrics
                     else {},
                 },
@@ -484,51 +558,30 @@ class Orchestrator:
 
         return self._epoch_metrics
 
-    def _run_epoch(self) -> EpochMetrics:
-        """Run a single epoch."""
-        epoch_start = self.state.current_epoch
-
+    def _epoch_pre_hooks(self) -> None:
+        """Shared epoch-start logic for sync and async paths."""
         self._update_adaptive_governance()
 
-        if self._moltbook_handler is not None:
-            self._moltbook_handler.on_epoch_start()
+        for handler in self._handler_registry.all_handlers():
+            try:
+                handler.on_epoch_start(self.state)
+            except Exception:
+                pass  # handler hook failures must not break simulation
 
-        if self._memory_handler is not None:
-            self._memory_handler.on_epoch_start(self.state)
-
-        if self._scholar_handler is not None:
-            self._scholar_handler.on_epoch_start(self.state)
-
-        if self._kernel_handler is not None:
-            self._kernel_handler.on_epoch_start(self.state)
-
-        # Apply epoch-start governance (reputation decay, unfreezes)
         if self.governance_engine:
             gov_effect = self.governance_engine.apply_epoch_start(
                 self.state, self.state.current_epoch
             )
             self._apply_governance_effect(gov_effect)
 
-        for _step in range(self.config.steps_per_epoch):
-            if self.state.is_paused:
-                break
+    def _epoch_post_hooks(self, epoch_start: int) -> EpochMetrics:
+        """Shared epoch-end logic for sync and async paths."""
+        for handler in self._handler_registry.all_handlers():
+            try:
+                handler.on_epoch_end(self.state)
+            except Exception:
+                pass  # handler hook failures must not break simulation
 
-            self._run_step()
-            self.state.advance_step()
-
-        # Marketplace epoch maintenance
-        if self._marketplace_handler is not None:
-            self._marketplace_handler.on_epoch_end(self.state)
-
-        # Scholar epoch maintenance
-        if self._scholar_handler is not None:
-            self._scholar_handler.on_epoch_end(self.state)
-
-        # Kernel oracle epoch maintenance
-        if self._kernel_handler is not None:
-            self._kernel_handler.on_epoch_end(self.state)
-
-        # Apply network edge decay
         if self.network is not None:
             pruned = self.network.decay_edges()
             if pruned > 0:
@@ -540,25 +593,69 @@ class Orchestrator:
                     )
                 )
 
-        # Apply memory decay for rain/river agents at epoch boundary
         self._apply_agent_memory_decay(epoch_start)
 
-        # Compute epoch metrics
         metrics = self._compute_epoch_metrics()
 
-        # Log epoch completion
         self._emit_event(
             Event(
                 event_type=EventType.EPOCH_COMPLETED,
-                payload=metrics.__dict__,
+                payload=metrics.model_dump(),
                 epoch=epoch_start,
             )
         )
 
-        # Advance to next epoch
         self.state.advance_epoch()
-
         return metrics
+
+    def _step_preamble(self) -> None:
+        """Shared step-start logic for sync and async paths."""
+        if (
+            self.governance_engine
+            and self.governance_engine.config.adaptive_use_behavioral_features
+        ):
+            self._update_adaptive_governance(include_behavioral=True)
+
+        if self.governance_engine:
+            step_effect = self.governance_engine.apply_step(
+                self.state, self.state.current_step
+            )
+            self._apply_governance_effect(step_effect)
+
+        for handler in self._handler_registry.all_handlers():
+            try:
+                handler.on_step(self.state, self.state.current_step)
+            except Exception:
+                pass  # handler hook failures must not break simulation
+
+    def _get_eligible_agents(self) -> List[str]:
+        """Return agents eligible to act this step (respects schedule, limits, governance)."""
+        agent_order = self._get_agent_schedule()
+        eligible: List[str] = []
+        for agent_id in agent_order:
+            if len(eligible) >= self.config.max_actions_per_step:
+                break
+            if not self.state.can_agent_act(agent_id):
+                continue
+            if self.governance_engine and not self.governance_engine.can_agent_act(
+                agent_id, self.state
+            ):
+                continue
+            eligible.append(agent_id)
+        return eligible
+
+    def _run_epoch(self) -> EpochMetrics:
+        """Run a single epoch."""
+        epoch_start = self.state.current_epoch
+        self._epoch_pre_hooks()
+
+        for _step in range(self.config.steps_per_epoch):
+            if self.state.is_paused:
+                break
+            self._run_step()
+            self.state.advance_step()
+
+        return self._epoch_post_hooks(epoch_start)
 
     def _apply_agent_memory_decay(self, epoch: int) -> None:
         """Apply memory decay to all agents that support it.
@@ -575,55 +672,14 @@ class Orchestrator:
 
     def _run_step(self) -> None:
         """Run a single step within an epoch."""
-        if (
-            self.governance_engine
-            and self.governance_engine.config.adaptive_use_behavioral_features
-        ):
-            self._update_adaptive_governance(include_behavioral=True)
+        self._step_preamble()
 
-        # Step-level governance hooks (e.g., decomposition checkpoints)
-        if self.governance_engine:
-            step_effect = self.governance_engine.apply_step(
-                self.state, self.state.current_step
-            )
-            self._apply_governance_effect(step_effect)
-
-        if self._moltbook_handler is not None:
-            self._moltbook_handler.tick(self.state.current_step)
-
-        # Get agent schedule for this step
-        agent_order = self._get_agent_schedule()
-
-        actions_this_step = 0
-
-        for agent_id in agent_order:
-            if actions_this_step >= self.config.max_actions_per_step:
-                break
-
-            if not self.state.can_agent_act(agent_id):
-                continue
-
-            # Check governance admission control (staking)
-            if self.governance_engine and not self.governance_engine.can_agent_act(
-                agent_id, self.state
-            ):
-                continue
-
+        for agent_id in self._get_eligible_agents():
             agent = self._agents[agent_id]
-
-            # Build observation for agent
             observation = self._build_observation(agent_id)
-
-            # Get agent action
             action = self._select_action(agent, observation)
+            self._execute_action(action)
 
-            # Execute action
-            success = self._execute_action(action)
-
-            if success:
-                actions_this_step += 1
-
-        # Resolve pending interactions
         self._resolve_pending_interactions()
 
     def _select_action(self, agent: BaseAgent, observation: Observation) -> Action:
@@ -722,261 +778,18 @@ class Orchestrator:
 
     def _build_observation(self, agent_id: str) -> Observation:
         """Build observation for an agent."""
-        agent_state = self.state.get_agent(agent_id)
-        rate_limit = self.state.get_rate_limit_state(agent_id)
-
-        # Get visible posts
-        visible_posts = [p.to_dict() for p in self.feed.get_ranked_posts(limit=20)]
-
-        # Get pending proposals for this agent
-        pending_proposals = [
-            {
-                "proposal_id": p.proposal_id,
-                "initiator_id": p.initiator_id,
-                "interaction_type": p.interaction_type,
-                "content": p.content,
-                "offered_transfer": p.metadata.get("offered_transfer", 0),
-            }
-            for p in self.state.get_proposals_for_agent(agent_id)
-        ]
-
-        # Get available tasks
-        available_tasks = [
-            t.to_dict()
-            for t in self.task_pool.get_claimable_tasks(
-                agent_reputation=agent_state.reputation if agent_state else 0,
-                current_epoch=self.state.current_epoch,
-            )
-        ]
-
-        # Get agent's active tasks
-        active_tasks = [
-            t.to_dict()
-            for t in self.task_pool.get_tasks_for_agent(agent_id)
-            if t.status in (TaskStatus.CLAIMED, TaskStatus.IN_PROGRESS)
-        ]
-
-        # Get visible agents (filtered by network if enabled)
-        active_agents = self.state.get_active_agents()
-
-        if self.network is not None:
-            # Only show network neighbors
-            neighbor_ids = set(self.network.neighbors(agent_id))
-            active_agents = [s for s in active_agents if s.agent_id in neighbor_ids]
-
-        visible_agents = [
-            {
-                "agent_id": s.agent_id,
-                "name": s.name,
-                "agent_type": s.agent_type.value,
-                "reputation": s.reputation,
-                "resources": s.resources,
-                "edge_weight": self.network.edge_weight(agent_id, s.agent_id)
-                if self.network
-                else 1.0,
-            }
-            for s in active_agents
-            if s.agent_id != agent_id
-        ]
-
-        visible_agents = [
-            self._apply_observation_noise(record) for record in visible_agents
-        ]
-
-        # Build marketplace observation via handler
-        available_bounties: List[Dict] = []
-        active_bids: List[Dict] = []
-        active_escrows: List[Dict] = []
-        pending_bid_decisions: List[Dict] = []
-
-        if self._marketplace_handler is not None:
-            mkt_obs = self._marketplace_handler.build_observation_fields(
-                agent_id,
-                self.state,
-            )
-            available_bounties = mkt_obs["available_bounties"]
-            active_bids = mkt_obs["active_bids"]
-            active_escrows = mkt_obs["active_escrows"]
-            pending_bid_decisions = mkt_obs["pending_bid_decisions"]
-
-        # Build Moltipedia observation via handler
-        contested_pages: List[Dict] = []
-        search_results: List[Dict] = []
-        random_pages: List[Dict] = []
-        leaderboard: List[Dict] = []
-        agent_points: float = 0.0
-        heartbeat_status: Dict = {}
-
-        if self._moltipedia_handler is not None:
-            wiki_obs = self._moltipedia_handler.build_observation_fields(
-                agent_id,
-                self.state,
-            )
-            contested_pages = wiki_obs["contested_pages"]
-            search_results = wiki_obs["search_results"]
-            random_pages = wiki_obs["random_pages"]
-            leaderboard = wiki_obs["leaderboard"]
-            agent_points = wiki_obs["agent_points"]
-            heartbeat_status = wiki_obs["heartbeat_status"]
-
-        # Build Moltbook observation via handler
-        moltbook_published_posts: List[Dict] = []
-        moltbook_pending_posts: List[Dict] = []
-        moltbook_rate_limits: Dict = {}
-        moltbook_karma: float = 0.0
-
-        if self._moltbook_handler is not None:
-            molt_obs = self._moltbook_handler.get_agent_observation(
-                agent_id,
-                self.state.current_step,
-            )
-            moltbook_published_posts = molt_obs["published_posts"]
-            moltbook_pending_posts = molt_obs["pending_posts"]
-            moltbook_rate_limits = molt_obs["rate_limits"]
-            moltbook_karma = molt_obs["karma"]
-
-        # Build memory tier observation via handler
-        memory_hot_cache: List[Dict] = []
-        memory_pending_promotions: List[Dict] = []
-        memory_search_results: List[Dict] = []
-        memory_challenged_entries: List[Dict] = []
-        memory_entry_counts: Dict = {}
-        memory_writes_remaining: int = 0
-
-        if self._memory_handler is not None:
-            # Simulate compaction events per-agent per-step
-            self._memory_handler.maybe_compaction(agent_id, self.state)
-
-            mem_obs = self._memory_handler.build_observation_fields(
-                agent_id,
-                self.state,
-            )
-            memory_hot_cache = mem_obs["memory_hot_cache"]
-            memory_pending_promotions = mem_obs["memory_pending_promotions"]
-            memory_challenged_entries = mem_obs["memory_challenged_entries"]
-            memory_entry_counts = mem_obs["memory_entry_counts"]
-            memory_writes_remaining = mem_obs["memory_writes_remaining"]
-
-        # Build scholar observation via handler
-        scholar_query = None
-        scholar_passage_pool: List[Dict] = []
-        scholar_draft_citations: List[Dict] = []
-        scholar_citation_to_verify = None
-        scholar_synthesis_result = None
-
-        if self._scholar_handler is not None:
-            scholar_obs = self._scholar_handler.build_observation_fields(
-                agent_id,
-                self.state,
-            )
-            scholar_query = scholar_obs["scholar_query"]
-            scholar_passage_pool = scholar_obs["scholar_passage_pool"]
-            scholar_draft_citations = scholar_obs["scholar_draft_citations"]
-            scholar_citation_to_verify = scholar_obs["scholar_citation_to_verify"]
-            scholar_synthesis_result = scholar_obs["scholar_synthesis_result"]
-
-        # Build kernel market observation via handler
-        kernel_available_challenges: List[Dict] = []
-        kernel_pending_submissions: List[Dict] = []
-        kernel_submissions_to_verify: List[Dict] = []
-        kernel_submission_history: List[Dict] = []
-
-        if self._kernel_handler is not None:
-            kernel_obs = self._kernel_handler.build_observation_fields(
-                agent_id,
-                self.state,
-            )
-            kernel_available_challenges = kernel_obs["kernel_available_challenges"]
-            kernel_pending_submissions = kernel_obs["kernel_pending_submissions"]
-            kernel_submissions_to_verify = kernel_obs["kernel_submissions_to_verify"]
-            kernel_submission_history = kernel_obs["kernel_submission_history"]
-
-        return Observation(
-            agent_state=agent_state or AgentState(),
-            current_epoch=self.state.current_epoch,
-            current_step=self.state.current_step,
-            can_post=rate_limit.can_post(self.state.rate_limits)
-            if self.config.enable_rate_limits
-            else True,
-            can_interact=rate_limit.can_interact(self.state.rate_limits)
-            if self.config.enable_rate_limits
-            else True,
-            can_vote=rate_limit.can_vote(self.state.rate_limits)
-            if self.config.enable_rate_limits
-            else True,
-            can_claim_task=rate_limit.can_claim_task(self.state.rate_limits)
-            if self.config.enable_rate_limits
-            else True,
-            visible_posts=visible_posts,
-            pending_proposals=pending_proposals,
-            available_tasks=available_tasks,
-            active_tasks=active_tasks,
-            visible_agents=visible_agents,
-            available_bounties=available_bounties,
-            active_bids=active_bids,
-            active_escrows=active_escrows,
-            pending_bid_decisions=pending_bid_decisions,
-            contested_pages=contested_pages,
-            search_results=search_results,
-            random_pages=random_pages,
-            leaderboard=leaderboard,
-            agent_points=agent_points,
-            heartbeat_status=heartbeat_status,
-            ecosystem_metrics=self._apply_observation_noise(
-                self.state.get_epoch_metrics_snapshot()
-            ),
-            moltbook_published_posts=moltbook_published_posts,
-            moltbook_pending_posts=moltbook_pending_posts,
-            moltbook_rate_limits=moltbook_rate_limits,
-            moltbook_karma=moltbook_karma,
-            memory_hot_cache=memory_hot_cache,
-            memory_pending_promotions=memory_pending_promotions,
-            memory_search_results=memory_search_results,
-            memory_challenged_entries=memory_challenged_entries,
-            memory_entry_counts=memory_entry_counts,
-            memory_writes_remaining=memory_writes_remaining,
-            scholar_query=scholar_query,
-            scholar_passage_pool=scholar_passage_pool,
-            scholar_draft_citations=scholar_draft_citations,
-            scholar_citation_to_verify=scholar_citation_to_verify,
-            scholar_synthesis_result=scholar_synthesis_result,
-            kernel_available_challenges=kernel_available_challenges,
-            kernel_pending_submissions=kernel_pending_submissions,
-            kernel_submissions_to_verify=kernel_submissions_to_verify,
-            kernel_submission_history=kernel_submission_history,
-        )
+        return self._obs_builder.build(agent_id)
 
     def _apply_observation_noise(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Apply configurable gaussian noise to numeric observation fields.
-
-        Noise is only applied when enabled and never to boolean fields.
-        """
-        if (
-            self.config.observation_noise_probability <= 0
-            or self.config.observation_noise_std <= 0
-        ):
-            return record
-
-        noisy: Dict[str, Any] = {}
-        for key, value in record.items():
-            if isinstance(value, bool):
-                noisy[key] = value
-                continue
-            if isinstance(value, (int, float)):
-                if self._rng.random() < self.config.observation_noise_probability:
-                    noisy[key] = float(value) + self._rng.gauss(
-                        0.0, self.config.observation_noise_std
-                    )
-                else:
-                    noisy[key] = value
-                continue
-            noisy[key] = value
-        return noisy
+        """Apply configurable gaussian noise to numeric observation fields."""
+        return self._obs_builder.apply_noise(record)
 
     def _execute_action(self, action: Action) -> bool:
         """
         Execute an agent action.
+
+        Core actions (POST, VOTE, etc.) are handled inline.
+        Domain actions are dispatched via the handler registry.
 
         Returns:
             True if action was successful
@@ -984,383 +797,98 @@ class Orchestrator:
         agent_id = action.agent_id
         rate_limit = self.state.get_rate_limit_state(agent_id)
 
+        # --- Core actions (orchestrator-owned) ---
+        core_result = self._handle_core_action(action, rate_limit)
+        if core_result is not None:
+            return core_result
+
+        # --- Handler-dispatched actions (via registry) ---
+        if not isinstance(action.action_type, ActionType):
+            return False
+
+        handler = self._handler_registry.get_handler(action.action_type)
+        if handler is None:
+            return False
+
+        try:
+            result = handler.handle_action(action, self.state)
+        except Exception:
+            return False
+
+        if not result.success:
+            return False
+
+        # If no observables, this was a simple success/failure action
+        if result.observables is None:
+            return True
+
+        # Standard proxy computation + interaction finalization pipeline
+        v_hat, p = self.proxy_computer.compute_labels(result.observables)
+
+        # Build interaction_type from result
+        interaction_type = InteractionType.COLLABORATION
+        if hasattr(result, "interaction_type") and isinstance(
+            getattr(result, "interaction_type", None), InteractionType
+        ):
+            interaction_type = result.interaction_type
+
+        # Build tau: prefer explicit tau, fall back to negated points
+        tau = 0.0
+        if hasattr(result, "tau") and result.tau != 0.0:
+            tau = result.tau
+        elif hasattr(result, "points") and result.points != 0.0:
+            tau = -result.points
+
+        # Build ground_truth: prefer explicit field, fall back to submission
+        ground_truth_val = getattr(result, "ground_truth", None)
+        if ground_truth_val is None and hasattr(result, "submission"):
+            submission = result.submission
+            if submission is not None:
+                ground_truth_val = -1 if submission.is_cheat else 1
+
+        interaction = SoftInteraction(
+            initiator=result.initiator_id,
+            counterparty=result.counterparty_id,
+            interaction_type=interaction_type,
+            accepted=result.accepted,
+            task_progress_delta=result.observables.task_progress_delta,
+            rework_count=result.observables.rework_count,
+            verifier_rejections=result.observables.verifier_rejections,
+            tool_misuse_flags=result.observables.tool_misuse_flags,
+            counterparty_engagement_delta=result.observables.counterparty_engagement_delta,
+            v_hat=v_hat,
+            p=p,
+            tau=tau,
+            metadata=result.metadata or {},
+            **({"ground_truth": ground_truth_val} if ground_truth_val is not None else {}),
+        )
+
+        gov_effect, _, _ = self._finalize_interaction(interaction)
+
+        # Handler-specific post-processing
+        try:
+            handler.post_finalize(result, interaction, gov_effect, self.state)
+        except Exception:
+            pass  # post_finalize failures must not break the action
+
+        return True
+
+    def _handle_core_action(
+        self, action: Action, rate_limit: Any
+    ) -> Optional[bool]:
+        """Handle NOOP — the only action still owned by the orchestrator.
+
+        All other former "core" actions (POST, REPLY, VOTE,
+        PROPOSE/ACCEPT/REJECT_INTERACTION, CLAIM_TASK, SUBMIT_OUTPUT)
+        are now dispatched via the handler registry through
+        ``FeedHandler``, ``CoreInteractionHandler``, and ``TaskHandler``.
+
+        Returns ``None`` if the action is not a core action.
+        """
         if action.action_type == ActionType.NOOP:
             return True
 
-        elif action.action_type == ActionType.POST:
-            if not rate_limit.can_post(self.state.rate_limits):
-                return False
-
-            try:
-                self.feed.create_post(
-                    author_id=agent_id,
-                    content=action.content[: self.config.max_content_length],
-                )
-                rate_limit.record_post()
-                return True
-            except ValueError:
-                return False
-
-        elif action.action_type == ActionType.REPLY:
-            if not rate_limit.can_post(self.state.rate_limits):
-                return False
-
-            try:
-                self.feed.create_post(
-                    author_id=agent_id,
-                    content=action.content[: self.config.max_content_length],
-                    parent_id=action.target_id,
-                )
-                rate_limit.record_post()
-                return True
-            except ValueError:
-                return False
-
-        elif action.action_type == ActionType.VOTE:
-            if not rate_limit.can_vote(self.state.rate_limits):
-                return False
-
-            vote_type = (
-                VoteType.UPVOTE if action.vote_direction > 0 else VoteType.DOWNVOTE
-            )
-            vote = self.feed.vote(action.target_id, agent_id, vote_type)
-            if vote:
-                rate_limit.record_vote()
-                return True
-            return False
-
-        elif action.action_type == ActionType.PROPOSE_INTERACTION:
-            if not rate_limit.can_interact(self.state.rate_limits):
-                return False
-
-            # Validate network constraint
-            if self.network is not None:
-                if not self.network.has_edge(agent_id, action.counterparty_id):
-                    # Cannot interact with non-neighbors
-                    return False
-
-            proposal = InteractionProposal(
-                initiator_id=agent_id,
-                counterparty_id=action.counterparty_id,
-                interaction_type=action.interaction_type.value,
-                content=action.content,
-                metadata=action.metadata,
-            )
-            self.state.add_proposal(proposal)
-            rate_limit.record_interaction()
-
-            # Log proposal event
-            self._emit_event(
-                interaction_proposed_event(
-                    interaction_id=proposal.proposal_id,
-                    initiator_id=agent_id,
-                    counterparty_id=action.counterparty_id,
-                    interaction_type=action.interaction_type.value,
-                    v_hat=0.0,  # Computed later
-                    p=0.5,
-                    epoch=self.state.current_epoch,
-                    step=self.state.current_step,
-                )
-            )
-
-            return True
-
-        elif action.action_type == ActionType.ACCEPT_INTERACTION:
-            accept_proposal: Optional[InteractionProposal] = self.state.remove_proposal(
-                action.target_id
-            )
-            if accept_proposal:
-                self._complete_interaction(accept_proposal, accepted=True)
-                return True
-            return False
-
-        elif action.action_type == ActionType.REJECT_INTERACTION:
-            proposal_rej: Optional[InteractionProposal] = self.state.remove_proposal(
-                action.target_id
-            )
-            if proposal_rej:
-                self._complete_interaction(proposal_rej, accepted=False)
-                return True
-            return False
-
-        elif action.action_type == ActionType.CLAIM_TASK:
-            agent_state = self.state.get_agent(agent_id)
-            if not agent_state:
-                return False
-
-            success = self.task_pool.claim_task(
-                task_id=action.target_id,
-                agent_id=agent_id,
-                agent_reputation=agent_state.reputation,
-            )
-            if success:
-                rate_limit.record_task_claim()
-            return success
-
-        elif action.action_type == ActionType.SUBMIT_OUTPUT:
-            task = self.task_pool.get_task(action.target_id)
-            if task and task.claimed_by == agent_id:
-                task.submit_output(agent_id, action.content)
-                return True
-            return False
-
-        # Marketplace actions — delegate to handler
-        elif action.action_type == ActionType.POST_BOUNTY:
-            if self._marketplace_handler is None:
-                return False
-            return self._marketplace_handler.handle_post_bounty(
-                action,
-                self.state,
-                enable_rate_limits=self.config.enable_rate_limits,
-            )
-
-        elif action.action_type == ActionType.PLACE_BID:
-            if self._marketplace_handler is None:
-                return False
-            return self._marketplace_handler.handle_place_bid(
-                action,
-                self.state,
-                enable_rate_limits=self.config.enable_rate_limits,
-            )
-
-        elif action.action_type == ActionType.ACCEPT_BID:
-            if self._marketplace_handler is None:
-                return False
-            return self._marketplace_handler.handle_accept_bid(action, self.state)
-
-        elif action.action_type == ActionType.REJECT_BID:
-            if self._marketplace_handler is None:
-                return False
-            return self._marketplace_handler.handle_reject_bid(action, self.state)
-
-        elif action.action_type == ActionType.WITHDRAW_BID:
-            if self._marketplace_handler is None:
-                return False
-            return self._marketplace_handler.handle_withdraw_bid(action)
-
-        elif action.action_type == ActionType.FILE_DISPUTE:
-            if self._marketplace_handler is None:
-                return False
-            return self._marketplace_handler.handle_file_dispute(action, self.state)
-
-        # Moltipedia wiki actions
-        elif action.action_type in (
-            ActionType.CREATE_PAGE,
-            ActionType.EDIT_PAGE,
-            ActionType.FILE_OBJECTION,
-            ActionType.POLICY_FLAG,
-        ):
-            if self._moltipedia_handler is None:
-                return False
-
-            result = self._moltipedia_handler.handle_action(action, self.state)
-            if not result.success:
-                return False
-
-            if result.observables is None:
-                return True
-
-            v_hat, p = self.proxy_computer.compute_labels(result.observables)
-
-            interaction = SoftInteraction(
-                initiator=result.initiator_id,
-                counterparty=result.counterparty_id,
-                interaction_type=InteractionType.COLLABORATION,
-                accepted=result.accepted,
-                task_progress_delta=result.observables.task_progress_delta,
-                rework_count=result.observables.rework_count,
-                verifier_rejections=result.observables.verifier_rejections,
-                tool_misuse_flags=result.observables.tool_misuse_flags,
-                counterparty_engagement_delta=result.observables.counterparty_engagement_delta,
-                v_hat=v_hat,
-                p=p,
-                tau=-result.points,
-                metadata=result.metadata or {},
-            )
-
-            gov_effect, _, _ = self._finalize_interaction(interaction)
-
-            if interaction.metadata.get("moltipedia"):
-                moltipedia_cost = self._moltipedia_cost_from_effect(gov_effect)
-                points_awarded = max(0.0, result.points - moltipedia_cost)
-                self._moltipedia_handler.record_points(
-                    agent_id=result.initiator_id,
-                    points_awarded=points_awarded,
-                    state=self.state,
-                    page_id=interaction.metadata.get("page_id"),
-                    edit_type=interaction.metadata.get("edit_type"),
-                )
-                self._emit_moltipedia_governance_events(gov_effect, interaction)
-
-            return True
-
-        # Memory tier actions
-        elif action.action_type in (
-            ActionType.WRITE_MEMORY,
-            ActionType.PROMOTE_MEMORY,
-            ActionType.VERIFY_MEMORY,
-            ActionType.SEARCH_MEMORY,
-            ActionType.CHALLENGE_MEMORY,
-        ):
-            if self._memory_handler is None:
-                return False
-
-            memory_result = self._memory_handler.handle_action(action, self.state)
-            if not memory_result.success:
-                return False
-
-            if memory_result.observables is None:
-                return True
-
-            v_hat, p = self.proxy_computer.compute_labels(memory_result.observables)
-
-            interaction = SoftInteraction(
-                initiator=memory_result.initiator_id,
-                counterparty=memory_result.counterparty_id,
-                interaction_type=InteractionType.COLLABORATION,
-                accepted=memory_result.accepted,
-                task_progress_delta=memory_result.observables.task_progress_delta,
-                rework_count=memory_result.observables.rework_count,
-                verifier_rejections=memory_result.observables.verifier_rejections,
-                tool_misuse_flags=memory_result.observables.tool_misuse_flags,
-                counterparty_engagement_delta=memory_result.observables.counterparty_engagement_delta,
-                v_hat=v_hat,
-                p=p,
-                tau=0.0,
-                metadata=memory_result.metadata or {},
-            )
-
-            gov_effect, _, _ = self._finalize_interaction(interaction)
-
-            # Check if governance blocked a promotion
-            if memory_result.metadata.get("memory_promotion"):
-                memory_gov_cost = self._memory_governance_cost(gov_effect)
-                if memory_gov_cost > 0:
-                    # Governance blocked the promotion — revert it
-                    entry_id = memory_result.metadata.get("entry_id", "")
-                    if entry_id:
-                        self._memory_handler.store.revert(entry_id)
-
-            return True
-
-        # Moltbook actions
-        elif action.action_type in (
-            ActionType.MOLTBOOK_POST,
-            ActionType.MOLTBOOK_COMMENT,
-            ActionType.MOLTBOOK_VERIFY,
-            ActionType.MOLTBOOK_VOTE,
-        ):
-            if self._moltbook_handler is None:
-                return False
-
-            moltbook_result = self._moltbook_handler.handle_action(action, self.state)
-            if not moltbook_result.success:
-                return False
-
-            if moltbook_result.observables is None:
-                return True
-
-            v_hat, p = self.proxy_computer.compute_labels(moltbook_result.observables)
-
-            interaction = SoftInteraction(
-                initiator=moltbook_result.initiator_id,
-                counterparty=moltbook_result.counterparty_id,
-                interaction_type=moltbook_result.interaction_type,
-                accepted=moltbook_result.accepted,
-                task_progress_delta=moltbook_result.observables.task_progress_delta,
-                rework_count=moltbook_result.observables.rework_count,
-                verifier_rejections=moltbook_result.observables.verifier_rejections,
-                tool_misuse_flags=moltbook_result.observables.tool_misuse_flags,
-                counterparty_engagement_delta=(
-                    moltbook_result.observables.counterparty_engagement_delta
-                ),
-                v_hat=v_hat,
-                p=p,
-                tau=0.0,
-                metadata=moltbook_result.metadata or {},
-            )
-
-            self._finalize_interaction(interaction)
-            return True
-
-        # Scholar/literature synthesis actions
-        elif action.action_type in (
-            ActionType.RETRIEVE_PASSAGES,
-            ActionType.SYNTHESIZE_ANSWER,
-            ActionType.VERIFY_CITATION,
-        ):
-            if self._scholar_handler is None:
-                return False
-
-            scholar_result = self._scholar_handler.handle_action(action, self.state)
-            if not scholar_result.success:
-                return False
-
-            if scholar_result.observables is None:
-                return True
-
-            v_hat, p = self.proxy_computer.compute_labels(scholar_result.observables)
-
-            interaction = SoftInteraction(
-                initiator=scholar_result.initiator_id,
-                counterparty=scholar_result.counterparty_id,
-                interaction_type=InteractionType.COLLABORATION,
-                accepted=scholar_result.accepted,
-                task_progress_delta=scholar_result.observables.task_progress_delta,
-                rework_count=scholar_result.observables.rework_count,
-                verifier_rejections=scholar_result.observables.verifier_rejections,
-                tool_misuse_flags=scholar_result.observables.tool_misuse_flags,
-                counterparty_engagement_delta=scholar_result.observables.counterparty_engagement_delta,
-                v_hat=v_hat,
-                p=p,
-                tau=0.0,
-                metadata=scholar_result.metadata or {},
-            )
-
-            self._finalize_interaction(interaction)
-            return True
-
-        # Kernel market actions
-        elif action.action_type in (
-            ActionType.SUBMIT_KERNEL,
-            ActionType.VERIFY_KERNEL,
-            ActionType.AUDIT_KERNEL,
-        ):
-            if self._kernel_handler is None:
-                return False
-
-            kernel_result = self._kernel_handler.handle_action(action, self.state)
-            if not kernel_result.success:
-                return False
-
-            if kernel_result.observables is None:
-                return True
-
-            v_hat, p = self.proxy_computer.compute_labels(kernel_result.observables)
-
-            interaction = SoftInteraction(
-                initiator=kernel_result.initiator_id,
-                counterparty=kernel_result.counterparty_id,
-                interaction_type=InteractionType.TRADE,
-                accepted=kernel_result.accepted,
-                task_progress_delta=kernel_result.observables.task_progress_delta,
-                rework_count=kernel_result.observables.rework_count,
-                verifier_rejections=kernel_result.observables.verifier_rejections,
-                tool_misuse_flags=kernel_result.observables.tool_misuse_flags,
-                counterparty_engagement_delta=kernel_result.observables.counterparty_engagement_delta,
-                v_hat=v_hat,
-                p=p,
-                tau=0.0,
-                ground_truth=-1
-                if (kernel_result.submission and kernel_result.submission.is_cheat)
-                else 1,
-                metadata=kernel_result.metadata or {},
-            )
-
-            self._finalize_interaction(interaction)
-            return True
-
-        return False
+        return None  # Dispatched via handler registry
 
     def _resolve_pending_interactions(self) -> None:
         """Resolve any remaining pending interactions."""
@@ -1404,35 +932,7 @@ class Orchestrator:
         accepted: bool,
     ) -> None:
         """Complete an interaction and compute payoffs."""
-        # Generate observables via the injectable generator
-        observables = self._observable_generator.generate(
-            proposal,
-            accepted,
-            self.state,
-        )
-
-        # Compute v_hat and p
-        v_hat, p = self.proxy_computer.compute_labels(observables)
-
-        # Create SoftInteraction
-        interaction = SoftInteraction(
-            interaction_id=proposal.proposal_id,
-            initiator=proposal.initiator_id,
-            counterparty=proposal.counterparty_id,
-            interaction_type=InteractionType(proposal.interaction_type),
-            accepted=accepted,
-            task_progress_delta=observables.task_progress_delta,
-            rework_count=observables.rework_count,
-            verifier_rejections=observables.verifier_rejections,
-            tool_misuse_flags=observables.tool_misuse_flags,
-            counterparty_engagement_delta=observables.counterparty_engagement_delta,
-            v_hat=v_hat,
-            p=p,
-            tau=proposal.metadata.get("offered_transfer", 0),
-            metadata=proposal.metadata,
-        )
-
-        self._finalize_interaction(interaction)
+        self._finalizer.complete_interaction(proposal, accepted)
 
     def _generate_observables(
         self,
@@ -1451,119 +951,11 @@ class Orchestrator:
         interaction: SoftInteraction,
     ) -> Tuple[GovernanceEffect, float, float]:
         """Apply governance, compute payoffs, update state, and emit events."""
-        gov_effect = GovernanceEffect()
-        if self.governance_engine:
-            gov_effect = self.governance_engine.apply_interaction(
-                interaction, self.state
-            )
-            interaction.c_a += gov_effect.cost_a
-            interaction.c_b += gov_effect.cost_b
-            self._apply_governance_effect(gov_effect)
-
-            if gov_effect.cost_a > 0 or gov_effect.cost_b > 0:
-                self._emit_event(
-                    Event(
-                        event_type=EventType.GOVERNANCE_COST_APPLIED,
-                        interaction_id=interaction.interaction_id,
-                        initiator_id=interaction.initiator,
-                        counterparty_id=interaction.counterparty,
-                        payload={
-                            "cost_a": gov_effect.cost_a,
-                            "cost_b": gov_effect.cost_b,
-                            "levers": [e.lever_name for e in gov_effect.lever_effects],
-                        },
-                        epoch=self.state.current_epoch,
-                        step=self.state.current_step,
-                    )
-                )
-
-        payoff_init = self.payoff_engine.payoff_initiator(interaction)
-        payoff_counter = self.payoff_engine.payoff_counterparty(interaction)
-
-        if interaction.accepted:
-            initiator_state = self.state.get_agent(interaction.initiator)
-            counterparty_state = self.state.get_agent(interaction.counterparty)
-
-            if initiator_state:
-                initiator_state.record_initiated(accepted=True, p=interaction.p)
-                initiator_state.total_payoff += payoff_init
-                rep_delta = (interaction.p - 0.5) - interaction.c_a
-                self._update_reputation(interaction.initiator, rep_delta)
-
-            if counterparty_state:
-                counterparty_state.record_received(accepted=True, p=interaction.p)
-                counterparty_state.total_payoff += payoff_counter
-
-        if interaction.initiator in self._agents:
-            self._agents[interaction.initiator].update_from_outcome(
-                interaction, payoff_init
-            )
-        if interaction.counterparty in self._agents:
-            self._agents[interaction.counterparty].update_from_outcome(
-                interaction, payoff_counter
-            )
-
-        self.state.record_interaction(interaction)
-
-        self._emit_event(
-            interaction_completed_event(
-                interaction_id=interaction.interaction_id,
-                accepted=interaction.accepted,
-                payoff_initiator=payoff_init,
-                payoff_counterparty=payoff_counter,
-                epoch=self.state.current_epoch,
-                step=self.state.current_step,
-            )
-        )
-
-        self._emit_event(
-            payoff_computed_event(
-                interaction_id=interaction.interaction_id,
-                initiator_id=interaction.initiator,
-                counterparty_id=interaction.counterparty,
-                payoff_initiator=payoff_init,
-                payoff_counterparty=payoff_counter,
-                components={
-                    "p": interaction.p,
-                    "v_hat": interaction.v_hat,
-                    "tau": interaction.tau,
-                    "accepted": interaction.accepted,
-                },
-                epoch=self.state.current_epoch,
-                step=self.state.current_step,
-            )
-        )
-
-        if self.network is not None and interaction.accepted:
-            self.network.strengthen_edge(
-                interaction.initiator, interaction.counterparty
-            )
-
-        for callback in self._on_interaction_complete:
-            callback(interaction, payoff_init, payoff_counter)
-
-        return gov_effect, payoff_init, payoff_counter
+        return self._finalizer.finalize_interaction(interaction)
 
     def _update_reputation(self, agent_id: str, delta: float) -> None:
         """Update agent reputation."""
-        agent_state = self.state.get_agent(agent_id)
-        if not agent_state:
-            return
-
-        old_rep = agent_state.reputation
-        agent_state.update_reputation(delta)
-
-        self._emit_event(
-            reputation_updated_event(
-                agent_id=agent_id,
-                old_reputation=old_rep,
-                new_reputation=agent_state.reputation,
-                delta=delta,
-                reason="interaction_outcome",
-                epoch=self.state.current_epoch,
-                step=self.state.current_step,
-            )
-        )
+        self._finalizer._update_reputation(agent_id, delta)
 
     # =========================================================================
     # Marketplace Delegation (preserves public interface)
@@ -1592,96 +984,7 @@ class Orchestrator:
 
     def _apply_governance_effect(self, effect: GovernanceEffect) -> None:
         """Apply governance effects to state (freeze/unfreeze, reputation, resources)."""
-        # Freeze agents
-        for agent_id in effect.agents_to_freeze:
-            self.state.freeze_agent(agent_id)
-
-        # Unfreeze agents
-        for agent_id in effect.agents_to_unfreeze:
-            self.state.unfreeze_agent(agent_id)
-
-        # Apply reputation deltas
-        for agent_id, delta in effect.reputation_deltas.items():
-            agent_state = self.state.get_agent(agent_id)
-            if agent_state:
-                old_rep = agent_state.reputation
-                agent_state.update_reputation(delta)
-                self._emit_event(
-                    reputation_updated_event(
-                        agent_id=agent_id,
-                        old_reputation=old_rep,
-                        new_reputation=agent_state.reputation,
-                        delta=delta,
-                        reason="governance",
-                        epoch=self.state.current_epoch,
-                        step=self.state.current_step,
-                    )
-                )
-
-        # Apply resource deltas
-        for agent_id, delta in effect.resource_deltas.items():
-            agent_state = self.state.get_agent(agent_id)
-            if agent_state:
-                agent_state.update_resources(delta)
-
-    def _memory_governance_cost(self, effect: GovernanceEffect) -> float:
-        """Compute memory-specific governance cost from effects."""
-        memory_levers = {
-            "memory_promotion_gate",
-            "memory_write_rate_limit",
-            "memory_cross_verification",
-            "memory_provenance",
-        }
-        return sum(
-            lever.cost_a
-            for lever in effect.lever_effects
-            if lever.lever_name in memory_levers
-        )
-
-    def _moltipedia_cost_from_effect(self, effect: GovernanceEffect) -> float:
-        """Compute Moltipedia-specific cost from governance effects."""
-        moltipedia_levers = {
-            "moltipedia_pair_cap",
-            "moltipedia_page_cooldown",
-            "moltipedia_daily_cap",
-            "moltipedia_no_self_fix",
-        }
-        return sum(
-            lever.cost_a
-            for lever in effect.lever_effects
-            if lever.lever_name in moltipedia_levers
-        )
-
-    def _emit_moltipedia_governance_events(
-        self,
-        effect: GovernanceEffect,
-        interaction: SoftInteraction,
-    ) -> None:
-        """Emit Moltipedia governance trigger events."""
-        event_map = {
-            "moltipedia_pair_cap": EventType.PAIR_CAP_TRIGGERED,
-            "moltipedia_page_cooldown": EventType.COOLDOWN_TRIGGERED,
-            "moltipedia_daily_cap": EventType.DAILY_CAP_TRIGGERED,
-        }
-        page_id = interaction.metadata.get("page_id") if interaction.metadata else None
-        for lever in effect.lever_effects:
-            if lever.lever_name not in event_map:
-                continue
-            if lever.cost_a <= 0:
-                continue
-            self._emit_event(
-                Event(
-                    event_type=event_map[lever.lever_name],
-                    agent_id=interaction.initiator,
-                    payload={
-                        "page_id": page_id,
-                        "cost_a": lever.cost_a,
-                        "details": lever.details,
-                    },
-                    epoch=self.state.current_epoch,
-                    step=self.state.current_step,
-                )
-            )
+        self._finalizer.apply_governance_effect(effect)
 
     def _compute_epoch_metrics(self) -> EpochMetrics:
         """Compute metrics for the current epoch."""
@@ -1726,16 +1029,12 @@ class Orchestrator:
         )
 
     def _emit_event(self, event: Event) -> None:
-        """Emit an event to the log."""
-        if event.seed is None:
-            event.seed = self.config.seed
-        if event.scenario_id is None:
-            event.scenario_id = self.config.scenario_id
-        if event.replay_k is None:
-            event.replay_k = self.config.replay_k
+        """Emit an event via the event bus."""
+        self._event_bus.emit(event)
 
-        if self.event_log is not None and self.config.log_events:
-            self.event_log.append(event)
+    def subscribe_events(self, callback: Callable[[Event], None]) -> None:
+        """Register an external subscriber for all simulation events."""
+        self._event_bus.subscribe(callback)
 
     def pause(self) -> None:
         """Pause the simulation."""
@@ -1889,7 +1188,7 @@ class Orchestrator:
                 event_type=EventType.SIMULATION_ENDED,
                 payload={
                     "total_epochs": self.config.n_epochs,
-                    "final_metrics": self._epoch_metrics[-1].__dict__
+                    "final_metrics": self._epoch_metrics[-1].model_dump()
                     if self._epoch_metrics
                     else {},
                 },
@@ -1901,111 +1200,37 @@ class Orchestrator:
     async def _run_epoch_async(self) -> EpochMetrics:
         """Run a single epoch asynchronously."""
         epoch_start = self.state.current_epoch
-
-        self._update_adaptive_governance()
-
-        # Apply epoch-start governance (reputation decay, unfreezes)
-        if self.governance_engine:
-            gov_effect = self.governance_engine.apply_epoch_start(
-                self.state, self.state.current_epoch
-            )
-            self._apply_governance_effect(gov_effect)
+        self._epoch_pre_hooks()
 
         for _step in range(self.config.steps_per_epoch):
             if self.state.is_paused:
                 break
-
             await self._run_step_async()
             self.state.advance_step()
 
-        # Apply network edge decay
-        if self.network is not None:
-            pruned = self.network.decay_edges()
-            if pruned > 0:
-                self._emit_event(
-                    Event(
-                        event_type=EventType.EPOCH_COMPLETED,
-                        payload={"network_edges_pruned": pruned},
-                        epoch=epoch_start,
-                    )
-                )
-
-        # Compute epoch metrics
-        metrics = self._compute_epoch_metrics()
-
-        # Log epoch completion
-        self._emit_event(
-            Event(
-                event_type=EventType.EPOCH_COMPLETED,
-                payload=metrics.__dict__,
-                epoch=epoch_start,
-            )
-        )
-
-        # Advance to next epoch
-        self.state.advance_epoch()
-
-        return metrics
+        return self._epoch_post_hooks(epoch_start)
 
     async def _run_step_async(self) -> None:
         """Run a single step asynchronously with concurrent LLM calls."""
-        if (
-            self.governance_engine
-            and self.governance_engine.config.adaptive_use_behavioral_features
-        ):
-            self._update_adaptive_governance(include_behavioral=True)
+        self._step_preamble()
 
-        # Step-level governance hooks (e.g., decomposition checkpoints)
-        if self.governance_engine:
-            step_effect = self.governance_engine.apply_step(
-                self.state, self.state.current_step
-            )
-            self._apply_governance_effect(step_effect)
+        agents_to_act = self._get_eligible_agents()
 
-        # Get agent schedule for this step
-        agent_order = self._get_agent_schedule()
-
-        actions_this_step = 0
-
-        # Collect agents that can act this step
-        agents_to_act = []
-        for agent_id in agent_order:
-            if actions_this_step >= self.config.max_actions_per_step:
-                break
-
-            if not self.state.can_agent_act(agent_id):
-                continue
-
-            # Check governance admission control (staking)
-            if self.governance_engine and not self.governance_engine.can_agent_act(
-                agent_id, self.state
-            ):
-                continue
-
-            agents_to_act.append(agent_id)
-            actions_this_step += 1
-
-        # Get actions concurrently for LLM agents
         async def get_agent_action(agent_id: str) -> Tuple[str, Action]:
             agent = self._agents[agent_id]
             observation = self._build_observation(agent_id)
             action = await self._select_action_async(agent, observation)
             return agent_id, action
 
-        # Execute all agent actions concurrently
         tasks = [get_agent_action(agent_id) for agent_id in agents_to_act]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Process results
         for result in results:
             if isinstance(result, Exception):
-                # Log error but continue
                 continue
-
             agent_id, action = result  # type: ignore[misc]
             self._execute_action(action)
 
-        # Resolve pending interactions asynchronously
         await self._resolve_pending_interactions_async()
 
     async def _resolve_pending_interactions_async(self) -> None:
@@ -2122,17 +1347,8 @@ class Orchestrator:
     # =========================================================================
 
     def get_adaptive_adversary_reports(self) -> Dict[str, Dict]:
-        """
-        Get strategy reports from all adaptive adversaries.
-
-        Returns:
-            Dictionary mapping agent_id to strategy report
-        """
-        reports = {}
-        for agent_id, agent in self._agents.items():
-            if hasattr(agent, "get_strategy_report"):
-                reports[agent_id] = agent.get_strategy_report()
-        return reports
+        """Get strategy reports from all adaptive adversaries."""
+        return self._redteam.get_adaptive_adversary_reports()
 
     def notify_adversary_detection(
         self,
@@ -2140,104 +1356,12 @@ class Orchestrator:
         penalty: float = 0.0,
         detected: bool = True,
     ) -> None:
-        """
-        Notify an adaptive adversary of detection/penalty.
-
-        This allows adversaries to learn from governance feedback.
-
-        Args:
-            agent_id: The agent that was detected
-            penalty: Penalty amount applied
-            detected: Whether the agent was detected
-        """
-        agent = self._agents.get(agent_id)
-        if agent is not None and hasattr(agent, "update_adversary_outcome"):
-            # Get recent payoff for this agent
-            recent_payoff = 0.0
-            if self.state.completed_interactions:
-                agent_interactions = [
-                    i
-                    for i in self.state.completed_interactions
-                    if i.initiator == agent_id or i.counterparty == agent_id
-                ]
-                if agent_interactions:
-                    last = agent_interactions[-1]
-                    if last.initiator == agent_id:
-                        recent_payoff = last.payoff_initiator or 0.0  # type: ignore[attr-defined]
-                    else:
-                        recent_payoff = last.payoff_counterparty or 0.0  # type: ignore[attr-defined]
-
-            agent.update_adversary_outcome(
-                payoff=recent_payoff,
-                penalty=penalty,
-                detected=detected,
-            )
+        """Notify an adaptive adversary of detection/penalty."""
+        self._redteam.notify_adversary_detection(agent_id, penalty, detected)
 
     def get_evasion_metrics(self) -> Dict:
-        """
-        Get evasion metrics for adversarial agents.
-
-        Returns:
-            Dictionary with evasion statistics
-        """
-        metrics: Dict[str, Any] = {
-            "total_adversaries": 0,
-            "adaptive_adversaries": 0,
-            "avg_detection_rate": 0.0,
-            "avg_heat_level": 0.0,
-            "strategies_used": {},
-            "by_agent": {},
-        }
-
-        detection_rates = []
-        heat_levels = []
-
-        for agent_id, agent in self._agents.items():
-            agent_state = self.state.get_agent(agent_id)
-            if agent_state and agent_state.agent_type == AgentType.ADVERSARIAL:
-                metrics["total_adversaries"] += 1
-
-                if hasattr(agent, "get_strategy_report"):
-                    metrics["adaptive_adversaries"] += 1
-                    report = agent.get_strategy_report()
-                    metrics["by_agent"][agent_id] = report
-
-                    # Aggregate strategy usage
-                    for strategy, stats in report.get("strategy_stats", {}).items():
-                        if strategy not in metrics["strategies_used"]:
-                            metrics["strategies_used"][strategy] = {
-                                "total_attempts": 0,
-                                "total_detections": 0,
-                            }
-                        attempts = stats.get("attempts", 0)
-                        detection_rate = stats.get("detection_rate", 0)
-                        metrics["strategies_used"][strategy]["total_attempts"] += (
-                            attempts
-                        )
-                        metrics["strategies_used"][strategy]["total_detections"] += int(
-                            attempts * detection_rate
-                        )
-
-                    heat_levels.append(report.get("heat_level", 0))
-
-                    # Calculate detection rate from strategy stats
-                    total_attempts = sum(
-                        s.get("attempts", 0)
-                        for s in report.get("strategy_stats", {}).values()
-                    )
-                    total_detected = sum(
-                        s.get("attempts", 0) * s.get("detection_rate", 0)
-                        for s in report.get("strategy_stats", {}).values()
-                    )
-                    if total_attempts > 0:
-                        detection_rates.append(total_detected / total_attempts)
-
-        if detection_rates:
-            metrics["avg_detection_rate"] = sum(detection_rates) / len(detection_rates)
-        if heat_levels:
-            metrics["avg_heat_level"] = sum(heat_levels) / len(heat_levels)
-
-        return metrics
+        """Get evasion metrics for adversarial agents."""
+        return self._redteam.get_evasion_metrics()
 
     # =========================================================================
     # Boundary Delegation (preserves public interface)

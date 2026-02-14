@@ -1,0 +1,28 @@
+============================================================
+RED-TEAM EVALUATION REPORT
+============================================================
+
+Governance Configuration: {'circuit_breaker_enabled': True, 'collusion_detection_enabled': True, 'audit_enabled': True, 'staking_enabled': True, 'transaction_tax_rate': 0.05}
+Evaluation Date: 2026-02-12 23:11:43.600717
+
+OVERALL ASSESSMENT
+----------------------------------------
+Robustness Score: 0.66 (D)
+Attacks Tested: 8
+Attacks Prevented: 5
+Attacks Successful: 3
+
+KEY METRICS
+----------------------------------------
+Overall Evasion Rate: 25.99%
+Detection Latency: 7.6 epochs
+Total Damage Allowed: 290.61
+
+VULNERABILITIES DISCOVERED
+----------------------------------------
+  [CRITICAL] vuln_sybil_attack_success
+    Sybil Attack succeeded with significant damage (103)
+    Attack Vector: coordination
+    Mitigation: Enable or strengthen vote_normalization, bandwidth_cap, collusion_detection
+
+============================================================

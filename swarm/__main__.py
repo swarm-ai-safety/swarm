@@ -114,7 +114,7 @@ def cmd_run(args: argparse.Namespace) -> int:
             print()
 
     # Export if requested
-    if args.export_json or args.export_csv:
+    if args.export_json or args.export_csv or args.export_dolt:
         from swarm.analysis.aggregation import EpochSnapshot, SimulationHistory
 
         history = SimulationHistory(
@@ -151,6 +151,22 @@ def cmd_run(args: argparse.Namespace) -> int:
             paths = export_to_csv(history, args.export_csv, prefix=scenario.scenario_id)
             for kind, path in paths.items():
                 print(f"Exported CSV ({kind}): {path}")
+
+        if args.export_dolt:
+            try:
+                from swarm.analysis.dolt_export import export_to_dolt
+
+                # Resolve Dolt dir relative to repo root (swarm package parent)
+                dolt_dir = Path(args.export_dolt)
+                if not dolt_dir.is_absolute():
+                    repo_root = Path(__file__).resolve().parent.parent
+                    dolt_dir = repo_root / dolt_dir
+                # Derive a run_dir name from scenario + seed
+                seed = scenario.orchestrator_config.seed
+                run_dir_name = f"{scenario.scenario_id}_seed{seed}"
+                export_to_dolt(history, run_dir_name, str(dolt_dir))
+            except Exception as exc:
+                print(f"Warning: Dolt export failed: {exc}")
 
     # Check success criteria
     if scenario.success_criteria and not args.quiet:
@@ -237,7 +253,7 @@ def cmd_sandbox(args: argparse.Namespace) -> int:
 
     subcmd = args.sandbox_cmd
     if subcmd in handlers:
-        return handlers[subcmd](args)
+        return int(handlers[subcmd](args))
 
     print(f"Unknown sandbox subcommand: {subcmd}", file=sys.stderr)
     return 1
@@ -402,6 +418,14 @@ def main() -> int:
     )
     run_parser.add_argument(
         "--export-csv", metavar="DIR", help="Export results to CSV directory"
+    )
+    run_parser.add_argument(
+        "--export-dolt",
+        nargs="?",
+        const="runs/dolt_runs",
+        default=None,
+        metavar="DIR",
+        help="Export results to Dolt repo (default: runs/dolt_runs)",
     )
     run_parser.add_argument(
         "--prompt-audit",

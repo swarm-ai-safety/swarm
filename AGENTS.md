@@ -2,12 +2,17 @@
 
 This repo maintains task-focused LLM agent personas in `.claude/agents/*.md`. Use the role that best matches the work and treat the `.claude/agents` files as the source of truth.
 
+## Scope & Precedence
+- This guidance applies to coding agents operating in this repository (including Claude Code and Codex-style agents).
+- Instruction priority is: system/developer/user directives first, then this file.
+
 ## How To Choose
 - Scenario design or mechanism-isolating experiments: `Scenario Architect`
 - Governance levers and intervention tradeoffs: `Mechanism Designer`
 - Metrics definitions, logging, and tests: `Metrics Auditor`
 - Red-teaming and adversarial strategies: `Adversary Designer`
 - Reproducibility, benchmarks, and hygiene: `Reproducibility Sheriff`
+- External repo reconnaissance and pattern mining: `Research Scout`
 
 ## Hooks
 - Pre-commit runs from `.claude/hooks/pre-commit` via `.git/hooks/pre-commit`.
@@ -90,9 +95,24 @@ Guardrails:
 - Add new required checks as recommended first
 Source: `.claude/agents/reproducibility_sheriff.md`
 
+## Research Scout
+Focus: investigates external repositories/codebases for patterns relevant to a concrete implementation goal.
+Optimizes for:
+- Fast discovery of transferable patterns
+- Source-backed findings with exact file paths
+- Practical adaptation advice for this repo
+Deliverables:
+- Structured findings from target repo(s): what it is, where it lives, how it works
+- Suggested adaptation plan tied to local code areas
+- Tradeoffs and integration risks
+Guardrails:
+- Prefer direct evidence from source files over secondhand summaries
+- Clearly separate observed facts from inferred recommendations
+Source: `.claude/agents/research_scout.md`
+
 ## Landing the Plane (Session Completion)
 
-**When ending a work session**, you MUST complete ALL steps below. Work is NOT complete until `git push` succeeds.
+**When explicitly shipping/landing work (for example: "ship", "submit", "close this out")**, complete ALL steps below. Work is not complete until `git push` succeeds.
 
 **MANDATORY WORKFLOW:**
 
@@ -110,8 +130,10 @@ Source: `.claude/agents/reproducibility_sheriff.md`
 6. **Verify** - All changes committed AND pushed
 7. **Hand off** - Provide context for next session
 
-**CRITICAL RULES:**
+**CRITICAL RULES (for ship/closeout sessions):**
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
+
+For non-ship sessions, keep changes local and report status clearly instead of forcing a push.

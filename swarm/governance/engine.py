@@ -9,6 +9,7 @@ from swarm.governance.audits import RandomAuditLever
 from swarm.governance.circuit_breaker import CircuitBreakerLever
 from swarm.governance.collusion import CollusionPenaltyLever
 from swarm.governance.config import GovernanceConfig
+from swarm.governance.council_lever import CouncilGovernanceLever
 from swarm.governance.decomposition import DecompositionLever
 from swarm.governance.diversity import DiversityDefenseLever
 from swarm.governance.dynamic_friction import IncoherenceFrictionLever
@@ -33,6 +34,7 @@ from swarm.governance.moltipedia import (
     PageCooldownLever,
     PairCapLever,
 )
+from swarm.governance.refinery import RefineryLever
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever
 from swarm.governance.security import SecurityLever
 from swarm.governance.taxes import TransactionTaxLever
@@ -98,6 +100,7 @@ class GovernanceEngine:
         self,
         config: Optional[GovernanceConfig] = None,
         seed: Optional[int] = None,
+        council: Optional[Any] = None,
     ):
         """
         Initialize the governance engine.
@@ -110,6 +113,7 @@ class GovernanceEngine:
         # Pydantic auto-validates
 
         levers: List[GovernanceLever] = [
+            RefineryLever(self.config),
             TransactionTaxLever(self.config),
             ReputationDecayLever(self.config),
             StakingLever(self.config),
@@ -145,6 +149,10 @@ class GovernanceEngine:
         levers.append(TransparencyLever(self.config))
         levers.append(ModeratorLever(self.config, seed=seed))
         levers.append(SybilDetectionLever(self.config))
+
+        # Council governance lever (requires external council instance)
+        if self.config.council_lever_enabled and council is not None:
+            levers.append(CouncilGovernanceLever(self.config, council=council, seed=seed))
 
         # Diversity as Defense lever
         levers.append(DiversityDefenseLever(self.config))
@@ -292,7 +300,7 @@ class GovernanceEngine:
         Returns:
             Vote weight in (0, 1]
         """
-        return self._vote_normalization_lever.compute_vote_weight(agent_id, vote_count)
+        return float(self._vote_normalization_lever.compute_vote_weight(agent_id, vote_count))
 
     def slash_agent_stake(
         self,
@@ -316,11 +324,11 @@ class GovernanceEngine:
         effect = self._staking_lever.slash_stake(agent_id, state, reason)
         return GovernanceEffect.from_lever_effects([effect])
 
-    def get_circuit_breaker_status(self, agent_id: str) -> Dict:
+    def get_circuit_breaker_status(self, agent_id: str) -> Dict[str, Any]:
         """Get circuit breaker status for an agent."""
         if self._circuit_breaker_lever is None:
             return {}
-        return self._circuit_breaker_lever.get_freeze_status(agent_id)
+        return dict(self._circuit_breaker_lever.get_freeze_status(agent_id))
 
     def reset_circuit_breaker(self, agent_id: str) -> None:
         """Reset circuit breaker tracking for an agent."""
@@ -434,13 +442,13 @@ class GovernanceEngine:
         """Release an agent from security quarantine."""
         if self._security_lever is None:
             return False
-        return self._security_lever.release_from_quarantine(agent_id)
+        return bool(self._security_lever.release_from_quarantine(agent_id))
 
-    def get_security_containment_actions(self) -> List[Dict]:
+    def get_security_containment_actions(self) -> List[Dict[str, Any]]:
         """Get history of security containment actions."""
         if self._security_lever is None:
             return []
-        return self._security_lever.get_containment_actions()
+        return list(self._security_lever.get_containment_actions())
 
     def clear_security_history(self) -> None:
         """Clear security analysis history and state."""

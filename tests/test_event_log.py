@@ -1,6 +1,7 @@
 """Tests for append-only JSONL event logger."""
 
 from datetime import datetime, timedelta
+from typing import Optional
 
 from swarm.logging.event_log import EventLog
 from swarm.models.events import Event, EventType
@@ -13,12 +14,12 @@ from swarm.models.interaction import InteractionType
 
 def _make_event(
     event_type: EventType = EventType.INTERACTION_PROPOSED,
-    interaction_id: str = None,
-    initiator_id: str = None,
-    counterparty_id: str = None,
-    agent_id: str = None,
-    payload: dict = None,
-    timestamp: datetime = None,
+    interaction_id: Optional[str] = None,
+    initiator_id: Optional[str] = None,
+    counterparty_id: Optional[str] = None,
+    agent_id: Optional[str] = None,
+    payload: Optional[dict] = None,
+    timestamp: Optional[datetime] = None,
 ) -> Event:
     """Create a test event."""
     return Event(
@@ -39,7 +40,7 @@ def _make_interaction_events(
     accepted: bool = True,
     p: float = 0.7,
     v_hat: float = 0.4,
-    base_time: datetime = None,
+    base_time: Optional[datetime] = None,
 ) -> list[Event]:
     """Create a PROPOSED → ACCEPTED/REJECTED → PAYOFF event stream."""
     base = base_time or datetime.now()

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from scipy import stats
 
 BASE = pathlib.Path(
-    "/Users/raelisavitt/distributional-agi-safety/"
+    "/Users/raelisavitt/swarm/"
     "runs/20260211-000149_kernel_market_governance_comparison"
 )
 CSV = BASE / "sweep_results.csv"

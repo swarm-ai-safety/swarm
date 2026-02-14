@@ -448,10 +448,16 @@ class SystemHorizonEvaluator:
 
             payoffs = [self.payoff_engine.total_welfare(i) for i in accepted]
             arr = np.array(payoffs, dtype=np.float64)
-            mean_abs = abs(float(arr.mean()))
             std = float(arr.std())
+            mean_abs = abs(float(arr.mean()))
 
-            cv = std / mean_abs if mean_abs > 1e-9 else 0.0
+            if std == 0.0:
+                cv = 0.0
+            else:
+                # Preserve large CV in near-zero-mean epochs without
+                # producing infinities that break JSON serialisation.
+                eps = 1e-8 * (mean_abs + std)
+                cv = std / max(mean_abs, eps)
             cvs.append(cv)
             if cv > threshold:
                 hot_count += 1

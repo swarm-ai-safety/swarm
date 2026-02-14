@@ -1,0 +1,72 @@
+# SkillRL Scenario
+# Models the SkillRL framework (Xia et al., 2026): recursive skill-augmented
+# reinforcement learning with hierarchical SkillBank, GRPO advantage, and
+# validation-failure refinement.
+#
+# Mix of SkillRL agents alongside honest and adversarial agents to test
+# whether skill evolution improves cooperative outcomes under adversarial
+# pressure.
+
+scenario_id: skillrl
+description: >
+  SkillRL integration test: skill-evolving agents learn reusable strategies
+  and lessons from interaction outcomes, using GRPO-style advantage and
+  recursive refinement to adapt their skill libraries over time.
+motif: skill_evolution
+
+agents:
+  - type: skillrl
+    count: 3
+    config:
+      acceptance_threshold: 0.4
+      trust_weight: 0.3
+      interact_probability: 0.5
+      skill_exploration_rate: 0.15
+      refinement_interval: 2
+      promotion_interval: 5
+
+  - type: honest
+    count: 2
+
+  - type: opportunistic
+    count: 1
+
+  - type: adversarial
+    count: 1
+
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 0.95
+  bandwidth_cap: 10
+  staking_enabled: false
+  circuit_breaker_enabled: false
+  audit_enabled: false
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.0
+  rho_b: 0.0
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 20
+  min_agents: 7
+  toxicity_threshold: 0.5
+
+outputs:
+  event_log: "logs/skillrl_events.jsonl"
+  metrics_csv: "logs/skillrl_metrics.csv"

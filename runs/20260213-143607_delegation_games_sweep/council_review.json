@@ -1,0 +1,58 @@
+{
+  "evaluation_type": "sweep",
+  "run_dir": "runs/20260213-143607_delegation_games_sweep",
+  "synthesis": "FINDINGS:\n- Higher transaction tax rates reduce aggregate welfare: tax=0% yields mean welfare 179.68 vs tax=15% at 136.83 (Cohen's d=1.20, large effect). The mechanism imposes real costs on all agent types.\n- Honest agents consistently earn the highest payoffs across all configurations (20.18-25.37), confirming the mechanism does not create perverse incentives that reward deception over honesty.\n- The circuit breaker shows a modest welfare-preserving effect: CB=True yields mean welfare 160.47 vs CB=False at 144.29 (d=0.53, medium effect), though high variance in the CB=True group limits statistical confidence.\n- Toxicity rates are remarkably stable across all tax rates (0.31-0.34), suggesting the tax mechanism primarily redistributes surplus rather than deterring harmful interactions.\n- Quality gap remains positive across all configurations (0.17-0.18), indicating no adverse selection \u2014 beneficial interactions are preferentially accepted.\n\nCONCERNS:\n- Only 3 seeds per configuration (24 total runs). With n=3 per cell, Welch's t-tests have very low power (~0.30 for d=1.0). The large effect sizes observed may not replicate.\n- No multiple comparisons correction applied. With 4 tax levels \u00d7 2 CB states = 8 cells, pairwise comparisons across all metrics yield 28+ hypotheses. At alpha=0.05, ~1.4 false positives expected by chance.\n- The tax=0%/CB=True cell has an extreme outlier (welfare=269.6, seed 48) that inflates the group mean by ~50. This single run drives much of the apparent CB=True advantage.\n- Normality cannot be assessed with n=3. The Welch t-test assumes approximate normality, which is unverifiable at this sample size. Non-parametric alternatives (Mann-Whitney U) would have even less power.\n- Adversarial agent payoffs are near zero or negative across all conditions, which could indicate the adversarial strategy is simply non-viable rather than being effectively governed.\n\nRECOMMENDATIONS:\n- Increase to 10+ seeds per configuration (minimum 80 total runs) to achieve adequate statistical power (0.80) for detecting medium effects (d\u22650.5).\n- Apply Holm-Bonferroni correction across all pairwise comparisons. Report both corrected and uncorrected p-values.\n- Investigate the seed-48 outlier (welfare=269.6). If it reflects a valid but rare trajectory, report it separately. If it's a simulation artifact, exclude and document.\n- Add intermediate tax rates (0.02, 0.08, 0.12) to characterize the welfare-tax dose-response curve and identify any non-linearities or threshold effects.\n- Test adversarial strategies that specifically exploit the tax mechanism (e.g., agents that strategically time interactions to minimize tax burden) to validate governance robustness.\n- Report Shapiro-Wilk normality tests once sample sizes are adequate, and include bootstrap confidence intervals as a non-parametric robustness check.",
+  "findings": [
+    "Higher transaction tax rates reduce aggregate welfare: tax=0% yields mean welfare 179.68 vs tax=15% at 136.83 (Cohen's d=1.20, large effect). The mechanism imposes real costs on all agent types.",
+    "Honest agents consistently earn the highest payoffs across all configurations (20.18-25.37), confirming the mechanism does not create perverse incentives that reward deception over honesty.",
+    "The circuit breaker shows a modest welfare-preserving effect: CB=True yields mean welfare 160.47 vs CB=False at 144.29 (d=0.53, medium effect), though high variance in the CB=True group limits statistical confidence.",
+    "Toxicity rates are remarkably stable across all tax rates (0.31-0.34), suggesting the tax mechanism primarily redistributes surplus rather than deterring harmful interactions.",
+    "Quality gap remains positive across all configurations (0.17-0.18), indicating no adverse selection \u2014 beneficial interactions are preferentially accepted."
+  ],
+  "concerns": [
+    "Only 3 seeds per configuration (24 total runs). With n=3 per cell, Welch's t-tests have very low power (~0.30 for d=1.0). The large effect sizes observed may not replicate.",
+    "No multiple comparisons correction applied. With 4 tax levels \u00d7 2 CB states = 8 cells, pairwise comparisons yield 28+ hypotheses. At alpha=0.05, ~1.4 false positives expected by chance.",
+    "The tax=0%/CB=True cell has an extreme outlier (welfare=269.6, seed 48) that inflates the group mean by ~50. This single run drives much of the apparent CB=True advantage.",
+    "Normality cannot be assessed with n=3. Non-parametric alternatives (Mann-Whitney U) would have even less power.",
+    "Adversarial agent payoffs are near zero or negative across all conditions, which could indicate the adversarial strategy is simply non-viable rather than being effectively governed."
+  ],
+  "recommendations": [
+    "Increase to 10+ seeds per configuration (minimum 80 total runs) to achieve adequate statistical power (0.80) for detecting medium effects (d\u22650.5).",
+    "Apply Holm-Bonferroni correction across all pairwise comparisons. Report both corrected and uncorrected p-values.",
+    "Investigate the seed-48 outlier (welfare=269.6). If it reflects a valid but rare trajectory, report it separately. If it's a simulation artifact, exclude and document.",
+    "Add intermediate tax rates (0.02, 0.08, 0.12) to characterize the welfare-tax dose-response curve and identify any non-linearities.",
+    "Test adversarial strategies that specifically exploit the tax mechanism to validate governance robustness.",
+    "Report Shapiro-Wilk normality tests once sample sizes are adequate, and include bootstrap confidence intervals as a non-parametric robustness check."
+  ],
+  "responses": {
+    "mechanism_designer": "The delegation games sweep tests a transaction tax (0-15%) combined with an optional circuit breaker. The tax creates a straightforward welfare-cost tradeoff: higher taxes reduce total surplus without meaningfully reducing toxicity (0.31-0.34 across all rates). This suggests the tax is not Pigouvian \u2014 it does not internalize the externality of toxic interactions but rather acts as a flat friction. The honest-agent payoff dominance (25.37 at tax=0 vs 20.18 at tax=15) is encouraging for incentive compatibility, but the near-zero adversarial payoffs suggest these agents may be non-viable regardless of governance. The circuit breaker's welfare boost (d=0.53) hints at value in targeted intervention over broad taxation, but needs more data. The quality gap staying positive (0.17-0.18) across all conditions is a strong signal that the acceptance mechanism is functioning correctly \u2014 no adverse selection is occurring.",
+    "statistician": "The study has critical power limitations. With n=3 per cell across an 8-cell design (4 tax \u00d7 2 CB), the total sample is 24 runs. For the headline finding (tax welfare effect, d=1.20), a two-sample t-test with n=3 per group achieves only ~30% power at alpha=0.05. The observed large effect sizes (d>1.0) should be interpreted cautiously \u2014 small samples systematically inflate effect sizes (the 'winner's curse'). The seed-48 outlier in the tax=0/CB=True cell (welfare=269.6 vs group mean ~207) is particularly concerning \u2014 it represents a 30% deviation and likely drives the entire CB effect. The toxicity comparisons (d\u22481.0 for tax=0 vs tax=0.15) are similarly underpowered. Without multiple comparisons correction across the full hypothesis space, reported significances are unreliable. Minimum recommendation: 10 seeds per cell (80 total) with pre-registered primary outcomes.",
+    "red_teamer": "Several governance gaps are apparent. First, the flat toxicity rate (0.31-0.34) across all tax rates means a strategic agent could maintain exploitative behavior and simply absorb the tax as a cost of doing business \u2014 the tax is not punitive enough to deter. Second, the circuit breaker only freezes 0-1 agents per run, suggesting either the threshold is too lenient or adversarial agents stay just below it. A smarter adversary could calibrate behavior to avoid triggering the breaker while still extracting value. Third, deceptive agents actually earn more than opportunistic agents at tax rates 0.05 and 0.10 \u2014 this is a red flag that the governance mechanism may inadvertently reward sophisticated deception over simple opportunism. Fourth, the study doesn't test collusion scenarios where multiple adversarial agents coordinate to game the tax or overwhelm the circuit breaker. Fifth, with quality_gap stable at 0.17-0.18, an adversary could potentially manipulate the acceptance mechanism by appearing just above the acceptance threshold."
+  },
+  "rankings": {
+    "mechanism_designer": [
+      "mechanism_designer",
+      "red_teamer",
+      "statistician"
+    ],
+    "statistician": [
+      "statistician",
+      "mechanism_designer",
+      "red_teamer"
+    ],
+    "red_teamer": [
+      "red_teamer",
+      "mechanism_designer",
+      "statistician"
+    ]
+  },
+  "aggregate_ranking": [
+    "mechanism_designer",
+    "red_teamer",
+    "statistician"
+  ],
+  "members_responded": 3,
+  "members_total": 3,
+  "success": true,
+  "error": null
+}

@@ -150,6 +150,121 @@ class GitObserver:
                 current_path = None
         return worktrees
 
+    # --- Branch-based observables ---
+
+    def get_feature_branches(
+        self, base: str = "origin/main"
+    ) -> List[Dict[str, str]]:
+        """Return unmerged remote feature branches.
+
+        Each entry contains:
+            branch: full ref name (e.g. ``origin/claude/fix-bug``)
+            agent:  inferred agent name from first path segment after remote
+            slug:   remaining path after agent prefix
+        """
+        result = _run_git(
+            ["branch", "-r", "--no-merged", base, "--format=%(refname:short)"],
+            cwd=self._workspace_path,
+        )
+        if not result or result.returncode != 0:
+            return []
+
+        branches: List[Dict[str, str]] = []
+        for line in result.stdout.strip().splitlines():
+            ref = line.strip()
+            if not ref or "->" in ref:
+                continue
+            # Strip remote prefix (e.g. "origin/")
+            without_remote = ref.split("/", 1)[1] if "/" in ref else ref
+            parts = without_remote.split("/", 1)
+            agent = parts[0]
+            slug = parts[1] if len(parts) > 1 else without_remote
+            branches.append({"branch": ref, "agent": agent, "slug": slug})
+        return branches
+
+    def get_branch_stats(
+        self, branch: str, base: str = "origin/main"
+    ) -> dict:
+        """Compute PR-related observables for a remote branch vs *base*.
+
+        Same return schema as :meth:`get_pr_stats` so the mapper can
+        consume either interchangeably.
+        """
+        cwd = self._workspace_path
+        stats: dict = {
+            "commit_count": 0,
+            "files_changed": 0,
+            "review_iterations": 0,
+            "ci_failures": 0,
+            "time_to_merge_hours": None,
+        }
+
+        # Commit count since divergence from base
+        result = _run_git(
+            ["rev-list", "--count", branch, f"^{base}"], cwd=cwd
+        )
+        if result and result.returncode == 0:
+            try:
+                stats["commit_count"] = int(result.stdout.strip())
+            except ValueError:
+                pass
+
+        # Files changed
+        result = _run_git(
+            ["diff", "--name-only", f"{base}...{branch}"], cwd=cwd
+        )
+        if result and result.returncode == 0:
+            files = [f for f in result.stdout.strip().splitlines() if f]
+            stats["files_changed"] = len(files)
+
+        # Review iterations (fixup/amend/fix commits)
+        result = _run_git(
+            ["log", "--oneline", f"{base}..{branch}"], cwd=cwd
+        )
+        if result and result.returncode == 0:
+            rework = 0
+            for line in result.stdout.strip().splitlines():
+                low = line.lower()
+                if any(
+                    k in low
+                    for k in ("fixup!", "squash!", "amend", "fix:", "fix ")
+                ):
+                    rework += 1
+            stats["review_iterations"] = rework
+
+        # CI failures (commits with "[ci-fail]" in message)
+        result = _run_git(
+            ["log", "--oneline", "--grep=[ci-fail]", f"{base}..{branch}"],
+            cwd=cwd,
+        )
+        if result and result.returncode == 0:
+            failures = [
+                line for line in result.stdout.strip().splitlines() if line
+            ]
+            stats["ci_failures"] = len(failures)
+
+        # Time span: first commit to last commit on branch
+        result = _run_git(
+            ["log", "--format=%aI", f"{base}..{branch}"], cwd=cwd
+        )
+        if result and result.returncode == 0:
+            timestamps = [
+                line.strip()
+                for line in result.stdout.strip().splitlines()
+                if line.strip()
+            ]
+            if len(timestamps) >= 2:
+                try:
+                    t0 = datetime.fromisoformat(timestamps[-1])
+                    t1 = datetime.fromisoformat(timestamps[0])
+                    stats["time_to_merge_hours"] = (
+                        t1 - t0
+                    ).total_seconds() / 3600.0
+                except (ValueError, IndexError):
+                    pass
+
+        return stats
+
     def get_recent_activity(
         self, agent_name: str, since: datetime
     ) -> List[GasTownEvent]:

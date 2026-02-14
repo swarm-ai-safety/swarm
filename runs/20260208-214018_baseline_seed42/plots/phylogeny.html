@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Agent Phylogeny — 20260208-214018_baseline_seed42</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0a0a1a;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;display:flex;justify-content:center;padding:20px}
+#container{max-width:1200px;width:100%}
+h1{font-size:1.1em;color:#fff;margin-bottom:12px;font-weight:500}
+#canvas-wrap{position:relative}
+canvas{display:block;border-radius:6px;border:1px solid rgba(255,255,255,0.08)}
+#controls{display:flex;align-items:center;gap:10px;margin-top:10px;padding:8px 0;flex-wrap:wrap}
+#playBtn{background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);color:#fff;padding:6px 14px;border-radius:4px;cursor:pointer;font-size:14px;min-width:38px;text-align:center}
+#playBtn:hover{background:rgba(255,255,255,0.18)}
+input[type=range]{-webkit-appearance:none;height:4px;background:rgba(255,255,255,0.15);border-radius:2px;outline:none}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;background:#fff;border-radius:50%;cursor:pointer}
+#epochSlider{flex:1;min-width:120px}
+#epoch-display{color:#888;font-size:.85em;font-family:monospace;min-width:110px}
+#legend{display:flex;gap:16px;margin-top:6px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:.8em;color:#aaa}
+.legend-dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+#tooltip{position:absolute;display:none;background:rgba(0,0,0,0.88);border:1px solid rgba(255,255,255,0.15);border-radius:6px;padding:8px 12px;font-size:.8em;font-family:monospace;line-height:1.5;pointer-events:none;z-index:10;color:#e0e0e0;max-width:250px}
+.speed-label{margin-left:auto;font-size:.8em;color:#888;display:flex;align-items:center;gap:6px}
+#speedSlider{width:80px}
+</style>
+</head>
+<body>
+<div id="container">
+  <h1>Agent Phylogeny — 20260208-214018_baseline_seed42</h1>
+  <div id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+    <div id="tooltip"></div>
+  </div>
+  <div id="controls">
+    <button id="playBtn">&#9654;</button>
+    <input type="range" id="epochSlider" min="0" max="1" value="0" step="0.01">
+    <span id="epoch-display">Epoch 0 / 0</span>
+    <span class="speed-label">Speed
+      <input type="range" id="speedSlider" min="1" max="20" value="5">
+    </span>
+  </div>
+  <div id="legend"></div>
+</div>
+
+<script>
+(function(){
+"use strict";
+
+// === Embedded data ===
+var AGENT_DATA = {"agents": {"honest_1": {"agent_type": "honest", "epochs": [{"epoch": 0, "reputation": 0.34654366135847414, "cumulative_payoff": 1.660076779585224, "n_interactions": 3, "avg_p": 0.702239284352272, "is_frozen": false}, {"epoch": 1, "reputation": 0.6453756770038864, "cumulative_payoff": 2.3583248030533426, "n_interactions": 1, "avg_p": 0.7988320156454123, "is_frozen": false}, {"epoch": 2, "reputation": 0.8488249820572679, "cumulative_payoff": 4.033329278631048, "n_interactions": 3, "avg_p": 0.7055565501283789, "is_frozen": false}, {"epoch": 3, "reputation": 1.2972409170735886, "cumulative_payoff": 5.940903758408946, "n_interactions": 4, "avg_p": 0.6512624132963163, "is_frozen": false}, {"epoch": 4, "reputation": 1.5704890572101038, "cumulative_payoff": 7.143529970290653, "n_interactions": 2, "avg_p": 0.7342087372939023, "is_frozen": false}, {"epoch": 5, "reputation": 2.0943159983707593, "cumulative_payoff": 9.142271796965215, "n_interactions": 3, "avg_p": 0.7774981837054583, "is_frozen": false}, {"epoch": 6, "reputation": 2.0943159983707593, "cumulative_payoff": 10.449453498633718, "n_interactions": 2, "avg_p": 0.7690605672228346, "is_frozen": false}, {"epoch": 7, "reputation": 2.0943159983707593, "cumulative_payoff": 10.449453498633718, "n_interactions": 0, "avg_p": 0.5, "is_frozen": false}, {"epoch": 8, "reputation": 2.0943159983707593, "cumulative_payoff": 11.186528868156254, "n_interactions": 1, "avg_p": 0.8247169130150238, "is_frozen": false}, {"epoch": 9, "reputation": 2.3595630938297747, "cumulative_payoff": 12.41608252510342, "n_interactions": 2, "avg_p": 0.7431845523157216, "is_frozen": false}]}, "honest_2": {"agent_type": "honest", "epochs": [{"epoch": 0, "reputation": 0.0, "cumulative_payoff": 0.3202393554465161, "n_interactions": 1, "avg_p": 0.5468262369643441, "is_frozen": false}, {"epoch": 1, "reputation": 0.1604418406198831, "cumulative_payoff": 1.249837630148977, "n_interactions": 2, "avg_p": 0.6431994249008204, "is_frozen": false}, {"epoch": 2, "reputation": 0.6507604838113122, "cumulative_payoff": 3.6564035292448134, "n_interactions": 4, "avg_p": 0.734427649849306, "is_frozen": false}, {"epoch": 3, "reputation": 0.6507604838113122, "cumulative_payoff": 3.6564035292448134, "n_interactions": 0, "avg_p": 0.5, "is_frozen": false}, {"epoch": 4, "reputation": 0.9591871973825404, "cumulative_payoff": 4.369043599601656, "n_interactions": 1, "avg_p": 0.8084267135712282, "is_frozen": false}, {"epoch": 5, "reputation": 0.9591871973825404, "cumulative_payoff": 4.369043599601656, "n_interactions": 0, "avg_p": 0.5, "is_frozen": false}, {"epoch": 6, "reputation": 2.005104291422229, "cumulative_payoff": 6.937919240661189, "n_interactions": 4, "avg_p": 0.7614792735099223, "is_frozen": false}, {"epoch": 7, "reputation": 2.005104291422229, "cumulative_payoff": 6.937919240661189, "n_interactions": 0, "avg_p": 0.5, "is_frozen": false}, {"epoch": 8, "reputation": 2.4521908841629094, "cumulative_payoff": 8.10854912977221, "n_interactions": 2, "avg_p": 0.7235432963703403, "is_frozen": false}, {"epoch": 9, "reputation": 2.775163228333287, "cumulative_payoff": 8.843007646027777, "n_interactions": 1, "avg_p": 0.8229723441703776, "is_frozen": false}]}, "honest_3": {"agent_type": "honest", "epochs": [{"epoch": 0, "reputation": 0.2601741916983419, "cumulative_payoff": 2.9220285418890275, "n_interactions": 5, "avg_p": 0.7229371389185371, "is_frozen": false}, {"epoch": 1, "reputation": 0.2601741916983419, "cumulative_payoff": 3.620276565357146, "n_interactions": 1, "avg_p": 0.7988320156454123, "is_frozen": false}, {"epoch": 2, "reputation": 0.6733945370300976, "cumulative_payoff": 5.295281040934851, "n_interactions": 3, "avg_p": 0.7055565501283789, "is_frozen": false}, {"epoch": 3, "reputation": 0.8407486826831867, "cumulative_payoff": 6.9689361619389665, "n_interactions": 3, "avg_p": 0.7052566935564699, "is_frozen": false}, {"epoch": 4, "reputation": 0.8407486826831867, "cumulative_payoff": 7.628808372143739, "n_interactions": 1, "avg_p": 0.7732481401365152, "is_frozen": false}, {"epoch": 5, "reputation": 1.1494162926389058, "cumulative_payoff": 9.948819858436542, "n_interactions": 4, "avg_p": 0.7200019143821338, "is_frozen": false}, {"epoch": 6, "reputation": 1.6875374270845749, "cumulative_payoff": 11.256001560105046, "n_interactions": 2, "avg_p": 0.7690605672228346, "is_frozen": false}, {"epoch": 7, "reputation": 1.6875374270845749, "cumulative_payoff": 11.486716632508612, "n_interactions": 1, "avg_p": 0.48714338160237747, "is_frozen": false}, {"epoch": 8, "reputation": 2.0122543400995987, "cumulative_payoff": 12.980486617104873, "n_interactions": 3, "avg_p": 0.6652822187991692, "is_frozen": false}, {"epoch": 9, "reputation": 2.233376349272026, "cumulative_payoff": 14.210040274052039, "n_interactions": 2, "avg_p": 0.7431845523157216, "is_frozen": false}]}, "opportunistic_1": {"agent_type": "opportunistic", "epochs": [{"epoch": 0, "reputation": 0.5522058024817375, "cumulative_payoff": 1.8283087037226062, "n_interactions": 4, "avg_p": 0.6380514506204343, "is_frozen": false}, {"epoch": 1, "reputation": 0.5522058024817375, "cumulative_payoff": 2.7579069784250674, "n_interactions": 2, "avg_p": 0.6431994249008204, "is_frozen": false}, {"epoch": 2, "reputation": 1.1949593152891942, "cumulative_payoff": 5.707515212423397, "n_interactions": 5, "avg_p": 0.7266144311997772, "is_frozen": false}, {"epoch": 3, "reputation": 1.3001827093159295, "cumulative_payoff": 6.3653503034635, "n_interactions": 2, "avg_p": 0.5526116970133677, "is_frozen": false}, {"epoch": 4, "reputation": 1.3001827093159295, "cumulative_payoff": 7.620744375497277, "n_interactions": 2, "avg_p": 0.751798024011259, "is_frozen": false}, {"epoch": 5, "reputation": 1.3476958157280896, "cumulative_payoff": 7.942014035115517, "n_interactions": 1, "avg_p": 0.5475131064121601, "is_frozen": false}, {"epoch": 6, "reputation": 1.3476958157280896, "cumulative_payoff": 10.747755062374951, "n_interactions": 5, "avg_p": 0.7074321369679243, "is_frozen": false}, {"epoch": 7, "reputation": 1.4095429347713995, "cumulative_payoff": 11.340525740939915, "n_interactions": 2, "avg_p": 0.5309235595216548, "is_frozen": false}, {"epoch": 8, "reputation": 1.7328515199697978, "cumulative_payoff": 13.746118507848532, "n_interactions": 5, "avg_p": 0.6540790355878158, "is_frozen": false}, {"epoch": 9, "reputation": 1.7328515199697978, "cumulative_payoff": 14.480577024104099, "n_interactions": 1, "avg_p": 0.8229723441703776, "is_frozen": false}]}, "deceptive_1": {"agent_type": "deceptive", "epochs": [{"epoch": 0, "reputation": 0.0, "cumulative_payoff": 0.24611758597228678, "n_interactions": 1, "avg_p": 0.4974117239815245, "is_frozen": false}, {"epoch": 1, "reputation": 0.0, "cumulative_payoff": 0.24611758597228678, "n_interactions": 0, "avg_p": 0.5, "is_frozen": false}, {"epoch": 2, "reputation": 0.0, "cumulative_payoff": 0.7891599208747797, "n_interactions": 1, "avg_p": 0.695361556601662, "is_frozen": false}, {"epoch": 3, "reputation": 0.0, "cumulative_payoff": 1.2130756531410998, "n_interactions": 1, "avg_p": 0.61594382151088, "is_frozen": false}, {"epoch": 4, "reputation": 0.0, "cumulative_payoff": 1.2130756531410998, "n_interactions": 0, "avg_p": 0.5, "is_frozen": false}, {"epoch": 5, "reputation": 0.0, "cumulative_payoff": 1.2130756531410998, "n_interactions": 0, "avg_p": 0.5, "is_frozen": false}, {"epoch": 6, "reputation": 0.0, "cumulative_payoff": 1.4499410393409984, "n_interactions": 1, "avg_p": 0.49124359079993235, "is_frozen": false}, {"epoch": 7, "reputation": 0.0, "cumulative_payoff": 1.8119966455023968, "n_interactions": 1, "avg_p": 0.5747037374409323, "is_frozen": false}, {"epoch": 8, "reputation": 0.0, "cumulative_payoff": 2.290264908226269, "n_interactions": 1, "avg_p": 0.6521788418159147, "is_frozen": false}, {"epoch": 9, "reputation": 0.0, "cumulative_payoff": 2.290264908226269, "n_interactions": 0, "avg_p": 0.5, "is_frozen": false}]}}, "n_epochs": 10, "n_agents": 5};
+var ECOSYSTEM_DATA = {"epochs": [{"epoch": 0, "toxicity_rate": 0.3344394777802066, "ecosystem_threat_level": 0.0, "quality_gap": 0.0, "n_agents": 5, "n_frozen": 0, "total_welfare": 6.9767709666156605}, {"epoch": 1, "toxicity_rate": 0.2703630718673523, "ecosystem_threat_level": 0.0, "quality_gap": 0.10367991895089013, "n_agents": 5, "n_frozen": 0, "total_welfare": 2.377821568795886}, {"epoch": 2, "toxicity_rate": 0.28128227420199714, "ecosystem_threat_level": 0.0, "quality_gap": 0.0, "n_agents": 5, "n_frozen": 0, "total_welfare": 9.249225419152069}, {"epoch": 3, "toxicity_rate": 0.355801305060771, "ecosystem_threat_level": 0.0, "quality_gap": 0.0, "n_agents": 5, "n_frozen": 0, "total_welfare": 4.662980424088435}, {"epoch": 4, "toxicity_rate": 0.2091625731461283, "ecosystem_threat_level": 0.0, "quality_gap": 0.09566809240258212, "n_agents": 5, "n_frozen": 0, "total_welfare": 2.7450245611232305}, {"epoch": 5, "toxicity_rate": 0.2799980856178663, "ecosystem_threat_level": 0.0, "quality_gap": 0.0, "n_agents": 5, "n_frozen": 0, "total_welfare": 4.640022972585605}, {"epoch": 6, "toxicity_rate": 0.2359936285857737, "ecosystem_threat_level": 0.0, "quality_gap": 0.272762780614294, "n_agents": 5, "n_frozen": 0, "total_welfare": 7.752114685456074}, {"epoch": 7, "toxicity_rate": 0.4690764404783451, "ecosystem_threat_level": 0.0, "quality_gap": 0.0, "n_agents": 5, "n_frozen": 0, "total_welfare": 1.1855413571299294}, {"epoch": 8, "toxicity_rate": 0.3174813181743162, "ecosystem_threat_level": 0.0, "quality_gap": 0.0, "n_agents": 5, "n_frozen": 0, "total_welfare": 6.285336272862309}, {"epoch": 9, "toxicity_rate": 0.23021951706605978, "ecosystem_threat_level": 0.0, "quality_gap": 0.0, "n_agents": 5, "n_frozen": 0, "total_welfare": 3.9280243464054623}]};
+var CONFIG = {"width": 1200, "height": 800, "colors": {"honest": "#22c55e", "opportunistic": "#eab308", "deceptive": "#8b5cf6", "adversarial": "#ef4444", "rlm": "#06b6d4"}, "default_color": "#6b7280"};
+
+// === Constants ===
+var COLORS = CONFIG.colors || {};
+var DEFAULT_COLOR = CONFIG.default_color || "#6b7280";
+var W = CONFIG.width || 1200;
+var H = CONFIG.height || 800;
+
+// === Canvas setup ===
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext("2d");
+var dpr = window.devicePixelRatio || 1;
+canvas.width = W * dpr;
+canvas.height = H * dpr;
+canvas.style.width = W + "px";
+canvas.style.height = H + "px";
+ctx.scale(dpr, dpr);
+
+// === Plot margins ===
+var margin = {top: 40, right: 30, bottom: 50, left: 70};
+var plotW = W - margin.left - margin.right;
+var plotH = H - margin.top - margin.bottom;
+
+// === Compute data ranges ===
+var repMin = Infinity, repMax = -Infinity;
+var payMin = Infinity, payMax = -Infinity;
+var agentIds = Object.keys(AGENT_DATA.agents);
+
+for (var i = 0; i < agentIds.length; i++) {
+    var ag = AGENT_DATA.agents[agentIds[i]];
+    for (var j = 0; j < ag.epochs.length; j++) {
+        var ep = ag.epochs[j];
+        if (ep.reputation < repMin) repMin = ep.reputation;
+        if (ep.reputation > repMax) repMax = ep.reputation;
+        if (ep.cumulative_payoff < payMin) payMin = ep.cumulative_payoff;
+        if (ep.cumulative_payoff > payMax) payMax = ep.cumulative_payoff;
+    }
+}
+
+// Add padding
+var repPad = Math.max((repMax - repMin) * 0.12, 0.05);
+var payPad = Math.max((payMax - payMin) * 0.12, 0.1);
+repMin -= repPad; repMax += repPad;
+payMin -= payPad; payMax += payPad;
+
+var maxEpoch = Math.max(AGENT_DATA.n_epochs - 1, 0);
+
+// === Perlin noise (3D, classic) ===
+var Perlin = (function() {
+    var p = new Uint8Array(512);
+    var perm = new Uint8Array(256);
+    for (var i = 0; i < 256; i++) perm[i] = i;
+    // Fisher-Yates shuffle
+    for (var i = 255; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = perm[i]; perm[i] = perm[j]; perm[j] = tmp;
+    }
+    for (var i = 0; i < 512; i++) p[i] = perm[i & 255];
+
+    function fade(t) { return t * t * t * (t * (t * 6 - 15) + 10); }
+    function lerp(a, b, t) { return a + t * (b - a); }
+    function grad3(hash, x, y, z) {
+        var h = hash & 15;
+        var u = h < 8 ? x : y;
+        var v = h < 4 ? y : (h === 12 || h === 14 ? x : z);
+        return ((h & 1) ? -u : u) + ((h & 2) ? -v : v);
+    }
+
+    return {
+        noise: function(x, y, z) {
+            var X = Math.floor(x) & 255;
+            var Y = Math.floor(y) & 255;
+            var Z = Math.floor(z) & 255;
+            x -= Math.floor(x);
+            y -= Math.floor(y);
+            z -= Math.floor(z);
+            var u = fade(x), v = fade(y), w = fade(z);
+            var A  = p[X] + Y, AA = p[A] + Z, AB = p[A + 1] + Z;
+            var B  = p[X + 1] + Y, BA = p[B] + Z, BB = p[B + 1] + Z;
+            return lerp(
+                lerp(
+                    lerp(grad3(p[AA], x, y, z), grad3(p[BA], x-1, y, z), u),
+                    lerp(grad3(p[AB], x, y-1, z), grad3(p[BB], x-1, y-1, z), u),
+                    v),
+                lerp(
+                    lerp(grad3(p[AA+1], x, y, z-1), grad3(p[BA+1], x-1, y, z-1), u),
+                    lerp(grad3(p[AB+1], x, y-1, z-1), grad3(p[BB+1], x-1, y-1, z-1), u),
+                    v),
+                w);
+        }
+    };
+})();
+
+// === Build agent objects ===
+function hexToRGB(hex) {
+    return [parseInt(hex.slice(1,3),16), parseInt(hex.slice(3,5),16), parseInt(hex.slice(5,7),16)];
+}
+
+var agents = [];
+for (var i = 0; i < agentIds.length; i++) {
+    var id = agentIds[i];
+    var d = AGENT_DATA.agents[id];
+    var color = COLORS[d.agent_type] || DEFAULT_COLOR;
+    var rgb = hexToRGB(color);
+    agents.push({
+        id: id,
+        type: d.agent_type,
+        epochs: d.epochs,
+        color: color,
+        rgbStr: rgb[0] + "," + rgb[1] + "," + rgb[2],
+        x: W / 2,
+        y: H / 2,
+        trail: []
+    });
+}
+
+// === State ===
+var currentEpoch = 0;
+var playing = false;
+var baseSpeed = 0.4;
+var flowTime = 0;
+var lastTS = null;
+
+// === Controls ===
+var playBtn = document.getElementById("playBtn");
+var epochSlider = document.getElementById("epochSlider");
+var speedSlider = document.getElementById("speedSlider");
+var epochDisplay = document.getElementById("epoch-display");
+var tooltip = document.getElementById("tooltip");
+
+epochSlider.max = maxEpoch || 1;
+epochSlider.step = 0.01;
+
+playBtn.addEventListener("click", function() {
+    playing = !playing;
+    playBtn.innerHTML = playing ? "&#9646;&#9646;" : "&#9654;";
+    if (playing && currentEpoch >= maxEpoch) currentEpoch = 0;
+});
+
+epochSlider.addEventListener("input", function() {
+    currentEpoch = parseFloat(epochSlider.value);
+    playing = false;
+    playBtn.innerHTML = "&#9654;";
+});
+
+// === Helpers ===
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+function dataToCanvas(rep, pay) {
+    var x = margin.left + (rep - repMin) / (repMax - repMin) * plotW;
+    var y = margin.top + plotH - (pay - payMin) / (payMax - payMin) * plotH;
+    return {x: x, y: y};
+}
+
+function getAgentState(agent, epoch) {
+    var eps = agent.epochs;
+    if (!eps || eps.length === 0) return null;
+    var idx = Math.floor(epoch);
+    var frac = epoch - idx;
+    if (idx >= eps.length - 1) return eps[eps.length - 1];
+    var a = eps[idx];
+    var b = eps[Math.min(idx + 1, eps.length - 1)];
+    return {
+        reputation: lerp(a.reputation, b.reputation, frac),
+        cumulative_payoff: lerp(a.cumulative_payoff, b.cumulative_payoff, frac),
+        n_interactions: lerp(a.n_interactions, b.n_interactions, frac),
+        avg_p: lerp(a.avg_p, b.avg_p, frac),
+        is_frozen: frac < 0.5 ? a.is_frozen : b.is_frozen
+    };
+}
+
+function getEcoState(epoch) {
+    var eps = ECOSYSTEM_DATA.epochs;
+    if (!eps || eps.length === 0) return {toxicity_rate:0, ecosystem_threat_level:0, quality_gap:0, total_welfare:0};
+    var idx = Math.floor(epoch);
+    var frac = epoch - idx;
+    if (idx >= eps.length - 1) return eps[eps.length - 1];
+    var a = eps[idx];
+    var b = eps[Math.min(idx + 1, eps.length - 1)];
+    return {
+        toxicity_rate: lerp(a.toxicity_rate||0, b.toxicity_rate||0, frac),
+        ecosystem_threat_level: lerp(a.ecosystem_threat_level||0, b.ecosystem_threat_level||0, frac),
+        quality_gap: lerp(a.quality_gap||0, b.quality_gap||0, frac),
+        total_welfare: lerp(a.total_welfare||0, b.total_welfare||0, frac)
+    };
+}
+
+// === Drawing functions ===
+
+function drawBackground(eco) {
+    var tox = Math.min(eco.toxicity_rate || 0, 1);
+    var grad = ctx.createRadialGradient(W/2, H/2, 0, W/2, H/2, W * 0.7);
+    var r = Math.round(10 + tox * 40);
+    var g = Math.round(10 + (1 - tox) * 15);
+    grad.addColorStop(0, "rgb(" + r + "," + g + ",26)");
+    grad.addColorStop(1, "#0a0a1a");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+}
+
+function drawGrid() {
+    ctx.save();
+    ctx.strokeStyle = "rgba(255,255,255,0.06)";
+    ctx.lineWidth = 1;
+    var nx = 6, ny = 6;
+    for (var i = 0; i <= nx; i++) {
+        var x = margin.left + (i / nx) * plotW;
+        ctx.beginPath(); ctx.moveTo(x, margin.top); ctx.lineTo(x, H - margin.bottom); ctx.stroke();
+    }
+    for (var i = 0; i <= ny; i++) {
+        var y = margin.top + (i / ny) * plotH;
+        ctx.beginPath(); ctx.moveTo(margin.left, y); ctx.lineTo(W - margin.right, y); ctx.stroke();
+    }
+    ctx.restore();
+}
+
+function drawAxes() {
+    ctx.save();
+    ctx.fillStyle = "#666";
+    ctx.font = "11px monospace";
+    ctx.textAlign = "center";
+
+    var nx = 6;
+    for (var i = 0; i <= nx; i++) {
+        var x = margin.left + (i / nx) * plotW;
+        var val = repMin + (i / nx) * (repMax - repMin);
+        ctx.fillText(val.toFixed(2), x, H - margin.bottom + 16);
+    }
+    ctx.fillStyle = "#888";
+    ctx.fillText("Reputation", W / 2, H - 8);
+
+    ctx.textAlign = "right";
+    ctx.fillStyle = "#666";
+    var ny = 6;
+    for (var i = 0; i <= ny; i++) {
+        var y = margin.top + (i / ny) * plotH;
+        var val = payMax - (i / ny) * (payMax - payMin);
+        ctx.fillText(val.toFixed(1), margin.left - 8, y + 4);
+    }
+
+    ctx.save();
+    ctx.translate(14, H / 2);
+    ctx.rotate(-Math.PI / 2);
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#888";
+    ctx.fillText("Cumulative Payoff", 0, 0);
+    ctx.restore();
+
+    ctx.restore();
+}
+
+function drawFlowField(eco) {
+    var step = 55;
+    var turb = 0.3 + (eco.toxicity_rate || 0) * 0.7;
+    ctx.save();
+    ctx.globalAlpha = 0.04 + turb * 0.04;
+    ctx.strokeStyle = "#ffffff";
+    ctx.lineWidth = 0.8;
+    for (var x = margin.left + step / 2; x < W - margin.right; x += step) {
+        for (var y = margin.top + step / 2; y < H - margin.bottom; y += step) {
+            var angle = Perlin.noise(x * 0.005 * turb, y * 0.005 * turb, flowTime * 0.3) * Math.PI * 2;
+            var len = 10 + turb * 6;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len);
+            ctx.stroke();
+        }
+    }
+    ctx.restore();
+}
+
+function drawTrail(agent) {
+    var trail = agent.trail;
+    if (trail.length < 2) return;
+    for (var i = 1; i < trail.length; i++) {
+        var alpha = (i / trail.length) * 0.35;
+        ctx.beginPath();
+        ctx.moveTo(trail[i-1].x, trail[i-1].y);
+        ctx.lineTo(trail[i].x, trail[i].y);
+        ctx.strokeStyle = "rgba(" + agent.rgbStr + "," + alpha + ")";
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+    }
+}
+
+function drawAgent(agent, state) {
+    var radius = Math.max(3, Math.min(3 + Math.sqrt(Math.max(state.n_interactions, 0)) * 2.2, 14));
+
+    ctx.save();
+    if (state.is_frozen) ctx.globalAlpha = 0.4;
+
+    // Glow
+    ctx.shadowColor = agent.color;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(agent.x, agent.y, radius, 0, Math.PI * 2);
+    ctx.fillStyle = agent.color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    // Inner bright core
+    ctx.beginPath();
+    ctx.arc(agent.x, agent.y, radius * 0.45, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.fill();
+
+    // Frozen ring
+    if (state.is_frozen) {
+        ctx.setLineDash([3, 3]);
+        ctx.strokeStyle = "#88ccff";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(agent.x, agent.y, radius + 3, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    ctx.restore();
+}
+
+function drawHUD(eco) {
+    ctx.save();
+    ctx.fillStyle = "#666";
+    ctx.font = "11px monospace";
+    ctx.textAlign = "right";
+    var lines = [
+        "Toxicity: " + ((eco.toxicity_rate || 0) * 100).toFixed(1) + "%",
+        "Threat: " + ((eco.ecosystem_threat_level || 0) * 100).toFixed(1) + "%",
+        "Welfare: " + (eco.total_welfare || 0).toFixed(1)
+    ];
+    for (var i = 0; i < lines.length; i++) {
+        ctx.fillText(lines[i], W - margin.right, margin.top + 15 + i * 16);
+    }
+    ctx.restore();
+}
+
+// === Tooltip ===
+canvas.addEventListener("mousemove", function(e) {
+    var rect = canvas.getBoundingClientRect();
+    var mx = (e.clientX - rect.left) * (W / rect.width);
+    var my = (e.clientY - rect.top) * (H / rect.height);
+
+    var closest = null;
+    var closestDist = 22;
+
+    for (var i = 0; i < agents.length; i++) {
+        var dx = agents[i].x - mx;
+        var dy = agents[i].y - my;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < closestDist) {
+            closestDist = dist;
+            closest = agents[i];
+        }
+    }
+
+    if (closest) {
+        var state = getAgentState(closest, currentEpoch);
+        tooltip.style.display = "block";
+        var tx = e.clientX - rect.left + 15;
+        var ty = e.clientY - rect.top - 10;
+        if (tx + 200 > rect.width) tx = e.clientX - rect.left - 210;
+        tooltip.style.left = tx + "px";
+        tooltip.style.top = ty + "px";
+        tooltip.innerHTML =
+            "<b>" + closest.id + "</b> (" + closest.type + ")<br>" +
+            "Rep: " + state.reputation.toFixed(3) + "<br>" +
+            "Payoff: " + state.cumulative_payoff.toFixed(3) + "<br>" +
+            "Avg p: " + state.avg_p.toFixed(3) + "<br>" +
+            "Interactions: " + Math.round(state.n_interactions);
+    } else {
+        tooltip.style.display = "none";
+    }
+});
+
+canvas.addEventListener("mouseleave", function() {
+    tooltip.style.display = "none";
+});
+
+// === Build legend ===
+var legendEl = document.getElementById("legend");
+var typesPresent = {};
+for (var i = 0; i < agents.length; i++) typesPresent[agents[i].type] = true;
+var typeOrder = ["honest", "opportunistic", "deceptive", "adversarial", "rlm"];
+for (var i = 0; i < typeOrder.length; i++) {
+    var t = typeOrder[i];
+    if (!typesPresent[t]) continue;
+    var item = document.createElement("div");
+    item.className = "legend-item";
+    item.innerHTML = '<span class="legend-dot" style="background:' + (COLORS[t] || DEFAULT_COLOR) + '"></span>' + t;
+    legendEl.appendChild(item);
+}
+
+// === Animation loop ===
+function animate(ts) {
+    if (lastTS === null) lastTS = ts;
+    var dt = Math.min((ts - lastTS) / 1000, 0.1);  // clamp to avoid jumps
+    lastTS = ts;
+
+    if (playing) {
+        var speedFactor = parseFloat(speedSlider.value) / 5;
+        currentEpoch += dt * baseSpeed * speedFactor;
+        if (currentEpoch >= maxEpoch) {
+            currentEpoch = maxEpoch;
+            playing = false;
+            playBtn.innerHTML = "&#9654;";
+        }
+        epochSlider.value = currentEpoch;
+    }
+
+    flowTime += dt;
+
+    epochDisplay.textContent = "Epoch " + Math.floor(currentEpoch) + " / " + maxEpoch;
+
+    var eco = getEcoState(currentEpoch);
+    var turb = 0.3 + (eco.toxicity_rate || 0) * 0.7;
+    var threatDrift = (eco.ecosystem_threat_level || 0) * 0.5;
+
+    // Clear & draw background
+    drawBackground(eco);
+    drawGrid();
+    drawFlowField(eco);
+
+    // Update agents
+    for (var i = 0; i < agents.length; i++) {
+        var agent = agents[i];
+        var state = getAgentState(agent, currentEpoch);
+        if (!state) continue;
+
+        var pos = dataToCanvas(state.reputation, state.cumulative_payoff);
+
+        // Flow field perturbation
+        var angle = Perlin.noise(pos.x * 0.008, pos.y * 0.008, flowTime * 0.4) * Math.PI * 2;
+        var pertStr = 2 + turb * 5;
+        agent.x = pos.x + Math.cos(angle) * pertStr;
+        agent.y = pos.y + Math.sin(angle) * pertStr + threatDrift * 2;
+
+        // Clamp to plot area
+        agent.x = Math.max(margin.left, Math.min(W - margin.right, agent.x));
+        agent.y = Math.max(margin.top, Math.min(H - margin.bottom, agent.y));
+
+        // Trail
+        agent.trail.push({x: agent.x, y: agent.y});
+        if (agent.trail.length > 45) agent.trail.shift();
+
+        drawTrail(agent);
+        drawAgent(agent, state);
+    }
+
+    drawAxes();
+    drawHUD(eco);
+
+    requestAnimationFrame(animate);
+}
+
+// Start
+requestAnimationFrame(animate);
+
+})();
+</script>
+</body>
+</html>

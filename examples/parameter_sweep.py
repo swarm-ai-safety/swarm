@@ -41,6 +41,25 @@ def main():
         default=Path("scenarios/baseline.yaml"),
         help="Base scenario file",
     )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Base seed for sweep",
+        dest="seed_base",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=5,
+        help="Number of epochs per run",
+    )
+    parser.add_argument(
+        "--runs_per_config",
+        type=int,
+        default=2,
+        help="Number of runs per parameter config",
+    )
     args = parser.parse_args()
 
     print("=" * 60)
@@ -52,8 +71,8 @@ def main():
     print(f"Loading base scenario: {args.scenario}")
     base_scenario = load_scenario(args.scenario)
 
-    # Reduce epochs for faster sweep
-    base_scenario.orchestrator_config.n_epochs = 5
+    # Set epochs
+    base_scenario.orchestrator_config.n_epochs = args.epochs
 
     # Configure sweep
     print("\nConfiguring parameter sweep...")
@@ -69,8 +88,8 @@ def main():
                 values=[False, True],
             ),
         ],
-        runs_per_config=2,  # Multiple runs for statistical significance
-        seed_base=42,
+        runs_per_config=args.runs_per_config,
+        seed_base=args.seed_base,
     )
 
     print(f"  Parameters: {len(sweep_config.parameters)}")

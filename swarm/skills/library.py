@@ -15,6 +15,7 @@ from swarm.skills.model import (
     Skill,
     SkillDomain,
     SkillPerformance,
+    SkillTier,
     SkillType,
     clamp_p,
 )
@@ -151,6 +152,55 @@ class SkillLibrary:
     def get_skills_by_type(self, skill_type: SkillType) -> List[Skill]:
         """Get all skills of a given type."""
         return [s for s in self._skills.values() if s.skill_type == skill_type]
+
+    def get_skills_by_tier(self, tier: SkillTier) -> List[Skill]:
+        """Get all skills in a given tier (GENERAL or TASK_SPECIFIC)."""
+        return [s for s in self._skills.values() if s.tier == tier]
+
+    def select_best_skill_tiered(
+        self,
+        domain: SkillDomain,
+        context: Dict,
+        exploration_rate: float = 0.1,
+    ) -> Optional[Skill]:
+        """SkillRL-style tiered retrieval: task-specific first, general fallback.
+
+        Retrieves the best applicable task-specific skill for the domain.
+        If none is found, falls back to the best applicable general skill.
+        """
+        import random as _random
+
+        # Try task-specific skills in the requested domain
+        task_applicable = [
+            s for s in self.get_applicable_skills(domain, context)
+            if s.tier == SkillTier.TASK_SPECIFIC
+        ]
+        if task_applicable:
+            if _random.random() < exploration_rate:
+                return _random.choice(task_applicable)
+            return max(
+                task_applicable,
+                key=lambda s: self._performance.get(
+                    s.skill_id, SkillPerformance()
+                ).effectiveness,
+            )
+
+        # Fallback to general-tier skills (domain-agnostic)
+        general_applicable = [
+            s for s in self._skills.values()
+            if s.tier == SkillTier.GENERAL and self._condition_matches(s, context)
+        ]
+        if general_applicable:
+            if _random.random() < exploration_rate:
+                return _random.choice(general_applicable)
+            return max(
+                general_applicable,
+                key=lambda s: self._performance.get(
+                    s.skill_id, SkillPerformance()
+                ).effectiveness,
+            )
+
+        return None
 
     def get_applicable_skills(
         self,

@@ -1,0 +1,147 @@
+# Delegation Games Scenario
+# Inspired by Tomašev, Franklin & Osindero (2026) "Intelligent AI Delegation"
+# (arXiv:2602.11865)
+#
+# Tests delegation failure modes in multi-agent task allocation:
+# - Capability overestimation (agents claiming skills they lack)
+# - Sandbagging (strategic underperformance to avoid future delegation)
+# - Deceptive alignment (appearing trustworthy to gain delegation authority)
+# - Cascading delegation (agents re-delegating without accountability)
+#
+# Principal agents post bounties (delegation), delegates bid and execute.
+# Governance levers test whether trust calibration, audits, and reputation
+# can catch delegation failures before they cascade.
+
+scenario_id: delegation_games
+description: "Delegation failure modes: trust calibration, sandbagging, and cascading re-delegation"
+motif: delegation_test
+
+agents:
+  # Principals: honest agents who delegate via bounties
+  - type: honest
+    count: 3
+    config:
+      post_probability: 0.1
+      interact_probability: 0.5
+      # Principals are bounty-heavy — they delegate work
+      acceptance_threshold: 0.45
+
+  # Competent delegates: reliably deliver quality work
+  - type: honest
+    count: 2
+    config:
+      post_probability: 0.1
+      interact_probability: 0.3
+      acceptance_threshold: 0.3
+
+  # Sandbagging delegates: strategically underperform
+  - type: opportunistic
+    count: 2
+    config:
+      free_ride_probability: 0.6
+      risk_tolerance: 0.7
+      payoff_threshold: 0.1
+
+  # Capability-faking delegates: claim skills they lack
+  - type: deceptive
+    count: 1
+    config:
+      trust_building_phase: 3
+      exploitation_threshold: 0.5
+      facade_probability: 0.9
+
+  # Cascading re-delegator: accepts work then sub-delegates
+  - type: opportunistic
+    count: 1
+    config:
+      free_ride_probability: 0.8
+      risk_tolerance: 0.9
+      payoff_threshold: -0.1
+
+  # Adversarial delegate: actively sabotages delegated work
+  - type: adversarial
+    count: 1
+
+marketplace:
+  enabled: true
+  escrow_fee_rate: 0.03
+  min_bounty_amount: 2.0
+  max_bids_per_bounty: 10
+  bid_deadline_epochs: 2
+  dispute_resolution_epochs: 1
+  auto_expire_bounties: true
+  dispute_default_split: 0.5
+
+governance:
+  # Reputation decay: delegates must maintain performance
+  reputation_decay_rate: 0.92
+
+  # Transaction tax: cost of delegation overhead
+  transaction_tax_rate: 0.05
+  transaction_tax_split: 0.5
+
+  # Circuit breaker: freeze agents with too many failures
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+  # Random audit: catch sandbagging and capability faking
+  audit_enabled: true
+  audit_probability: 0.15
+  audit_penalty_multiplier: 2.5
+  audit_threshold_p: 0.45
+
+  # Collusion detection: catch cascading re-delegation rings
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.6
+  collusion_min_interactions: 3
+  collusion_score_threshold: 0.4
+  collusion_penalty_multiplier: 1.5
+
+  bandwidth_cap: 12
+
+network:
+  topology: small_world
+  params:
+    k: 4
+    p: 0.15
+  dynamic: true
+  edge_strengthen_rate: 0.12
+  edge_decay_rate: 0.06
+  min_edge_weight: 0.1
+  max_edge_weight: 1.0
+  reputation_disconnect_threshold: -0.5
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 15
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 8
+  interactions_per_step: 6
+  votes_per_epoch: 40
+  tasks_per_epoch: 5
+  bounties_per_epoch: 4
+  bids_per_epoch: 8
+
+payoff:
+  s_plus: 2.5
+  s_minus: 1.5
+  h: 2.5
+  theta: 0.5
+  # Moderate externality internalization — delegates bear some ecosystem cost
+  rho_a: 0.15
+  rho_b: 0.10
+  w_rep: 1.2
+
+success_criteria:
+  min_epochs: 20
+  min_agents: 10
+  toxicity_threshold: 0.45
+
+outputs:
+  event_log: "logs/delegation_games_events.jsonl"
+  metrics_csv: "logs/delegation_games_metrics.csv"

@@ -1043,7 +1043,8 @@ class LLMClient:
             system=system_prompt,
             messages=[{"role": "user", "content": user_prompt}],
         )
-        text = message.content[0].text if message.content else ""
+        block = message.content[0] if message.content else None
+        text = block.text if block is not None and hasattr(block, "text") else ""
         usage = getattr(message, "usage", None)
         in_tokens = getattr(usage, "input_tokens", 0) if usage else 0
         out_tokens = getattr(usage, "output_tokens", 0) if usage else 0

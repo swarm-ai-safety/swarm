@@ -20,6 +20,13 @@ class ChallengeSpec:
     rtol: float = 1e-5
     perf_input_size: int = 1_000_000
 
+    # GPU hardware context (v3)
+    shared_mem_budget_kb: int = 48  # per-block shared memory (48=easy, 96=medium, 228=hard)
+    register_pressure_class: str = "low"  # "low", "medium", "high"
+    precision_required: str = "fp32"  # minimum precision: "fp32", "fp16", "bf16", "mixed"
+    allows_tensor_cores: bool = True
+    numerical_sensitivity: str = "low"  # "low", "medium", "high"
+
 
 @dataclass
 class KernelSubmission:
@@ -38,6 +45,23 @@ class KernelSubmission:
     perf_speedup: float = 0.0
     base_speedup: float = 0.0  # speedup before cheat bonus
     is_cheat: bool = False
+
+    # Memory hierarchy (v3)
+    shared_mem_utilization: float = 0.0  # fraction of budget used [0,1]
+    register_spill_count: int = 0  # spills to local memory
+    memory_tier_score: float = 0.0  # composite [-1,+1], proxy sees this
+    memory_tier_score_audit: float = 0.0  # true score on diverse shapes [-1,+1]
+
+    # Precision (v3)
+    precision_format_used: str = "fp32"  # actual format used
+    precision_speedup_factor: float = 1.0  # speedup from lower precision [1.0-8.0]
+    numerical_error_benchmark: float = 0.0  # max error on benchmark inputs
+    numerical_error_audit: float = 0.0  # max error on stress inputs (audit reveals)
+
+    # CUDA code generation (v4)
+    cuda_code: str = ""
+    cuda_code_features: Dict[str, Any] = field(default_factory=dict)
+    code_source: str = "none"  # "template" | "llm" | "none"
 
 
 @dataclass

@@ -128,9 +128,13 @@ class TestScholarHandler:
 
     @pytest.fixture
     def handler(self):
+        from swarm.logging.event_bus import EventBus
+
+        bus = EventBus()
         events = []
+        bus.subscribe(lambda e: events.append(e))
         config = ScholarConfig(seed=42)
-        return ScholarHandler(config, emit_event=lambda e: events.append(e))
+        return ScholarHandler(config, event_bus=bus)
 
     def test_mini_corpus_generated(self, handler):
         assert len(handler._corpus) > 0

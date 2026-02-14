@@ -8,8 +8,11 @@ Core loop:
 - Success (payoff > 0) -> new strategy skill
 - Failure (payoff < 0) -> new lesson skill
 - Co-occurring successes -> composite skill candidates
+- Recursive refinement: tighten failing skills via validation analysis
+- GRPO advantage: score skills relative to group baseline
 """
 
+from collections import deque
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
@@ -19,6 +22,7 @@ from swarm.skills.model import (
     Skill,
     SkillDomain,
     SkillInvocation,
+    SkillTier,
     SkillType,
 )
 
@@ -52,6 +56,34 @@ class EvolutionConfig:
     # Effect delta clamp range for composed skills
     max_effect_delta: float = 0.5
 
+    # --- SkillRL extensions (Xia et al., 2026) ---
+
+    # Recursive evolution: refine skills when they fail during validation
+    recursive_evolution_enabled: bool = False
+    # Minimum invocations before a skill is eligible for refinement
+    refinement_min_invocations: int = 3
+    # If a skill's success_rate drops below this after refinement_min_invocations,
+    # tighten its condition or adjust its effect
+    refinement_success_threshold: float = 0.4
+    # How much to tighten condition bands on refinement (shrink ±p band)
+    refinement_band_shrink: float = 0.05
+    # Maximum number of refinements per epoch
+    max_refinements_per_epoch: int = 3
+
+    # GRPO-style advantage: use group-relative advantage instead of raw payoff
+    grpo_enabled: bool = False
+    # Window of recent payoffs for computing group baseline
+    grpo_window_size: int = 20
+    # Temperature for advantage normalisation
+    grpo_temperature: float = 1.0
+
+    # Tier assignment: skills with broad applicability become GENERAL
+    auto_tier_promotion: bool = False
+    # Minimum invocations across distinct domains for tier promotion
+    tier_promotion_min_invocations: int = 10
+    # Minimum success rate for tier promotion
+    tier_promotion_min_success_rate: float = 0.6
+
 
 class SkillEvolutionEngine:
     """Extracts, evolves, and composes skills from interaction outcomes.
@@ -79,10 +111,19 @@ class SkillEvolutionEngine:
         # Invocation log for analysis
         self._invocation_log: List[SkillInvocation] = []
 
+        # --- SkillRL extensions ---
+        # GRPO: rolling window of recent payoffs for group baseline
+        self._grpo_payoff_buffer: deque = deque(
+            maxlen=max(1, self.config.grpo_window_size),
+        )
+        # Refinement rate limiting
+        self._refinements_this_epoch: int = 0
+
     def on_epoch_start(self, epoch: int) -> None:
         """Reset per-epoch counters."""
         self._current_epoch = epoch
         self._extractions_this_epoch = 0
+        self._refinements_this_epoch = 0
 
     def extract_skill(
         self,
@@ -112,11 +153,16 @@ class SkillEvolutionEngine:
         if active_skill_ids and payoff > 0:
             self._record_co_occurrences(active_skill_ids)
 
+        # If GRPO is enabled, use advantage for extraction decisions
+        effective_payoff = payoff
+        if self.config.grpo_enabled:
+            effective_payoff = self.compute_grpo_advantage(payoff)
+
         # Determine if we should extract
         skill = None
-        if payoff >= self.config.success_payoff_threshold and interaction.p >= self.config.min_p_for_strategy:
+        if effective_payoff >= self.config.success_payoff_threshold and interaction.p >= self.config.min_p_for_strategy:
             skill = self._extract_strategy(agent_id, interaction, payoff)
-        elif payoff <= self.config.failure_payoff_threshold:
+        elif effective_payoff <= self.config.failure_payoff_threshold:
             skill = self._extract_lesson(agent_id, interaction, payoff)
 
         if skill is not None:
@@ -212,6 +258,7 @@ class SkillEvolutionEngine:
         domain = self._infer_domain(interaction)
         condition = self._build_condition_from_interaction(interaction)
         effect = self._build_strategy_effect(interaction, payoff)
+        tier = self._assign_tier(interaction)
 
         name = ""
         if self.config.auto_name:
@@ -224,6 +271,7 @@ class SkillEvolutionEngine:
             name=name,
             skill_type=SkillType.STRATEGY,
             domain=domain,
+            tier=tier,
             created_by=agent_id,
             condition=condition,
             effect=effect,
@@ -241,6 +289,7 @@ class SkillEvolutionEngine:
         domain = self._infer_domain(interaction)
         condition = self._build_condition_from_interaction(interaction)
         effect = self._build_lesson_effect(interaction, payoff)
+        tier = self._assign_tier(interaction)
 
         name = ""
         if self.config.auto_name:
@@ -253,6 +302,7 @@ class SkillEvolutionEngine:
             name=name,
             skill_type=SkillType.LESSON,
             domain=domain,
+            tier=tier,
             created_by=agent_id,
             condition=condition,
             effect=effect,
@@ -391,6 +441,174 @@ class SkillEvolutionEngine:
                 merged[key] = vb
 
         return merged
+
+    # ------------------------------------------------------------------
+    # GRPO-style group-relative advantage (Xia et al., 2026)
+    # ------------------------------------------------------------------
+
+    def compute_grpo_advantage(self, payoff: float) -> float:
+        """Compute group-relative advantage for a payoff.
+
+        Instead of using raw payoff to decide whether to extract a
+        strategy or lesson, GRPO normalises against a running baseline
+        of recent payoffs:
+
+            advantage = (payoff - mean) / (std + temperature)
+
+        This makes skill extraction adaptive: in a high-payoff
+        environment the bar for "success" rises, and in a low-payoff
+        environment small wins still count.
+        """
+        import math
+
+        # Guard against NaN/Inf input
+        if math.isnan(payoff) or math.isinf(payoff):
+            return 0.0
+
+        self._grpo_payoff_buffer.append(payoff)
+
+        if len(self._grpo_payoff_buffer) < 2:
+            return payoff  # Not enough data yet
+
+        buf = list(self._grpo_payoff_buffer)
+        mean = sum(buf) / len(buf)
+        variance = sum((x - mean) ** 2 for x in buf) / len(buf)
+        std = variance ** 0.5
+        # Guard against zero denominator (temperature=0 + constant payoffs)
+        denom = std + max(1e-8, self.config.grpo_temperature)
+        return float((payoff - mean) / denom)
+
+    # ------------------------------------------------------------------
+    # Recursive skill evolution (validation-failure refinement)
+    # ------------------------------------------------------------------
+
+    def refine_skills(
+        self,
+        library: "SkillLibrary",
+        agent_id: str,
+    ) -> List[str]:
+        """Refine under-performing skills by tightening conditions/effects.
+
+        This implements the recursive evolution mechanism from SkillRL:
+        after a skill has been invoked enough times, if it is still
+        under-performing, we tighten its condition band so it fires
+        in a narrower (more appropriate) context, and adjust its effect
+        to be more conservative.
+
+        Note: Mutations are done via copy-on-write (new dict objects) so
+        that shared-library scenarios are safe from cross-agent side effects.
+
+        Returns list of skill IDs that were refined.
+        """
+        if not self.config.recursive_evolution_enabled:
+            return []
+
+        refined: List[str] = []
+        for skill in list(library.all_skills):
+            if self._refinements_this_epoch >= self.config.max_refinements_per_epoch:
+                break
+
+            perf = library.get_performance(skill.skill_id)
+            if perf is None or perf.invocations < self.config.refinement_min_invocations:
+                continue
+
+            if perf.success_rate >= self.config.refinement_success_threshold:
+                continue  # Performing well enough
+
+            # Composite skills are not directly refined
+            if skill.skill_type == SkillType.COMPOSITE:
+                continue
+
+            # --- Tighten the condition band (copy-on-write) ---
+            shrink = self.config.refinement_band_shrink
+            cond = dict(skill.condition)
+            if "min_p" in cond and "max_p" in cond:
+                mid = (cond["min_p"] + cond["max_p"]) / 2.0
+                half = max(0.05, (cond["max_p"] - cond["min_p"]) / 2.0 - shrink)
+                cond["min_p"] = max(0.0, mid - half)
+                cond["max_p"] = min(1.0, mid + half)
+            skill.condition = cond
+
+            # --- Adjust effect toward caution (copy-on-write) ---
+            eff = dict(skill.effect)
+            if skill.skill_type == SkillType.STRATEGY:
+                # Make the strategy less aggressive
+                delta = eff.get("acceptance_threshold_delta", 0.0)
+                eff["acceptance_threshold_delta"] = max(-0.5, min(0.5, delta + 0.02))
+            elif skill.skill_type == SkillType.LESSON:
+                # Make the lesson more cautious
+                delta = eff.get("acceptance_threshold_delta", 0.0)
+                eff["acceptance_threshold_delta"] = max(-0.5, min(0.5, delta + 0.03))
+            skill.effect = eff
+
+            # Bump version; copy tags to avoid mutating a shared set
+            skill.version += 1
+            skill.tags = set(skill.tags) | {"refined"}
+
+            self._refinements_this_epoch += 1
+            refined.append(skill.skill_id)
+
+        return refined
+
+    # ------------------------------------------------------------------
+    # Automatic tier promotion
+    # ------------------------------------------------------------------
+
+    def maybe_promote_to_general(
+        self,
+        library: "SkillLibrary",
+    ) -> List[str]:
+        """Promote high-performing task-specific skills to GENERAL tier.
+
+        A skill that has been invoked many times with consistent success
+        across interactions is likely a universal heuristic rather than a
+        domain-specific one.  Promoting it to GENERAL makes it available
+        as a fallback in all domains.
+        """
+        if not self.config.auto_tier_promotion:
+            return []
+
+        promoted: List[str] = []
+        for skill in library.all_skills:
+            if skill.tier != SkillTier.TASK_SPECIFIC:
+                continue
+
+            perf = library.get_performance(skill.skill_id)
+            if perf is None:
+                continue
+
+            if (
+                perf.invocations >= self.config.tier_promotion_min_invocations
+                and perf.success_rate >= self.config.tier_promotion_min_success_rate
+            ):
+                skill.tier = SkillTier.GENERAL
+                # Copy-on-write: remove domain-specific constraints
+                cond = dict(skill.condition)
+                cond.pop("interaction_types", None)
+                skill.condition = cond
+                skill.tags = set(skill.tags) | {"promoted_general"}
+                promoted.append(skill.skill_id)
+
+        return promoted
+
+    # ------------------------------------------------------------------
+    # Tier-aware extraction helpers
+    # ------------------------------------------------------------------
+
+    def _assign_tier(self, interaction: SoftInteraction) -> SkillTier:
+        """Determine initial tier for a newly extracted skill.
+
+        Skills from domain-specific interaction types start as
+        TASK_SPECIFIC.  Skills from generic/uncategorised contexts
+        default to GENERAL.
+        """
+        if interaction.interaction_type.value in ("collaboration", "trade"):
+            return SkillTier.TASK_SPECIFIC
+        return SkillTier.GENERAL
+
+    # ------------------------------------------------------------------
+    # Co-occurrence tracking
+    # ------------------------------------------------------------------
 
     def _record_co_occurrences(self, skill_ids: List[str]) -> None:
         """Record co-occurrence of skills in a successful interaction."""

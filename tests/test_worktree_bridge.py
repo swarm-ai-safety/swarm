@@ -7,6 +7,7 @@ import os
 import subprocess
 import time
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 import pytest
@@ -33,7 +34,7 @@ def _make_config(tmp_path: Path, **overrides) -> WorktreeConfig:
     repo.mkdir(exist_ok=True)
     sandbox_root = tmp_path / "sandboxes"
     sandbox_root.mkdir(exist_ok=True)
-    defaults = {
+    defaults: dict[str, Any] = {
         "repo_path": str(repo),
         "sandbox_root": str(sandbox_root),
         "max_sandboxes": 5,

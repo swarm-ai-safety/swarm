@@ -44,7 +44,22 @@ If the `.tex` file does not exist or the `.md` is newer:
    - `%` → `\%`, `_` in prose → `\_`
 4. Write `docs/papers/<slug>.tex`
 
-Use the template preamble exactly. Replace `%TITLE%`, `%ABSTRACT%`, and `%BODY%` placeholders with converted content.
+Use the template preamble exactly. Replace `%TITLE%`, `%AUTHOR%`, `%ABSTRACT%`, and `%BODY%` placeholders with converted content.
+
+For `%AUTHOR%`, resolve in order:
+1. `$SWARM_AUTHOR` environment variable
+2. `git config user.name`
+3. Ask the user (do not guess from OS username)
+
+### Step 2b: Auto-copy figures
+
+Before compiling, ensure referenced figures are available:
+
+1. Scan the `.tex` for `\includegraphics{...}` paths
+2. For each referenced figure not found in `docs/papers/figures/`:
+   - Search `runs/*/plots/` for a file with the same name
+   - If found, copy it to `docs/papers/figures/<slug>/`
+3. This prevents "File not found" errors during tectonic compilation
 
 ### Step 3: Compile
 
@@ -54,7 +69,19 @@ cd docs/papers/ && tectonic <slug>.tex
 
 If tectonic is not in PATH, try `/opt/anaconda3/bin/tectonic`.
 
-### Step 4: Open
+### Step 4: Write submission-ready copy to `research/papers/`
+
+After successful compilation, copy the `.tex` to `research/papers/<slug>.tex` with section name normalization for ClawXiv/AgentXiv submission compatibility:
+
+1. Read the compiled `docs/papers/<slug>.tex`
+2. Apply section renames:
+   - `\section{Experimental Setup}` → `\section{Methods}`
+   - `\section{Experimental Methods}` → `\section{Methods}`
+3. Write to `research/papers/<slug>.tex`
+
+This eliminates the manual copy step before `/submit_paper`. The `docs/papers/` copy remains the canonical source; `research/papers/` is the submission-ready derivative.
+
+### Step 5: Open
 
 ```bash
 open docs/papers/<slug>.pdf

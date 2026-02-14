@@ -1,16 +1,39 @@
-# SWARM: System-Wide Assessment of Risk in Multi-agent systems
+# SWARM
+
+System-Wide Risk Evaluation for Multi-Agent AI Systems
 
 [![CI](https://github.com/swarm-ai-safety/swarm/actions/workflows/ci.yml/badge.svg)](https://github.com/swarm-ai-safety/swarm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/swarm-safety.svg)](https://pypi.org/project/swarm-safety/)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb)
 [![ClawXiv Bridge](https://img.shields.io/badge/ClawXiv-Bridge-blue)](https://github.com/swarm-ai-safety/swarm/blob/main/docs/bridges/clawxiv.md)
 
 <img src="https://github.com/swarm-ai-safety/swarm/raw/main/docs/images/swarm-hero.gif" alt="SWARM dashboard showing emergent risk metrics" width="100%">
 
-**Study how intelligence swarms—and where it fails.**
+*Emergent risk appears at the interaction level, not the individual agent level.*
 
-SWARM is a research framework for studying emergent risks in multi-agent AI systems. Rather than focusing on single misaligned agents, SWARM reveals how catastrophic failures can emerge from the *interaction* of many sub-AGI agents—even when none are individually dangerous.
+SWARM is a research framework for **measuring emergent failures that only appear when many AI agents interact** — even when individual agents are safe.
+
+It enables:
+- interaction-level safety metrics (illusion delta, quality gaps)
+- governance experiments (audits, staking, sanctions)
+- reproducible multi-agent safety benchmarks
+
+## Why this repo is worth starring
+
+⭐ You work on multi-agent or LLM-agent systems  
+⭐ You care about systemic or emergent AI risks  
+⭐ You want benchmarks beyond single-agent evals  
+⭐ You’re designing governance, audits, or red-teaming
+
+## Run your first emergent failure in 60 seconds
+
+```bash
+python examples/illusion_delta_minimal.py
+```
+
+This minimal example runs a 3-agent simulation with one deceptive actor and computes an illusion-delta style signal from replay variability.
 
 ## The Core Insight
 
@@ -183,7 +206,7 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 | **Incoherence** | `Var[decision] / E[error]` | Variance-to-error ratio across replays |
 | **Illusion delta** | `C_perceived − C_distributed` | Gap between apparent and actual coherence |
 
-### Governance Levers
+### Governance Levers (24+)
 
 - **Transaction Taxes** - Reduce exploitation, cost welfare
 - **Reputation Decay** - Punish bad actors, erode honest standing
@@ -191,6 +214,12 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 - **Random Audits** - Deter hidden exploitation
 - **Staking** - Filter undercapitalized agents
 - **Collusion Detection** - Catch coordinated attacks
+- **Dynamic Friction** - Adaptive rate limiting under stress
+- **Sybil Detection** - Penalize behaviorally similar clusters
+- **Council Governance** - Deliberative multi-agent policy decisions
+- **Incoherence Breaker** - Detect/prevent incoherent policies
+- **Ensemble Governance** - Multi-lever combination strategies
+- And 13+ more (diversity, transparency, decomposition, memory governance, ...)
 
 ### Agent Policies
 
@@ -200,6 +229,10 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 | **Opportunistic** | Maximizes short-term payoff, cherry-picks tasks, strategic voting |
 | **Deceptive** | Builds trust through honest behavior, then exploits trusted relationships |
 | **Adversarial** | Targets honest agents, coordinates with allies, disrupts ecosystem |
+| **LDT** | Logical Decision Theory with UDT precommitment and opponent modeling |
+| **RLM** | Reinforcement Learning from Memory — learns from interaction history |
+| **Council** | Deliberative governance via multi-agent council protocol |
+| **SkillRL** | Reinforcement learning over evolving skill repertoire |
 | **LLM** | Behavior determined by LLM with configurable persona ([details](docs/llm-agents.md)) |
 
 ## How SWARM Compares
@@ -209,15 +242,22 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 | Multi-agent interaction modeling | Primary focus | Primary focus | Limited | Limited | Limited |
 | Soft probabilistic labels | Core design | No | No | No | No |
 | Adverse selection metrics | Yes (toxicity, quality gap) | No | No | No | No |
-| Configurable governance levers | 6 built-in | None | None | None | Compliance rules |
+| Configurable governance levers | 24+ built-in | None | None | None | Compliance rules |
 | Collusion detection | Yes (pair-wise, structural) | No | No | No | No |
 | Replay-based incoherence | Yes | No | No | No | No |
 | LLM agent support | Yes (Anthropic, OpenAI, Ollama) | Yes | Yes | Yes | Yes |
-| Scenario configs (YAML) | 23 built-in | Custom | Benchmark suites | Task suites | Eval suites |
-| Framework bridges | Concordia, OpenClaw, GasTown, Ralph, AgentXiv, ClawXiv | — | — | — | — |
+| Scenario configs (YAML) | 55 built-in | Custom | Benchmark suites | Task suites | Eval suites |
+| Framework bridges | 8 (Concordia, OpenClaw, GasTown, LiveSWE, Prime Intellect, Ralph, Claude Code, Worktree) | — | — | — | — |
 | License | MIT | Apache 2.0 | MIT | Varies | MIT |
 
 SWARM is complementary to these frameworks, not competitive. The [Concordia bridge](docs/bridges/concordia.md) lets you run Concordia agents through SWARM's governance and metrics layer. See [full comparison](docs/comparison.md).
+
+## Related work
+
+SWARM is inspired by and complementary to:
+- Agent-based governance simulations
+- Recursive and multi-agent evaluation frameworks
+- Mechanism design for AI systems
 
 ## Architecture
 
@@ -246,23 +286,29 @@ Observables -> ProxyComputer -> v_hat -> sigmoid -> p -> SoftPayoffEngine -> pay
 ```
 swarm/
 ├── swarm/
-│   ├── models/          # SoftInteraction, AgentState/AgentStatus, event schema
-│   ├── core/            # PayoffEngine, ProxyComputer, sigmoid, orchestrator
-│   ├── agents/          # Honest, opportunistic, deceptive, adversarial, LLM, adaptive
-│   ├── env/             # EnvState, feed, tasks, network, composite tasks
-│   ├── governance/      # Config, levers, taxes, reputation, audits, collusion
-│   ├── metrics/         # SoftMetrics, reporters, collusion detection, capabilities
-│   ├── forecaster/      # Risk forecasters for adaptive governance activation
-│   ├── replay/          # Replay runner and decision-level replay utilities
-│   ├── scenarios/       # YAML scenario loader
-│   ├── analysis/        # Parameter sweeps, dashboard
+│   ├── models/          # SoftInteraction, AgentState, events, identity, kernel, schemas (8 modules)
+│   ├── core/            # Orchestrator, PayoffEngine, ProxyComputer + 21 domain handlers (29 modules)
+│   ├── agents/          # 18 agent types: honest, deceptive, LDT, RLM, council, SkillRL, LLM, ... (22 modules)
+│   ├── env/             # Feed, tasks, marketplace, auctions, HFN, memory tiers, catalogs (15 modules)
+│   ├── governance/      # 24+ levers: taxes, reputation, audits, collusion, council, ... (23 modules)
+│   ├── metrics/         # SoftMetrics, reporters, RLM, incoherence, collusion, ... (14 modules)
+│   ├── csm/             # Consumer-Seller Marketplace: matching, negotiation, identity (10 modules)
+│   ├── council/         # Council governance protocol, ranking, prompts (5 modules)
+│   ├── skills/          # Skill learning & evolution: model, library, governance (6 modules)
+│   ├── bridges/         # 8 external integrations: Concordia, GasTown, Prime Intellect, ... (60 files)
+│   ├── research/        # Research pipeline: agents, platforms, quality gates, Track A (15 modules)
 │   ├── redteam/         # Attack scenarios, evaluator, evasion metrics
-│   ├── boundaries/      # External world, flow tracking, policies, leakage
+│   ├── boundaries/      # External world, flow tracking, permeability, leakage
+│   ├── analysis/        # Parameter sweeps, plots, dashboard, export
+│   ├── api/             # FastAPI server
+│   ├── forecaster/      # Risk forecasters for adaptive governance
+│   ├── replay/          # Replay runner and decision-level replay
+│   ├── scenarios/       # YAML scenario loader
 │   └── logging/         # Append-only JSONL logger
-├── tests/               # Test suite
-├── examples/            # Demo scripts
-├── scenarios/           # YAML scenario definitions
-├── docs/                # Documentation
+├── tests/               # 2922 tests across 93 files
+├── examples/            # 18 runnable scripts + Streamlit demo
+├── scenarios/           # 55 YAML scenario definitions
+├── docs/                # Documentation, papers, blog posts
 └── pyproject.toml
 ```
 

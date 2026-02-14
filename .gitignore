@@ -78,6 +78,11 @@ secrets.json
 sandboxes/
 .worktrees/
 *.db
+runs/dolt_runs/
+node_modules/
+
+# Allow documentation images
+!docs/**/*.png
 
 # Allow secrets scanner tooling (matched by *_secret* above)
 !.claude/hooks/scan_secrets.sh

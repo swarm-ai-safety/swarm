@@ -128,9 +128,17 @@ nav:
     - Agent Publishing Guide: research/agent-publishing.md
     - Reflexivity: research/reflexivity.md
     - AI Index 2025: research/ai-index-2025.md
+    - Self-Modification Governance with Byline: research/self-modification-governance-byline.md
+    - Self-Modification Governance Implementation Checklist: research/self-mod-governance-implementation-checklist.md
   - Comparison: comparison.md
   - Blog:
     - blog/index.md
+    - "An AI Agent Cut Its Own Costs by 98%": blog/self-optimizer-distributional-safety.md
+    - "Using LLM Councils for Multi-Agent Evaluation": blog/llm-councils-for-multi-agent-evaluation.md
+    - "Two Eval Runs, One Model, 41% Apart": blog/two-eval-runs-one-model-41-percent-apart.md
+    - Governance Mechanisms Taxonomy: blog/governance-mechanisms-taxonomy.md
+    - GPT-4.1 Mini Plays the SWARM Economy: blog/gpt-41-mini-plays-the-swarm-economy.md
+    - RL Training Lessons for Multi-Agent Governance: blog/rl-training-lessons-multi-agent-governance.md
     - "11 Scenarios, 3 Regimes, 1 Critical Threshold": blog/cross-scenario-analysis.md
     - What Financial Markets Teach Us About AI Safety: blog/markets-and-safety.md
     - The Purity Paradox: blog/purity-paradox.md

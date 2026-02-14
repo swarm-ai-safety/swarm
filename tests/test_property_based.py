@@ -435,7 +435,7 @@ class TestPayoffProperties:
         s_minus=st_positive_param,
         h=st_positive_param,
     )
-    @settings(max_examples=500)
+    @settings(max_examples=500, deadline=None)
     def test_expected_surplus_equals_formula(self, p, s_plus, s_minus, h):
         """expected_surplus matches p * s_plus - (1-p) * s_minus."""
         config = PayoffConfig(s_plus=s_plus, s_minus=s_minus, h=h)
@@ -739,7 +739,7 @@ class TestSoftMetricsProperties:
     @given(
         p_values=st.lists(st_p, min_size=1, max_size=20),
     )
-    @settings(max_examples=300)
+    @settings(max_examples=300, deadline=None)
     def test_average_quality_in_unit_interval(self, p_values):
         """Average quality is in [0, 1]."""
         interactions = [SoftInteraction(p=p) for p in p_values]

@@ -1,0 +1,215 @@
+"""Observation construction for agents.
+
+Extracted from ``Orchestrator`` to isolate the per-agent observation
+assembly into a focused, testable component.  The orchestrator
+delegates to an ``ObservationBuilder`` instance, passing shared
+mutable references so all state reads are live.
+"""
+
+from __future__ import annotations
+
+import random
+from typing import Any, Dict, Optional
+
+from swarm.agents.base import Observation
+from swarm.core.handler_registry import HandlerRegistry
+from swarm.env.feed import Feed
+from swarm.env.network import AgentNetwork
+from swarm.env.state import EnvState
+from swarm.env.tasks import TaskPool, TaskStatus
+from swarm.models.agent import AgentState
+
+
+class ObservationBuilder:
+    """Builds per-agent ``Observation`` objects from environment state.
+
+    Responsibilities:
+    - Gather visible posts, pending proposals, tasks, and agent info
+    - Filter agents by network topology when enabled
+    - Collect handler-contributed observation fields via the registry
+    - Apply configurable observation noise
+    """
+
+    def __init__(
+        self,
+        config: Any,  # OrchestratorConfig (avoid circular import)
+        state: EnvState,
+        feed: Feed,
+        task_pool: TaskPool,
+        network: Optional[AgentNetwork],
+        handler_registry: HandlerRegistry,
+        rng: random.Random,
+    ) -> None:
+        self._config = config
+        self._state = state
+        self._feed = feed
+        self._task_pool = task_pool
+        self._network = network
+        self._handler_registry = handler_registry
+        self._rng = rng
+
+    # ------------------------------------------------------------------
+    # Public API
+    # ------------------------------------------------------------------
+
+    def build(self, agent_id: str) -> Observation:
+        """Build an ``Observation`` for *agent_id*."""
+        agent_state = self._state.get_agent(agent_id)
+        rate_limit = self._state.get_rate_limit_state(agent_id)
+
+        visible_posts = [p.to_dict() for p in self._feed.get_ranked_posts(limit=20)]
+
+        pending_proposals = [
+            {
+                "proposal_id": p.proposal_id,
+                "initiator_id": p.initiator_id,
+                "interaction_type": p.interaction_type,
+                "content": p.content,
+                "offered_transfer": p.metadata.get("offered_transfer", 0),
+            }
+            for p in self._state.get_proposals_for_agent(agent_id)
+        ]
+
+        available_tasks = [
+            t.to_dict()
+            for t in self._task_pool.get_claimable_tasks(
+                agent_reputation=agent_state.reputation if agent_state else 0,
+                current_epoch=self._state.current_epoch,
+            )
+        ]
+
+        active_tasks = [
+            t.to_dict()
+            for t in self._task_pool.get_tasks_for_agent(agent_id)
+            if t.status in (TaskStatus.CLAIMED, TaskStatus.IN_PROGRESS)
+        ]
+
+        active_agents = self._state.get_active_agents()
+
+        if self._network is not None:
+            neighbor_ids = set(self._network.neighbors(agent_id))
+            active_agents = [s for s in active_agents if s.agent_id in neighbor_ids]
+
+        visible_agents = [
+            {
+                "agent_id": s.agent_id,
+                "name": s.name,
+                "agent_type": s.agent_type.value,
+                "reputation": s.reputation,
+                "resources": s.resources,
+                "edge_weight": self._network.edge_weight(agent_id, s.agent_id)
+                if self._network
+                else 1.0,
+            }
+            for s in active_agents
+            if s.agent_id != agent_id
+        ]
+
+        visible_agents = [self.apply_noise(record) for record in visible_agents]
+
+        # Collect handler observation fields via registry
+        handler_fields: Dict[str, Any] = {}
+        for handler in self._handler_registry.all_handlers():
+            try:
+                handler.on_pre_observation(agent_id, self._state)
+                fields = handler.build_observation_fields(agent_id, self._state)
+            except Exception:
+                continue
+            mapping = handler.observation_field_mapping()
+            for key, value in fields.items():
+                obs_key = mapping.get(key, key)
+                if obs_key in handler_fields:
+                    raise ValueError(
+                        f"Observation field '{obs_key}' returned by "
+                        f"{type(handler).__name__} conflicts with a field "
+                        f"already set by another handler"
+                    )
+                handler_fields[obs_key] = value
+
+        return Observation(
+            agent_state=agent_state or AgentState(),
+            current_epoch=self._state.current_epoch,
+            current_step=self._state.current_step,
+            can_post=rate_limit.can_post(self._state.rate_limits)
+            if self._config.enable_rate_limits
+            else True,
+            can_interact=rate_limit.can_interact(self._state.rate_limits)
+            if self._config.enable_rate_limits
+            else True,
+            can_vote=rate_limit.can_vote(self._state.rate_limits)
+            if self._config.enable_rate_limits
+            else True,
+            can_claim_task=rate_limit.can_claim_task(self._state.rate_limits)
+            if self._config.enable_rate_limits
+            else True,
+            visible_posts=visible_posts,
+            pending_proposals=pending_proposals,
+            available_tasks=available_tasks,
+            active_tasks=active_tasks,
+            visible_agents=visible_agents,
+            # Marketplace fields
+            available_bounties=handler_fields.get("available_bounties", []),
+            active_bids=handler_fields.get("active_bids", []),
+            active_escrows=handler_fields.get("active_escrows", []),
+            pending_bid_decisions=handler_fields.get("pending_bid_decisions", []),
+            # Moltipedia fields
+            contested_pages=handler_fields.get("contested_pages", []),
+            search_results=handler_fields.get("search_results", []),
+            random_pages=handler_fields.get("random_pages", []),
+            leaderboard=handler_fields.get("leaderboard", []),
+            agent_points=handler_fields.get("agent_points", 0.0),
+            heartbeat_status=handler_fields.get("heartbeat_status", {}),
+            ecosystem_metrics=self.apply_noise(
+                self._state.get_epoch_metrics_snapshot()
+            ),
+            # Moltbook fields
+            moltbook_published_posts=handler_fields.get("moltbook_published_posts", []),
+            moltbook_pending_posts=handler_fields.get("moltbook_pending_posts", []),
+            moltbook_rate_limits=handler_fields.get("moltbook_rate_limits", {}),
+            moltbook_karma=handler_fields.get("moltbook_karma", 0.0),
+            # Memory fields
+            memory_hot_cache=handler_fields.get("memory_hot_cache", []),
+            memory_pending_promotions=handler_fields.get("memory_pending_promotions", []),
+            memory_search_results=handler_fields.get("memory_search_results", []),
+            memory_challenged_entries=handler_fields.get("memory_challenged_entries", []),
+            memory_entry_counts=handler_fields.get("memory_entry_counts", {}),
+            memory_writes_remaining=handler_fields.get("memory_writes_remaining", 0),
+            # Scholar fields
+            scholar_query=handler_fields.get("scholar_query"),
+            scholar_passage_pool=handler_fields.get("scholar_passage_pool", []),
+            scholar_draft_citations=handler_fields.get("scholar_draft_citations", []),
+            scholar_citation_to_verify=handler_fields.get("scholar_citation_to_verify"),
+            scholar_synthesis_result=handler_fields.get("scholar_synthesis_result"),
+            # Kernel fields
+            kernel_available_challenges=handler_fields.get("kernel_available_challenges", []),
+            kernel_pending_submissions=handler_fields.get("kernel_pending_submissions", []),
+            kernel_submissions_to_verify=handler_fields.get("kernel_submissions_to_verify", []),
+            kernel_submission_history=handler_fields.get("kernel_submission_history", []),
+        )
+
+    def apply_noise(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply configurable gaussian noise to numeric observation fields.
+
+        Noise is only applied when enabled and never to boolean fields.
+        """
+        if (
+            self._config.observation_noise_probability <= 0
+            or self._config.observation_noise_std <= 0
+        ):
+            return record
+
+        noisy: Dict[str, Any] = {}
+        for key, value in record.items():
+            if isinstance(value, bool):
+                noisy[key] = value
+                continue
+            if isinstance(value, (int, float)):
+                if self._rng.random() < self._config.observation_noise_probability:
+                    noisy[key] = float(value) + self._rng.gauss(
+                        0.0, self._config.observation_noise_std
+                    )
+                else:
+                    noisy[key] = value
+                continue
+            noisy[key] = value
+        return noisy

@@ -1,0 +1,32 @@
+{
+  "timestamp": "20260211-233528",
+  "model": "claude-haiku-4-5-20251001",
+  "config": {
+    "population_size": 8,
+    "max_turns": 5,
+    "seed": 42,
+    "mixes": {
+      "balanced": {
+        "h": 0.34,
+        "o": 0.33,
+        "d": 0.33
+      }
+    },
+    "personas": [
+      "default"
+    ]
+  },
+  "elapsed_seconds": 15.99,
+  "results": [
+    {
+      "mix": "balanced",
+      "persona": "default",
+      "reward": 5.7545,
+      "toxicity": 0.1863,
+      "mean_p": 0.8136,
+      "welfare": 1.4408,
+      "steps": 5,
+      "terminated_early": false
+    }
+  ]
+}

@@ -384,15 +384,16 @@ class TestDecidePostingAction:
 
 def _make_handler():
     """Create a MarketplaceHandler with real Marketplace and TaskPool,
-    and a mock emit_event callable."""
+    and an EventBus with a subscriber to collect events."""
+    from swarm.logging.event_bus import EventBus
+
     marketplace = Marketplace(MarketplaceConfig())
     task_pool = TaskPool()
     events = []
+    bus = EventBus()
+    bus.subscribe(lambda event: events.append(event))
 
-    def emit(event):
-        events.append(event)
-
-    handler = MarketplaceHandler(marketplace, task_pool, emit)
+    handler = MarketplaceHandler(marketplace, task_pool, event_bus=bus)
     return handler, marketplace, task_pool, events
 
 

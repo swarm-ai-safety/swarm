@@ -99,6 +99,11 @@ class GovernanceConfig(BaseModel):
     transparency_bonus_rate: float = 0.1  # Reputation bonus/penalty rate
     transparency_threshold_p: float = 0.5  # Threshold for bonus vs penalty
 
+    # Council governance lever
+    council_lever_enabled: bool = False
+    council_lever_review_probability: float = 0.3
+    council_lever_penalty_multiplier: float = 1.0
+
     # Moderator agent (VAE paper)
     moderator_enabled: bool = False
     moderator_review_probability: float = 0.5  # Probability of review
@@ -145,6 +150,10 @@ class GovernanceConfig(BaseModel):
     self_evolution_divergence_threshold: float = 0.7
     self_evolution_tool_risk_threshold: float = 0.6
     self_evolution_growth_freeze_duration: int = 1
+
+    # Refinery quality gate (inspired by GasTown's Refinery merge queue)
+    refinery_enabled: bool = False
+    refinery_p_threshold: float = 0.5  # reject interactions with p below this
 
     # Diversity as Defense (DaD)
     diversity_enabled: bool = False
@@ -272,6 +281,11 @@ class GovernanceConfig(BaseModel):
             raise ValueError("transparency_bonus_rate must be non-negative")
         if not 0.0 <= self.transparency_threshold_p <= 1.0:
             raise ValueError("transparency_threshold_p must be in [0, 1]")
+        # Council lever validation
+        if not 0.0 <= self.council_lever_review_probability <= 1.0:
+            raise ValueError("council_lever_review_probability must be in [0, 1]")
+        if self.council_lever_penalty_multiplier < 0:
+            raise ValueError("council_lever_penalty_multiplier must be non-negative")
         # Moderator validation
         if not 0.0 <= self.moderator_review_probability <= 1.0:
             raise ValueError("moderator_review_probability must be in [0, 1]")
@@ -318,6 +332,10 @@ class GovernanceConfig(BaseModel):
             raise ValueError(
                 "self_evolution_growth_freeze_duration must be >= 1"
             )
+
+        # Refinery validation
+        if not 0.0 <= self.refinery_p_threshold <= 1.0:
+            raise ValueError("refinery_p_threshold must be in [0, 1]")
 
         # Diversity as Defense validation
         if not 0.0 <= self.diversity_rho_max <= 1.0:

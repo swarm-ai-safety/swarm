@@ -1,0 +1,58 @@
+{
+  "evaluation_type": "sweep",
+  "run_dir": "runs/20260213-123944_moltbook_captcha_study",
+  "synthesis": "FINDINGS:\n- Zero hypotheses survive multiple comparisons correction. Out of 112 pairwise tests across 7 metrics, 0 are Bonferroni-significant and 0 are BH-significant. The Moltbook CAPTCHA challenge difficulty and collusion penalty multiplier have no statistically reliable effect on any measured outcome.\n- The largest observed effect (challenge difficulty 0.0 vs 0.75 on welfare, d=-0.584, p=0.011) is a medium effect that does not survive correction for 112 hypotheses (Bonferroni threshold: p<0.00045). This is consistent with a null result inflated by multiple testing.\n- Deceptive agents dominate all configurations, earning 133-151 per run vs honest agents at ~47 and adversarial at ~36. This payoff structure is invariant to both governance parameters, suggesting neither CAPTCHA difficulty nor collusion penalties address the core mechanism enabling deceptive surplus extraction.\n- Challenge difficulty shows a weak inverted-U pattern on welfare: monotonically increasing from diff=0.0 (870) to diff=0.75 (904) then dropping at diff=1.0 (883). This non-monotonicity may indicate that extreme difficulty creates friction that offsets any governance benefit.\n- Collusion penalty shows no clear dose-response on any metric. Penalty=0.5 yields the highest welfare (896.2) while penalty=2.0 yields the lowest (880.3), but these differences are within noise (all d<0.3).\n\nCONCERNS:\n- With 200 runs across 20 cells (5 difficulty \u00d7 4 penalty), each cell has only 10 seeds. At n=10 per group for pairwise comparisons (n1=40 vs n2=40 pooled across the other swept dimension), the study has ~60% power to detect d=0.5. However, the strongest observed effect (d=0.58) still fails correction, suggesting either the true effects are smaller than d=0.5 or the mechanism genuinely has no impact.\n- The 112 hypotheses create a severe multiple comparisons burden. The Bonferroni threshold of p<0.00045 is extremely conservative, but even the liberal BH procedure finds nothing. This is a strong null result.\n- Toxicity rate is essentially constant across all conditions (0.2631-0.2654, range=0.0023), with effect sizes d<0.6. The governance mechanisms appear completely ineffective at reducing harmful interaction rates.\n- The study sweeps two parameters simultaneously but does not test interaction effects. A 2-way ANOVA or mixed model could reveal whether difficulty and penalty have synergistic or antagonistic effects that pairwise t-tests miss.\n- Deceptive agents earning 3x the payoff of honest agents (133-151 vs 46-47) represents a fundamental incentive compatibility failure. Neither swept parameter addresses this, raising the question of whether the wrong governance levers were tested.\n\nRECOMMENDATIONS:\n- Accept the null result as informative: Moltbook CAPTCHA difficulty and collusion penalty multiplier do not meaningfully affect outcomes in this scenario configuration. Publish this as a negative result \u2014 it constrains the design space.\n- Investigate why deceptive agents earn 3x honest agent payoffs. This payoff gap is the dominant feature of the data and should be the primary research question. Consider testing governance mechanisms that directly target deceptive surplus (e.g., higher deception detection thresholds, mandatory verification, reputation-weighted payoffs).\n- Run a 2-way ANOVA with interaction terms to check for synergistic effects between difficulty and penalty before concluding both are individually ineffective.\n- If pursuing further sweeps on these parameters, use a narrower range around the apparent sweet spot (difficulty=0.5-0.75) with finer granularity (steps of 0.05) and more seeds per cell (20+).\n- Consider whether the CAPTCHA mechanism is structurally capable of affecting the metrics measured. If CAPTCHAs only gate entry and don't modify post-entry behavior, they may be testing the wrong lever for toxicity/welfare outcomes.\n- Add pre-registration for primary hypotheses in future studies to clearly separate confirmatory from exploratory analyses.",
+  "findings": [
+    "Zero hypotheses survive multiple comparisons correction. Out of 112 pairwise tests across 7 metrics, 0 are Bonferroni-significant and 0 are BH-significant. The Moltbook CAPTCHA challenge difficulty and collusion penalty multiplier have no statistically reliable effect on any measured outcome.",
+    "The largest observed effect (challenge difficulty 0.0 vs 0.75 on welfare, d=-0.584, p=0.011) is a medium effect that does not survive correction for 112 hypotheses (Bonferroni threshold: p<0.00045).",
+    "Deceptive agents dominate all configurations, earning 133-151 per run vs honest agents at ~47 and adversarial at ~36. This payoff structure is invariant to both governance parameters.",
+    "Challenge difficulty shows a weak inverted-U pattern on welfare: monotonically increasing from diff=0.0 (870) to diff=0.75 (904) then dropping at diff=1.0 (883).",
+    "Collusion penalty shows no clear dose-response on any metric. All differences are within noise (d<0.3)."
+  ],
+  "concerns": [
+    "With 10 seeds per cell (200 total runs, 20 cells), the study has ~60% power at d=0.5. The strongest observed effect (d=0.58) still fails correction, suggesting true effects are smaller than detectable.",
+    "The 112 hypotheses create a severe multiple comparisons burden. Even the liberal BH procedure finds nothing \u2014 this is a strong null result.",
+    "Toxicity rate is essentially constant (0.2631-0.2654, range=0.0023). The governance mechanisms appear completely ineffective at reducing harmful interactions.",
+    "No interaction effects tested. A 2-way ANOVA could reveal synergistic effects that pairwise t-tests miss.",
+    "Deceptive agents earning 3x honest agent payoffs (133-151 vs 46-47) represents a fundamental incentive compatibility failure that neither swept parameter addresses."
+  ],
+  "recommendations": [
+    "Accept and publish the null result \u2014 it constrains the design space by showing CAPTCHA difficulty and collusion penalty are ineffective governance levers in this configuration.",
+    "Investigate why deceptive agents earn 3x honest payoffs. This is the dominant feature and should drive the next study's hypothesis.",
+    "Run a 2-way ANOVA with interaction terms before concluding both parameters are individually ineffective.",
+    "If pursuing further sweeps, narrow the range around difficulty=0.5-0.75 with finer granularity and 20+ seeds per cell.",
+    "Consider whether the CAPTCHA mechanism is structurally capable of affecting post-entry behavior \u2014 it may be the wrong lever for toxicity/welfare.",
+    "Add pre-registration for primary hypotheses in future studies to separate confirmatory from exploratory analyses."
+  ],
+  "responses": {
+    "mechanism_designer": "This is a clean null result that is nonetheless highly informative. The Moltbook CAPTCHA mechanism and collusion penalty operate on different margins than the ones driving welfare and toxicity in this scenario. CAPTCHAs gate entry quality but don't modify the payoff structure conditional on entry \u2014 once an agent passes the CAPTCHA, the same delegation game plays out regardless of difficulty level. Similarly, the collusion penalty multiplier (0-2x) doesn't affect outcomes because the penalty base may be too small relative to the gains from collusion, or because collusion isn't the primary exploitation vector. The critical finding is the deceptive agent payoff dominance: at 133-151 per run (3x honest agents), the simulation has an incentive compatibility problem that neither lever addresses. The mechanism design implication is clear \u2014 effective governance here requires modifying the payoff structure itself (e.g., through verification, reputation weighting, or surplus clawback) rather than entry barriers or penalty scaling.",
+    "statistician": "This is a well-powered null result for the primary comparisons. With n=40 per group (pooled across the other parameter), the study achieves ~85% power at d=0.5 and ~60% power at d=0.3. The largest observed effect (d=0.584, p=0.011) fails Bonferroni correction at the 112-hypothesis threshold (p<0.00045), and even BH correction at alpha=0.05 produces zero significant results. The effect size distribution (max |d|=0.584, most |d|<0.3) is consistent with sampling noise around a true null. Toxicity rate has negligible variance across conditions (SD~0.004, range 0.002), making it essentially a constant \u2014 the governance parameters have zero practical effect on harm rates. One methodological concern: the study tests each parameter marginally but ignores the 2-way interaction. A factorial ANOVA should be run. The inverted-U in welfare vs difficulty (peaking at 0.75) is suggestive but not statistically reliable and may be an artifact of aggregating across penalty levels.",
+    "red_teamer": "The most alarming finding is that deceptive agents earn 3x the payoff of honest agents across ALL governance configurations tested. This means the entire CAPTCHA/penalty design space is broken from an adversarial perspective \u2014 a rational agent would always choose deception. Specific attack vectors: (1) CAPTCHAs are a one-time gate, so an adversary can invest effort to pass the CAPTCHA then exploit indefinitely. Difficulty=1.0 slightly reduces deceptive payoffs (140.9 vs 151.5 at difficulty=0.75) but still leaves deception vastly more profitable than honesty. (2) The collusion penalty multiplier at 2x barely moves adversarial payoffs (35.9 vs 36.3 at 0x) \u2014 an adversary can simply absorb the penalty. (3) No configuration freezes any agents (n_frozen\u22480 across the board), meaning the circuit breaker is either disabled or too lenient. (4) The study doesn't test adaptive adversaries who observe the governance parameters and optimize against them. (5) The quality gap is stable and positive (0.18-0.19), which paradoxically means the acceptance mechanism works \u2014 but accepted interactions still produce high deceptive surplus, suggesting the problem is post-acceptance exploitation, not adverse selection."
+  },
+  "rankings": {
+    "mechanism_designer": [
+      "mechanism_designer",
+      "red_teamer",
+      "statistician"
+    ],
+    "statistician": [
+      "statistician",
+      "mechanism_designer",
+      "red_teamer"
+    ],
+    "red_teamer": [
+      "red_teamer",
+      "mechanism_designer",
+      "statistician"
+    ]
+  },
+  "aggregate_ranking": [
+    "mechanism_designer",
+    "red_teamer",
+    "statistician"
+  ],
+  "members_responded": 3,
+  "members_total": 3,
+  "success": true,
+  "error": null
+}

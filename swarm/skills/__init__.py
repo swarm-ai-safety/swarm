@@ -21,6 +21,7 @@ from swarm.skills.model import (
     Skill,
     SkillInvocation,
     SkillPerformance,
+    SkillTier,
     SkillType,
 )
 
@@ -30,6 +31,7 @@ __all__ = [
     "SkillInvocation",
     "SkillLibrary",
     "SkillPerformance",
+    "SkillTier",
     "SkillType",
     "SharingMode",
 ]

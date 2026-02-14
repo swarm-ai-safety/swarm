@@ -72,6 +72,61 @@ if [ -n "$STAGED_FILES" ]; then
     echo "[swarm pre-commit] secrets scan: clean"
 fi
 
+# ── 1b. Private infra ID / dashboard link scan ──
+echo "[swarm pre-commit] private infra scan"
+
+INFRA_PATTERNS=(
+    'app\.primeintellect\.ai/dashboard'   # Prime Intellect dashboard links
+    'primeintellect\.ai/runs/'            # Prime Intellect run links
+    '[a-z0-9]{24}'                        # Prime Intellect run IDs (24-char alphanumeric)
+)
+
+# Only check added lines in staged content for blog/docs/public-facing files
+STAGED_PUBLIC=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(md|html|rst|txt)$' || true)
+if [ -n "$STAGED_PUBLIC" ]; then
+    INFRA_FOUND=0
+    INFRA_DIFF=$(git diff --cached -U0 -- $STAGED_PUBLIC)
+
+    # Check for dashboard URLs (high confidence — always block)
+    for pattern in 'app\.primeintellect\.ai/' 'primeintellect\.ai/dashboard' 'primeintellect\.ai/runs/'; do
+        INFRA_MATCHES=$(echo "$INFRA_DIFF" | grep -E "^\+" | grep -E "$pattern" || true)
+        if [ -n "$INFRA_MATCHES" ]; then
+            echo "ERROR: Private dashboard link detected:"
+            echo "$INFRA_MATCHES" | head -5
+            echo ""
+            INFRA_FOUND=1
+        fi
+    done
+
+    # Check for bare run IDs (24-char lowercase alphanumeric, only in added lines)
+    # Filter out common false positives (commit SHAs are 40 chars, these are 24)
+    RUN_ID_MATCHES=$(echo "$INFRA_DIFF" | grep -E "^\+" | grep -Eio '\b[a-z0-9]{24}\b' | \
+        grep -v '^[0-9a-f]\{40\}$' || true)
+    if [ -n "$RUN_ID_MATCHES" ]; then
+        # Only flag if the line also mentions "run" or "prime" or "training" (context-aware)
+        CONTEXTUAL=$(echo "$INFRA_DIFF" | grep -E "^\+" | grep -Ei '(run.id|prime|training|dashboard)' | \
+            grep -Eio '\b[a-z0-9]{24}\b' || true)
+        if [ -n "$CONTEXTUAL" ]; then
+            echo "WARNING: Possible Prime Intellect run ID detected in public-facing file:"
+            echo "$CONTEXTUAL" | head -5
+            echo ""
+            INFRA_FOUND=1
+        fi
+    fi
+
+    if [ $INFRA_FOUND -eq 1 ]; then
+        echo "=========================================="
+        echo "COMMIT BLOCKED: Private infrastructure IDs"
+        echo "=========================================="
+        echo ""
+        echo "Do not expose run IDs or dashboard links in public docs/blog."
+        echo "Remove the ID or replace with a generic description."
+        echo ""
+        exit 1
+    fi
+    echo "[swarm pre-commit] private infra scan: clean"
+fi
+
 # ── 2. Lint/Typecheck (prefer pre-commit if available) ──
 if command -v pre-commit >/dev/null 2>&1 && [ -f ".pre-commit-config.yaml" ]; then
     echo "[swarm pre-commit] pre-commit (config hooks)"
@@ -115,7 +170,8 @@ if [ -z "$STAGED_ANY_CODE" ]; then
     echo "[swarm pre-commit] no staged .py/.sh files; skipping pytest"
 else
     echo "[swarm pre-commit] pytest"
-    python -m pytest tests/ -x -q; PYTEST_EXIT=$?
+    PYTEST_EXIT=0
+    python -m pytest tests/ -x -q || PYTEST_EXIT=$?
     if [ $PYTEST_EXIT -ne 0 ]; then
         echo "[swarm pre-commit] pytest FAILED (exit $PYTEST_EXIT)"
         exit 1

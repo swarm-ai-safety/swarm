@@ -143,6 +143,10 @@ governance:
   collusion_realtime_penalty: true
   collusion_realtime_rate: 0.1
 
+  # Refinery quality gate (models GasTown's Refinery merge queue)
+  refinery_enabled: true
+  refinery_p_threshold: 0.5
+
   # Bandwidth cap
   bandwidth_cap: 8
 

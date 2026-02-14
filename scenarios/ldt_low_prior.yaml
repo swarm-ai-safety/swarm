@@ -1,0 +1,61 @@
+# LDT Low Cooperation Prior Scenario (§4.2 Condition C)
+# Tests whether deeper acausal reasoning helps with lower cooperation priors
+# where marginal cooperation decisions are more contested.
+# Prediction: Level 2-3 should show larger effects with prior=0.35.
+
+scenario_id: ldt_low_prior
+description: "LDT agents with low cooperation prior (0.35) — contested cooperation"
+motif: ldt_cooperation
+
+agents:
+  - type: ldt
+    count: 3
+    config:
+      cooperation_prior: 0.35
+      similarity_threshold: 0.7
+      welfare_weight: 0.3
+      updateless_commitment: 0.8
+      acausality_depth: 1
+      decision_theory: fdt
+  - type: honest
+    count: 2
+  - type: opportunistic
+    count: 1
+  - type: adversarial
+    count: 1
+
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 1.0
+  bandwidth_cap: 10
+  circuit_breaker_enabled: false
+  audit_enabled: false
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.0
+  rho_b: 0.0
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 10
+  min_agents: 7
+  toxicity_threshold: 0.5
+
+outputs:
+  event_log: "logs/ldt_low_prior_events.jsonl"
+  metrics_csv: "logs/ldt_low_prior_metrics.csv"
