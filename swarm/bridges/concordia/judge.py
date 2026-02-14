@@ -4,6 +4,7 @@ import hashlib
 import json
 import logging
 import re
+import threading
 from collections import OrderedDict
 from typing import Any, Callable
 
@@ -31,6 +32,7 @@ class LLMJudge:
         self._config = config or JudgeConfig()
         self._llm_client = llm_client
         self._cache: OrderedDict[str, JudgeScores] = OrderedDict()
+        self._cache_lock = threading.Lock()
 
     def evaluate(self, narrative: str) -> JudgeScores:
         """Evaluate a narrative and return scores."""
@@ -39,16 +41,17 @@ class LLMJudge:
         # Check cache
         if self._config.cache_enabled:
             key = self._cache_key(truncated)
-            if key in self._cache:
-                cached = self._cache[key]
-                return JudgeScores(
-                    progress=cached.progress,
-                    quality=cached.quality,
-                    cooperation=cached.cooperation,
-                    harm=cached.harm,
-                    raw_response=cached.raw_response,
-                    cached=True,
-                )
+            with self._cache_lock:
+                if key in self._cache:
+                    cached = self._cache[key]
+                    return JudgeScores(
+                        progress=cached.progress,
+                        quality=cached.quality,
+                        cooperation=cached.cooperation,
+                        harm=cached.harm,
+                        raw_response=cached.raw_response,
+                        cached=True,
+                    )
 
         # Stub mode: return defaults if no LLM client
         if self._llm_client is None:
@@ -72,10 +75,11 @@ class LLMJudge:
         # Update cache
         if self._config.cache_enabled:
             key = self._cache_key(truncated)
-            self._cache[key] = scores
-            # Evict oldest if over limit
-            while len(self._cache) > self._config.cache_max_size:
-                self._cache.popitem(last=False)
+            with self._cache_lock:
+                self._cache[key] = scores
+                # Evict oldest if over limit
+                while len(self._cache) > self._config.cache_max_size:
+                    self._cache.popitem(last=False)
 
         return scores
 
