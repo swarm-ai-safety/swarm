@@ -4,6 +4,7 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## Posts
 
+- **[An AI Agent Cut Its Own Costs by 98%. Its Benchmarks Still Passed.](self-optimizer-distributional-safety.md)** — A self-optimizing agent passes every hard metric while soft distributional metrics reveal quality collapse, adverse selection, and proxy gaming.
 - **[Three Agents, Three Philosophies, One Benchmark](three-agents-three-philosophies.md)** — An LLM reasoner, a state-graph explorer, and a CNN learner walk into ARC-AGI-3. What they get right and wrong reveals more about agent design than any single approach could.
 - **[What 13 Agent Versions Taught Us About Interactive Reasoning](arc-agi-3-agent-development-lessons.md)** — Building a Claude Sonnet 4.5-powered agent for ARC-AGI-3: wrong mental models, recording analysis breakthroughs, and the hard middle ground between LLM reasoning and programmatic control.
 - **[Three Models, One Study: What Happens When You Let an LLM Council Peer-Review Your Research](llm-council-three-models-one-study.md)** — We built a 3-stage deliberation protocol where LLM agents peer-rank each other anonymously. Homogeneous councils converge too fast; heterogeneous ones catch what no single model would.
