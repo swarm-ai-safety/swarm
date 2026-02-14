@@ -25,7 +25,7 @@ import sys
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -37,7 +37,6 @@ from swarm.bridges.concordia.multiverse import (
     MultiverseConfig,
     MultiverseResult,
     MultiverseRunner,
-    UniverseResult,
 )
 from swarm.bridges.concordia.simulacra import (
     CommunityConfig,
@@ -468,7 +467,7 @@ def generate_plots(
         values = [mv.bias_squared, mv.variance]
         colors = ["#e74c3c", "#3498db"]
         bottom = 0.0
-        for comp, val, col in zip(components, values, colors):
+        for comp, val, col in zip(components, values, colors, strict=True):
             ax.bar("Total Error", val, bottom=bottom, label=f"{comp} = {val:.4f}",
                     color=col, width=0.4)
             bottom += val
@@ -512,7 +511,7 @@ def print_summary(
 
     # WhatIf
     if whatif_results:
-        print(f"\n  WhatIf Injections:")
+        print("\n  WhatIf Injections:")
         print(f"    {'Persona':<20} {'Baseline Tox':>12} {'Post Tox':>12} {'Delta':>10}")
         print(f"    {'-' * 56}")
         for r in whatif_results:
