@@ -21,7 +21,7 @@ The evaluator automatically creates LLM agents from each council member's config
 | **Anthropic** (default) | `export ANTHROPIC_API_KEY=sk-ant-...` | Uses `claude-sonnet-4-20250514` |
 | **OpenAI** | `export OPENAI_API_KEY=sk-...` | Uses `gpt-4o` |
 | **Ollama** (local, free) | `brew install ollama && ollama serve` | Requires a pulled model |
-| **Groq** | `export GROQ_API_KEY=gsk_...` | Uses `llama-3.1-70b-versatile` |
+| **Groq** | `export GROQ_API_KEY=gsk_...` | Uses `llama-3.3-70b-versatile` |
 | **Together** | `export TOGETHER_API_KEY=...` | Uses `meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo` |
 | **DeepSeek** | `export DEEPSEEK_API_KEY=sk-...` | Uses `deepseek-chat` |
 | **Google** | `export GOOGLE_API_KEY=...` | Uses `gemini-2.0-flash` (requires `google-genai`) |
