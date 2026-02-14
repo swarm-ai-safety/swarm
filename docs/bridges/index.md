@@ -52,7 +52,7 @@ Train and evaluate RL models on SWARM safety metrics using Prime Intellect's dis
 - **Features:** Environment export, composite reward from SWARM metrics, anti-gaming scoring, platform job management
 - **Status:** In development
 
-[Learn more →](prime-intellect.md)
+[Learn more →](prime_intellect.md)
 
 ### SWARM-Ralph
 
