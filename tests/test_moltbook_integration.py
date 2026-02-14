@@ -51,7 +51,9 @@ def test_moltbook_publish_flow():
 
 
 def test_moltbook_rate_limit_hits_recorded():
-    # Use more steps than the cooldown window (5) to ensure spam triggers rate limit
+    # Use many more steps than the cooldown window to ensure spam triggers rate limit.
+    # With cooldown=2 and 20 steps, the agent can only post every 2 steps (10 max),
+    # but will attempt every step, so ~10 attempts should be rate-limited.
     gov = GovernanceConfig(
         moltbook_rate_limit_enabled=True,
         moltbook_post_cooldown_steps=2,
@@ -63,8 +65,8 @@ def test_moltbook_rate_limit_hits_recorded():
         moltbook_challenge_window_steps=2,
     )
     config = OrchestratorConfig(
-        n_epochs=1,
-        steps_per_epoch=8,
+        n_epochs=2,
+        steps_per_epoch=10,
         seed=2,
         moltbook_config=MoltbookConfig(enabled=True, seed=2),
         governance_config=gov,

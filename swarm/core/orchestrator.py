@@ -1045,10 +1045,12 @@ class Orchestrator:
         child_id = f"{parent_id}_child{self._spawn_counter}"
 
         # Instantiate child agent (concrete subclasses set their own agent_type)
+        child_rng = random.Random((self.config.seed or 0) + self._spawn_counter)
         child_agent = agent_class(  # type: ignore[call-arg]
             agent_id=child_id,
             name=child_id,
             config=child_config if child_config else None,
+            rng=child_rng,
         )
         self._agents[child_id] = child_agent
 
