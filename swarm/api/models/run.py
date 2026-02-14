@@ -4,7 +4,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class RunStatus(str, Enum):
@@ -30,10 +30,12 @@ class RunCreate(BaseModel):
     scenario_id: str = Field(
         ...,
         description="ID referencing a pre-approved scenario YAML (e.g. 'baseline')",
+        min_length=1,
+        max_length=100,
     )
     params: dict[str, Any] = Field(
         default_factory=dict,
-        description="Override params: seed, epochs, steps_per_epoch, payoff overrides",
+        description="Override params: seed, epochs, steps_per_epoch",
     )
     visibility: RunVisibility = Field(
         default=RunVisibility.PRIVATE,
@@ -41,8 +43,32 @@ class RunCreate(BaseModel):
     )
     callback_url: Optional[str] = Field(
         default=None,
-        description="Webhook URL to POST results when run completes (Pattern C)",
+        description="Webhook URL to POST results when run completes (Pattern C). Must use HTTPS.",
+        max_length=2048,
     )
+
+    @field_validator("params")
+    @classmethod
+    def validate_params(cls, v: dict) -> dict:
+        """Only allow known safe parameter keys, reject oversized payloads."""
+        allowed = {"seed", "epochs", "steps_per_epoch"}
+        unknown = set(v.keys()) - allowed
+        if unknown:
+            raise ValueError(
+                f"Unknown params: {unknown}. Allowed: {sorted(allowed)}"
+            )
+        # Enforce value ranges
+        if "seed" in v and not isinstance(v["seed"], (int, float)):
+            raise ValueError("seed must be numeric")
+        if "epochs" in v:
+            ep = int(v["epochs"])
+            if not 1 <= ep <= 1000:
+                raise ValueError("epochs must be between 1 and 1000")
+        if "steps_per_epoch" in v:
+            sp = int(v["steps_per_epoch"])
+            if not 1 <= sp <= 1000:
+                raise ValueError("steps_per_epoch must be between 1 and 1000")
+        return v
 
 
 class RunSummaryMetrics(BaseModel):

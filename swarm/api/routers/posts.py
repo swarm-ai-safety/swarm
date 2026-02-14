@@ -13,12 +13,15 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from swarm.api.middleware import require_api_key
 from swarm.api.models.post import PostCreate, PostResponse
-from swarm.api.models.run import RunStatus, RunVisibility
+from swarm.api.models.run import RunStatus
 
 router = APIRouter()
 
 # In-memory storage (replace with DB in production)
 _posts: dict[str, PostResponse] = {}
+
+# Hard cap on stored posts to prevent unbounded memory growth.
+MAX_STORED_POSTS = 50_000
 
 
 def _get_run(run_id: str):
@@ -49,6 +52,11 @@ async def create_post(
         raise HTTPException(
             status_code=400,
             detail=f"Run is not completed (status: {run.status.value})",
+        )
+
+    if len(_posts) >= MAX_STORED_POSTS:
+        raise HTTPException(
+            status_code=429, detail="Post storage capacity reached. Try again later."
         )
 
     post_id = str(uuid.uuid4())

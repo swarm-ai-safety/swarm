@@ -12,7 +12,9 @@ from fastapi.testclient import TestClient  # noqa: E402
 from swarm.api.app import create_app  # noqa: E402
 from swarm.api.config import APIConfig  # noqa: E402
 from swarm.api.middleware import (  # noqa: E402
+    _api_key_hashes,
     _api_keys,
+    _key_quotas,
     _rate_limit_windows,
     _trusted_keys,
     register_api_key,
@@ -29,10 +31,14 @@ from swarm.api.models.run import RunStatus, RunVisibility  # noqa: E402
 def _clear_middleware_state():
     """Reset middleware state between tests."""
     _api_keys.clear()
+    _api_key_hashes.clear()
+    _key_quotas.clear()
     _rate_limit_windows.clear()
     _trusted_keys.clear()
     yield
     _api_keys.clear()
+    _api_key_hashes.clear()
+    _key_quotas.clear()
     _rate_limit_windows.clear()
     _trusted_keys.clear()
 
@@ -107,6 +113,191 @@ class TestMiddleware:
 
 
 # ---------------------------------------------------------------------------
+# Security-specific tests
+# ---------------------------------------------------------------------------
+
+
+class TestSecurityHardening:
+    """Tests for security controls added during the security review."""
+
+    def test_ssrf_callback_http_rejected(self, client):
+        """HTTP callback URLs are rejected (must be HTTPS)."""
+        _, api_key = _register_agent(client)
+        resp = client.post(
+            "/api/runs",
+            json={
+                "scenario_id": "baseline",
+                "callback_url": "http://evil.com/hook",
+            },
+            headers=_auth_header(api_key),
+        )
+        assert resp.status_code == 400
+        assert "HTTPS" in resp.json()["detail"]
+
+    def test_ssrf_callback_localhost_rejected(self, client):
+        """Callback URLs pointing to localhost are rejected."""
+        _, api_key = _register_agent(client)
+        resp = client.post(
+            "/api/runs",
+            json={
+                "scenario_id": "baseline",
+                "callback_url": "https://localhost/hook",
+            },
+            headers=_auth_header(api_key),
+        )
+        assert resp.status_code == 400
+        assert "internal" in resp.json()["detail"].lower()
+
+    def test_ssrf_callback_metadata_rejected(self, client):
+        """Callback URLs to cloud metadata endpoints are rejected."""
+        _, api_key = _register_agent(client)
+        resp = client.post(
+            "/api/runs",
+            json={
+                "scenario_id": "baseline",
+                "callback_url": "https://169.254.169.254/latest/meta-data",
+            },
+            headers=_auth_header(api_key),
+        )
+        assert resp.status_code == 400
+
+    def test_ssrf_callback_private_ip_rejected(self, client):
+        """Callback URLs to private IPs are rejected."""
+        _, api_key = _register_agent(client)
+        for host in ["10.0.0.1", "192.168.1.1", "172.16.0.1"]:
+            resp = client.post(
+                "/api/runs",
+                json={
+                    "scenario_id": "baseline",
+                    "callback_url": f"https://{host}/hook",
+                },
+                headers=_auth_header(api_key),
+            )
+            assert resp.status_code == 400, f"Expected 400 for {host}"
+
+    def test_path_traversal_scenario_id_rejected(self, client):
+        """Path traversal attempts in scenario_id are rejected."""
+        _, api_key = _register_agent(client)
+        for bad_id in ["../../etc/passwd", "../baseline", "foo/bar", "a;b", "a b"]:
+            resp = client.post(
+                "/api/runs",
+                json={"scenario_id": bad_id},
+                headers=_auth_header(api_key),
+            )
+            assert resp.status_code == 400, f"Expected 400 for scenario_id={bad_id!r}"
+
+    def test_scenario_allowlist_no_longer_leaks_names(self, client):
+        """Error message for unknown scenario does not list all allowed names."""
+        _, api_key = _register_agent(client)
+        resp = client.post(
+            "/api/runs",
+            json={"scenario_id": "nonexistent"},
+            headers=_auth_header(api_key),
+        )
+        detail = resp.json()["detail"]
+        # Should NOT contain "Allowed: [...]"
+        assert "Allowed:" not in detail
+
+    def test_unknown_params_rejected(self, client):
+        """Run params with unknown keys are rejected at the model level."""
+        _, api_key = _register_agent(client)
+        resp = client.post(
+            "/api/runs",
+            json={
+                "scenario_id": "baseline",
+                "params": {"evil_key": "drop table"},
+            },
+            headers=_auth_header(api_key),
+        )
+        assert resp.status_code == 422
+
+    def test_epochs_out_of_range_rejected(self, client):
+        """Epochs > 1000 rejected at model level."""
+        _, api_key = _register_agent(client)
+        resp = client.post(
+            "/api/runs",
+            json={
+                "scenario_id": "baseline",
+                "params": {"epochs": 9999},
+            },
+            headers=_auth_header(api_key),
+        )
+        assert resp.status_code == 422
+
+    def test_tags_too_many_rejected(self, client):
+        """More than 20 tags rejected."""
+        from pydantic import ValidationError
+
+        from swarm.api.models.post import PostCreate
+
+        with pytest.raises(ValidationError):
+            PostCreate(
+                run_id="x",
+                title="t",
+                blurb="b",
+                tags=[f"tag{i}" for i in range(21)],
+            )
+
+    def test_tag_too_long_rejected(self):
+        from pydantic import ValidationError
+
+        from swarm.api.models.post import PostCreate
+
+        with pytest.raises(ValidationError):
+            PostCreate(
+                run_id="x",
+                title="t",
+                blurb="b",
+                tags=["a" * 101],
+            )
+
+    def test_key_metrics_too_large_rejected(self):
+        from pydantic import ValidationError
+
+        from swarm.api.models.post import PostCreate
+
+        # 51 keys
+        with pytest.raises(ValidationError):
+            PostCreate(
+                run_id="x",
+                title="t",
+                blurb="b",
+                key_metrics={f"k{i}": i for i in range(51)},
+            )
+
+    def test_error_message_sanitized(self, client):
+        """Error messages on failed runs should not leak stack traces."""
+        _, api_key = _register_agent(client)
+        headers = _auth_header(api_key)
+
+        # Kick off a run (baseline should succeed, but we check the error field format)
+        resp = client.post(
+            "/api/runs",
+            json={
+                "scenario_id": "baseline",
+                "params": {"seed": 1, "epochs": 1, "steps_per_epoch": 1},
+            },
+            headers=headers,
+        )
+        run_id = resp.json()["run_id"]
+
+        # Wait for completion
+        for _ in range(60):
+            resp = client.get(f"/api/runs/{run_id}", headers=headers)
+            if resp.json()["status"] in ("completed", "failed"):
+                break
+            time.sleep(0.5)
+
+        # If it completed, error should be None
+        # If it failed, error should be sanitized (type: truncated_message format)
+        data = resp.json()
+        if data["error"] is not None:
+            assert len(data["error"]) <= 300  # Truncated
+            assert "Traceback" not in data["error"]
+            assert "File " not in data["error"]
+
+
+# ---------------------------------------------------------------------------
 # Run endpoint tests
 # ---------------------------------------------------------------------------
 
@@ -125,11 +316,10 @@ class TestRunEndpoints:
         _, api_key = _register_agent(client)
         resp = client.post(
             "/api/runs",
-            json={"scenario_id": "nonexistent_scenario_xyz"},
+            json={"scenario_id": "nonexistent"},
             headers=_auth_header(api_key),
         )
         assert resp.status_code == 404
-        assert "nonexistent_scenario_xyz" in resp.json()["detail"]
 
     def test_create_run_baseline(self, client):
         """Kick off a baseline run and get back a run_id + status_url."""
@@ -346,7 +536,6 @@ class TestPostEndpoints:
 
     def test_feed_is_public(self, client):
         """The feed endpoint is publicly readable (no auth needed for GET)."""
-        # The feed router doesn't require auth for GET
         resp = client.get("/api/posts")
         assert resp.status_code == 200
         assert isinstance(resp.json(), list)

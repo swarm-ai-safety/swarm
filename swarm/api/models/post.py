@@ -1,9 +1,10 @@
 """Post/feed card models for the Moltbook-style results feed."""
 
+import json
 from datetime import datetime
 from typing import Any, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 
 class PostCreate(BaseModel):
@@ -21,8 +22,36 @@ class PostCreate(BaseModel):
         description="Highlighted metrics to display on the card",
     )
     tags: list[str] = Field(
-        default_factory=list, description="Tags for filtering (e.g. 'baseline', 'sweep')"
+        default_factory=list,
+        description="Tags for filtering (e.g. 'baseline', 'sweep')",
     )
+
+    @field_validator("key_metrics")
+    @classmethod
+    def validate_key_metrics(cls, v: dict) -> dict:
+        """Bound the size of key_metrics to prevent memory bombs."""
+        if len(v) > 50:
+            raise ValueError("key_metrics must have at most 50 entries")
+        # Reject deeply nested or oversized payloads by checking serialized size
+        serialized = json.dumps(v, default=str)
+        if len(serialized) > 10_000:
+            raise ValueError("key_metrics serialized size must be under 10KB")
+        return v
+
+    @field_validator("tags")
+    @classmethod
+    def validate_tags(cls, v: list) -> list:
+        """Bound tags count and individual tag length."""
+        if len(v) > 20:
+            raise ValueError("At most 20 tags allowed")
+        for tag in v:
+            if not isinstance(tag, str):
+                raise ValueError("Each tag must be a string")
+            if len(tag) > 100:
+                raise ValueError("Each tag must be at most 100 characters")
+            if not tag.strip():
+                raise ValueError("Tags must not be blank")
+        return v
 
 
 class PostResponse(BaseModel):

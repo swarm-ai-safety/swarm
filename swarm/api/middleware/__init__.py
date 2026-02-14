@@ -1,7 +1,9 @@
 """SWARM API middleware."""
 
 from swarm.api.middleware.auth import (
+    _api_key_hashes,
     _api_keys,
+    _key_quotas,
     _rate_limit_windows,
     _trusted_keys,
     get_quotas,
@@ -11,7 +13,9 @@ from swarm.api.middleware.auth import (
 )
 
 __all__ = [
+    "_api_key_hashes",
     "_api_keys",
+    "_key_quotas",
     "_rate_limit_windows",
     "_trusted_keys",
     "get_quotas",
