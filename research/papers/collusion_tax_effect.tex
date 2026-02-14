@@ -1,0 +1,363 @@
+% SWARM Paper Template
+% Generated from docs/papers/collusion_tax_effect.md
+
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{verbatim}
+
+\title{Collusion Tax Effect: Transaction Taxation and Collusion\\Penalties in Recursive Multi-Agent Systems}
+\author{SWARM Research Collective}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We investigate the interaction between transaction taxation and collusion penalties in a 12-agent simulation featuring recursive learning model (RLM) agents at varying reasoning depths (1, 3, and 5) alongside honest baseline agents. Sweeping tax rates (0\%, 2\%, 5\%, 10\%) and collusion penalty multipliers (0.5x, 1.0x, 1.5x, 2.0x) across 160 runs (10 seeds per configuration), we find that transaction taxes produce massive welfare reductions ($d=4.80$, $p<0.0001$ for 0\% vs 10\% tax) with particularly strong effects on RLM agents ($d=6.02$). Collusion penalties show no significant effect on welfare but the 2.0x multiplier significantly increases toxicity ($d=-1.12$, $p<0.0001$). Honest agents earn 2.7x more than RLM agents across all conditions, and this ratio is stable across tax rates. Of 60 pre-registered hypotheses, 21 survive Bonferroni correction.
+\end{abstract}
+
+\section{Introduction}
+
+Recursive reasoning in multi-agent systems creates a distinct governance challenge: agents that model other agents' reasoning may develop implicit coordination strategies that are difficult to detect and penalize. The SWARM framework's RLM (Recursive Learning Model) agents implement varying depths of recursive theory-of-mind, enabling controlled study of how reasoning depth interacts with governance mechanisms.
+
+This study examines two governance levers in a collusion-aware environment:
+
+\begin{enumerate}
+\item \textbf{Transaction taxes}: A blunt instrument that increases the cost of all interactions, regardless of quality or intent.
+\item \textbf{Collusion penalties}: A targeted instrument that penalizes detected coordination patterns, calibrated by a multiplier applied to the base penalty.
+\end{enumerate}
+
+We ask three questions:
+\begin{enumerate}
+\item How does transaction taxation affect welfare in a recursive agent environment, and does the effect differ between honest and RLM agents?
+\item Does increasing collusion penalty severity reduce collusive behavior (as measured by toxicity)?
+\item Is there an interaction effect between tax rate and collusion penalty --- do they amplify or substitute for each other?
+\end{enumerate}
+
+\section{Methods}
+
+\subsection{Scenario Configuration}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Total agents & 12 \\
+RLM agents (depth=1) & 3 (``rlm\_shallow'') \\
+RLM agents (depth=3) & 3 (``rlm\_mid'') \\
+RLM agents (depth=5) & 3 (``rlm\_deep'') \\
+Honest agents & 3 \\
+Epochs & 30 \\
+Steps per epoch & 15 \\
+Collusion detection & Enabled \\
+Collusion frequency threshold & 2.0 \\
+Collusion correlation threshold & 0.7 \\
+Audit enabled & Yes (probability=0.15) \\
+Audit penalty multiplier & 2.0 \\
+Bandwidth cap & 15 \\
+\bottomrule
+\end{tabular}
+\caption{Scenario configuration for the recursive collusion experiment.}
+\end{table}
+
+\subsection{Swept Parameters}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Values} \\
+\midrule
+\texttt{governance.transaction\_tax\_rate} & 0.0, 0.02, 0.05, 0.10 \\
+\texttt{governance.collusion\_penalty\_multiplier} & 0.5, 1.0, 1.5, 2.0 \\
+\bottomrule
+\end{tabular}
+\caption{Swept parameters. Total configurations: $4 \times 4 = 16$. Seeds per configuration: 10. Total runs: 160.}
+\end{table}
+
+\subsection{Metrics}
+
+\begin{itemize}
+\item \textbf{Welfare}: Cumulative payoff across all 12 agents over 30 epochs
+\item \textbf{Toxicity rate}: $\mathbb{E}[1-p \mid \text{accepted}]$, expected harm from accepted interactions
+\item \textbf{Quality gap}: $\mathbb{E}[p \mid \text{accepted}] - \mathbb{E}[p \mid \text{rejected}]$
+\item \textbf{Honest payoff}: Mean payoff per honest agent
+\item \textbf{RLM payoff}: Derived as $(\text{welfare} - \text{honest\_payoff} \times 3) / 9$
+\end{itemize}
+
+\subsection{Statistical Methods}
+
+\begin{itemize}
+\item Welch's $t$-test (unequal variance) for pairwise comparisons
+\item Mann-Whitney $U$ as non-parametric robustness check
+\item Cohen's $d$ for effect sizes (pooled SD)
+\item Bonferroni correction ($\alpha = 0.05/60 = 0.000833$)
+\item Benjamini-Hochberg correction for false discovery rate
+\item Shapiro-Wilk normality validation
+\item Paired $t$-test for agent-type stratification
+\item 60 total pre-registered hypotheses
+\end{itemize}
+
+\section{Results}
+
+\subsection{Welfare by Tax Rate}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llllll}
+\toprule
+\textbf{Tax} & \textbf{Welfare} & \textbf{Toxicity} & \textbf{Honest} & \textbf{RLM} & \textbf{N} \\
+\midrule
+0.00 & $3791.5 \pm 49.1$ & $0.3346 \pm 0.0010$ & $601.3 \pm 18.5$ & $220.8 \pm 1.9$ & 40 \\
+0.02 & $3738.9 \pm 46.4$ & $0.3350 \pm 0.0014$ & $599.0 \pm 16.0$ & $215.8 \pm 1.5$ & 40 \\
+0.05 & $3605.7 \pm 57.2$ & $0.3363 \pm 0.0034$ & $575.7 \pm 17.1$ & $208.7 \pm 2.8$ & 40 \\
+0.10 & $3386.0 \pm 109.0$ & $0.3403 \pm 0.0093$ & $545.3 \pm 20.6$ & $194.5 \pm 5.9$ & 40 \\
+\bottomrule
+\end{tabular}
+\caption{Welfare, toxicity, honest payoff, and RLM payoff by transaction tax rate (mean $\pm$ SD).}
+\end{table}
+
+Transaction taxes produce monotonic welfare reduction across all tax levels, with the strongest effects at 10\% (welfare drops from 3791.5 to 3386.0, an 11\% decline). Unlike the baseline governance study where toxicity was unaffected by taxation, here toxicity also increases significantly with tax rate ($d=-0.86$, $p=0.0004$ for 0\% vs 10\%).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/collusion_tax_effect/welfare_vs_tax.png}
+\caption{Welfare vs transaction tax rate with 95\% CI error bars.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/collusion_tax_effect/toxicity_vs_tax.png}
+\caption{Toxicity vs transaction tax rate with 95\% CI error bars.}
+\end{figure}
+
+\subsection{Welfare by Collusion Penalty}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Penalty} & \textbf{Welfare (mean $\pm$ SD)} & \textbf{Toxicity (mean $\pm$ SD)} & \textbf{N} \\
+\midrule
+0.5x & $3647.6 \pm 144.3$ & $0.3344 \pm 0.0013$ & 40 \\
+1.0x & $3645.0 \pm 134.3$ & $0.3347 \pm 0.0010$ & 40 \\
+1.5x & $3648.7 \pm 148.7$ & $0.3354 \pm 0.0019$ & 40 \\
+2.0x & $3580.8 \pm 236.6$ & $0.3416 \pm 0.0089$ & 40 \\
+\bottomrule
+\end{tabular}
+\caption{Welfare and toxicity by collusion penalty multiplier.}
+\end{table}
+
+Collusion penalty multiplier has no significant effect on welfare at 0.5x--1.5x. However, the 2.0x multiplier shows both reduced welfare and significantly increased toxicity ($d=-1.12$, $p<0.0001$ vs 0.5x). This counterintuitive finding suggests that excessive collusion penalties may destabilize the system.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/collusion_tax_effect/welfare_vs_penalty.png}
+\caption{Welfare vs collusion penalty multiplier with 95\% CI error bars.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/collusion_tax_effect/toxicity_vs_penalty.png}
+\caption{Toxicity vs collusion penalty multiplier with 95\% CI error bars.}
+\end{figure}
+
+\subsection{Interaction Effects}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\textwidth]{figures/collusion_tax_effect/welfare_vs_tax_by_penalty.png}
+\caption{Welfare vs tax rate grouped by collusion penalty multiplier.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/collusion_tax_effect/welfare_heatmap.png}
+\caption{Mean welfare heatmap across tax rate and collusion penalty combinations.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/collusion_tax_effect/toxicity_heatmap.png}
+\caption{Mean toxicity heatmap across tax rate and collusion penalty combinations.}
+\end{figure}
+
+The heatmaps reveal that the welfare-reducing effects of taxation and high collusion penalties are approximately additive --- there is no strong interaction effect. The worst-case configuration (10\% tax, 2.0x penalty) produces the lowest welfare and highest toxicity.
+
+\subsection{Significant Results (Bonferroni-corrected)}
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabular}{lllll}
+\toprule
+\textbf{Comparison} & \textbf{Metric} & \textbf{$d$} & \textbf{$p$} & \textbf{Effect} \\
+\midrule
+Tax 0\% vs 10\% & RLM payoff & 6.02 & $<0.0001$ & Very large \\
+Tax 0\% vs 5\% & RLM payoff & 4.98 & $<0.0001$ & Very large \\
+Tax 2\% vs 10\% & RLM payoff & 4.96 & $<0.0001$ & Very large \\
+Tax 0\% vs 10\% & Welfare & 4.80 & $<0.0001$ & Very large \\
+Tax 2\% vs 10\% & Welfare & 4.22 & $<0.0001$ & Very large \\
+Tax 0\% vs 5\% & Welfare & 3.48 & $<0.0001$ & Very large \\
+Tax 0\% vs 2\% & RLM payoff & 2.93 & $<0.0001$ & Large \\
+Tax 2\% vs 10\% & Honest payoff & 2.92 & $<0.0001$ & Large \\
+Tax 0\% vs 10\% & Honest payoff & 2.87 & $<0.0001$ & Large \\
+Penalty 0.5x vs 2.0x & Toxicity & $-1.12$ & $<0.0001$ & Medium \\
+Tax 0\% vs 10\% & Toxicity & $-0.86$ & 0.0004 & Medium \\
+\bottomrule
+\end{tabular}
+\caption{Selected Bonferroni-significant results (11 of 21 shown). All tax comparisons on welfare, honest payoff, and RLM payoff are significant.}
+\end{table}
+
+\subsection{Agent-Type Stratification}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Agent Type} & \textbf{Mean Payoff (all conditions)} \\
+\midrule
+Honest & $580.3 \pm 28.9$ \\
+RLM & $210.0 \pm 10.5$ \\
+\bottomrule
+\end{tabular}
+\caption{Mean payoff by agent type across all configurations.}
+\end{table}
+
+Honest vs RLM: $d=17.03$, $p<0.0001$. Honest agents earn 2.76x more than RLM agents across all conditions.
+
+\textbf{Honest/RLM payoff ratio by tax rate:}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Tax Rate} & \textbf{Honest} & \textbf{RLM} & \textbf{Ratio} \\
+\midrule
+0.00 & 601.3 & 220.8 & 2.72 \\
+0.02 & 599.0 & 215.8 & 2.78 \\
+0.05 & 575.7 & 208.7 & 2.76 \\
+0.10 & 545.3 & 194.5 & 2.80 \\
+\bottomrule
+\end{tabular}
+\caption{Honest/RLM payoff ratio is stable across tax rates ($\sim$2.76x).}
+\end{table}
+
+The honest/RLM payoff ratio is remarkably stable across tax rates ($\sim$2.76), indicating that taxation reduces both agent types proportionally. RLM agents, however, show higher sensitivity in absolute terms ($d=6.02$ for RLM vs $d=2.87$ for honest on 0\% vs 10\% tax).
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/collusion_tax_effect/agent_payoff_honest_vs_rlm.png}
+\caption{Agent payoff distribution: honest vs RLM agents.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/collusion_tax_effect/agent_payoff_vs_tax.png}
+\caption{Agent payoff by type vs transaction tax rate.}
+\end{figure}
+
+\subsection{Normality Validation}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llll}
+\toprule
+\textbf{Group} & \textbf{Shapiro-Wilk $W$} & \textbf{$p$-value} & \textbf{Normal?} \\
+\midrule
+Tax 0\% & 0.9246 & 0.0108 & No \\
+Tax 2\% & 0.9379 & 0.0293 & No \\
+Tax 5\% & 0.9695 & 0.3473 & Yes \\
+Tax 10\% & 0.8713 & 0.0003 & No \\
+\bottomrule
+\end{tabular}
+\caption{Shapiro-Wilk normality tests on welfare distributions.}
+\end{table}
+
+Three of four groups fail Shapiro-Wilk normality tests. All significant results are confirmed by both parametric (Welch's $t$) and non-parametric (Mann-Whitney $U$) tests.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/collusion_tax_effect/welfare_toxicity_tradeoff.png}
+\caption{Welfare-toxicity tradeoff scatter plot colored by tax rate.}
+\end{figure}
+
+\section{Discussion}
+
+\subsection{Key Findings}
+
+\textbf{Transaction taxes devastate welfare in recursive agent environments.} The effect sizes in this study ($d=4.80$ for welfare, $d=6.02$ for RLM payoff) are far larger than those observed in the baseline governance study ($d=1.41$). With 12 agents, 30 epochs, and $\sim$3800 interactions per run, taxation has a cumulative effect that compounds over longer time horizons.
+
+\textbf{Collusion penalties at moderate levels are inert.} Penalty multipliers from 0.5x to 1.5x show no significant effect on any metric. Only the 2.0x multiplier produces a detectable effect, and it is paradoxical: increased toxicity without welfare improvement. This suggests that aggressive collusion detection may create false positives or disrupt beneficial coordination.
+
+\textbf{RLM agents are disproportionately affected by taxation.} While the honest/RLM payoff ratio remains stable ($\sim$2.76x), RLM agents show nearly twice the effect size sensitivity to taxation ($d=6.02$ vs $d=2.87$). This may be because RLM agents' recursive reasoning generates more marginal-value interactions that are eliminated by transaction costs.
+
+\subsection{Comparison with Baseline Governance Study}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{lll}
+\toprule
+\textbf{Finding} & \textbf{Baseline (5 agents)} & \textbf{Collusion (12 agents)} \\
+\midrule
+Tax effect on welfare & $d=1.41$ & $d=4.80$ \\
+Tax effect on toxicity & None ($p>0.05$) & Significant ($d=-0.86$) \\
+Penalty effect & None & Toxicity increase at 2.0x \\
+Honest advantage & 14.50 vs 2.26 & 580.3 vs 210.0 \\
+\bottomrule
+\end{tabular}
+\caption{Cross-study comparison of governance effects.}
+\end{table}
+
+\subsection{Implications for Governance Design}
+
+\begin{enumerate}
+\item \textbf{Transaction taxes are counterproductive in recursive agent environments.} They reduce welfare dramatically while only marginally increasing toxicity detection.
+\item \textbf{Collusion penalties should be calibrated carefully.} The 2.0x multiplier crosses a threshold into counterproductive territory. A moderate penalty (1.0x--1.5x) appears optimal.
+\item \textbf{The tax-penalty interaction is additive, not synergistic.} Governance designers can tune these levers independently.
+\end{enumerate}
+
+\section{Conclusion}
+
+Transaction taxation produces massive welfare reductions in recursive multi-agent environments ($d=4.80$--$6.02$), with RLM agents bearing disproportionate costs. Collusion penalties have negligible welfare effects at moderate levels, but the 2.0x multiplier paradoxically increases toxicity. The honest/RLM payoff ratio is remarkably stable across governance conditions ($\sim$2.76x), suggesting that the relative advantage of honest behavior is robust to policy interventions. These findings argue against blunt taxation in collusion-aware environments and in favor of targeted, moderate penalty mechanisms.
+
+\section{Limitations}
+
+\begin{enumerate}
+\item \textbf{RLM payoff is derived, not directly measured.} We compute RLM payoff as $(\text{welfare} - \text{honest\_payoff} \times 3) / 9$, which averages across all 9 RLM agents regardless of recursion depth.
+\item \textbf{No depth-stratified analysis.} We do not distinguish between depth-1, depth-3, and depth-5 RLM agents, which may mask differential effects.
+\item \textbf{Non-normal welfare distributions.} Three of four tax rate groups fail Shapiro-Wilk tests, though all results are confirmed by Mann-Whitney $U$.
+\item \textbf{Fixed collusion detection thresholds.} Only the penalty multiplier is swept; detection sensitivity is held constant.
+\item \textbf{No adaptive agents.} RLM agents do not adjust their recursion depth or strategy in response to governance changes.
+\end{enumerate}
+
+\section{Reproducibility}
+
+\begin{verbatim}
+# Reproduce the sweep
+python runs/20260213-221500_collusion_tax_effect/run_sweep.py
+
+# Reproduce the analysis
+python runs/20260213-221500_collusion_tax_effect/analyze.py
+
+# Reproduce the plots
+python runs/20260213-221500_collusion_tax_effect/generate_plots.py
+\end{verbatim}
+
+Scenario file: \texttt{scenarios/rlm\_recursive\_collusion.yaml}\\
+Seeds: 300--309 (10 per configuration)\\
+Total runs: 160 (4 tax rates $\times$ 4 collusion penalty multipliers $\times$ 10 seeds)
+
+\end{document}

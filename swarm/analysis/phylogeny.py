@@ -15,7 +15,7 @@ from typing import Any, Dict, List, Optional, Union
 # Agent type colors matching dashboard conventions
 AGENT_COLORS: Dict[str, str] = {
     "honest": "#22c55e",
-    "opportunistic": "#eab308",
+    "opportunistic": "#facc15",
     "deceptive": "#8b5cf6",
     "adversarial": "#ef4444",
     "rlm": "#06b6d4",

@@ -21,7 +21,7 @@ Examples:
 - `runs/<YYYYMMDD-HHMMSS>_<scenario_id>_seed<seed>/`
 
 3) Run the scenario via the project CLI (preferred):
-- `python -m swarm run <scenario.yaml> --seed <seed> --epochs <epochs> --steps <steps> --export-json <run_dir>/history.json --export-csv <run_dir>/csv`
+- `python -m swarm run <scenario.yaml> --seed <seed> --epochs <epochs> --steps <steps> --export-json <run_dir>/history.json --export-csv <run_dir>/csv --export-dolt`
 
 4) If the scenario YAML declares `outputs.event_log` or `outputs.metrics_csv`, copy those artifacts into `<run_dir>/artifacts/` (do not modify the scenario file in-place).
 

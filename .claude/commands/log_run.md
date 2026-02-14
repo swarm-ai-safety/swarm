@@ -67,6 +67,8 @@ CREATE TABLE IF NOT EXISTS scenario_runs (
    - Total row count in the table
    - The SQLite query used (for reproducibility)
 
+6) Also export the summary row to Dolt by calling `export_run_summary_to_dolt(summary_dict)` from `swarm.analysis.dolt_export`. This writes the same row to the `scenario_runs` table in `runs/dolt_runs` and creates a Dolt commit. If Dolt is unavailable, print a warning and continue.
+
 ## Integration with /run_scenario
 
 After running a scenario, call `/log_run <run_dir>` to persist results. The `/run_scenario` command should mention this at the end of its output.

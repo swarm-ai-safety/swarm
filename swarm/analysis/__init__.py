@@ -10,6 +10,7 @@ from swarm.analysis.dashboard import (
     extract_metrics_from_orchestrator,
     run_dashboard,
 )
+from swarm.analysis.dolt_export import export_run_summary_to_dolt, export_to_dolt
 from swarm.analysis.phylogeny import generate_phylogeny
 from swarm.analysis.sweep import (
     SweepConfig,
@@ -37,4 +38,7 @@ __all__ = [
     "run_dashboard",
     # Phylogeny
     "generate_phylogeny",
+    # Dolt export
+    "export_to_dolt",
+    "export_run_summary_to_dolt",
 ]

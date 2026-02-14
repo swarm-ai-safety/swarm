@@ -1,0 +1,307 @@
+{
+  "experiment": "recursive_subagent_spawning",
+  "finding": "Task spawning tool only available to root orchestrator",
+  "max_depth_achieved": 1,
+  "max_fanout_tested": 6,
+  "actual_tree": {
+    "id": "ROOT",
+    "depth": 0,
+    "parent": null,
+    "model": "opus-4.6",
+    "status": "ok",
+    "message": "Root agent (orchestrator)",
+    "agent_id": null,
+    "children": [
+      {
+        "id": "alpha",
+        "depth": 1,
+        "parent": "ROOT",
+        "model": "haiku-4.5",
+        "status": "ok",
+        "message": "LEAF|alpha|depth=1|parent=ROOT",
+        "agent_id": "a83d9a1",
+        "children": []
+      },
+      {
+        "id": "beta",
+        "depth": 1,
+        "parent": "ROOT",
+        "model": "haiku-4.5",
+        "status": "ok",
+        "message": "LEAF|beta|depth=1|parent=ROOT",
+        "agent_id": "a826c18",
+        "children": []
+      },
+      {
+        "id": "gamma",
+        "depth": 1,
+        "parent": "ROOT",
+        "model": "haiku-4.5",
+        "status": "ok",
+        "message": "LEAF|gamma|depth=1|parent=ROOT",
+        "agent_id": "a9f9b68",
+        "children": []
+      },
+      {
+        "id": "delta",
+        "depth": 1,
+        "parent": "ROOT",
+        "model": "haiku-4.5",
+        "status": "ok",
+        "message": "LEAF|delta|depth=1|parent=ROOT",
+        "agent_id": "a659800",
+        "children": []
+      },
+      {
+        "id": "epsilon",
+        "depth": 1,
+        "parent": "ROOT",
+        "model": "haiku-4.5",
+        "status": "ok",
+        "message": "LEAF|epsilon|depth=1|parent=ROOT",
+        "agent_id": "a1fe14b",
+        "children": []
+      },
+      {
+        "id": "zeta",
+        "depth": 1,
+        "parent": "ROOT",
+        "model": "haiku-4.5",
+        "status": "ok",
+        "message": "LEAF|zeta|depth=1|parent=ROOT",
+        "agent_id": "a645f50",
+        "children": []
+      }
+    ]
+  },
+  "attempted_tree": {
+    "id": "ROOT",
+    "depth": 0,
+    "parent": null,
+    "model": "opus-4.6",
+    "status": "ok",
+    "message": "",
+    "agent_id": null,
+    "children": [
+      {
+        "id": "A",
+        "depth": 1,
+        "parent": "ROOT",
+        "model": "sonnet-4.5",
+        "status": "refused",
+        "message": "Refused: 'I don't have access to a Task tool that spawns child agents'",
+        "agent_id": null,
+        "children": [
+          {
+            "id": "A1",
+            "depth": 2,
+            "parent": "A",
+            "model": "haiku-4.5",
+            "status": "never_spawned",
+            "message": "",
+            "agent_id": null,
+            "children": [
+              {
+                "id": "A1a",
+                "depth": 3,
+                "parent": "A1",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              },
+              {
+                "id": "A1b",
+                "depth": 3,
+                "parent": "A1",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "A2",
+            "depth": 2,
+            "parent": "A",
+            "model": "haiku-4.5",
+            "status": "never_spawned",
+            "message": "",
+            "agent_id": null,
+            "children": [
+              {
+                "id": "A2a",
+                "depth": 3,
+                "parent": "A2",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              },
+              {
+                "id": "A2b",
+                "depth": 3,
+                "parent": "A2",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "B",
+        "depth": 1,
+        "parent": "ROOT",
+        "model": "sonnet-4.5",
+        "status": "refused",
+        "message": "Refused: 'I don't have access to a Task tool that spawns child agents'",
+        "agent_id": null,
+        "children": [
+          {
+            "id": "B1",
+            "depth": 2,
+            "parent": "B",
+            "model": "haiku-4.5",
+            "status": "never_spawned",
+            "message": "",
+            "agent_id": null,
+            "children": [
+              {
+                "id": "B1a",
+                "depth": 3,
+                "parent": "B1",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              },
+              {
+                "id": "B1b",
+                "depth": 3,
+                "parent": "B1",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "B2",
+            "depth": 2,
+            "parent": "B",
+            "model": "haiku-4.5",
+            "status": "never_spawned",
+            "message": "",
+            "agent_id": null,
+            "children": [
+              {
+                "id": "B2a",
+                "depth": 3,
+                "parent": "B2",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              },
+              {
+                "id": "B2b",
+                "depth": 3,
+                "parent": "B2",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "C",
+        "depth": 1,
+        "parent": "ROOT",
+        "model": "sonnet-4.5",
+        "status": "refused",
+        "message": "Refused: 'I don't have access to a Task tool that spawns child agents'",
+        "agent_id": null,
+        "children": [
+          {
+            "id": "C1",
+            "depth": 2,
+            "parent": "C",
+            "model": "haiku-4.5",
+            "status": "never_spawned",
+            "message": "",
+            "agent_id": null,
+            "children": [
+              {
+                "id": "C1a",
+                "depth": 3,
+                "parent": "C1",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              },
+              {
+                "id": "C1b",
+                "depth": 3,
+                "parent": "C1",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              }
+            ]
+          },
+          {
+            "id": "C2",
+            "depth": 2,
+            "parent": "C",
+            "model": "haiku-4.5",
+            "status": "never_spawned",
+            "message": "",
+            "agent_id": null,
+            "children": [
+              {
+                "id": "C2a",
+                "depth": 3,
+                "parent": "C2",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              },
+              {
+                "id": "C2b",
+                "depth": 3,
+                "parent": "C2",
+                "model": "haiku-4.5",
+                "status": "never_spawned",
+                "message": "",
+                "agent_id": null,
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

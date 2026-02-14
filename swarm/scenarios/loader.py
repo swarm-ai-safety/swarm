@@ -620,6 +620,8 @@ def load_scenario(path: Path) -> ScenarioConfig:
         steps_per_epoch=sim_data.get("steps_per_epoch", 10),
         seed=sim_data.get("seed"),
         scenario_id=data.get("scenario_id"),
+        schedule_mode=sim_data.get("schedule_mode", "round_robin"),
+        max_actions_per_step=sim_data.get("max_actions_per_step", 20),
         observation_noise_probability=sim_data.get(
             "observation_noise_probability", 0.0
         ),
