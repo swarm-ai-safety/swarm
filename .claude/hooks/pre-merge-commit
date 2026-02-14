@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# pre-merge-commit: block merges into main/master unless CI has passed
+# on the incoming commit.
+#
+# Requires: gh CLI authenticated with repo access.
+# Bypass:   SKIP_SWARM_HOOKS=1 git merge ...
+
+if [[ "${SKIP_SWARM_HOOKS:-0}" == "1" ]]; then
+  echo "[swarm pre-merge-commit] SKIP_SWARM_HOOKS=1 set; skipping."
+  exit 0
+fi
+
+# Only gate merges *into* main or master.
+current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || true)
+if [[ "$current_branch" != "main" && "$current_branch" != "master" ]]; then
+  exit 0
+fi
+
+# Read the SHA being merged in.
+merge_head_file="$(git rev-parse --git-dir)/MERGE_HEAD"
+if [[ ! -f "$merge_head_file" ]]; then
+  echo "[swarm pre-merge-commit] no MERGE_HEAD found; skipping CI check."
+  exit 0
+fi
+merge_sha=$(head -n1 "$merge_head_file")
+
+echo "[swarm pre-merge-commit] merging into '$current_branch' — checking CI status for $merge_sha"
+
+if ! command -v gh &>/dev/null; then
+  echo "[swarm pre-merge-commit] ERROR: 'gh' CLI not found. Install it to enable CI gating."
+  echo "  Bypass with: SKIP_SWARM_HOOKS=1 git merge ..."
+  exit 1
+fi
+
+# gh pr checks uses the commit SHA to look up check-suite results.
+# --fail-with-non-zero makes gh exit 1 if any required check failed or is pending.
+ci_output=$(gh pr checks "$merge_sha" 2>&1) || true
+ci_status=$?
+
+# If gh pr checks doesn't find a PR, fall back to commit status checks.
+if echo "$ci_output" | grep -qi "no pull requests found\|could not find"; then
+  echo "[swarm pre-merge-commit] no PR found for $merge_sha; checking commit status directly."
+  ci_status_json=$(gh api "repos/{owner}/{repo}/commits/$merge_sha/status" --jq '.state' 2>/dev/null || true)
+
+  if [[ -z "$ci_status_json" ]]; then
+    echo "[swarm pre-merge-commit] WARNING: unable to query commit status."
+    echo "  If you trust this merge, bypass with: SKIP_SWARM_HOOKS=1 git merge ..."
+    exit 1
+  fi
+
+  if [[ "$ci_status_json" == "success" ]]; then
+    echo "[swarm pre-merge-commit] commit status: success. Merge allowed."
+    exit 0
+  elif [[ "$ci_status_json" == "pending" ]]; then
+    echo "[swarm pre-merge-commit] BLOCKED: CI is still running on $merge_sha."
+    echo "  Wait for CI to finish, then retry the merge."
+    echo "  Bypass with: SKIP_SWARM_HOOKS=1 git merge ..."
+    exit 1
+  else
+    echo "[swarm pre-merge-commit] BLOCKED: CI status is '$ci_status_json' on $merge_sha."
+    echo "  Fix failing checks before merging into $current_branch."
+    echo "  Bypass with: SKIP_SWARM_HOOKS=1 git merge ..."
+    exit 1
+  fi
+fi
+
+# Parse gh pr checks output.
+if [[ $ci_status -ne 0 ]]; then
+  echo "[swarm pre-merge-commit] BLOCKED: one or more CI checks have not passed."
+  echo ""
+  echo "$ci_output"
+  echo ""
+  echo "  Fix failing checks before merging into $current_branch."
+  echo "  Bypass with: SKIP_SWARM_HOOKS=1 git merge ..."
+  exit 1
+fi
+
+echo "[swarm pre-merge-commit] all CI checks passed. Merge allowed."
