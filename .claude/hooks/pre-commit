@@ -170,7 +170,8 @@ if [ -z "$STAGED_ANY_CODE" ]; then
     echo "[swarm pre-commit] no staged .py/.sh files; skipping pytest"
 else
     echo "[swarm pre-commit] pytest"
-    python -m pytest tests/ -x -q; PYTEST_EXIT=$?
+    PYTEST_EXIT=0
+    python -m pytest tests/ -x -q || PYTEST_EXIT=$?
     if [ $PYTEST_EXIT -ne 0 ]; then
         echo "[swarm pre-commit] pytest FAILED (exit $PYTEST_EXIT)"
         exit 1
