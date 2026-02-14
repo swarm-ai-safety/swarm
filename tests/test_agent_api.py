@@ -1,6 +1,8 @@
-"""Tests for the SWARM Agent API (runs, posts, middleware)."""
+"""Tests for the SWARM Agent API (runs, posts, middleware, persistence)."""
 
+import tempfile
 import time
+from pathlib import Path
 
 import pytest
 
@@ -43,6 +45,21 @@ def _clear_middleware_state():
     _trusted_keys.clear()
 
 
+@pytest.fixture(autouse=True)
+def _use_temp_db(tmp_path):
+    """Point persistence stores at a temp SQLite DB for test isolation."""
+    import swarm.api.routers.runs as runs_mod
+    import swarm.api.routers.posts as posts_mod
+    from swarm.api.persistence import RunStore, PostStore
+
+    db_path = tmp_path / "test_api.db"
+    runs_mod._store = RunStore(db_path=db_path)
+    posts_mod._post_store = PostStore(db_path=db_path)
+    yield
+    runs_mod._store = None
+    posts_mod._post_store = None
+
+
 @pytest.fixture
 def app():
     """Create a fresh FastAPI app."""
@@ -67,6 +84,18 @@ def _register_agent(client) -> tuple[str, str]:
 
 def _auth_header(api_key: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {api_key}"}
+
+
+def _wait_for_run(client, run_id: str, api_key: str, timeout: int = 60) -> dict:
+    """Wait for a run to complete and return its data."""
+    headers = _auth_header(api_key)
+    for _ in range(timeout * 2):
+        resp = client.get(f"/api/runs/{run_id}", headers=headers)
+        data = resp.json()
+        if data["status"] in ("completed", "failed"):
+            return data
+        time.sleep(0.5)
+    pytest.fail("Run did not complete within timeout")
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +128,6 @@ class TestMiddleware:
 
     def test_rate_limiting(self, client):
         """Exceeding rate limit returns 429."""
-        # Set a very low rate limit
         client.app._swarm_rate_limit = 3  # type: ignore[attr-defined]
         register_api_key("rl_key", "agent_rl")
         headers = _auth_header("rl_key")
@@ -195,7 +223,6 @@ class TestSecurityHardening:
             headers=_auth_header(api_key),
         )
         detail = resp.json()["detail"]
-        # Should NOT contain "Allowed: [...]"
         assert "Allowed:" not in detail
 
     def test_unknown_params_rejected(self, client):
@@ -256,7 +283,6 @@ class TestSecurityHardening:
 
         from swarm.api.models.post import PostCreate
 
-        # 51 keys
         with pytest.raises(ValidationError):
             PostCreate(
                 run_id="x",
@@ -270,7 +296,6 @@ class TestSecurityHardening:
         _, api_key = _register_agent(client)
         headers = _auth_header(api_key)
 
-        # Kick off a run (baseline should succeed, but we check the error field format)
         resp = client.post(
             "/api/runs",
             json={
@@ -280,19 +305,10 @@ class TestSecurityHardening:
             headers=headers,
         )
         run_id = resp.json()["run_id"]
+        data = _wait_for_run(client, run_id, api_key)
 
-        # Wait for completion
-        for _ in range(60):
-            resp = client.get(f"/api/runs/{run_id}", headers=headers)
-            if resp.json()["status"] in ("completed", "failed"):
-                break
-            time.sleep(0.5)
-
-        # If it completed, error should be None
-        # If it failed, error should be sanitized (type: truncated_message format)
-        data = resp.json()
         if data["error"] is not None:
-            assert len(data["error"]) <= 300  # Truncated
+            assert len(data["error"]) <= 300
             assert "Traceback" not in data["error"]
             assert "File " not in data["error"]
 
@@ -343,7 +359,6 @@ class TestRunEndpoints:
         _, api_key = _register_agent(client)
         headers = _auth_header(api_key)
 
-        # Kick off a short run
         resp = client.post(
             "/api/runs",
             json={
@@ -353,19 +368,8 @@ class TestRunEndpoints:
             headers=headers,
         )
         run_id = resp.json()["run_id"]
+        data = _wait_for_run(client, run_id, api_key)
 
-        # Poll until done (with timeout)
-        for _ in range(60):
-            resp = client.get(f"/api/runs/{run_id}", headers=headers)
-            assert resp.status_code == 200
-            status = resp.json()["status"]
-            if status in ("completed", "failed"):
-                break
-            time.sleep(0.5)
-        else:
-            pytest.fail("Run did not complete within timeout")
-
-        data = resp.json()
         assert data["status"] == "completed"
         assert data["summary_metrics"] is not None
         assert data["summary_metrics"]["n_epochs_completed"] >= 1
@@ -375,19 +379,16 @@ class TestRunEndpoints:
         _, key_a = _register_agent(client)
         _, key_b = _register_agent(client)
 
-        # Agent A kicks off a run
         client.post(
             "/api/runs",
             json={"scenario_id": "baseline", "params": {"epochs": 1, "steps_per_epoch": 1}},
             headers=_auth_header(key_a),
         )
 
-        # Agent B sees nothing
         resp = client.get("/api/runs", headers=_auth_header(key_b))
         assert resp.status_code == 200
         assert len(resp.json()) == 0
 
-        # Agent A sees their run
         resp = client.get("/api/runs", headers=_auth_header(key_a))
         assert resp.status_code == 200
         assert len(resp.json()) == 1
@@ -433,7 +434,6 @@ class TestRunEndpoints:
         run_id = resp.json()["run_id"]
 
         resp = client.post(f"/api/runs/{run_id}/cancel", headers=headers)
-        # May succeed or fail depending on whether run already completed
         assert resp.status_code in (200, 400)
 
     def test_cancel_other_agents_run_denied(self, client):
@@ -454,29 +454,101 @@ class TestRunEndpoints:
 
 
 # ---------------------------------------------------------------------------
-# Post/feed endpoint tests
+# Compare-runs endpoint tests
 # ---------------------------------------------------------------------------
 
 
-class TestPostEndpoints:
-    """Tests for POST /api/posts, GET /api/posts."""
+class TestCompareEndpoint:
+    """Tests for GET /api/runs/compare."""
 
-    def _wait_for_run(self, client, run_id: str, api_key: str) -> dict:
-        """Wait for a run to complete and return its data."""
-        headers = _auth_header(api_key)
-        for _ in range(60):
-            resp = client.get(f"/api/runs/{run_id}", headers=headers)
-            data = resp.json()
-            if data["status"] in ("completed", "failed"):
-                return data
-            time.sleep(0.5)
-        pytest.fail("Run did not complete within timeout")
+    def _create_completed_run(self, client, api_key: str, seed: int = 1) -> str:
+        """Helper: create a run and wait for completion, return run_id."""
+        resp = client.post(
+            "/api/runs",
+            json={
+                "scenario_id": "baseline",
+                "params": {"seed": seed, "epochs": 1, "steps_per_epoch": 1},
+            },
+            headers=_auth_header(api_key),
+        )
+        run_id = resp.json()["run_id"]
+        _wait_for_run(client, run_id, api_key)
+        return run_id
 
-    def test_create_post_for_completed_run(self, client):
+    def test_compare_two_runs(self, client):
+        """Compare two completed runs returns metrics + deltas."""
         _, api_key = _register_agent(client)
         headers = _auth_header(api_key)
 
-        # Run a scenario
+        run_a = self._create_completed_run(client, api_key, seed=1)
+        run_b = self._create_completed_run(client, api_key, seed=2)
+
+        resp = client.get(
+            f"/api/runs/compare?ids={run_a},{run_b}",
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["baseline_run_id"] == run_a
+        assert run_a in data["runs"]
+        assert run_b in data["runs"]
+        # Baseline has no delta, second run does
+        assert "delta_vs_baseline" not in data["runs"][run_a]
+        assert "delta_vs_baseline" in data["runs"][run_b]
+
+    def test_compare_needs_at_least_two(self, client):
+        """Comparing fewer than 2 runs returns 400."""
+        _, api_key = _register_agent(client)
+        headers = _auth_header(api_key)
+
+        run_a = self._create_completed_run(client, api_key)
+
+        resp = client.get(
+            f"/api/runs/compare?ids={run_a}",
+            headers=headers,
+        )
+        assert resp.status_code == 400
+
+    def test_compare_nonexistent_run_404(self, client):
+        _, api_key = _register_agent(client)
+        headers = _auth_header(api_key)
+
+        run_a = self._create_completed_run(client, api_key)
+
+        resp = client.get(
+            f"/api/runs/compare?ids={run_a},nonexistent-id",
+            headers=headers,
+        )
+        assert resp.status_code == 404
+
+    def test_compare_other_agents_private_run_denied(self, client):
+        _, key_a = _register_agent(client)
+        _, key_b = _register_agent(client)
+
+        run_a = self._create_completed_run(client, key_a)
+        run_b = self._create_completed_run(client, key_b)
+
+        # Agent A tries to compare with Agent B's private run
+        resp = client.get(
+            f"/api/runs/compare?ids={run_a},{run_b}",
+            headers=_auth_header(key_a),
+        )
+        assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Artifacts endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestArtifactsEndpoint:
+    """Tests for GET /api/runs/:id/artifacts."""
+
+    def test_list_artifacts_for_completed_run(self, client):
+        """After a run completes, artifacts should be listable."""
+        _, api_key = _register_agent(client)
+        headers = _auth_header(api_key)
+
         resp = client.post(
             "/api/runs",
             json={
@@ -486,9 +558,79 @@ class TestPostEndpoints:
             headers=headers,
         )
         run_id = resp.json()["run_id"]
-        self._wait_for_run(client, run_id, api_key)
+        _wait_for_run(client, run_id, api_key)
 
-        # Post a card
+        resp = client.get(f"/api/runs/{run_id}/artifacts", headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["run_id"] == run_id
+        assert isinstance(data["artifacts"], list)
+        # Should have at least history.json
+        if data["artifacts"]:
+            assert any("history.json" in a["path"] for a in data["artifacts"])
+
+    def test_artifacts_not_found_returns_empty(self, client):
+        """If no artifacts directory exists, return empty list."""
+        _, api_key = _register_agent(client)
+        headers = _auth_header(api_key)
+
+        # Create a run but don't wait — artifacts may not exist yet
+        resp = client.post(
+            "/api/runs",
+            json={
+                "scenario_id": "baseline",
+                "params": {"seed": 1, "epochs": 1, "steps_per_epoch": 1},
+            },
+            headers=headers,
+        )
+        run_id = resp.json()["run_id"]
+
+        # Immediately query artifacts (run might not have exported yet)
+        resp = client.get(f"/api/runs/{run_id}/artifacts", headers=headers)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data["artifacts"], list)
+
+    def test_artifacts_access_denied_for_private_run(self, client):
+        _, key_a = _register_agent(client)
+        _, key_b = _register_agent(client)
+
+        resp = client.post(
+            "/api/runs",
+            json={"scenario_id": "baseline", "params": {"epochs": 1, "steps_per_epoch": 1}},
+            headers=_auth_header(key_a),
+        )
+        run_id = resp.json()["run_id"]
+
+        resp = client.get(
+            f"/api/runs/{run_id}/artifacts", headers=_auth_header(key_b)
+        )
+        assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# Post/feed endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestPostEndpoints:
+    """Tests for POST /api/posts, GET /api/posts."""
+
+    def test_create_post_for_completed_run(self, client):
+        _, api_key = _register_agent(client)
+        headers = _auth_header(api_key)
+
+        resp = client.post(
+            "/api/runs",
+            json={
+                "scenario_id": "baseline",
+                "params": {"seed": 1, "epochs": 1, "steps_per_epoch": 1},
+            },
+            headers=headers,
+        )
+        run_id = resp.json()["run_id"]
+        _wait_for_run(client, run_id, api_key)
+
         resp = client.post(
             "/api/posts",
             json={
@@ -520,9 +662,8 @@ class TestPostEndpoints:
             headers=_auth_header(key_a),
         )
         run_id = resp.json()["run_id"]
-        self._wait_for_run(client, run_id, key_a)
+        _wait_for_run(client, run_id, key_a)
 
-        # Agent B tries to post a card for Agent A's run
         resp = client.post(
             "/api/posts",
             json={
@@ -553,7 +694,7 @@ class TestPostEndpoints:
             headers=headers,
         )
         run_id = resp.json()["run_id"]
-        self._wait_for_run(client, run_id, api_key)
+        _wait_for_run(client, run_id, api_key)
 
         client.post(
             "/api/posts",
@@ -566,7 +707,6 @@ class TestPostEndpoints:
             headers=headers,
         )
 
-        # Filter by tag
         resp = client.get("/api/posts?tag=special_tag_xyz")
         assert resp.status_code == 200
         posts = resp.json()
@@ -586,7 +726,7 @@ class TestPostEndpoints:
             headers=headers,
         )
         run_id = resp.json()["run_id"]
-        self._wait_for_run(client, run_id, api_key)
+        _wait_for_run(client, run_id, api_key)
 
         resp = client.post(
             "/api/posts",
@@ -606,6 +746,253 @@ class TestPostEndpoints:
     def test_get_post_not_found(self, client):
         resp = client.get("/api/posts/nonexistent-id")
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Voting endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestVotingEndpoint:
+    """Tests for POST /api/posts/:id/vote."""
+
+    def _create_post(self, client, api_key: str) -> str:
+        """Helper: create a run, wait, post a card, return post_id."""
+        headers = _auth_header(api_key)
+        resp = client.post(
+            "/api/runs",
+            json={
+                "scenario_id": "baseline",
+                "params": {"seed": 1, "epochs": 1, "steps_per_epoch": 1},
+            },
+            headers=headers,
+        )
+        run_id = resp.json()["run_id"]
+        _wait_for_run(client, run_id, api_key)
+
+        resp = client.post(
+            "/api/posts",
+            json={
+                "run_id": run_id,
+                "title": "Vote test post",
+                "blurb": "For voting tests",
+            },
+            headers=headers,
+        )
+        return resp.json()["post_id"]
+
+    def test_upvote(self, client):
+        """Upvoting a post increments its upvote count."""
+        _, api_key = _register_agent(client)
+        post_id = self._create_post(client, api_key)
+
+        resp = client.post(
+            f"/api/posts/{post_id}/vote",
+            json={"direction": 1},
+            headers=_auth_header(api_key),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["upvotes"] == 1
+        assert data["downvotes"] == 0
+        assert data["your_vote"] == 1
+
+    def test_downvote(self, client):
+        """Downvoting a post increments its downvote count."""
+        _, api_key = _register_agent(client)
+        post_id = self._create_post(client, api_key)
+
+        resp = client.post(
+            f"/api/posts/{post_id}/vote",
+            json={"direction": -1},
+            headers=_auth_header(api_key),
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["upvotes"] == 0
+        assert data["downvotes"] == 1
+        assert data["your_vote"] == -1
+
+    def test_toggle_vote_off(self, client):
+        """Voting the same direction again removes the vote."""
+        _, api_key = _register_agent(client)
+        post_id = self._create_post(client, api_key)
+        headers = _auth_header(api_key)
+
+        # First upvote
+        client.post(f"/api/posts/{post_id}/vote", json={"direction": 1}, headers=headers)
+
+        # Same direction again = toggle off
+        resp = client.post(f"/api/posts/{post_id}/vote", json={"direction": 1}, headers=headers)
+        data = resp.json()
+        assert data["upvotes"] == 0
+        assert data["your_vote"] is None
+
+    def test_switch_vote(self, client):
+        """Voting in the opposite direction switches the vote."""
+        _, api_key = _register_agent(client)
+        post_id = self._create_post(client, api_key)
+        headers = _auth_header(api_key)
+
+        # Upvote first
+        client.post(f"/api/posts/{post_id}/vote", json={"direction": 1}, headers=headers)
+
+        # Switch to downvote
+        resp = client.post(f"/api/posts/{post_id}/vote", json={"direction": -1}, headers=headers)
+        data = resp.json()
+        assert data["upvotes"] == 0
+        assert data["downvotes"] == 1
+        assert data["your_vote"] == -1
+
+    def test_multiple_voters(self, client):
+        """Multiple agents can vote on the same post."""
+        _, key_a = _register_agent(client)
+        _, key_b = _register_agent(client)
+        post_id = self._create_post(client, key_a)
+
+        client.post(
+            f"/api/posts/{post_id}/vote",
+            json={"direction": 1},
+            headers=_auth_header(key_a),
+        )
+        resp = client.post(
+            f"/api/posts/{post_id}/vote",
+            json={"direction": 1},
+            headers=_auth_header(key_b),
+        )
+        data = resp.json()
+        assert data["upvotes"] == 2
+
+    def test_vote_on_nonexistent_post(self, client):
+        _, api_key = _register_agent(client)
+        resp = client.post(
+            "/api/posts/nonexistent-id/vote",
+            json={"direction": 1},
+            headers=_auth_header(api_key),
+        )
+        assert resp.status_code == 404
+
+    def test_vote_requires_auth(self, client):
+        resp = client.post(
+            "/api/posts/some-id/vote",
+            json={"direction": 1},
+        )
+        assert resp.status_code == 401
+
+    def test_zero_direction_rejected(self, client):
+        _, api_key = _register_agent(client)
+        post_id = self._create_post(client, api_key)
+        resp = client.post(
+            f"/api/posts/{post_id}/vote",
+            json={"direction": 0},
+            headers=_auth_header(api_key),
+        )
+        assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# Persistence tests
+# ---------------------------------------------------------------------------
+
+
+class TestPersistence:
+    """Tests for the SQLite persistence layer."""
+
+    def test_run_store_roundtrip(self, tmp_path):
+        """Runs survive store re-creation (simulating restart)."""
+        from swarm.api.persistence import RunStore
+        from swarm.api.models.run import RunResponse, RunStatus, RunVisibility, RunSummaryMetrics
+        from datetime import datetime, timezone
+
+        db_path = tmp_path / "roundtrip.db"
+        store = RunStore(db_path=db_path)
+
+        run = RunResponse(
+            run_id="test-123",
+            scenario_id="baseline",
+            status=RunStatus.COMPLETED,
+            visibility=RunVisibility.PRIVATE,
+            agent_id="agent-1",
+            created_at=datetime.now(timezone.utc),
+            completed_at=datetime.now(timezone.utc),
+            progress=1.0,
+            summary_metrics=RunSummaryMetrics(
+                total_interactions=100,
+                accepted_interactions=80,
+                avg_toxicity=0.15,
+                final_welfare=10.5,
+                avg_payoff=1.2,
+                quality_gap=0.3,
+                n_agents=5,
+                n_epochs_completed=10,
+            ),
+            status_url="http://localhost/api/runs/test-123",
+        )
+        store.save(run)
+
+        # Create a new store pointing at the same DB (simulates restart)
+        store2 = RunStore(db_path=db_path)
+        loaded = store2.get("test-123")
+        assert loaded is not None
+        assert loaded.run_id == "test-123"
+        assert loaded.status == RunStatus.COMPLETED
+        assert loaded.summary_metrics is not None
+        assert loaded.summary_metrics.total_interactions == 100
+
+    def test_post_store_roundtrip(self, tmp_path):
+        """Posts survive store re-creation."""
+        from swarm.api.persistence import PostStore
+        from swarm.api.models.post import PostResponse
+        from datetime import datetime, timezone
+
+        db_path = tmp_path / "roundtrip.db"
+        store = PostStore(db_path=db_path)
+
+        post = PostResponse(
+            post_id="post-abc",
+            run_id="run-xyz",
+            agent_id="agent-1",
+            title="Test Card",
+            blurb="Testing persistence",
+            key_metrics={"toxicity": 0.1},
+            tags=["test", "persistence"],
+            published_at=datetime.now(timezone.utc),
+            run_url="http://localhost/api/runs/run-xyz",
+        )
+        store.save(post)
+
+        store2 = PostStore(db_path=db_path)
+        loaded = store2.get("post-abc")
+        assert loaded is not None
+        assert loaded.title == "Test Card"
+        assert loaded.tags == ["test", "persistence"]
+        assert loaded.key_metrics["toxicity"] == 0.1
+
+    def test_vote_persistence(self, tmp_path):
+        """Votes survive store re-creation."""
+        from swarm.api.persistence import PostStore
+        from swarm.api.models.post import PostResponse
+        from datetime import datetime, timezone
+
+        db_path = tmp_path / "votes.db"
+        store = PostStore(db_path=db_path)
+
+        post = PostResponse(
+            post_id="post-v",
+            run_id="run-v",
+            agent_id="agent-1",
+            title="Vote Test",
+            blurb="Test",
+            published_at=datetime.now(timezone.utc),
+        )
+        store.save(post)
+        store.vote("post-v", "voter-1", 1)
+        store.vote("post-v", "voter-2", -1)
+
+        # Re-open store
+        store2 = PostStore(db_path=db_path)
+        assert store2.get_vote("post-v", "voter-1") == 1
+        assert store2.get_vote("post-v", "voter-2") == -1
 
 
 # ---------------------------------------------------------------------------
@@ -671,10 +1058,10 @@ class TestPostModels:
         from swarm.api.models.post import PostCreate
 
         with pytest.raises(ValidationError):
-            PostCreate(run_id="x", title="", blurb="ok")  # title min_length=1
+            PostCreate(run_id="x", title="", blurb="ok")
 
         with pytest.raises(ValidationError):
-            PostCreate(run_id="x", title="ok", blurb="x" * 2001)  # blurb max_length
+            PostCreate(run_id="x", title="ok", blurb="x" * 2001)
 
 
 class TestFeedQueryModel:

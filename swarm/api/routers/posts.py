@@ -1,34 +1,66 @@
 """Post/feed endpoints — publish run result cards to a Moltbook-style feed.
 
 Implements Pattern B from the agent API design:
-  POST /api/posts        — publish a result card
-  GET  /api/posts        — browse the feed (newest first)
-  GET  /api/posts/:id    — get a single card
+  POST /api/posts            — publish a result card
+  GET  /api/posts            — browse the feed (newest first)
+  GET  /api/posts/:id        — get a single card
+  POST /api/posts/:id/vote   — upvote or downvote a card
 """
 
 import uuid
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from pydantic import BaseModel, Field
 
 from swarm.api.middleware import require_api_key
 from swarm.api.models.post import PostCreate, PostResponse
 from swarm.api.models.run import RunStatus
+from swarm.api.persistence import PostStore, RunStore
 
 router = APIRouter()
-
-# In-memory storage (replace with DB in production)
-_posts: dict[str, PostResponse] = {}
 
 # Hard cap on stored posts to prevent unbounded memory growth.
 MAX_STORED_POSTS = 50_000
 
+_post_store: Optional[PostStore] = None
+_run_store_ref: Optional[RunStore] = None
+
+
+def get_post_store() -> PostStore:
+    global _post_store
+    if _post_store is None:
+        _post_store = PostStore()
+    return _post_store
+
 
 def _get_run(run_id: str):
-    """Import runs storage lazily to avoid circular imports."""
-    from swarm.api.routers.runs import _runs
+    """Look up a run from the run store."""
+    from swarm.api.routers.runs import get_store
 
-    return _runs.get(run_id)
+    return get_store().get(run_id)
+
+
+# ---------------------------------------------------------------------------
+# Vote model
+# ---------------------------------------------------------------------------
+
+
+class VoteRequest(BaseModel):
+    """Request to vote on a post."""
+
+    direction: int = Field(
+        ...,
+        description="Vote direction: +1 for upvote, -1 for downvote",
+        ge=-1,
+        le=1,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
 
 
 @router.post("", response_model=PostResponse)
@@ -37,10 +69,9 @@ async def create_post(
     request: Request,
     agent_id: str = Depends(require_api_key),
 ) -> PostResponse:
-    """Publish a result card to the feed.
+    """Publish a result card to the feed."""
+    store = get_post_store()
 
-    The referenced run must exist and be completed.
-    """
     run = _get_run(body.run_id)
     if run is None:
         raise HTTPException(status_code=404, detail="Referenced run not found")
@@ -54,7 +85,7 @@ async def create_post(
             detail=f"Run is not completed (status: {run.status.value})",
         )
 
-    if len(_posts) >= MAX_STORED_POSTS:
+    if store.total_count() >= MAX_STORED_POSTS:
         raise HTTPException(
             status_code=429, detail="Post storage capacity reached. Try again later."
         )
@@ -74,7 +105,7 @@ async def create_post(
         run_url=f"{base_url}/api/runs/{body.run_id}",
     )
 
-    _posts[post_id] = post
+    store.save(post)
     return post
 
 
@@ -91,19 +122,46 @@ async def list_posts(
 
     No authentication required — the feed is public.
     """
-    posts = sorted(_posts.values(), key=lambda p: p.published_at, reverse=True)
-
-    if tag:
-        posts = [p for p in posts if tag in p.tags]
-    if agent_id_filter:
-        posts = [p for p in posts if p.agent_id == agent_id_filter]
-
-    return posts[offset : offset + limit]
+    store = get_post_store()
+    return store.list_posts(
+        tag=tag,
+        agent_id=agent_id_filter,
+        limit=limit,
+        offset=offset,
+    )
 
 
 @router.get("/{post_id}", response_model=PostResponse)
 async def get_post(post_id: str) -> PostResponse:
     """Get a single post card."""
-    if post_id not in _posts:
+    store = get_post_store()
+    post = store.get(post_id)
+    if post is None:
         raise HTTPException(status_code=404, detail="Post not found")
-    return _posts[post_id]
+    return post
+
+
+@router.post("/{post_id}/vote")
+async def vote_on_post(
+    post_id: str,
+    body: VoteRequest,
+    agent_id: str = Depends(require_api_key),
+) -> dict:
+    """Upvote or downvote a post.
+
+    - direction=+1: upvote
+    - direction=-1: downvote
+
+    Voting the same direction again toggles (removes) your vote.
+    Voting the opposite direction switches your vote.
+    """
+    if body.direction == 0:
+        raise HTTPException(status_code=400, detail="direction must be +1 or -1")
+
+    store = get_post_store()
+    post = store.get(post_id)
+    if post is None:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    result = store.vote(post_id, agent_id, body.direction)
+    return result

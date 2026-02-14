@@ -1,10 +1,12 @@
-"""Run management endpoints — kickoff, status, artifacts.
+"""Run management endpoints — kickoff, status, artifacts, compare.
 
 Implements Patterns A/B/C from the agent API design:
-  POST /api/runs         — kick off a scenario run (Pattern A: webhook kickoff)
-  GET  /api/runs/:id     — poll run status (Pattern B: agent polls)
-  GET  /api/runs         — list runs for the authenticated agent
-  POST /api/runs/:id/cancel — cancel a queued/running run
+  POST /api/runs             — kick off a scenario run (Pattern A: webhook kickoff)
+  GET  /api/runs/:id         — poll run status (Pattern B: agent polls)
+  GET  /api/runs             — list runs for the authenticated agent
+  POST /api/runs/:id/cancel  — cancel a queued/running run
+  GET  /api/runs/compare     — compare metrics across runs
+  GET  /api/runs/:id/artifacts — list / download run artifacts
 """
 
 import logging
@@ -13,10 +15,11 @@ import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 from urllib.parse import urlparse
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import FileResponse, JSONResponse
 
 from swarm.api.middleware import get_quotas, is_trusted, require_api_key
 from swarm.api.models.run import (
@@ -27,39 +30,49 @@ from swarm.api.models.run import (
     RunSummaryMetrics,
     RunVisibility,
 )
+from swarm.api.persistence import RunStore
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 # ---------------------------------------------------------------------------
-# In-memory run storage (replace with DB in production)
+# Persistence (replaces in-memory dicts)
 # ---------------------------------------------------------------------------
-_runs: dict[str, RunResponse] = {}
+_store: Optional[RunStore] = None
 _run_threads: dict[str, threading.Thread] = {}
-_lock = threading.Lock()  # Protects _runs and related dicts
+_lock = threading.Lock()  # Protects _run_threads and store writes during execution
 
-# Hard cap on total stored runs to prevent unbounded memory growth.
-MAX_STORED_RUNS = 10_000
+# Stash params and quotas alongside the run (not in the Pydantic model)
+_run_params: dict[str, dict] = {}
+_run_quotas: dict[str, dict] = {}
+_run_callbacks: dict[str, str] = {}
+
+# Hard cap on total stored runs to prevent unbounded growth.
+MAX_STORED_RUNS = 100_000
 
 # Scenario allowlist: only these scenario IDs can be run via the API.
-# Populated at startup from the scenarios/ directory.
 _SCENARIO_ALLOWLIST: set[str] = set()
 _SCENARIOS_DIR: Optional[Path] = None
 
 # Strict pattern: scenario IDs must be alphanumeric + hyphens/underscores only.
-# This is defense-in-depth against path traversal even though we also check
-# the allowlist.
 _SCENARIO_ID_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9_-]{0,99}$")
 
 # Callback URL allowlist: only HTTPS to external hosts.
 _ALLOWED_CALLBACK_SCHEMES = {"https"}
 
 
+def get_store() -> RunStore:
+    """Lazy-init the run store singleton."""
+    global _store
+    if _store is None:
+        _store = RunStore()
+    return _store
+
+
 def _discover_scenarios() -> None:
     """Scan the scenarios/ directory and populate the allowlist."""
     global _SCENARIOS_DIR
-    # Try multiple roots (repo root, package parent, CWD)
     candidates = [
         Path(__file__).resolve().parents[3] / "scenarios",
         Path.cwd() / "scenarios",
@@ -99,8 +112,6 @@ def _resolve_scenario_path(scenario_id: str) -> Path:
     if _SCENARIOS_DIR is None:
         raise HTTPException(status_code=500, detail="Scenarios directory not found")
     path = _SCENARIOS_DIR / f"{scenario_id}.yaml"
-    # Resolve and verify the path stays within the scenarios directory
-    # (defense-in-depth against symlink attacks)
     resolved = path.resolve()
     if not str(resolved).startswith(str(_SCENARIOS_DIR.resolve())):
         raise HTTPException(status_code=400, detail="Invalid scenario path")
@@ -110,10 +121,7 @@ def _resolve_scenario_path(scenario_id: str) -> Path:
 
 
 def _validate_callback_url(url: Optional[str]) -> None:
-    """Validate callback_url to prevent SSRF.
-
-    Only HTTPS URLs to non-private hosts are allowed.
-    """
+    """Validate callback_url to prevent SSRF."""
     if url is None:
         return
     try:
@@ -129,7 +137,6 @@ def _validate_callback_url(url: Optional[str]) -> None:
     if not parsed.hostname:
         raise HTTPException(status_code=400, detail="callback_url missing hostname")
 
-    # Block private/internal network ranges
     hostname = parsed.hostname.lower()
     blocked_hosts = {
         "localhost", "127.0.0.1", "0.0.0.0", "::1",
@@ -140,7 +147,6 @@ def _validate_callback_url(url: Optional[str]) -> None:
             status_code=400,
             detail="callback_url must not point to internal/private hosts",
         )
-    # Block private IP ranges and link-local
     if hostname.startswith(("10.", "192.168.", "172.16.", "172.17.", "172.18.",
                             "172.19.", "172.2", "172.30.", "172.31.",
                             "169.254.", "fc", "fd", "fe80")):
@@ -154,20 +160,11 @@ def _validate_callback_url(url: Optional[str]) -> None:
 # Background run executor
 # ---------------------------------------------------------------------------
 
-# Stash params and quotas alongside the run (not in the Pydantic model)
-_run_params: dict[str, dict] = {}
-_run_quotas: dict[str, dict] = {}
-_run_callbacks: dict[str, str] = {}
-
 
 def _execute_run(run_id: str) -> None:
-    """Execute a SWARM run in a background thread.
-
-    Updates the in-memory run record with progress and results.
-    If a callback_url was provided, POSTs results when done (Pattern C).
-    """
-    with _lock:
-        run = _runs.get(run_id)
+    """Execute a SWARM run in a background thread."""
+    store = get_store()
+    run = store.get(run_id)
     if run is None:
         return
 
@@ -178,7 +175,7 @@ def _execute_run(run_id: str) -> None:
         scenario_path = _resolve_scenario_path(run.scenario_id)
         scenario = load_scenario(scenario_path)
 
-        # Apply param overrides (only known safe keys)
+        # Apply param overrides
         params = _run_params.get(run_id, {})
         _ALLOWED_PARAM_KEYS = {"seed", "epochs", "steps_per_epoch"}
         for key in params:
@@ -205,16 +202,15 @@ def _execute_run(run_id: str) -> None:
             scenario.orchestrator_config.steps_per_epoch, max_steps
         )
 
-        # Disable file-based event logging for API runs (write to runs/ instead)
         scenario.orchestrator_config.log_path = None
         scenario.orchestrator_config.log_events = False
 
         orchestrator = build_orchestrator(scenario)
 
-        # Mark as running (thread-safe update)
-        with _lock:
-            run.status = RunStatus.RUNNING
-            run.started_at = datetime.now(timezone.utc)
+        # Mark as running
+        run.status = RunStatus.RUNNING
+        run.started_at = datetime.now(timezone.utc)
+        store.save(run)
 
         metrics_history = orchestrator.run()
 
@@ -239,11 +235,11 @@ def _execute_run(run_id: str) -> None:
                 n_epochs_completed=len(metrics_history),
             )
 
-        with _lock:
-            run.summary_metrics = summary
-            run.status = RunStatus.COMPLETED
-            run.completed_at = datetime.now(timezone.utc)
-            run.progress = 1.0
+        run.summary_metrics = summary
+        run.status = RunStatus.COMPLETED
+        run.completed_at = datetime.now(timezone.utc)
+        run.progress = 1.0
+        store.save(run)
 
         # Export artifacts to runs/ directory
         _export_run_artifacts(run, scenario, orchestrator, metrics_history)
@@ -255,16 +251,13 @@ def _execute_run(run_id: str) -> None:
 
     except Exception as exc:
         logger.exception("Run %s failed", run_id)
-        with _lock:
-            run.status = RunStatus.FAILED
-            run.completed_at = datetime.now(timezone.utc)
-            # Sanitize error: only include the exception class and a truncated message.
-            # Never leak file paths, stack traces, or config details.
-            exc_type = type(exc).__name__
-            exc_msg = str(exc)[:200]
-            run.error = f"{exc_type}: {exc_msg}"
+        run.status = RunStatus.FAILED
+        run.completed_at = datetime.now(timezone.utc)
+        exc_type = type(exc).__name__
+        exc_msg = str(exc)[:200]
+        run.error = f"{exc_type}: {exc_msg}"
+        store.save(run)
     finally:
-        # Clean up stashed data to prevent memory leaks
         _run_params.pop(run_id, None)
         _run_quotas.pop(run_id, None)
 
@@ -299,7 +292,6 @@ def _export_run_artifacts(
             )
             history.add_epoch_snapshot(snapshot)
 
-        # Determine output directory
         repo_root = Path(__file__).resolve().parents[3]
         run_dir = repo_root / "runs" / run.run_id
         run_dir.mkdir(parents=True, exist_ok=True)
@@ -311,14 +303,10 @@ def _export_run_artifacts(
 
 
 def _fire_callback(callback_url: str, run: RunResponse) -> None:
-    """POST run results to the agent's callback URL.
-
-    Only non-sensitive summary fields are included in the payload.
-    """
+    """POST run results to the agent's callback URL."""
     try:
         import requests
 
-        # Build a sanitized payload — never include internal error details
         payload = {
             "run_id": run.run_id,
             "scenario_id": run.scenario_id,
@@ -332,35 +320,24 @@ def _fire_callback(callback_url: str, run: RunResponse) -> None:
             callback_url,
             json=payload,
             timeout=10,
-            allow_redirects=False,  # Prevent redirect-based SSRF bypass
+            allow_redirects=False,
         )
     except Exception:
         logger.warning("Callback to %s failed for run %s", callback_url, run.run_id)
 
 
-def _evict_oldest_completed_runs() -> None:
-    """Evict the oldest completed/failed/cancelled runs when at capacity.
-
-    Must be called with _lock held.
-    """
-    if len(_runs) < MAX_STORED_RUNS:
-        return
-
-    # Find completed runs sorted by creation time (oldest first)
-    terminal_statuses = {RunStatus.COMPLETED, RunStatus.FAILED, RunStatus.CANCELLED}
-    evictable = [
-        (rid, r)
-        for rid, r in _runs.items()
-        if r.status in terminal_statuses
-    ]
-    evictable.sort(key=lambda pair: pair[1].created_at)
-
-    # Evict oldest 10%
-    to_evict = max(1, len(evictable) // 10)
-    for rid, _ in evictable[:to_evict]:
-        _runs.pop(rid, None)
-        _run_callbacks.pop(rid, None)
-        _run_threads.pop(rid, None)
+def _get_run_artifacts_dir(run_id: str) -> Optional[Path]:
+    """Return the artifacts directory for a run, or None if it doesn't exist."""
+    repo_root = Path(__file__).resolve().parents[3]
+    run_dir = repo_root / "runs" / run_id
+    # Defense-in-depth: ensure resolved path is under runs/
+    resolved = run_dir.resolve()
+    runs_root = (repo_root / "runs").resolve()
+    if not str(resolved).startswith(str(runs_root)):
+        return None
+    if run_dir.is_dir():
+        return run_dir
+    return None
 
 
 # ---------------------------------------------------------------------------
@@ -374,15 +351,10 @@ async def create_run(
     request: Request,
     agent_id: str = Depends(require_api_key),
 ) -> RunKickoffResponse:
-    """Kick off a new SWARM run.
+    """Kick off a new SWARM run."""
+    store = get_store()
 
-    Validates the scenario against the allowlist, enforces quotas,
-    and starts execution in a background thread.
-    """
-    # Validate scenario_id format and presence in allowlist
     _resolve_scenario_path(body.scenario_id)
-
-    # Validate callback_url (SSRF protection)
     _validate_callback_url(body.callback_url)
 
     # Enforce visibility: only trusted keys may publish public results
@@ -397,50 +369,43 @@ async def create_run(
     # Enforce concurrency quota
     quotas = get_quotas(token)
     max_concurrent = quotas.get("max_concurrent", 5)
-    with _lock:
-        active = sum(
-            1
-            for r in _runs.values()
-            if r.agent_id == agent_id
-            and r.status in (RunStatus.QUEUED, RunStatus.RUNNING)
-        )
-        if active >= max_concurrent:
-            raise HTTPException(
-                status_code=429,
-                detail=f"Concurrency limit reached ({max_concurrent} active runs)",
-            )
-
-        # Enforce total stored runs cap
-        _evict_oldest_completed_runs()
-        if len(_runs) >= MAX_STORED_RUNS:
-            raise HTTPException(
-                status_code=429,
-                detail="Server run storage capacity reached. Try again later.",
-            )
-
-        run_id = str(uuid.uuid4())
-        now = datetime.now(timezone.utc)
-        base_url = str(request.base_url).rstrip("/")
-
-        run = RunResponse(
-            run_id=run_id,
-            scenario_id=body.scenario_id,
-            status=RunStatus.QUEUED,
-            visibility=body.visibility,
-            agent_id=agent_id,
-            created_at=now,
-            progress=0.0,
-            status_url=f"{base_url}/api/runs/{run_id}",
-            public_url=f"{base_url}/api/runs/{run_id}"
-            if body.visibility == RunVisibility.PUBLIC
-            else None,
+    active = store.count_active(agent_id)
+    if active >= max_concurrent:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Concurrency limit reached ({max_concurrent} active runs)",
         )
 
-        _runs[run_id] = run
-        _run_params[run_id] = body.params
-        _run_quotas[run_id] = quotas
-        if body.callback_url:
-            _run_callbacks[run_id] = body.callback_url
+    # Enforce total stored runs cap
+    if store.total_count() >= MAX_STORED_RUNS:
+        raise HTTPException(
+            status_code=429,
+            detail="Server run storage capacity reached. Try again later.",
+        )
+
+    run_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    base_url = str(request.base_url).rstrip("/")
+
+    run = RunResponse(
+        run_id=run_id,
+        scenario_id=body.scenario_id,
+        status=RunStatus.QUEUED,
+        visibility=body.visibility,
+        agent_id=agent_id,
+        created_at=now,
+        progress=0.0,
+        status_url=f"{base_url}/api/runs/{run_id}",
+        public_url=f"{base_url}/api/runs/{run_id}"
+        if body.visibility == RunVisibility.PUBLIC
+        else None,
+    )
+
+    store.save(run)
+    _run_params[run_id] = body.params
+    _run_quotas[run_id] = quotas
+    if body.callback_url:
+        _run_callbacks[run_id] = body.callback_url
 
     # Launch background execution
     t = threading.Thread(target=_execute_run, args=(run_id,), daemon=True)
@@ -456,25 +421,151 @@ async def create_run(
     )
 
 
+@router.get("/compare")
+async def compare_runs(
+    ids: str = Query(..., description="Comma-separated run IDs to compare"),
+    agent_id: str = Depends(require_api_key),
+) -> JSONResponse:
+    """Compare metrics across multiple runs side-by-side.
+
+    Returns a dict keyed by run_id with summary metrics and deltas
+    relative to the first run in the list.
+    """
+    store = get_store()
+    run_ids = [rid.strip() for rid in ids.split(",") if rid.strip()]
+
+    if len(run_ids) < 2:
+        raise HTTPException(status_code=400, detail="Need at least 2 run IDs to compare")
+    if len(run_ids) > 10:
+        raise HTTPException(status_code=400, detail="At most 10 runs can be compared")
+
+    runs = store.get_multiple(run_ids)
+    runs_by_id = {r.run_id: r for r in runs}
+
+    # Check access: agent must own or runs must be public
+    for rid in run_ids:
+        run = runs_by_id.get(rid)
+        if run is None:
+            raise HTTPException(status_code=404, detail=f"Run '{rid}' not found")
+        if run.visibility == RunVisibility.PRIVATE and run.agent_id != agent_id:
+            raise HTTPException(status_code=403, detail=f"Access denied to run '{rid}'")
+        if run.status != RunStatus.COMPLETED:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Run '{rid}' is not completed (status: {run.status.value})",
+            )
+
+    # Build comparison structure
+    baseline_id = run_ids[0]
+    baseline = runs_by_id[baseline_id]
+    baseline_metrics = baseline.summary_metrics
+
+    comparison: dict[str, Any] = {}
+    for rid in run_ids:
+        run = runs_by_id[rid]
+        m = run.summary_metrics
+        if m is None:
+            comparison[rid] = {"scenario_id": run.scenario_id, "metrics": None}
+            continue
+
+        entry: dict[str, Any] = {
+            "scenario_id": run.scenario_id,
+            "created_at": run.created_at.isoformat(),
+            "metrics": m.model_dump(),
+        }
+
+        # Compute deltas relative to baseline
+        if rid != baseline_id and baseline_metrics is not None:
+            delta = {}
+            for field_name in RunSummaryMetrics.model_fields:
+                val = getattr(m, field_name)
+                base_val = getattr(baseline_metrics, field_name)
+                if isinstance(val, (int, float)) and isinstance(base_val, (int, float)):
+                    delta[field_name] = round(val - base_val, 6)
+            entry["delta_vs_baseline"] = delta
+
+        comparison[rid] = entry
+
+    return JSONResponse(
+        content={
+            "baseline_run_id": baseline_id,
+            "runs": comparison,
+        }
+    )
+
+
+@router.get("/{run_id}/artifacts")
+async def list_artifacts(
+    run_id: str,
+    agent_id: str = Depends(require_api_key),
+) -> JSONResponse:
+    """List available artifact files for a completed run."""
+    store = get_store()
+    run = store.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if run.visibility == RunVisibility.PRIVATE and run.agent_id != agent_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    artifacts_dir = _get_run_artifacts_dir(run_id)
+    if artifacts_dir is None:
+        return JSONResponse(content={"run_id": run_id, "artifacts": []})
+
+    artifacts = []
+    for f in sorted(artifacts_dir.rglob("*")):
+        if f.is_file():
+            rel = f.relative_to(artifacts_dir)
+            artifacts.append({
+                "path": str(rel),
+                "size_bytes": f.stat().st_size,
+            })
+
+    return JSONResponse(content={"run_id": run_id, "artifacts": artifacts})
+
+
+@router.get("/{run_id}/artifacts/{file_path:path}")
+async def download_artifact(
+    run_id: str,
+    file_path: str,
+    agent_id: str = Depends(require_api_key),
+) -> FileResponse:
+    """Download a specific artifact file."""
+    store = get_store()
+    run = store.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if run.visibility == RunVisibility.PRIVATE and run.agent_id != agent_id:
+        raise HTTPException(status_code=403, detail="Access denied")
+
+    artifacts_dir = _get_run_artifacts_dir(run_id)
+    if artifacts_dir is None:
+        raise HTTPException(status_code=404, detail="No artifacts for this run")
+
+    target = (artifacts_dir / file_path).resolve()
+    # Path traversal defense
+    if not str(target).startswith(str(artifacts_dir.resolve())):
+        raise HTTPException(status_code=400, detail="Invalid file path")
+    if not target.is_file():
+        raise HTTPException(status_code=404, detail="Artifact not found")
+
+    return FileResponse(str(target), filename=target.name)
+
+
 @router.get("/{run_id}", response_model=RunResponse)
 async def get_run(
     run_id: str,
     agent_id: str = Depends(require_api_key),
 ) -> RunResponse:
-    """Get run status and results.
-
-    Private runs are only visible to the agent that created them.
-    Public runs redact the error field for non-owners.
-    """
-    with _lock:
-        if run_id not in _runs:
-            raise HTTPException(status_code=404, detail="Run not found")
-        run = _runs[run_id]
+    """Get run status and results."""
+    store = get_store()
+    run = store.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
 
     if run.visibility == RunVisibility.PRIVATE and run.agent_id != agent_id:
         raise HTTPException(status_code=403, detail="Access denied")
 
-    # Redact error details for non-owners (even on public runs)
+    # Redact error details for non-owners
     if run.agent_id != agent_id and run.error:
         run = run.model_copy(update={"error": "Run failed"})
 
@@ -486,8 +577,8 @@ async def list_runs(
     agent_id: str = Depends(require_api_key),
 ) -> list[RunResponse]:
     """List runs for the authenticated agent."""
-    with _lock:
-        return [r for r in _runs.values() if r.agent_id == agent_id]
+    store = get_store()
+    return store.list_by_agent(agent_id)
 
 
 @router.post("/{run_id}/cancel")
@@ -496,21 +587,21 @@ async def cancel_run(
     agent_id: str = Depends(require_api_key),
 ) -> dict:
     """Cancel a queued or running run."""
-    with _lock:
-        if run_id not in _runs:
-            raise HTTPException(status_code=404, detail="Run not found")
+    store = get_store()
+    run = store.get(run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="Run not found")
+    if run.agent_id != agent_id:
+        raise HTTPException(status_code=403, detail="Access denied")
 
-        run = _runs[run_id]
-        if run.agent_id != agent_id:
-            raise HTTPException(status_code=403, detail="Access denied")
+    if run.status not in (RunStatus.QUEUED, RunStatus.RUNNING):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel run in status '{run.status.value}'",
+        )
 
-        if run.status not in (RunStatus.QUEUED, RunStatus.RUNNING):
-            raise HTTPException(
-                status_code=400,
-                detail=f"Cannot cancel run in status '{run.status.value}'",
-            )
-
-        run.status = RunStatus.CANCELLED
-        run.completed_at = datetime.now(timezone.utc)
+    run.status = RunStatus.CANCELLED
+    run.completed_at = datetime.now(timezone.utc)
+    store.save(run)
 
     return {"run_id": run_id, "status": "cancelled"}
