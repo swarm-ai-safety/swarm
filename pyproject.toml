@@ -45,6 +45,7 @@ dev = [
 analysis = [
     "matplotlib>=3.7",
     "seaborn>=0.12",
+    "scipy>=1.10",
 ]
 runtime = [
     "pyyaml>=6.0",

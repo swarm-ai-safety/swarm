@@ -59,6 +59,7 @@ class AgentLabBridge:
         self._interactions: List[SoftInteraction] = []
         self._events: List[AgentLabEvent] = []
         self._phase_interactions: dict[str, List[SoftInteraction]] = {}
+        self._last_total_cost_usd: float = 0.0
 
     # --- Offline ingestion ---
 
@@ -160,20 +161,25 @@ class AgentLabBridge:
             AgentLabEventType.CODE_FAILED,
             AgentLabEventType.CODE_REPAIRED,
         ):
-            success = event.event_type in (
-                AgentLabEventType.CODE_GENERATED,
-                AgentLabEventType.CODE_EXECUTED,
-            )
+            success = event.event_type == AgentLabEventType.CODE_EXECUTED
             repair = event.event_type == AgentLabEventType.CODE_REPAIRED
-            self._policy.evaluate_code_execution(success or repair)
+            # Only evaluate the circuit breaker on actual execution
+            # outcomes (executed / failed / repaired), not on code
+            # generation which precedes execution.
+            if event.event_type != AgentLabEventType.CODE_GENERATED:
+                self._policy.evaluate_code_execution(success or repair)
             interaction = self._mapper.map_code_event(
                 event, success=success, repair_attempt=repair
             )
             interactions.append(interaction)
 
         elif event.event_type == AgentLabEventType.COST_UPDATED:
-            cost = event.payload.get("total_cost_usd", 0.0)
-            self._apply_cost_policy(cost)
+            # Payload carries cumulative total; convert to delta so the
+            # policy's running sum stays correct.
+            total = event.payload.get("total_cost_usd", 0.0)
+            delta = max(total - self._last_total_cost_usd, 0.0)
+            self._last_total_cost_usd = total
+            self._apply_cost_policy(delta)
 
         # Record and log each interaction
         for interaction in interactions:

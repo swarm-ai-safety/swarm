@@ -169,10 +169,18 @@ def main() -> int:
     bonferroni_threshold = 0.05 / total_hypotheses if total_hypotheses > 0 else 0.05
 
     all_results.sort(key=lambda r: r["t_p"])
-    for i, r in enumerate(all_results):
+    for r in all_results:
         r["bonferroni_sig"] = r["t_p"] < bonferroni_threshold
-        bh_threshold = ((i + 1) / total_hypotheses) * 0.05 if total_hypotheses > 0 else 0.05
-        r["bh_sig"] = r["t_p"] <= bh_threshold
+    # Benjamini-Hochberg: find largest rank k where p_k <= (k/m)*q,
+    # then mark all ranks 1..k as significant.
+    bh_cutoff = 0
+    for i, r in enumerate(all_results):
+        rank = i + 1
+        bh_threshold = (rank / total_hypotheses) * 0.05 if total_hypotheses > 0 else 0.05
+        if r["t_p"] <= bh_threshold:
+            bh_cutoff = rank
+    for i, r in enumerate(all_results):
+        r["bh_sig"] = (i + 1) <= bh_cutoff
 
     bonferroni_sig = [r for r in all_results if r["bonferroni_sig"]]
     bh_sig = [r for r in all_results if r["bh_sig"]]
