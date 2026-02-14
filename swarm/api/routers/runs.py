@@ -9,6 +9,7 @@ Implements Patterns A/B/C from the agent API design:
   GET  /api/runs/:id/artifacts — list / download run artifacts
 """
 
+import atexit
 import ipaddress
 import logging
 import re
@@ -43,7 +44,9 @@ router = APIRouter()
 # ---------------------------------------------------------------------------
 _store: Optional[RunStore] = None
 _run_threads: dict[str, threading.Thread] = {}
+_run_cancel_events: dict[str, threading.Event] = {}
 _lock = threading.Lock()  # Protects _run_threads and store writes during execution
+_shutting_down = threading.Event()  # Signals global shutdown to all threads
 
 # Stash params and quotas alongside the run (not in the Pydantic model)
 _run_params: dict[str, dict] = {}
@@ -73,6 +76,52 @@ def get_store() -> RunStore:
     if _store is None:
         _store = RunStore()
     return _store
+
+
+def _is_cancelled(run_id: str) -> bool:
+    """Check if a run has been cancelled or the process is shutting down."""
+    if _shutting_down.is_set():
+        return True
+    evt = _run_cancel_events.get(run_id)
+    return evt is not None and evt.is_set()
+
+
+# Allowlisted exception types safe to show to run owners.
+_SAFE_ERROR_TYPES = frozenset({
+    "ValueError", "TypeError", "KeyError", "FileNotFoundError",
+    "RuntimeError", "TimeoutError", "PermissionError",
+})
+
+
+def _sanitize_error(exc: Exception) -> str:
+    """Build a user-safe error string, stripping internal paths (fix 2.9)."""
+    exc_type = type(exc).__name__
+    if exc_type in _SAFE_ERROR_TYPES:
+        msg = str(exc)[:200]
+        # Strip filesystem paths (anything starting with /)
+        import re as _re
+        msg = _re.sub(r"/[\w/.-]+", "<path>", msg)
+        return f"{exc_type}: {msg}"
+    return "Internal error"
+
+
+def shutdown_run_threads(timeout: float = 5.0) -> None:
+    """Signal all running threads to stop and wait for them to finish.
+
+    Called during process shutdown to avoid daemon-thread DB corruption
+    (security fix 2.7).
+    """
+    _shutting_down.set()
+    # Signal all individual cancel events too
+    with _lock:
+        for evt in _run_cancel_events.values():
+            evt.set()
+        threads = list(_run_threads.values())
+    for t in threads:
+        t.join(timeout=timeout)
+
+
+atexit.register(shutdown_run_threads)
 
 
 def _discover_scenarios() -> None:
@@ -244,6 +293,13 @@ def _execute_run(run_id: str) -> None:
         return
 
     try:
+        # Check cancellation before starting work (security fix 2.5)
+        if _is_cancelled(run_id):
+            run.status = RunStatus.CANCELLED
+            run.completed_at = datetime.now(timezone.utc)
+            store.save(run)
+            return
+
         from swarm.analysis.aggregation import EpochSnapshot, SimulationHistory
         from swarm.scenarios.loader import build_orchestrator, load_scenario
 
@@ -282,12 +338,26 @@ def _execute_run(run_id: str) -> None:
 
         orchestrator = build_orchestrator(scenario)
 
+        # Check cancellation before the expensive orchestrator.run()
+        if _is_cancelled(run_id):
+            run.status = RunStatus.CANCELLED
+            run.completed_at = datetime.now(timezone.utc)
+            store.save(run)
+            return
+
         # Mark as running
         run.status = RunStatus.RUNNING
         run.started_at = datetime.now(timezone.utc)
         store.save(run)
 
         metrics_history = orchestrator.run()
+
+        # Check cancellation after orchestrator completes
+        if _is_cancelled(run_id):
+            run.status = RunStatus.CANCELLED
+            run.completed_at = datetime.now(timezone.utc)
+            store.save(run)
+            return
 
         # Build summary
         summary = None
@@ -328,15 +398,14 @@ def _execute_run(run_id: str) -> None:
         logger.exception("Run %s failed", run_id)
         run.status = RunStatus.FAILED
         run.completed_at = datetime.now(timezone.utc)
-        exc_type = type(exc).__name__
-        exc_msg = str(exc)[:200]
-        run.error = f"{exc_type}: {exc_msg}"
+        run.error = _sanitize_error(exc)
         store.save(run)
     finally:
         # Clean up all stashed data to prevent memory leaks (fixes 2.4)
         _run_params.pop(run_id, None)
         _run_quotas.pop(run_id, None)
         _run_callbacks.pop(run_id, None)
+        _run_cancel_events.pop(run_id, None)
 
 
 def _export_run_artifacts(
@@ -486,10 +555,13 @@ async def create_run(
     if body.callback_url:
         _run_callbacks[run_id] = body.callback_url
 
-    # Launch background execution
-    t = threading.Thread(target=_execute_run, args=(run_id,), daemon=True)
+    # Launch background execution (non-daemon so shutdown can join cleanly,
+    # security fix 2.7)
+    cancel_evt = threading.Event()
+    t = threading.Thread(target=_execute_run, args=(run_id,), daemon=False)
     with _lock:
         _run_threads[run_id] = t
+        _run_cancel_events[run_id] = cancel_evt
     t.start()
 
     return RunKickoffResponse(
@@ -687,6 +759,11 @@ async def cancel_run(
             status_code=400,
             detail=f"Cannot cancel run in status '{run.status.value}'",
         )
+
+    # Signal the background thread to stop (security fix 2.5)
+    evt = _run_cancel_events.get(run_id)
+    if evt is not None:
+        evt.set()
 
     run.status = RunStatus.CANCELLED
     run.completed_at = datetime.now(timezone.utc)

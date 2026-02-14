@@ -14,7 +14,6 @@ from fastapi.testclient import TestClient  # noqa: E402
 from swarm.api.app import create_app  # noqa: E402
 from swarm.api.config import APIConfig  # noqa: E402
 from swarm.api.middleware import (  # noqa: E402
-    _api_key_hashes,
     _api_keys,
     _key_quotas,
     _rate_limit_windows,
@@ -33,22 +32,23 @@ from swarm.api.models.run import RunStatus, RunVisibility  # noqa: E402
 def _clear_middleware_state():
     """Reset middleware state between tests."""
     import swarm.api.routers.agents as agents_mod
+    import swarm.api.routers.posts as posts_mod
 
     _api_keys.clear()
-    _api_key_hashes.clear()
     _key_quotas.clear()
     _rate_limit_windows.clear()
     _trusted_keys.clear()
     agents_mod._registration_rate.clear()
     agents_mod._registered_agents.clear()
+    posts_mod._public_rate.clear()
     yield
     _api_keys.clear()
-    _api_key_hashes.clear()
     _key_quotas.clear()
     _rate_limit_windows.clear()
     _trusted_keys.clear()
     agents_mod._registration_rate.clear()
     agents_mod._registered_agents.clear()
+    posts_mod._public_rate.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -61,6 +61,9 @@ def _use_temp_db(tmp_path):
     db_path = tmp_path / "test_api.db"
     runs_mod._store = RunStore(db_path=db_path)
     posts_mod._post_store = PostStore(db_path=db_path)
+    # Clear shutdown state from previous tests
+    runs_mod._shutting_down.clear()
+    runs_mod._run_cancel_events.clear()
     yield
     runs_mod._store = None
     posts_mod._post_store = None
@@ -950,6 +953,7 @@ class TestVotingEndpoint:
         assert resp.status_code == 401
 
     def test_zero_direction_rejected(self, client):
+        """direction=0 is rejected at model level (Literal[1,-1], fix 3.1)."""
         _, api_key = _register_agent(client)
         post_id = self._create_post(client, api_key)
         resp = client.post(
@@ -957,7 +961,7 @@ class TestVotingEndpoint:
             json={"direction": 0},
             headers=_auth_header(api_key),
         )
-        assert resp.status_code == 400
+        assert resp.status_code == 422
 
 
 # ---------------------------------------------------------------------------

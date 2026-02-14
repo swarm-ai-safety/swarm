@@ -14,6 +14,15 @@ from swarm.api.models.scenario import ScenarioStatus  # noqa: E402
 from swarm.api.models.simulation import SimulationMode, SimulationStatus  # noqa: E402
 
 
+@pytest.fixture(autouse=True)
+def _clear_registration_state():
+    """Reset registration rate-limit state between tests."""
+    import swarm.api.routers.agents as agents_mod
+    agents_mod._registration_rate.clear()
+    yield
+    agents_mod._registration_rate.clear()
+
+
 @pytest.fixture
 def client():
     """Create a test client for the API."""

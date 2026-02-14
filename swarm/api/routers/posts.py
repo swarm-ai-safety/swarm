@@ -7,9 +7,10 @@ Implements Pattern B from the agent API design:
   POST /api/posts/:id/vote   — upvote or downvote a card
 """
 
+import time
 import uuid
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
@@ -27,6 +28,11 @@ MAX_STORED_POSTS = 50_000
 _post_store: Optional[PostStore] = None
 _run_store_ref: Optional[RunStore] = None
 
+# Per-IP rate limiting for unauthenticated (public) endpoints (security fix 4.3).
+_public_rate: dict[str, list[float]] = {}
+_PUBLIC_RATE_WINDOW = 60.0  # seconds
+_PUBLIC_RATE_LIMIT = 120  # requests per IP per window
+
 
 def get_post_store() -> PostStore:
     global _post_store
@@ -42,6 +48,18 @@ def _get_run(run_id: str):
     return get_store().get(run_id)
 
 
+def _check_public_rate_limit(request: Request) -> None:
+    """Enforce per-IP rate limiting on unauthenticated endpoints (fix 4.3)."""
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    window = _public_rate.get(client_ip, [])
+    window = [t for t in window if now - t < _PUBLIC_RATE_WINDOW]
+    if len(window) >= _PUBLIC_RATE_LIMIT:
+        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+    window.append(now)
+    _public_rate[client_ip] = window
+
+
 # ---------------------------------------------------------------------------
 # Vote model
 # ---------------------------------------------------------------------------
@@ -50,11 +68,9 @@ def _get_run(run_id: str):
 class VoteRequest(BaseModel):
     """Request to vote on a post."""
 
-    direction: int = Field(
+    direction: Literal[1, -1] = Field(
         ...,
         description="Vote direction: +1 for upvote, -1 for downvote",
-        ge=-1,
-        le=1,
     )
 
 
@@ -111,6 +127,7 @@ async def create_post(
 
 @router.get("", response_model=list[PostResponse])
 async def list_posts(
+    request: Request,
     tag: str | None = Query(None, description="Filter by tag"),
     agent_id_filter: str | None = Query(
         None, alias="agent_id", description="Filter by publishing agent"
@@ -122,6 +139,7 @@ async def list_posts(
 
     No authentication required — the feed is public.
     """
+    _check_public_rate_limit(request)
     store = get_post_store()
     return store.list_posts(
         tag=tag,
@@ -132,8 +150,9 @@ async def list_posts(
 
 
 @router.get("/{post_id}", response_model=PostResponse)
-async def get_post(post_id: str) -> PostResponse:
+async def get_post(post_id: str, request: Request) -> PostResponse:
     """Get a single post card."""
+    _check_public_rate_limit(request)
     store = get_post_store()
     post = store.get(post_id)
     if post is None:
@@ -155,9 +174,6 @@ async def vote_on_post(
     Voting the same direction again toggles (removes) your vote.
     Voting the opposite direction switches your vote.
     """
-    if body.direction == 0:
-        raise HTTPException(status_code=400, detail="direction must be +1 or -1")
-
     store = get_post_store()
     post = store.get(post_id)
     if post is None:

@@ -18,7 +18,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     _discover_scenarios()
     yield
-    # Shutdown
+    # Shutdown — cleanly stop background run threads (security fix 2.7)
+    from swarm.api.routers.runs import shutdown_run_threads
+
+    shutdown_run_threads(timeout=5.0)
 
 
 def create_app(config: APIConfig | None = None) -> FastAPI:
@@ -57,13 +60,14 @@ def create_app(config: APIConfig | None = None) -> FastAPI:
     # Stash rate-limit config on the app for the middleware to read
     app._swarm_rate_limit = config.rate_limit_per_minute  # type: ignore[attr-defined]
 
-    # Configure CORS
+    # Configure CORS — only allow methods and headers actually used by the
+    # API to reduce attack surface (security fix 6.1).
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.cors_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
     )
 
     # Include routers

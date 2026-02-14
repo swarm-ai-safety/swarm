@@ -1,7 +1,7 @@
 """API key authentication and rate-limiting middleware."""
 
 import hashlib
-import hmac
+import threading
 import time
 from collections import defaultdict
 from typing import Optional
@@ -14,13 +14,11 @@ from fastapi.security import APIKeyHeader
 # the process memory is ever dumped.
 _api_keys: dict[str, str] = {}
 
-# Reverse map for quick lookup: key_hash -> raw key needed for hmac comparison
-# (This is belt-and-suspenders — ideally we'd only store hashes, but we need
-# constant-time comparison against the incoming token.)
-_api_key_hashes: dict[str, str] = {}  # raw_key -> key_hash
-
 # Rate-limit tracking: key_hash -> list of request timestamps
 _rate_limit_windows: dict[str, list[float]] = defaultdict(list)
+
+# Lock protecting _rate_limit_windows for thread safety (security fix 4.4).
+_rate_limit_lock = threading.Lock()
 
 # Per-key resource quotas (set when key is issued)
 _key_quotas: dict[str, dict] = {}
@@ -56,7 +54,6 @@ def register_api_key(
 
     key_hash = _hash_key(api_key)
     _api_keys[key_hash] = agent_id
-    _api_key_hashes[api_key] = key_hash
     _key_quotas[key_hash] = {
         "max_epochs": max_epochs,
         "max_steps": max_steps,
@@ -86,21 +83,20 @@ def _extract_bearer_token(header_value: Optional[str]) -> Optional[str]:
     return header_value
 
 
-def _constant_time_key_lookup(token: str) -> Optional[str]:
-    """Look up an API key using constant-time comparison.
+def _lookup_key(token: str) -> Optional[str]:
+    """Look up an API key by its SHA-256 hash.
 
     Returns the agent_id if valid, None otherwise.
-    """
-    # First, compute the hash to narrow down the candidate.
-    # SHA-256 is not timing-sensitive for our purposes.
-    token_hash = _hash_key(token)
 
-    # Use hmac.compare_digest for the hash comparison to prevent
-    # timing side-channels on the hash value itself.
-    for stored_hash, agent_id in _api_keys.items():
-        if hmac.compare_digest(token_hash, stored_hash):
-            return agent_id
-    return None
+    Uses a direct dict lookup on the hash (O(1)) rather than iterating
+    all keys (security fix 4.2). This is safe because:
+    - SHA-256 is preimage-resistant, so the hash doesn't leak the key.
+    - Dict lookup on the hash doesn't create a timing oracle on key
+      content — the only timing signal is "key exists vs not", which
+      is the same for any auth scheme.
+    """
+    token_hash = _hash_key(token)
+    return _api_keys.get(token_hash)
 
 
 async def require_api_key(
@@ -115,27 +111,30 @@ async def require_api_key(
     if token is None:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
-    agent_id = _constant_time_key_lookup(token)
+    agent_id = _lookup_key(token)
     if agent_id is None:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
-    # Rate limiting
+    # Rate limiting (thread-safe via _rate_limit_lock, security fix 4.4)
     rate_limit = getattr(request.app, "_swarm_rate_limit", 100)
     token_hash = _hash_key(token)
     now = time.monotonic()
-    window = _rate_limit_windows[token_hash]
 
-    # Prune entries older than 60 seconds, but cap stored entries to prevent
-    # memory abuse from rapid-fire requests that don't get pruned fast enough.
-    cutoff = now - 60
-    pruned = [t for t in window if t > cutoff]
-    if len(pruned) > MAX_RATE_LIMIT_ENTRIES_PER_KEY:
-        pruned = pruned[-MAX_RATE_LIMIT_ENTRIES_PER_KEY:]
-    _rate_limit_windows[token_hash] = pruned
-    window = _rate_limit_windows[token_hash]
+    with _rate_limit_lock:
+        window = _rate_limit_windows[token_hash]
 
-    if len(window) >= rate_limit:
-        raise HTTPException(status_code=429, detail="Rate limit exceeded")
+        # Prune entries older than 60 seconds, but cap stored entries to prevent
+        # memory abuse from rapid-fire requests that don't get pruned fast enough.
+        cutoff = now - 60
+        pruned = [t for t in window if t > cutoff]
+        if len(pruned) > MAX_RATE_LIMIT_ENTRIES_PER_KEY:
+            pruned = pruned[-MAX_RATE_LIMIT_ENTRIES_PER_KEY:]
 
-    window.append(now)
+        if len(pruned) >= rate_limit:
+            _rate_limit_windows[token_hash] = pruned
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+
+        pruned.append(now)
+        _rate_limit_windows[token_hash] = pruned
+
     return agent_id
