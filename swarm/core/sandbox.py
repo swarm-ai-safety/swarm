@@ -645,7 +645,7 @@ class FailoverChain:
             )
 
         # All backends exhausted
-        last_result = ExecutionResult(
+        last_result: ExecutionResult[Any] = ExecutionResult(
             status=ExecutionStatus.FAILED,
             error=Exception(
                 f"All {len(self._backends)} backends failed: "
