@@ -24,7 +24,12 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 
-from swarm.api.middleware import get_quotas, is_trusted, require_api_key
+from swarm.api.middleware import (
+    get_quotas_hash,
+    get_request_key_hash,
+    is_trusted_hash,
+    require_api_key,
+)
 from swarm.api.models.run import (
     RunCreate,
     RunKickoffResponse,
@@ -504,10 +509,12 @@ async def create_run(
     _resolve_scenario_path(body.scenario_id)
     _validate_callback_url(body.callback_url)
 
+    # Use the pre-computed PBKDF2 hash stashed by require_api_key,
+    # avoiding expensive re-hashing on every call.
+    key_hash = get_request_key_hash(request)
+
     # Enforce visibility: only trusted keys may publish public results
-    api_key_header = request.headers.get("Authorization", "")
-    token = api_key_header[7:] if api_key_header.startswith("Bearer ") else api_key_header
-    if body.visibility == RunVisibility.PUBLIC and not is_trusted(token):
+    if body.visibility == RunVisibility.PUBLIC and not is_trusted_hash(key_hash):
         raise HTTPException(
             status_code=403,
             detail="Only trusted API keys can create public runs",
@@ -515,7 +522,7 @@ async def create_run(
 
     # Enforce concurrency quota — count live threads, not DB status,
     # to prevent bypass via cancel-then-create (security fix 2.6).
-    quotas = get_quotas(token)
+    quotas = get_quotas_hash(key_hash)
     max_concurrent = quotas.get("max_concurrent", 5)
     live = _count_live_threads(agent_id)
     if live >= max_concurrent:

@@ -30,12 +30,28 @@ _trusted_keys: set[str] = set()
 MAX_REGISTERED_KEYS = 10_000
 MAX_RATE_LIMIT_ENTRIES_PER_KEY = 200
 
+# PBKDF2 parameters for API key hashing.
+# Fixed application-level salt (keys are high-entropy UUIDs, so per-key
+# salt is unnecessary; fixed salt provides domain separation).
+_KDF_SALT = b"swarm-api-key-v1"
+_KDF_ITERATIONS = 100_000
+
 _api_key_header = APIKeyHeader(name="Authorization", auto_error=False)
 
 
 def _hash_key(raw_key: str) -> str:
-    """Produce a deterministic hash of an API key for storage."""
-    return hashlib.sha256(raw_key.encode()).hexdigest()
+    """Hash an API key using PBKDF2-HMAC-SHA256.
+
+    Uses a computationally expensive KDF rather than plain SHA-256 so that
+    brute-forcing dumped hashes is infeasible even for shorter keys.
+    """
+    dk = hashlib.pbkdf2_hmac(
+        "sha256",
+        raw_key.encode("utf-8"),
+        _KDF_SALT,
+        _KDF_ITERATIONS,
+    )
+    return dk.hex()
 
 
 def register_api_key(
@@ -65,13 +81,40 @@ def register_api_key(
 
 
 def is_trusted(api_key: str) -> bool:
-    """Check whether a key is trusted (can publish public results)."""
+    """Check whether a raw key is trusted (can publish public results).
+
+    Prefer ``is_trusted_hash`` with a pre-computed hash when the hash
+    is already available (e.g. from ``get_request_key_hash``).
+    """
     return _hash_key(api_key) in _trusted_keys
 
 
+def is_trusted_hash(key_hash: str) -> bool:
+    """Check whether a pre-computed key hash is trusted."""
+    return key_hash in _trusted_keys
+
+
 def get_quotas(api_key: str) -> dict:
-    """Return the resource quotas for a key."""
+    """Return the resource quotas for a raw key.
+
+    Prefer ``get_quotas_hash`` with a pre-computed hash when the hash
+    is already available (e.g. from ``get_request_key_hash``).
+    """
     return _key_quotas.get(_hash_key(api_key), {})
+
+
+def get_quotas_hash(key_hash: str) -> dict:
+    """Return the resource quotas for a pre-computed key hash."""
+    return _key_quotas.get(key_hash, {})
+
+
+def get_request_key_hash(request: Request) -> str:
+    """Retrieve the key hash stashed by ``require_api_key``.
+
+    This avoids re-computing the expensive PBKDF2 hash on every call
+    to ``is_trusted`` / ``get_quotas`` within the same request.
+    """
+    return request.state._swarm_key_hash  # type: ignore[attr-defined]
 
 
 def _extract_bearer_token(header_value: Optional[str]) -> Optional[str]:
@@ -83,20 +126,14 @@ def _extract_bearer_token(header_value: Optional[str]) -> Optional[str]:
     return header_value
 
 
-def _lookup_key(token: str) -> Optional[str]:
-    """Look up an API key by its SHA-256 hash.
+def _lookup_key(token: str) -> tuple[Optional[str], str]:
+    """Look up an API key by its PBKDF2 hash.
 
-    Returns the agent_id if valid, None otherwise.
-
-    Uses a direct dict lookup on the hash (O(1)) rather than iterating
-    all keys (security fix 4.2). This is safe because:
-    - SHA-256 is preimage-resistant, so the hash doesn't leak the key.
-    - Dict lookup on the hash doesn't create a timing oracle on key
-      content — the only timing signal is "key exists vs not", which
-      is the same for any auth scheme.
+    Returns (agent_id_or_None, key_hash) so the caller can reuse
+    the expensive hash without recomputing.
     """
     token_hash = _hash_key(token)
-    return _api_keys.get(token_hash)
+    return _api_keys.get(token_hash), token_hash
 
 
 async def require_api_key(
@@ -105,19 +142,24 @@ async def require_api_key(
 ) -> str:
     """FastAPI dependency that validates the API key.
 
-    Returns the agent_id associated with the key.
+    Returns the agent_id associated with the key.  The computed key hash
+    is stashed on ``request.state._swarm_key_hash`` so downstream code
+    can call ``get_request_key_hash(request)`` instead of re-hashing.
     """
     token = _extract_bearer_token(api_key_header)
     if token is None:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
-    agent_id = _lookup_key(token)
+    agent_id, token_hash = _lookup_key(token)
     if agent_id is None:
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
+    # Stash the hash so the router can call is_trusted_hash / get_quotas_hash
+    # without re-computing the expensive PBKDF2.
+    request.state._swarm_key_hash = token_hash
+
     # Rate limiting (thread-safe via _rate_limit_lock, security fix 4.4)
     rate_limit = getattr(request.app, "_swarm_rate_limit", 100)
-    token_hash = _hash_key(token)
     now = time.monotonic()
 
     with _rate_limit_lock:
