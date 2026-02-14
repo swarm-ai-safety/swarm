@@ -70,6 +70,10 @@ cli = [
 concordia = [
     "concordia>=1.0",
 ]
+langgraph = [
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+]
 prime_intellect = [
     "prime>=0.1.0",
     "verifiers>=0.1.0",
