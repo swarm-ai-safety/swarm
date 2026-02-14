@@ -31,6 +31,7 @@ from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.core.perturbation import PerturbationConfig, PerturbationEngine
 from swarm.core.proxy import ProxyComputer, ProxyObservables
 from swarm.core.redteam_inspector import RedTeamInspector
+from swarm.core.rivals_handler import RivalsConfig, RivalsHandler
 from swarm.core.scholar_handler import ScholarConfig, ScholarHandler
 from swarm.core.spawn import SpawnConfig, SpawnTree
 from swarm.core.task_handler import TaskHandler
@@ -109,6 +110,9 @@ class OrchestratorConfig(BaseModel):
 
     # Spawn configuration
     spawn_config: Optional[SpawnConfig] = None
+
+    # Rivals (Team-of-Rivals) configuration
+    rivals_config: Optional["RivalsConfig"] = None
 
     # Composite task configuration
     enable_composite_tasks: bool = False
@@ -387,6 +391,16 @@ class Orchestrator:
             self._handler_registry.register(self._kernel_handler)
         else:
             self._kernel_handler = None
+
+        # Rivals handler (Team-of-Rivals pipeline)
+        if self.config.rivals_config is not None:
+            self._rivals_handler: Optional[RivalsHandler] = RivalsHandler(
+                config=self.config.rivals_config,
+                event_bus=self._event_bus,
+            )
+            self._handler_registry.register(self._rivals_handler)
+        else:
+            self._rivals_handler = None
 
         # Boundary handler
         if self.config.enable_boundaries:
@@ -1026,8 +1040,8 @@ class Orchestrator:
         self._spawn_counter += 1
         child_id = f"{parent_id}_child{self._spawn_counter}"
 
-        # Instantiate child agent
-        child_agent = agent_class(
+        # Instantiate child agent (concrete subclasses set their own agent_type)
+        child_agent = agent_class(  # type: ignore[call-arg]
             agent_id=child_id,
             name=child_id,
             config=child_config if child_config else None,
