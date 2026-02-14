@@ -22,6 +22,12 @@ Get up and running with SWARM in minutes.
 
     Build a custom scenario from scratch
 
+-   :material-notebook: **[Quickstart Notebook](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb)**
+
+    ---
+
+    Run two scenarios in Colab with plots — no local setup needed [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb)
+
 </div>
 
 ## Prerequisites

@@ -159,9 +159,12 @@ python examples/mvp_demo.py
 
 ### Interactive Notebook
 
-The **[quickstart notebook](examples/quickstart.ipynb)** runs two scenarios end-to-end in ~5 minutes with no API keys: a cooperative baseline and an adversarial red-team that collapses around epoch 12. Includes diagnostic plots and a per-agent payoff breakdown.
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb)
+
+The **[quickstart notebook](examples/quickstart.ipynb)** runs two scenarios end-to-end in ~5 minutes with no API keys: a cooperative baseline and an adversarial red-team that collapses around epoch 12. Includes diagnostic plots and a per-agent payoff breakdown. Click the Colab badge to run it in your browser — no local setup needed.
 
 ```bash
+# Or run locally:
 jupyter notebook examples/quickstart.ipynb
 ```
 
@@ -186,6 +189,26 @@ swarm run scenarios/baseline.yaml --seed 42 --epochs 20 --steps 15
 # Export outputs
 swarm run scenarios/baseline.yaml --export-json results.json --export-csv outputs/
 ```
+
+## Examples & Notebooks
+
+All examples run standalone with no API keys unless noted. Start with the quickstart notebook, then explore by interest area.
+
+| Example | Description | Colab | Difficulty |
+|---------|-------------|-------|------------|
+| **[quickstart.ipynb](examples/quickstart.ipynb)** | Two scenarios end-to-end with plots | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb) | Beginner |
+| **[illusion_delta_minimal.py](examples/illusion_delta_minimal.py)** | Replay-based incoherence detection (3 agents) | — | Beginner |
+| **[mvp_demo.py](examples/mvp_demo.py)** | Full 5-agent simulation with metric printout | — | Beginner |
+| **[run_scenario.py](examples/run_scenario.py)** | Run any YAML scenario from CLI | — | Beginner |
+| **[parameter_sweep.py](examples/parameter_sweep.py)** | Sweep governance parameters and compare | — | Intermediate |
+| **[run_redteam.py](examples/run_redteam.py)** | Red-team evaluation across 8 attack vectors | — | Intermediate |
+| **[governance_mvp_sweep.py](examples/governance_mvp_sweep.py)** | Governance lever comparison sweep | — | Intermediate |
+| **[llm_demo.py](examples/llm_demo.py)** | LLM-backed agents (requires API key) | — | Intermediate |
+| **[ldt_composition_study.py](examples/ldt_composition_study.py)** | LDT agent composition research | — | Advanced |
+| **[reproduce_2602_00035.py](examples/reproduce_2602_00035.py)** | Reproduce paper results | — | Advanced |
+| **[demo/app.py](examples/demo/app.py)** | Streamlit interactive dashboard | — | Intermediate |
+
+> **Tip for Colab users:** The quickstart notebook auto-detects Colab and installs SWARM from GitHub. For other scripts, add `!pip install swarm-safety` in the first cell.
 
 ## Core Concepts
 
