@@ -146,6 +146,10 @@ When `/write_paper` or `/compile_paper` needs an author name, resolve in this or
 
 Never guess or infer from the OS username.
 
+## Test fix discipline
+
+- When fixing a flaky test, prefer making it deterministic (set seeds, constrain inputs) over loosening assertions.
+
 ## Safety / invariants (do not break)
 
 - `p` must remain in `[0, 1]` everywhere it is surfaced or logged.
