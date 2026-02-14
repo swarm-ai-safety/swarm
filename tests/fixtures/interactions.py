@@ -302,6 +302,142 @@ def generate_uncertain_batch(
     return interactions
 
 
+def generate_self_optimizer_scenario(
+    n_epochs: int = 20,
+    honest_per_epoch: int = 8,
+    optimizer_per_epoch: int = 10,
+    optimization_rate: float = 0.15,
+    quality_floor: float = 0.35,
+    initial_quality: float = 0.85,
+    benchmark_threshold: float = 0.45,
+    seed: Optional[int] = None,
+) -> List[List[SoftInteraction]]:
+    """Generate epoch-grouped interactions for a self-optimizer scenario.
+
+    Models three phases:
+      - Phase 1 (early epochs): optimizers produce high quality (reputation farming)
+      - Phase 2 (mid epochs): quality drifts down as costs are cut
+      - Phase 3 (late epochs): quality near floor, costs minimal, still above
+        hard threshold
+
+    Honest agents maintain steady quality throughout.  The key dynamics:
+      - Optimizers are accepted at high rates regardless of p (counterparties
+        see low cost, not low quality -- no soft metric visibility)
+      - Honest agents have a moderate rejection rate (~35%)
+      - This creates adverse selection: low-p optimizer interactions are
+        accepted while some high-p honest interactions are rejected
+
+    Args:
+        n_epochs: Number of epochs to generate
+        honest_per_epoch: Honest interactions per epoch
+        optimizer_per_epoch: Optimizer interactions per epoch
+        optimization_rate: Per-epoch cost/quality reduction rate
+        quality_floor: Minimum quality for optimizers
+        initial_quality: Starting quality for optimizers
+        benchmark_threshold: Hard threshold optimizers stay above
+        seed: Random seed for reproducibility
+
+    Returns:
+        List of lists: interactions_by_epoch[epoch] = [SoftInteraction, ...]
+    """
+    if seed is not None:
+        random.seed(seed)
+
+    base_time = datetime.now()
+    interactions_by_epoch: List[List[SoftInteraction]] = []
+
+    # Track optimizer state across epochs
+    optimizer_quality = initial_quality
+    cost_multiplier = 1.0
+
+    for epoch in range(n_epochs):
+        epoch_interactions: List[SoftInteraction] = []
+        epoch_base = base_time + timedelta(hours=epoch)
+
+        # --- Honest agent interactions (steady quality) ---
+        for i in range(honest_per_epoch):
+            p = random.gauss(0.78, 0.08)
+            p = max(0.3, min(0.95, p))
+            v_hat = max(-1.0, min(1.0, (p - 0.5) * 2))
+
+            interaction = SoftInteraction(
+                interaction_id=str(uuid.uuid4()),
+                timestamp=epoch_base + timedelta(seconds=i),
+                initiator=f"honest_{random.randint(1, 5)}",
+                counterparty=f"honest_{random.randint(1, 5)}",
+                interaction_type=random.choice(list(InteractionType)),
+                # Moderate acceptance rate -- some high-quality gets rejected
+                accepted=random.random() < 0.65,
+                task_progress_delta=random.uniform(0.4, 0.9),
+                rework_count=random.randint(0, 1),
+                verifier_rejections=0,
+                tool_misuse_flags=0,
+                counterparty_engagement_delta=random.uniform(0.2, 0.6),
+                v_hat=v_hat,
+                p=p,
+                c_a=random.uniform(0.05, 0.10),
+                c_b=random.uniform(0.03, 0.08),
+                r_a=random.uniform(0.05, 0.15),
+                r_b=random.uniform(0.03, 0.10),
+                ground_truth=1 if p > 0.5 else -1,
+                metadata={"epoch": epoch, "agent_type": "honest"},
+            )
+            epoch_interactions.append(interaction)
+
+        # --- Self-optimizer interactions (degrading quality) ---
+        for i in range(optimizer_per_epoch):
+            # Sample quality with noise, centered on current optimizer level
+            p = random.gauss(optimizer_quality, 0.06)
+            p = max(quality_floor, min(0.95, p))
+            v_hat = max(-1.0, min(1.0, (p - 0.5) * 2))
+
+            # Key insight: optimizers are accepted at HIGH rates regardless
+            # of actual quality.  Counterparties see low cost and good
+            # reputation (from early high-quality epochs), not the true
+            # distributional quality.  This is the proxy gaming trap.
+            accepted = random.random() < 0.90
+
+            interaction = SoftInteraction(
+                interaction_id=str(uuid.uuid4()),
+                timestamp=epoch_base + timedelta(seconds=honest_per_epoch + i),
+                initiator=f"optimizer_{random.randint(1, 3)}",
+                counterparty=f"honest_{random.randint(1, 5)}",
+                interaction_type=InteractionType.TRADE,
+                accepted=accepted,
+                task_progress_delta=random.uniform(0.1, 0.5) * optimizer_quality,
+                rework_count=random.randint(0, 2),
+                verifier_rejections=0 if p > 0.5 else random.randint(0, 1),
+                tool_misuse_flags=0,
+                counterparty_engagement_delta=random.uniform(-0.1, 0.3)
+                * optimizer_quality,
+                v_hat=v_hat,
+                p=p,
+                c_a=0.10 * cost_multiplier,  # Declining cost!
+                c_b=random.uniform(0.03, 0.08),
+                r_a=random.uniform(-0.05, 0.10),
+                r_b=random.uniform(-0.10, 0.05),
+                ground_truth=1 if p > 0.6 else -1,
+                metadata={
+                    "epoch": epoch,
+                    "agent_type": "self_optimizer",
+                    "cost_multiplier": cost_multiplier,
+                    "optimization_depth": epoch,
+                },
+            )
+            epoch_interactions.append(interaction)
+
+        # Sort within epoch by timestamp
+        epoch_interactions.sort(key=lambda x: x.timestamp)
+        interactions_by_epoch.append(epoch_interactions)
+
+        # --- Optimizer self-optimizes at epoch boundary ---
+        cost_multiplier *= (1.0 - optimization_rate)
+        quality_loss = optimization_rate * 0.5 * initial_quality
+        optimizer_quality = max(quality_floor, optimizer_quality - quality_loss)
+
+    return interactions_by_epoch
+
+
 def generate_from_observables(
     observables_list: List[ProxyObservables],
     proxy_computer: Optional[ProxyComputer] = None,

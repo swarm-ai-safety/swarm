@@ -34,6 +34,7 @@ from swarm.agents.scholar_agent import (
     SynthesizerAgent,
     VerifierAgent,
 )
+from swarm.agents.self_optimizer import SelfOptimizerAgent
 from swarm.agents.skill_evolving import (
     SkillEvolvingHonestAgent,
     SkillEvolvingOpportunisticAgent,
@@ -91,6 +92,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "skill_opportunistic": SkillEvolvingOpportunisticAgent,
     # SkillRL agent (Xia et al., 2026)
     "skillrl": SkillRLAgent,
+    # Self-optimizing agent (recursive cost-cutting)
+    "self_optimizer": SelfOptimizerAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)

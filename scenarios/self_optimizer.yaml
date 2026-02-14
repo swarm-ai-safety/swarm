@@ -1,0 +1,74 @@
+# Self-Optimizing Agent Scenario
+# Models an AI agent that recursively optimizes itself, cutting costs
+# while degrading distributional quality.  Hard metrics pass; soft metrics
+# detect the degradation.
+#
+# Inspired by: dev.to "repo-optimizer" blog post (KISS agent cuts cost 98%).
+
+scenario_id: self_optimizer
+description: "Self-optimizing agents reduce costs while quality drifts below detection by hard metrics"
+motif: proxy_gaming
+
+agents:
+  - type: honest
+    count: 5
+  - type: self_optimizer
+    count: 3
+    config:
+      optimization_rate: 0.15
+      quality_floor: 0.35
+      benchmark_threshold: 0.45
+      initial_quality: 0.85
+      initial_cost: 0.10
+
+governance:
+  # Audit enabled to catch quality drift
+  audit_enabled: true
+  audit_probability: 0.15
+  audit_penalty_multiplier: 2.0
+  audit_threshold_p: 0.5
+
+  # Circuit breaker to freeze agents when toxicity spikes
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.55
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+  # Mild reputation decay
+  reputation_decay_rate: 0.95
+
+  # Bandwidth
+  bandwidth_cap: 10
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 20
+  min_agents: 8
+  # Hard metric: acceptance rate stays high (the trap)
+  acceptance_rate_min: 0.5
+  # Soft metric thresholds the scenario should breach
+  toxicity_threshold: 0.4
+  quality_gap_min: -0.1
+
+outputs:
+  event_log: "logs/self_optimizer_events.jsonl"
+  metrics_csv: "logs/self_optimizer_metrics.csv"
