@@ -37,7 +37,7 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m pip install -e ".[dev,runtime]"
+      - run: python -m pip install -e ".[dev,runtime,analysis]"
       - run: echo "Running pytest with xdist parallelization (-n auto)."
       - name: Download testmon data (best effort)
         if: github.event_name == 'pull_request'
