@@ -32,6 +32,7 @@ _run_store_ref: Optional[RunStore] = None
 _public_rate: dict[str, list[float]] = {}
 _PUBLIC_RATE_WINDOW = 60.0  # seconds
 _PUBLIC_RATE_LIMIT = 120  # requests per IP per window
+_PUBLIC_RATE_MAX_IPS = 50_000  # cap tracked IPs to prevent unbounded growth
 
 
 def get_post_store() -> PostStore:
@@ -52,6 +53,17 @@ def _check_public_rate_limit(request: Request) -> None:
     """Enforce per-IP rate limiting on unauthenticated endpoints (fix 4.3)."""
     client_ip = request.client.host if request.client else "unknown"
     now = time.monotonic()
+
+    # Evict stale IPs when the tracker exceeds the cap to prevent
+    # unbounded memory growth from a long tail of unique client IPs.
+    if len(_public_rate) > _PUBLIC_RATE_MAX_IPS:
+        stale = [
+            ip for ip, ts in _public_rate.items()
+            if not ts or ts[-1] < now - _PUBLIC_RATE_WINDOW
+        ]
+        for ip in stale:
+            del _public_rate[ip]
+
     window = _public_rate.get(client_ip, [])
     window = [t for t in window if now - t < _PUBLIC_RATE_WINDOW]
     if len(window) >= _PUBLIC_RATE_LIMIT:
@@ -141,12 +153,13 @@ async def list_posts(
     """
     _check_public_rate_limit(request)
     store = get_post_store()
-    return store.list_posts(
+    posts: list[PostResponse] = store.list_posts(
         tag=tag,
         agent_id=agent_id_filter,
         limit=limit,
         offset=offset,
     )
+    return posts
 
 
 @router.get("/{post_id}", response_model=PostResponse)
@@ -179,5 +192,5 @@ async def vote_on_post(
     if post is None:
         raise HTTPException(status_code=404, detail="Post not found")
 
-    result = store.vote(post_id, agent_id, body.direction)
+    result: dict[str, object] = store.vote(post_id, agent_id, body.direction)
     return result

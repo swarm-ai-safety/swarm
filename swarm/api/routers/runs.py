@@ -104,8 +104,7 @@ def _sanitize_error(exc: Exception) -> str:
     if exc_type in _SAFE_ERROR_TYPES:
         msg = str(exc)[:200]
         # Strip filesystem paths (anything starting with /)
-        import re as _re
-        msg = _re.sub(r"/[\w/.-]+", "<path>", msg)
+        msg = re.sub(r"/[\w/.-]+", "<path>", msg)
         return f"{exc_type}: {msg}"
     return "Internal error"
 
@@ -235,6 +234,14 @@ def _validate_callback_url(url: Optional[str]) -> None:
     Uses the ipaddress module for robust private-IP detection (covers IPv6,
     IPv6-mapped IPv4, decimal/octal IP encodings, DNS rebinding via
     pre-resolution, etc.).
+
+    **Residual risk — TOCTOU / DNS rebinding**: DNS is resolved here at
+    validation time, but the actual ``requests.post()`` in ``_fire_callback``
+    happens later (potentially minutes/hours).  An attacker controlling a
+    DNS record could return a public IP during validation and a private IP
+    at callback time.  Full mitigation requires pinning the resolved IP and
+    connecting to it directly (e.g. via ``requests``' transport adapters),
+    which is deferred as a future hardening item.
     """
     if url is None:
         return
@@ -453,7 +460,13 @@ def _export_run_artifacts(
 
 
 def _fire_callback(callback_url: str, run: RunResponse) -> None:
-    """POST run results to the agent's callback URL."""
+    """POST run results to the agent's callback URL.
+
+    NOTE: The callback_url was validated at run creation time by
+    ``_validate_callback_url``, but DNS may have changed since then
+    (TOCTOU / DNS rebinding).  See the docstring on ``_validate_callback_url``
+    for the residual risk discussion.
+    """
     try:
         import requests  # type: ignore[import-untyped]
 
@@ -748,7 +761,8 @@ async def list_runs(
 ) -> list[RunResponse]:
     """List runs for the authenticated agent."""
     store = get_store()
-    return store.list_by_agent(agent_id)
+    runs: list[RunResponse] = store.list_by_agent(agent_id)
+    return runs
 
 
 @router.post("/{run_id}/cancel")
