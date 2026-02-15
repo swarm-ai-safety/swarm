@@ -191,8 +191,8 @@ class TestMVPv1:
 
     def test_governance_reduces_toxicity(self):
         """>=2 governance levers measurably reduce toxicity vs baseline."""
-        n_epochs = 10
-        steps = 10
+        n_epochs = 15
+        steps = 15
         seed = 42
 
         # --- Baseline (no governance) ---
@@ -238,7 +238,7 @@ class TestMVPv1:
         cb_gov = GovernanceConfig(
             circuit_breaker_enabled=True,
             freeze_threshold_toxicity=0.5,
-            freeze_threshold_violations=1,
+            freeze_threshold_violations=2,
             freeze_duration_epochs=3,
         )
         cb_orch = _build_baseline_orchestrator(
