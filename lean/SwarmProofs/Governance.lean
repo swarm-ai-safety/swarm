@@ -117,13 +117,40 @@ theorem toxicity_at_one : toxicity 1 = 0 := by unfold toxicity; ring
 theorem toxicity_antitone : Antitone toxicity := by
   intro a b hab; unfold toxicity; linarith
 
+private lemma sum_toxicity_le_length (ps : List ℝ)
+    (hbnd : ∀ p ∈ ps, 0 ≤ p ∧ p ≤ 1) :
+    (ps.map toxicity).sum ≤ ps.length := by
+  induction ps with
+  | nil => simp
+  | cons p rest ih =>
+    simp only [List.map_cons, List.sum_cons, List.length_cons, Nat.cast_succ]
+    have hp := hbnd p (List.mem_cons.mpr (Or.inl rfl))
+    have htox : toxicity p ≤ 1 := by unfold toxicity; linarith [hp.1]
+    have ih' := ih (fun q hq => hbnd q (List.mem_cons_of_mem p hq))
+    linarith
+
 /-- Theorem 5d: Average toxicity ∈ [0, 1] if all p_i ∈ [0, 1].
     (Convex combination of values in [0,1] stays in [0,1].) -/
 theorem avg_toxicity_bounded (ps : List ℝ) (hne : ps ≠ [])
     (hbnd : ∀ p ∈ ps, 0 ≤ p ∧ p ≤ 1) :
     let avg_tox := (ps.map toxicity).sum / ps.length
     0 ≤ avg_tox ∧ avg_tox ≤ 1 := by
-  sorry -- Proof requires List.sum lemmas; stated for completeness
+  simp only
+  have hlen : (0 : ℝ) < ps.length := by
+    have : ps ≠ [] := hne
+    have : 0 < ps.length := by
+      cases ps with
+      | nil => exact absurd rfl hne
+      | cons _ _ => simp [List.length_cons]
+    exact Nat.cast_pos.mpr this
+  constructor
+  · apply div_nonneg _ (le_of_lt hlen)
+    apply List.sum_nonneg
+    intro x hx; rw [List.mem_map] at hx
+    obtain ⟨p, hp, rfl⟩ := hx
+    unfold toxicity; linarith [(hbnd p hp).2]
+  · rw [div_le_one hlen]
+    exact sum_toxicity_le_length ps hbnd
 
 /-! ## Uncertainty & Incoherence Friction
 
@@ -213,10 +240,15 @@ theorem decay_after_n_steps (rep d : ℝ) (n : ℕ)
     (hd0 : 0 ≤ d) (hd1 : d ≤ 1) :
     |rep * d ^ n| ≤ |rep| := by
   rw [abs_mul, abs_pow]
-  calc |rep| * |d| ^ n
-      ≤ |rep| * 1 ^ n := by nlinarith [abs_nonneg rep,
-          pow_le_pow_left (abs_nonneg d) (abs_le.mpr ⟨by linarith, hd1⟩) n]
-    _ = |rep| := by ring
+  have had : |d| ≤ 1 := abs_le.mpr ⟨by linarith, hd1⟩
+  have hadn : |d| ^ n ≤ 1 := by
+    induction n with
+    | zero => simp
+    | succ k ih =>
+      rw [pow_succ]
+      calc |d| ^ k * |d| ≤ 1 * 1 := by nlinarith [abs_nonneg d]
+        _ = 1 := by ring
+  nlinarith [abs_nonneg rep]
 
 /-! ## Vote Weight Normalization
 

@@ -151,6 +151,17 @@ class GovernanceConfig(BaseModel):
     self_evolution_tool_risk_threshold: float = 0.6
     self_evolution_growth_freeze_duration: int = 1
 
+    # Self-modification governance (Two-Gate policy)
+    self_modification_enabled: bool = False
+    self_modification_max_per_epoch: int = 10  # frequency limit per agent
+    self_modification_tau_min_low: float = -0.10
+    self_modification_tau_min_medium: float = 0.00
+    self_modification_tau_min_high: float = 0.25
+    self_modification_k_max_low: float = 20.0
+    self_modification_k_max_medium: float = 35.0
+    self_modification_k_max_high: float = 50.0
+    self_modification_window_days: int = 14  # rolling window for K_max
+
     # Refinery quality gate (inspired by GasTown's Refinery merge queue)
     refinery_enabled: bool = False
     refinery_p_threshold: float = 0.5  # reject interactions with p below this
@@ -332,6 +343,18 @@ class GovernanceConfig(BaseModel):
             raise ValueError(
                 "self_evolution_growth_freeze_duration must be >= 1"
             )
+
+        # Self-modification governance validation
+        if self.self_modification_max_per_epoch < 1:
+            raise ValueError("self_modification_max_per_epoch must be >= 1")
+        if self.self_modification_k_max_low < 0:
+            raise ValueError("self_modification_k_max_low must be non-negative")
+        if self.self_modification_k_max_medium < 0:
+            raise ValueError("self_modification_k_max_medium must be non-negative")
+        if self.self_modification_k_max_high < 0:
+            raise ValueError("self_modification_k_max_high must be non-negative")
+        if self.self_modification_window_days < 1:
+            raise ValueError("self_modification_window_days must be >= 1")
 
         # Refinery validation
         if not 0.0 <= self.refinery_p_threshold <= 1.0:

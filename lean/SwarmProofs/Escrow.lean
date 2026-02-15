@@ -16,6 +16,7 @@
     8. Bid validity: 0 < bid_amount ≤ reward_amount
     9. State machine transition well-formedness
 -/
+import SwarmProofs.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.NormNum
@@ -58,7 +59,7 @@ theorem success_conservation (amount fee_rate : ℝ) :
 
 /-- Theorem 2a: Released amount ≥ 0 when fee_rate ∈ [0, 1] and amount ≥ 0. -/
 theorem released_nonneg (amount fee_rate : ℝ)
-    (ha : 0 ≤ amount) (hf0 : 0 ≤ fee_rate) (hf1 : fee_rate ≤ 1) :
+    (ha : 0 ≤ amount) (_ : 0 ≤ fee_rate) (hf1 : fee_rate ≤ 1) :
     0 ≤ released_on_success amount fee_rate := by
   unfold released_on_success escrow_fee; nlinarith
 
@@ -122,7 +123,7 @@ theorem dispute_conservation (amount fee_rate worker_share : ℝ) :
 
 /-- Theorem 6: Distributable is non-negative. -/
 theorem distributable_nonneg (amount fee_rate : ℝ)
-    (ha : 0 ≤ amount) (hf0 : 0 ≤ fee_rate) (hf1 : fee_rate ≤ 1) :
+    (ha : 0 ≤ amount) (_ : 0 ≤ fee_rate) (hf1 : fee_rate ≤ 1) :
     0 ≤ distributable amount fee_rate := by
   unfold distributable escrow_fee; nlinarith
 

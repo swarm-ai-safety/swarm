@@ -965,12 +965,15 @@ class LDTAgent(BaseAgent):
         self._own_trace.append((interaction.accepted, interaction.p))
 
         # Invalidate caches so they're recomputed next time.
+        # _own_trace changed, which affects twin scores, level-2/3
+        # decisions, and subjunctive dependence for *all* counterparties,
+        # so we must clear every cache — not just the current one.
         with self._cache_lock:
-            self._twin_scores.pop(counterparty, None)
-            self._inferred_policies.pop(counterparty, None)
-            self._level2_cache.pop(counterparty, None)
-            self._level3_cache.pop(counterparty, None)
-            self._subjunctive_cache.pop(counterparty, None)
+            self._twin_scores.clear()
+            self._inferred_policies.clear()
+            self._level2_cache.clear()
+            self._level3_cache.clear()
+            self._subjunctive_cache.clear()
 
     # ------------------------------------------------------------------
     # Private helpers

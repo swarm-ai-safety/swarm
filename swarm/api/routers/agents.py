@@ -1,10 +1,12 @@
 """Agent registration and management endpoints."""
 
+import time
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
+from swarm.api.middleware import register_api_key
 from swarm.api.models.agent import (
     AgentRegistration,
     AgentResponse,
@@ -16,9 +18,18 @@ router = APIRouter()
 # In-memory storage for development (replace with database in production)
 _registered_agents: dict[str, AgentResponse] = {}
 
+# Rate limiting for registration endpoint (per-IP).
+# Maps IP -> list of registration timestamps within the window.
+_registration_rate: dict[str, list[float]] = {}
+_REGISTRATION_WINDOW = 60.0  # seconds
+_REGISTRATION_LIMIT = 10  # max registrations per IP per window
+MAX_REGISTERED_AGENTS = 10_000
+
 
 @router.post("/register", response_model=AgentResponse)
-async def register_agent(registration: AgentRegistration) -> AgentResponse:
+async def register_agent(
+    registration: AgentRegistration, request: Request
+) -> AgentResponse:
     """Register a new agent to participate in SWARM simulations.
 
     Args:
@@ -27,6 +38,26 @@ async def register_agent(registration: AgentRegistration) -> AgentResponse:
     Returns:
         Registered agent info with API key.
     """
+    # Per-IP rate limiting to prevent registration flooding (security fix 5.1)
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.monotonic()
+    window = _registration_rate.get(client_ip, [])
+    window = [t for t in window if now - t < _REGISTRATION_WINDOW]
+    if len(window) >= _REGISTRATION_LIMIT:
+        raise HTTPException(
+            status_code=429,
+            detail="Too many registrations. Try again later.",
+        )
+    window.append(now)
+    _registration_rate[client_ip] = window
+
+    # Cap total registered agents
+    if len(_registered_agents) >= MAX_REGISTERED_AGENTS:
+        raise HTTPException(
+            status_code=429,
+            detail="Registration capacity reached. Try again later.",
+        )
+
     agent_id = str(uuid.uuid4())
     api_key = f"swarm_{uuid.uuid4().hex}"  # Simple key for now
 
@@ -41,6 +72,10 @@ async def register_agent(registration: AgentRegistration) -> AgentResponse:
     )
 
     _registered_agents[agent_id] = agent
+
+    # Register the API key so it can be used for runs/posts endpoints
+    register_api_key(api_key, agent_id)
+
     return agent
 
 

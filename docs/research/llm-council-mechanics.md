@@ -139,7 +139,7 @@ OpenRouter is particularly useful for heterogeneous councils since it proxies al
 | OpenAI | `OPENAI_API_KEY` | `gpt-4o` |
 | OpenRouter | `OPENROUTER_API_KEY` | (user-specified) |
 | Ollama | (local) | (user-specified) |
-| Groq | `GROQ_API_KEY` | `llama-3.1-70b-versatile` |
+| Groq | `GROQ_API_KEY` | `llama-3.3-70b-versatile` |
 | Together | `TOGETHER_API_KEY` | `Meta-Llama-3.1-70B-Instruct-Turbo` |
 | DeepSeek | `DEEPSEEK_API_KEY` | `deepseek-chat` |
 | Google | `GOOGLE_API_KEY` | `gemini-2.0-flash` |
