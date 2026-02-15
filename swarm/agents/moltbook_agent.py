@@ -30,13 +30,15 @@ class BaseMoltbookAgent(BaseAgent):
         name: Optional[str] = None,
         rng: Optional[random.Random] = None,
     ):
+        _config = config or {}
+        _rng = rng or (random.Random(_config["seed"]) if "seed" in _config else None)
         super().__init__(
             agent_id=agent_id,
             agent_type=agent_type,
             roles=roles or [Role.POSTER],
-            config=config or {},
+            config=_config,
             name=name,
-            rng=rng,
+            rng=_rng,
         )
         self.challenge_skill = challenge_skill
 
