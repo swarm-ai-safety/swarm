@@ -15,7 +15,8 @@ This note documents findings from baseline evaluation with `gpt-5-nano` (80 roll
 
 ## Summary
 - Goal: Identify environment design issues before RL training
-- Key observation: Six issues found in baseline eval — all addressed. Composite reward improved +27% on easy (0.948 → 1.205) and +25% on medium (0.948 → 1.182). Rollout utilization doubled (avg 12 → 24+ turns).
+- Key observation: Six issues found in baseline eval — all addressed. Post-fix composite reward is 1.205 (easy) / 1.182 (medium) vs 0.948 baseline (medium). Rollout utilization increased from avg 12 to 24+ turns.
+- **Confound warning:** All six changes were applied simultaneously and the baseline was medium-only, so individual contributions cannot be isolated. The difficulty switch (change #6) alters bot mix and taxes, making cross-difficulty comparisons especially unreliable. The medium-to-medium comparison (+25%) is fairer but still confounded by the other five changes.
 - Risks / regressions: Interaction quality slightly decreased (-9% easy, -14% medium), likely due to higher turn count inflating the denominator. Judge scoring not yet validated at scale.
 
 ## Metrics Snapshot
@@ -108,7 +109,7 @@ Easy difficulty (more honest bots, fewer adversarial bots, lower taxes) establis
 - **Governance mechanisms work as intended** once the environment design issues are fixed. The circuit breaker never triggers (100% survival), reputation is maintainable, and the soft label scoring produces meaningful payoff differentiation — on both easy and medium difficulty.
 - **Adverse selection signal is present but weak.** The claim-task waste pattern (10.2 claims vs 5.8 submissions on medium) suggests competition with bots for tasks, but the agent hasn't learned to strategically select tasks yet. RL training should surface this.
 - **Deceptive bot stochastic threshold is active on medium.** Medium difficulty generates 0-1 deceptive bots per scenario with randomized trust thresholds (3-8). The agent shows more cautious trade behavior — proposal acceptance drops from 0.58 (easy) to 0.45 (medium), suggesting some sensitivity to exploitative proposals even before RL training.
-- **All fixes hold under harder conditions.** Medium difficulty produces slightly lower reward (1.182 vs 1.205) and reputation (0.511 vs 0.516) than easy, as expected with more adversarial bots and higher taxes. But the improvements over baseline are consistent: +25% composite reward, 2x turn utilization, stable reputation.
+- **Post-fix metrics are consistent across difficulties.** Medium difficulty produces slightly lower reward (1.182 vs 1.205) and reputation (0.511 vs 0.516) than easy, as expected with more adversarial bots and higher taxes. Both post-fix runs show higher composite reward and turn utilization than baseline, though individual change contributions are confounded (see Summary).
 - **More rollouts reach simulation_complete on medium** (45% vs 25% on easy) — the agent uses turns more efficiently when facing competition, likely because bot actions create more actionable state (pending proposals, contested tasks) that prompts tool use.
 - **Judge scoring adds a credible quality signal** but hasn't been tested at scale. The heuristic fallback ensures training can proceed without API keys.
 
