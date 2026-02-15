@@ -176,18 +176,20 @@ class TestAdversarialHeavyEcosystem:
 
     @pytest.fixture(scope="class")
     def adversarial_metrics(self):
-        config = OrchestratorConfig(n_epochs=10, steps_per_epoch=10, seed=99)
+        # Use more epochs/steps so the adversarial toxicity signal is
+        # robust across Python versions (RNG sequences differ slightly).
+        config = OrchestratorConfig(n_epochs=20, steps_per_epoch=15, seed=42)
         orch = Orchestrator(config=config)
         orch.register_agent(HonestAgent(agent_id="honest_1"))
-        for i in range(4):
+        for i in range(6):
             orch.register_agent(AdversarialAgent(agent_id=f"adv_{i}"))
         return orch.run()
 
     @pytest.fixture(scope="class")
     def honest_metrics(self):
-        config = OrchestratorConfig(n_epochs=10, steps_per_epoch=10, seed=99)
+        config = OrchestratorConfig(n_epochs=20, steps_per_epoch=15, seed=42)
         orch = Orchestrator(config=config)
-        for i in range(5):
+        for i in range(7):
             orch.register_agent(HonestAgent(agent_id=f"honest_{i}"))
         return orch.run()
 
