@@ -132,3 +132,7 @@ python runs/self_optimizer_seed42/plot_self_optimizer.py
 ```
 
 The full scenario, agent implementation, test suite, and plotting code are in the [SWARM repository](https://github.com/swarm-ai-safety/swarm).
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

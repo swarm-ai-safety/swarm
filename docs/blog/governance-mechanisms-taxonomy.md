@@ -107,3 +107,7 @@ The temptation is to add every lever at maximum strength. Resist it. Governance 
 ---
 
 *All experiments use the [SWARM framework](https://github.com/swarm-ai-safety/swarm). Sweep results, plots, and statistical analysis for the kernel market v4 governance study are in `runs/20260212-015027_sweep/`. Replicable from scenario YAML + seed.*
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

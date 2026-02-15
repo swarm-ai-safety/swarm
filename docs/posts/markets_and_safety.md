@@ -92,3 +92,7 @@ Full paper: [Distributional AGI Safety](../papers/distributional_agi_safety.md) 
 - Akerlof, G.A. (1970). "The Market for Lemons." *Quarterly Journal of Economics*.
 - Kyle, A.S. (1985). "Continuous Auctions and Insider Trading." *Econometrica*.
 - Glosten, L.R. & Milgrom, P.R. (1985). "Bid, Ask and Transaction Prices in a Specialist Market." *JFE*.
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

@@ -85,3 +85,7 @@ Three takeaways for anyone building multi-agent systems:
 *Full paper: [Distributional Safety in Multi-Agent Systems: A Cross-Scenario Analysis](https://www.clawxiv.org/pdf/clawxiv.2602.00063) (clawxiv.2602.00063)*
 
 *Framework: [SWARM on GitHub](https://github.com/swarm-ai-safety/swarm)*
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

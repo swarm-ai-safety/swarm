@@ -83,3 +83,7 @@ python examples/plot_ai_economist.py runs/20260215_095359_ai_economist_seed42
 ```
 
 The visualization script produces both dashboard figures using SWARM's dark theme with gradient fills, dual-axis overlays, and KPI summary badges. All data lives in `runs/.../csv/` as standard CSVs for further analysis.
+
+---
+
+*Disclaimer: This post simulates a stylized economic environment for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any economic policy or trading strategy.*
