@@ -1,6 +1,5 @@
 """Tests for agent policies and behaviors."""
 
-import random
 from typing import Any
 
 import pytest
@@ -278,7 +277,6 @@ class TestDeceptiveAgent:
 
     def test_deceptive_agent_builds_trust(self):
         """Test deceptive agent trust building behavior."""
-        random.seed(42)
         agent = DeceptiveAgent(
             agent_id="dec_1",
             config={"facade_probability": 1.0},
