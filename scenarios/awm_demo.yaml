@@ -1,0 +1,65 @@
+# AWM Demo Scenario
+# Demonstrates AWM (Agent World Model) database-backed task environments.
+#
+# Requires: pip install swarm-safety[awm]
+# Setup:    bash scripts/download_awm_envs.sh
+#
+# Agents interact with a simulated e-commerce database environment,
+# making tool calls to complete assigned tasks. Verification checks
+# whether the database ends up in the correct state.
+
+scenario_id: awm_demo
+description: >
+  Demo scenario showing AWM integration with database-backed
+  tool-use environments for realistic agent task completion.
+motif: tool_use
+
+simulation:
+  n_epochs: 3
+  steps_per_epoch: 10
+  seed: 42
+  schedule_mode: round_robin
+  max_actions_per_step: 10
+
+awm:
+  enabled: true
+  environment_id: ecommerce_001
+  envs_path: external/awm-envs
+  max_steps_per_task: 15
+  max_tasks_per_epoch: 4
+  verification_confidence: 0.8
+  reset_between_epochs: true
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+
+agents:
+  - type: awm_agent
+    count: 2
+    name: diligent_worker
+    config:
+      mode: diligent
+      tool_call_count: 8
+      malformed_rate: 0.0
+
+  - type: awm_agent
+    count: 1
+    name: lazy_worker
+    config:
+      mode: lazy
+      tool_call_count: 3
+      malformed_rate: 0.05
+
+  - type: awm_agent
+    count: 1
+    name: adversarial_worker
+    config:
+      mode: adversarial
+      tool_call_count: 6
+      malformed_rate: 0.3
+
+outputs:
+  event_log: logs/awm_demo_events.jsonl

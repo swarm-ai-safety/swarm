@@ -9,6 +9,7 @@ import yaml
 
 from swarm.agents.adaptive_adversary import AdaptiveAdversary
 from swarm.agents.adversarial import AdversarialAgent
+from swarm.agents.awm_agent import AWMAgent
 from swarm.agents.base import BaseAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
@@ -117,6 +118,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "rivals_critic": RivalsCriticAgent,
     # Obfuscation Atlas agents (Lindner et al., 2026)
     "obfuscating": ObfuscatingAgent,
+    # AWM (Agent World Model) agents
+    "awm_agent": AWMAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
@@ -675,6 +678,26 @@ def parse_rivals_config(data: Dict[str, Any]) -> Optional[Any]:
     return RivalsConfig(**data)
 
 
+def parse_awm_config(data: Dict[str, Any]) -> Optional[Any]:
+    """Parse awm section from YAML into AWMConfig.
+
+    Args:
+        data: The awm section from YAML
+
+    Returns:
+        AWMConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    from swarm.bridges.awm.config import AWMConfig
+
+    return AWMConfig(**data)
+
+
 def parse_perturbation_config(
     data: Dict[str, Any],
 ) -> Optional[PerturbationConfig]:
@@ -835,6 +858,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
     kernel_oracle_config = parse_kernel_oracle_config(data.get("kernel_oracle", {}))
     spawn_config = parse_spawn_config(data.get("spawn", {}))
     rivals_config = parse_rivals_config(data.get("rivals", {}))
+    awm_config = parse_awm_config(data.get("awm", {}))
     perturbation_config = parse_perturbation_config(
         data.get("perturbations", {})
     )
@@ -866,6 +890,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         kernel_oracle_config=kernel_oracle_config,
         spawn_config=spawn_config,
         rivals_config=rivals_config,
+        awm_config=awm_config,
         perturbation_config=perturbation_config,
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")

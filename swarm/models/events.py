@@ -107,6 +107,10 @@ class EventType(Enum):
     SELF_MODIFICATION_EXECUTED = "self_modification_executed"
     SELF_MODIFICATION_REVERTED = "self_modification_reverted"
 
+    # AWM (Agent World Model) events
+    AWM_TASK_ASSIGNED = "awm_task_assigned"
+    AWM_TASK_COMPLETED = "awm_task_completed"
+
     # System events
     SIMULATION_STARTED = "simulation_started"
     SIMULATION_ENDED = "simulation_ended"

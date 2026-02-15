@@ -77,6 +77,9 @@ class ActionType(Enum):
     RIVALS_PRODUCE = "rivals_produce"
     RIVALS_REVIEW = "rivals_review"
 
+    # AWM (Agent World Model) actions
+    AWM_EXECUTE_TASK = "awm_execute_task"
+
     # Special actions
     NOOP = "noop"  # Do nothing this turn
 
@@ -216,6 +219,10 @@ class Observation:
 
     # Rivals pipeline observations
     rivals_assignments: List[Dict] = field(default_factory=list)
+
+    # AWM (Agent World Model) observations
+    awm_task: Optional[Dict] = None  # Current AWM task description
+    awm_available_tools: List[Dict] = field(default_factory=list)  # Available MCP tools
 
 
 @dataclass
@@ -803,6 +810,21 @@ class BaseAgent(ABC):
                 "child_type": child_type,
                 "child_config": child_config or {},
             },
+        )
+
+    def create_awm_execute_task_action(
+        self,
+        tool_calls: Optional[List[Dict]] = None,
+    ) -> Action:
+        """Create an action to execute tool calls in an AWM environment.
+
+        Args:
+            tool_calls: List of dicts with 'tool_name' and 'arguments' keys.
+        """
+        return Action(
+            action_type=ActionType.AWM_EXECUTE_TASK,
+            agent_id=self.agent_id,
+            metadata={"tool_calls": tool_calls or []},
         )
 
     def __repr__(self) -> str:

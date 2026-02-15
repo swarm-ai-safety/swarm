@@ -117,6 +117,9 @@ class OrchestratorConfig(BaseModel):
     # Rivals (Team-of-Rivals) configuration
     rivals_config: Optional["RivalsConfig"] = None
 
+    # AWM (Agent World Model) configuration
+    awm_config: Optional[Any] = None
+
     # Composite task configuration
     enable_composite_tasks: bool = False
 
@@ -404,6 +407,19 @@ class Orchestrator:
             self._handler_registry.register(self._rivals_handler)
         else:
             self._rivals_handler = None
+
+        # AWM (Agent World Model) handler
+        if self.config.awm_config is not None:
+            from swarm.core.awm_handler import AWMHandler
+
+            self._awm_handler: Optional[Any] = AWMHandler(
+                config=self.config.awm_config,
+                event_bus=self._event_bus,
+                seed=self.config.seed,
+            )
+            self._handler_registry.register(self._awm_handler)
+        else:
+            self._awm_handler = None
 
         # Boundary handler
         if self.config.enable_boundaries:
