@@ -23,7 +23,14 @@ The tax planner observes aggregate statistics each epoch and adjusts a 4-bracket
 
 ## Economy dynamics
 
+<div class="plotly-embed" markdown>
+<iframe src="figures/gtb_economy_interactive.html" height="650" loading="lazy"></iframe>
+<div class="static-fallback">
+
 ![Economy Dashboard](figures/gtb_economy_dashboard.png)
+
+</div>
+</div>
 
 **Production scaled from 97 to 1,102** over 20 epochs as agents learned efficient gathering patterns. Tax revenue tracked production closely, reaching 505 by the final epoch — the planner successfully captured value without killing growth.
 
@@ -42,7 +49,14 @@ The effective tax rate climbed from 10.3% to 36.8% as the planner responded to g
 
 ## Adversarial dynamics
 
+<div class="plotly-embed" markdown>
+<iframe src="figures/gtb_adversarial_interactive.html" height="700" loading="lazy"></iframe>
+<div class="static-fallback">
+
 ![Adversarial Dynamics](figures/gtb_adversarial_dynamics.png)
+
+</div>
+</div>
 
 **Honest agents dominated wealth accumulation.** The top earners (Honest 0, Honest 1) accumulated 1,600+ total wealth (coin + house value). Gaming agents managed moderate wealth (~600-700), while evasive agents hovered around 400-500 despite being caught in all 8 audits they faced.
 

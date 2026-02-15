@@ -115,6 +115,36 @@ mjx-container[jax="CHTML"][display="true"] {
   padding: 0.25rem 0;
 }
 
+/* Interactive figure iframes */
+.plotly-embed {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--swarm-deep-blue);
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.plotly-embed iframe {
+  width: 100%;
+  border: none;
+  display: block;
+}
+
+/* Static fallback shown below iframe */
+.plotly-embed .static-fallback {
+  display: none;
+}
+
+@media (max-width: 480px) {
+  .plotly-embed iframe {
+    display: none;
+  }
+  .plotly-embed .static-fallback {
+    display: block;
+  }
+}
+
 /* Hero section on homepage */
 .md-content__inner > h1:first-child {
   display: none;
