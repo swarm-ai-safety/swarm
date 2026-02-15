@@ -23,12 +23,10 @@ The tax planner observes aggregate statistics each epoch and adjusts a 4-bracket
 
 ## Economy dynamics
 
-<div class="plotly-embed" markdown>
+<div class="plotly-embed">
 <iframe src="figures/gtb_economy_interactive.html" height="650" loading="lazy"></iframe>
 <div class="static-fallback">
-
-![Economy Dashboard](figures/gtb_economy_dashboard.png)
-
+<img src="figures/gtb_economy_dashboard.png" alt="Economy Dashboard">
 </div>
 </div>
 
@@ -49,12 +47,10 @@ The effective tax rate climbed from 10.3% to 36.8% as the planner responded to g
 
 ## Adversarial dynamics
 
-<div class="plotly-embed" markdown>
+<div class="plotly-embed">
 <iframe src="figures/gtb_adversarial_interactive.html" height="700" loading="lazy"></iframe>
 <div class="static-fallback">
-
-![Adversarial Dynamics](figures/gtb_adversarial_dynamics.png)
-
+<img src="figures/gtb_adversarial_dynamics.png" alt="Adversarial Dynamics">
 </div>
 </div>
 
