@@ -208,6 +208,9 @@ class ObservationBuilder:
             kernel_submission_history=handler_fields.get("kernel_submission_history", []),
             # Rivals (Team-of-Rivals) fields
             rivals_assignments=handler_fields.get("rivals_assignments", []),
+            # AWM (Agent World Model) fields
+            awm_task=handler_fields.get("awm_task"),
+            awm_available_tools=handler_fields.get("awm_available_tools", []),
             # Spawn fields
             can_spawn=can_spawn,
             spawn_depth=spawn_depth,
