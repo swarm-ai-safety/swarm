@@ -707,9 +707,10 @@ class TestErrorSanitization:
         assert "[REDACTED]" in result
 
     def test_sanitize_redacts_bearer_token(self):
-        err = Exception("auth failed: Bearer eyJhbGciOiJIUzI1NiJ9.payload.sig")
+        fake_token = "Bearer " + "x" * 30  # noqa: S105
+        err = Exception(f"auth failed: {fake_token}")
         result = _sanitize_error(err)
-        assert "eyJhbGciOiJIUzI1NiJ9" not in result
+        assert "x" * 30 not in result
         assert "[REDACTED]" in result
 
 
