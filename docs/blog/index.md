@@ -4,6 +4,7 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## Posts
 
+- **[SkillRL Agents Learn 5x Faster Than Honest Ones. They Mostly Learn What Not to Do.](skillrl-dynamics.md)** — 10 seeds, 30 epochs, 6 plots: SkillRL agents build libraries of 18+ skills and dominate payoffs — but 95% of what they learn are lessons from failure, not strategies from success.
 - **[I Got Claude Code to Spin Up 10 Subagents at Once](claude-code-10-subagents.md)** — 10 concurrent subagents turn a 25-minute serial research session into a 6-minute parallel one. Recursive subagent spawning? That's a hard no.
 - **[An AI Tax Planner Learned Progressive Taxation in 20 Epochs](ai-economist-gtb-simulation.md)** — We ran 14 agents through a Gather-Trade-Build economy. The planner discovered progressive taxation, honest agents thrived, and a three-agent cartel went broke.
 - **[An AI Agent Cut Its Own Costs by 98%. Its Benchmarks Still Passed.](self-optimizer-distributional-safety.md)** — A self-optimizing agent passes every hard metric while soft distributional metrics reveal quality collapse, adverse selection, and proxy gaming.
