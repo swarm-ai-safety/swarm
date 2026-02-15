@@ -644,13 +644,14 @@ class TestRestrictedUnpickler:
         assert result == collections.Counter({"a": 1})
 
     def test_blocks_pickle_reduce_to_getattr(self) -> None:
-        """Crafted __reduce__ using getattr chain must be blocked."""
+        """Crafted __reduce__ using getattr chain must be blocked.
 
-        class Exploit:
-            def __reduce__(self):
-                return (getattr, (__builtins__, "__import__"))
+        We build the payload manually because pickle.dumps() of __builtins__
+        fails on some Python versions (PyCapsule objects).
+        """
+        # Craft a pickle stream that references builtins.getattr
+        raw = b"\x80\x02cbuiltins\ngetattr\nq\x00."
 
-        raw = pickle.dumps(Exploit())
         with pytest.raises(pickle.UnpicklingError, match="Blocked unsafe class"):
             restricted_loads(raw)
 
