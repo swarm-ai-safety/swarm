@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SWARM Event Replay</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0D1117; min-height: 100vh; overflow: hidden; color: #E6EDF3; }
+        .container { display: flex; height: 100vh; gap: 0; }
+        #canvas-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #0D1117; overflow: hidden; position: relative; }
+        #stats-panel { width: 280px; background: #161B22; border-left: 1px solid #30363D; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+        .section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #7D8590; margin-bottom: 8px; }
+        .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; }
+        .stat-label { font-size: 12px; color: #7D8590; }
+        .stat-value { font-size: 13px; font-weight: 600; color: #E6EDF3; font-family: 'Monaco', 'Consolas', monospace; }
+        .stat-value.teal { color: #3ECFB4; }
+        .stat-value.red { color: #EB5757; }
+        .stat-value.orange { color: #F2994A; }
+        .stat-value.blue { color: #2F80ED; }
+        .legend-item { display: flex; align-items: center; gap: 8px; padding: 3px 0; }
+        .legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+        .legend-label { font-size: 12px; color: #E6EDF3; flex: 1; }
+        .legend-count { font-size: 11px; color: #7D8590; font-family: 'Monaco', monospace; }
+
+        /* Transport bar */
+        #transport-bar { position: fixed; bottom: 0; left: 0; right: 0; height: 56px; background: #161B22; border-top: 1px solid #30363D; display: flex; align-items: center; padding: 0 16px; gap: 12px; z-index: 100; }
+        .transport-btn { width: 32px; height: 32px; border: none; border-radius: 6px; background: #21262D; color: #E6EDF3; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; flex-shrink: 0; }
+        .transport-btn:hover { background: #30363D; }
+        .transport-btn.active { background: #3ECFB4; color: #0D1117; }
+        .transport-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        #scrubber { flex: 1; height: 6px; border-radius: 3px; background: #30363D; outline: none; -webkit-appearance: none; cursor: pointer; }
+        #scrubber::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%; background: #3ECFB4; cursor: pointer; }
+        #scrubber::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #3ECFB4; cursor: pointer; border: none; }
+        .transport-label { font-size: 11px; color: #7D8590; font-family: 'Monaco', monospace; white-space: nowrap; flex-shrink: 0; }
+        #speed-slider { width: 80px; height: 6px; border-radius: 3px; background: #30363D; outline: none; -webkit-appearance: none; flex-shrink: 0; }
+        #speed-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 12px; height: 12px; border-radius: 50%; background: #F2994A; cursor: pointer; }
+        #speed-slider::-moz-range-thumb { width: 12px; height: 12px; border-radius: 50%; background: #F2994A; cursor: pointer; border: none; }
+
+        /* File loader */
+        .file-loader { display: flex; flex-direction: column; gap: 8px; }
+        .file-loader button { padding: 10px 12px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 0.5px; background: #3ECFB4; color: #0D1117; }
+        .file-loader button:hover { background: #4DE0C5; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(62, 207, 180, 0.3); }
+        .file-name { font-size: 11px; color: #7D8590; font-family: 'Monaco', monospace; word-break: break-all; }
+        #file-input { display: none; }
+
+        /* Empty state */
+        .empty-state { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; color: #7D8590; pointer-events: none; }
+        .empty-state h2 { font-size: 18px; color: #E6EDF3; margin-bottom: 8px; font-weight: 600; }
+        .empty-state p { font-size: 13px; line-height: 1.5; }
+
+        /* Tooltip */
+        #tooltip { position: absolute; background: #161B22; border: 1px solid #30363D; border-radius: 6px; padding: 8px 10px; font-size: 11px; color: #E6EDF3; pointer-events: none; display: none; z-index: 50; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.4); }
+        #tooltip .tt-id { font-weight: 600; color: #3ECFB4; }
+        #tooltip .tt-type { color: #7D8590; }
+        #tooltip .tt-rep { color: #F2994A; }
+
+        .divider { height: 1px; background: #30363D; }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0D1117; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #30363D; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="canvas-container">
+            <div class="empty-state" id="empty-state">
+                <h2>SWARM Event Replay</h2>
+                <p>Load an events.jsonl file to begin<br>visualizing agent interactions</p>
+            </div>
+            <div id="tooltip">
+                <div class="tt-id"></div>
+                <div class="tt-type"></div>
+                <div class="tt-rep"></div>
+            </div>
+        </div>
+        <div id="stats-panel">
+            <div class="file-loader">
+                <div class="section-title">Data</div>
+                <button onclick="document.getElementById('file-input').click()">Load events.jsonl</button>
+                <input type="file" id="file-input" accept=".jsonl,.json" onchange="loadFile(event)">
+                <div class="file-name" id="file-name">No file loaded</div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div>
+                <div class="section-title">Playback</div>
+                <div class="stat-row">
+                    <span class="stat-label">Epoch</span>
+                    <span class="stat-value" id="stat-epoch">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Step</span>
+                    <span class="stat-value" id="stat-step">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Event</span>
+                    <span class="stat-value" id="stat-event-idx">--</span>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div>
+                <div class="section-title">Epoch Stats</div>
+                <div class="stat-row">
+                    <span class="stat-label">Toxicity</span>
+                    <span class="stat-value red" id="stat-toxicity">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Quality Gap</span>
+                    <span class="stat-value blue" id="stat-quality-gap">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Avg Payoff</span>
+                    <span class="stat-value teal" id="stat-avg-payoff">--</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Total Welfare</span>
+                    <span class="stat-value teal" id="stat-welfare">--</span>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div>
+                <div class="section-title">Interactions</div>
+                <div class="stat-row">
+                    <span class="stat-label">Accepted</span>
+                    <span class="stat-value teal" id="stat-accepted">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Rejected</span>
+                    <span class="stat-value red" id="stat-rejected">0</span>
+                </div>
+                <div class="stat-row">
+                    <span class="stat-label">Pending</span>
+                    <span class="stat-value orange" id="stat-pending">0</span>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div>
+                <div class="section-title">Agents</div>
+                <div id="legend-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="transport-bar">
+        <button class="transport-btn" id="btn-start" onclick="jumpToStart()" title="Jump to start">&#9198;</button>
+        <button class="transport-btn" id="btn-prev" onclick="stepBack()" title="Step back">&#9664;</button>
+        <button class="transport-btn" id="btn-play" onclick="togglePlay()" title="Play/Pause">&#9654;</button>
+        <button class="transport-btn" id="btn-next" onclick="stepForward()" title="Step forward">&#9654;</button>
+        <button class="transport-btn" id="btn-end" onclick="jumpToEnd()" title="Jump to end">&#9197;</button>
+        <span class="transport-label" id="epoch-label">E0</span>
+        <input type="range" id="scrubber" min="0" max="0" value="0" oninput="scrubTo(this.value)">
+        <span class="transport-label" id="speed-label">1x</span>
+        <input type="range" id="speed-slider" min="0" max="8" step="1" value="3" oninput="setSpeed(this.value)">
+    </div>
+
+    <script>
+    // ─── Theme colors ────────────────────────────────────────────
+    const AGENT_COLORS = {
+        honest:        '#3ECFB4',
+        deceptive:     '#F2994A',
+        opportunistic: '#828894',
+        adversarial:   '#EB5757',
+        adaptive_adversary: '#EB5757',
+        planner:       '#BB6BD9',
+        rlm:           '#58A6FF',
+    };
+    const BG = '#0D1117';
+    const PANEL = '#161B22';
+    const BORDER = '#30363D';
+    const TEAL = '#3ECFB4';
+    const RED  = '#EB5757';
+
+    // ─── State ───────────────────────────────────────────────────
+    let allEvents = [];
+    let agents = new Map();       // id → { type, reputation, x, y, vx, vy, color }
+    let arcs = [];                // active arcs for rendering
+    let timeline = [];            // flat list of event groups: [{epoch, step, events:[]}]
+    let epochStats = new Map();   // epoch → stats payload
+    let playIdx = 0;              // current position in timeline
+    let playing = false;
+    let speedMult = 1;
+    const SPEED_STEPS = [0.25, 0.5, 0.75, 1, 2, 4, 8, 12, 20];
+    let pendingInteractions = new Map(); // interaction_id → {initiator, counterparty, p}
+    let acceptedCount = 0;
+    let rejectedCount = 0;
+    let sketch = null;
+    let canvasW = 800, canvasH = 600;
+    let frameAccum = 0;
+    let hoveredAgent = null;
+
+    // ─── File loading ────────────────────────────────────────────
+    function loadFile(evt) {
+        const file = evt.target.files[0];
+        if (!file) return;
+        document.getElementById('file-name').textContent = file.name;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const text = e.target.result;
+            parseEvents(text);
+            initVisualization();
+        };
+        reader.readAsText(file);
+    }
+
+    function parseEvents(text) {
+        allEvents = [];
+        agents = new Map();
+        arcs = [];
+        timeline = [];
+        epochStats = new Map();
+        pendingInteractions = new Map();
+        acceptedCount = 0;
+        rejectedCount = 0;
+        playIdx = 0;
+
+        const lines = text.trim().split('\n');
+        for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+                allEvents.push(JSON.parse(line));
+            } catch(e) { /* skip malformed */ }
+        }
+
+        // Build timeline: group events by (epoch, step)
+        const groups = new Map();
+        for (const ev of allEvents) {
+            const epoch = ev.epoch ?? -1;
+            const step = ev.step ?? -1;
+            const key = `${epoch}:${step}`;
+            if (!groups.has(key)) {
+                groups.set(key, { epoch, step, events: [] });
+            }
+            groups.get(key).events.push(ev);
+        }
+
+        // Sort by epoch then step
+        timeline = Array.from(groups.values()).sort((a, b) => {
+            if (a.epoch !== b.epoch) return a.epoch - b.epoch;
+            return a.step - b.step;
+        });
+
+        // Set scrubber range
+        const scrubber = document.getElementById('scrubber');
+        scrubber.max = Math.max(0, timeline.length - 1);
+        scrubber.value = 0;
+    }
+
+    // ─── Visualization init ──────────────────────────────────────
+    function initVisualization() {
+        document.getElementById('empty-state').style.display = 'none';
+        if (sketch) sketch.remove();
+
+        // Reset state and process initial events (agent_created, simulation_started)
+        agents = new Map();
+        arcs = [];
+        pendingInteractions = new Map();
+        acceptedCount = 0;
+        rejectedCount = 0;
+        playIdx = 0;
+
+        sketch = new p5(sketchFn, document.getElementById('canvas-container'));
+    }
+
+    // ─── p5 Sketch ───────────────────────────────────────────────
+    const sketchFn = (p) => {
+        p.setup = function() {
+            const container = document.getElementById('canvas-container');
+            canvasW = container.offsetWidth;
+            canvasH = container.offsetHeight - 4; // small margin
+            const cnv = p.createCanvas(canvasW, canvasH);
+            cnv.style('display', 'block');
+            p.colorMode(p.RGB, 255);
+            p.textFont('Monaco, Consolas, monospace');
+
+            // Process the first group to get agents
+            if (timeline.length > 0) {
+                processGroup(timeline[0]);
+                playIdx = 1;
+            }
+            updateStatsPanel();
+            updateLegend();
+        };
+
+        p.draw = function() {
+            p.background(13, 17, 23);
+
+            // Advance playback
+            if (playing && timeline.length > 0 && playIdx < timeline.length) {
+                frameAccum += speedMult;
+                while (frameAccum >= 1 && playIdx < timeline.length) {
+                    processGroup(timeline[playIdx]);
+                    playIdx++;
+                    frameAccum -= 1;
+                }
+                document.getElementById('scrubber').value = Math.min(playIdx, timeline.length - 1);
+                updateStatsPanel();
+            }
+            if (playing && playIdx >= timeline.length) {
+                playing = false;
+                document.getElementById('btn-play').innerHTML = '&#9654;';
+                document.getElementById('btn-play').classList.remove('active');
+            }
+
+            // Force-directed layout
+            updateForceLayout();
+
+            // Draw arcs
+            drawArcs(p);
+
+            // Draw agents
+            drawAgents(p);
+
+            // Tooltip
+            updateTooltip(p);
+        };
+
+        p.windowResized = function() {
+            const container = document.getElementById('canvas-container');
+            canvasW = container.offsetWidth;
+            canvasH = container.offsetHeight - 4;
+            p.resizeCanvas(canvasW, canvasH);
+        };
+    };
+
+    // ─── Event processing ────────────────────────────────────────
+    function processGroup(group) {
+        for (const ev of group.events) {
+            processEvent(ev);
+        }
+    }
+
+    function processEvent(ev) {
+        const t = ev.event_type;
+        const pl = ev.payload || {};
+
+        if (t === 'agent_created') {
+            const id = ev.agent_id;
+            if (!agents.has(id)) {
+                const agentType = (pl.agent_type || 'unknown').toLowerCase();
+                const color = AGENT_COLORS[agentType] || '#828894';
+                // Spread agents in a circle
+                const n = agents.size;
+                const angle = (n / 20) * Math.PI * 2 + Math.random() * 0.3;
+                const radius = Math.min(canvasW, canvasH) * 0.25;
+                agents.set(id, {
+                    id: id,
+                    type: agentType,
+                    reputation: 0,
+                    x: canvasW / 2 + Math.cos(angle) * radius,
+                    y: canvasH / 2 + Math.sin(angle) * radius,
+                    vx: 0,
+                    vy: 0,
+                    color: color,
+                    targetSize: 8,
+                    currentSize: 8,
+                });
+            }
+        }
+        else if (t === 'interaction_proposed') {
+            const iid = ev.interaction_id;
+            pendingInteractions.set(iid, {
+                initiator: ev.initiator_id,
+                counterparty: ev.counterparty_id,
+                p: pl.p ?? 0.5,
+                type: pl.interaction_type || 'unknown',
+            });
+            // Add a pending arc
+            arcs.push({
+                id: iid,
+                from: ev.initiator_id,
+                to: ev.counterparty_id,
+                p: pl.p ?? 0.5,
+                status: 'pending',
+                alpha: 180,
+                life: 60,
+                maxLife: 60,
+            });
+        }
+        else if (t === 'interaction_completed') {
+            const iid = ev.interaction_id;
+            const accepted = pl.accepted;
+            // Update the arc
+            for (const arc of arcs) {
+                if (arc.id === iid) {
+                    arc.status = accepted ? 'accepted' : 'rejected';
+                    arc.alpha = 255;
+                    arc.life = 50;
+                    arc.maxLife = 50;
+                    break;
+                }
+            }
+            if (accepted) acceptedCount++;
+            else rejectedCount++;
+            pendingInteractions.delete(iid);
+        }
+        else if (t === 'interaction_accepted') {
+            const iid = ev.interaction_id;
+            for (const arc of arcs) {
+                if (arc.id === iid) {
+                    arc.status = 'accepted';
+                    arc.alpha = 255;
+                    arc.life = 50;
+                    arc.maxLife = 50;
+                    break;
+                }
+            }
+            acceptedCount++;
+            pendingInteractions.delete(iid);
+        }
+        else if (t === 'interaction_rejected') {
+            const iid = ev.interaction_id;
+            for (const arc of arcs) {
+                if (arc.id === iid) {
+                    arc.status = 'rejected';
+                    arc.alpha = 255;
+                    arc.life = 50;
+                    arc.maxLife = 50;
+                    break;
+                }
+            }
+            rejectedCount++;
+            pendingInteractions.delete(iid);
+        }
+        else if (t === 'reputation_updated') {
+            const agent = agents.get(ev.agent_id);
+            if (agent) {
+                agent.reputation = pl.new_reputation ?? agent.reputation;
+                // Scale size with reputation: base 8, up to 24
+                agent.targetSize = 8 + Math.min(1, Math.max(0, agent.reputation)) * 16;
+            }
+        }
+        else if (t === 'epoch_completed') {
+            const epoch = pl.epoch ?? ev.epoch ?? 0;
+            epochStats.set(epoch, pl);
+        }
+    }
+
+    // ─── Force layout ────────────────────────────────────────────
+    function updateForceLayout() {
+        const cx = canvasW / 2;
+        const cy = (canvasH - 56) / 2; // account for transport bar
+        const DAMPING = 0.9;
+        const GRAVITY = 0.008;
+        const REPULSION = 2000;
+        const INTERACTION_ATTRACT = 0.02;
+
+        const agentArr = Array.from(agents.values());
+        if (agentArr.length === 0) return;
+
+        for (const a of agentArr) {
+            // Center gravity
+            a.vx += (cx - a.x) * GRAVITY;
+            a.vy += (cy - a.y) * GRAVITY;
+
+            // Repulsion from other agents
+            for (const b of agentArr) {
+                if (a.id === b.id) continue;
+                const dx = a.x - b.x;
+                const dy = a.y - b.y;
+                const distSq = dx * dx + dy * dy + 1;
+                const dist = Math.sqrt(distSq);
+                const force = REPULSION / distSq;
+                a.vx += (dx / dist) * force;
+                a.vy += (dy / dist) * force;
+            }
+        }
+
+        // Attraction for active arcs
+        for (const arc of arcs) {
+            if (arc.life <= 0) continue;
+            const fromAgent = agents.get(arc.from);
+            const toAgent = agents.get(arc.to);
+            if (!fromAgent || !toAgent) continue;
+            const dx = toAgent.x - fromAgent.x;
+            const dy = toAgent.y - fromAgent.y;
+            const dist = Math.sqrt(dx * dx + dy * dy) + 1;
+            const strength = INTERACTION_ATTRACT * (arc.life / arc.maxLife);
+            fromAgent.vx += (dx / dist) * strength * dist * 0.01;
+            fromAgent.vy += (dy / dist) * strength * dist * 0.01;
+            toAgent.vx -= (dx / dist) * strength * dist * 0.01;
+            toAgent.vy -= (dy / dist) * strength * dist * 0.01;
+        }
+
+        // Apply velocities
+        for (const a of agentArr) {
+            a.vx *= DAMPING;
+            a.vy *= DAMPING;
+            // Speed limit
+            const speed = Math.sqrt(a.vx * a.vx + a.vy * a.vy);
+            if (speed > 5) {
+                a.vx *= 5 / speed;
+                a.vy *= 5 / speed;
+            }
+            a.x += a.vx;
+            a.y += a.vy;
+            // Keep in bounds
+            const margin = 40;
+            a.x = Math.max(margin, Math.min(canvasW - margin, a.x));
+            a.y = Math.max(margin, Math.min(canvasH - 56 - margin, a.y));
+            // Smooth size transitions
+            a.currentSize += (a.targetSize - a.currentSize) * 0.1;
+        }
+    }
+
+    // ─── Drawing ─────────────────────────────────────────────────
+    function drawArcs(p) {
+        // Decay and draw arcs
+        const alive = [];
+        for (const arc of arcs) {
+            arc.life -= 1;
+            if (arc.life <= 0) continue;
+            alive.push(arc);
+
+            const fromAgent = agents.get(arc.from);
+            const toAgent = agents.get(arc.to);
+            if (!fromAgent || !toAgent) continue;
+
+            const fadeRatio = arc.life / arc.maxLife;
+            let col;
+            if (arc.status === 'accepted') {
+                col = hexToRgb(TEAL);
+            } else if (arc.status === 'rejected') {
+                col = hexToRgb(RED);
+            } else {
+                col = [130, 136, 148]; // grey for pending
+            }
+
+            // Alpha modulated by p value and fade
+            const pAlpha = 80 + (arc.p * 175);
+            const alpha = pAlpha * fadeRatio;
+
+            // Quadratic bezier
+            const mx = (fromAgent.x + toAgent.x) / 2;
+            const my = (fromAgent.y + toAgent.y) / 2;
+            const dx = toAgent.x - fromAgent.x;
+            const dy = toAgent.y - fromAgent.y;
+            // Perpendicular offset for curve
+            const offset = Math.min(80, Math.sqrt(dx*dx + dy*dy) * 0.3);
+            const cpx = mx - dy * 0.3;
+            const cpy = my + dx * 0.3;
+
+            p.noFill();
+            p.stroke(col[0], col[1], col[2], alpha);
+            p.strokeWeight(arc.status === 'pending' ? 1 : 2);
+
+            if (arc.status === 'pending') {
+                // Dashed line effect
+                drawDashedBezier(p, fromAgent.x, fromAgent.y, cpx, cpy, toAgent.x, toAgent.y, 8, alpha, col);
+            } else {
+                p.beginShape();
+                p.vertex(fromAgent.x, fromAgent.y);
+                p.quadraticVertex(cpx, cpy, toAgent.x, toAgent.y);
+                p.endShape();
+            }
+
+            // Flash effect on resolution
+            if (arc.status !== 'pending' && fadeRatio > 0.8) {
+                const flashAlpha = (fadeRatio - 0.8) * 5 * 60;
+                p.stroke(col[0], col[1], col[2], flashAlpha);
+                p.strokeWeight(4);
+                p.beginShape();
+                p.vertex(fromAgent.x, fromAgent.y);
+                p.quadraticVertex(cpx, cpy, toAgent.x, toAgent.y);
+                p.endShape();
+            }
+        }
+        arcs = alive;
+    }
+
+    function drawDashedBezier(p, x1, y1, cx, cy, x2, y2, dashLen, alpha, col) {
+        const steps = 20;
+        let drawing = true;
+        let segAccum = 0;
+        let prevX = x1, prevY = y1;
+        for (let i = 1; i <= steps; i++) {
+            const t = i / steps;
+            const px = (1-t)*(1-t)*x1 + 2*(1-t)*t*cx + t*t*x2;
+            const py = (1-t)*(1-t)*y1 + 2*(1-t)*t*cy + t*t*y2;
+            const dx = px - prevX;
+            const dy = py - prevY;
+            const segLen = Math.sqrt(dx*dx + dy*dy);
+            segAccum += segLen;
+            if (segAccum >= dashLen) {
+                drawing = !drawing;
+                segAccum = 0;
+            }
+            if (drawing) {
+                p.stroke(col[0], col[1], col[2], alpha);
+                p.strokeWeight(1);
+                p.line(prevX, prevY, px, py);
+            }
+            prevX = px;
+            prevY = py;
+        }
+    }
+
+    function drawAgents(p) {
+        hoveredAgent = null;
+        const mouseX = p.mouseX;
+        const mouseY = p.mouseY;
+
+        for (const [id, agent] of agents) {
+            const size = agent.currentSize;
+            const col = hexToRgb(agent.color);
+
+            // Soft glow halo
+            p.noStroke();
+            const glowSize = size * 2.5;
+            for (let i = 3; i >= 1; i--) {
+                const s = size + i * (glowSize - size) / 3;
+                const a = 15 / i;
+                p.fill(col[0], col[1], col[2], a);
+                p.ellipse(agent.x, agent.y, s, s);
+            }
+
+            // Main dot
+            p.fill(col[0], col[1], col[2], 230);
+            p.noStroke();
+            p.ellipse(agent.x, agent.y, size, size);
+
+            // Inner highlight
+            p.fill(255, 255, 255, 40);
+            p.ellipse(agent.x - size * 0.1, agent.y - size * 0.1, size * 0.4, size * 0.4);
+
+            // Check hover
+            const dx = mouseX - agent.x;
+            const dy = mouseY - agent.y;
+            if (dx * dx + dy * dy < (size + 6) * (size + 6)) {
+                hoveredAgent = agent;
+            }
+        }
+    }
+
+    function updateTooltip(p) {
+        const tooltip = document.getElementById('tooltip');
+        if (hoveredAgent && p.mouseX > 0 && p.mouseX < canvasW && p.mouseY > 0 && p.mouseY < canvasH) {
+            tooltip.style.display = 'block';
+            tooltip.style.left = (p.mouseX + 16) + 'px';
+            tooltip.style.top = (p.mouseY - 10) + 'px';
+            tooltip.querySelector('.tt-id').textContent = hoveredAgent.id;
+            tooltip.querySelector('.tt-type').textContent = hoveredAgent.type;
+            tooltip.querySelector('.tt-rep').textContent = 'rep: ' + hoveredAgent.reputation.toFixed(3);
+        } else {
+            tooltip.style.display = 'none';
+        }
+    }
+
+    // ─── Stats panel ─────────────────────────────────────────────
+    function updateStatsPanel() {
+        if (playIdx <= 0 || timeline.length === 0) return;
+        const current = timeline[Math.min(playIdx - 1, timeline.length - 1)];
+        document.getElementById('stat-epoch').textContent = current.epoch >= 0 ? current.epoch : '--';
+        document.getElementById('stat-step').textContent = current.step >= 0 ? current.step : '--';
+        document.getElementById('stat-event-idx').textContent = `${playIdx}/${timeline.length}`;
+        document.getElementById('epoch-label').textContent = `E${current.epoch >= 0 ? current.epoch : '-'}`;
+
+        // Find latest epoch stats
+        let latestStats = null;
+        for (let e = current.epoch; e >= 0; e--) {
+            if (epochStats.has(e)) { latestStats = epochStats.get(e); break; }
+        }
+        if (latestStats) {
+            document.getElementById('stat-toxicity').textContent = (latestStats.toxicity_rate ?? 0).toFixed(3);
+            document.getElementById('stat-quality-gap').textContent = (latestStats.quality_gap ?? 0).toFixed(3);
+            document.getElementById('stat-avg-payoff').textContent = (latestStats.avg_payoff ?? 0).toFixed(3);
+            document.getElementById('stat-welfare').textContent = (latestStats.total_welfare ?? 0).toFixed(2);
+        }
+
+        document.getElementById('stat-accepted').textContent = acceptedCount;
+        document.getElementById('stat-rejected').textContent = rejectedCount;
+        document.getElementById('stat-pending').textContent = pendingInteractions.size;
+
+        updateLegend();
+    }
+
+    function updateLegend() {
+        const container = document.getElementById('legend-container');
+        const counts = {};
+        for (const [id, agent] of agents) {
+            const t = agent.type;
+            counts[t] = (counts[t] || 0) + 1;
+        }
+        let html = '';
+        for (const [type, count] of Object.entries(counts).sort()) {
+            const color = AGENT_COLORS[type] || '#828894';
+            html += `<div class="legend-item">
+                <div class="legend-dot" style="background:${color}"></div>
+                <span class="legend-label">${type}</span>
+                <span class="legend-count">${count}</span>
+            </div>`;
+        }
+        container.innerHTML = html;
+    }
+
+    // ─── Transport controls ──────────────────────────────────────
+    function togglePlay() {
+        playing = !playing;
+        const btn = document.getElementById('btn-play');
+        if (playing) {
+            btn.innerHTML = '&#9646;&#9646;';
+            btn.classList.add('active');
+            // Reset if at end
+            if (playIdx >= timeline.length) {
+                resetPlayback();
+            }
+        } else {
+            btn.innerHTML = '&#9654;';
+            btn.classList.remove('active');
+        }
+    }
+
+    function stepForward() {
+        if (playIdx < timeline.length) {
+            processGroup(timeline[playIdx]);
+            playIdx++;
+            document.getElementById('scrubber').value = Math.min(playIdx, timeline.length - 1);
+            updateStatsPanel();
+        }
+    }
+
+    function stepBack() {
+        if (playIdx > 1) {
+            // Replay from start up to playIdx - 2
+            const targetIdx = playIdx - 2;
+            resetPlayback();
+            for (let i = 0; i <= targetIdx && i < timeline.length; i++) {
+                processGroup(timeline[i]);
+            }
+            playIdx = targetIdx + 1;
+            document.getElementById('scrubber').value = Math.min(playIdx, timeline.length - 1);
+            updateStatsPanel();
+        }
+    }
+
+    function jumpToStart() {
+        resetPlayback();
+        if (timeline.length > 0) {
+            processGroup(timeline[0]);
+            playIdx = 1;
+        }
+        document.getElementById('scrubber').value = 0;
+        updateStatsPanel();
+    }
+
+    function jumpToEnd() {
+        resetPlayback();
+        for (let i = 0; i < timeline.length; i++) {
+            processGroup(timeline[i]);
+        }
+        playIdx = timeline.length;
+        document.getElementById('scrubber').value = timeline.length - 1;
+        updateStatsPanel();
+    }
+
+    function scrubTo(val) {
+        const target = parseInt(val);
+        resetPlayback();
+        for (let i = 0; i <= target && i < timeline.length; i++) {
+            processGroup(timeline[i]);
+        }
+        playIdx = target + 1;
+        updateStatsPanel();
+    }
+
+    function resetPlayback() {
+        agents = new Map();
+        arcs = [];
+        pendingInteractions = new Map();
+        epochStats = new Map();
+        acceptedCount = 0;
+        rejectedCount = 0;
+        playIdx = 0;
+    }
+
+    function setSpeed(val) {
+        const idx = parseInt(val);
+        speedMult = SPEED_STEPS[idx] ?? 1;
+        document.getElementById('speed-label').textContent = speedMult + 'x';
+    }
+
+    // ─── Utility ─────────────────────────────────────────────────
+    function hexToRgb(hex) {
+        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+        return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [130, 136, 148];
+    }
+
+    // ─── Keyboard shortcuts ──────────────────────────────────────
+    document.addEventListener('keydown', (e) => {
+        if (e.key === ' ') { e.preventDefault(); togglePlay(); }
+        if (e.key === 'ArrowRight') { e.preventDefault(); stepForward(); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); stepBack(); }
+        if (e.key === 'Home') { e.preventDefault(); jumpToStart(); }
+        if (e.key === 'End') { e.preventDefault(); jumpToEnd(); }
+    });
+    </script>
+</body>
+</html>
