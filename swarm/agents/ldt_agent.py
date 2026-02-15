@@ -34,6 +34,7 @@ simulation framework.
 
 import math
 import random
+import threading
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
@@ -156,6 +157,7 @@ class LDTAgent(BaseAgent):
         config: Optional[Dict] = None,
         name: Optional[str] = None,
         memory_config: Optional["MemoryConfig"] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -164,6 +166,7 @@ class LDTAgent(BaseAgent):
             config=config or {},
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
 
         # --- LDT-specific parameters ---
@@ -241,6 +244,8 @@ class LDTAgent(BaseAgent):
         self._subjunctive_cache: Dict[str, SubjunctiveDependence] = {}
         # Precommitted policy (UDT): computed once, never updated.
         self._precommitted_cooperate: Optional[bool] = None
+        # Lock for cache access.
+        self._cache_lock = threading.Lock()
 
     # ------------------------------------------------------------------
     # Core LDT reasoning helpers
@@ -309,26 +314,27 @@ class LDTAgent(BaseAgent):
         High conditional agreement + high MI indicates the decisions are
         "subjunctively linked" — changing our output would change theirs.
         """
-        if counterparty_id in self._subjunctive_cache:
-            return self._subjunctive_cache[counterparty_id]
+        with self._cache_lock:
+            if counterparty_id in self._subjunctive_cache:
+                return self._subjunctive_cache[counterparty_id]
 
-        cosine = self._compute_twin_score(counterparty_id)
-        profile = self._counterparty_profiles.get(counterparty_id, [])
-        own = self._own_trace[-self.counterfactual_horizon :]
+            cosine = self._compute_twin_score(counterparty_id)
+            profile = self._counterparty_profiles.get(counterparty_id, [])
+            own = self._own_trace[-self.counterfactual_horizon :]
 
-        # Need paired decisions to compute conditional probabilities.
-        # Match by index (they interacted at the same timesteps).
-        n = min(len(profile), len(own))
-        if n < 3:
-            result = SubjunctiveDependence(
-                cosine_similarity=cosine,
-                conditional_agreement=cosine,
-                conditional_defection=cosine,
-                mutual_information=0.0,
-                subjunctive_score=cosine,
-            )
-            self._subjunctive_cache[counterparty_id] = result
-            return result
+            # Need paired decisions to compute conditional probabilities.
+            # Match by index (they interacted at the same timesteps).
+            n = min(len(profile), len(own))
+            if n < 3:
+                result = SubjunctiveDependence(
+                    cosine_similarity=cosine,
+                    conditional_agreement=cosine,
+                    conditional_defection=cosine,
+                    mutual_information=0.0,
+                    subjunctive_score=cosine,
+                )
+                self._subjunctive_cache[counterparty_id] = result
+                return result
 
         # Align traces: our recent decisions paired with theirs.
         our_decisions = [(acc, p) for acc, p in own[-n:]]
@@ -870,7 +876,7 @@ class LDTAgent(BaseAgent):
             return self._handle_bid_decision(observation)
 
         # 3. Bid on bounties at fair value.
-        if observation.available_bounties and random.random() < 0.25:
+        if observation.available_bounties and self._rng.random() < 0.25:
             return self._bid_on_bounty(observation)
 
         # 4. Work on active tasks.
@@ -886,7 +892,7 @@ class LDTAgent(BaseAgent):
                 return self.create_claim_task_action(best["task_id"])
 
         # 6. Post constructive content.
-        if observation.can_post and random.random() < self.post_probability:
+        if observation.can_post and self._rng.random() < self.post_probability:
             content = self._generate_content(observation)
             if content:
                 return self.create_post_action(content)
@@ -895,7 +901,7 @@ class LDTAgent(BaseAgent):
         if (
             observation.can_vote
             and observation.visible_posts
-            and random.random() < self.vote_probability
+            and self._rng.random() < self.vote_probability
         ):
             return self._vote_on_posts(observation)
 
@@ -903,7 +909,7 @@ class LDTAgent(BaseAgent):
         if (
             observation.can_interact
             and observation.visible_agents
-            and random.random() < self.interact_probability
+            and self._rng.random() < self.interact_probability
         ):
             return self._propose_interaction(observation)
 
@@ -959,11 +965,12 @@ class LDTAgent(BaseAgent):
         self._own_trace.append((interaction.accepted, interaction.p))
 
         # Invalidate caches so they're recomputed next time.
-        self._twin_scores.pop(counterparty, None)
-        self._inferred_policies.pop(counterparty, None)
-        self._level2_cache.pop(counterparty, None)
-        self._level3_cache.pop(counterparty, None)
-        self._subjunctive_cache.pop(counterparty, None)
+        with self._cache_lock:
+            self._twin_scores.pop(counterparty, None)
+            self._inferred_policies.pop(counterparty, None)
+            self._level2_cache.pop(counterparty, None)
+            self._level3_cache.pop(counterparty, None)
+            self._subjunctive_cache.pop(counterparty, None)
 
     # ------------------------------------------------------------------
     # Private helpers
@@ -985,9 +992,9 @@ class LDTAgent(BaseAgent):
         bounties = observation.available_bounties
         if not bounties:
             return self.create_noop_action()
-        bounty = random.choice(bounties)
+        bounty = self._rng.choice(bounties)
         reward = bounty.get("reward_amount", 0)
-        bid_amount = reward * random.uniform(0.8, 0.95)
+        bid_amount = reward * self._rng.uniform(0.8, 0.95)
         return self.create_place_bid_action(
             bounty_id=bounty["bounty_id"],
             bid_amount=bid_amount,
@@ -1032,7 +1039,8 @@ class LDTAgent(BaseAgent):
             "Observations from recent interactions — cooperation pays off.",
             "A note on building trust through consistent behaviour.",
         ]
-        return random.choice(topics)
+        result: str = self._rng.choice(topics)
+        return result
 
     def _vote_on_posts(self, observation: Observation) -> Action:
         """Vote on posts based on quality signals."""
@@ -1045,7 +1053,7 @@ class LDTAgent(BaseAgent):
         if not unvoted:
             return self.create_noop_action()
 
-        post = random.choice(unvoted)
+        post = self._rng.choice(unvoted)
         post_id = post.get("post_id", "")
 
         net_votes = post.get("net_votes", 0)

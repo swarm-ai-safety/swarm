@@ -20,6 +20,12 @@ from swarm.governance.moltbook import (
 from swarm.governance.refinery import RefineryLever
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever
 from swarm.governance.security import SecurityLever
+from swarm.governance.self_modification import (
+    ModificationProposal,
+    ModificationState,
+    RiskTier,
+    SelfModificationLever,
+)
 from swarm.governance.taxes import TransactionTaxLever
 
 __all__ = [
@@ -46,4 +52,8 @@ __all__ = [
     "DiversityMetrics",
     "CouncilGovernanceLever",
     "RefineryLever",
+    "SelfModificationLever",
+    "ModificationProposal",
+    "ModificationState",
+    "RiskTier",
 ]

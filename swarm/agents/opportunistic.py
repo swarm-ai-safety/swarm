@@ -1,6 +1,5 @@
 """Opportunistic agent policy implementation."""
 
-import random
 from typing import Dict, List, Optional
 
 from swarm.agents.base import (
@@ -32,6 +31,7 @@ class OpportunisticAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng=None,
     ):
         """Initialize opportunistic agent."""
         super().__init__(
@@ -40,6 +40,7 @@ class OpportunisticAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
 
         # Opportunistic agent parameters
@@ -66,7 +67,7 @@ class OpportunisticAgent(BaseAgent):
             return self._handle_bid_decision_opportunistic(observation)
 
         # Target high-reward bounties with undercut bids
-        if observation.available_bounties and random.random() < 0.5:
+        if observation.available_bounties and self._rng.random() < 0.5:
             return self._bid_undercut(observation)
 
         # Handle pending proposals based on expected payoff
@@ -86,14 +87,14 @@ class OpportunisticAgent(BaseAgent):
         # Work on tasks (maybe with minimal effort)
         if observation.active_tasks:
             task = observation.active_tasks[0]
-            if random.random() < self.free_ride_probability:
+            if self._rng.random() < self.free_ride_probability:
                 # Submit low-quality work
                 return self._submit_minimal_work(task)
             else:
                 return self._work_on_task(task, observation)
 
         # Post engagement-bait content
-        if observation.can_post and random.random() < self.post_probability:
+        if observation.can_post and self._rng.random() < self.post_probability:
             content = self._generate_engagement_content(observation)
             return self.create_post_action(content)
 
@@ -101,7 +102,7 @@ class OpportunisticAgent(BaseAgent):
         if (
             observation.can_vote
             and observation.visible_posts
-            and random.random() < self.vote_probability
+            and self._rng.random() < self.vote_probability
         ):
             return self._strategic_vote(observation)
 
@@ -139,10 +140,10 @@ class OpportunisticAgent(BaseAgent):
         if history:
             # Accept if past interactions were profitable
             avg_p = sum(i.p for i in history) / len(history)
-            return avg_p > 0.5
+            return bool(avg_p > 0.5)
         else:
             # Accept with some probability for unknown agents
-            return bool(random.random() < self.risk_tolerance)
+            return bool(self._rng.random() < self.risk_tolerance)
 
     def propose_interaction(
         self,
@@ -204,7 +205,7 @@ class OpportunisticAgent(BaseAgent):
         best = max(bounties, key=lambda b: b.get("reward_amount", 0))
         reward = best.get("reward_amount", 0)
         # Undercut: bid low to win
-        bid_amount = reward * random.uniform(0.5, 0.7)
+        bid_amount = reward * self._rng.uniform(0.5, 0.7)
         return self.create_place_bid_action(
             bounty_id=best["bounty_id"],
             bid_amount=max(bid_amount, 1.0),
@@ -227,7 +228,7 @@ class OpportunisticAgent(BaseAgent):
                 if agent.get("reputation", 0) > 0:
                     return True
 
-        return random.random() < 0.4  # Accept some unknowns
+        return bool(self._rng.random() < 0.4)  # Accept some unknowns
 
     def _find_best_roi_task(self, tasks: List[Dict]) -> Optional[Dict]:
         """Find task with best return on investment."""
@@ -273,7 +274,8 @@ class OpportunisticAgent(BaseAgent):
             "You won't believe what I discovered!",
             "Am I the only one who thinks this?",
         ]
-        return random.choice(engagement_bait)
+        result: str = self._rng.choice(engagement_bait)
+        return result
 
     def _strategic_vote(self, observation: Observation) -> Action:
         """Vote strategically based on existing votes."""
@@ -315,7 +317,7 @@ class OpportunisticAgent(BaseAgent):
                 targets.append(agent_id)
 
         if targets:
-            target = random.choice(targets)
+            target = self._rng.choice(targets)
             return self.create_propose_action(
                 counterparty_id=target,
                 interaction_type=InteractionType.TRADE,

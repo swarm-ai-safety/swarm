@@ -73,6 +73,7 @@ class ModelingAdversary(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -80,6 +81,7 @@ class ModelingAdversary(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
 
         self.modeling_horizon: int = self.config.get("modeling_horizon", 15)
@@ -225,9 +227,9 @@ class ModelingAdversary(BaseAgent):
         # Against LDT agents, continue mimicry more often
         # (to fool twin detection)
         if model.is_ldt_like:
-            return random.random() < self.mimicry_probability
+            return bool(self._rng.random() < self.mimicry_probability)
 
-        return random.random() < 0.2
+        return bool(self._rng.random() < 0.2)
 
     # ------------------------------------------------------------------
     # Decision logic
@@ -250,10 +252,10 @@ class ModelingAdversary(BaseAgent):
             # Against LDT: exploit by accepting but extracting
             # maximum surplus. Alternate cooperation/defection
             # to keep twin score ambiguous.
-            return random.random() < 0.4
+            return bool(self._rng.random() < 0.4)
 
         # Against non-LDT: straightforward exploitation
-        return random.random() < (1.0 - self.aggression_level)
+        return bool(self._rng.random() < (1.0 - self.aggression_level))
 
     # ------------------------------------------------------------------
     # BaseAgent interface
@@ -296,8 +298,8 @@ class ModelingAdversary(BaseAgent):
                 )
 
         # Post content (mix of constructive and disruptive)
-        if observation.can_post and random.random() < self.post_probability:
-            if random.random() < self.mimicry_probability:
+        if observation.can_post and self._rng.random() < self.post_probability:
+            if self._rng.random() < self.mimicry_probability:
                 content = "Sharing an analysis — looking for collaborative feedback."
             else:
                 content = "This system has significant flaws that need addressing."

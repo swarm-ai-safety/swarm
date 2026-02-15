@@ -1,6 +1,5 @@
 """Honest agent policy implementation."""
 
-import random
 from typing import TYPE_CHECKING, Dict, List, Optional
 
 from swarm.agents.base import (
@@ -36,6 +35,7 @@ class HonestAgent(BaseAgent):
         config: Optional[Dict] = None,
         name: Optional[str] = None,
         memory_config: Optional["MemoryConfig"] = None,
+        rng=None,
     ):
         """Initialize honest agent."""
         super().__init__(
@@ -45,6 +45,7 @@ class HonestAgent(BaseAgent):
             config=config or {},
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
 
         # Honest agent parameters
@@ -79,13 +80,13 @@ class HonestAgent(BaseAgent):
             return self._handle_bid_decision(observation)
 
         # Bid on available bounties
-        if observation.available_bounties and random.random() < 0.3:
+        if observation.available_bounties and self._rng.random() < 0.3:
             return self._bid_on_bounty(observation)
 
         # Post bounties for collaboration
         if (
             observation.agent_state.resources > 20
-            and random.random() < 0.15
+            and self._rng.random() < 0.15
             and not observation.available_bounties
         ):
             return self._post_bounty(observation)
@@ -103,7 +104,7 @@ class HonestAgent(BaseAgent):
                 return self.create_claim_task_action(best_task["task_id"])
 
         # Post with some probability
-        if observation.can_post and random.random() < self.post_probability:
+        if observation.can_post and self._rng.random() < self.post_probability:
             content = self._generate_helpful_content(observation)
             if content:
                 return self.create_post_action(content)
@@ -112,12 +113,12 @@ class HonestAgent(BaseAgent):
         if (
             observation.can_vote
             and observation.visible_posts
-            and random.random() < self.vote_probability
+            and self._rng.random() < self.vote_probability
         ):
             return self._vote_on_posts(observation)
 
         # Propose interactions
-        if observation.can_interact and random.random() < self.interact_probability:
+        if observation.can_interact and self._rng.random() < self.interact_probability:
             if observation.visible_agents:
                 return self._propose_interaction(observation)
 
@@ -206,10 +207,10 @@ class HonestAgent(BaseAgent):
             return self.create_noop_action()
 
         # Pick a bounty and bid at fair value
-        bounty = random.choice(bounties)
+        bounty = self._rng.choice(bounties)
         reward = bounty.get("reward_amount", 0)
         # Honest agents bid at fair price (80-95% of reward)
-        bid_amount = reward * random.uniform(0.8, 0.95)
+        bid_amount = reward * self._rng.uniform(0.8, 0.95)
         return self.create_place_bid_action(
             bounty_id=bounty["bounty_id"],
             bid_amount=bid_amount,
@@ -218,7 +219,7 @@ class HonestAgent(BaseAgent):
 
     def _post_bounty(self, observation: Observation) -> Action:
         """Post a bounty for work needed."""
-        reward = random.uniform(5.0, 15.0)
+        reward = self._rng.uniform(5.0, 15.0)
         return self.create_post_bounty_action(
             reward_amount=reward,
             task_description="Looking for quality collaboration on a research task.",
@@ -278,7 +279,8 @@ class HonestAgent(BaseAgent):
             "Based on my analysis, here are my observations.",
             "Let me contribute a constructive perspective.",
         ]
-        return random.choice(topics)
+        result: str = self._rng.choice(topics)
+        return result
 
     def _vote_on_posts(self, observation: Observation) -> Action:
         """Vote on visible posts based on quality signals."""
@@ -292,7 +294,7 @@ class HonestAgent(BaseAgent):
             return self.create_noop_action()
 
         # Select a post to vote on
-        post = random.choice(unvoted)
+        post = self._rng.choice(unvoted)
         post_id = post.get("post_id", "")
 
         # Vote based on quality signals

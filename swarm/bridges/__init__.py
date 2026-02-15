@@ -10,6 +10,7 @@ Available bridge subpackages (lazy import to avoid pulling in optional deps):
     swarm.bridges.live_swe          — Live self-evolving SWE agent bridge
     swarm.bridges.worktree          — Native git worktree sandbox bridge
     swarm.bridges.ralph             — Ralph event-stream bridge
+    swarm.bridges.pettingzoo        — PettingZoo multi-agent RL environment bridge
     swarm.bridges.prime_intellect   — Prime Intellect RL training bridge
 """
 

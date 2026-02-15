@@ -231,14 +231,17 @@ def _format_sweep_prompt(run_dir: Path) -> str:
                 for row in rows:
                     for k, v in row.items():
                         try:
-                            numeric_cols.setdefault(k, []).append(float(v))
+                            fv = float(v)
                         except (ValueError, TypeError):
-                            pass
+                            continue
+                        numeric_cols.setdefault(k, []).append(fv)
 
                 if numeric_cols:
                     parts.append("### Column Statistics\n")
                     for col, vals in numeric_cols.items():
                         n = len(vals)
+                        if n == 0:
+                            continue
                         mean = sum(vals) / n
                         sorted_vals = sorted(vals)
                         median = sorted_vals[n // 2]

@@ -2,13 +2,13 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame, spring, interpolate } from "remotion";
 import { colors, fonts } from "../theme";
 
-const MetricRow: React.FC<{
+const StatCard: React.FC<{
+  value: string;
   label: string;
-  hard: string;
-  soft: string;
+  color: string;
   frame: number;
   delay: number;
-}> = ({ label, hard, soft, frame, delay }) => {
+}> = ({ value, label, color, frame, delay }) => {
   const p = Math.max(
     0,
     spring({ frame: frame - delay, fps: 30, config: { damping: 200 } }),
@@ -17,45 +17,37 @@ const MetricRow: React.FC<{
   return (
     <div
       style={{
-        display: "flex",
-        width: 900,
-        alignItems: "center",
         opacity: p,
-        transform: `translateX(${interpolate(p, [0, 1], [30, 0])}px)`,
-        gap: 20,
+        transform: `translateY(${interpolate(p, [0, 1], [30, 0])}px)`,
+        background: `${color}10`,
+        border: `1px solid ${color}30`,
+        borderRadius: 16,
+        padding: "28px 36px",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        width: 260,
+        gap: 8,
       }}
     >
       <span
         style={{
-          width: 300,
-          fontSize: 26,
+          fontSize: 44,
+          fontWeight: 800,
+          color,
+          fontFamily: fonts.mono,
+        }}
+      >
+        {value}
+      </span>
+      <span
+        style={{
+          fontSize: 20,
           color: colors.textDim,
-          textAlign: "right",
+          textAlign: "center",
         }}
       >
         {label}
-      </span>
-      <span
-        style={{
-          width: 250,
-          fontSize: 26,
-          color: colors.danger,
-          fontWeight: 600,
-          textAlign: "center",
-        }}
-      >
-        {hard}
-      </span>
-      <span
-        style={{
-          width: 250,
-          fontSize: 26,
-          color: colors.success,
-          fontWeight: 600,
-          textAlign: "center",
-        }}
-      >
-        {soft}
       </span>
     </div>
   );
@@ -65,9 +57,9 @@ export const KeyFinding: React.FC = () => {
   const frame = useCurrentFrame();
 
   const titleP = spring({ frame, fps: 30, config: { damping: 200 } });
-  const headerP = Math.max(
+  const bottomP = Math.max(
     0,
-    spring({ frame: frame - 20, fps: 30, config: { damping: 200 } }),
+    spring({ frame: frame - 85, fps: 30, config: { damping: 200 } }),
   );
 
   return (
@@ -96,81 +88,60 @@ export const KeyFinding: React.FC = () => {
 
       <div
         style={{
-          fontSize: 48,
+          fontSize: 56,
           fontWeight: 700,
           color: colors.text,
           opacity: titleP,
           textAlign: "center",
           marginBottom: 50,
-          lineHeight: 1.4,
         }}
       >
-        Every soft metric detects
-        <br />
-        <span style={{ color: colors.accent }}>
-          what every hard metric misses.
-        </span>
+        Rigorous by Design
       </div>
 
       <div
         style={{
           display: "flex",
-          width: 900,
-          alignItems: "center",
-          opacity: headerP,
-          gap: 20,
-          marginBottom: 24,
-          paddingBottom: 16,
-          borderBottom: `1px solid ${colors.textMuted}40`,
+          gap: 32,
+          marginBottom: 44,
         }}
       >
-        <span style={{ width: 300 }} />
-        <span
-          style={{
-            width: 250,
-            fontSize: 28,
-            color: colors.danger,
-            fontWeight: 700,
-            textAlign: "center",
-          }}
-        >
-          Hard Metrics
-        </span>
-        <span
-          style={{
-            width: 250,
-            fontSize: 28,
-            color: colors.success,
-            fontWeight: 700,
-            textAlign: "center",
-          }}
-        >
-          Soft Metrics
-        </span>
+        <StatCard
+          value="700+"
+          label="pre-registered runs"
+          color={colors.accent}
+          frame={frame}
+          delay={20}
+        />
+        <StatCard
+          value="10"
+          label="seeds per config"
+          color={colors.accent}
+          frame={frame}
+          delay={35}
+        />
+        <StatCard
+          value="Bonferroni"
+          label="correction on all tests"
+          color={colors.success}
+          frame={frame}
+          delay={50}
+        />
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-        <MetricRow
-          label="Acceptance rate"
-          hard="passes &#x2717;"
-          soft="toxicity &#x2713;"
-          frame={frame}
-          delay={40}
-        />
-        <MetricRow
-          label="Benchmark score"
-          hard="passes &#x2717;"
-          soft="quality gap &#x2713;"
-          frame={frame}
-          delay={55}
-        />
-        <MetricRow
-          label="Distribution shift"
-          hard="invisible &#x2717;"
-          soft="KS test &#x2713;"
-          frame={frame}
-          delay={70}
-        />
+      <div
+        style={{
+          fontSize: 30,
+          color: colors.textDim,
+          opacity: bottomP,
+          textAlign: "center",
+          lineHeight: 1.6,
+          maxWidth: 800,
+        }}
+      >
+        200-run study found nothing significant.
+        <br />
+        <span style={{ color: colors.accent }}>We report that too.</span>
       </div>
     </AbsoluteFill>
   );

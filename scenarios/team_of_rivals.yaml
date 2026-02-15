@@ -1,0 +1,95 @@
+# Team-of-Rivals scenario (arXiv:2601.14351)
+#
+# Staged critics with veto authority + retry loops produce more
+# coherent outputs than single-agent or advisory governance.
+
+scenario_id: team_of_rivals
+description: >
+  Implementation of "If You Want Coherence, Orchestrate a Team of Rivals"
+  (Vijayaraghavan et al.). Full staged veto pipeline with 3 producers
+  and 3 critics across code, chart, and writing stages.
+motif: team_of_rivals
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 10
+  seed: 42
+  schedule_mode: round_robin
+  max_actions_per_step: 20
+
+rivals:
+  enabled: true
+  mode: team_of_rivals
+  max_retries_per_stage: 3
+  tasks_per_epoch: 4
+  trap_probability: 0.5
+  seed: 42
+  default_detection_rate: 0.7
+  default_false_positive_rate: 0.1
+  default_quality_level: 0.7
+  default_trap_awareness: 0.5
+
+agents:
+  # Producers
+  - type: rivals_producer
+    name: coder
+    count: 1
+    config:
+      role: coder
+      quality_level: 0.75
+      trap_awareness: 0.6
+
+  - type: rivals_producer
+    name: chart_maker
+    count: 1
+    config:
+      role: chart_maker
+      quality_level: 0.70
+      trap_awareness: 0.5
+
+  - type: rivals_producer
+    name: writer
+    count: 1
+    config:
+      role: writer
+      quality_level: 0.80
+      trap_awareness: 0.55
+
+  # Critics
+  - type: rivals_critic
+    name: critic_code
+    count: 1
+    config:
+      role: critic_code
+      detection_rate: 0.75
+      false_positive_rate: 0.10
+
+  - type: rivals_critic
+    name: critic_chart
+    count: 1
+    config:
+      role: critic_chart
+      detection_rate: 0.70
+      false_positive_rate: 0.12
+
+  - type: rivals_critic
+    name: critic_output
+    count: 1
+    config:
+      role: critic_output
+      detection_rate: 0.80
+      false_positive_rate: 0.08
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+
+outputs:
+  event_log: logs/team_of_rivals.jsonl
+  metrics_csv: logs/team_of_rivals_metrics.csv
+
+success_criteria:
+  min_success_rate: 0.5
+  max_delta_illusion: 0.3

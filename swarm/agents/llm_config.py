@@ -147,7 +147,7 @@ class LLMUsageStats:
             "meta-llama/llama-3-70b-instruct": 0.59,
             "google/gemini-pro-1.5": 1.25,
             # Groq models
-            "llama-3.1-70b-versatile": 0.59,
+            "llama-3.3-70b-versatile": 0.59,
             "mixtral-8x7b-32768": 0.24,
             # Together models
             "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo": 0.88,
@@ -173,7 +173,7 @@ class LLMUsageStats:
             "meta-llama/llama-3-70b-instruct": 0.79,
             "google/gemini-pro-1.5": 5.0,
             # Groq models
-            "llama-3.1-70b-versatile": 0.79,
+            "llama-3.3-70b-versatile": 0.79,
             "mixtral-8x7b-32768": 0.24,
             # Together models
             "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo": 0.88,

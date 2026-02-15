@@ -28,6 +28,7 @@ class BaseMoltbookAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -35,9 +36,9 @@ class BaseMoltbookAgent(BaseAgent):
             roles=roles or [Role.POSTER],
             config=config or {},
             name=name,
+            rng=rng,
         )
         self.challenge_skill = challenge_skill
-        self._rng = random.Random(self.config.get("seed"))
 
     def _pending_verification_action(
         self, observation: Observation
@@ -64,7 +65,7 @@ class BaseMoltbookAgent(BaseAgent):
 
     def _wrong_answer(self, correct: float) -> float:
         offset = self._rng.uniform(1.0, 5.0)
-        return round(correct + offset, 2)
+        return float(round(correct + offset, 2))
 
     def accept_interaction(
         self,
@@ -90,6 +91,7 @@ class DiligentMoltbookAgent(BaseMoltbookAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -100,6 +102,7 @@ class DiligentMoltbookAgent(BaseMoltbookAgent):
             roles=roles,
             config=config,
             name=name,
+            rng=rng,
         )
 
     def act(self, observation: Observation) -> Action:
@@ -128,6 +131,7 @@ class SpamBotAgent(BaseMoltbookAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -138,6 +142,7 @@ class SpamBotAgent(BaseMoltbookAgent):
             roles=roles,
             config=config,
             name=name,
+            rng=rng,
         )
 
     def act(self, observation: Observation) -> Action:
@@ -164,6 +169,7 @@ class HumanPretenderAgent(BaseMoltbookAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -174,6 +180,7 @@ class HumanPretenderAgent(BaseMoltbookAgent):
             roles=roles,
             config=config,
             name=name,
+            rng=rng,
         )
 
     def act(self, observation: Observation) -> Action:
@@ -200,6 +207,7 @@ class CollusiveVoterAgent(BaseMoltbookAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -210,6 +218,7 @@ class CollusiveVoterAgent(BaseMoltbookAgent):
             roles=roles,
             config=config,
             name=name,
+            rng=rng,
         )
         self.partner_id = self.config.get("partner_id")
 
@@ -229,5 +238,5 @@ class CollusiveVoterAgent(BaseMoltbookAgent):
             return None
         for post in observation.moltbook_published_posts:
             if post.get("author_id") == self.partner_id:
-                return post
+                return dict(post)
         return None

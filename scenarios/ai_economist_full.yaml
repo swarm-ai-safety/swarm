@@ -1,0 +1,153 @@
+# AI Economist Full Scenario
+# Gather-Trade-Build economy with bilevel Planner-Workers loop,
+# piecewise tax schedules, and adversarial behaviors.
+#
+# Run:  python -m swarm.domains.gather_trade_build.run_scenario scenarios/ai_economist_full.yaml
+
+scenario_id: ai_economist_full
+description: >
+  Full AI Economist scenario with GTB gridworld, bilevel tax policy,
+  income bunching, misreporting/evasion, audits, and collusion detection.
+motif: ai_economist
+
+# ── Domain: Gather-Trade-Build ────────────────────────────────────────
+domain:
+  type: gather_trade_build
+
+  map:
+    height: 15
+    width: 15
+    wood_density: 0.20
+    stone_density: 0.15
+    resource_regen_rate: 0.1
+    resource_max_amount: 5.0
+
+  market:
+    enabled: true
+    transaction_fee_rate: 0.02
+    price_floor: 0.1
+    price_ceiling: 100.0
+
+  build:
+    wood_cost: 3.0
+    stone_cost: 3.0
+    income_per_house_per_step: 1.0
+    max_houses_per_agent: 10
+
+  energy_per_step: 10.0
+  energy_cost_move: 1.0
+  energy_cost_gather: 1.0
+  energy_cost_trade: 0.5
+  energy_cost_build: 2.0
+
+# ── Taxation ──────────────────────────────────────────────────────────
+  taxation:
+    schedule_family: piecewise
+    brackets:
+      - threshold: 0.0
+        rate: 0.10
+      - threshold: 10.0
+        rate: 0.20
+      - threshold: 25.0
+        rate: 0.35
+      - threshold: 50.0
+        rate: 0.45
+    smoothing: 0.0        # 0 = hard brackets; >0 = sigmoid smoothing
+    damping: 0.3          # planner rate-of-change damping
+    update_interval_epochs: 1
+    allow_non_monotone: false
+
+# ── Planner ───────────────────────────────────────────────────────────
+  planner:
+    planner_type: heuristic   # heuristic | bandit | rl
+    objective: welfare
+    prod_weight: 1.0
+    ineq_weight: 0.5
+    learning_rate: 0.01
+    exploration_rate: 0.1
+    update_interval_epochs: 1
+
+# ── Gaming (income shifting / bunching) ───────────────────────────────
+  gaming:
+    income_shifting_enabled: true
+    max_shift_fraction_per_epoch: 0.3
+    gaming_cost_fraction: 0.05
+    bunching_detection_enabled: true
+    bunching_bin_width: 1.0
+
+# ── Misreporting / Evasion ────────────────────────────────────────────
+  misreporting:
+    enabled: true
+    max_underreport_fraction: 0.5
+    audit_probability: 0.2
+    risk_based_audit_multiplier: 1.5
+    fine_multiplier: 2.0
+    reputation_penalty_per_catch: 0.1
+    freeze_on_repeat: true
+    freeze_after_n_catches: 3
+    freeze_duration_epochs: 2
+
+# ── Collusion ─────────────────────────────────────────────────────────
+  collusion:
+    enabled: true
+    max_coalition_size: 4
+    min_coalition_size: 2
+    detection_window_steps: 20
+    similarity_threshold: 0.7
+    suspicion_score_threshold: 0.6
+    response_audit_multiplier: 2.0
+    response_stake_increase: 1.5
+    response_trade_restriction_epochs: 1
+
+# ── Agents ────────────────────────────────────────────────────────────
+agents:
+  # Honest workers (majority)
+  - policy: honest
+    count: 5
+    skill_gather: 1.0
+    skill_build: 1.0
+
+  # High-skill honest worker
+  - policy: honest
+    count: 2
+    skill_gather: 1.5
+    skill_build: 1.2
+
+  # Strategic income-shifting workers
+  - policy: gaming
+    count: 2
+    shift_fraction: 0.25
+    skill_gather: 1.0
+
+  # Tax-evading workers
+  - policy: evasive
+    count: 2
+    underreport_fraction: 0.3
+    skill_gather: 1.0
+
+  # Colluding coalition
+  - policy: collusive
+    count: 3
+    coalition_id: cartel_alpha
+    skill_gather: 1.0
+
+# ── Simulation ────────────────────────────────────────────────────────
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 15
+  seed: 42
+
+# ── Outputs ───────────────────────────────────────────────────────────
+outputs:
+  event_log: "logs/ai_economist_events.jsonl"
+  metrics_csv: "logs/ai_economist_metrics.csv"
+
+# ── Success Criteria ──────────────────────────────────────────────────
+success_criteria:
+  min_epochs: 20
+  min_agents: 10
+  # Qualitative checks (verified in tests):
+  # - Bunching near bracket edges under incentives
+  # - Planner tax updates alter worker behavior
+  # - Audits catch a subset of misreporters
+  # - Collusion detection flags coordinated agents

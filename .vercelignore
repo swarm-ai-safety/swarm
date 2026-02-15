@@ -8,3 +8,6 @@ __pycache__/
 .mypy_cache/
 .pytest_cache/
 .venv/
+promo/node_modules/
+promo/out/
+lean/.lake/

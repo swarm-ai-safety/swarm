@@ -1,6 +1,5 @@
 """Deceptive agent policy implementation."""
 
-import random
 from typing import Dict, List, Optional
 
 from swarm.agents.base import (
@@ -32,6 +31,7 @@ class DeceptiveAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng=None,
     ):
         """Initialize deceptive agent."""
         super().__init__(
@@ -40,6 +40,7 @@ class DeceptiveAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
 
         # Deceptive agent parameters
@@ -69,7 +70,7 @@ class DeceptiveAgent(BaseAgent):
         self._epochs_active += 1
 
         # Accept bids on our bounties (building facade)
-        if observation.pending_bid_decisions and random.random() < 0.7:
+        if observation.pending_bid_decisions and self._rng.random() < 0.7:
             bids = observation.pending_bid_decisions
             cheapest = min(bids, key=lambda b: b.get("bid_amount", float("inf")))
             return self.create_accept_bid_action(
@@ -78,7 +79,7 @@ class DeceptiveAgent(BaseAgent):
             )
 
         # Bid competitively on bounties
-        if observation.available_bounties and random.random() < 0.4:
+        if observation.available_bounties and self._rng.random() < 0.4:
             return self._bid_competitively(observation)
 
         # Handle pending proposals
@@ -111,7 +112,7 @@ class DeceptiveAgent(BaseAgent):
                 return self.create_claim_task_action(task["task_id"])
 
         # Post helpful-seeming content
-        if observation.can_post and random.random() < self.post_probability:
+        if observation.can_post and self._rng.random() < self.post_probability:
             content = self._generate_trust_building_content()
             return self.create_post_action(content)
 
@@ -141,7 +142,7 @@ class DeceptiveAgent(BaseAgent):
         # Submit lower quality work but maintain facade
         if observation.active_tasks:
             task = observation.active_tasks[0]
-            if random.random() < 0.4:
+            if self._rng.random() < 0.4:
                 return self._submit_subtly_poor_work(task)
             else:
                 return self._work_on_task_carefully(task)
@@ -165,7 +166,7 @@ class DeceptiveAgent(BaseAgent):
 
         # In trust-building phase, accept most proposals
         if count < self.trust_building_phase_length:
-            return bool(random.random() < self.facade_probability)
+            return bool(self._rng.random() < self.facade_probability)
 
         # After trust is built, be more selective
         trust = self._trust_scores.get(initiator_id, 0.5)
@@ -231,7 +232,7 @@ class DeceptiveAgent(BaseAgent):
         best = max(bounties, key=lambda b: b.get("reward_amount", 0))
         reward = best.get("reward_amount", 0)
         # Bid competitively (slightly below reward)
-        bid_amount = reward * random.uniform(0.7, 0.9)
+        bid_amount = reward * self._rng.uniform(0.7, 0.9)
         return self.create_place_bid_action(
             bounty_id=best["bounty_id"],
             bid_amount=max(bid_amount, 1.0),
@@ -247,10 +248,10 @@ class DeceptiveAgent(BaseAgent):
 
         # Early phase: high acceptance
         if count < self.trust_building_phase_length:
-            return random.random() < 0.9
+            return bool(self._rng.random() < 0.9)
 
         # Later: more selective
-        return random.random() < 0.6
+        return bool(self._rng.random() < 0.6)
 
     def _should_exploit(self, observation: Observation) -> bool:
         """Determine if it's time to exploit."""
@@ -321,12 +322,13 @@ class DeceptiveAgent(BaseAgent):
             "Quality and reliability are my priorities.",
             "Looking forward to collaborating with everyone.",
         ]
-        return random.choice(content_options)
+        result: str = self._rng.choice(content_options)
+        return result
 
     def _vote_positively(self, observation: Observation) -> Action:
         """Vote positively to appear supportive."""
         if observation.visible_posts:
-            post = random.choice(observation.visible_posts)
+            post = self._rng.choice(observation.visible_posts)
             return self.create_vote_action(post.get("post_id", ""), 1)
         return self.create_noop_action()
 
@@ -346,7 +348,7 @@ class DeceptiveAgent(BaseAgent):
                 candidates.append(agent_id)
 
         if candidates:
-            target = random.choice(candidates)
+            target = self._rng.choice(candidates)
             return self.create_propose_action(
                 counterparty_id=target,
                 interaction_type=InteractionType.COLLABORATION,

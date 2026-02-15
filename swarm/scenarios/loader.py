@@ -1,5 +1,6 @@
 """Scenario loader for YAML configuration files."""
 
+import random
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
@@ -26,6 +27,7 @@ from swarm.agents.moltbook_agent import (
     SpamBotAgent,
 )
 from swarm.agents.opportunistic import OpportunisticAgent
+from swarm.agents.rivals_agent import RivalsCriticAgent, RivalsProducerAgent
 from swarm.agents.rlm_agent import RLMAgent
 from swarm.agents.scholar_agent import (
     AdversarialRetrieverAgent,
@@ -52,6 +54,20 @@ from swarm.core.moltbook_handler import MoltbookConfig
 from swarm.core.moltipedia_handler import MoltipediaConfig
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 from swarm.core.payoff import PayoffConfig
+from swarm.core.perturbation import (
+    AgentDropoutConfig,
+    CorruptionMode,
+    NetworkPartitionConfig,
+    ParameterShocksConfig,
+    ParameterShockSpec,
+    PartitionMode,
+    PerturbationConfig,
+    ResourceShockConfig,
+    ResourceShockMode,
+    ScheduleSpec,
+    ShockTrigger,
+    SignalCorruptionConfig,
+)
 from swarm.core.scholar_handler import ScholarConfig
 from swarm.core.spawn import PayoffAttributionMode, SpawnConfig
 from swarm.env.marketplace import MarketplaceConfig
@@ -95,6 +111,9 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "skillrl": SkillRLAgent,
     # Self-optimizing agent (recursive cost-cutting)
     "self_optimizer": SelfOptimizerAgent,
+    # Rivals pipeline agents (Team-of-Rivals)
+    "rivals_producer": RivalsProducerAgent,
+    "rivals_critic": RivalsCriticAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
@@ -622,6 +641,155 @@ def parse_spawn_config(data: Dict[str, Any]) -> Optional[SpawnConfig]:
     )
 
 
+def parse_rivals_config(data: Dict[str, Any]) -> Optional[Any]:
+    """Parse rivals section from YAML into RivalsConfig.
+
+    Args:
+        data: The rivals section from YAML
+
+    Returns:
+        RivalsConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    from swarm.core.rivals_handler import RivalsConfig
+
+    return RivalsConfig(**data)
+
+
+def parse_perturbation_config(
+    data: Dict[str, Any],
+) -> Optional[PerturbationConfig]:
+    """
+    Parse perturbations section from YAML into PerturbationConfig.
+
+    Args:
+        data: The perturbations section from YAML
+
+    Returns:
+        PerturbationConfig if any sub-config is enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    # Agent dropout
+    dropout_data = data.get("agent_dropout", {})
+    agent_dropout = AgentDropoutConfig(
+        enabled=dropout_data.get("enabled", False),
+        probability_per_step=dropout_data.get("probability_per_step", 0.1),
+        min_duration_steps=dropout_data.get("min_duration_steps", 1),
+        max_duration_steps=dropout_data.get("max_duration_steps", 3),
+        exempt_types=dropout_data.get("exempt_types", []),
+    )
+
+    # Signal corruption
+    corruption_data = data.get("signal_corruption", {})
+    schedule_list = []
+    for s in corruption_data.get("schedule", []):
+        schedule_list.append(
+            ScheduleSpec(
+                start_epoch=s.get("start_epoch", 0),
+                end_epoch=s.get("end_epoch"),
+            )
+        )
+    mode_str = corruption_data.get("mode", "zero_out")
+    try:
+        corruption_mode = CorruptionMode(mode_str)
+    except ValueError as err:
+        raise ValueError(f"Unknown corruption mode: {mode_str}") from err
+    signal_corruption = SignalCorruptionConfig(
+        enabled=corruption_data.get("enabled", False),
+        targets=corruption_data.get("targets", ["task_progress_delta"]),
+        mode=corruption_mode,
+        schedule=schedule_list,
+    )
+
+    # Parameter shocks
+    shocks_data = data.get("parameter_shocks", {})
+    shock_specs = []
+    for s in shocks_data.get("shocks", []):
+        trigger_str = s.get("trigger", "epoch")
+        try:
+            trigger = ShockTrigger(trigger_str)
+        except ValueError as err:
+            raise ValueError(f"Unknown shock trigger: {trigger_str}") from err
+        shock_specs.append(
+            ParameterShockSpec(
+                trigger=trigger,
+                at_epoch=s.get("at_epoch"),
+                when=s.get("when"),
+                params=s.get("params", {}),
+                revert_after_epochs=s.get("revert_after_epochs"),
+            )
+        )
+    parameter_shocks = ParameterShocksConfig(
+        enabled=shocks_data.get("enabled", False),
+        shocks=shock_specs,
+    )
+
+    # Network partition
+    partition_data = data.get("network_partition", {})
+    partition_mode_str = partition_data.get("mode", "bisect")
+    try:
+        partition_mode = PartitionMode(partition_mode_str)
+    except ValueError as err:
+        raise ValueError(
+            f"Unknown partition mode: {partition_mode_str}"
+        ) from err
+    partition_trigger_str = partition_data.get("trigger", "epoch")
+    try:
+        partition_trigger = ShockTrigger(partition_trigger_str)
+    except ValueError as err:
+        raise ValueError(
+            f"Unknown partition trigger: {partition_trigger_str}"
+        ) from err
+    network_partition = NetworkPartitionConfig(
+        enabled=partition_data.get("enabled", False),
+        trigger=partition_trigger,
+        at_epoch=partition_data.get("at_epoch"),
+        mode=partition_mode,
+        isolate_type=partition_data.get("isolate_type"),
+        heal_after_epochs=partition_data.get("heal_after_epochs"),
+    )
+
+    # Resource shock
+    resource_data = data.get("resource_shock", {})
+    resource_mode_str = resource_data.get("mode", "drain_all")
+    try:
+        resource_mode = ResourceShockMode(resource_mode_str)
+    except ValueError as err:
+        raise ValueError(
+            f"Unknown resource shock mode: {resource_mode_str}"
+        ) from err
+    resource_trigger_str = resource_data.get("trigger", "epoch")
+    try:
+        resource_trigger = ShockTrigger(resource_trigger_str)
+    except ValueError as err:
+        raise ValueError(
+            f"Unknown resource trigger: {resource_trigger_str}"
+        ) from err
+    resource_shock = ResourceShockConfig(
+        enabled=resource_data.get("enabled", False),
+        trigger=resource_trigger,
+        at_epoch=resource_data.get("at_epoch"),
+        mode=resource_mode,
+        magnitude=resource_data.get("magnitude", 0.5),
+    )
+
+    return PerturbationConfig(
+        seed=data.get("seed"),
+        agent_dropout=agent_dropout,
+        signal_corruption=signal_corruption,
+        parameter_shocks=parameter_shocks,
+        network_partition=network_partition,
+        resource_shock=resource_shock,
+    )
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -652,6 +820,10 @@ def load_scenario(path: Path) -> ScenarioConfig:
     scholar_config = parse_scholar_config(data.get("scholar", {}))
     kernel_oracle_config = parse_kernel_oracle_config(data.get("kernel_oracle", {}))
     spawn_config = parse_spawn_config(data.get("spawn", {}))
+    rivals_config = parse_rivals_config(data.get("rivals", {}))
+    perturbation_config = parse_perturbation_config(
+        data.get("perturbations", {})
+    )
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -679,6 +851,8 @@ def load_scenario(path: Path) -> ScenarioConfig:
         scholar_config=scholar_config,
         kernel_oracle_config=kernel_oracle_config,
         spawn_config=spawn_config,
+        rivals_config=rivals_config,
+        perturbation_config=perturbation_config,
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")
         else None,
@@ -794,7 +968,10 @@ def parse_llm_config(data: Dict[str, Any]) -> Any:
     )
 
 
-def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
+def create_agents(
+    agent_specs: List[Dict[str, Any]],
+    seed: int | None = None,
+) -> List[BaseAgent]:
     """
     Create agent instances from specifications.
 
@@ -803,12 +980,14 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
 
     Args:
         agent_specs: List of agent specifications from YAML
+        seed: Optional seed for deterministic agent RNG creation
 
     Returns:
         List of instantiated agents
     """
     agents = []
     counters: Dict[str, int] = {}
+    _agent_counter = 0  # monotonic counter for child RNG derivation
 
     for spec in agent_specs:
         agent_type = spec.get("type", "honest")
@@ -873,11 +1052,16 @@ def create_agents(agent_specs: List[Dict[str, Any]]) -> List[BaseAgent]:
                     else base_name
                 )
 
-                # Create agent with optional config
+                # Create agent with optional config and seeded RNG
+                _agent_counter += 1
+                agent_rng = (
+                    random.Random(seed + _agent_counter) if seed is not None else None
+                )
                 agent = agent_class(
                     agent_id=agent_id,
                     name=agent_name,
                     config=agent_config,
+                    rng=agent_rng,
                 )  # type: ignore[call-arg]
                 agents.append(agent)
 
@@ -904,9 +1088,17 @@ def build_orchestrator(scenario: ScenarioConfig) -> Orchestrator:
     orchestrator.state.rate_limits = scenario.rate_limits
 
     # Create and register agents
-    agents = create_agents(scenario.agent_specs)
+    agents = create_agents(scenario.agent_specs, seed=scenario.orchestrator_config.seed)
     for agent in agents:
         orchestrator.register_agent(agent)
+
+    # Register rivals agent roles if handler is present
+    if orchestrator._rivals_handler is not None:
+        for agent in agents:
+            if hasattr(agent, "role"):
+                orchestrator._rivals_handler.register_agent_role(
+                    agent.agent_id, agent.role
+                )
 
     return orchestrator
 

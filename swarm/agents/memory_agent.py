@@ -20,6 +20,7 @@ class DiligentRecorderAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -27,10 +28,10 @@ class DiligentRecorderAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
         self._write_probability = self.config.get("write_probability", 0.4)
         self._verify_probability = self.config.get("verify_probability", 0.3)
-        self._rng = random.Random()
 
     def act(self, observation: Observation) -> Action:
         # Challenge suspicious entries first
@@ -89,6 +90,7 @@ class MemoryPoisonerAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -96,8 +98,8 @@ class MemoryPoisonerAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
-        self._rng = random.Random()
 
     def act(self, observation: Observation) -> Action:
         # Aggressively write poisoned facts
@@ -145,6 +147,7 @@ class CacheGamerAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -152,9 +155,9 @@ class CacheGamerAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
         self._counter = 0
-        self._rng = random.Random()
 
     def act(self, observation: Observation) -> Action:
         # Maximum write rate
@@ -196,6 +199,7 @@ class CollusiveVerifierAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -203,9 +207,9 @@ class CollusiveVerifierAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
         self.partner_id = self.config.get("partner_id")
-        self._rng = random.Random()
 
     def act(self, observation: Observation) -> Action:
         # Prioritize verifying partner's entries

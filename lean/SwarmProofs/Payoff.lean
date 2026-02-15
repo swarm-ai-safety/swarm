@@ -56,15 +56,17 @@ theorem expected_surplus_mono (cfg : PayoffConfig) :
 
 /-- When p ∈ [0, 1], expected surplus ≥ -s_minus. -/
 theorem expected_surplus_lower (cfg : PayoffConfig) (p : ℝ)
-    (hp0 : 0 ≤ p) (hp1 : p ≤ 1) :
+    (hp0 : 0 ≤ p) (_ : p ≤ 1) :
     -cfg.s_minus ≤ expected_surplus cfg p := by
-  unfold expected_surplus; have := cfg.hs_plus; nlinarith
+  unfold expected_surplus
+  nlinarith [cfg.hs_plus, cfg.hs_minus, mul_nonneg hp0 cfg.hs_plus]
 
 /-- When p ∈ [0, 1], expected surplus ≤ s_plus. -/
 theorem expected_surplus_upper (cfg : PayoffConfig) (p : ℝ)
-    (hp0 : 0 ≤ p) (hp1 : p ≤ 1) :
+    (_ : 0 ≤ p) (hp1 : p ≤ 1) :
     expected_surplus cfg p ≤ cfg.s_plus := by
-  unfold expected_surplus; have := cfg.hs_minus; nlinarith
+  unfold expected_surplus
+  nlinarith [cfg.hs_plus, cfg.hs_minus, mul_nonneg (sub_nonneg.mpr hp1) cfg.hs_minus]
 
 /-- Combined: S(p) ∈ [-s_minus, s_plus] for p ∈ [0, 1]. -/
 theorem expected_surplus_bounded (cfg : PayoffConfig) (p : ℝ)
@@ -77,7 +79,7 @@ theorem expected_surplus_bounded (cfg : PayoffConfig) (p : ℝ)
 
 /-- Expected harm is non-negative for p ∈ [0, 1]. -/
 theorem expected_harm_nonneg (cfg : PayoffConfig) (p : ℝ)
-    (hp0 : 0 ≤ p) (hp1 : p ≤ 1) :
+    (_ : 0 ≤ p) (hp1 : p ≤ 1) :
     0 ≤ expected_harm cfg p := by
   unfold expected_harm; exact mul_nonneg (by linarith) cfg.hh
 
@@ -124,9 +126,8 @@ theorem social_break_even_ge_private (cfg : PayoffConfig)
     (hd2 : 0 < cfg.s_plus + cfg.s_minus + cfg.h) :
     break_even_p cfg ≤ social_break_even_p cfg := by
   unfold break_even_p social_break_even_p
-  rw [div_le_div_iff hd1 hd2]
-  have := cfg.hs_plus; have := cfg.hs_minus; have := cfg.hh
-  nlinarith
+  rw [div_le_div_iff₀ hd1 hd2]
+  nlinarith [cfg.hs_plus, cfg.hs_minus, cfg.hh]
 
 /-! ## Theorem 10: Transfer is zero-sum -/
 
@@ -148,8 +149,10 @@ theorem full_internalization
     let π_a := cfg.theta * S - τ - cfg.rho_a * E
     let π_b := (1 - cfg.theta) * S + τ - cfg.rho_b * E
     π_a + π_b = social_surplus cfg p := by
+  simp only
   unfold social_surplus expected_surplus expected_harm
-  nlinarith [h_full]
+  have hrb : cfg.rho_b = 1 - cfg.rho_a := by linarith
+  rw [hrb]; ring
 
 /-! ## Additional properties -/
 

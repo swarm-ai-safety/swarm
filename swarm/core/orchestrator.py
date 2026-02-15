@@ -1,6 +1,7 @@
 """Orchestrator for running the multi-agent simulation."""
 
 import asyncio
+import logging
 import random
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
@@ -28,8 +29,10 @@ from swarm.core.observable_generator import (
 )
 from swarm.core.observation_builder import ObservationBuilder
 from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
+from swarm.core.perturbation import PerturbationConfig, PerturbationEngine
 from swarm.core.proxy import ProxyComputer, ProxyObservables
 from swarm.core.redteam_inspector import RedTeamInspector
+from swarm.core.rivals_handler import RivalsConfig, RivalsHandler
 from swarm.core.scholar_handler import ScholarConfig, ScholarHandler
 from swarm.core.spawn import SpawnConfig, SpawnTree
 from swarm.core.task_handler import TaskHandler
@@ -59,6 +62,8 @@ from swarm.models.events import (
     EventType,
 )
 from swarm.models.interaction import InteractionType, SoftInteraction
+
+logger = logging.getLogger(__name__)
 
 
 class OrchestratorConfig(BaseModel):
@@ -109,6 +114,9 @@ class OrchestratorConfig(BaseModel):
     # Spawn configuration
     spawn_config: Optional[SpawnConfig] = None
 
+    # Rivals (Team-of-Rivals) configuration
+    rivals_config: Optional["RivalsConfig"] = None
+
     # Composite task configuration
     enable_composite_tasks: bool = False
 
@@ -130,6 +138,9 @@ class OrchestratorConfig(BaseModel):
     # Stress-test knobs
     observation_noise_probability: float = 0.0
     observation_noise_std: float = 0.0
+
+    # Perturbation engine configuration
+    perturbation_config: Optional[PerturbationConfig] = None
 
 
 class EpochMetrics(BaseModel):
@@ -267,7 +278,7 @@ class Orchestrator:
         self.proxy_computer = proxy_computer or ProxyComputer()
         self.metrics_calculator = metrics_calculator or SoftMetrics(self.payoff_engine)
         self._observable_generator: ObservableGenerator = (
-            observable_generator or DefaultObservableGenerator()
+            observable_generator or DefaultObservableGenerator(rng=self._rng)
         )
 
         # Governance engine (injectable)
@@ -280,6 +291,19 @@ class Orchestrator:
             )
         else:
             self.governance_engine = None
+
+        # Perturbation engine
+        if self.config.perturbation_config is not None:
+            self._perturbation_engine: Optional[PerturbationEngine] = (
+                PerturbationEngine(
+                    config=self.config.perturbation_config,
+                    state=self.state,
+                    network=self.network,
+                    governance_engine=self.governance_engine,
+                )
+            )
+        else:
+            self._perturbation_engine = None
 
         # Event bus (central publish-subscribe for all events)
         self._event_bus = EventBus()
@@ -370,6 +394,16 @@ class Orchestrator:
             self._handler_registry.register(self._kernel_handler)
         else:
             self._kernel_handler = None
+
+        # Rivals handler (Team-of-Rivals pipeline)
+        if self.config.rivals_config is not None:
+            self._rivals_handler: Optional[RivalsHandler] = RivalsHandler(
+                config=self.config.rivals_config,
+                event_bus=self._event_bus,
+            )
+            self._handler_registry.register(self._rivals_handler)
+        else:
+            self._rivals_handler = None
 
         # Boundary handler
         if self.config.enable_boundaries:
@@ -581,11 +615,14 @@ class Orchestrator:
         """Shared epoch-start logic for sync and async paths."""
         self._update_adaptive_governance()
 
+        if self._perturbation_engine is not None:
+            self._perturbation_engine.on_epoch_start(self.state.current_epoch)
+
         for handler in self._handler_registry.all_handlers():
             try:
                 handler.on_epoch_start(self.state)
             except Exception:
-                pass  # handler hook failures must not break simulation
+                logger.debug("Handler %s.on_epoch_start failed", type(handler).__name__, exc_info=True)
 
         if self.governance_engine:
             gov_effect = self.governance_engine.apply_epoch_start(
@@ -599,7 +636,7 @@ class Orchestrator:
             try:
                 handler.on_epoch_end(self.state)
             except Exception:
-                pass  # handler hook failures must not break simulation
+                logger.debug("Handler %s.on_epoch_end failed", type(handler).__name__, exc_info=True)
 
         if self.network is not None:
             pruned = self.network.decay_edges()
@@ -613,6 +650,23 @@ class Orchestrator:
                 )
 
         self._apply_agent_memory_decay(epoch_start)
+
+        # Check condition-triggered perturbation shocks against epoch metrics
+        if self._perturbation_engine is not None:
+            epoch_metrics_dict = {
+                "epoch": epoch_start,
+                "toxicity_rate": 0.0,
+                "quality_gap": 0.0,
+            }
+            interactions = self.state.completed_interactions
+            if interactions:
+                epoch_metrics_dict["toxicity_rate"] = (
+                    self.metrics_calculator.toxicity_rate(interactions)
+                )
+                epoch_metrics_dict["quality_gap"] = (
+                    self.metrics_calculator.quality_gap(interactions)
+                )
+            self._perturbation_engine.check_condition(epoch_metrics_dict)
 
         metrics = self._compute_epoch_metrics()
 
@@ -629,6 +683,11 @@ class Orchestrator:
 
     def _step_preamble(self) -> None:
         """Shared step-start logic for sync and async paths."""
+        if self._perturbation_engine is not None:
+            self._perturbation_engine.on_step_start(
+                self.state.current_epoch, self.state.current_step
+            )
+
         if (
             self.governance_engine
             and self.governance_engine.config.adaptive_use_behavioral_features
@@ -645,15 +704,22 @@ class Orchestrator:
             try:
                 handler.on_step(self.state, self.state.current_step)
             except Exception:
-                pass  # handler hook failures must not break simulation
+                logger.debug("Handler %s.on_step failed", type(handler).__name__, exc_info=True)
 
     def _get_eligible_agents(self) -> List[str]:
         """Return agents eligible to act this step (respects schedule, limits, governance)."""
         agent_order = self._get_agent_schedule()
+        dropped = (
+            self._perturbation_engine.get_dropped_agents()
+            if self._perturbation_engine is not None
+            else set()
+        )
         eligible: List[str] = []
         for agent_id in agent_order:
             if len(eligible) >= self.config.max_actions_per_step:
                 break
+            if agent_id in dropped:
+                continue
             if not self.state.can_agent_act(agent_id):
                 continue
             if self.governance_engine and not self.governance_engine.can_agent_act(
@@ -832,6 +898,7 @@ class Orchestrator:
         try:
             result = handler.handle_action(action, self.state)
         except Exception:
+            logger.debug("Handler %s.handle_action failed", type(handler).__name__, exc_info=True)
             return False
 
         if not result.success:
@@ -888,7 +955,7 @@ class Orchestrator:
         try:
             handler.post_finalize(result, interaction, gov_effect, self.state)
         except Exception:
-            pass  # post_finalize failures must not break the action
+            logger.debug("Handler %s.post_finalize failed", type(handler).__name__, exc_info=True)
 
         return True
 
@@ -977,11 +1044,13 @@ class Orchestrator:
         self._spawn_counter += 1
         child_id = f"{parent_id}_child{self._spawn_counter}"
 
-        # Instantiate child agent
-        child_agent = agent_class(
+        # Instantiate child agent (concrete subclasses set their own agent_type)
+        child_rng = random.Random((self.config.seed or 0) + self._spawn_counter)
+        child_agent = agent_class(  # type: ignore[call-arg]
             agent_id=child_id,
             name=child_id,
             config=child_config if child_config else None,
+            rng=child_rng,
         )
         self._agents[child_id] = child_agent
 

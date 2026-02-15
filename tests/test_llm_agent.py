@@ -643,7 +643,7 @@ class TestNewProviderCostTracking:
     @pytest.mark.parametrize(
         "model",
         [
-            "llama-3.1-70b-versatile",
+            "llama-3.3-70b-versatile",
             "mixtral-8x7b-32768",
             "meta-llama/Meta-Llama-3.1-70B-Instruct-Turbo",
             "deepseek-chat",

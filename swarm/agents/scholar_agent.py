@@ -30,6 +30,7 @@ class BaseScholarAgent(BaseAgent):
         config: Optional[Dict] = None,
         name: Optional[str] = None,
         memory_config: Optional["MemoryConfig"] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -38,9 +39,9 @@ class BaseScholarAgent(BaseAgent):
             config=config or {},
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
         self.entailment_accuracy = entailment_accuracy
-        self._rng = random.Random(config.get("seed") if config else None)
 
     def accept_interaction(
         self,
@@ -51,7 +52,7 @@ class BaseScholarAgent(BaseAgent):
         if proposal.interaction_type == InteractionType.COLLABORATION:
             return True
         trust = self.compute_counterparty_trust(proposal.initiator_id)
-        return trust >= 0.4
+        return bool(trust >= 0.4)
 
     def propose_interaction(
         self,
@@ -131,6 +132,7 @@ class RetrieverAgent(BaseScholarAgent):
         config: Optional[Dict] = None,
         name: Optional[str] = None,
         memory_config: Optional["MemoryConfig"] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -140,6 +142,7 @@ class RetrieverAgent(BaseScholarAgent):
             config=config,
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
         self.bias = bias
 
@@ -176,6 +179,7 @@ class SynthesizerAgent(BaseScholarAgent):
         config: Optional[Dict] = None,
         name: Optional[str] = None,
         memory_config: Optional["MemoryConfig"] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -185,6 +189,7 @@ class SynthesizerAgent(BaseScholarAgent):
             config=config,
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
 
     def act(self, observation: Observation) -> Action:
@@ -249,6 +254,7 @@ class VerifierAgent(BaseScholarAgent):
         config: Optional[Dict] = None,
         name: Optional[str] = None,
         memory_config: Optional["MemoryConfig"] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -258,6 +264,7 @@ class VerifierAgent(BaseScholarAgent):
             config=config,
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
         self.accuracy = accuracy
 
@@ -327,6 +334,7 @@ class AdversarialRetrieverAgent(BaseScholarAgent):
         config: Optional[Dict] = None,
         name: Optional[str] = None,
         memory_config: Optional["MemoryConfig"] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -336,6 +344,7 @@ class AdversarialRetrieverAgent(BaseScholarAgent):
             config=config,
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
         self.attack_strategy = attack_strategy
         self.attack_rate = attack_rate
@@ -435,6 +444,7 @@ class AdversarialSynthesizerAgent(BaseScholarAgent):
         config: Optional[Dict] = None,
         name: Optional[str] = None,
         memory_config: Optional["MemoryConfig"] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -444,6 +454,7 @@ class AdversarialSynthesizerAgent(BaseScholarAgent):
             config=config,
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
         self.hallucination_rate = hallucination_rate
 
@@ -510,5 +521,5 @@ class AdversarialSynthesizerAgent(BaseScholarAgent):
         words = query_text.split()
         topic = " ".join(words[2:6]) if len(words) > 4 else query_text
 
-        template = self._rng.choice(templates)
+        template: str = self._rng.choice(templates)
         return template.format(topic=topic)

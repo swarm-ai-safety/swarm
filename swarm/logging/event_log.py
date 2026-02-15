@@ -1,6 +1,7 @@
 """Append-only JSONL event logger."""
 
 import json
+import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
@@ -25,6 +26,7 @@ class EventLog:
             path: Path to the JSONL log file
         """
         self.path = Path(path)
+        self._lock = threading.Lock()
         self._ensure_parent_exists()
 
     def _ensure_parent_exists(self) -> None:
@@ -38,8 +40,9 @@ class EventLog:
         Args:
             event: Event to append
         """
-        with open(self.path, "a") as f:
-            f.write(json.dumps(event.to_dict()) + "\n")
+        with self._lock:
+            with open(self.path, "a") as f:
+                f.write(json.dumps(event.to_dict()) + "\n")
 
     def append_many(self, events: List[Event]) -> None:
         """
@@ -48,9 +51,10 @@ class EventLog:
         Args:
             events: List of events to append
         """
-        with open(self.path, "a") as f:
-            for event in events:
-                f.write(json.dumps(event.to_dict()) + "\n")
+        with self._lock:
+            with open(self.path, "a") as f:
+                for event in events:
+                    f.write(json.dumps(event.to_dict()) + "\n")
 
     def replay(self) -> Iterator[Event]:
         """
@@ -210,9 +214,15 @@ class EventLog:
         return last
 
     def clear(self) -> None:
-        """Clear the log file (destructive)."""
+        """Archive the current log and start fresh.
+
+        Preserves append-only semantics by rotating the existing file
+        to ``<name>.cleared_<timestamp>.jsonl`` before truncating.
+        If the log file does not exist, this is a no-op.
+        """
         if self.path.exists():
-            self.path.unlink()
+            self.rotate(suffix="cleared_" + datetime.now().strftime("%Y%m%d_%H%M%S"))
+            # rotate() moves the file, so nothing left to delete
 
     def rotate(self, suffix: Optional[str] = None) -> Path:
         """

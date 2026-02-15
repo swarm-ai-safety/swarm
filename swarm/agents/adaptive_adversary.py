@@ -5,7 +5,6 @@ based on what behaviors get detected and penalized. They use reinforcement
 learning-style updates to evolve more effective attack strategies.
 """
 
-import random
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional, Set
@@ -158,6 +157,7 @@ class AdaptiveAdversary(BaseAgent):
         heat_threshold: float = 0.6,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng=None,
     ):
         """Initialize adaptive adversary."""
         super().__init__(
@@ -165,6 +165,7 @@ class AdaptiveAdversary(BaseAgent):
             agent_type=AgentType.ADVERSARIAL,
             config=config or {},
             name=name,
+            rng=rng,
         )
 
         # Learning parameters (can be overridden by config)
@@ -196,11 +197,13 @@ class AdaptiveAdversary(BaseAgent):
                 AttackStrategy.INTERMITTENT,
                 AttackStrategy.MIMICRY,
             ]
-            return random.choice(evasion_strategies)
+            strategy: AttackStrategy = self._rng.choice(evasion_strategies)
+            return strategy
 
         # Exploration
-        if random.random() < self.exploration_rate:
-            return random.choice(list(AttackStrategy))
+        if self._rng.random() < self.exploration_rate:
+            strategy = self._rng.choice(list(AttackStrategy))
+            return strategy
 
         # Exploitation: choose best performing strategy
         best_strategy = max(
@@ -293,7 +296,7 @@ class AdaptiveAdversary(BaseAgent):
     def _act_innocently(self, observation: Observation) -> Action:
         """Act like an honest agent to reduce heat."""
         # Post helpful content
-        if random.random() < 0.3:
+        if self._rng.random() < 0.3:
             return Action(
                 action_type=ActionType.POST,
                 content="Here's a helpful update on recent progress.",
@@ -322,8 +325,8 @@ class AdaptiveAdversary(BaseAgent):
                 a for a in observation.visible_agents if a.get("agent_type") == "honest"
             ]
 
-            if honest_agents and random.random() < 0.5:
-                target = random.choice(honest_agents)
+            if honest_agents and self._rng.random() < 0.5:
+                target = self._rng.choice(honest_agents)
                 return Action(
                     action_type=ActionType.PROPOSE_INTERACTION,
                     target_id=target.get("agent_id") or "",
@@ -350,7 +353,7 @@ class AdaptiveAdversary(BaseAgent):
 
         if allies:
             # Collaborate with ally
-            ally = random.choice(allies)
+            ally = self._rng.choice(allies)
             return Action(
                 action_type=ActionType.PROPOSE_INTERACTION,
                 target_id=ally.get("agent_id") or "",
@@ -363,7 +366,7 @@ class AdaptiveAdversary(BaseAgent):
     def _act_low_profile(self, observation: Observation) -> Action:
         """Stay under the radar."""
         # Minimal activity
-        if random.random() < 0.7:
+        if self._rng.random() < 0.7:
             return Action(action_type=ActionType.NOOP)
 
         # Occasional innocent post
@@ -383,9 +386,9 @@ class AdaptiveAdversary(BaseAgent):
             return self._act_innocently(observation)
 
         # Mimic their activity patterns
-        if random.random() < 0.4:
+        if self._rng.random() < 0.4:
             # Collaborate like honest agents do
-            target = random.choice(honest_agents)
+            target = self._rng.choice(honest_agents)
             return Action(
                 action_type=ActionType.PROPOSE_INTERACTION,
                 target_id=target.get("agent_id") or "",
@@ -434,7 +437,7 @@ class AdaptiveAdversary(BaseAgent):
                 if a.get("agent_id") in self.memory.vulnerable_targets
             ]
             if targets:
-                target = random.choice(targets)
+                target = self._rng.choice(targets)
                 # Set cooldown after attack
                 self.attack_cooldown = 3
                 return Action(
@@ -468,7 +471,7 @@ class AdaptiveAdversary(BaseAgent):
             weights = {s: w / total for s, w in weights.items()}
 
         # Sample strategy
-        r = random.random()
+        r = self._rng.random()
         cumsum = 0.0
         for strategy, weight in weights.items():
             cumsum += weight
@@ -489,8 +492,8 @@ class AdaptiveAdversary(BaseAgent):
             or a.get("agent_type") == "honest"
         ]
 
-        if targets and random.random() < 0.5:
-            target = random.choice(targets)
+        if targets and self._rng.random() < 0.5:
+            target = self._rng.choice(targets)
             return Action(
                 action_type=ActionType.PROPOSE_INTERACTION,
                 target_id=target.get("agent_id") or "",
@@ -524,7 +527,7 @@ class AdaptiveAdversary(BaseAgent):
             return True
 
         # Otherwise, accept based on expected payoff
-        return random.random() < 0.6
+        return bool(self._rng.random() < 0.6)
 
     def propose_interaction(
         self,
@@ -539,7 +542,7 @@ class AdaptiveAdversary(BaseAgent):
         # Only propose if there's strategic value
         if not (is_ally or is_target):
             # Small chance to propose to random agents
-            if random.random() > 0.2:
+            if self._rng.random() > 0.2:
                 return None
 
         # Determine interaction type based on strategy

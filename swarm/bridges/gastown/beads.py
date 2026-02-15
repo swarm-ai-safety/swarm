@@ -13,6 +13,11 @@ from swarm.bridges.gastown.events import GasTownEvent, GasTownEventType
 
 logger = logging.getLogger(__name__)
 
+# Allowlist of valid table names for SQL query interpolation.
+# Table names cannot be parameterized in SQLite, so we use f-string interpolation
+# with strict validation to prevent SQL injection.
+_VALID_TABLES = frozenset({"issues", "beads"})
+
 # Mapping from bead status strings to event types for state transitions.
 _STATE_EVENT_MAP: Dict[str, GasTownEventType] = {
     "open": GasTownEventType.BEAD_CREATED,
@@ -37,6 +42,11 @@ class BeadsClient:
         self._conn = sqlite3.connect(uri, uri=True)
         self._conn.row_factory = sqlite3.Row
         self._table = self._detect_table()
+        # Validate table name is from allowlist (SQL injection prevention).
+        # f-string interpolation on lines 68, 72, 78 is safe because _table
+        # is guaranteed to be "issues" or "beads" (cannot be parameterized).
+        if self._table not in _VALID_TABLES:
+            raise ValueError(f"Invalid table name: {self._table!r}")
         # Track last-seen state per bead to detect transitions.
         self._last_states: Dict[str, str] = {}
 

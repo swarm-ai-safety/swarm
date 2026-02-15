@@ -206,6 +206,8 @@ class ObservationBuilder:
             kernel_pending_submissions=handler_fields.get("kernel_pending_submissions", []),
             kernel_submissions_to_verify=handler_fields.get("kernel_submissions_to_verify", []),
             kernel_submission_history=handler_fields.get("kernel_submission_history", []),
+            # Rivals (Team-of-Rivals) fields
+            rivals_assignments=handler_fields.get("rivals_assignments", []),
             # Spawn fields
             can_spawn=can_spawn,
             spawn_depth=spawn_depth,

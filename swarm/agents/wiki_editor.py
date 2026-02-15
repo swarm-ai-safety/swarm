@@ -16,6 +16,7 @@ class DiligentEditorAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -23,6 +24,7 @@ class DiligentEditorAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
         self.create_probability = self.config.get("create_probability", 0.2)
 
@@ -45,7 +47,7 @@ class DiligentEditorAgent(BaseAgent):
                 page["page_id"], content=self._improve_content(page)
             )
 
-        if random.random() < self.create_probability:
+        if self._rng.random() < self.create_probability:
             return self.create_page_action(
                 title=f"Moltipedia Entry {self.agent_id}",
                 content="A draft entry following editorial policy.",
@@ -73,6 +75,7 @@ class PointFarmerAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -80,6 +83,7 @@ class PointFarmerAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
         self.stub_probability = self.config.get("stub_probability", 0.4)
 
@@ -90,13 +94,13 @@ class PointFarmerAgent(BaseAgent):
                 page["page_id"], content=self._quick_fix(page)
             )
 
-        if observation.random_pages and random.random() < 0.6:
+        if observation.random_pages and self._rng.random() < 0.6:
             page = observation.random_pages[0]
             return self.create_edit_page_action(
                 page["page_id"], content=self._quick_fix(page)
             )
 
-        if random.random() < self.stub_probability:
+        if self._rng.random() < self.stub_probability:
             return self.create_page_action(
                 title="Quick Stub",
                 content="Short stub for later expansion.",
@@ -124,6 +128,7 @@ class CollusiveEditorAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -131,6 +136,7 @@ class CollusiveEditorAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
         self.partner_id = self.config.get("partner_id")
 
@@ -169,7 +175,7 @@ class CollusiveEditorAgent(BaseAgent):
             + observation.random_pages
         ):
             if page.get("created_by") == self.partner_id:
-                return page
+                return dict(page)
         return None
 
     def _polish(self, page: Dict) -> str:
@@ -186,6 +192,7 @@ class VandalAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -193,6 +200,7 @@ class VandalAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
 
     def act(self, observation: Observation) -> Action:

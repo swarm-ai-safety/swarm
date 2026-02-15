@@ -6,7 +6,6 @@ naively (like HonestAgent), while level N agents best-respond assuming
 counterparties play at level N-1.
 """
 
-import random
 from collections import deque
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
@@ -140,6 +139,7 @@ class RLMAgent(BaseAgent):
         config: Optional[Dict] = None,
         name: Optional[str] = None,
         memory_config: Optional["MemoryConfig"] = None,
+        rng=None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -148,6 +148,7 @@ class RLMAgent(BaseAgent):
             config=config or {},
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
 
         # RLM-specific parameters
@@ -177,7 +178,7 @@ class RLMAgent(BaseAgent):
             # Strategic acceptance: higher recursion considers counterparty intent
             accept_prob = 0.5 + 0.1 * min(self.recursion_depth, 5) * (trust - 0.5)
             accept_prob = max(0.0, min(1.0, accept_prob + 0.1 * model.cooperation_rate))
-            if random.random() < accept_prob:
+            if self._rng.random() < accept_prob:
                 return self.create_accept_action(proposal["proposal_id"])
             else:
                 return self.create_reject_action(proposal["proposal_id"])
@@ -217,7 +218,7 @@ class RLMAgent(BaseAgent):
         horizon_bonus = 0.02 * min(self.planning_horizon, 10)
         base_prob += horizon_bonus
 
-        return bool(random.random() < max(0.0, min(1.0, base_prob)))
+        return bool(self._rng.random() < max(0.0, min(1.0, base_prob)))
 
     def propose_interaction(
         self,
@@ -345,8 +346,8 @@ class RLMAgent(BaseAgent):
 
         # Epsilon-greedy exploration: rate decreases with depth
         epsilon = 0.1 / (depth + 1)
-        if random.random() < epsilon and len(candidates) > 1:
-            best_action = random.choice(candidates)
+        if self._rng.random() < epsilon and len(candidates) > 1:
+            best_action = self._rng.choice(candidates)
 
         trace = {
             "depth": depth,
@@ -377,7 +378,7 @@ class RLMAgent(BaseAgent):
                 )
 
         # Fallback: post or noop
-        if observation.can_post and random.random() < 0.3:
+        if observation.can_post and self._rng.random() < 0.3:
             return self.create_post_action("Sharing strategic insights.")
 
         if observation.available_tasks and observation.can_claim_task:
@@ -473,7 +474,7 @@ class RLMAgent(BaseAgent):
 
         if action.action_type == ActionType.PROPOSE_INTERACTION:
             trust = self.compute_counterparty_trust(action.counterparty_id)
-            return trust * 0.5
+            return float(trust * 0.5)
 
         if action.action_type == ActionType.POST:
             return 0.15

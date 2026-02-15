@@ -20,9 +20,11 @@
    12.  Correlation penalty non-negativity
    13.  Entropy penalty non-negativity
 -/
+import SwarmProofs.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.Positivity
 import Mathlib.Analysis.SpecialFunctions.Log.Basic
 
 noncomputable section
@@ -87,18 +89,16 @@ theorem shannon_entropy_nonneg {n : ℕ} (s : Simplex n) :
     have : Real.log (s.weights i) ≤ 0 :=
       Real.log_nonpos (le_of_lt h) hw
     exact mul_nonpos_of_nonneg_of_nonpos (le_of_lt h) this
-  · le_refl
+  · linarith
 
 /-- Theorem 4: Entropy of a uniform distribution = log(n).
-    (Stated as a formula identity, not requiring simplex.) -/
+    (Stated as a formula identity.) -/
 theorem uniform_entropy_eq_log_n (n : ℕ) (hn : 0 < n) :
-    let w : ℝ := 1 / n
-    -(n : ℝ) * (w * Real.log w) = Real.log n := by
-  simp only
-  rw [div_mul_eq_mul_div, mul_comm (Real.log _), ← neg_mul,
-      Real.log_div (by positivity) (Nat.cast_ne_zero.mpr (by omega))]
-  ring_nf
-  rw [Real.log_one]; ring
+    -(n : ℝ) * ((1 / (n : ℝ)) * Real.log (1 / (n : ℝ))) = Real.log n := by
+  have hn_ne : (n : ℝ) ≠ 0 := Nat.cast_ne_zero.mpr (by omega)
+  have hn_pos : (0 : ℝ) < n := Nat.cast_pos.mpr hn
+  rw [Real.log_div one_ne_zero hn_ne, Real.log_one, zero_sub]
+  field_simp
 
 /-! ## Pearson Correlation
 
@@ -107,13 +107,15 @@ theorem uniform_entropy_eq_log_n (n : ℕ) (hn : 0 < n) :
 -/
 
 /-- Theorem 5: Pearson correlation ∈ [-1, 1].
-    This is a direct consequence of Cauchy-Schwarz. -/
-theorem pearson_bounded (cov var_x var_y : ℝ)
-    (hx : 0 < var_x) (hy : 0 < var_y)
-    (hcs : cov ^ 2 ≤ var_x * var_y)  -- Cauchy-Schwarz
-    : let rho := cov / (Real.sqrt var_x * Real.sqrt var_y)
-      -1 ≤ rho ∧ rho ≤ 1 := by
-  sorry -- Requires sqrt arithmetic; stated for completeness
+    Stated for cov/denom where cov² ≤ denom² (Cauchy-Schwarz). -/
+theorem pearson_bounded (cov denom : ℝ) (hd : 0 < denom)
+    (hcs : cov ^ 2 ≤ denom ^ 2) :
+    -1 ≤ cov / denom ∧ cov / denom ≤ 1 := by
+  constructor
+  · rw [neg_le, ← neg_div, div_le_one hd]
+    nlinarith [sq_nonneg (cov + denom)]
+  · rw [div_le_one hd]
+    nlinarith [sq_nonneg (denom - cov)]
 
 /-! ## Risk Surrogate
 
@@ -136,8 +138,13 @@ theorem risk_surrogate_nonneg (p_bar rho_bar : ℝ) (n : ℕ)
   apply mul_nonneg
   · exact mul_nonneg hp0 (by linarith)
   · have hn1 : (0 : ℝ) < (n : ℝ) - 1 := by
-      have := @Nat.cast_le ℝ _ 2 n |>.mpr hn; linarith
-    nlinarith
+      have : (2 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
+      linarith
+    have : ((n : ℝ) - 1) * rho_bar ≥ -1 := by
+      have := mul_le_mul_of_nonneg_left hrho (le_of_lt hn1)
+      rw [mul_div_cancel₀ _ (ne_of_gt hn1)] at this
+      linarith
+    linarith
 
 /-- Theorem 7: Risk vanishes under perfect accuracy (p̄ = 0). -/
 theorem risk_at_zero_error (rho_bar : ℝ) (n : ℕ) :
@@ -155,16 +162,17 @@ theorem risk_at_max_diversity (p_bar : ℝ) (n : ℕ) (hn : 2 ≤ n) :
     risk_surrogate p_bar (-1 / ((n : ℝ) - 1)) n = 0 := by
   unfold risk_surrogate
   have hn1 : (n : ℝ) - 1 ≠ 0 := by
-    have := @Nat.cast_le ℝ _ 2 n |>.mpr hn; linarith
+    have : (2 : ℝ) ≤ (n : ℝ) := by exact_mod_cast hn
+    linarith
   field_simp; ring
 
 /-- Theorem 8a: Risk is maximised at p̄ = 0.5 (fixed ρ̄, N). -/
 theorem risk_max_at_half (rho_bar : ℝ) (n : ℕ)
-    (p : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 1)
+    (p : ℝ) (_ : 0 ≤ p) (_ : p ≤ 1)
     (hfactor : 0 ≤ 1 + ((n : ℝ) - 1) * rho_bar) :
     risk_surrogate p rho_bar n ≤ risk_surrogate (1/2) rho_bar n := by
   unfold risk_surrogate
-  have : p * (1 - p) ≤ 1/2 * (1 - 1/2) := by nlinarith
+  have : p * (1 - p) ≤ 1/2 * (1 - 1/2) := by nlinarith [sq_nonneg (p - 1/2)]
   exact mul_le_mul_of_nonneg_right this hfactor
 
 /-! ## Disagreement Rate
@@ -173,25 +181,42 @@ theorem risk_max_at_half (rho_bar : ℝ) (n : ℕ)
   where count_0 + count_1 = n
 -/
 
-/-- Disagreement rate: D = 1 - majority_fraction -/
-def disagreement_rate (count_1 n : ℕ) : ℝ :=
-  if n = 0 then 0
-  else 1 - (max count_1 (n - count_1) : ℝ) / n
+/-- Disagreement rate: D = 1 - majority_fraction.
+    Uses real-valued inputs for simpler proofs. -/
+def disagreement_rate (k total : ℝ) : ℝ :=
+  if total = 0 then 0
+  else 1 - max k (total - k) / total
 
-/-- Theorem 9: Disagreement rate ∈ [0, 0.5] when count_1 ≤ n. -/
-theorem disagreement_bounded (count_1 n : ℕ) (h : count_1 ≤ n) (hn : 0 < n) :
-    0 ≤ disagreement_rate count_1 n ∧
-    disagreement_rate count_1 n ≤ 1/2 := by
-  sorry -- Requires Nat/ℝ cast arithmetic; stated for completeness
+/-- Theorem 9: Disagreement rate ∈ [0, 0.5] when 0 ≤ k ≤ total and total > 0. -/
+theorem disagreement_bounded (k total : ℝ) (hk0 : 0 ≤ k) (hkn : k ≤ total)
+    (hn : 0 < total) :
+    0 ≤ disagreement_rate k total ∧
+    disagreement_rate k total ≤ 1/2 := by
+  unfold disagreement_rate
+  rw [if_neg (ne_of_gt hn)]
+  constructor
+  · -- 0 ≤ 1 - max(k, total-k)/total, i.e. max(k, total-k) ≤ total
+    have hmax : max k (total - k) ≤ total := max_le hkn (by linarith)
+    have : max k (total - k) / total ≤ 1 := by rw [div_le_one hn]; exact hmax
+    linarith
+  · -- 1 - max(k, total-k)/total ≤ 1/2, i.e. total/2 ≤ max(k, total-k)
+    have hmid : total / 2 ≤ max k (total - k) := by
+      by_cases h : k ≤ total / 2
+      · exact (by linarith : total / 2 ≤ total - k).trans (le_max_right k (total - k))
+      · push_neg at h
+        exact (le_of_lt h).trans (le_max_left k (total - k))
+    have : 1 / 2 ≤ max k (total - k) / total := by
+      rw [le_div_iff₀ hn]; linarith
+    linarith
 
 /-- Theorem 10: Disagreement is symmetric: D(k, n) = D(n-k, n). -/
-theorem disagreement_symmetric (k n : ℕ) (h : k ≤ n) :
-    disagreement_rate k n = disagreement_rate (n - k) n := by
+theorem disagreement_symmetric (k total : ℝ) (_ : k ≤ total) :
+    disagreement_rate k total = disagreement_rate (total - k) total := by
   unfold disagreement_rate
   split_ifs with hn
   · rfl
   · congr 1; congr 1
-    have : n - (n - k) = k := Nat.sub_sub_self h
+    have : total - (total - k) = k := by ring
     rw [this, max_comm]
 
 /-! ## Governance Penalties -/

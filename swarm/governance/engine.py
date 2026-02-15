@@ -37,6 +37,7 @@ from swarm.governance.moltipedia import (
 from swarm.governance.refinery import RefineryLever
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever
 from swarm.governance.security import SecurityLever
+from swarm.governance.self_modification import SelfModificationLever
 from swarm.governance.taxes import TransactionTaxLever
 from swarm.governance.transparency import TransparencyLever
 from swarm.models.interaction import SoftInteraction
@@ -157,6 +158,10 @@ class GovernanceEngine:
         # Diversity as Defense lever
         levers.append(DiversityDefenseLever(self.config))
 
+        # Self-modification governance lever
+        if self.config.self_modification_enabled:
+            levers.append(SelfModificationLever(self.config))
+
         # Stored as a tuple so that external code cannot mutate in place.
         self._levers: tuple[GovernanceLever, ...] = tuple(levers)
 
@@ -169,6 +174,7 @@ class GovernanceEngine:
         self._moltbook_rate_limit_lever: Optional[MoltbookRateLimitLever] = None
         self._moltbook_challenge_lever: Optional[ChallengeVerificationLever] = None
         self._diversity_lever: Optional[DiversityDefenseLever] = None
+        self._self_modification_lever: Optional[SelfModificationLever] = None
 
         for lever in self._levers:
             if isinstance(lever, StakingLever):
@@ -185,6 +191,8 @@ class GovernanceEngine:
                 self._moltbook_challenge_lever = lever
             elif isinstance(lever, DiversityDefenseLever):
                 self._diversity_lever = lever
+            elif isinstance(lever, SelfModificationLever):
+                self._self_modification_lever = lever
 
         # Adaptive governance state
         self._incoherence_forecaster: Optional[Any] = None
@@ -464,3 +472,7 @@ class GovernanceEngine:
     def get_diversity_lever(self) -> Optional[DiversityDefenseLever]:
         """Return the diversity defense lever if registered."""
         return self._diversity_lever
+
+    def get_self_modification_lever(self) -> Optional[SelfModificationLever]:
+        """Return the self-modification lever if registered."""
+        return self._self_modification_lever

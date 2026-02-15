@@ -39,11 +39,11 @@ theorem toxicity_mem_Icc (p : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 1) :
   constructor <;> (unfold toxicity; linarith)
 
 /-- Toxicity is non-negative for p ∈ [0, 1]. -/
-theorem toxicity_nonneg (p : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 1) :
+theorem toxicity_nonneg (p : ℝ) (_ : 0 ≤ p) (hp1 : p ≤ 1) :
     0 ≤ toxicity p := by unfold toxicity; linarith
 
 /-- Toxicity is at most 1 for p ∈ [0, 1]. -/
-theorem toxicity_le_one (p : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 1) :
+theorem toxicity_le_one (p : ℝ) (hp0 : 0 ≤ p) (_ : p ≤ 1) :
     toxicity p ≤ 1 := by unfold toxicity; linarith
 
 /-! ## Theorem 2: Complement relation -/
@@ -100,7 +100,9 @@ theorem brier_score_bounded (p v : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 1)
     0 ≤ (p - v) ^ 2 ∧ (p - v) ^ 2 ≤ 1 := by
   constructor
   · exact sq_nonneg _
-  · rcases hv with rfl | rfl <;> nlinarith [sq_nonneg (p - v)]
+  · rcases hv with rfl | rfl
+    · nlinarith [sq_nonneg p]
+    · nlinarith [sq_nonneg (p - 1)]
 
 /-- Perfect prediction: Brier = 0. -/
 theorem brier_score_perfect (v : ℝ) : (v - v) ^ 2 = 0 := by ring

@@ -18,9 +18,13 @@
    10.  Ecosystem risk ∈ [0, 1]
    11.  Vote alignment score ∈ [0, 1]
 -/
+import SwarmProofs.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.Ring
 import Mathlib.Tactic.NormNum
+import Mathlib.Tactic.Positivity
+
+noncomputable section
 
 namespace Swarm.Collusion
 
@@ -91,7 +95,7 @@ theorem corr_score_bounded (c : ℝ) (hc : |c| ≤ 1) :
 def accept_score (rate : ℝ) : ℝ := max 0 ((rate - 1/2) * 2)
 
 /-- Theorem 3: Acceptance score ∈ [0, 1] when rate ∈ [0, 1]. -/
-theorem accept_score_bounded (r : ℝ) (h0 : 0 ≤ r) (h1 : r ≤ 1) :
+theorem accept_score_bounded (r : ℝ) (_ : 0 ≤ r) (h1 : r ≤ 1) :
     0 ≤ accept_score r ∧ accept_score r ≤ 1 := by
   unfold accept_score
   constructor
@@ -110,7 +114,7 @@ def quality_score (avg_p acceptance_rate : ℝ) : ℝ :=
   else 0
 
 /-- Theorem 4: Quality score ∈ [0, 1] when avg_p ∈ [0, 1]. -/
-theorem quality_score_bounded (p r : ℝ) (hp0 : 0 ≤ p) (hp1 : p ≤ 1) :
+theorem quality_score_bounded (p r : ℝ) (hp0 : 0 ≤ p) (_ : p ≤ 1) :
     0 ≤ quality_score p r ∧ quality_score p r ≤ 1 := by
   unfold quality_score; split_ifs
   · constructor
@@ -233,6 +237,6 @@ theorem alignment_bounded (a ct : ℝ)
   rw [if_pos hct]
   constructor
   · exact div_nonneg ha (le_of_lt hct)
-  · exact div_le_one_of_le hle (le_of_lt hct)
+  · rw [div_le_one₀ hct]; exact hle
 
 end Swarm.Collusion

@@ -1,6 +1,5 @@
 """Adversarial agent policy implementation."""
 
-import random
 from typing import Dict, List, Optional, Set
 
 from swarm.agents.base import (
@@ -33,6 +32,7 @@ class AdversarialAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng=None,
     ):
         """Initialize adversarial agent."""
         super().__init__(
@@ -41,6 +41,7 @@ class AdversarialAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
 
         # Adversarial parameters
@@ -75,11 +76,11 @@ class AdversarialAgent(BaseAgent):
         self._update_targets(observation)
 
         # Post bait bounties to waste others' resources
-        if observation.agent_state.resources > 10 and random.random() < 0.2:
+        if observation.agent_state.resources > 10 and self._rng.random() < 0.2:
             return self._post_bait_bounty(observation)
 
         # File frivolous disputes on active escrows
-        if observation.active_escrows and random.random() < 0.4:
+        if observation.active_escrows and self._rng.random() < 0.4:
             return self._file_frivolous_dispute(observation)
 
         # Handle pending proposals
@@ -88,14 +89,14 @@ class AdversarialAgent(BaseAgent):
             return self._handle_proposal(proposal, observation)
 
         # Attack mode
-        if self._attack_cooldown == 0 and random.random() < self.attack_probability:
+        if self._attack_cooldown == 0 and self._rng.random() < self.attack_probability:
             action = self._execute_attack(observation)
             if action.action_type != ActionType.NOOP:
                 self._attack_cooldown = 2  # Cooldown between attacks
                 return action
 
         # Disruptive posting
-        if observation.can_post and random.random() < self.post_probability:
+        if observation.can_post and self._rng.random() < self.post_probability:
             content = self._generate_disruptive_content()
             return self.create_post_action(content)
 
@@ -133,9 +134,9 @@ class AdversarialAgent(BaseAgent):
 
         # Reject collaboration (wastes resources)
         if proposal.interaction_type == InteractionType.COLLABORATION:
-            return random.random() < 0.3
+            return bool(self._rng.random() < 0.3)
 
-        return random.random() < 0.5
+        return bool(self._rng.random() < 0.5)
 
     def propose_interaction(
         self,
@@ -173,7 +174,7 @@ class AdversarialAgent(BaseAgent):
 
     def _post_bait_bounty(self, observation: Observation) -> Action:
         """Post a deceptive bounty to waste others' time."""
-        reward = random.uniform(1.0, 5.0)
+        reward = self._rng.uniform(1.0, 5.0)
         return self.create_post_bounty_action(
             reward_amount=reward,
             task_description="Easy task with great reward potential!",
@@ -185,7 +186,7 @@ class AdversarialAgent(BaseAgent):
         escrows = observation.active_escrows
         if not escrows:
             return self.create_noop_action()
-        escrow = random.choice(escrows)
+        escrow = self._rng.choice(escrows)
         return self.create_file_dispute_action(
             escrow_id=escrow["escrow_id"],
             reason="Quality of work is unsatisfactory.",
@@ -221,7 +222,7 @@ class AdversarialAgent(BaseAgent):
             return self.create_accept_action(proposal_id)
 
         # Probabilistic acceptance
-        if random.random() < 0.4:
+        if self._rng.random() < 0.4:
             return self.create_accept_action(proposal_id)
 
         return self.create_reject_action(proposal_id)
@@ -237,7 +238,7 @@ class AdversarialAgent(BaseAgent):
             ]
 
             if targets:
-                target = random.choice(targets)
+                target = self._rng.choice(targets)
                 return self.create_propose_action(
                     counterparty_id=target or "",
                     interaction_type=InteractionType.TRADE,
@@ -271,7 +272,8 @@ class AdversarialAgent(BaseAgent):
             "The game is rigged against honest players.",
             "[inflammatory content to derail discussions]",
         ]
-        return random.choice(content_options)
+        result: str = self._rng.choice(content_options)
+        return result
 
     def _generate_attack_content(self) -> str:
         """Generate attack-focused content."""
@@ -281,7 +283,8 @@ class AdversarialAgent(BaseAgent):
             "Exclusive insider information: [false claims]",
             "Breaking: [fabricated controversy]",
         ]
-        return random.choice(content_options)
+        result: str = self._rng.choice(content_options)
+        return result
 
     def _vote_to_harm(self, observation: Observation) -> Action:
         """Vote to harm target reputation."""
@@ -313,7 +316,7 @@ class AdversarialAgent(BaseAgent):
         target_agents = [a for a in agents if a.get("agent_id") in self._target_list]
 
         if target_agents:
-            target = random.choice(target_agents)
+            target = self._rng.choice(target_agents)
             return self.create_propose_action(
                 counterparty_id=target.get("agent_id", ""),
                 interaction_type=InteractionType.TRADE,
@@ -323,7 +326,7 @@ class AdversarialAgent(BaseAgent):
         # Fall back to random agent
         non_self = [a for a in agents if a.get("agent_id") != self.agent_id]
         if non_self:
-            target = random.choice(non_self)
+            target = self._rng.choice(non_self)
             return self.create_propose_action(
                 counterparty_id=target.get("agent_id", ""),
                 interaction_type=InteractionType.TRADE,

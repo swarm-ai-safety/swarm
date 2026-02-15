@@ -75,12 +75,11 @@ theorem sigmoid_strictMono (k : ℝ) (hk : 0 < k) :
     StrictMono (sigmoid k) := by
   intro a b hab
   unfold sigmoid
-  have hb_pos := one_plus_exp_pos (-k * b)
   have ha_pos := one_plus_exp_pos (-k * a)
-  rw [div_lt_div_iff ha_pos hb_pos]
-  simp only [one_mul]
-  apply add_lt_add_left
-  exact exp_lt_exp.mpr (by nlinarith)
+  have hb_pos := one_plus_exp_pos (-k * b)
+  have hexp : exp (-k * b) < exp (-k * a) := exp_lt_exp.mpr (by nlinarith)
+  rw [div_lt_div_iff₀ ha_pos hb_pos]
+  linarith
 
 theorem sigmoid_mono (k : ℝ) (hk : 0 ≤ k) :
     Monotone (sigmoid k) := by

@@ -477,15 +477,19 @@ class TestLastEvent:
 class TestClearAndRotate:
     """Tests for clear and rotate."""
 
-    def test_clear_removes_file(self, tmp_path):
-        """clear() deletes the log file."""
+    def test_clear_archives_file(self, tmp_path):
+        """clear() archives the log and leaves count at 0."""
         log = EventLog(tmp_path / "log.jsonl")
         log.append(_make_event())
         assert log.path.exists()
 
         log.clear()
+        # Original path should no longer exist (was rotated)
         assert not log.path.exists()
         assert log.count() == 0
+        # An archived copy should exist in the same directory
+        archived = list(tmp_path.glob("log.cleared_*.jsonl"))
+        assert len(archived) == 1
 
     def test_clear_nonexistent_file(self, tmp_path):
         """clear() on non-existent file does not raise."""

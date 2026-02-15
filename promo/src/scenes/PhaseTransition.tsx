@@ -2,59 +2,36 @@ import React from "react";
 import { AbsoluteFill, useCurrentFrame, spring, interpolate } from "remotion";
 import { colors, fonts } from "../theme";
 
-const RegimeCard: React.FC<{
-  title: string;
-  adversarial: string;
-  welfare: string;
-  color: string;
-  frame: number;
-  delay: number;
-}> = ({ title, adversarial, welfare, color, frame, delay }) => {
-  const p = Math.max(
-    0,
-    spring({ frame: frame - delay, fps: 30, config: { damping: 200 } }),
-  );
-
-  return (
-    <div
-      style={{
-        opacity: p,
-        transform: `translateY(${interpolate(p, [0, 1], [40, 0])}px)`,
-        background: `${color}10`,
-        border: `2px solid ${color}40`,
-        borderRadius: 20,
-        padding: "36px 44px",
-        width: 340,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 16,
-      }}
-    >
-      <span style={{ fontSize: 36, fontWeight: 700, color }}>{title}</span>
-      <span style={{ fontSize: 22, color: colors.textDim }}>
-        Adversarial: {adversarial}
-      </span>
-      <span style={{ fontSize: 22, color: colors.textDim }}>
-        Welfare: {welfare}
-      </span>
-    </div>
-  );
-};
-
 export const PhaseTransition: React.FC = () => {
   const frame = useCurrentFrame();
 
   const titleP = spring({ frame, fps: 30, config: { damping: 200 } });
-  const msgP = Math.max(
+
+  const taxP = Math.max(
     0,
-    spring({ frame: frame - 80, fps: 30, config: { damping: 200 } }),
+    spring({ frame: frame - 25, fps: 30, config: { damping: 200 } }),
+  );
+  const arrowP = Math.max(
+    0,
+    spring({ frame: frame - 45, fps: 30, config: { damping: 100 } }),
+  );
+  const welfareP = Math.max(
+    0,
+    spring({ frame: frame - 55, fps: 30, config: { damping: 200 } }),
+  );
+  const statsP = Math.max(
+    0,
+    spring({ frame: frame - 75, fps: 30, config: { damping: 200 } }),
+  );
+  const replicatedP = Math.max(
+    0,
+    spring({ frame: frame - 95, fps: 30, config: { damping: 200 } }),
   );
 
   return (
     <AbsoluteFill
       style={{
-        background: `radial-gradient(ellipse at 50% 60%, ${colors.warning}08, ${colors.bg} 70%)`,
+        background: `radial-gradient(ellipse at 50% 50%, ${colors.accent}08, ${colors.bg} 70%)`,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -77,53 +54,134 @@ export const PhaseTransition: React.FC = () => {
 
       <div
         style={{
-          fontSize: 60,
+          fontSize: 52,
           fontWeight: 700,
           color: colors.text,
           opacity: titleP,
           marginBottom: 50,
+          textAlign: "center",
+          lineHeight: 1.3,
         }}
       >
-        The Phase Transition
-      </div>
-
-      <div style={{ display: "flex", gap: 40, marginBottom: 50 }}>
-        <RegimeCard
-          title="Cooperative"
-          adversarial="0–20%"
-          welfare="Stable"
-          color={colors.success}
-          frame={frame}
-          delay={20}
-        />
-        <RegimeCard
-          title="Contested"
-          adversarial="20–37.5%"
-          welfare="Declining"
-          color={colors.warning}
-          frame={frame}
-          delay={35}
-        />
-        <RegimeCard
-          title="Collapse"
-          adversarial="50%+"
-          welfare="Zero"
-          color={colors.danger}
-          frame={frame}
-          delay={50}
-        />
+        Replicated Finding:
+        <br />
+        <span style={{ color: colors.accent }}>The Tax-Welfare Tradeoff</span>
       </div>
 
       <div
         style={{
-          fontSize: 34,
+          display: "flex",
+          alignItems: "center",
+          gap: 40,
+          marginBottom: 40,
+        }}
+      >
+        <div
+          style={{
+            opacity: taxP,
+            transform: `scale(${interpolate(taxP, [0, 1], [0.8, 1])})`,
+            background: `${colors.warning}15`,
+            border: `2px solid ${colors.warning}40`,
+            borderRadius: 16,
+            padding: "20px 36px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 48,
+              fontWeight: 800,
+              color: colors.warning,
+              fontFamily: fonts.mono,
+            }}
+          >
+            10% tax
+          </span>
+        </div>
+
+        <div
+          style={{
+            fontSize: 48,
+            color: colors.textDim,
+            opacity: arrowP,
+          }}
+        >
+          {"\u2192"}
+        </div>
+
+        <div
+          style={{
+            opacity: welfareP,
+            transform: `scale(${interpolate(welfareP, [0, 1], [0.8, 1])})`,
+            background: `${colors.danger}15`,
+            border: `2px solid ${colors.danger}40`,
+            borderRadius: 16,
+            padding: "20px 36px",
+          }}
+        >
+          <span
+            style={{
+              fontSize: 48,
+              fontWeight: 800,
+              color: colors.danger,
+              fontFamily: fonts.mono,
+            }}
+          >
+            {"\u22128.1% welfare"}
+          </span>
+        </div>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          gap: 48,
+          opacity: statsP,
+          marginBottom: 36,
+        }}
+      >
+        {[
+          { label: "p", value: "0.0007" },
+          { label: "Cohen\u2019s d", value: "0.80" },
+          { label: "runs", value: "160" },
+          { label: "seeds", value: "10" },
+        ].map(({ label, value }) => (
+          <div
+            key={label}
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+            }}
+          >
+            <span
+              style={{
+                fontSize: 36,
+                fontWeight: 700,
+                color: colors.accent,
+                fontFamily: fonts.mono,
+              }}
+            >
+              {value}
+            </span>
+            <span
+              style={{ fontSize: 20, color: colors.textDim, marginTop: 4 }}
+            >
+              {label}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      <div
+        style={{
+          fontSize: 28,
+          color: colors.success,
+          opacity: replicatedP,
           fontWeight: 600,
-          color: colors.warning,
-          opacity: msgP,
           textAlign: "center",
         }}
       >
-        Early results suggest the transition is abrupt, not gradual.
+        Survives Bonferroni correction. Replicated across 5 independent studies.
       </div>
     </AbsoluteFill>
   );

@@ -128,6 +128,7 @@ class SkillRLAgent(BaseAgent):
         memory_config: Optional["MemoryConfig"] = None,
         library_config: Optional[SkillLibraryConfig] = None,
         evolution_config: Optional[EvolutionConfig] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -136,6 +137,7 @@ class SkillRLAgent(BaseAgent):
             config=config or {},
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
 
         cfg = config or {}
@@ -297,7 +299,7 @@ class SkillRLAgent(BaseAgent):
         if (
             observation.can_interact
             and observation.visible_agents
-            and random.random() < self.skillrl_config.interact_probability
+            and self._rng.random() < self.skillrl_config.interact_probability
         ):
             candidates = [
                 a for a in observation.visible_agents
@@ -322,7 +324,7 @@ class SkillRLAgent(BaseAgent):
         # Post
         if (
             observation.can_post
-            and random.random() < self.skillrl_config.post_probability
+            and self._rng.random() < self.skillrl_config.post_probability
         ):
             return self.create_post_action("Sharing skill-augmented insights.")
 
@@ -330,9 +332,9 @@ class SkillRLAgent(BaseAgent):
         if (
             observation.can_vote
             and observation.visible_posts
-            and random.random() < self.skillrl_config.vote_probability
+            and self._rng.random() < self.skillrl_config.vote_probability
         ):
-            post = random.choice(observation.visible_posts)
+            post = self._rng.choice(observation.visible_posts)
             return self.create_vote_action(post.get("post_id", ""), 1)
 
         return self.create_noop_action()

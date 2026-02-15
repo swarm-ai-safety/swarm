@@ -7,6 +7,7 @@ accuracy, promotion, and cache control.
 """
 
 import random
+import threading
 import uuid
 from dataclasses import dataclass, field
 from enum import Enum
@@ -75,6 +76,7 @@ class MemoryStore:
     def __init__(self, seed: Optional[int] = None):
         self._entries: Dict[str, MemoryEntry] = {}
         self._rng = random.Random(seed)
+        self._lock = threading.Lock()
 
         # Hot cache: top-K entries from Tier 3 rebuilt at epoch start
         self._hot_cache: List[MemoryEntry] = []
@@ -100,18 +102,19 @@ class MemoryStore:
         step: int,
     ) -> MemoryEntry:
         """Write a new fact to Tier 1 (ephemeral)."""
-        entry = MemoryEntry(
-            content=content,
-            author_id=agent_id,
-            tier=MemoryTier.EPHEMERAL,
-            quality_score=max(0.0, min(1.0, quality_score)),
-            is_poisoned=is_poisoned,
-            created_epoch=epoch,
-            created_step=step,
-        )
-        self._entries[entry.entry_id] = entry
-        self._writes_this_epoch[agent_id] = self._writes_this_epoch.get(agent_id, 0) + 1
-        return entry
+        with self._lock:
+            entry = MemoryEntry(
+                content=content,
+                author_id=agent_id,
+                tier=MemoryTier.EPHEMERAL,
+                quality_score=max(0.0, min(1.0, quality_score)),
+                is_poisoned=is_poisoned,
+                created_epoch=epoch,
+                created_step=step,
+            )
+            self._entries[entry.entry_id] = entry
+            self._writes_this_epoch[agent_id] = self._writes_this_epoch.get(agent_id, 0) + 1
+            return entry
 
     # ------------------------------------------------------------------
     # Promote
@@ -127,36 +130,37 @@ class MemoryStore:
         Ephemeral -> Structured -> Graph.
         Returns True if promotion succeeded.
         """
-        entry = self._entries.get(entry_id)
-        if entry is None:
-            return False
-        if entry.status == MemoryEntryStatus.REVERTED:
-            return False
+        with self._lock:
+            entry = self._entries.get(entry_id)
+            if entry is None:
+                return False
+            if entry.status == MemoryEntryStatus.REVERTED:
+                return False
 
-        if entry.tier == MemoryTier.EPHEMERAL:
-            target = MemoryTier.STRUCTURED
-        elif entry.tier == MemoryTier.STRUCTURED:
-            target = MemoryTier.GRAPH
-        else:
-            return False  # Already at top tier
+            if entry.tier == MemoryTier.EPHEMERAL:
+                target = MemoryTier.STRUCTURED
+            elif entry.tier == MemoryTier.STRUCTURED:
+                target = MemoryTier.GRAPH
+            else:
+                return False  # Already at top tier
 
-        entry.status = MemoryEntryStatus.PENDING_PROMOTION
-        # Create promoted copy at new tier
-        promoted = MemoryEntry(
-            content=entry.content,
-            author_id=entry.author_id,
-            tier=target,
-            status=MemoryEntryStatus.ACTIVE,
-            quality_score=entry.quality_score,
-            is_poisoned=entry.is_poisoned,
-            created_epoch=entry.created_epoch,
-            created_step=entry.created_step,
-            promoted_from=entry.entry_id,
-            verified_by=list(entry.verified_by),
-        )
-        self._entries[promoted.entry_id] = promoted
-        entry.status = MemoryEntryStatus.PROMOTED
-        return True
+            entry.status = MemoryEntryStatus.PENDING_PROMOTION
+            # Create promoted copy at new tier
+            promoted = MemoryEntry(
+                content=entry.content,
+                author_id=entry.author_id,
+                tier=target,
+                status=MemoryEntryStatus.ACTIVE,
+                quality_score=entry.quality_score,
+                is_poisoned=entry.is_poisoned,
+                created_epoch=entry.created_epoch,
+                created_step=entry.created_step,
+                promoted_from=entry.entry_id,
+                verified_by=list(entry.verified_by),
+            )
+            self._entries[promoted.entry_id] = promoted
+            entry.status = MemoryEntryStatus.PROMOTED
+            return True
 
     # ------------------------------------------------------------------
     # Verify
@@ -208,62 +212,63 @@ class MemoryStore:
 
         Tier 1 first (hot cache + ephemeral), then Tier 2, then Tier 3.
         """
-        if not query:
-            return []
+        with self._lock:
+            if not query:
+                return []
 
-        query_lower = query.lower()
-        results: List[MemoryEntry] = []
-        seen_ids: set = set()
+            query_lower = query.lower()
+            results: List[MemoryEntry] = []
+            seen_ids: set = set()
 
-        # Tier 1: hot cache + ephemeral entries
-        for entry in self._hot_cache:
-            if entry.entry_id not in seen_ids and query_lower in entry.content.lower():
-                results.append(entry)
-                seen_ids.add(entry.entry_id)
+            # Tier 1: hot cache + ephemeral entries
+            for entry in self._hot_cache:
+                if entry.entry_id not in seen_ids and query_lower in entry.content.lower():
+                    results.append(entry)
+                    seen_ids.add(entry.entry_id)
 
-        for entry in self._entries.values():
-            if (
-                entry.entry_id not in seen_ids
-                and entry.tier == MemoryTier.EPHEMERAL
-                and entry.status == MemoryEntryStatus.ACTIVE
-                and query_lower in entry.content.lower()
-            ):
-                results.append(entry)
-                seen_ids.add(entry.entry_id)
+            for entry in self._entries.values():
+                if (
+                    entry.entry_id not in seen_ids
+                    and entry.tier == MemoryTier.EPHEMERAL
+                    and entry.status == MemoryEntryStatus.ACTIVE
+                    and query_lower in entry.content.lower()
+                ):
+                    results.append(entry)
+                    seen_ids.add(entry.entry_id)
 
-        # Check if Tier 1 is sufficient (~80% of queries)
-        if len(results) >= limit:
+            # Check if Tier 1 is sufficient (~80% of queries)
+            if len(results) >= limit:
+                self._record_search_hit(agent_id, len(results))
+                return results[:limit]
+
+            # Tier 2: structured entries
+            for entry in self._entries.values():
+                if (
+                    entry.entry_id not in seen_ids
+                    and entry.tier == MemoryTier.STRUCTURED
+                    and entry.status == MemoryEntryStatus.ACTIVE
+                    and query_lower in entry.content.lower()
+                ):
+                    results.append(entry)
+                    seen_ids.add(entry.entry_id)
+
+            if len(results) >= limit:
+                self._record_search_hit(agent_id, len(results))
+                return results[:limit]
+
+            # Tier 3: graph entries
+            for entry in self._entries.values():
+                if (
+                    entry.entry_id not in seen_ids
+                    and entry.tier == MemoryTier.GRAPH
+                    and entry.status == MemoryEntryStatus.ACTIVE
+                    and query_lower in entry.content.lower()
+                ):
+                    results.append(entry)
+                    seen_ids.add(entry.entry_id)
+
             self._record_search_hit(agent_id, len(results))
             return results[:limit]
-
-        # Tier 2: structured entries
-        for entry in self._entries.values():
-            if (
-                entry.entry_id not in seen_ids
-                and entry.tier == MemoryTier.STRUCTURED
-                and entry.status == MemoryEntryStatus.ACTIVE
-                and query_lower in entry.content.lower()
-            ):
-                results.append(entry)
-                seen_ids.add(entry.entry_id)
-
-        if len(results) >= limit:
-            self._record_search_hit(agent_id, len(results))
-            return results[:limit]
-
-        # Tier 3: graph entries
-        for entry in self._entries.values():
-            if (
-                entry.entry_id not in seen_ids
-                and entry.tier == MemoryTier.GRAPH
-                and entry.status == MemoryEntryStatus.ACTIVE
-                and query_lower in entry.content.lower()
-            ):
-                results.append(entry)
-                seen_ids.add(entry.entry_id)
-
-        self._record_search_hit(agent_id, len(results))
-        return results[:limit]
 
     def _record_search_hit(self, agent_id: str, count: int) -> None:
         self._search_hits[agent_id] = self._search_hits.get(agent_id, 0) + count
@@ -274,17 +279,18 @@ class MemoryStore:
 
     def rebuild_hot_cache(self) -> List[MemoryEntry]:
         """Rebuild hot cache from top Tier 3 entries by quality + read count."""
-        graph_entries = [
-            e
-            for e in self._entries.values()
-            if e.tier == MemoryTier.GRAPH and e.status == MemoryEntryStatus.ACTIVE
-        ]
-        graph_entries.sort(
-            key=lambda e: (e.quality_score, e.read_count),
-            reverse=True,
-        )
-        self._hot_cache = graph_entries[: self._hot_cache_size]
-        return list(self._hot_cache)
+        with self._lock:
+            graph_entries = [
+                e
+                for e in self._entries.values()
+                if e.tier == MemoryTier.GRAPH and e.status == MemoryEntryStatus.ACTIVE
+            ]
+            graph_entries.sort(
+                key=lambda e: (e.quality_score, e.read_count),
+                reverse=True,
+            )
+            self._hot_cache = graph_entries[: self._hot_cache_size]
+            return list(self._hot_cache)
 
     @property
     def hot_cache(self) -> List[MemoryEntry]:

@@ -61,6 +61,7 @@ class SelfOptimizerAgent(BaseAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng: Optional[random.Random] = None,
     ):
         super().__init__(
             agent_id=agent_id,
@@ -68,6 +69,7 @@ class SelfOptimizerAgent(BaseAgent):
             roles=roles,
             config=config or {},
             name=name,
+            rng=rng,
         )
 
         # Optimization parameters
@@ -160,7 +162,7 @@ class SelfOptimizerAgent(BaseAgent):
                 if a.get("agent_id") != self.agent_id
             ]
             if targets:
-                target = random.choice(targets)
+                target = self._rng.choice(targets)
                 return self.create_propose_action(
                     counterparty_id=target["agent_id"],
                     interaction_type=InteractionType.TRADE,
@@ -213,8 +215,8 @@ class SelfOptimizerAgent(BaseAgent):
         p stays above ``benchmark_threshold`` most of the time (passing
         hard tests) while the *distribution* shifts leftward.
         """
-        p = random.gauss(self.current_quality, noise_std)
-        return max(self.quality_floor, min(1.0, p))
+        p = self._rng.gauss(self.current_quality, noise_std)
+        return float(max(self.quality_floor, min(1.0, p)))
 
     def passes_benchmark(self, p: float) -> bool:
         """Check if quality passes the hard benchmark threshold."""

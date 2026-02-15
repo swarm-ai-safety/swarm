@@ -103,4 +103,16 @@ __all__ = [
     "group_by_epoch",
     # RLM experiment metrics
     "RLMMetrics",
+    # Rivals (Team-of-Rivals) metrics (lazy import to avoid circular dependency)
+    # Use: from swarm.metrics.rivals_metrics import compute_rivals_metrics, RivalsMetrics
 ]
+
+
+def __getattr__(name: str):
+    """Lazy import for rivals metrics to avoid circular dependency."""
+    if name in ("RivalsMetrics", "compute_rivals_metrics"):
+        from swarm.metrics.rivals_metrics import RivalsMetrics as _RM
+        from swarm.metrics.rivals_metrics import compute_rivals_metrics as _crm
+        _map = {"RivalsMetrics": _RM, "compute_rivals_metrics": _crm}
+        return _map[name]
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

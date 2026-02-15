@@ -48,7 +48,14 @@ class DefaultObservableGenerator:
     by the initiator's current reputation.  This creates a feedback
     loop: reputation decay degrades observable quality, which lowers
     the soft label p, which in turn reduces payoffs and welfare.
+
+    Accepts an optional ``random.Random`` instance for deterministic
+    signal generation.  When *rng* is ``None`` the module-level
+    ``random`` functions are used (legacy behaviour).
     """
+
+    def __init__(self, rng: random.Random | None = None) -> None:
+        self._rng: random.Random = rng or random.Random()
 
     def generate(
         self,
@@ -86,48 +93,49 @@ class DefaultObservableGenerator:
             counterparty_engagement_delta=engagement,
         )
 
-    @staticmethod
     def _base_signals(
+        self,
         agent_type: AgentType,
     ) -> tuple[float, int, int, int, float]:
         """Return (task_progress, rework, rejections, misuse, engagement)."""
+        rng = self._rng
         if agent_type == AgentType.HONEST:
             return (
-                random.uniform(0.3, 0.8),
-                random.randint(0, 1),
+                rng.uniform(0.3, 0.8),
+                rng.randint(0, 1),
                 0,
                 0,
-                random.uniform(0.2, 0.6),
+                rng.uniform(0.2, 0.6),
             )
         elif agent_type == AgentType.OPPORTUNISTIC:
             return (
-                random.uniform(0.1, 0.5),
-                random.randint(0, 2),
-                random.randint(0, 1),
+                rng.uniform(0.1, 0.5),
+                rng.randint(0, 2),
+                rng.randint(0, 1),
                 0,
-                random.uniform(-0.2, 0.3),
+                rng.uniform(-0.2, 0.3),
             )
         elif agent_type == AgentType.DECEPTIVE:
             return (
-                random.uniform(0.2, 0.6),
-                random.randint(0, 2),
-                random.randint(0, 1),
+                rng.uniform(0.2, 0.6),
+                rng.randint(0, 2),
+                rng.randint(0, 1),
                 0,
-                random.uniform(0.0, 0.4),
+                rng.uniform(0.0, 0.4),
             )
         elif agent_type == AgentType.RLM:
             return (
-                random.uniform(0.2, 0.7),
-                random.randint(0, 2),
-                random.randint(0, 1),
+                rng.uniform(0.2, 0.7),
+                rng.randint(0, 2),
+                rng.randint(0, 1),
                 0,
-                random.uniform(0.0, 0.5),
+                rng.uniform(0.0, 0.5),
             )
         else:  # Adversarial
             return (
-                random.uniform(-0.3, 0.2),
-                random.randint(1, 3),
-                random.randint(1, 2),
-                random.randint(0, 1),
-                random.uniform(-0.5, -0.1),
+                rng.uniform(-0.3, 0.2),
+                rng.randint(1, 3),
+                rng.randint(1, 2),
+                rng.randint(0, 1),
+                rng.uniform(-0.5, -0.1),
             )

@@ -268,6 +268,13 @@ class AgentNetwork:
             return 0.0
         return self._adjacency[a][b]
 
+    def add_node(self, agent_id: str) -> None:
+        """Add a node (agent) to the network if not already present."""
+        if agent_id not in self._adjacency:
+            self._adjacency[agent_id] = {}
+        if agent_id not in self._agent_ids:
+            self._agent_ids.append(agent_id)
+
     def add_edge(self, a: str, b: str, weight: float = 1.0) -> None:
         """
         Add or update edge between agents.

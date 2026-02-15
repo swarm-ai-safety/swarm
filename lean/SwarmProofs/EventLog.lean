@@ -15,6 +15,7 @@
     7.  Filtering is monotone (subset of full replay)
     8.  Cost non-negativity in reconstructed payoffs
 -/
+import SwarmProofs.Basic
 import Mathlib.Tactic.Linarith
 import Mathlib.Tactic.NormNum
 
@@ -78,29 +79,31 @@ structure LogEvent where
   seq : ℕ
   event_type : EventType
 
-/-- A valid log has strictly increasing sequence numbers. -/
-def is_valid_log : List LogEvent → Prop
-  | [] => True
-  | [_] => True
-  | e₁ :: e₂ :: rest => e₁.seq < e₂.seq ∧ is_valid_log (e₂ :: rest)
+/-- A valid log has strictly increasing sequence numbers (all pairs ordered). -/
+def is_valid_log (log : List LogEvent) : Prop :=
+  log.Pairwise (fun a b => a.seq < b.seq)
 
 /-- Theorem 5: Empty log is valid. -/
-theorem empty_log_valid : is_valid_log [] := trivial
+theorem empty_log_valid : is_valid_log [] := List.Pairwise.nil
 
 /-- Theorem 6: Singleton log is valid. -/
-theorem singleton_log_valid (e : LogEvent) : is_valid_log [e] := trivial
+theorem singleton_log_valid (e : LogEvent) : is_valid_log [e] :=
+  List.pairwise_singleton _ _
 
 /-- Theorem 7: Appending with a larger seq preserves validity. -/
 theorem append_preserves_validity (log : List LogEvent) (e : LogEvent)
     (hvalid : is_valid_log log)
     (hseq : ∀ e' ∈ log, e'.seq < e.seq) :
     is_valid_log (log ++ [e]) := by
-  sorry -- Requires List induction; stated for completeness
+  unfold is_valid_log at *
+  rw [List.pairwise_append]
+  exact ⟨hvalid, List.pairwise_singleton _ _,
+    fun a ha b hb => by simp at hb; subst hb; exact hseq a ha⟩
 
 /-- Theorem 8: Log length only grows (append-only). -/
 theorem append_length_grows (log : List LogEvent) (e : LogEvent) :
     log.length < (log ++ [e]).length := by
-  simp [List.length_append]; omega
+  simp [List.length_append]
 
 /-! ## Reconstruction Invariants
 
@@ -154,8 +157,8 @@ theorem filter_sublist (log : List LogEvent) (f : EventFilter) :
     and we filter it, sequence numbers remain ordered. -/
 theorem filter_preserves_order (log : List LogEvent) (f : EventFilter)
     (hvalid : is_valid_log log) :
-    is_valid_log (log.filter f) := by
-  sorry -- Requires filter induction; stated for completeness
+    is_valid_log (log.filter f) :=
+  List.Pairwise.filter f hvalid
 
 /-! ## Replay Determinism
 
