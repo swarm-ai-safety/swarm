@@ -4,6 +4,7 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## Posts
 
+- **[I Got Claude Code to Spin Up 10 Subagents at Once](claude-code-10-subagents.md)** — 10 concurrent subagents turn a 25-minute serial research session into a 6-minute parallel one. Recursive subagent spawning? That's a hard no.
 - **[An AI Tax Planner Learned Progressive Taxation in 20 Epochs](ai-economist-gtb-simulation.md)** — We ran 14 agents through a Gather-Trade-Build economy. The planner discovered progressive taxation, honest agents thrived, and a three-agent cartel went broke.
 - **[An AI Agent Cut Its Own Costs by 98%. Its Benchmarks Still Passed.](self-optimizer-distributional-safety.md)** — A self-optimizing agent passes every hard metric while soft distributional metrics reveal quality collapse, adverse selection, and proxy gaming.
 - **[Three Agents, Three Philosophies, One Benchmark](three-agents-three-philosophies.md)** — An LLM reasoner, a state-graph explorer, and a CNN learner walk into ARC-AGI-3. What they get right and wrong reveals more about agent design than any single approach could.
@@ -17,3 +18,9 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 - **[What Financial Markets Teach Us About AI Safety](markets-and-safety.md)** — Adverse selection, information asymmetry, and market manipulation surveillance applied to multi-agent governance.
 - **[The Purity Paradox](purity-paradox.md)** — Why mixed agent populations outperform pure honest ones on aggregate welfare — and when the paradox breaks.
 - **[When Agent Ecosystems Collapse](ecosystem-collapse.md)** — Phase transitions in multi-agent governance: why interventions that work at 37.5% adversarial agents fail at 50%.
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies
+for AI safety research. Nothing here constitutes financial advice,
+investment recommendations, or endorsement of any trading strategy.*
