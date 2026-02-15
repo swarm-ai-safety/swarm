@@ -238,8 +238,8 @@ class TestMVPv1:
         cb_gov = GovernanceConfig(
             circuit_breaker_enabled=True,
             freeze_threshold_toxicity=0.5,
-            freeze_threshold_violations=2,
-            freeze_duration_epochs=2,
+            freeze_threshold_violations=1,
+            freeze_duration_epochs=3,
         )
         cb_orch = _build_baseline_orchestrator(
             n_epochs=n_epochs,
