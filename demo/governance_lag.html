@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Governance Lag</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace; background: #0D1117; min-height: 100vh; overflow: hidden; color: #E6EDF3; }
+        #canvas-container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <script>
+    // Real epoch data from rlm_governance_lag (50 epochs, 10 agents, seed 42)
+    const epochData = [
+        {toxicity:0.343,welfare:51.76,interactions:63,accepted:58,rejected:5,quality_gap:-0.042},
+        {toxicity:0.329,welfare:60.01,interactions:64,accepted:64,rejected:0,quality_gap:0},
+        {toxicity:0.336,welfare:58.65,interactions:64,accepted:64,rejected:0,quality_gap:0},
+        {toxicity:0.340,welfare:56.76,interactions:63,accepted:63,rejected:0,quality_gap:0},
+        {toxicity:0.315,welfare:60.78,interactions:62,accepted:62,rejected:0,quality_gap:0},
+        {toxicity:0.343,welfare:56.23,interactions:63,accepted:63,rejected:0,quality_gap:0},
+        {toxicity:0.328,welfare:56.40,interactions:60,accepted:60,rejected:0,quality_gap:0},
+        {toxicity:0.323,welfare:63.07,interactions:66,accepted:66,rejected:0,quality_gap:0},
+        {toxicity:0.334,welfare:58.10,interactions:63,accepted:63,rejected:0,quality_gap:0},
+        {toxicity:0.328,welfare:60.24,interactions:64,accepted:64,rejected:0,quality_gap:0},
+        {toxicity:0.348,welfare:54.40,interactions:62,accepted:62,rejected:0,quality_gap:0},
+        {toxicity:0.329,welfare:59.90,interactions:64,accepted:64,rejected:0,quality_gap:0},
+        {toxicity:0.337,welfare:53.81,interactions:59,accepted:59,rejected:0,quality_gap:0},
+        {toxicity:0.351,welfare:51.99,interactions:61,accepted:60,rejected:1,quality_gap:-0.101},
+        {toxicity:0.336,welfare:59.41,interactions:65,accepted:65,rejected:0,quality_gap:0},
+        {toxicity:0.331,welfare:59.62,interactions:64,accepted:64,rejected:0,quality_gap:0},
+        {toxicity:0.329,welfare:61.87,interactions:66,accepted:66,rejected:0,quality_gap:0},
+        {toxicity:0.334,welfare:56.26,interactions:61,accepted:61,rejected:0,quality_gap:0},
+        {toxicity:0.308,welfare:64.14,interactions:64,accepted:64,rejected:0,quality_gap:0},
+        {toxicity:0.329,welfare:59.92,interactions:64,accepted:64,rejected:0,quality_gap:0},
+        {toxicity:0.323,welfare:54.46,interactions:59,accepted:57,rejected:2,quality_gap:0.025},
+        {toxicity:0.336,welfare:53.91,interactions:59,accepted:59,rejected:0,quality_gap:0},
+        {toxicity:0.350,welfare:53.16,interactions:62,accepted:61,rejected:1,quality_gap:-0.120},
+        {toxicity:0.337,welfare:56.50,interactions:64,accepted:62,rejected:2,quality_gap:0.034},
+        {toxicity:0.329,welfare:61.89,interactions:66,accepted:66,rejected:0,quality_gap:0},
+        {toxicity:0.332,welfare:58.52,interactions:63,accepted:63,rejected:0,quality_gap:0},
+        {toxicity:0.324,welfare:60.02,interactions:63,accepted:63,rejected:0,quality_gap:0},
+        {toxicity:0.329,welfare:59.98,interactions:65,accepted:64,rejected:1,quality_gap:0.043},
+        {toxicity:0.348,welfare:55.31,interactions:63,accepted:63,rejected:0,quality_gap:0},
+        {toxicity:0.334,welfare:53.34,interactions:59,accepted:58,rejected:1,quality_gap:0.102},
+        {toxicity:0.332,welfare:58.46,interactions:63,accepted:63,rejected:0,quality_gap:0},
+        {toxicity:0.309,welfare:61.96,interactions:63,accepted:62,rejected:1,quality_gap:0.172},
+        {toxicity:0.327,welfare:62.22,interactions:66,accepted:66,rejected:0,quality_gap:0},
+        {toxicity:0.327,welfare:58.54,interactions:62,accepted:62,rejected:0,quality_gap:0},
+        {toxicity:0.324,welfare:62.88,interactions:66,accepted:66,rejected:0,quality_gap:0},
+        {toxicity:0.314,welfare:63.05,interactions:64,accepted:64,rejected:0,quality_gap:0},
+        {toxicity:0.345,welfare:54.00,interactions:62,accepted:61,rejected:1,quality_gap:-0.075},
+        {toxicity:0.334,welfare:60.77,interactions:66,accepted:66,rejected:0,quality_gap:0},
+        {toxicity:0.340,welfare:57.79,interactions:64,accepted:64,rejected:0,quality_gap:0},
+        {toxicity:0.329,welfare:59.00,interactions:63,accepted:63,rejected:0,quality_gap:0},
+        {toxicity:0.322,welfare:62.45,interactions:65,accepted:65,rejected:0,quality_gap:0},
+        {toxicity:0.314,welfare:63.92,interactions:65,accepted:65,rejected:0,quality_gap:0},
+        {toxicity:0.348,welfare:56.06,interactions:64,accepted:64,rejected:0,quality_gap:0},
+        {toxicity:0.319,welfare:64.86,interactions:67,accepted:67,rejected:0,quality_gap:0},
+        {toxicity:0.330,welfare:57.99,interactions:63,accepted:62,rejected:1,quality_gap:0.119},
+        {toxicity:0.321,welfare:57.83,interactions:60,accepted:60,rejected:0,quality_gap:0},
+        {toxicity:0.329,welfare:58.04,interactions:62,accepted:62,rejected:0,quality_gap:0},
+        {toxicity:0.319,welfare:59.09,interactions:62,accepted:61,rejected:1,quality_gap:0.089},
+        {toxicity:0.339,welfare:56.94,interactions:63,accepted:63,rejected:0,quality_gap:0},
+        {toxicity:0.336,welfare:58.63,interactions:64,accepted:64,rejected:0,quality_gap:0}
+    ];
+
+    new p5((p) => {
+        let w, h;
+        let time = 0;
+        let currentEpoch = 0;
+        let epochProgress = 0;
+        let waveParticles = [];
+        let historyToxicity = [];
+        let historyWelfare = [];
+
+        p.setup = function() {
+            const container = document.getElementById('canvas-container');
+            w = container.offsetWidth;
+            h = container.offsetHeight;
+            p.createCanvas(w, h);
+            p.colorMode(p.RGB, 255);
+
+            // Pre-seed wave particles
+            for (let i = 0; i < 200; i++) {
+                waveParticles.push({
+                    x: p.random(w),
+                    y: p.random(h * 0.3, h * 0.85),
+                    vx: p.random(-0.5, 0.5),
+                    vy: 0,
+                    size: p.random(2, 6),
+                    phase: p.random(p.TWO_PI),
+                    freq: p.random(0.5, 2)
+                });
+            }
+        };
+
+        function lerpVal(key) {
+            const e0 = epochData[currentEpoch];
+            const e1 = epochData[Math.min(currentEpoch + 1, epochData.length - 1)];
+            return p.lerp(e0[key], e1[key], epochProgress);
+        }
+
+        p.draw = function() {
+            p.background(13, 17, 23, 30);
+            time += 0.016;
+            epochProgress += 0.004;
+
+            if (epochProgress >= 1.0) {
+                epochProgress = 0;
+                currentEpoch = (currentEpoch + 1) % epochData.length;
+            }
+
+            const toxicity = lerpVal('toxicity');
+            const welfare = lerpVal('welfare');
+            const interactions = lerpVal('interactions');
+            const qualityGap = lerpVal('quality_gap');
+
+            // Record history for sparkline
+            if (p.frameCount % 4 === 0) {
+                historyToxicity.push(toxicity);
+                historyWelfare.push(welfare);
+                if (historyToxicity.length > 300) { historyToxicity.shift(); historyWelfare.shift(); }
+            }
+
+            // Compute governance "pressure" - a lagged version of toxicity
+            const govPressure = toxicity;
+            // Zones: top = "unmonitored", bottom = "governed"
+            const govLine = p.map(govPressure, 0.30, 0.36, h * 0.35, h * 0.55, true);
+
+            // Draw governance boundary
+            p.noFill();
+            p.strokeWeight(1);
+            for (let x = 0; x < w; x += 2) {
+                const wobble = p.sin(x * 0.01 + time * 2) * 8 + p.sin(x * 0.03 + time) * 4;
+                const y = govLine + wobble;
+                const alpha = 100 + p.sin(x * 0.05 + time * 3) * 40;
+                p.stroke(187, 107, 217, alpha);
+                p.point(x, y);
+                p.stroke(187, 107, 217, alpha * 0.3);
+                p.point(x, y - 1);
+                p.point(x, y + 1);
+            }
+
+            // Draw governance zone labels
+            p.noStroke();
+            p.fill(242, 153, 74, 50);
+            p.textSize(9);
+            p.textAlign(p.LEFT, p.TOP);
+            p.text('UNMONITORED ZONE', 30, govLine - 30);
+            p.fill(62, 207, 180, 50);
+            p.text('GOVERNED ZONE', 30, govLine + 18);
+
+            // Update & draw wave particles
+            const welfareNorm = p.map(welfare, 50, 66, 0, 1, true);
+            for (let i = 0; i < waveParticles.length; i++) {
+                const part = waveParticles[i];
+                part.phase += part.freq * 0.02;
+                part.x += part.vx;
+                part.vy = p.sin(part.phase + time) * 0.8;
+                part.y += part.vy;
+
+                // Wrap
+                if (part.x < 0) part.x = w;
+                if (part.x > w) part.x = 0;
+                part.y = p.constrain(part.y, h * 0.15, h * 0.9);
+
+                const aboveGov = part.y < govLine;
+                const distToGov = Math.abs(part.y - govLine);
+                const nearGov = distToGov < 40;
+
+                let r, g, b, alpha;
+                if (aboveGov) {
+                    // Unmonitored: orange-red for toxic
+                    const tox = p.map(toxicity, 0.30, 0.36, 0, 1, true);
+                    r = p.lerp(180, 242, tox);
+                    g = p.lerp(180, 100, tox);
+                    b = p.lerp(180, 74, tox);
+                    alpha = 120 + tox * 80;
+                } else {
+                    // Governed: teal, brightness = welfare
+                    r = 62;
+                    g = p.lerp(150, 220, welfareNorm);
+                    b = p.lerp(140, 190, welfareNorm);
+                    alpha = 100 + welfareNorm * 80;
+                }
+
+                if (nearGov) {
+                    // Transition shimmer
+                    r = p.lerp(r, 187, 0.5);
+                    g = p.lerp(g, 107, 0.5);
+                    b = p.lerp(b, 217, 0.5);
+                    alpha *= 1.3;
+                }
+
+                p.noStroke();
+                p.fill(r, g, b, alpha);
+                p.ellipse(part.x, part.y, part.size * (nearGov ? 1.5 : 1));
+            }
+
+            // Sparkline graphs (bottom area)
+            const sparkY = h - 120;
+            const sparkW = 280;
+            const sparkH = 40;
+            const sparkX = w - sparkW - 30;
+
+            // Toxicity sparkline
+            drawSparkline(historyToxicity, sparkX, sparkY, sparkW, sparkH, 0.28, 0.38, [220, 60, 80], 'TOXICITY RATE');
+            // Welfare sparkline
+            drawSparkline(historyWelfare, sparkX, sparkY + 55, sparkW, sparkH, 48, 68, [62, 207, 180], 'TOTAL WELFARE');
+
+            // HUD
+            drawHUD(toxicity, welfare, interactions, qualityGap);
+        };
+
+        function drawSparkline(data, sx, sy, sw, sh, minV, maxV, color, label) {
+            if (data.length < 2) return;
+
+            // Background
+            p.fill(22, 27, 34, 180);
+            p.noStroke();
+            p.rect(sx - 5, sy - 5, sw + 10, sh + 22, 4);
+
+            // Label
+            p.fill(125, 133, 144);
+            p.textSize(8);
+            p.textAlign(p.LEFT, p.TOP);
+            p.text(label, sx, sy - 2);
+
+            // Line
+            p.noFill();
+            p.strokeWeight(1.5);
+            p.beginShape();
+            for (let i = 0; i < data.length; i++) {
+                const x = sx + (i / (data.length - 1)) * sw;
+                const y = sy + 12 + p.map(data[i], minV, maxV, sh - 12, 0, true);
+                p.stroke(color[0], color[1], color[2], 200);
+                p.vertex(x, y);
+            }
+            p.endShape();
+
+            // Current value dot
+            const lastY = sy + 12 + p.map(data[data.length - 1], minV, maxV, sh - 12, 0, true);
+            p.fill(color[0], color[1], color[2]);
+            p.noStroke();
+            p.ellipse(sx + sw, lastY, 5);
+        }
+
+        function drawHUD(toxicity, welfare, interactions, qualityGap) {
+            const pad = 30;
+            p.noStroke();
+            p.fill(230, 237, 243, 200);
+            p.textSize(14);
+            p.textAlign(p.LEFT, p.TOP);
+            p.textFont('monospace');
+            p.text('GOVERNANCE LAG', pad, pad);
+
+            p.fill(125, 133, 144);
+            p.textSize(10);
+            p.text('rlm_governance_lag / 10 agents / 50 epochs / seed 42', pad, pad + 20);
+
+            p.fill(230, 237, 243, 180);
+            p.textSize(12);
+            p.text(`EPOCH ${currentEpoch}/${epochData.length - 1}`, pad, pad + 44);
+
+            // Progress bar
+            p.fill(48, 54, 61);
+            p.rect(pad, pad + 60, 200, 3, 2);
+            p.fill(187, 107, 217);
+            p.rect(pad, pad + 60, 200 * ((currentEpoch + epochProgress) / epochData.length), 3, 2);
+
+            // Big stats
+            const statsY = pad + 80;
+            p.fill(220, 60, 80, 220);
+            p.textSize(28);
+            p.text(toxicity.toFixed(3), pad, statsY);
+            p.fill(125, 133, 144);
+            p.textSize(9);
+            p.text('TOXICITY', pad, statsY + 32);
+
+            p.fill(62, 207, 180, 220);
+            p.textSize(28);
+            p.text(welfare.toFixed(1), pad, statsY + 52);
+            p.fill(125, 133, 144);
+            p.textSize(9);
+            p.text('WELFARE', pad, statsY + 84);
+
+            if (Math.abs(qualityGap) > 0.01) {
+                p.fill(qualityGap < 0 ? p.color(242, 153, 74) : p.color(62, 207, 180));
+                p.textSize(11);
+                p.text(`QUALITY GAP: ${qualityGap > 0 ? '+' : ''}${qualityGap.toFixed(3)}`, pad, statsY + 104);
+            }
+
+            // Attribution
+            p.textAlign(p.RIGHT, p.BOTTOM);
+            p.fill(125, 133, 144, 150);
+            p.textSize(9);
+            p.text('distributional-agi-safety', w - pad, h - pad);
+        }
+    }, document.getElementById('canvas-container'));
+    </script>
+</body>
+</html>

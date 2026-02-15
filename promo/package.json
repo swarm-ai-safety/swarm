@@ -6,7 +6,15 @@
     "studio": "npx remotion studio",
     "render": "npx remotion render SwarmPromo out/swarm-promo.mp4",
     "gif": "npx remotion render SwarmPromo out/swarm-promo.gif --image-format=png --every-nth-frame=2",
-    "still": "npx remotion still SwarmPromo --frame=0 out/thumbnail.png"
+    "still": "npx remotion still SwarmPromo --frame=0 out/thumbnail.png",
+    "render:collusion": "npx remotion render CollusionCascade out/collusion-cascade.mp4",
+    "gif:collusion": "npx remotion render CollusionCascade out/collusion-cascade.gif --image-format=png --every-nth-frame=2",
+    "render:governance": "npx remotion render GovernanceLag out/governance-lag.mp4",
+    "gif:governance": "npx remotion render GovernanceLag out/governance-lag.gif --image-format=png --every-nth-frame=2",
+    "render:delegation": "npx remotion render DelegationGames out/delegation-games.mp4",
+    "gif:delegation": "npx remotion render DelegationGames out/delegation-games.gif --image-format=png --every-nth-frame=2",
+    "render:socials": "npx remotion render CollusionCascade out/collusion-cascade.mp4 && npx remotion render GovernanceLag out/governance-lag.mp4 && npx remotion render DelegationGames out/delegation-games.mp4",
+    "gif:socials": "npx remotion render CollusionCascade out/collusion-cascade.gif --image-format=png --every-nth-frame=2 && npx remotion render GovernanceLag out/governance-lag.gif --image-format=png --every-nth-frame=2 && npx remotion render DelegationGames out/delegation-games.gif --image-format=png --every-nth-frame=2"
   },
   "dependencies": {
     "@remotion/cli": "4.0.242",

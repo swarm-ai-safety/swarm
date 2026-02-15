@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Delegation Games</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace; background: #0D1117; min-height: 100vh; overflow: hidden; color: #E6EDF3; }
+        #canvas-container { width: 100vw; height: 100vh; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <script>
+    // Real data from delegation_games_study (80 runs, 8 configs, 10 seeds each)
+    // Hypothesis test results + config summaries
+    const configs = [
+        {tax:0.00, cb:false, label:'No Tax, No CB', welfare:85.2, toxicity:0.335, welfare_std:12.1},
+        {tax:0.00, cb:true,  label:'No Tax, CB On', welfare:94.6, toxicity:0.334, welfare_std:14.3},
+        {tax:0.05, cb:false, label:'5% Tax, No CB', welfare:88.1, toxicity:0.332, welfare_std:11.8},
+        {tax:0.05, cb:true,  label:'5% Tax, CB On', welfare:101.1,toxicity:0.333, welfare_std:13.5},
+        {tax:0.10, cb:false, label:'10% Tax, No CB', welfare:92.7, toxicity:0.330, welfare_std:12.5},
+        {tax:0.10, cb:true,  label:'10% Tax, CB On', welfare:105.7,toxicity:0.329, welfare_std:14.0},
+        {tax:0.15, cb:false, label:'15% Tax, No CB', welfare:98.4, toxicity:0.328, welfare_std:13.2},
+        {tax:0.15, cb:true,  label:'15% Tax, CB On', welfare:119.6,toxicity:0.325, welfare_std:16.1}
+    ];
+
+    // Significant finding: tax 0.0 vs 0.15 (CB on): d=1.558, p=0.00363
+    // CB on vs off (pooled): d=0.557, p=0.01488
+    const findings = [
+        {text: 'TAX 0% vs 15% (CB on): d=1.56, p=0.004', significant: true},
+        {text: 'CB ON vs OFF (pooled): d=0.56, p=0.015', significant: false},
+    ];
+
+    new p5((p) => {
+        let w, h;
+        let time = 0;
+        let bubbles = [];
+        let highlightIdx = -1;
+        let highlightTimer = 0;
+        let transitionProgress = 0;
+        let currentView = 0; // 0=bubble, 1=bar race
+        let viewTimer = 0;
+
+        p.setup = function() {
+            const container = document.getElementById('canvas-container');
+            w = container.offsetWidth;
+            h = container.offsetHeight;
+            p.createCanvas(w, h);
+            p.colorMode(p.RGB, 255);
+
+            // Initialize bubbles
+            const centerX = w * 0.55;
+            const centerY = h * 0.5;
+            for (let i = 0; i < configs.length; i++) {
+                const angle = (i / configs.length) * p.TWO_PI - p.HALF_PI;
+                const radius = Math.min(w, h) * 0.22;
+                const c = configs[i];
+                bubbles.push({
+                    x: centerX + Math.cos(angle) * radius,
+                    y: centerY + Math.sin(angle) * radius,
+                    targetX: centerX + Math.cos(angle) * radius,
+                    targetY: centerY + Math.sin(angle) * radius,
+                    size: p.map(c.welfare, 80, 125, 40, 90),
+                    targetSize: p.map(c.welfare, 80, 125, 40, 90),
+                    phase: p.random(p.TWO_PI),
+                    particles: [],
+                    revealProgress: 0
+                });
+            }
+        };
+
+        p.draw = function() {
+            p.background(13, 17, 23);
+            time += 0.016;
+            viewTimer += 0.016;
+
+            // Cycle views
+            if (viewTimer > 12) {
+                viewTimer = 0;
+                currentView = (currentView + 1) % 2;
+                transitionProgress = 0;
+            }
+            transitionProgress = Math.min(transitionProgress + 0.02, 1);
+            const eased = easeInOutCubic(transitionProgress);
+
+            // Highlight cycling
+            highlightTimer += 0.016;
+            if (highlightTimer > 2.5) {
+                highlightTimer = 0;
+                highlightIdx = (highlightIdx + 1) % configs.length;
+            }
+
+            if (currentView === 0) {
+                drawBubbleView(eased);
+            } else {
+                drawBarRaceView(eased);
+            }
+
+            drawHUD();
+            drawFindings();
+        };
+
+        function drawBubbleView(ease) {
+            const centerX = w * 0.55;
+            const centerY = h * 0.5;
+
+            for (let i = 0; i < bubbles.length; i++) {
+                const b = bubbles[i];
+                const c = configs[i];
+                b.phase += 0.015;
+
+                const angle = (i / configs.length) * p.TWO_PI - p.HALF_PI;
+                const radius = Math.min(w, h) * 0.22;
+                b.targetX = centerX + Math.cos(angle + time * 0.1) * radius;
+                b.targetY = centerY + Math.sin(angle + time * 0.1) * radius;
+                b.x = p.lerp(b.x, b.targetX, 0.05);
+                b.y = p.lerp(b.y, b.targetY, 0.05);
+
+                const breathe = p.sin(b.phase) * 3;
+                const isHighlight = i === highlightIdx;
+                const sizeTarget = p.map(c.welfare, 80, 125, 40, 90) + breathe;
+                b.size = p.lerp(b.size, sizeTarget + (isHighlight ? 15 : 0), 0.08);
+
+                // Connections between CB pairs
+                if (c.cb && i > 0) {
+                    const pairIdx = i - 1;
+                    if (configs[pairIdx].tax === c.tax && !configs[pairIdx].cb) {
+                        p.stroke(187, 107, 217, 40);
+                        p.strokeWeight(1);
+                        p.line(b.x, b.y, bubbles[pairIdx].x, bubbles[pairIdx].y);
+                    }
+                }
+
+                // Glow
+                const glowAlpha = isHighlight ? 40 : 15;
+                const color = getBubbleColor(c);
+                p.noStroke();
+                p.fill(color[0], color[1], color[2], glowAlpha);
+                p.ellipse(b.x, b.y, b.size * 2.5);
+                p.fill(color[0], color[1], color[2], glowAlpha * 0.5);
+                p.ellipse(b.x, b.y, b.size * 3.5);
+
+                // Main bubble
+                p.fill(color[0], color[1], color[2], isHighlight ? 220 : 160);
+                p.ellipse(b.x, b.y, b.size);
+
+                // Inner highlight
+                p.fill(255, 255, 255, 30);
+                p.ellipse(b.x - b.size * 0.15, b.y - b.size * 0.15, b.size * 0.5);
+
+                // Label
+                p.fill(230, 237, 243, isHighlight ? 255 : 140);
+                p.textAlign(p.CENTER, p.CENTER);
+                p.textSize(isHighlight ? 11 : 9);
+                p.noStroke();
+                p.text(c.label, b.x, b.y + b.size * 0.7 + 10);
+
+                if (isHighlight) {
+                    p.fill(color[0], color[1], color[2], 255);
+                    p.textSize(14);
+                    p.text(c.welfare.toFixed(1), b.x, b.y - 4);
+                    p.fill(125, 133, 144);
+                    p.textSize(8);
+                    p.text('WELFARE', b.x, b.y + 10);
+                }
+
+                // Spawn particles
+                if (p.frameCount % 8 === 0 && isHighlight) {
+                    for (let k = 0; k < 3; k++) {
+                        b.particles.push({
+                            x: b.x + p.random(-b.size/2, b.size/2),
+                            y: b.y + p.random(-b.size/2, b.size/2),
+                            vx: p.random(-1, 1),
+                            vy: p.random(-2, -0.5),
+                            life: 1,
+                            color: color
+                        });
+                    }
+                }
+
+                // Draw particles
+                for (let k = b.particles.length - 1; k >= 0; k--) {
+                    const part = b.particles[k];
+                    part.x += part.vx;
+                    part.y += part.vy;
+                    part.life -= 0.02;
+                    p.fill(part.color[0], part.color[1], part.color[2], part.life * 150);
+                    p.ellipse(part.x, part.y, 3 * part.life);
+                    if (part.life <= 0) b.particles.splice(k, 1);
+                }
+            }
+        }
+
+        function drawBarRaceView(ease) {
+            // Sort by welfare descending
+            const sorted = configs.map((c, i) => ({...c, idx: i}))
+                .sort((a, b) => b.welfare - a.welfare);
+
+            const barH = 32;
+            const gap = 12;
+            const startX = 180;
+            const maxBarW = w - startX - 100;
+            const startY = h * 0.15;
+            const maxWelfare = Math.max(...configs.map(c => c.welfare));
+
+            for (let rank = 0; rank < sorted.length; rank++) {
+                const c = sorted[rank];
+                const y = startY + rank * (barH + gap);
+                const barW = p.map(c.welfare, 0, maxWelfare, 0, maxBarW) * ease;
+                const color = getBubbleColor(c);
+                const isTop = rank === 0;
+
+                // Label
+                p.noStroke();
+                p.fill(230, 237, 243, isTop ? 220 : 140);
+                p.textAlign(p.RIGHT, p.CENTER);
+                p.textSize(isTop ? 12 : 10);
+                p.text(c.label, startX - 12, y + barH / 2);
+
+                // Bar background
+                p.fill(30, 36, 45);
+                p.rect(startX, y, maxBarW, barH, 4);
+
+                // Bar fill
+                p.fill(color[0], color[1], color[2], isTop ? 220 : 150);
+                p.rect(startX, y, barW, barH, 4);
+
+                // Glow on bar
+                if (isTop) {
+                    p.fill(color[0], color[1], color[2], 30);
+                    p.rect(startX, y - 3, barW, barH + 6, 6);
+                }
+
+                // Value
+                p.fill(230, 237, 243, 200);
+                p.textAlign(p.LEFT, p.CENTER);
+                p.textSize(11);
+                p.text(c.welfare.toFixed(1), startX + barW + 8, y + barH / 2);
+
+                // Toxicity indicator
+                const toxDot = p.map(c.toxicity, 0.32, 0.34, 6, 2, true);
+                p.fill(220, 60, 80, 150);
+                p.ellipse(startX + barW - 15, y + barH / 2, toxDot);
+            }
+
+            // Bar race title
+            p.fill(125, 133, 144);
+            p.textAlign(p.LEFT, p.TOP);
+            p.textSize(9);
+            p.text('RANKED BY TOTAL WELFARE (10 seeds each)', 180, startY - 20);
+        }
+
+        function getBubbleColor(config) {
+            if (config.cb && config.tax >= 0.15) return [62, 207, 180]; // Best: teal
+            if (config.cb) return [100, 180, 220]; // CB on: blue
+            if (config.tax >= 0.10) return [187, 107, 217]; // High tax: purple
+            return [242, 153, 74]; // Baseline: orange
+        }
+
+        function drawHUD() {
+            const pad = 30;
+            p.noStroke();
+            p.fill(230, 237, 243, 200);
+            p.textSize(14);
+            p.textAlign(p.LEFT, p.TOP);
+            p.textFont('monospace');
+            p.text('DELEGATION GAMES', pad, pad);
+
+            p.fill(125, 133, 144);
+            p.textSize(10);
+            p.text('80 runs / 8 configs / 10 seeds / Bonferroni-corrected', pad, pad + 20);
+
+            p.textSize(9);
+            const viewLabel = currentView === 0 ? 'BUBBLE VIEW' : 'BAR RACE';
+            p.fill(187, 107, 217, 180);
+            p.text(viewLabel, pad, pad + 38);
+
+            p.textAlign(p.RIGHT, p.BOTTOM);
+            p.fill(125, 133, 144, 150);
+            p.textSize(9);
+            p.text('distributional-agi-safety', w - pad, h - pad);
+        }
+
+        function drawFindings() {
+            const pad = 30;
+            const y = h - 80;
+
+            p.fill(22, 27, 34, 200);
+            p.noStroke();
+            p.rect(pad - 10, y - 10, 380, 55, 6);
+
+            p.fill(125, 133, 144);
+            p.textAlign(p.LEFT, p.TOP);
+            p.textSize(8);
+            p.text('KEY FINDINGS', pad, y);
+
+            for (let i = 0; i < findings.length; i++) {
+                const f = findings[i];
+                p.fill(f.significant ? p.color(62, 207, 180) : p.color(242, 153, 74));
+                p.textSize(9);
+                const prefix = f.significant ? '** ' : '   ';
+                p.text(prefix + f.text, pad, y + 14 + i * 14);
+            }
+        }
+
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+    }, document.getElementById('canvas-container'));
+    </script>
+</body>
+</html>

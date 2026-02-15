@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synchronous Dissipation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0D1117; min-height: 100vh; overflow: hidden; color: #E6EDF3; }
+        .container { display: flex; height: 100vh; gap: 20px; padding: 20px; }
+        #canvas-container { flex: 1; display: flex; align-items: center; justify-content: center; background: #161B22; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.3); overflow: hidden; }
+        #controls { width: 280px; background: #161B22; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.3); overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 24px; }
+        .control-section { display: flex; flex-direction: column; gap: 12px; }
+        .section-title { font-size: 11px; font-weight: 700; letter-spacing: 0.8px; text-transform: uppercase; color: #7D8590; }
+        .control-group { display: flex; flex-direction: column; gap: 6px; }
+        .control-group label { font-size: 13px; font-weight: 500; color: #E6EDF3; }
+        .control-group input[type="range"] { width: 100%; height: 6px; border-radius: 3px; background: #30363D; outline: none; -webkit-appearance: none; }
+        .control-group input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: #3ECFB4; cursor: pointer; }
+        .control-group input[type="range"]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: #3ECFB4; cursor: pointer; border: none; }
+        .value-display { font-size: 12px; color: #7D8590; font-family: 'Monaco', monospace; }
+        .seed-display { font-size: 14px; font-weight: 600; color: #E6EDF3; font-family: 'Monaco', monospace; }
+        .button-group { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .button-full { grid-column: 1 / -1; }
+        button { padding: 10px 12px; border: none; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; text-transform: uppercase; letter-spacing: 0.5px; }
+        .btn-primary { background: #3ECFB4; color: #0D1117; }
+        .btn-primary:hover { background: #4DE0C5; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(62, 207, 180, 0.3); }
+        .btn-secondary { background: #21262D; color: #3ECFB4; }
+        .btn-secondary:hover { background: #30363D; }
+        .input-with-button { display: flex; gap: 6px; }
+        #seed-input { flex: 1; padding: 8px 10px; border: 1px solid #30363D; border-radius: 6px; font-size: 12px; font-family: 'Monaco', monospace; background: #0D1117; color: #E6EDF3; }
+        #seed-input:focus { outline: none; border-color: #3ECFB4; box-shadow: 0 0 0 3px rgba(62, 207, 180, 0.15); }
+        .color-control { display: flex; gap: 8px; align-items: center; }
+        .color-control input[type="color"] { width: 40px; height: 40px; border: none; border-radius: 6px; cursor: pointer; }
+        .color-control label { flex: 1; font-size: 12px; color: #999; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0D1117; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: #30363D; border-radius: 3px; }
+        .attribution { font-size: 10px; color: #7D8590; text-align: center; margin-top: 12px; padding-top: 12px; border-top: 1px solid #21262D; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="canvas-container"></div>
+        <div id="controls">
+            <div class="control-section">
+                <div class="section-title">Seed</div>
+                <div style="background: #0D1117; padding: 12px; border-radius: 8px; text-align: center;">
+                    <div class="seed-display" id="seed-display">12345</div>
+                </div>
+                <div class="button-group">
+                    <button class="btn-secondary" onclick="previousSeed()">← Prev</button>
+                    <button class="btn-secondary" onclick="nextSeed()">Next →</button>
+                    <button class="btn-secondary button-full" onclick="randomSeed()">Random</button>
+                </div>
+                <div class="input-with-button">
+                    <input type="text" id="seed-input" placeholder="Jump to seed...">
+                    <button class="btn-primary" onclick="jumpToSeed()">Go</button>
+                </div>
+            </div>
+            <div class="control-section">
+                <div class="section-title">Parameters</div>
+                <div class="control-group">
+                    <label>Agent Count</label>
+                    <input type="range" id="agentCount" min="8" max="64" step="4" value="32" oninput="updateParam('agentCount', this.value)">
+                    <span class="value-display" id="agentCount-value">32</span>
+                </div>
+                <div class="control-group">
+                    <label>Coupling Strength</label>
+                    <input type="range" id="coupling" min="0.01" max="0.5" step="0.01" value="0.15" oninput="updateParam('coupling', this.value)">
+                    <span class="value-display" id="coupling-value">0.15</span>
+                </div>
+                <div class="control-group">
+                    <label>Dissipation Rate</label>
+                    <input type="range" id="dissipation" min="0.01" max="0.2" step="0.01" value="0.08" oninput="updateParam('dissipation', this.value)">
+                    <span class="value-display" id="dissipation-value">0.08</span>
+                </div>
+                <div class="control-group">
+                    <label>Frequency Spread</label>
+                    <input type="range" id="freqSpread" min="0.5" max="3.0" step="0.1" value="1.5" oninput="updateParam('freqSpread', this.value)">
+                    <span class="value-display" id="freqSpread-value">1.5</span>
+                </div>
+                <div class="control-group">
+                    <label>Trail Length</label>
+                    <input type="range" id="trailLength" min="10" max="200" step="10" value="80" oninput="updateParam('trailLength', this.value)">
+                    <span class="value-display" id="trailLength-value">80</span>
+                </div>
+            </div>
+            <div class="control-section">
+                <div class="section-title">Colors</div>
+                <div class="color-control">
+                    <input type="color" id="color1" value="#3ECFB4" oninput="updateColor('color1', this.value)">
+                    <label>Honest</label>
+                </div>
+                <div class="color-control">
+                    <input type="color" id="color2" value="#BB6BD9" oninput="updateColor('color2', this.value)">
+                    <label>Planner</label>
+                </div>
+                <div class="color-control">
+                    <input type="color" id="color3" value="#F2994A" oninput="updateColor('color3', this.value)">
+                    <label>Deceptive</label>
+                </div>
+            </div>
+            <div class="control-section">
+                <div class="section-title">Actions</div>
+                <button class="btn-primary button-full" onclick="regenerate()">↻ Regenerate</button>
+                <button class="btn-secondary button-full" onclick="resetParameters()">Reset</button>
+            </div>
+            <div class="attribution">Synchronous Dissipation<br>Algorithm Art</div>
+        </div>
+    </div>
+    <script>
+        let currentSeed = 12345;
+        let sketch;
+        let params = {
+            seed: 12345,
+            agentCount: 32,
+            coupling: 0.15,
+            dissipation: 0.08,
+            freqSpread: 1.5,
+            trailLength: 80,
+            color1: [62, 207, 180],
+            color2: [187, 107, 217],
+            color3: [242, 153, 74]
+        };
+        const defaultParams = { ...params };
+        function updateParam(name, value) {
+            params[name] = parseFloat(value);
+            document.getElementById(name + '-value').textContent = params[name].toFixed(params[name] < 1 ? 2 : 0);
+        }
+        function updateColor(name, hex) {
+            const rgb = hexToRgb(hex);
+            params[name] = rgb;
+        }
+        function hexToRgb(hex) {
+            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? [parseInt(result[1], 16), parseInt(result[2], 16), parseInt(result[3], 16)] : [0, 0, 0];
+        }
+        function rgbToHex(rgb) {
+            return '#' + rgb.map(x => parseInt(x).toString(16).padStart(2, '0')).join('').toUpperCase();
+        }
+        function previousSeed() {
+            currentSeed = Math.max(1, currentSeed - 1);
+            setSeed(currentSeed);
+        }
+        function nextSeed() {
+            currentSeed += 1;
+            setSeed(currentSeed);
+        }
+        function randomSeed() {
+            currentSeed = Math.floor(Math.random() * 1000000);
+            setSeed(currentSeed);
+        }
+        function jumpToSeed() {
+            const input = document.getElementById('seed-input');
+            const seed = parseInt(input.value);
+            if (!isNaN(seed)) {
+                setSeed(seed);
+                input.value = '';
+            }
+        }
+        function setSeed(seed) {
+            currentSeed = seed;
+            params.seed = seed;
+            document.getElementById('seed-display').textContent = seed;
+            regenerate();
+        }
+        function regenerate() {
+            if (sketch) sketch.remove();
+            sketch = new p5(sketchFunction, document.getElementById('canvas-container'));
+        }
+        function resetParameters() {
+            params = { ...defaultParams, seed: params.seed };
+            document.getElementById('agentCount').value = params.agentCount;
+            document.getElementById('coupling').value = params.coupling;
+            document.getElementById('dissipation').value = params.dissipation;
+            document.getElementById('freqSpread').value = params.freqSpread;
+            document.getElementById('trailLength').value = params.trailLength;
+            document.getElementById('agentCount-value').textContent = params.agentCount;
+            document.getElementById('coupling-value').textContent = params.coupling.toFixed(2);
+            document.getElementById('dissipation-value').textContent = params.dissipation.toFixed(2);
+            document.getElementById('freqSpread-value').textContent = params.freqSpread.toFixed(1);
+            document.getElementById('trailLength-value').textContent = params.trailLength;
+            document.getElementById('color1').value = rgbToHex(params.color1);
+            document.getElementById('color2').value = rgbToHex(params.color2);
+            document.getElementById('color3').value = rgbToHex(params.color3);
+            regenerate();
+        }
+        const sketchFunction = (p) => {
+            let agents = [];
+            let trails = [];
+            let time = 0;
+            p.setup = function() {
+                p.randomSeed(params.seed);
+                p.noiseSeed(params.seed);
+                const container = document.getElementById('canvas-container');
+                const size = Math.min(container.offsetWidth - 40, container.offsetHeight - 40);
+                p.createCanvas(size, size);
+                agents = [];
+                trails = [];
+                for (let i = 0; i < params.agentCount; i++) {
+                    const baseFreq = 1.0;
+                    const freqOffset = p.random(-params.freqSpread, params.freqSpread) * 0.1;
+                    agents.push({
+                        phase: p.random(p.TWO_PI),
+                        frequency: baseFreq + freqOffset,
+                        x: p.width / 2 + p.random(-50, 50),
+                        y: p.height / 2 + p.random(-50, 50),
+                        vx: p.random(-0.5, 0.5),
+                        vy: p.random(-0.5, 0.5),
+                        mass: 1,
+                        trail: []
+                    });
+                    trails.push([]);
+                }
+                p.background(13, 17, 23);
+                p.colorMode(p.RGB, 255);
+            };
+            p.draw = function() {
+                p.background(13, 17, 23, 10);
+                time += 0.016;
+                for (let i = 0; i < agents.length; i++) {
+                    const agent = agents[i];
+                    agent.phase += agent.frequency * 0.02;
+                    let fx = 0, fy = 0;
+                    for (let j = 0; j < agents.length; j++) {
+                        if (i === j) continue;
+                        const other = agents[j];
+                        const phaseDiff = agent.phase - other.phase;
+                        const coupling = params.coupling * p.sin(phaseDiff);
+                        const dx = other.x - agent.x;
+                        const dy = other.y - agent.y;
+                        const dist = p.sqrt(dx*dx + dy*dy) + 0.01;
+                        const attract = coupling * 2.0 / (dist + 1);
+                        fx += (dx / dist) * attract;
+                        fy += (dy / dist) * attract;
+                    }
+                    agent.vx += fx;
+                    agent.vy += fy;
+                    agent.vx *= (1 - params.dissipation);
+                    agent.vy *= (1 - params.dissipation);
+                    const speed = p.sqrt(agent.vx*agent.vx + agent.vy*agent.vy);
+                    if (speed > 8) {
+                        agent.vx *= 8 / speed;
+                        agent.vy *= 8 / speed;
+                    }
+                    agent.x += agent.vx;
+                    agent.y += agent.vy;
+                    agent.x = (agent.x + p.width) % p.width;
+                    agent.y = (agent.y + p.height) % p.height;
+                    agent.trail.push({x: agent.x, y: agent.y, phase: agent.phase});
+                    if (agent.trail.length > params.trailLength) {
+                        agent.trail.shift();
+                    }
+                }
+                for (let i = 0; i < agents.length; i++) {
+                    const agent = agents[i];
+                    const trail = agent.trail;
+                    if (trail.length < 2) continue;
+                    for (let j = 0; j < trail.length - 1; j++) {
+                        const point = trail[j];
+                        const nextPoint = trail[j + 1];
+                        const phaseMagnitude = p.abs(p.sin(point.phase));
+                        let r, g, b;
+                        if (phaseMagnitude > 0.66) {
+                            r = params.color1[0];
+                            g = params.color1[1];
+                            b = params.color1[2];
+                        } else if (phaseMagnitude > 0.33) {
+                            r = params.color2[0];
+                            g = params.color2[1];
+                            b = params.color2[2];
+                        } else {
+                            r = params.color3[0];
+                            g = params.color3[1];
+                            b = params.color3[2];
+                        }
+                        const alpha = (j / trail.length) * 200;
+                        p.stroke(r, g, b, alpha);
+                        p.strokeWeight(2 - (j / trail.length) * 1.5);
+                        p.line(point.x, point.y, nextPoint.x, nextPoint.y);
+                    }
+                    const mag = p.abs(p.sin(agent.phase));
+                    let dotColor;
+                    if (mag > 0.66) {
+                        dotColor = params.color1;
+                    } else if (mag > 0.33) {
+                        dotColor = params.color2;
+                    } else {
+                        dotColor = params.color3;
+                    }
+                    p.fill(dotColor[0], dotColor[1], dotColor[2], 220);
+                    p.noStroke();
+                    p.ellipse(agent.x, agent.y, 4 + mag * 2);
+                }
+            };
+        };
+        regenerate();
+    </script>
+</body>
+</html>

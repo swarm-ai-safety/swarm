@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collusion Cascade</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'SF Mono', 'Monaco', 'Inconsolata', monospace; background: #0D1117; min-height: 100vh; overflow: hidden; color: #E6EDF3; }
+        #canvas-container { width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; }
+    </style>
+</head>
+<body>
+    <div id="canvas-container"></div>
+    <script>
+    // Real epoch data from rlm_recursive_collusion (30 epochs, 12 agents, seed 42)
+    const epochData = [
+        {epoch:0,toxicity:0.347,quality_gap:0.043,welfare:72.4,accepted:77,rejected:32,interactions:109},
+        {epoch:1,toxicity:0.338,quality_gap:0.040,welfare:89.0,accepted:92,rejected:12,interactions:104},
+        {epoch:2,toxicity:0.335,quality_gap:0.019,welfare:97.4,accepted:100,rejected:9,interactions:109},
+        {epoch:3,toxicity:0.348,quality_gap:0.047,welfare:91.7,accepted:98,rejected:7,interactions:105},
+        {epoch:4,toxicity:0.334,quality_gap:0.075,welfare:118.4,accepted:121,rejected:6,interactions:127},
+        {epoch:5,toxicity:0.341,quality_gap:0.000,welfare:128.3,accepted:134,rejected:0,interactions:134},
+        {epoch:6,toxicity:0.340,quality_gap:0.000,welfare:132.4,accepted:138,rejected:0,interactions:138},
+        {epoch:7,toxicity:0.343,quality_gap:0.122,welfare:127.4,accepted:134,rejected:1,interactions:135},
+        {epoch:8,toxicity:0.353,quality_gap:-0.080,welfare:120.6,accepted:131,rejected:1,interactions:132},
+        {epoch:9,toxicity:0.341,quality_gap:-0.091,welfare:128.3,accepted:134,rejected:1,interactions:135},
+        {epoch:10,toxicity:0.349,quality_gap:0.000,welfare:126.1,accepted:135,rejected:0,interactions:135},
+        {epoch:11,toxicity:0.336,quality_gap:-0.085,welfare:130.5,accepted:134,rejected:1,interactions:135},
+        {epoch:12,toxicity:0.335,quality_gap:0.000,welfare:129.7,accepted:133,rejected:0,interactions:133},
+        {epoch:13,toxicity:0.327,quality_gap:0.052,welfare:131.0,accepted:131,rejected:1,interactions:132},
+        {epoch:14,toxicity:0.330,quality_gap:0.132,welfare:130.6,accepted:132,rejected:1,interactions:133},
+        {epoch:15,toxicity:0.338,quality_gap:0.000,welfare:128.5,accepted:133,rejected:0,interactions:133},
+        {epoch:16,toxicity:0.336,quality_gap:-0.009,welfare:124.5,accepted:128,rejected:3,interactions:131},
+        {epoch:17,toxicity:0.330,quality_gap:0.056,welfare:131.8,accepted:133,rejected:1,interactions:134},
+        {epoch:18,toxicity:0.337,quality_gap:0.036,welfare:126.0,accepted:130,rejected:3,interactions:133},
+        {epoch:19,toxicity:0.338,quality_gap:-0.103,welfare:127.7,accepted:132,rejected:1,interactions:133},
+        {epoch:20,toxicity:0.330,quality_gap:0.065,welfare:129.6,accepted:131,rejected:1,interactions:132},
+        {epoch:21,toxicity:0.335,quality_gap:-0.051,welfare:125.6,accepted:129,rejected:1,interactions:130},
+        {epoch:22,toxicity:0.334,quality_gap:-0.017,welfare:125.2,accepted:128,rejected:3,interactions:131},
+        {epoch:23,toxicity:0.324,quality_gap:0.000,welfare:133.1,accepted:132,rejected:0,interactions:132},
+        {epoch:24,toxicity:0.326,quality_gap:0.000,welfare:135.3,accepted:135,rejected:0,interactions:135},
+        {epoch:25,toxicity:0.346,quality_gap:-0.045,welfare:121.4,accepted:129,rejected:2,interactions:131},
+        {epoch:26,toxicity:0.327,quality_gap:0.002,welfare:129.7,accepted:130,rejected:2,interactions:132},
+        {epoch:27,toxicity:0.335,quality_gap:0.000,welfare:128.6,accepted:132,rejected:0,interactions:132},
+        {epoch:28,toxicity:0.336,quality_gap:0.000,welfare:126.3,accepted:130,rejected:0,interactions:130},
+        {epoch:29,toxicity:0.348,quality_gap:0.000,welfare:125.4,accepted:134,rejected:0,interactions:134}
+    ];
+
+    const N_AGENTS = 12;
+
+    new p5((p) => {
+        let agents = [];
+        let currentEpoch = 0;
+        let epochProgress = 0;
+        let time = 0;
+        let connections = [];
+        let particles = [];
+        let w, h;
+
+        p.setup = function() {
+            const container = document.getElementById('canvas-container');
+            w = container.offsetWidth;
+            h = container.offsetHeight;
+            p.createCanvas(w, h);
+            p.colorMode(p.RGB, 255);
+
+            // Initialize agents in a ring
+            for (let i = 0; i < N_AGENTS; i++) {
+                const angle = (i / N_AGENTS) * p.TWO_PI - p.HALF_PI;
+                const radius = Math.min(w, h) * 0.28;
+                agents.push({
+                    baseX: w/2 + Math.cos(angle) * radius,
+                    baseY: h/2 + Math.sin(angle) * radius,
+                    x: w/2 + Math.cos(angle) * radius,
+                    y: h/2 + Math.sin(angle) * radius,
+                    phase: p.random(p.TWO_PI),
+                    freq: 0.3 + p.random(0.4),
+                    radius: 12,
+                    colluding: false,
+                    collusionStrength: 0,
+                    trail: []
+                });
+            }
+        };
+
+        function lerpEpochValue(key) {
+            const e0 = epochData[currentEpoch];
+            const e1 = epochData[Math.min(currentEpoch + 1, epochData.length - 1)];
+            return p.lerp(e0[key], e1[key], epochProgress);
+        }
+
+        p.draw = function() {
+            p.background(13, 17, 23, 25);
+            time += 0.016;
+            epochProgress += 0.003;
+
+            if (epochProgress >= 1.0) {
+                epochProgress = 0;
+                currentEpoch = (currentEpoch + 1) % epochData.length;
+            }
+
+            const toxicity = lerpEpochValue('toxicity');
+            const qualityGap = lerpEpochValue('quality_gap');
+            const welfare = lerpEpochValue('welfare');
+            const accepted = lerpEpochValue('accepted');
+            const rejected = lerpEpochValue('rejected');
+
+            // Derive collusion intensity from toxicity and negative quality gap
+            const collusionIntensity = p.map(toxicity, 0.32, 0.36, 0, 1, true);
+            const adverseSelection = qualityGap < -0.02 ? p.map(qualityGap, -0.12, 0, 1, 0, true) : 0;
+
+            // Update agents
+            for (let i = 0; i < agents.length; i++) {
+                const a = agents[i];
+                a.phase += a.freq * 0.02;
+
+                // Agents drift based on collusion — colluding agents cluster
+                const drift = collusionIntensity * 15;
+                const noiseX = p.noise(i * 10, time * 0.5) * 2 - 1;
+                const noiseY = p.noise(i * 10 + 100, time * 0.5) * 2 - 1;
+
+                // Some agents drawn toward center (colluding)
+                const toCenter = collusionIntensity * 0.02;
+                a.x = p.lerp(a.x, a.baseX + noiseX * drift, 0.05);
+                a.y = p.lerp(a.y, a.baseY + noiseY * drift, 0.05);
+                a.x = p.lerp(a.x, w/2, toCenter * (i < 4 ? 3 : 0.2));
+                a.y = p.lerp(a.y, h/2, toCenter * (i < 4 ? 3 : 0.2));
+
+                // Collusion assignment: first few agents are "colluding"
+                a.colluding = i < 4;
+                a.collusionStrength = p.lerp(a.collusionStrength,
+                    a.colluding ? collusionIntensity : 0, 0.03);
+
+                a.trail.push({x: a.x, y: a.y});
+                if (a.trail.length > 40) a.trail.shift();
+            }
+
+            // Draw connections between colluding agents
+            for (let i = 0; i < agents.length; i++) {
+                for (let j = i + 1; j < agents.length; j++) {
+                    const a = agents[i], b = agents[j];
+                    const d = p.dist(a.x, a.y, b.x, b.y);
+                    const bothColluding = a.colluding && b.colluding;
+                    const maxDist = bothColluding ? 400 : 120;
+
+                    if (d < maxDist) {
+                        const alpha = bothColluding
+                            ? p.map(d, 0, maxDist, 120, 0) * collusionIntensity
+                            : p.map(d, 0, maxDist, 30, 0);
+                        if (bothColluding) {
+                            p.stroke(242, 153, 74, alpha);
+                        } else {
+                            p.stroke(62, 207, 180, alpha * 0.5);
+                        }
+                        p.strokeWeight(bothColluding ? 1.5 : 0.5);
+                        p.line(a.x, a.y, b.x, b.y);
+                    }
+                }
+            }
+
+            // Draw trails
+            for (let i = 0; i < agents.length; i++) {
+                const a = agents[i];
+                for (let j = 0; j < a.trail.length - 1; j++) {
+                    const alpha = (j / a.trail.length) * 80;
+                    if (a.colluding) {
+                        const r = p.lerp(62, 242, a.collusionStrength);
+                        const g = p.lerp(207, 153, a.collusionStrength);
+                        const b_ = p.lerp(180, 74, a.collusionStrength);
+                        p.stroke(r, g, b_, alpha);
+                    } else {
+                        p.stroke(62, 207, 180, alpha * 0.6);
+                    }
+                    p.strokeWeight(1);
+                    p.line(a.trail[j].x, a.trail[j].y, a.trail[j+1].x, a.trail[j+1].y);
+                }
+            }
+
+            // Draw agents
+            for (let i = 0; i < agents.length; i++) {
+                const a = agents[i];
+                p.noStroke();
+                const pulse = p.sin(a.phase) * 0.3 + 0.7;
+
+                if (a.colluding) {
+                    const r = p.lerp(62, 242, a.collusionStrength);
+                    const g = p.lerp(207, 153, a.collusionStrength);
+                    const b_ = p.lerp(180, 74, a.collusionStrength);
+                    // Glow
+                    p.fill(r, g, b_, 30 * a.collusionStrength);
+                    p.ellipse(a.x, a.y, a.radius * 4 * pulse);
+                    p.fill(r, g, b_, 220);
+                    p.ellipse(a.x, a.y, a.radius * pulse);
+                } else {
+                    p.fill(62, 207, 180, 180);
+                    p.ellipse(a.x, a.y, a.radius * 0.7 * pulse);
+                }
+            }
+
+            // Spawn interaction particles
+            if (p.frameCount % 3 === 0) {
+                const fromIdx = Math.floor(p.random(N_AGENTS));
+                const toIdx = Math.floor(p.random(N_AGENTS));
+                if (fromIdx !== toIdx) {
+                    const isAccepted = p.random() < (accepted / (accepted + rejected + 0.01));
+                    particles.push({
+                        x: agents[fromIdx].x,
+                        y: agents[fromIdx].y,
+                        tx: agents[toIdx].x,
+                        ty: agents[toIdx].y,
+                        t: 0,
+                        accepted: isAccepted,
+                        life: 1
+                    });
+                }
+            }
+
+            // Draw & update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const part = particles[i];
+                part.t += 0.025;
+                part.life -= 0.015;
+                const px = p.lerp(part.x, part.tx, part.t);
+                const py = p.lerp(part.y, part.ty, part.t);
+                p.noStroke();
+                if (part.accepted) {
+                    p.fill(62, 207, 180, part.life * 150);
+                } else {
+                    p.fill(220, 60, 80, part.life * 200);
+                }
+                p.ellipse(px, py, 3);
+
+                if (part.life <= 0 || part.t >= 1) {
+                    particles.splice(i, 1);
+                }
+            }
+
+            // Adverse selection warning flash
+            if (adverseSelection > 0.3) {
+                const flash = p.sin(time * 4) * 0.5 + 0.5;
+                p.fill(220, 60, 80, flash * adverseSelection * 15);
+                p.noStroke();
+                p.rect(0, 0, w, h);
+            }
+
+            // HUD
+            drawHUD(toxicity, qualityGap, welfare, collusionIntensity);
+        };
+
+        function drawHUD(toxicity, qualityGap, welfare, collusion) {
+            const pad = 30;
+            const lineH = 22;
+
+            // Title
+            p.noStroke();
+            p.fill(230, 237, 243, 200);
+            p.textSize(14);
+            p.textAlign(p.LEFT, p.TOP);
+            p.textFont('monospace');
+            p.text('COLLUSION CASCADE', pad, pad);
+
+            p.fill(125, 133, 144);
+            p.textSize(10);
+            p.text('rlm_recursive_collusion / 12 agents / seed 42', pad, pad + 20);
+
+            // Epoch counter
+            p.fill(230, 237, 243, 180);
+            p.textSize(12);
+            p.text(`EPOCH ${currentEpoch}/${epochData.length - 1}`, pad, pad + 44);
+
+            // Epoch progress bar
+            p.fill(48, 54, 61);
+            p.rect(pad, pad + 60, 180, 3, 2);
+            p.fill(62, 207, 180);
+            p.rect(pad, pad + 60, 180 * ((currentEpoch + epochProgress) / epochData.length), 3, 2);
+
+            // Metrics
+            const metricsY = pad + 80;
+            drawMetric('TOXICITY', toxicity, 0.30, 0.36, metricsY, pad, [220, 60, 80]);
+            drawMetric('WELFARE', welfare, 70, 140, metricsY + 40, pad, [62, 207, 180]);
+            drawMetric('QUALITY GAP', qualityGap, -0.12, 0.15, metricsY + 80, pad, [187, 107, 217]);
+            drawMetric('COLLUSION', collusion, 0, 1, metricsY + 120, pad, [242, 153, 74]);
+
+            // Legend (bottom right)
+            p.textAlign(p.RIGHT, p.BOTTOM);
+            p.fill(125, 133, 144, 150);
+            p.textSize(9);
+            p.text('distributional-agi-safety', w - pad, h - pad);
+        }
+
+        function drawMetric(label, value, min, max, y, x, color) {
+            p.textAlign(p.LEFT, p.TOP);
+            p.fill(125, 133, 144);
+            p.textSize(9);
+            p.text(label, x, y);
+            p.fill(color[0], color[1], color[2], 220);
+            p.textSize(16);
+            p.text(typeof value === 'number' ? value.toFixed(3) : value, x, y + 11);
+
+            // Mini bar
+            const barW = 100;
+            const barH = 2;
+            const barX = x + 100;
+            const barY = y + 20;
+            p.fill(48, 54, 61);
+            p.rect(barX, barY, barW, barH, 1);
+            const fill = p.map(value, min, max, 0, barW, true);
+            p.fill(color[0], color[1], color[2], 180);
+            p.rect(barX, barY, fill, barH, 1);
+        }
+    }, document.getElementById('canvas-container'));
+    </script>
+</body>
+</html>

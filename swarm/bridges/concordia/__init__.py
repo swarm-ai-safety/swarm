@@ -20,7 +20,12 @@ Social Simulacra integration (Park et al., 2022):
 """
 
 from swarm.bridges.concordia.adapter import ConcordiaAdapter
-from swarm.bridges.concordia.config import ConcordiaConfig, JudgeConfig
+from swarm.bridges.concordia.config import (
+    ConcordiaConfig,
+    ConcordiaEntityConfig,
+    JudgeConfig,
+)
+from swarm.bridges.concordia.entity_agent import ConcordiaEntityAgent
 from swarm.bridges.concordia.events import (
     ConcordiaEvent,
     ConcordiaEventType,
@@ -52,6 +57,8 @@ __all__ = [
     # Core bridge
     "ConcordiaAdapter",
     "ConcordiaConfig",
+    "ConcordiaEntityConfig",
+    "ConcordiaEntityAgent",
     "JudgeConfig",
     "ConcordiaEvent",
     "ConcordiaEventType",
