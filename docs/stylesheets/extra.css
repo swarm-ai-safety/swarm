@@ -145,7 +145,7 @@ mjx-container[jax="CHTML"][display="true"] {
   }
 }
 
-/* Hero section on homepage */
-.md-content__inner > h1:first-child {
+/* Hide auto-generated H1 on homepage only (homepage uses .hero for its own title) */
+.md-content__inner:has(.hero) > h1:first-child {
   display: none;
 }
