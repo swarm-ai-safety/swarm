@@ -78,6 +78,10 @@ class AgentLabConfig:
     max_review_rounds: int = 3
     review_score_threshold: float = 4.0  # on 1-10 scale
 
+    # Refinement pipeline
+    refinement_cost_budget_usd: float = 10.0
+    refinement_depth: str = "lite"
+
     # Memory caps
     max_interactions: int = 50000
     max_events: int = 50000

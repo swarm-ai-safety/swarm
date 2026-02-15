@@ -133,6 +133,7 @@ nav:
   - Comparison: comparison.md
   - Blog:
     - blog/index.md
+    - "Your CI Is Flaky Because Your Margins Are Zero": blog/your-ci-is-flaky-because-your-margins-are-zero.md
     - "I Got Claude Code to Spin Up 10 Subagents": blog/claude-code-10-subagents.md
     - "An AI Tax Planner Learned Progressive Taxation": blog/ai-economist-gtb-simulation.md
     - "An AI Agent Cut Its Own Costs by 98%": blog/self-optimizer-distributional-safety.md

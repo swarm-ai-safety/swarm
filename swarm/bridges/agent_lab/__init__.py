@@ -37,6 +37,12 @@ from swarm.bridges.agent_lab.policy import (
     PolicyDecision,
     PolicyResult,
 )
+from swarm.bridges.agent_lab.refinement import (
+    RefinementConfig,
+    RefinementResult,
+    StudyContext,
+)
+from swarm.bridges.agent_lab.runner import AgentLabRunner
 
 __all__ = [
     "AgentLabBridge",
@@ -47,9 +53,13 @@ __all__ = [
     "AgentLabEventType",
     "AgentLabMapper",
     "AgentLabPolicy",
+    "AgentLabRunner",
     "DialogueEvent",
     "PolicyDecision",
     "PolicyResult",
+    "RefinementConfig",
+    "RefinementResult",
     "ReviewEvent",
     "SolverIterationEvent",
+    "StudyContext",
 ]

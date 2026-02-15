@@ -5,10 +5,18 @@ AgentLabBridge is the central adapter that:
 2. Routes events to the mapper for SoftInteraction production
 3. Evaluates governance policy (phase gates, circuit breakers, cost caps)
 4. Feeds into SWARM's logging and metrics pipeline
+5. Runs study refinement via AgentLab subprocess (refine_study)
 """
 
+from __future__ import annotations
+
+import json
 import logging
-from typing import List
+from pathlib import Path
+from typing import TYPE_CHECKING, List, Optional
+
+if TYPE_CHECKING:
+    from swarm.bridges.agent_lab.refinement import RefinementConfig, RefinementResult
 
 from swarm.bridges.agent_lab.client import AgentLabClient
 from swarm.bridges.agent_lab.config import AgentLabConfig
@@ -250,6 +258,125 @@ class AgentLabBridge:
             },
         )
         self._event_log.append(event)
+
+    # --- Study refinement ---
+
+    def refine_study(
+        self,
+        run_dir: str,
+        refinement_config: Optional["RefinementConfig"] = None,
+    ) -> "RefinementResult":
+        """Run AgentLab refinement on a completed SWARM study.
+
+        Packages the study's artifacts, spawns AgentLab as a subprocess,
+        ingests the resulting checkpoint, and writes outputs to
+        ``<run_dir>/refinement/``.
+
+        Args:
+            run_dir: Path to the completed study run directory.
+            refinement_config: Optional refinement configuration.
+                Defaults to settings from self._config.
+
+        Returns:
+            RefinementResult with hypotheses, suggestions, and interactions.
+        """
+        from swarm.bridges.agent_lab.refinement import (
+            RefinementConfig,
+            RefinementResult,
+            StudyContext,
+        )
+        from swarm.bridges.agent_lab.runner import AgentLabRunner
+
+        # Build context from run directory
+        context = StudyContext.from_run_dir(run_dir)
+
+        # Build config
+        if refinement_config is None:
+            refinement_config = RefinementConfig(
+                cost_budget_usd=self._config.refinement_cost_budget_usd,
+                depth=self._config.refinement_depth,
+            )
+
+        # Generate temp YAML config
+        import tempfile
+
+        import yaml
+
+        yaml_dict = refinement_config.to_agent_lab_yaml(context)
+        with tempfile.NamedTemporaryFile(
+            mode="w", suffix=".yaml", delete=False, prefix="refinement_"
+        ) as f:
+            yaml.dump(yaml_dict, f)
+            yaml_path = f.name
+
+        # Run subprocess
+        runner = AgentLabRunner(refinement_config)
+        work_dir = str(Path(run_dir) / "refinement" / "agent_lab_work")
+        returncode, stdout, stderr, duration = runner.run_refinement(
+            yaml_path, work_dir
+        )
+
+        result = RefinementResult(
+            success=(returncode == 0),
+            duration_seconds=duration,
+        )
+
+        # Try to ingest checkpoint
+        checkpoint = runner.find_checkpoint(work_dir)
+        if checkpoint:
+            try:
+                interactions = self.ingest_checkpoint(checkpoint)
+                result.interactions = interactions
+                result.total_cost_usd = self._policy.total_cost_usd
+            except Exception:
+                logger.exception("Failed to ingest refinement checkpoint")
+
+        # Parse stdout for structured content
+        result.hypotheses = self._extract_section(stdout, "hypothes")
+        result.gaps_identified = self._extract_section(stdout, "gap")
+
+        # Write outputs
+        output_dir = Path(run_dir) / "refinement"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        report_path = output_dir / "refinement_report.json"
+        with open(report_path, "w") as f:
+            json.dump(result.to_dict(), f, indent=2)
+
+        config_path = output_dir / "refinement_config.yaml"
+        with open(config_path, "w") as f:
+            import yaml
+            yaml.dump(yaml_dict, f)
+
+        if result.interactions:
+            interactions_path = output_dir / "interactions.jsonl"
+            with open(interactions_path, "w") as f:
+                for interaction in result.interactions:
+                    f.write(json.dumps(interaction.to_dict()) + "\n")
+
+        logger.info(
+            "Refinement complete: success=%s, interactions=%d, cost=$%.2f",
+            result.success,
+            len(result.interactions),
+            result.total_cost_usd,
+        )
+
+        return result
+
+    @staticmethod
+    def _extract_section(text: str, keyword: str) -> List[str]:
+        """Extract bullet-point lines containing a keyword from text."""
+        items: List[str] = []
+        for line in text.splitlines():
+            stripped = line.strip()
+            if keyword.lower() in stripped.lower() and len(stripped) > 10:
+                # Clean up bullet markers
+                for prefix in ("- ", "* ", "• ", "· "):
+                    if stripped.startswith(prefix):
+                        stripped = stripped[len(prefix):]
+                        break
+                items.append(stripped)
+        return items
 
     # --- Accessors ---
 
