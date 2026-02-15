@@ -120,6 +120,14 @@ The NBER "Coasean singularity" framework provides a theoretical map of how AI ag
 
 By focusing on equilibrium behavior, failure modes, and governance-relevant metrics, SWARM aims to bridge economic theory, agentic AI engineering, and AI safety—providing empirical grounding for claims about welfare, robustness, and market structure in an agent-native economy.
 
+### Positioning: SWARM and "Virtual Agent Economies"
+
+Tomasev et al. (2025), "Virtual Agent Economies" ([arXiv:2509.10147](https://arxiv.org/abs/2509.10147)), propose a conceptual framework for designing sandbox economies where AI agents transact. SWARM and this paper share strong thematic overlap — both frame AI safety as a multi-agent economic problem, model heterogeneous agent types, and address adverse selection, externalities, and governance via mechanism design.
+
+The key difference is level of abstraction: the paper is conceptual (no code), while SWARM is a working simulation with formalized models. SWARM also introduces contributions with no counterpart in the paper (soft probabilistic labels, proxy computation, incoherence theory), while the paper covers topics SWARM does not (Dworkin-style auctions, mission economies, cryptographic identity, permeability analysis). The two are complementary — SWARM could serve as an implementation platform for testing the paper's proposals.
+
+See also: [`docs/virtual-agent-economies.md`](../virtual-agent-economies.md) for SWARM features directly inspired by this paper.
+
 ### Simulation Frameworks
 
 - **Concordia** (Google DeepMind) - Generative agent simulation
