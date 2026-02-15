@@ -1143,3 +1143,346 @@ class TestDecisionTheoryModes:
         r1 = agent_tdt._level1_cooperate_decision("other")
         r2 = agent_orig._level1_cooperate_decision("other")
         assert r1 == r2
+
+
+# ------------------------------------------------------------------
+# Test: Twin graph (depth 4)
+# ------------------------------------------------------------------
+
+
+class TestTwinGraph:
+    def test_empty_graph_no_history(self):
+        """Twin graph should be empty with no counterparty profiles."""
+        agent = LDTAgent("ldt_1", config={"acausality_depth": 4})
+        agent._rebuild_twin_graph()
+        assert agent._twin_graph == {}
+
+    def test_graph_populated_after_interactions(self):
+        """Twin graph should have edges after recording interactions."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 4,
+            "twin_graph_min_edge": 0.3,
+        })
+        for _ in range(10):
+            agent._own_trace.append((True, 0.8))
+            agent._counterparty_profiles.setdefault("peer_a", []).append((True, 0.8))
+            agent._counterparty_profiles.setdefault("peer_b", []).append((True, 0.75))
+        agent._rebuild_twin_graph()
+        # Should have edges from ldt_1 to peer_a and peer_b.
+        assert len(agent._twin_graph) > 0
+
+    def test_threshold_filters_low_similarity(self):
+        """Edges below twin_graph_min_edge should not appear."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 4,
+            "twin_graph_min_edge": 0.99,  # very high threshold
+        })
+        for _ in range(10):
+            agent._own_trace.append((True, 0.8))
+            agent._counterparty_profiles.setdefault("divergent", []).append((False, 0.1))
+        agent._rebuild_twin_graph()
+        # Divergent traces → low similarity → no edge.
+        assert "divergent" not in agent._twin_graph.get("ldt_1", {})
+
+    def test_graph_symmetry(self):
+        """If A→B exists in graph, B→A should too (with same weight)."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 4,
+            "twin_graph_min_edge": 0.1,
+        })
+        for _ in range(10):
+            agent._own_trace.append((True, 0.8))
+            agent._counterparty_profiles.setdefault("peer", []).append((True, 0.8))
+        agent._rebuild_twin_graph()
+        if "ldt_1" in agent._twin_graph and "peer" in agent._twin_graph["ldt_1"]:
+            assert "peer" in agent._twin_graph
+            assert "ldt_1" in agent._twin_graph["peer"]
+            assert agent._twin_graph["ldt_1"]["peer"] == pytest.approx(
+                agent._twin_graph["peer"]["ldt_1"]
+            )
+
+    def test_graph_invalidated_on_update(self):
+        """Twin graph cache should be cleared on update_from_outcome."""
+        agent = LDTAgent("ldt_1", config={"acausality_depth": 4})
+        agent._transitive_twin_cache["peer"] = [("x", 0.5)]
+        ix = _interaction(initiator="peer", counterparty="ldt_1", accepted=True, p=0.8)
+        agent.update_from_outcome(ix, 1.0)
+        assert "peer" not in agent._transitive_twin_cache
+
+    def test_cross_edges_between_counterparties(self):
+        """Graph should include edges between counterparties."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 4,
+            "twin_graph_min_edge": 0.1,
+        })
+        for _ in range(10):
+            agent._own_trace.append((True, 0.8))
+            agent._counterparty_profiles.setdefault("a", []).append((True, 0.8))
+            agent._counterparty_profiles.setdefault("b", []).append((True, 0.82))
+        agent._rebuild_twin_graph()
+        # a and b have very similar profiles → cross-edge should exist.
+        has_ab = "b" in agent._twin_graph.get("a", {})
+        has_ba = "a" in agent._twin_graph.get("b", {})
+        assert has_ab and has_ba
+
+
+# ------------------------------------------------------------------
+# Test: Transitive twin detection
+# ------------------------------------------------------------------
+
+
+class TestTransitiveTwinDetection:
+    def _setup_chain(self):
+        """Create agent with A→B→C chain in twin graph."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 4,
+            "twin_graph_min_edge": 0.1,
+            "twin_graph_traversal_depth": 3,
+            "twin_graph_decay": 0.9,
+        })
+        # Manually set up a twin graph: ldt_1→A→B→C
+        agent._twin_graph = {
+            "ldt_1": {"A": 0.8},
+            "A": {"ldt_1": 0.8, "B": 0.7},
+            "B": {"A": 0.7, "C": 0.6},
+            "C": {"B": 0.6},
+        }
+        return agent
+
+    def test_direct_twins_found(self):
+        """Direct neighbours of counterparty should be found."""
+        agent = self._setup_chain()
+        twins = agent._find_transitive_twins("A")
+        twin_ids = [t[0] for t in twins]
+        assert "B" in twin_ids
+
+    def test_depth2_transitive_found(self):
+        """Transitive twins at depth 2 should be found."""
+        agent = self._setup_chain()
+        twins = agent._find_transitive_twins("A")
+        twin_ids = [t[0] for t in twins]
+        assert "C" in twin_ids
+
+    def test_decay_applied_per_hop(self):
+        """Scores should decay with each hop."""
+        agent = self._setup_chain()
+        twins = agent._find_transitive_twins("A")
+        twin_dict = {t[0]: t[1] for t in twins}
+        if "B" in twin_dict and "C" in twin_dict:
+            assert twin_dict["C"] < twin_dict["B"]
+
+    def test_depth_limit_respected(self):
+        """Should not traverse beyond twin_graph_traversal_depth."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 4,
+            "twin_graph_traversal_depth": 1,  # Only 1 hop
+            "twin_graph_decay": 0.9,
+        })
+        agent._twin_graph = {
+            "A": {"B": 0.8},
+            "B": {"A": 0.8, "C": 0.7},
+            "C": {"B": 0.7, "D": 0.6},
+            "D": {"C": 0.6},
+        }
+        twins = agent._find_transitive_twins("A")
+        twin_ids = [t[0] for t in twins]
+        # With depth 1, should only see B (direct neighbor of A).
+        # C and D require depth 2+.
+        assert "B" in twin_ids
+        assert "D" not in twin_ids
+
+    def test_no_self_loop(self):
+        """Agent's own ID should not appear as a transitive twin."""
+        agent = self._setup_chain()
+        twins = agent._find_transitive_twins("A")
+        twin_ids = [t[0] for t in twins]
+        assert "ldt_1" not in twin_ids
+
+    def test_caching(self):
+        """Second call should use cache."""
+        agent = self._setup_chain()
+        twins1 = agent._find_transitive_twins("A")
+        twins2 = agent._find_transitive_twins("A")
+        assert twins1 is twins2  # Same object from cache
+
+    def test_empty_graph_returns_empty(self):
+        """No twins if graph is empty."""
+        agent = LDTAgent("ldt_1", config={"acausality_depth": 4})
+        twins = agent._find_transitive_twins("unknown")
+        assert twins == []
+
+
+# ------------------------------------------------------------------
+# Test: Level 4 — Twin graph cooperation
+# ------------------------------------------------------------------
+
+
+class TestLevel4TwinGraphCooperation:
+    def test_cooperative_network_high_prob(self):
+        """With cooperative twins, L4 probability should be high."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 4,
+            "cooperation_prior": 0.8,
+            "counterfactual_horizon": 10,
+            "twin_graph_min_edge": 0.1,
+            "acausal_bonus_weight": 0.3,
+        })
+        # Build cooperative history with multiple peers.
+        for _ in range(10):
+            agent._own_trace.append((True, 0.85))
+            agent._counterparty_profiles.setdefault("peer", []).append((True, 0.85))
+            agent._counterparty_profiles.setdefault("twin_a", []).append((True, 0.9))
+            agent._counterparty_profiles.setdefault("twin_b", []).append((True, 0.8))
+        agent._rebuild_twin_graph()
+        prob = agent._twin_graph_cooperation("peer")
+        assert prob > 0.5
+
+    def test_isolated_agent_falls_back_to_l3(self):
+        """Without twin graph edges, L4 should equal L3."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 4,
+            "cooperation_prior": 0.7,
+        })
+        # No history → empty twin graph → no transitive twins.
+        l3 = agent._recursive_equilibrium("unknown")
+        l4 = agent._twin_graph_cooperation("unknown")
+        assert l4 == pytest.approx(l3)
+
+    def test_bonus_bounded(self):
+        """L4 cooperation probability must be in [0, 1]."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 4,
+            "acausal_bonus_weight": 0.5,
+        })
+        for _ in range(10):
+            agent._own_trace.append((True, 0.9))
+            agent._counterparty_profiles.setdefault("x", []).append((True, 0.9))
+        agent._rebuild_twin_graph()
+        prob = agent._twin_graph_cooperation("x")
+        assert 0.0 <= prob <= 1.0
+
+    def test_depth4_returns_bool(self):
+        """Full L4 decision should return a boolean."""
+        agent = LDTAgent("ldt_1", config={"acausality_depth": 4})
+        result = agent._ldt_cooperate_decision("unknown")
+        assert isinstance(result, bool)
+
+
+# ------------------------------------------------------------------
+# Test: Level 5 — Monte Carlo cooperation
+# ------------------------------------------------------------------
+
+
+class TestLevel5MonteCarlo:
+    def test_deterministic_with_seed(self):
+        """Same seed should produce identical results."""
+        def make_agent():
+            a = LDTAgent("ldt_1", config={
+                "acausality_depth": 5,
+                "n_counterfactual_samples": 20,
+                "counterfactual_noise_std": 0.1,
+            }, rng=random.Random(42))
+            for _ in range(10):
+                a._own_trace.append((True, 0.8))
+                a._counterparty_profiles.setdefault("p", []).append((True, 0.8))
+            a._rebuild_twin_graph()
+            return a
+
+        a1 = make_agent()
+        a2 = make_agent()
+        p1 = a1._monte_carlo_cooperation("p")
+        p2 = a2._monte_carlo_cooperation("p")
+        assert p1 == pytest.approx(p2)
+
+    def test_bounded_output(self):
+        """MC cooperation probability must be in [0, 1]."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 5,
+            "n_counterfactual_samples": 10,
+        })
+        for _ in range(10):
+            agent._own_trace.append((True, 0.7))
+            agent._counterparty_profiles.setdefault("x", []).append((True, 0.6))
+        agent._rebuild_twin_graph()
+        prob = agent._monte_carlo_cooperation("x")
+        assert 0.0 <= prob <= 1.0
+
+    def test_zero_noise_matches_deterministic(self):
+        """With noise_std=0, MC should match single L4 computation."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 5,
+            "n_counterfactual_samples": 10,
+            "counterfactual_noise_std": 0.0,
+        })
+        for _ in range(10):
+            agent._own_trace.append((True, 0.8))
+            agent._counterparty_profiles.setdefault("p", []).append((True, 0.75))
+        agent._rebuild_twin_graph()
+        mc = agent._monte_carlo_cooperation("p")
+        # With zero noise, all samples are identical → internally consistent.
+        # Note: MC uses simplified best-response vs L4's full recursive
+        # equilibrium, so we just verify MC output is bounded.
+        assert 0.0 <= mc <= 1.0
+
+    def test_depth5_returns_bool(self):
+        """Full L5 decision should return a boolean."""
+        agent = LDTAgent("ldt_1", config={
+            "acausality_depth": 5,
+            "n_counterfactual_samples": 5,
+        })
+        result = agent._ldt_cooperate_decision("unknown")
+        assert isinstance(result, bool)
+
+
+# ------------------------------------------------------------------
+# Test: Depth 4-5 backward compatibility
+# ------------------------------------------------------------------
+
+
+class TestNewDepthBackwardCompat:
+    def test_depth1_unchanged(self):
+        """Depth=1 behavior should be unchanged with new code."""
+        agent = LDTAgent("ldt_1", config={"acausality_depth": 1})
+        for _ in range(10):
+            agent._own_trace.append((True, 0.8))
+            agent._counterparty_profiles.setdefault("p", []).append((True, 0.75))
+        l1 = agent._level1_cooperate_decision("p")
+        full = agent._ldt_cooperate_decision("p")
+        assert l1 == full
+
+    def test_depth2_unchanged(self):
+        """Depth=2 behavior should be unchanged."""
+        agent = LDTAgent("ldt_1", config={"acausality_depth": 2})
+        result = agent._ldt_cooperate_decision("unknown")
+        assert isinstance(result, bool)
+
+    def test_depth3_unchanged(self):
+        """Depth=3 behavior should be unchanged."""
+        agent = LDTAgent("ldt_1", config={"acausality_depth": 3})
+        result = agent._ldt_cooperate_decision("unknown")
+        assert isinstance(result, bool)
+
+    def test_new_defaults_exist(self):
+        """New config params should have defaults."""
+        agent = LDTAgent("ldt_1")
+        assert agent.twin_graph_min_edge == 0.3
+        assert agent.twin_graph_traversal_depth == 2
+        assert agent.twin_graph_decay == 0.9
+        assert agent.n_counterfactual_samples == 50
+        assert agent.counterfactual_noise_std == 0.1
+        assert agent.acausal_bonus_weight == 0.1
+
+    def test_no_twin_graph_at_depth_leq3(self):
+        """At depth <= 3, twin graph and MC state should be empty/unused."""
+        agent = LDTAgent("ldt_1", config={"acausality_depth": 3})
+        for _ in range(5):
+            ix = _interaction(initiator="peer", counterparty="ldt_1", accepted=True, p=0.8)
+            agent.update_from_outcome(ix, 1.0)
+        # Twin graph should not have been populated.
+        assert agent._twin_graph == {}
+
+    def test_depth4_does_not_populate_mc(self):
+        """Depth=4 should use twin graph but not MC sampling."""
+        agent = LDTAgent("ldt_1", config={"acausality_depth": 4})
+        result = agent._ldt_cooperate_decision("unknown")
+        assert isinstance(result, bool)

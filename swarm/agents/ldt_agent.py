@@ -209,6 +209,30 @@ class LDTAgent(BaseAgent):
             "introspection_discount", 0.9
         )
 
+        # --- twin graph parameters (depth >= 4) ---
+        self.twin_graph_min_edge: float = self.config.get(
+            "twin_graph_min_edge", 0.3
+        )
+        self.twin_graph_traversal_depth: int = self.config.get(
+            "twin_graph_traversal_depth", 2
+        )
+        self.twin_graph_decay: float = self.config.get(
+            "twin_graph_decay", 0.9
+        )
+
+        # --- Monte Carlo parameters (depth >= 5) ---
+        self.n_counterfactual_samples: int = self.config.get(
+            "n_counterfactual_samples", 50
+        )
+        self.counterfactual_noise_std: float = self.config.get(
+            "counterfactual_noise_std", 0.1
+        )
+
+        # --- acausal bonus ---
+        self.acausal_bonus_weight: float = self.config.get(
+            "acausal_bonus_weight", 0.1
+        )
+
         # --- decision theory variant ---
         # "tdt" = Timeless (original), "fdt" = Functional, "udt" = Updateless
         self.decision_theory: str = self.config.get("decision_theory", "fdt")
@@ -246,6 +270,14 @@ class LDTAgent(BaseAgent):
         self._precommitted_cooperate: Optional[bool] = None
         # Lock for cache access.
         self._cache_lock = threading.Lock()
+
+        # --- Twin graph state (depth >= 4) ---
+        # Adjacency dict: agent_id -> {agent_id -> similarity_score}
+        self._twin_graph: Dict[str, Dict[str, float]] = {}
+        # Cache for transitive twin lookups.
+        self._transitive_twin_cache: Dict[str, List[Tuple[str, float]]] = {}
+        # Seeded RNG for Monte Carlo counterfactual sampling (depth >= 5).
+        self._mc_rng = random.Random(self._rng.randint(0, 2**32 - 1))
 
     # ------------------------------------------------------------------
     # Core LDT reasoning helpers
@@ -747,6 +779,203 @@ class LDTAgent(BaseAgent):
         return result
 
     # ------------------------------------------------------------------
+    # Twin graph (depth >= 4)
+    # ------------------------------------------------------------------
+
+    def _rebuild_twin_graph(self) -> None:
+        """Rebuild the twin graph from current counterparty profiles.
+
+        Computes pairwise similarity between all known counterparties
+        (including self-to-counterparty edges) and stores edges that
+        exceed ``twin_graph_min_edge``.
+        """
+        agents = list(self._counterparty_profiles.keys())
+        graph: Dict[str, Dict[str, float]] = {}
+
+        # Edges from us to each counterparty.
+        own_vec = self._own_behaviour_vector()
+        for aid in agents:
+            their_vec = self._counterparty_behaviour_vector(aid)
+            sim = max(0.0, min(1.0, _cosine_similarity(own_vec, their_vec)))
+            if sim >= self.twin_graph_min_edge:
+                graph.setdefault(self.agent_id, {})[aid] = sim
+                graph.setdefault(aid, {})[self.agent_id] = sim
+
+        # Cross-edges between counterparties (O(N^2), trivial for N<20).
+        for i, a in enumerate(agents):
+            vec_a = self._counterparty_behaviour_vector(a)
+            for b in agents[i + 1:]:
+                vec_b = self._counterparty_behaviour_vector(b)
+                sim = max(0.0, min(1.0, _cosine_similarity(vec_a, vec_b)))
+                if sim >= self.twin_graph_min_edge:
+                    graph.setdefault(a, {})[b] = sim
+                    graph.setdefault(b, {})[a] = sim
+
+        self._twin_graph = graph
+
+    def _find_transitive_twins(
+        self, counterparty_id: str
+    ) -> List[Tuple[str, float]]:
+        """BFS on the twin graph to find transitive twins.
+
+        Returns ``(agent_id, decayed_score)`` pairs reachable within
+        ``twin_graph_traversal_depth`` hops.  Similarity decays by
+        ``twin_graph_decay`` per hop.
+        """
+        if counterparty_id in self._transitive_twin_cache:
+            return self._transitive_twin_cache[counterparty_id]
+
+        result: List[Tuple[str, float]] = []
+        visited = {self.agent_id, counterparty_id}
+
+        # BFS frontier: (agent_id, accumulated_score)
+        frontier: List[Tuple[str, float]] = []
+
+        # Seed from counterparty's neighbours.
+        for neighbour, edge_score in self._twin_graph.get(
+            counterparty_id, {}
+        ).items():
+            if neighbour not in visited:
+                frontier.append((neighbour, edge_score * self.twin_graph_decay))
+                visited.add(neighbour)
+
+        depth = 1
+        while frontier and depth < self.twin_graph_traversal_depth:
+            result.extend(frontier)
+            next_frontier: List[Tuple[str, float]] = []
+            for node, score in frontier:
+                for neighbour, edge_score in self._twin_graph.get(
+                    node, {}
+                ).items():
+                    if neighbour not in visited:
+                        decayed = score * edge_score * self.twin_graph_decay
+                        if decayed > 0.01:  # prune negligible paths
+                            next_frontier.append((neighbour, decayed))
+                            visited.add(neighbour)
+            frontier = next_frontier
+            depth += 1
+
+        # Add any remaining from the last frontier.
+        result.extend(frontier)
+
+        self._transitive_twin_cache[counterparty_id] = result
+        return result
+
+    def _twin_graph_cooperation(self, counterparty_id: str) -> float:
+        """Level 4: twin-graph-enhanced cooperation probability.
+
+        1. Gets Level 3 equilibrium probability.
+        2. Finds transitive twins via BFS.
+        3. Computes acausal bonus from cooperation history with twins.
+        4. Blends: ``(1 - beta) * l3 + beta * bonus``.
+        """
+        l3_prob = self._recursive_equilibrium(counterparty_id)
+        twins = self._find_transitive_twins(counterparty_id)
+
+        if not twins:
+            return l3_prob
+
+        # Acausal bonus: weighted sum of cooperation rates with twins.
+        bonus_sum = 0.0
+        weight_sum = 0.0
+        for twin_id, path_score in twins:
+            profile = self._counterparty_profiles.get(twin_id, [])
+            if profile:
+                coop_rate = sum(1 for acc, _ in profile if acc) / len(profile)
+                bonus_sum += path_score * coop_rate
+                weight_sum += path_score
+
+        acausal_bonus = bonus_sum / weight_sum if weight_sum > 0 else 0.0
+        acausal_bonus = max(0.0, min(1.0, acausal_bonus))
+
+        beta = self.acausal_bonus_weight
+        final = (1.0 - beta) * l3_prob + beta * acausal_bonus
+        return max(0.0, min(1.0, final))
+
+    def _compute_l4_for_profile(
+        self,
+        counterparty_id: str,
+        perturbed_profiles: Dict[str, List[Tuple[bool, float]]],
+    ) -> float:
+        """Pure-function Level 4 computation on perturbed profiles.
+
+        Used by Monte Carlo sampling to avoid mutating caches.
+        Recomputes Level 3 equilibrium + twin graph bonus from scratch
+        using the provided perturbed profiles.
+        """
+        # Recompute twin score from perturbed data.
+        profile = perturbed_profiles.get(counterparty_id, [])
+        recent = profile[-self.counterfactual_horizon:]
+        vec = [p if acc else -(1 - p) for acc, p in recent]
+        while len(vec) < self.counterfactual_horizon:
+            vec.append(0.5)
+
+        own = self._own_behaviour_vector()
+        twin_score = max(0.0, min(1.0, _cosine_similarity(own, vec)))
+
+        # Simplified Level 3: single best-response iteration.
+        inferred_coop_prior = (
+            sum(1 for acc, _ in profile if acc) / len(profile)
+            if profile
+            else self.cooperation_prior
+        )
+        my_p = self._best_response_probability(
+            inferred_coop_prior,
+            twin_score,
+            self.cooperation_prior,
+            self.similarity_threshold,
+            self.welfare_weight,
+            self.updateless_commitment,
+        )
+
+        # Twin graph bonus from perturbed profiles.
+        twins = self._find_transitive_twins(counterparty_id)
+        if not twins:
+            return my_p
+
+        bonus_sum = 0.0
+        weight_sum = 0.0
+        for twin_id, path_score in twins:
+            tp = perturbed_profiles.get(
+                twin_id, self._counterparty_profiles.get(twin_id, [])
+            )
+            if tp:
+                coop_rate = sum(1 for acc, _ in tp if acc) / len(tp)
+                bonus_sum += path_score * coop_rate
+                weight_sum += path_score
+
+        bonus = bonus_sum / weight_sum if weight_sum > 0 else 0.0
+        bonus = max(0.0, min(1.0, bonus))
+
+        beta = self.acausal_bonus_weight
+        return max(0.0, min(1.0, (1.0 - beta) * my_p + beta * bonus))
+
+    def _monte_carlo_cooperation(self, counterparty_id: str) -> float:
+        """Level 5: Monte Carlo counterfactual sampling.
+
+        For each of N samples, perturbs counterparty p-values with
+        Gaussian noise and computes Level 4 cooperation probability.
+        Returns the mean across samples.
+        """
+        samples: List[float] = []
+
+        for _ in range(self.n_counterfactual_samples):
+            # Build perturbed profiles.
+            perturbed: Dict[str, List[Tuple[bool, float]]] = {}
+            for aid, profile in self._counterparty_profiles.items():
+                perturbed_profile: List[Tuple[bool, float]] = []
+                for acc, p in profile:
+                    noise = self._mc_rng.gauss(0, self.counterfactual_noise_std)
+                    p_noisy = max(0.0, min(1.0, p + noise))
+                    perturbed_profile.append((acc, p_noisy))
+                perturbed[aid] = perturbed_profile
+
+            l4 = self._compute_l4_for_profile(counterparty_id, perturbed)
+            samples.append(l4)
+
+        return sum(samples) / len(samples) if samples else 0.5
+
+    # ------------------------------------------------------------------
     # Core decision
     # ------------------------------------------------------------------
 
@@ -817,6 +1046,8 @@ class LDTAgent(BaseAgent):
         - depth=1: Behavioral twin detection (original logic)
         - depth=2: Level 1 + policy introspection refinement
         - depth=3: Weighted ensemble of all three levels
+        - depth=4: Twin-graph-enhanced cooperation (transitive twins)
+        - depth=5: Monte Carlo counterfactual sampling over Level 4
         """
         l1 = self._level1_cooperate_decision(counterparty_id)
 
@@ -845,7 +1076,17 @@ class LDTAgent(BaseAgent):
         l2_score = 1.0 if l2 else 0.0
         ensemble = 0.2 * l1_score + 0.3 * l2_score + 0.5 * l3_prob
 
-        return ensemble > 0.5
+        if self.acausality_depth == 3:
+            return ensemble > 0.5
+
+        # Level 4: twin-graph-enhanced cooperation.
+        if self.acausality_depth == 4:
+            l4_prob = self._twin_graph_cooperation(counterparty_id)
+            return l4_prob > 0.5
+
+        # depth >= 5: Monte Carlo over Level 4.
+        l5_prob = self._monte_carlo_cooperation(counterparty_id)
+        return l5_prob > 0.5
 
     # ------------------------------------------------------------------
     # BaseAgent interface
@@ -974,6 +1215,11 @@ class LDTAgent(BaseAgent):
             self._level2_cache.clear()
             self._level3_cache.clear()
             self._subjunctive_cache.clear()
+            self._transitive_twin_cache.clear()
+
+        # Rebuild twin graph edges (depth >= 4).
+        if self.acausality_depth >= 4:
+            self._rebuild_twin_graph()
 
     # ------------------------------------------------------------------
     # Private helpers
