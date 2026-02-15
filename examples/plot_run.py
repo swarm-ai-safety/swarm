@@ -155,6 +155,11 @@ def main() -> int:
         default=None,
         help="Plot only a specific metric (default: standard set)",
     )
+    parser.add_argument(
+        "--enhanced",
+        action="store_true",
+        help="Use enhanced dashboard with KPI cards, gradient fills, and glow lines",
+    )
     args = parser.parse_args()
 
     run_dir = args.run_dir
@@ -177,6 +182,29 @@ def main() -> int:
         return 0
 
     plots_dir.mkdir(parents=True, exist_ok=True)
+
+    # Enhanced dashboard mode
+    if args.enhanced:
+        try:
+            from swarm.analysis.enhanced_dashboard import plot_enhanced_dashboard
+
+            csv_dir = run_dir / "csv"
+            candidates = list(csv_dir.glob("*_epochs.csv")) if csv_dir.is_dir() else []
+            if not candidates:
+                candidates = list(run_dir.glob("*_epochs.csv"))
+            if not candidates:
+                print("No *_epochs.csv found for enhanced dashboard")
+                return 1
+
+            fig = plot_enhanced_dashboard(sorted(candidates)[0])
+            out = plots_dir / "enhanced_dashboard.png"
+            fig.savefig(out, dpi=200, bbox_inches="tight")
+            plt.close(fig)
+            print(out)
+            return 0
+        except Exception as err:
+            print(f"Enhanced dashboard failed: {err}")
+            return 1
 
     metrics = (
         [args.metric]

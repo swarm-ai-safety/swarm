@@ -15,6 +15,11 @@ from swarm.analysis.dashboard import (
     run_dashboard,
 )
 from swarm.analysis.dolt_export import export_run_summary_to_dolt, export_to_dolt
+from swarm.analysis.enhanced_dashboard import (
+    plot_enhanced_dashboard,
+    plot_enhanced_line,
+    plot_multi_scenario_dashboard,
+)
 from swarm.analysis.phylogeny import generate_phylogeny
 from swarm.analysis.sweep import (
     SweepConfig,
@@ -68,6 +73,10 @@ __all__ = [
     # Dolt export
     "export_to_dolt",
     "export_run_summary_to_dolt",
+    # Enhanced dashboard
+    "plot_enhanced_dashboard",
+    "plot_enhanced_line",
+    "plot_multi_scenario_dashboard",
     # Theme & colors
     "COLORS",
     "SWARM_STYLE",
