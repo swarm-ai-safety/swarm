@@ -39,6 +39,11 @@ from swarm.metrics.moltipedia_metrics import (
     point_concentration,
     policy_fix_exploitation_rate,
 )
+from swarm.metrics.obfuscation_metrics import (
+    ObfuscationCategory,
+    ObfuscationMetrics,
+    ObfuscationSummary,
+)
 from swarm.metrics.reporters import MetricsReporter
 from swarm.metrics.rlm_metrics import RLMMetrics
 from swarm.metrics.security import (
@@ -103,6 +108,10 @@ __all__ = [
     "group_by_epoch",
     # RLM experiment metrics
     "RLMMetrics",
+    # Obfuscation Atlas metrics
+    "ObfuscationMetrics",
+    "ObfuscationCategory",
+    "ObfuscationSummary",
     # Rivals (Team-of-Rivals) metrics (lazy import to avoid circular dependency)
     # Use: from swarm.metrics.rivals_metrics import compute_rivals_metrics, RivalsMetrics
 ]

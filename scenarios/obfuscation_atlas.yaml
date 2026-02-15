@@ -1,0 +1,111 @@
+# Obfuscation Atlas Scenario
+# Tests whether governance levers can handle obfuscation strategies
+# from Lindner et al. (2026) "Obfuscation Atlas" (FAR.AI)
+#
+# 12 agents: 4 honest + 2 blatant + 3 policy_obf + 2 activation_obf + 1 adaptive
+# Governance: audits, reputation decay, circuit breaker, collusion detection
+
+scenario_id: obfuscation_atlas
+description: >
+  Obfuscation Atlas integration: tests governance response to four deception
+  modes (blatant, policy obfuscation, activation obfuscation, adaptive)
+  from the FAR.AI paper. Key question: does our proxy (ProxyComputer) suffer
+  the same adversarial failure modes as the paper's lie detectors?
+motif: obfuscation_evasion
+
+agents:
+  # --- Honest agents (control group) ---
+  - type: honest
+    count: 4
+
+  # --- Blatant deception (easily caught baseline) ---
+  - type: obfuscating
+    count: 2
+    config:
+      obfuscation_strategy: blatant
+      trust_building_phase: 3
+
+  # --- Policy obfuscation (signal inflation + rationalization) ---
+  - type: obfuscating
+    count: 3
+    config:
+      obfuscation_strategy: policy_obfuscation
+      trust_building_phase: 5
+      rationalization_strength: 0.7
+      signal_inflation_cap: 0.4
+
+  # --- Activation obfuscation (representation drift) ---
+  - type: obfuscating
+    count: 2
+    config:
+      obfuscation_strategy: activation_obfuscation
+      trust_building_phase: 4
+      drift_rate: 0.05
+      activation_noise_scale: 0.1
+
+  # --- Adaptive (switches strategy based on detection) ---
+  - type: obfuscating
+    count: 1
+    config:
+      obfuscation_strategy: adaptive
+      trust_building_phase: 5
+
+governance:
+  # Random audit (analog to probe/lie detector)
+  audit_enabled: true
+  audit_probability: 0.15
+  audit_penalty_multiplier: 3.0
+  audit_threshold_p: 0.5
+
+  # Reputation decay (analog to KL penalty in the paper)
+  reputation_decay_rate: 0.85
+
+  # Circuit breaker
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+  # Collusion detection
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.7
+  collusion_min_interactions: 3
+
+  # Bandwidth cap
+  bandwidth_cap: 8
+
+network:
+  topology: small_world
+  params:
+    k: 4
+    p: 0.2
+
+simulation:
+  n_epochs: 30
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 8
+  interactions_per_step: 5
+  votes_per_epoch: 40
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.5
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.5
+
+success_criteria:
+  min_epochs: 30
+  min_agents: 12
+  toxicity_threshold: 0.4
+
+outputs:
+  event_log: "logs/obfuscation_atlas_events.jsonl"
+  metrics_csv: "logs/obfuscation_atlas_metrics.csv"

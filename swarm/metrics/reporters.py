@@ -5,6 +5,7 @@ from typing import Dict, List, Optional
 
 from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.metrics.incoherence import DecisionRecord, IncoherenceMetrics
+from swarm.metrics.obfuscation_metrics import ObfuscationSummary
 from swarm.metrics.soft_metrics import SoftMetrics
 from swarm.models.interaction import SoftInteraction
 
@@ -58,6 +59,13 @@ class MetricsSummary:
     incoherence_index: float = 0.0
     incoherence_n_decisions: int = 0
 
+    # Obfuscation Atlas metrics (optional)
+    obfuscation_probe_evasion: float = 0.0
+    obfuscation_drift: float = 0.0
+    obfuscation_rationalization: float = 0.0
+    obfuscation_detector_auc: Optional[float] = None
+    obfuscation_belief_shift: float = 0.0
+
     def to_dict(self) -> dict:
         """Convert to dictionary."""
         return {
@@ -105,6 +113,13 @@ class MetricsSummary:
                 "error": self.incoherence_error,
                 "index": self.incoherence_index,
                 "n_decisions": self.incoherence_n_decisions,
+            },
+            "obfuscation": {
+                "probe_evasion": self.obfuscation_probe_evasion,
+                "drift": self.obfuscation_drift,
+                "rationalization": self.obfuscation_rationalization,
+                "detector_auc": self.obfuscation_detector_auc,
+                "belief_shift": self.obfuscation_belief_shift,
             },
         }
 
@@ -335,6 +350,43 @@ class MetricsReporter:
             incoherence_error=sum(r.error for r in results) / n,
             incoherence_index=sum(r.incoherence for r in results) / n,
             incoherence_n_decisions=n,
+        )
+
+    def summary_with_obfuscation(
+        self,
+        interactions: List[SoftInteraction],
+        obfuscation_summary: ObfuscationSummary,
+    ) -> MetricsSummary:
+        """Compute summary plus obfuscation metrics.
+
+        Follows the same pattern as ``summary_with_incoherence()``:
+        computes the base summary then overlays obfuscation fields
+        via ``dataclasses.replace()``.
+
+        Args:
+            interactions: Interaction list for base soft/hard metrics.
+            obfuscation_summary: Pre-computed ObfuscationSummary.
+        """
+        base = self.summary(interactions)
+
+        # Compute rationalization rate: fraction with rationalization metadata
+        if interactions:
+            rationalization_count = sum(
+                1
+                for i in interactions
+                if i.metadata.get("rationalization")
+            )
+            rationalization_rate = rationalization_count / len(interactions)
+        else:
+            rationalization_rate = 0.0
+
+        return replace(
+            base,
+            obfuscation_probe_evasion=obfuscation_summary.probe_evasion_rate,
+            obfuscation_drift=obfuscation_summary.representation_drift,
+            obfuscation_rationalization=rationalization_rate,
+            obfuscation_detector_auc=obfuscation_summary.detector_auc,
+            obfuscation_belief_shift=obfuscation_summary.belief_shift_index,
         )
 
     def format_report(

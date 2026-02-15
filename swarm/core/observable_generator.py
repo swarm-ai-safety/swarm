@@ -7,7 +7,7 @@ or learned signal profiles).
 """
 
 import random
-from typing import Protocol, runtime_checkable
+from typing import Any, Dict, Protocol, runtime_checkable
 
 from swarm.core.proxy import ProxyObservables
 from swarm.env.state import EnvState, InteractionProposal
@@ -139,3 +139,79 @@ class DefaultObservableGenerator:
                 rng.randint(0, 1),
                 rng.uniform(-0.5, -0.1),
             )
+
+
+class ObfuscationObservableGenerator:
+    """Decorator over any ObservableGenerator that applies signal manipulation.
+
+    After the inner generator produces base signals, checks whether the
+    initiator agent has a ``get_signal_manipulation()`` method (duck-typing).
+    If so, applies bounded additive offsets to the raw observables.
+
+    Non-obfuscating agents pass through unchanged.  The p in [0,1] invariant
+    is preserved because manipulation targets raw signals, not p itself.
+    """
+
+    def __init__(
+        self,
+        inner: Any,
+        agents: Dict[str, Any] | None = None,
+    ) -> None:
+        """Initialize the obfuscation wrapper.
+
+        Args:
+            inner: The underlying ObservableGenerator to decorate.
+            agents: Mapping of agent_id -> agent instance.  Used for
+                duck-typing lookup of ``get_signal_manipulation()``.
+                Can be updated after construction.
+        """
+        self._inner = inner
+        self._agents: Dict[str, Any] = agents or {}
+
+    def set_agents(self, agents: Dict[str, Any]) -> None:
+        """Update the agent registry."""
+        self._agents = agents
+
+    def generate(
+        self,
+        proposal: InteractionProposal,
+        accepted: bool,
+        state: EnvState,
+    ) -> ProxyObservables:
+        """Generate observables, applying obfuscation offsets if present."""
+        base = self._inner.generate(proposal, accepted, state)
+
+        # Duck-type check: does the initiator agent have signal manipulation?
+        agent = self._agents.get(proposal.initiator_id)
+        if agent is None or not hasattr(agent, "get_signal_manipulation"):
+            return base
+
+        offsets = agent.get_signal_manipulation()
+        if not offsets:
+            return base
+
+        # Apply bounded offsets
+        tp = base.task_progress_delta + offsets.get("task_progress_delta", 0.0)
+        tp = max(-1.0, min(1.0, tp))
+
+        rework = base.rework_count + offsets.get("rework_count", 0.0)
+        rework = max(0, int(round(rework)))
+
+        rejections = base.verifier_rejections + offsets.get("verifier_rejections", 0.0)
+        rejections = max(0, int(round(rejections)))
+
+        misuse = base.tool_misuse_flags + offsets.get("tool_misuse_flags", 0.0)
+        misuse = max(0, int(round(misuse)))
+
+        eng = base.counterparty_engagement_delta + offsets.get(
+            "counterparty_engagement_delta", 0.0
+        )
+        eng = max(-1.0, min(1.0, eng))
+
+        return ProxyObservables(
+            task_progress_delta=tp,
+            rework_count=rework,
+            verifier_rejections=rejections,
+            tool_misuse_flags=misuse,
+            counterparty_engagement_delta=eng,
+        )

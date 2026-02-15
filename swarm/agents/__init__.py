@@ -21,6 +21,7 @@ from swarm.agents.moltbook_agent import (
     HumanPretenderAgent,
     SpamBotAgent,
 )
+from swarm.agents.obfuscating import ObfuscatingAgent, ObfuscationStrategy
 from swarm.agents.opportunistic import OpportunisticAgent
 from swarm.agents.rain_river import (
     AdversarialRainAgent,
@@ -68,6 +69,9 @@ __all__ = [
     "AdversarialRiverAgent",
     # Self-optimizing agent
     "SelfOptimizerAgent",
+    # Obfuscation Atlas agents
+    "ObfuscatingAgent",
+    "ObfuscationStrategy",
     # Attack strategies
     "AttackStrategy",
 ]

@@ -26,6 +26,7 @@ from swarm.agents.moltbook_agent import (
     HumanPretenderAgent,
     SpamBotAgent,
 )
+from swarm.agents.obfuscating import ObfuscatingAgent
 from swarm.agents.opportunistic import OpportunisticAgent
 from swarm.agents.rivals_agent import RivalsCriticAgent, RivalsProducerAgent
 from swarm.agents.rlm_agent import RLMAgent
@@ -114,12 +115,15 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     # Rivals pipeline agents (Team-of-Rivals)
     "rivals_producer": RivalsProducerAgent,
     "rivals_critic": RivalsCriticAgent,
+    # Obfuscation Atlas agents (Lindner et al., 2026)
+    "obfuscating": ObfuscatingAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
 _LLM_AGENT_CLASS = None
 _LLM_CONFIG_CLASSES = None
 _COUNCIL_AGENT_CLASS = None
+_CONCORDIA_ENTITY_CLASS = None
 
 
 def _get_llm_classes():
@@ -146,6 +150,16 @@ def _get_council_agent_class():
 
         _COUNCIL_AGENT_CLASS = CouncilAgent
     return _COUNCIL_AGENT_CLASS
+
+
+def _get_concordia_entity_class():
+    """Lazy import ConcordiaEntityAgent class."""
+    global _CONCORDIA_ENTITY_CLASS
+    if _CONCORDIA_ENTITY_CLASS is None:
+        from swarm.bridges.concordia.entity_agent import ConcordiaEntityAgent
+
+        _CONCORDIA_ENTITY_CLASS = ConcordiaEntityAgent
+    return _CONCORDIA_ENTITY_CLASS
 
 
 @dataclass
@@ -1035,6 +1049,36 @@ def create_agents(
                     agent_id=agent_id,
                     council_config=council_config,
                     name=agent_name,
+                )
+                agents.append(agent)
+
+        # Handle Concordia entity agents
+        elif agent_type == "concordia_entity":
+            ConcordiaEntityAgent = _get_concordia_entity_class()
+            from swarm.bridges.concordia.config import ConcordiaEntityConfig
+
+            raw_config = spec.get("concordia", {})
+            concordia_config = ConcordiaEntityConfig(**{
+                k: v for k, v in raw_config.items()
+                if k in ConcordiaEntityConfig.__dataclass_fields__
+            })
+
+            for _ in range(count):
+                counters["concordia_entity"] = (
+                    counters.get("concordia_entity", 0) + 1
+                )
+                agent_id = f"concordia_{counters['concordia_entity']}"
+                agent_name = (
+                    f"{base_name}_{counters['concordia_entity']}"
+                    if base_name and count > 1
+                    else base_name
+                )
+
+                agent = ConcordiaEntityAgent(
+                    agent_id=agent_id,
+                    concordia_config=concordia_config,
+                    name=agent_name,
+                    config=agent_config,
                 )
                 agents.append(agent)
 
