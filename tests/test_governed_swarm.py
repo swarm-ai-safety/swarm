@@ -393,9 +393,8 @@ class TestCompositePolicy:
         composite = CompositePolicy([Redirect1(), Redirect2()])
         result = composite.evaluate("a", "b", "task", {}, ProvenanceLogger())
         assert result.decision == GovernanceDecision.MODIFY
-        assert result.modified_context is not None
-        # Last redirect wins
-        assert result.modified_context["redirected_target"] == "agent_y"
+        # Last redirect wins — target is now on modified_target, not buried in modified_context
+        assert result.modified_target == "agent_y"
 
 
 # =========================================================================

@@ -98,7 +98,7 @@ def gini_coefficient(values: np.ndarray) -> float:
     return float((2 * np.sum(index * values) - (n + 1) * np.sum(values)) / (n * np.sum(values)))
 
 
-# ── Holm-Bonferroni correction ─────────────────────────────────────────
+# ── Multiple-comparisons corrections ──────────────────────────────────
 def holm_bonferroni(
     p_values: List[float], alpha: float = 0.05
 ) -> List[bool]:
@@ -116,6 +116,34 @@ def holm_bonferroni(
         else:
             # Once a test fails, all subsequent fail too
             break
+    return results
+
+
+def benjamini_hochberg(
+    p_values: List[float], alpha: float = 0.05
+) -> List[bool]:
+    """Apply Benjamini-Hochberg step-up correction (FDR control).
+
+    Finds the largest rank k where p_(k) <= (k/m)*alpha, then marks
+    all ranks 1..k as significant.
+
+    Returns a list of bools (same order as input) indicating significance.
+    """
+    n = len(p_values)
+    if n == 0:
+        return []
+    indexed = sorted(enumerate(p_values), key=lambda x: x[1])
+    # Find the largest rank that passes
+    bh_cutoff = 0
+    for rank_0, (_orig_idx, p) in enumerate(indexed):
+        rank = rank_0 + 1
+        if p <= (rank / n) * alpha:
+            bh_cutoff = rank
+    # All ranks up to bh_cutoff are significant
+    results = [False] * n
+    for rank_0, (orig_idx, _p) in enumerate(indexed):
+        if (rank_0 + 1) <= bh_cutoff:
+            results[orig_idx] = True
     return results
 
 
