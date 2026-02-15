@@ -150,6 +150,17 @@ Never guess or infer from the OS username.
 
 - When fixing a flaky test, prefer making it deterministic (set seeds, constrain inputs) over loosening assertions.
 
+## Blog post disclaimers
+
+- Any blog post (`docs/blog/`, `docs/posts/`) that references financial markets, trading, investment, market microstructure, or similar financial concepts **must** include a disclaimer at the bottom:
+  ```
+  ---
+
+  *Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*
+  ```
+- For posts that simulate economies (e.g. AI Economist), use the variant: `"...simulates a stylized economic environment for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any economic policy or trading strategy."`
+- The pre-commit hook enforces this automatically.
+
 ## Safety / invariants (do not break)
 
 - `p` must remain in `[0, 1]` everywhere it is surfaced or logged.

@@ -127,6 +127,39 @@ if [ -n "$STAGED_PUBLIC" ]; then
     echo "[swarm pre-commit] private infra scan: clean"
 fi
 
+# ── 1c. Financial disclaimer check (blog/post files mentioning markets) ──
+STAGED_BLOG=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^docs/(blog|posts)/.*\.md$' || true)
+if [ -n "$STAGED_BLOG" ]; then
+    DISCLAIMER_MISSING=""
+    for f in $STAGED_BLOG; do
+        # Check if the file mentions financial/market terms
+        HAS_FINANCE=$(grep -Eic '(financial market|market microstructure|trading|invest(ment|or|ing)|stock market|portfolio|kyle.s lambda|glosten.milgrom|adverse selection|bid.ask spread|FINRA|market maker)' "$f" || true)
+        if [ "$HAS_FINANCE" -gt 0 ]; then
+            # Check if it has a disclaimer
+            HAS_DISCLAIMER=$(grep -c 'not financial advice\|Nothing here constitutes financial advice\|does not constitute financial advice' "$f" || true)
+            if [ "$HAS_DISCLAIMER" -eq 0 ]; then
+                DISCLAIMER_MISSING="$DISCLAIMER_MISSING  - $f\n"
+            fi
+        fi
+    done
+
+    if [ -n "$DISCLAIMER_MISSING" ]; then
+        echo "=========================================="
+        echo "COMMIT BLOCKED: Missing financial disclaimer"
+        echo "=========================================="
+        echo ""
+        echo "These blog posts reference financial markets but lack a disclaimer:"
+        echo -e "$DISCLAIMER_MISSING"
+        echo "Add to the bottom of each file:"
+        echo '  ---'
+        echo '  *Disclaimer: This post uses financial market concepts as analogies'
+        echo '  for AI safety research. Nothing here constitutes financial advice,'
+        echo '  investment recommendations, or endorsement of any trading strategy.*'
+        echo ""
+        exit 1
+    fi
+fi
+
 # ── 2. Lint/Typecheck (prefer pre-commit if available) ──
 if command -v pre-commit >/dev/null 2>&1 && [ -f ".pre-commit-config.yaml" ]; then
     echo "[swarm pre-commit] pre-commit (config hooks)"
