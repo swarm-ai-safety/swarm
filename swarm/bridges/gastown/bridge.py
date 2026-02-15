@@ -81,13 +81,12 @@ class GasTownBridge:
         base = self._config.base_branch
         worktrees = self._git_observer.get_agent_worktrees()
 
-        # Build a lookup from agent name → best matching branch
+        # Build a lookup from agent name → best matching branch for agents
+        # that don't have a local worktree.
         branch_map: Dict[str, str] = {}
-        if not worktrees:
-            for info in self._git_observer.get_feature_branches(base):
-                agent = info["agent"]
-                # Keep the first (or only) branch per agent; callers that
-                # need all branches should use poll_branches().
+        for info in self._git_observer.get_feature_branches(base):
+            agent = info["agent"]
+            if agent not in worktrees:
                 branch_map.setdefault(agent, info["branch"])
 
         for event in new_events:

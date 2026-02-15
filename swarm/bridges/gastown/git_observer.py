@@ -85,7 +85,7 @@ class GitObserver:
 
         # CI failures (convention: commits with "[ci-fail]" in message)
         result = _run_git(
-            ["log", "--oneline", "--grep=[ci-fail]", "main..HEAD"],
+            ["log", "--oneline", "--fixed-strings", "--grep=[ci-fail]", "main..HEAD"],
             cwd=worktree,
         )
         if result and result.returncode == 0:
@@ -234,7 +234,7 @@ class GitObserver:
 
         # CI failures (commits with "[ci-fail]" in message)
         result = _run_git(
-            ["log", "--oneline", "--grep=[ci-fail]", f"{base}..{branch}"],
+            ["log", "--oneline", "--fixed-strings", "--grep=[ci-fail]", f"{base}..{branch}"],
             cwd=cwd,
         )
         if result and result.returncode == 0:
