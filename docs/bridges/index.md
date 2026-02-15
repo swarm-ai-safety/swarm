@@ -64,16 +64,6 @@ Ingest Ralph event streams into SWARM governance and metrics.
 
 [Learn more →](ralph.md)
 
-### SWARM-Prime Intellect
-
-Train safety-aware models on Prime Intellect's distributed RL platform using SWARM metrics as reward signals.
-
-- **Purpose:** RL training with SWARM safety rewards, environment publishing, model evaluation
-- **Features:** Verifiers-compatible environment, composite reward system, anti-gaming scoring, platform client
-- **Status:** In development
-
-[Learn more →](prime_intellect.md)
-
 ### SWARM-AgentXiv
 
 Map research papers to SWARM scenarios for validation.
