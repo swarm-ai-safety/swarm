@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 class TopologyMode(str, Enum):
     """Execution topology for batch runs.
-    
+
     Attributes:
         SHARED_EPISODE: All agents share the same episode/environment instance.
             Use when agents should interact in the same world state.
@@ -30,7 +30,7 @@ class TopologyMode(str, Enum):
 
 class SciAgentBenchTask(BaseModel):
     """Configuration for a single SciAgentBench task.
-    
+
     Attributes:
         task_id: Unique identifier for the task.
         instruction: Task instruction text.
@@ -52,7 +52,7 @@ class SciAgentBenchTask(BaseModel):
 
 class TaskResult(BaseModel):
     """Result from executing a single task.
-    
+
     Attributes:
         task_id: Task identifier.
         agent_id: Agent identifier.
@@ -78,7 +78,7 @@ class TaskResult(BaseModel):
 
 class BatchResult(BaseModel):
     """Aggregated results from a batch run.
-    
+
     Attributes:
         topology_mode: Topology mode used for this batch.
         task_results: Individual task results.

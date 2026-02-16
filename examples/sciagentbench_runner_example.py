@@ -5,7 +5,6 @@ to execute SciAgentBench-style tasks.
 """
 
 import logging
-from typing import Optional
 
 from swarm.evaluation.sciagentbench import (
     BatchRunConfig,
@@ -23,34 +22,34 @@ def example_task_executor(
     task: SciAgentBenchTask, agent_id: str, seed: int
 ) -> TaskResult:
     """Example task executor that simulates task execution.
-    
+
     In a real implementation, this would:
     1. Set up the environment with the given seed
     2. Load the task dataset
     3. Execute the agent on the task
     4. Evaluate the output against success criteria
     5. Return the result
-    
+
     Args:
         task: Task to execute.
         agent_id: Identifier for the agent.
         seed: Random seed for reproducibility.
-    
+
     Returns:
         TaskResult with execution outcome.
     """
     import time
-    
+
     logger.info(f"Executing {task.task_id} with {agent_id} (seed={seed})")
-    
+
     # Simulate task execution
     start_time = time.monotonic()
-    
+
     # Mock success/failure based on task and seed
     success = (seed % 3 != 0)  # Fail every third seed
-    
+
     execution_time = time.monotonic() - start_time
-    
+
     return TaskResult(
         task_id=task.task_id,
         agent_id=agent_id,
@@ -69,7 +68,7 @@ def example_task_executor(
 
 def main():
     """Run example batch evaluation."""
-    
+
     # Define sample tasks
     tasks = [
         SciAgentBenchTask(
@@ -100,7 +99,7 @@ def main():
             timeout_seconds=450.0,
         ),
     ]
-    
+
     # Configure the batch runner
     config = BatchRunConfig(
         topology_modes=[
@@ -112,27 +111,27 @@ def main():
         agent_ids=["gpt4", "claude-opus", "deepseek"],
         verbose=True,
     )
-    
+
     # Create and run the batch
     runner = SciAgentBenchRunner(config=config)
-    
+
     logger.info("=" * 60)
     logger.info("Running SciAgentBench batch across topology matrix")
     logger.info(f"Tasks: {len(tasks)}")
     logger.info(f"Agents: {len(config.agent_ids)}")
     logger.info(f"Topologies: {[t.value for t in config.topology_modes]}")
     logger.info("=" * 60)
-    
+
     results = runner.run_batch(
         tasks=tasks,
         executor=example_task_executor,
     )
-    
+
     # Print results summary
     logger.info("\n" + "=" * 60)
     logger.info("RESULTS SUMMARY")
     logger.info("=" * 60)
-    
+
     for topology_mode, batch_result in results.items():
         logger.info(f"\n{topology_mode.value.upper()}:")
         logger.info(f"  Total tasks: {batch_result.total_tasks}")
@@ -141,7 +140,7 @@ def main():
         logger.info(f"  Total time: {batch_result.total_execution_time:.2f}s")
         logger.info(f"  Avg time/task: {batch_result.avg_execution_time():.3f}s")
         logger.info(f"  Seeds used: {len(batch_result.seeds)}")
-        
+
         # Show per-agent breakdown
         agent_stats = {}
         for result in batch_result.task_results:
@@ -150,12 +149,12 @@ def main():
             agent_stats[result.agent_id]["total"] += 1
             if result.success:
                 agent_stats[result.agent_id]["success"] += 1
-        
+
         logger.info("  Per-agent success rates:")
         for agent_id, stats in agent_stats.items():
             success_rate = stats["success"] / stats["total"]
             logger.info(f"    {agent_id}: {stats['success']}/{stats['total']} ({success_rate:.2%})")
-    
+
     logger.info("\n" + "=" * 60)
     logger.info("Batch execution complete!")
     logger.info("=" * 60)

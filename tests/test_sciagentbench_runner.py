@@ -46,7 +46,7 @@ def mock_executor(task, agent_id, seed):
     """Mock task executor that returns deterministic results."""
     # Simulate success based on seed for determinism
     success = (seed % 3 != 0)  # Fail every third seed
-    
+
     return TaskResult(
         task_id=task.task_id,
         agent_id=agent_id,
@@ -91,16 +91,16 @@ class TestSciAgentBenchRunner:
             agent_ids=["agent1", "agent2"],
         )
         runner = SciAgentBenchRunner(config=config)
-        
+
         results = runner.run_batch(tasks=sample_tasks, executor=mock_executor)
-        
+
         assert TopologyMode.SHARED_EPISODE in results
         batch_result = results[TopologyMode.SHARED_EPISODE]
-        
+
         # With 3 tasks and 2 agents, expect 6 results
         assert batch_result.total_tasks == 6
         assert len(batch_result.task_results) == 6
-        
+
         # In shared_episode, each task should have same seed for both agents
         task1_results = [r for r in batch_result.task_results if r.task_id == "task1"]
         assert len(task1_results) == 2
@@ -114,16 +114,16 @@ class TestSciAgentBenchRunner:
             agent_ids=["agent1", "agent2"],
         )
         runner = SciAgentBenchRunner(config=config)
-        
+
         results = runner.run_batch(tasks=sample_tasks, executor=mock_executor)
-        
+
         assert TopologyMode.PER_AGENT in results
         batch_result = results[TopologyMode.PER_AGENT]
-        
+
         # With 3 tasks and 2 agents, expect 6 results
         assert batch_result.total_tasks == 6
         assert len(batch_result.task_results) == 6
-        
+
         # In per_agent, each (task, agent) pair should have unique seed
         task1_results = [r for r in batch_result.task_results if r.task_id == "task1"]
         assert len(task1_results) == 2
@@ -137,16 +137,16 @@ class TestSciAgentBenchRunner:
             agent_ids=["agent1", "agent2"],
         )
         runner = SciAgentBenchRunner(config=config)
-        
+
         results = runner.run_batch(tasks=sample_tasks, executor=mock_executor)
-        
+
         assert TopologyMode.PER_TASK in results
         batch_result = results[TopologyMode.PER_TASK]
-        
+
         # With 3 tasks and 2 agents, expect 6 results
         assert batch_result.total_tasks == 6
         assert len(batch_result.task_results) == 6
-        
+
         # In per_task, each task gets one seed shared by all agents
         task1_results = [r for r in batch_result.task_results if r.task_id == "task1"]
         assert len(task1_results) == 2
@@ -164,15 +164,15 @@ class TestSciAgentBenchRunner:
             agent_ids=["agent1"],
         )
         runner = SciAgentBenchRunner(config=config)
-        
+
         results = runner.run_batch(tasks=sample_tasks, executor=mock_executor)
-        
+
         # All three topology modes should have results
         assert len(results) == 3
         assert TopologyMode.SHARED_EPISODE in results
         assert TopologyMode.PER_AGENT in results
         assert TopologyMode.PER_TASK in results
-        
+
         # Each should have 3 results (3 tasks × 1 agent)
         for topology_mode, batch_result in results.items():
             assert batch_result.total_tasks == 3, f"Failed for {topology_mode}"
@@ -185,13 +185,13 @@ class TestSciAgentBenchRunner:
             base_seed=12345,
             agent_ids=["agent1"],
         )
-        
+
         runner1 = SciAgentBenchRunner(config=config)
         results1 = runner1.run_batch(tasks=sample_tasks, executor=mock_executor)
-        
+
         runner2 = SciAgentBenchRunner(config=config)
         results2 = runner2.run_batch(tasks=sample_tasks, executor=mock_executor)
-        
+
         # Seeds should be identical
         seeds1 = results1[TopologyMode.PER_AGENT].seeds
         seeds2 = results2[TopologyMode.PER_AGENT].seeds
@@ -209,14 +209,14 @@ class TestSciAgentBenchRunner:
             agent_ids=["agent1"],
         )
         runner = SciAgentBenchRunner(config=config)
-        
+
         results = runner.run_batch(tasks=sample_tasks, executor=mock_executor)
-        
+
         # Each topology should have different seeds (because RNG advances)
         seeds_shared = results[TopologyMode.SHARED_EPISODE].seeds
         seeds_per_agent = results[TopologyMode.PER_AGENT].seeds
         seeds_per_task = results[TopologyMode.PER_TASK].seeds
-        
+
         # All three should be different (but this is not guaranteed,
         # so we just check they were generated)
         assert len(seeds_shared) == 3
@@ -231,17 +231,17 @@ class TestSciAgentBenchRunner:
             agent_ids=["agent1"],
         )
         runner = SciAgentBenchRunner(config=config)
-        
+
         results = runner.run_batch(tasks=sample_tasks, executor=mock_executor)
         batch_result = results[TopologyMode.PER_TASK]
-        
+
         # Check summary metrics exist
         assert "success_rate" in batch_result.summary_metrics
         assert "total_execution_time" in batch_result.summary_metrics
         assert "avg_execution_time" in batch_result.summary_metrics
         assert "min_execution_time" in batch_result.summary_metrics
         assert "max_execution_time" in batch_result.summary_metrics
-        
+
         # Check values are reasonable
         assert 0.0 <= batch_result.summary_metrics["success_rate"] <= 1.0
         assert batch_result.summary_metrics["total_execution_time"] > 0
@@ -255,15 +255,15 @@ class TestSciAgentBenchRunner:
             agent_ids=["agent1"],
         )
         runner = SciAgentBenchRunner(config=config)
-        
+
         results = runner.run_batch(tasks=sample_tasks, executor=mock_executor)
         batch_result = results[TopologyMode.PER_TASK]
-        
+
         # Test success_rate method
         success_rate = batch_result.success_rate()
         assert 0.0 <= success_rate <= 1.0
         assert success_rate == batch_result.successful_tasks / batch_result.total_tasks
-        
+
         # Test avg_execution_time method
         avg_time = batch_result.avg_execution_time()
         assert avg_time > 0
@@ -280,14 +280,14 @@ class TestSciAgentBenchRunner:
             agent_ids=["agent1", "agent2", "agent3"],
         )
         runner = SciAgentBenchRunner(config=config)
-        
+
         results = runner.run_batch(tasks=sample_tasks, executor=mock_executor)
         batch_result = results[TopologyMode.PER_AGENT]
-        
+
         # 3 tasks × 3 agents = 9 results
         assert batch_result.total_tasks == 9
         assert len(batch_result.task_results) == 9
-        
+
         # Each task should have 3 results (one per agent)
         for task in sample_tasks:
             task_results = [r for r in batch_result.task_results if r.task_id == task.task_id]
@@ -302,10 +302,10 @@ class TestSciAgentBenchRunner:
             agent_ids=["agent1"],
         )
         runner = SciAgentBenchRunner(config=config)
-        
+
         results = runner.run_batch(tasks=[], executor=mock_executor)
         batch_result = results[TopologyMode.PER_TASK]
-        
+
         assert batch_result.total_tasks == 0
         assert len(batch_result.task_results) == 0
         assert batch_result.successful_tasks == 0
@@ -319,17 +319,17 @@ class TestSciAgentBenchRunner:
             dataset_path="/data/single.csv",
             domain="test",
         )
-        
+
         config = BatchRunConfig(
             topology_modes=[TopologyMode.PER_AGENT],
             base_seed=42,
             agent_ids=["agent1"],
         )
         runner = SciAgentBenchRunner(config=config)
-        
+
         results = runner.run_batch(tasks=[task], executor=mock_executor)
         batch_result = results[TopologyMode.PER_AGENT]
-        
+
         assert batch_result.total_tasks == 1
         assert len(batch_result.task_results) == 1
         assert batch_result.task_results[0].task_id == "single"
