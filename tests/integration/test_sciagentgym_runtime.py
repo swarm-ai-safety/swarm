@@ -13,6 +13,19 @@ from typing import Any, Dict, List, Optional
 import pytest
 
 # ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+# Resource leak detection thresholds
+VERY_STALE_SECONDS = 100  # Environment inactive for this long is very stale
+STALE_SECONDS = 50  # Environment inactive for this long is stale
+GC_THRESHOLD_SECONDS = 30.0  # GC threshold for stale environment collection
+
+# Object leak detection threshold - allows for test infrastructure variance
+# but catches significant leaks (e.g., unclosed file handles, retained references)
+MAX_OBJECT_GROWTH = 1000
+
+# ---------------------------------------------------------------------------
 # Mock SciAgentGym Runtime Infrastructure
 # ---------------------------------------------------------------------------
 
@@ -434,12 +447,12 @@ class TestResourceLeakDetection:
         env3 = runtime.create_environment("env-3")
 
         # Manually set last_active times
-        env1.last_active = time.time() - 100  # Very stale
-        env2.last_active = time.time() - 50   # Stale
+        env1.last_active = time.time() - VERY_STALE_SECONDS  # Very stale
+        env2.last_active = time.time() - STALE_SECONDS   # Stale
         env3.last_active = time.time()        # Active
 
-        # Run GC with 30 second threshold
-        stale_ids = runtime.gc_stale_environments(stale_seconds=30.0)
+        # Run GC with threshold
+        stale_ids = runtime.gc_stale_environments(stale_seconds=GC_THRESHOLD_SECONDS)
 
         # Verify stale environments were collected
         assert len(stale_ids) == 2
@@ -468,10 +481,12 @@ class TestResourceLeakDetection:
 
         final_objects = len(gc.get_objects())
 
-        # Allow some variance but no major leak
-        # (exact count may vary due to test infrastructure)
+        # Check for object leaks - allow some variance for test infrastructure
         object_growth = final_objects - initial_objects
-        assert object_growth < 1000, f"Potential object leak: {object_growth} new objects"
+        assert object_growth < MAX_OBJECT_GROWTH, (
+            f"Potential object leak: {object_growth} new objects "
+            f"(threshold: {MAX_OBJECT_GROWTH})"
+        )
 
     def test_invocation_history_cleared_on_cleanup(self, runtime):
         """Test invocation history is cleared on cleanup."""
