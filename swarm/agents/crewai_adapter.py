@@ -181,13 +181,13 @@ class CrewAIToolAdapter:
         """Return the agent's own state snapshot."""
         if self._obs is None:
             return {}
-        return self._obs.agent_state.to_dict()
+        return dict(self._obs.agent_state.to_dict())
 
     def get_visible_posts(self, limit: int = 10) -> List[Dict]:
         """Return the most recent visible posts."""
         if self._obs is None:
             return []
-        return self._obs.visible_posts[:limit]
+        return list(self._obs.visible_posts[:limit])
 
     def get_available_tasks(self) -> List[Dict]:
         """Return tasks available for claiming."""
@@ -438,7 +438,7 @@ def build_crew(
     # each sub-agent contributes to producing the final SwarmAction.
     tasks: list = []
     for i, (agent_def, crew_agent) in enumerate(
-        zip(sub_agent_defs, crew_agents)
+        zip(sub_agent_defs, crew_agents, strict=True)
     ):
         is_last = i == len(sub_agent_defs) - 1
         description = (
@@ -837,22 +837,12 @@ class CrewBackedAgent(BaseAgent):
             "can_interact": obs.can_interact,
             "can_vote": obs.can_vote,
             "can_claim_task": obs.can_claim_task,
-            "pending_proposals": [
-                p for p in obs.pending_proposals[:5]
-            ],
-            "visible_posts": [
-                p for p in obs.visible_posts[:10]
-            ],
-            "available_tasks": [
-                t for t in obs.available_tasks[:5]
-            ],
-            "visible_agents": [
-                a for a in obs.visible_agents[:10]
-            ],
+            "pending_proposals": list(obs.pending_proposals[:5]),
+            "visible_posts": list(obs.visible_posts[:10]),
+            "available_tasks": list(obs.available_tasks[:5]),
+            "visible_agents": list(obs.visible_agents[:10]),
             "ecosystem_metrics": dict(obs.ecosystem_metrics),
-            "available_bounties": [
-                b for b in obs.available_bounties[:5]
-            ],
+            "available_bounties": list(obs.available_bounties[:5]),
             "recent_deliberations": self._deliberation_memory[-5:],
             "action_schema": SwarmActionSchema.model_json_schema(),
             "valid_action_kinds": _VALID_KINDS,

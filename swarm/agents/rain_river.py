@@ -38,6 +38,7 @@ class RainAgent(HonestAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng=None,
     ):
         """
         Initialize a rain (discontinuous) agent.
@@ -47,6 +48,7 @@ class RainAgent(HonestAgent):
             roles: List of roles this agent can fulfill
             config: Agent-specific configuration
             name: Human-readable label (defaults to agent_id)
+            rng: Seeded Random instance for deterministic behavior
         """
         super().__init__(
             agent_id=agent_id,
@@ -54,6 +56,7 @@ class RainAgent(HonestAgent):
             config=config,
             name=name,
             memory_config=MemoryConfig.rain(),
+            rng=rng,
         )
 
 
@@ -80,6 +83,7 @@ class RiverAgent(HonestAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng=None,
     ):
         """
         Initialize a river (continuous) agent.
@@ -89,6 +93,7 @@ class RiverAgent(HonestAgent):
             roles: List of roles this agent can fulfill
             config: Agent-specific configuration
             name: Human-readable label (defaults to agent_id)
+            rng: Seeded Random instance for deterministic behavior
         """
         super().__init__(
             agent_id=agent_id,
@@ -96,6 +101,7 @@ class RiverAgent(HonestAgent):
             config=config,
             name=name,
             memory_config=MemoryConfig.river(),
+            rng=rng,
         )
 
 
@@ -121,6 +127,7 @@ class ConfigurableMemoryAgent(HonestAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng=None,
     ):
         """
         Initialize an agent with specified memory configuration.
@@ -131,6 +138,7 @@ class ConfigurableMemoryAgent(HonestAgent):
             roles: List of roles this agent can fulfill
             config: Agent-specific configuration
             name: Human-readable label (defaults to agent_id)
+            rng: Seeded Random instance for deterministic behavior
         """
         super().__init__(
             agent_id=agent_id,
@@ -138,6 +146,7 @@ class ConfigurableMemoryAgent(HonestAgent):
             config=config,
             name=name,
             memory_config=memory_config,
+            rng=rng,
         )
 
 
@@ -155,6 +164,7 @@ class AdversarialRainAgent(HonestAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng=None,
     ):
         """Initialize an adversarial rain agent."""
         from swarm.models.agent import AgentType
@@ -168,6 +178,7 @@ class AdversarialRainAgent(HonestAgent):
             config=config,
             name=name,
             memory_config=MemoryConfig.rain(),
+            rng=rng,
         )
         # Override agent type for adversarial behavior
         self.agent_type = AgentType.ADVERSARIAL
@@ -187,6 +198,7 @@ class AdversarialRiverAgent(HonestAgent):
         roles: Optional[List[Role]] = None,
         config: Optional[Dict] = None,
         name: Optional[str] = None,
+        rng=None,
     ):
         """Initialize an adversarial river agent."""
         from swarm.models.agent import AgentType
@@ -197,6 +209,7 @@ class AdversarialRiverAgent(HonestAgent):
             config=config,
             name=name,
             memory_config=MemoryConfig.river(),
+            rng=rng,
         )
         # Override agent type for adversarial behavior
         self.agent_type = AgentType.ADVERSARIAL
