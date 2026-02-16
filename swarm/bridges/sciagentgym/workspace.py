@@ -15,6 +15,10 @@ from typing import Optional
 logger = logging.getLogger(__name__)
 
 
+# Default subdirectories for workspaces
+DEFAULT_WORKSPACE_SUBDIRS = ["data", "outputs", "artifacts", "tmp"]
+
+
 class WorkspaceManager:
     """Manages workspace filesystems for SciAgentGym environments.
 
@@ -63,7 +67,7 @@ class WorkspaceManager:
 
         # Create standard subdirectories
         if subdirs is None:
-            subdirs = ["data", "outputs", "artifacts", "tmp"]
+            subdirs = DEFAULT_WORKSPACE_SUBDIRS
 
         for subdir in subdirs:
             (workspace_path / subdir).mkdir(exist_ok=True)

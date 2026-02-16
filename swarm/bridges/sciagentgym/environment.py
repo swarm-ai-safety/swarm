@@ -20,6 +20,10 @@ from swarm.bridges.sciagentgym.workspace import WorkspaceManager
 logger = logging.getLogger(__name__)
 
 
+# Number of mock tools to generate per discipline for testing
+MOCK_TOOLS_PER_DISCIPLINE = 5
+
+
 class EnvironmentInstance:
     """Represents a single SciAgentGym environment instance.
 
@@ -286,7 +290,7 @@ class SciAgentGymEnvironmentManager:
         mock_tools = [
             f"mock_tool_{discipline}_{i}"
             for discipline in self.config.disciplines
-            for i in range(5)  # 5 mock tools per discipline
+            for i in range(MOCK_TOOLS_PER_DISCIPLINE)
         ]
 
         for tool_name in mock_tools:
