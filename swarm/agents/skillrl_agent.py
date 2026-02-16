@@ -426,16 +426,16 @@ class SkillRLAgent(BaseAgent):
 
     def _maybe_refine(self, epoch: int, env_state: Optional["EnvState"] = None) -> None:
         """Run recursive skill refinement at configured intervals.
-        
+
         NEW: Evaluates refinements against governance gates if available.
-        
+
         Args:
             epoch: Current epoch number.
             env_state: Optional environment state for governance evaluation.
         """
         import logging
         logger = logging.getLogger(__name__)
-        
+
         interval = self.skillrl_config.refinement_interval
         if interval <= 0:
             return
@@ -445,37 +445,37 @@ class SkillRLAgent(BaseAgent):
             return
 
         self._last_refinement_epoch = epoch
-        
+
         # Collect refinement proposals
         refined_ids, proposals = self.skill_evolution.refine_skills_with_governance(
             self.skill_library,
             self.agent_id,
             governance_lever=None,  # First pass: collect proposals
         )
-        
+
         if not proposals:
             return
-        
+
         # Apply governance if enabled
         governance_lever = getattr(self, 'governance_lever', None)
         if governance_lever is not None and env_state is not None:
             approved_proposals = []
-            
+
             for proposal in proposals:
                 # Get agent metrics from environment state
                 agent_metrics = env_state.get_agent_metrics(self.agent_id) if hasattr(env_state, 'get_agent_metrics') else {}
                 baseline = {k: getattr(v, 'mean', 0.0) for k, v in agent_metrics.items()}
                 uncertainties = {k: getattr(v, 'std', 0.1) for k, v in agent_metrics.items()}
-                
+
                 # If no metrics available, use defaults
                 if not baseline:
                     baseline = {"payoff": 0.0, "reputation": 0.5}
                     uncertainties = {"payoff": 0.1, "reputation": 0.1}
-                
+
                 approved, tau_result, k_max_result = governance_lever.evaluate_refinement(
                     proposal, baseline, uncertainties
                 )
-                
+
                 if approved:
                     approved_proposals.append(proposal)
                 else:
@@ -486,25 +486,25 @@ class SkillRLAgent(BaseAgent):
         else:
             # No governance: approve all proposals (backward compatible)
             approved_proposals = proposals
-        
+
         # Apply approved refinements
         for proposal in approved_proposals:
             skill = self.skill_library.get_skill(proposal.skill_id)
             if skill is not None:
                 # Apply condition delta
                 new_condition = dict(skill.condition)
-                for key, (old_val, new_val) in proposal.condition_delta.items():
+                for key, (_old_val, new_val) in proposal.condition_delta.items():
                     if new_val is not None:
                         new_condition[key] = new_val
                 skill.condition = new_condition
-                
+
                 # Apply effect delta
                 new_effect = dict(skill.effect)
-                for key, (old_val, new_val) in proposal.effect_delta.items():
+                for key, (_old_val, new_val) in proposal.effect_delta.items():
                     if new_val is not None:
                         new_effect[key] = new_val
                 skill.effect = new_effect
-                
+
                 # Update version and tags
                 skill.version = proposal.refined_version
                 skill.tags = set(skill.tags) | {"refined"}
