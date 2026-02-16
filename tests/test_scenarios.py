@@ -483,10 +483,14 @@ class TestEndToEnd:
         assert gov.transaction_tax_rate > 0
         assert gov.staking_enabled is True
 
-        # Verify agents include solvers, reviewers, and opportunists
+        # Verify agents include solvers (synthesizer/retriever/verifier) and opportunists
+        # Scholar agents (synthesizer, verifier, retriever) are registered as AgentType.HONEST
+        # Opportunistic agents are registered as AgentType.OPPORTUNISTIC
         agents = orchestrator.get_all_agents()
         agent_types = [a.agent_type.value for a in agents]
-        assert "honest" in agent_types or "opportunistic" in agent_types
+        assert "honest" in agent_types, "Should have honest agents (solvers/reviewers)"
+        assert "opportunistic" in agent_types, "Should have opportunistic agents"
+        assert len(agents) == 9, "Should have 9 total agents (3 solvers + 2 reviewers + 2 retrievers + 2 opportunists)"
 
         # Run 2 epochs for speed
         orchestrator.config.n_epochs = 2
