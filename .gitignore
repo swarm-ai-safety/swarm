@@ -42,6 +42,13 @@ local/
 .credentials/
 credentials/
 
+# Migrated to swarm-ai-safety/swarm-artifacts
+runs/
+lean/
+promo/
+research/
+docs/papers/
+
 # Relocated directories (prevent re-creation at root)
 submissions/
 /bridges/
@@ -73,7 +80,8 @@ secrets.json
 *.parquet
 **/fontlist*.json
 
-# Lean 4 build artifacts
+# Lean 4 build artifacts (lean/ itself is in swarm-artifacts)
+# Kept for completeness if lean/ is ever re-added locally
 lean/.lake/
 lean/lake-packages/
 lean/lake-manifest.json
@@ -84,8 +92,7 @@ lean/build/
 sandboxes/
 .worktrees/
 *.db
-runs/dolt_runs/
-runs/*/
+# runs/ is fully ignored above (migrated to swarm-artifacts)
 node_modules/
 
 # Allow documentation images
