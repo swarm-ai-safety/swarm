@@ -51,10 +51,10 @@ class ProxyWeights(BaseModel):
     def normalize(self) -> "ProxyWeights":
         """Return normalized weights that sum to 1."""
         total = (
-            abs(self.task_progress)
-            + abs(self.rework_penalty)
-            + abs(self.verifier_penalty)
-            + abs(self.engagement_signal)
+            self.task_progress
+            + self.rework_penalty
+            + self.verifier_penalty
+            + self.engagement_signal
         )
 
         if total == 0:

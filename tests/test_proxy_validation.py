@@ -151,6 +151,26 @@ class TestProxyWeightsValidation:
                 engagement_signal=0.2,
             )
 
+    def test_normalize_rejects_negative_weights_from_model_construct(self):
+        """
+        normalize() should raise ValueError when called on weights with negative values.
+
+        This tests the scenario where validation is bypassed (e.g., via model_construct)
+        and negative weights exist. The normalize() method should fail when trying to
+        create a new ProxyWeights instance with the normalized negative values.
+        """
+        # Use model_construct to bypass validation and create invalid weights
+        invalid_weights = ProxyWeights.model_construct(
+            task_progress=-0.4,
+            rework_penalty=-0.2,
+            verifier_penalty=0.2,
+            engagement_signal=0.2,
+        )
+
+        # Attempting to normalize should raise ValueError when creating new ProxyWeights
+        with pytest.raises(ValueError, match="must be non-negative"):
+            invalid_weights.normalize()
+
 
 class TestClampingWarnings:
     """Tests for clamping warnings."""
