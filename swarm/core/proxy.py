@@ -33,7 +33,14 @@ class ProxyWeights(BaseModel):
     @field_validator("task_progress", "rework_penalty", "verifier_penalty", "engagement_signal")
     @classmethod
     def validate_non_negative(cls, v: float, info) -> float:
-        """Validate that weights are non-negative."""
+        """
+        Validate that weights are non-negative.
+        
+        Note: This single validator applies to all four weight fields.
+        The validation logic is identical for all fields (non-negative check).
+        If field-specific validation is needed in the future, split into
+        individual validators.
+        """
         if v < 0:
             raise ValueError(
                 f"{info.field_name} must be non-negative, got {v}. "
