@@ -7,7 +7,7 @@ or learned signal profiles).
 """
 
 import random
-from typing import Any, Dict, Protocol, runtime_checkable
+from typing import Any, Dict, Protocol, cast, runtime_checkable
 
 from swarm.core.proxy import ProxyObservables
 from swarm.env.state import EnvState, InteractionProposal
@@ -179,7 +179,7 @@ class ObfuscationObservableGenerator:
         state: EnvState,
     ) -> ProxyObservables:
         """Generate observables, applying obfuscation offsets if present."""
-        base = self._inner.generate(proposal, accepted, state)
+        base = cast(ProxyObservables, self._inner.generate(proposal, accepted, state))
 
         # Duck-type check: does the initiator agent have signal manipulation?
         agent = self._agents.get(proposal.initiator_id)

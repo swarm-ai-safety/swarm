@@ -128,12 +128,12 @@ class StudyContext:
                     desc = finding.get("description", finding.get("text", ""))
                     effect = finding.get("effect_size", "")
                     p_val = finding.get("p_value", "")
-                    parts = [desc]
+                    finding_parts: list[str] = [str(desc)]
                     if effect:
-                        parts.append(f"d={effect}")
+                        finding_parts.append(f"d={effect}")
                     if p_val:
-                        parts.append(f"p={p_val}")
-                    notes.append(", ".join(p for p in parts if p))
+                        finding_parts.append(f"p={p_val}")
+                    notes.append(", ".join(p for p in finding_parts if p))
 
         # Add parameter ranges
         params = self.summary.get("parameters", self.summary.get("swept_params", {}))

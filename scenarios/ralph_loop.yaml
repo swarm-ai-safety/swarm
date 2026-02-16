@@ -1,0 +1,67 @@
+# Ralph Loop Memory Comparison
+# Compares artifact-mediated (Ralph) vs ephemeral (Rain) vs continuous (River) memory
+#
+# Hypothesis H1: Ralph agents should outperform Rain (learnings help) but
+# underperform River (can't track individual counterparties).
+#
+# Key metrics to watch:
+# - Average payoff by agent type (River > Ralph > Rain expected)
+# - Quality gap (Ralph should show less adverse selection than Rain)
+# - Interaction volume (Ralph lower due to quality gate filtering)
+
+scenario_id: ralph_loop_comparison
+description: "Compare artifact-mediated memory (Ralph) vs rain vs river agents"
+motif: memory_model_comparison
+
+agents:
+  - type: ralph_loop
+    count: 4
+    name: ralph
+    config:
+      quality_gate_threshold: 0.6
+      consolidation_interval: 5
+      max_task_attempts: 3
+      learning_boost: 0.05
+  - type: rain
+    count: 3
+    name: rain
+  - type: river
+    count: 3
+    name: river
+
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 1.0
+  bandwidth_cap: 10
+  staking_enabled: false
+  circuit_breaker_enabled: false
+  audit_enabled: false
+
+simulation:
+  n_epochs: 30
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.0
+  rho_b: 0.0
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 30
+  min_agents: 10
+  toxicity_threshold: 0.5
+
+outputs:
+  event_log: "logs/ralph_loop_events.jsonl"
+  metrics_csv: "logs/ralph_loop_metrics.csv"

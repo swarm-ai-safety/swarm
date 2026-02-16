@@ -30,6 +30,7 @@ from swarm.agents.rain_river import (
     RainAgent,
     RiverAgent,
 )
+from swarm.agents.ralph_agent import AdversarialRalphAgent, RalphLoopAgent
 from swarm.agents.self_optimizer import SelfOptimizerAgent
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
@@ -67,6 +68,9 @@ __all__ = [
     "ConfigurableMemoryAgent",
     "AdversarialRainAgent",
     "AdversarialRiverAgent",
+    # Ralph loop agents
+    "RalphLoopAgent",
+    "AdversarialRalphAgent",
     # Self-optimizing agent
     "SelfOptimizerAgent",
     # Obfuscation Atlas agents

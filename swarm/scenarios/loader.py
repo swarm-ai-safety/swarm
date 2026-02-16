@@ -29,6 +29,8 @@ from swarm.agents.moltbook_agent import (
 )
 from swarm.agents.obfuscating import ObfuscatingAgent
 from swarm.agents.opportunistic import OpportunisticAgent
+from swarm.agents.rain_river import RainAgent, RiverAgent
+from swarm.agents.ralph_agent import AdversarialRalphAgent, RalphLoopAgent
 from swarm.agents.rivals_agent import RivalsCriticAgent, RivalsProducerAgent
 from swarm.agents.rlm_agent import RLMAgent
 from swarm.agents.scholar_agent import (
@@ -120,6 +122,12 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "obfuscating": ObfuscatingAgent,
     # AWM (Agent World Model) agents
     "awm_agent": AWMAgent,
+    # Rain/River memory agents
+    "rain": RainAgent,
+    "river": RiverAgent,
+    # Ralph loop agents (artifact-mediated memory)
+    "ralph_loop": RalphLoopAgent,
+    "adversarial_ralph": AdversarialRalphAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)

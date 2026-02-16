@@ -6,7 +6,7 @@ SoftInteraction objects and logging them to the SWARM event log.
 
 from __future__ import annotations
 
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from swarm.bridges.ai_scientist.client import AIScientistClient
 from swarm.bridges.ai_scientist.config import AIScientistConfig
@@ -107,10 +107,10 @@ class AIScientistBridge:
                 self._policy.evaluate_cost(cost)
 
         # Map event to interaction
-        interaction = self._mapper.map_event(event)
-        if interaction is not None:
-            interactions.append(interaction)
-            self._finalize_interaction(event, interaction)
+        mapped: Optional[SoftInteraction] = self._mapper.map_event(event)
+        if mapped is not None:
+            interactions.append(mapped)
+            self._finalize_interaction(event, mapped)
 
         return interactions
 

@@ -151,7 +151,8 @@ def _build_anthropic_fn(
                     messages=[{"role": "user", "content": user_prompt}],
                     temperature=config.temperature,
                 )
-                return resp.content[0].text if resp.content else ""
+                block = resp.content[0] if resp.content else None
+                return block.text if block is not None and hasattr(block, "text") else ""
             except Exception as exc:
                 last_err = exc
                 if attempt < config.max_retries:
@@ -642,7 +643,7 @@ class ConcordiaEntityAgent(BaseAgent):
         decision = "accepted" if accepted else "rejected"
         self._observe(f"You {decision} a proposal from {proposal.initiator_id}.")
 
-        return accepted
+        return bool(accepted)
 
     def propose_interaction(
         self,

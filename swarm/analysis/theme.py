@@ -23,6 +23,7 @@ from typing import Any, Dict, Iterator, List, Optional, Sequence
 
 import matplotlib as mpl
 import numpy as np
+from cycler import cycler
 
 # ---------------------------------------------------------------------------
 # Semantic color constants
@@ -166,7 +167,7 @@ SWARM_STYLE: Dict[str, Any] = {
     "savefig.facecolor": COLORS.BG_DARK,
     "savefig.edgecolor": "none",
     "font.family": "monospace",
-    "axes.prop_cycle": mpl.cycler(color=AGENT_CYCLE),
+    "axes.prop_cycle": cycler(color=AGENT_CYCLE),
     "figure.figsize": (10, 6),
     "lines.linewidth": 1.8,
     "lines.markersize": 6,
@@ -194,7 +195,7 @@ SWARM_LIGHT_STYLE: Dict[str, Any] = {
     "savefig.facecolor": COLORS.BG_LIGHT,
     "savefig.edgecolor": "none",
     "font.family": "monospace",
-    "axes.prop_cycle": mpl.cycler(color=[
+    "axes.prop_cycle": cycler(color=[
         # Slightly desaturated for print
         "#35B09B", "#D4822F", "#6E7380", "#CC4545", "#9E5ABB",
     ]),
