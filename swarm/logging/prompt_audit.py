@@ -41,6 +41,7 @@ class PromptAuditConfig:
     include_system_prompt: bool = False
     hash_system_prompt: bool = True
     max_chars: int = 20_000
+    max_entries: int = 50_000  # Prevent unbounded disk growth
 
 
 class PromptAuditLog:
@@ -48,6 +49,7 @@ class PromptAuditLog:
 
     def __init__(self, config: PromptAuditConfig):
         self.config = config
+        self._entries_written: int = 0
         self._ensure_parent_exists()
 
     def _ensure_parent_exists(self) -> None:
@@ -57,6 +59,8 @@ class PromptAuditLog:
             logger.warning(f"Failed to create prompt audit log directory: {e}")
 
     def append(self, record: Dict[str, Any]) -> None:
+        if self._entries_written >= self.config.max_entries:
+            return  # Cap reached; stop writing to prevent unbounded disk growth
         try:
             with open(self.config.path, "a", encoding="utf-8") as f:
                 try:
@@ -64,6 +68,12 @@ class PromptAuditLog:
                 except Exception as e:
                     logger.warning(f"Failed to set prompt audit log permissions: {e}")
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
+            self._entries_written += 1
+            if self._entries_written == self.config.max_entries:
+                logger.warning(
+                    "Prompt audit log reached %d entries; further writes suppressed",
+                    self.config.max_entries,
+                )
         except Exception as e:
             logger.warning(f"Failed to write prompt audit record: {e}")
 

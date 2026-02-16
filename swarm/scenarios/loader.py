@@ -127,6 +127,19 @@ _LLM_AGENT_CLASS = None
 _LLM_CONFIG_CLASSES = None
 _COUNCIL_AGENT_CLASS = None
 _CONCORDIA_ENTITY_CLASS = None
+_CREWAI_AGENT_CLASS = None
+_CREWAI_CONFIG_CLASS = None
+
+
+def _get_crewai_classes():
+    """Lazy import CrewAI adapter classes."""
+    global _CREWAI_AGENT_CLASS, _CREWAI_CONFIG_CLASS
+    if _CREWAI_AGENT_CLASS is None:
+        from swarm.agents.crewai_adapter import CrewBackedAgent, CrewConfig
+
+        _CREWAI_AGENT_CLASS = CrewBackedAgent
+        _CREWAI_CONFIG_CLASS = CrewConfig
+    return _CREWAI_AGENT_CLASS, _CREWAI_CONFIG_CLASS
 
 
 def _get_llm_classes():
@@ -1104,6 +1117,49 @@ def create_agents(
                     concordia_config=concordia_config,
                     name=agent_name,
                     config=agent_config,
+                )
+                agents.append(agent)
+
+        # Handle CrewAI adapter agents
+        elif agent_type == "crewai_adapter":
+            CrewBackedAgent, CrewConfig = _get_crewai_classes()
+            crew_params = spec.get("params", {})
+            crew_config_kwargs = {
+                "crew_profile": crew_params.get("crew_profile", "general_v1"),
+                "role_name": crew_params.get("role_name", "General Agent"),
+                "model": crew_params.get("model", "gpt-4o-mini"),
+                "temperature": crew_params.get("temperature", 0.7),
+                "max_tokens": crew_params.get("max_tokens", 1024),
+                "verbose": crew_params.get("verbose", False),
+                "enable_trace": crew_params.get("enable_trace", True),
+            }
+            if "timeout" in crew_params:
+                crew_config_kwargs["timeout"] = crew_params["timeout"]
+            crew_config = CrewConfig(**crew_config_kwargs)
+
+            for _ in range(count):
+                counters["crewai_adapter"] = (
+                    counters.get("crewai_adapter", 0) + 1
+                )
+                agent_id = f"crewai_{counters['crewai_adapter']}"
+                agent_name = (
+                    f"{base_name}_{counters['crewai_adapter']}"
+                    if base_name and count > 1
+                    else base_name
+                )
+
+                _agent_counter += 1
+                agent_rng = (
+                    random.Random(seed + _agent_counter)
+                    if seed is not None
+                    else None
+                )
+                agent = CrewBackedAgent(
+                    agent_id=agent_id,
+                    crew_config=crew_config,
+                    name=agent_name,
+                    config=agent_config,
+                    rng=agent_rng,
                 )
                 agents.append(agent)
 

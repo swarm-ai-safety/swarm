@@ -3,6 +3,7 @@
 import random
 import uuid
 from abc import ABC, abstractmethod
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -13,6 +14,10 @@ from swarm.models.interaction import InteractionType, SoftInteraction
 
 if TYPE_CHECKING:
     from swarm.agents.memory_config import MemoryConfig
+
+# ----- Memory bounds (prevent unbounded growth in long runs) -----
+MAX_MEMORY_SIZE: int = 1000
+MAX_INTERACTION_HISTORY: int = 500
 
 
 class ActionType(Enum):
@@ -285,9 +290,9 @@ class BaseAgent(ABC):
         else:
             self.memory_config = memory_config
 
-        # Internal state
-        self._memory: List[Dict] = []
-        self._interaction_history: List[SoftInteraction] = []
+        # Internal state (bounded to prevent memory growth in long runs)
+        self._memory: deque = deque(maxlen=MAX_MEMORY_SIZE)
+        self._interaction_history: deque = deque(maxlen=MAX_INTERACTION_HISTORY)
 
         # Counterparty trust memory: agent_id -> trust score in [0, 1]
         # Starts at 0.5 (neutral) for unknown agents
@@ -417,11 +422,11 @@ class BaseAgent(ABC):
 
     def get_memory(self, limit: int = 100) -> List[Dict]:
         """Get recent memory items."""
-        return self._memory[-limit:]
+        return list(self._memory)[-limit:]
 
     def get_interaction_history(self, limit: int = 50) -> List[SoftInteraction]:
         """Get recent interaction history."""
-        return self._interaction_history[-limit:]
+        return list(self._interaction_history)[-limit:]
 
     def compute_counterparty_trust(self, counterparty_id: str) -> float:
         """

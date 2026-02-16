@@ -24,6 +24,10 @@ from swarm.models.interaction import InteractionType
 if TYPE_CHECKING:
     from swarm.agents.memory_config import MemoryConfig
 
+# ----- Memory bounds -----
+MAX_COUNTERPARTY_MODELS: int = 500
+MAX_MODEL_HISTORY: int = 100
+
 
 @dataclass
 class CounterpartyModel:
@@ -60,6 +64,11 @@ class CounterpartyModel:
         self.interaction_count += 1
         self.cooperation_history.append(cooperated)
         self.payoff_history.append(payoff)
+        # Cap per-model history to prevent unbounded growth
+        if len(self.cooperation_history) > MAX_MODEL_HISTORY:
+            self.cooperation_history = self.cooperation_history[-MAX_MODEL_HISTORY:]
+        if len(self.payoff_history) > MAX_MODEL_HISTORY:
+            self.payoff_history = self.payoff_history[-MAX_MODEL_HISTORY:]
         # EMA update for cooperation rate
         alpha = 0.3
         self.cooperation_rate = (
@@ -91,8 +100,18 @@ class RLMWorkingMemory:
     recursion_traces: List[Dict] = field(default_factory=list)
 
     def get_or_create_model(self, agent_id: str) -> CounterpartyModel:
-        """Get existing model or create a new one for a counterparty."""
+        """Get existing model or create a new one for a counterparty.
+
+        Evicts the least-interacted-with model when the cap is reached.
+        """
         if agent_id not in self.counterparty_models:
+            # Evict least-active model if at capacity
+            if len(self.counterparty_models) >= MAX_COUNTERPARTY_MODELS:
+                evict_id = min(
+                    self.counterparty_models,
+                    key=lambda k: self.counterparty_models[k].interaction_count,
+                )
+                del self.counterparty_models[evict_id]
             self.counterparty_models[agent_id] = CounterpartyModel(agent_id=agent_id)
         return self.counterparty_models[agent_id]
 
