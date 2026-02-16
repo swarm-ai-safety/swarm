@@ -4,7 +4,6 @@ import { useContext, useCallback } from "react";
 import { SimContext } from "./simulation-context";
 import * as cam from "@/engine/camera";
 import { gridToScreen } from "@/engine/isometric";
-import { AGENT_GRID_SPACING } from "@/engine/constants";
 
 export function useCamera() {
   const { state, dispatch, agentPositions } = useContext(SimContext);
@@ -46,11 +45,12 @@ export function useCamera() {
     setViewport(cam.fitBounds(state.viewport, minX, minY, maxX, maxY));
   }, [state.viewport, setViewport, agentPositions]);
 
+  // Stable resize callback - only dispatches RESIZE action, no viewport dependency
   const resize = useCallback(
     (width: number, height: number) => {
-      setViewport({ ...state.viewport, width, height });
+      dispatch({ type: "RESIZE", width, height });
     },
-    [state.viewport, setViewport],
+    [dispatch],
   );
 
   return {

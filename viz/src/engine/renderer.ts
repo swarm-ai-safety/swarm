@@ -23,7 +23,9 @@ export interface RenderState {
 }
 
 export function render(ctx: CanvasRenderingContext2D, state: RenderState) {
-  const { width, height } = ctx.canvas;
+  // Use viewport dimensions (CSS pixels) since DPR scale is already applied by caller
+  const width = state.viewport.width;
+  const height = state.viewport.height;
 
   // 1. Clear
   ctx.clearRect(0, 0, width, height);

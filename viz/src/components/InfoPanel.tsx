@@ -10,17 +10,14 @@ export function InfoPanel() {
     useSimulation();
 
   const agent = agents.find((a) => a.id === selectedAgent);
-  if (!agent) return null;
 
-  const colors = AGENT_COLORS[agent.agentType];
-
-  // Build history from agent_snapshots for sparklines
+  // All hooks must be called unconditionally (React hooks rules)
   const history = useMemo(() => {
-    if (!agentSnapshots?.length) return [];
+    if (!agentSnapshots?.length || !agent) return [];
     return agentSnapshots
       .filter((s) => s.agent_id === agent.id)
       .sort((a, b) => a.epoch - b.epoch);
-  }, [agentSnapshots, agent.id]);
+  }, [agentSnapshots, agent?.id]);
 
   const repHistory = useMemo(() => history.map((h) => h.reputation), [history]);
   const payoffHistory = useMemo(
@@ -31,6 +28,10 @@ export function InfoPanel() {
     () => history.map((h) => h.avg_p_initiated),
     [history],
   );
+
+  if (!agent) return null;
+
+  const colors = AGENT_COLORS[agent.agentType];
 
   const totalActivity =
     agent.interactionsInitiated + agent.interactionsReceived;

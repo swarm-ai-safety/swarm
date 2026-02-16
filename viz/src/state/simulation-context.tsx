@@ -71,6 +71,7 @@ type Action =
   | { type: "SET_PLAYING"; playing: boolean }
   | { type: "SET_SPEED"; speed: number }
   | { type: "SET_VIEWPORT"; viewport: Viewport }
+  | { type: "RESIZE"; width: number; height: number }
   | { type: "SET_HOVERED"; agentId: string | null }
   | { type: "SET_SELECTED"; agentId: string | null }
   | { type: "TOGGLE_OVERLAY"; key: keyof OverlayState }
@@ -100,6 +101,9 @@ function reducer(state: SimState, action: Action): SimState {
       return { ...state, speed: action.speed };
     case "SET_VIEWPORT":
       return { ...state, viewport: action.viewport };
+    case "RESIZE":
+      if (state.viewport.width === action.width && state.viewport.height === action.height) return state;
+      return { ...state, viewport: { ...state.viewport, width: action.width, height: action.height } };
     case "SET_HOVERED":
       return { ...state, hoveredAgent: action.agentId };
     case "SET_SELECTED":
@@ -142,7 +146,7 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
   const agentPositions = useRef(new Map<string, { gridX: number; gridY: number }>());
   const agentsByEpoch = useRef(new Map<number, Map<string, AgentSnapshot>>());
 
-  // When data loads, compute positions and group snapshots
+  // When data loads, compute positions, group snapshots, and fit camera
   useEffect(() => {
     if (!state.data) return;
     const ids = getUniqueAgentIds(state.data.agent_snapshots);
@@ -150,6 +154,19 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
     agentsByEpoch.current = groupAgentsByEpoch(state.data.agent_snapshots);
     interactionSystem.current.clear();
     particleSystem.current.clear();
+
+    // Auto-fit camera to agent positions
+    if (agentPositions.current.size > 0) {
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (const pos of agentPositions.current.values()) {
+        const screen = gridToScreen(pos.gridX, pos.gridY);
+        minX = Math.min(minX, screen.x);
+        minY = Math.min(minY, screen.y - 120); // account for building height
+        maxX = Math.max(maxX, screen.x);
+        maxY = Math.max(maxY, screen.y + 30);
+      }
+      dispatch({ type: "SET_VIEWPORT", viewport: fitBounds(state.viewport, minX, minY, maxX, maxY) });
+    }
   }, [state.data]);
 
   return (

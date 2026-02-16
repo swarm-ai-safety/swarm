@@ -8,10 +8,9 @@ import { pToHealthColor } from "@/utils/color";
 export function MetricsOverlay() {
   const { data, currentEpochSnap, overlays, currentEpoch } = useSimulation();
 
-  if (!overlays.metricsHud || !currentEpochSnap || !data) return null;
-
-  // Sparkline data: last N epoch values
+  // useMemo must be called unconditionally (React hooks rules)
   const sparklineData = useMemo(() => {
+    if (!data) return { toxicity: [], avgP: [], gini: [], welfare: [] };
     const epochs = data.epoch_snapshots.slice(0, currentEpoch + 1);
     return {
       toxicity: epochs.map((e) => e.toxicity_rate),
@@ -20,6 +19,8 @@ export function MetricsOverlay() {
       welfare: epochs.map((e) => e.total_welfare),
     };
   }, [data, currentEpoch]);
+
+  if (!overlays.metricsHud || !currentEpochSnap || !data) return null;
 
   const e = currentEpochSnap;
 

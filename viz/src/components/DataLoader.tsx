@@ -64,7 +64,7 @@ export function DataLoader() {
             if (file) handleFile(file);
           }}
         >
-          <div className="text-3xl mb-2" style={{ color: "#3ECFB4" }}>
+          <div className="text-3xl mb-2 text-accent">
             +
           </div>
           <p className="text-sm text-muted">
