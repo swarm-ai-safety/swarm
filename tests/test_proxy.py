@@ -1,5 +1,7 @@
 """Tests for proxy computation."""
 
+import logging
+
 import pytest
 
 from swarm.core.proxy import ProxyComputer, ProxyObservables, ProxyWeights
@@ -338,8 +340,6 @@ class TestClampingWarnings:
 
     def test_sigmoid_warns_on_out_of_range_v_hat(self, caplog):
         """calibrated_sigmoid should warn when v_hat is outside [-1, +1]."""
-        import logging
-
         caplog.set_level(logging.WARNING)
 
         # Test positive out-of-range
@@ -360,8 +360,6 @@ class TestClampingWarnings:
 
     def test_sigmoid_no_warning_in_range(self, caplog):
         """calibrated_sigmoid should not warn when v_hat is in [-1, +1]."""
-        import logging
-
         caplog.set_level(logging.WARNING)
 
         # Test values in range
@@ -373,8 +371,6 @@ class TestClampingWarnings:
 
     def test_compute_v_hat_warns_on_out_of_range(self, caplog):
         """compute_v_hat should warn when weighted combination exceeds [-1, +1]."""
-        import logging
-
         caplog.set_level(logging.WARNING)
 
         # Create a computer with normal weights
@@ -406,8 +402,6 @@ class TestClampingWarnings:
 
     def test_compute_v_hat_no_warning_in_range(self, caplog):
         """compute_v_hat should not warn when result is in [-1, +1]."""
-        import logging
-
         caplog.set_level(logging.WARNING)
 
         # Use default normalized weights
@@ -427,14 +421,30 @@ class TestClampingWarnings:
         assert len(caplog.records) == 0
         assert -1.0 <= v_hat <= 1.0
 
-    def test_sigmoid_still_clamps_extreme_values(self):
-        """calibrated_sigmoid should still clamp extreme values to avoid overflow."""
+    def test_sigmoid_still_clamps_extreme_values(self, caplog):
+        """calibrated_sigmoid should warn and clamp extreme values to avoid overflow."""
+        caplog.set_level(logging.WARNING)
+
         # Test very large values (beyond [-10, +10])
         p_large = calibrated_sigmoid(50.0, k=2.0)
         assert 0.0 <= p_large <= 1.0
 
+        # Should have warned about out-of-range value
+        assert any(
+            "v_hat out of expected range [-1, +1]: 50.0" in record.message
+            for record in caplog.records
+        )
+
+        caplog.clear()
+
         p_small = calibrated_sigmoid(-50.0, k=2.0)
         assert 0.0 <= p_small <= 1.0
+
+        # Should have warned about out-of-range value
+        assert any(
+            "v_hat out of expected range [-1, +1]: -50.0" in record.message
+            for record in caplog.records
+        )
 
     def test_compute_v_hat_clamping_preserves_sign(self):
         """Clamped v_hat should preserve the sign of the unclamped value."""
