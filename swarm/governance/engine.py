@@ -17,6 +17,7 @@ from swarm.governance.ensemble import SelfEnsembleLever
 from swarm.governance.identity_lever import SybilDetectionLever
 from swarm.governance.incoherence_breaker import IncoherenceCircuitBreakerLever
 from swarm.governance.levers import GovernanceLever, LeverEffect
+from swarm.governance.loop_detector import LoopDetectorLever
 from swarm.governance.memory import (
     CrossVerificationLever,
     PromotionGateLever,
@@ -158,6 +159,10 @@ class GovernanceEngine:
         # Diversity as Defense lever
         levers.append(DiversityDefenseLever(self.config))
 
+        # Loop detector lever
+        if self.config.loop_detector_enabled:
+            levers.append(LoopDetectorLever(self.config))
+
         # Self-modification governance lever
         if self.config.self_modification_enabled:
             levers.append(SelfModificationLever(self.config))
@@ -174,6 +179,7 @@ class GovernanceEngine:
         self._moltbook_rate_limit_lever: Optional[MoltbookRateLimitLever] = None
         self._moltbook_challenge_lever: Optional[ChallengeVerificationLever] = None
         self._diversity_lever: Optional[DiversityDefenseLever] = None
+        self._loop_detector_lever: Optional[LoopDetectorLever] = None
         self._self_modification_lever: Optional[SelfModificationLever] = None
 
         for lever in self._levers:
@@ -191,6 +197,8 @@ class GovernanceEngine:
                 self._moltbook_challenge_lever = lever
             elif isinstance(lever, DiversityDefenseLever):
                 self._diversity_lever = lever
+            elif isinstance(lever, LoopDetectorLever):
+                self._loop_detector_lever = lever
             elif isinstance(lever, SelfModificationLever):
                 self._self_modification_lever = lever
 
@@ -472,6 +480,10 @@ class GovernanceEngine:
     def get_diversity_lever(self) -> Optional[DiversityDefenseLever]:
         """Return the diversity defense lever if registered."""
         return self._diversity_lever
+
+    def get_loop_detector_lever(self) -> Optional[LoopDetectorLever]:
+        """Return the loop detector lever if registered."""
+        return self._loop_detector_lever
 
     def get_self_modification_lever(self) -> Optional[SelfModificationLever]:
         """Return the self-modification lever if registered."""
