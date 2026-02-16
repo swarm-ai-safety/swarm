@@ -1,5 +1,7 @@
 """Tests for proxy computation."""
 
+import logging
+
 import pytest
 
 from swarm.core.proxy import ProxyComputer, ProxyObservables, ProxyWeights
@@ -317,3 +319,162 @@ class TestProxyComputer:
 
         # Higher k should push further from 0.5
         assert abs(p_high - 0.5) > abs(p_low - 0.5)
+
+
+class TestClampingWarnings:
+    """Tests for clamping warning behavior."""
+
+    # Test constants for weight configurations that force out-of-range values
+    EXCESSIVE_POSITIVE_WEIGHTS = ProxyWeights(
+        task_progress=2.0,
+        rework_penalty=2.0,
+        verifier_penalty=0.0,
+        engagement_signal=0.0,
+    )
+    EXCESSIVE_NEGATIVE_WEIGHTS = ProxyWeights(
+        task_progress=-2.0,
+        rework_penalty=-2.0,
+        verifier_penalty=0.0,
+        engagement_signal=0.0,
+    )
+
+    def test_sigmoid_warns_on_out_of_range_v_hat(self, caplog):
+        """calibrated_sigmoid should warn when v_hat is outside [-1, +1]."""
+        caplog.set_level(logging.WARNING)
+
+        # Test positive out-of-range
+        calibrated_sigmoid(2.5, k=2.0)
+        assert any(
+            "v_hat out of expected range [-1, +1]: 2.5" in record.message
+            for record in caplog.records
+        )
+
+        caplog.clear()
+
+        # Test negative out-of-range
+        calibrated_sigmoid(-3.0, k=2.0)
+        assert any(
+            "v_hat out of expected range [-1, +1]: -3.0" in record.message
+            for record in caplog.records
+        )
+
+    def test_sigmoid_no_warning_in_range(self, caplog):
+        """calibrated_sigmoid should not warn when v_hat is in [-1, +1]."""
+        caplog.set_level(logging.WARNING)
+
+        # Test values in range
+        for v_hat in [-1.0, -0.5, 0.0, 0.5, 1.0]:
+            calibrated_sigmoid(v_hat, k=2.0)
+
+        # Should have no warnings
+        assert len(caplog.records) == 0
+
+    def test_compute_v_hat_warns_on_out_of_range(self, caplog):
+        """compute_v_hat should warn when weighted combination exceeds [-1, +1]."""
+        caplog.set_level(logging.WARNING)
+
+        # Create a computer with normal weights
+        computer = ProxyComputer()
+
+        # Manually override the normalized weights to force out-of-range scenario
+        # This simulates a bug where weights aren't properly normalized
+        computer.weights = self.EXCESSIVE_POSITIVE_WEIGHTS
+
+        # All positive signals should trigger warning
+        obs = ProxyObservables(
+            task_progress_delta=1.0,
+            rework_count=0,
+            verifier_rejections=0,
+            tool_misuse_flags=0,
+            counterparty_engagement_delta=1.0,
+        )
+
+        v_hat = computer.compute_v_hat(obs)
+
+        # Should have logged a warning
+        assert any(
+            "v_hat out of expected range [-1, +1]" in record.message
+            for record in caplog.records
+        )
+
+        # v_hat should still be clamped to valid range
+        assert -1.0 <= v_hat <= 1.0
+
+    def test_compute_v_hat_no_warning_in_range(self, caplog):
+        """compute_v_hat should not warn when result is in [-1, +1]."""
+        caplog.set_level(logging.WARNING)
+
+        # Use default normalized weights
+        computer = ProxyComputer()
+
+        obs = ProxyObservables(
+            task_progress_delta=0.5,
+            rework_count=1,
+            verifier_rejections=0,
+            tool_misuse_flags=0,
+            counterparty_engagement_delta=0.3,
+        )
+
+        v_hat = computer.compute_v_hat(obs)
+
+        # Should have no warnings
+        assert len(caplog.records) == 0
+        assert -1.0 <= v_hat <= 1.0
+
+    def test_sigmoid_still_clamps_extreme_values(self, caplog):
+        """calibrated_sigmoid should warn and clamp extreme values to avoid overflow."""
+        caplog.set_level(logging.WARNING)
+
+        # Test very large values (beyond [-10, +10])
+        p_large = calibrated_sigmoid(50.0, k=2.0)
+        assert 0.0 <= p_large <= 1.0
+
+        # Should have warned about out-of-range value
+        assert any(
+            "v_hat out of expected range [-1, +1]: 50.0" in record.message
+            for record in caplog.records
+        )
+
+        caplog.clear()
+
+        p_small = calibrated_sigmoid(-50.0, k=2.0)
+        assert 0.0 <= p_small <= 1.0
+
+        # Should have warned about out-of-range value
+        assert any(
+            "v_hat out of expected range [-1, +1]: -50.0" in record.message
+            for record in caplog.records
+        )
+
+    def test_compute_v_hat_clamping_preserves_sign(self):
+        """Clamped v_hat should preserve the sign of the unclamped value."""
+        # Create a computer and manually set bad weights to force clamping
+        computer = ProxyComputer()
+
+        # Manually override to force out-of-range positive
+        computer.weights = self.EXCESSIVE_POSITIVE_WEIGHTS
+
+        obs_positive = ProxyObservables(
+            task_progress_delta=1.0,
+            rework_count=0,
+            verifier_rejections=0,
+            tool_misuse_flags=0,
+            counterparty_engagement_delta=1.0,
+        )
+
+        v_hat_pos = computer.compute_v_hat(obs_positive)
+        assert v_hat_pos > 0  # Should be clamped to +1.0
+
+        # Manually override to force out-of-range negative
+        computer.weights = self.EXCESSIVE_NEGATIVE_WEIGHTS
+
+        obs_negative = ProxyObservables(
+            task_progress_delta=1.0,
+            rework_count=0,
+            verifier_rejections=0,
+            tool_misuse_flags=0,
+            counterparty_engagement_delta=1.0,
+        )
+
+        v_hat_neg = computer.compute_v_hat(obs_negative)
+        assert v_hat_neg < 0  # Should be clamped to -1.0

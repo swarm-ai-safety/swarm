@@ -1,7 +1,10 @@
 """Calibrated sigmoid utilities for soft label computation."""
 
+import logging
 import math
 from typing import Tuple
+
+logger = logging.getLogger(__name__)
 
 
 def calibrated_sigmoid(v_hat: float, k: float = 2.0) -> float:
@@ -19,7 +22,14 @@ def calibrated_sigmoid(v_hat: float, k: float = 2.0) -> float:
     Returns:
         p: Probability in [0, 1]
     """
-    # Clamp v_hat to avoid numerical issues
+    # Clamp v_hat to avoid numerical issues and warn if out of expected range
+    if v_hat < -1.0 or v_hat > 1.0:
+        logger.warning(
+            "v_hat out of expected range [-1, +1]: %.4f. "
+            "Value will be clamped before sigmoid computation. "
+            "This may indicate upstream bugs in proxy computation.",
+            v_hat,
+        )
     v_hat = max(-10.0, min(10.0, v_hat))
 
     # Compute sigmoid

@@ -1,10 +1,13 @@
 """Proxy computer for v_hat computation from downstream observables."""
 
+import logging
 from typing import Any, Optional
 
 from pydantic import BaseModel
 
 from swarm.core.sigmoid import calibrated_sigmoid
+
+logger = logging.getLogger(__name__)
 
 
 class ProxyWeights(BaseModel):
@@ -192,7 +195,13 @@ class ProxyComputer:
             + self.weights.engagement_signal * engagement_signal
         )
 
-        # Clamp to [-1, +1]
+        # Clamp to [-1, +1] and warn if out of range
+        if v_hat < -1.0 or v_hat > 1.0:
+            logger.warning(
+                "v_hat out of expected range [-1, +1]: %.4f. Clamping to valid range. "
+                "This may indicate upstream bugs in signal computation or weights.",
+                v_hat,
+            )
         return max(-1.0, min(1.0, v_hat))
 
     def compute_p(self, v_hat: float) -> float:
