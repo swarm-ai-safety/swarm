@@ -110,6 +110,7 @@ class EventType(Enum):
     # AWM (Agent World Model) events
     AWM_TASK_ASSIGNED = "awm_task_assigned"
     AWM_TASK_COMPLETED = "awm_task_completed"
+    AWM_TOOL_CALL_EXECUTED = "awm_tool_call_executed"
 
     # System events
     SIMULATION_STARTED = "simulation_started"

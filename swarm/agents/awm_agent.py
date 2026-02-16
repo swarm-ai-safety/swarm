@@ -54,16 +54,44 @@ class AWMAgent(BaseAgent):
         self.mode = cfg.get("mode", "diligent")
         self.tool_call_count = cfg.get("tool_call_count", 5)
         self.malformed_rate = cfg.get("malformed_rate", 0.0)
+        self.step_mode: bool = cfg.get("step_mode", False)
+        self._current_plan: List[Dict] = []
+        self._plan_index: int = 0
 
     def act(self, observation: Observation) -> Action:
         """Decide action based on current observation."""
-        # If we have an AWM task, execute it
         if observation.awm_task is not None:
-            tool_calls = self._plan_tool_calls(observation)
-            return self.create_awm_execute_task_action(tool_calls=tool_calls)
-
-        # Fall back to NOOP
+            if self.step_mode:
+                return self._act_step_mode(observation)
+            return self._act_batch_mode(observation)
         return self.create_noop_action()
+
+    def _act_batch_mode(self, observation: Observation) -> Action:
+        """Batch mode: submit all tool calls in a single action."""
+        tool_calls = self._plan_tool_calls(observation)
+        return self.create_awm_execute_task_action(tool_calls=tool_calls)
+
+    def _act_step_mode(self, observation: Observation) -> Action:
+        """Step mode: submit one tool call per step, then finish."""
+        # If no active episode, generate a fresh plan
+        if not observation.awm_episode_active:
+            self._current_plan = self._plan_tool_calls(observation)
+            self._plan_index = 0
+
+        # If plan exhausted or no steps remaining, finish
+        if (
+            self._plan_index >= len(self._current_plan)
+            or observation.awm_steps_remaining <= 0
+        ):
+            return self.create_awm_finish_task_action()
+
+        # Submit next tool call from plan
+        call = self._current_plan[self._plan_index]
+        self._plan_index += 1
+        return self.create_awm_tool_call_action(
+            tool_name=call.get("tool_name", ""),
+            arguments=call.get("arguments", {}),
+        )
 
     def _plan_tool_calls(self, observation: Observation) -> List[Dict]:
         """Plan tool calls based on mode and available tools."""
@@ -123,8 +151,8 @@ class AWMAgent(BaseAgent):
     ) -> bool:
         """AWM agents accept interactions based on mode."""
         if self.mode == "adversarial":
-            return self._rng.random() < 0.3
-        return self._rng.random() < 0.7
+            return bool(self._rng.random() < 0.3)
+        return bool(self._rng.random() < 0.7)
 
     def propose_interaction(
         self,

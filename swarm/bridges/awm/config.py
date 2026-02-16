@@ -56,3 +56,6 @@ class AWMConfig(BaseModel):
         "{python} -m awm.server --host {host} --port {port} --env-path {env_path}"
     )
     health_check_interval: float = 0.5
+
+    # Phase 3: Multi-turn mode (False = batch for backward compat)
+    step_mode: bool = False

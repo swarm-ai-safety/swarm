@@ -77,6 +77,9 @@ class AWMHandler(Handler):
         # Task queue for the current epoch
         self._task_queue: List[Dict[str, Any]] = []
 
+        # Phase 3: Multi-turn last results per agent
+        self._last_results: Dict[str, Dict[str, Any]] = {}
+
         # Phase 2: Live mode support
         self._server_manager: Optional[AWMServerManager] = None
         self._clients: Dict[str, AWMMCPSyncClient] = {}
@@ -85,7 +88,11 @@ class AWMHandler(Handler):
 
     @staticmethod
     def handled_action_types() -> FrozenSet:
-        return frozenset({ActionType.AWM_EXECUTE_TASK})
+        return frozenset({
+            ActionType.AWM_EXECUTE_TASK,
+            ActionType.AWM_TOOL_CALL,
+            ActionType.AWM_FINISH_TASK,
+        })
 
     def _run_async(self, coro: Any) -> Any:
         """Run an async coroutine from synchronous handler methods."""
@@ -172,6 +179,7 @@ class AWMHandler(Handler):
 
         self._assignments.clear()
         self._traces.clear()
+        self._last_results.clear()
 
         # In live mode, reset all DBs between epochs
         if (
@@ -234,36 +242,56 @@ class AWMHandler(Handler):
                 "tools", self._get_available_tools()
             )
 
+        # Phase 3: Multi-turn observation fields
+        trace = self._traces.get(agent_id)
+        if trace is not None:
+            result["awm_episode_active"] = True
+            result["awm_steps_remaining"] = max(
+                0, trace.max_steps - trace.steps_used
+            )
+            last = self._last_results.get(agent_id)
+            if last is not None:
+                result["awm_last_result"] = last
+
         return result
 
     def observation_field_mapping(self) -> Dict[str, str]:
         return {
             "awm_task": "awm_task",
             "awm_available_tools": "awm_available_tools",
+            "awm_last_result": "awm_last_result",
+            "awm_episode_active": "awm_episode_active",
+            "awm_steps_remaining": "awm_steps_remaining",
         }
 
     def handle_action(
         self, action: Action, state: EnvState
     ) -> HandlerActionResult:
-        """Process an AWM_EXECUTE_TASK action."""
-        if action.action_type != ActionType.AWM_EXECUTE_TASK:
-            return HandlerActionResult(success=False)
+        """Dispatch AWM actions to the appropriate handler method."""
+        if action.action_type == ActionType.AWM_EXECUTE_TASK:
+            return self._handle_batch_mode(action, state)
+        elif action.action_type == ActionType.AWM_TOOL_CALL:
+            return self._handle_tool_call(action, state)
+        elif action.action_type == ActionType.AWM_FINISH_TASK:
+            return self._handle_finish_task(action, state)
+        return HandlerActionResult(success=False)
 
+    def _handle_batch_mode(
+        self, action: Action, state: EnvState
+    ) -> HandlerActionResult:
+        """Process an AWM_EXECUTE_TASK action (batch mode, unchanged)."""
         agent_id = action.agent_id
         trace = self._traces.get(agent_id)
 
         if trace is None:
-            # No active task for this agent
             return HandlerActionResult(success=False)
 
-        # Check step limit
         if trace.steps_used >= self.config.max_steps_per_task:
             return HandlerActionResult(
                 success=False,
                 metadata={"error": "max_steps_exceeded"},
             )
 
-        # Process tool calls from the action
         tool_calls = action.metadata.get("tool_calls", [])
         for tc_data in tool_calls:
             record = self._execute_tool_call(tc_data, agent_id)
@@ -278,20 +306,114 @@ class AWMHandler(Handler):
         trace.verified = verification_result.get("passed", False)
         trace.verification_details = verification_result
 
-        # Compute soft p from verification
         p = self._verifier.verify_and_score(verification_result)
+        observables = self._mapper.map(trace)
 
-        # Map trace to observables
+        self._completed_episodes.append(trace)
+        self._traces.pop(agent_id, None)
+        self._assignments.pop(agent_id, None)
+
+        self._emit_event(Event(
+            event_type=EventType.AWM_TASK_COMPLETED,
+            agent_id=agent_id,
+            payload={
+                "episode_id": trace.episode_id,
+                "verified": trace.verified,
+                "steps_used": trace.steps_used,
+                "error_count": trace.error_count,
+                "malformed_count": trace.malformed_count,
+                "soft_p": p,
+            },
+        ))
+
+        return HandlerActionResult(
+            success=True,
+            observables=observables,
+            initiator_id=agent_id,
+            counterparty_id=agent_id,
+            metadata={
+                "episode_id": trace.episode_id,
+                "verified": trace.verified,
+                "soft_p": p,
+                "steps_used": trace.steps_used,
+            },
+        )
+
+    def _handle_tool_call(
+        self, action: Action, state: EnvState
+    ) -> HandlerActionResult:
+        """Process a single AWM_TOOL_CALL action (multi-turn step mode)."""
+        agent_id = action.agent_id
+        trace = self._traces.get(agent_id)
+
+        if trace is None:
+            return HandlerActionResult(success=False)
+
+        if trace.steps_used >= trace.max_steps:
+            return HandlerActionResult(
+                success=False,
+                metadata={"error": "max_steps_exceeded"},
+            )
+
+        # Execute the single tool call
+        tc_data = {
+            "tool_name": action.metadata.get("tool_name", ""),
+            "arguments": action.metadata.get("arguments", {}),
+        }
+        record = self._execute_tool_call(tc_data, agent_id)
+        trace.tool_calls.append(record)
+        trace.steps_used += 1
+
+        # Store result for next observation
+        self._last_results[agent_id] = {
+            "tool_name": record.tool_name,
+            "success": record.success,
+            "result": record.result,
+            "error": record.error,
+            "is_error_response": record.is_error_response,
+        }
+
+        # Emit tool call event
+        self._emit_event(Event(
+            event_type=EventType.AWM_TOOL_CALL_EXECUTED,
+            agent_id=agent_id,
+            payload={
+                "episode_id": trace.episode_id,
+                "tool_name": record.tool_name,
+                "success": record.success,
+                "step": trace.steps_used,
+            },
+        ))
+
+        # No observables — episode continues
+        return HandlerActionResult(success=True, observables=None)
+
+    def _handle_finish_task(
+        self, action: Action, state: EnvState
+    ) -> HandlerActionResult:
+        """Process an AWM_FINISH_TASK action (finalize multi-turn episode)."""
+        agent_id = action.agent_id
+        trace = self._traces.get(agent_id)
+
+        if trace is None:
+            return HandlerActionResult(success=False)
+
+        # Run verification
+        verification_result = self._execute_verification(trace, agent_id)
+        trace.verified = verification_result.get("passed", False)
+        trace.verification_details = verification_result
+
+        p = self._verifier.verify_and_score(verification_result)
         observables = self._mapper.map(trace)
 
         # Track completed episode
         self._completed_episodes.append(trace)
 
-        # Remove from active traces
+        # Clean up
         self._traces.pop(agent_id, None)
         self._assignments.pop(agent_id, None)
+        self._last_results.pop(agent_id, None)
 
-        # Emit completion event
         self._emit_event(Event(
             event_type=EventType.AWM_TASK_COMPLETED,
             agent_id=agent_id,
@@ -361,7 +483,8 @@ class AWMHandler(Handler):
         """Run verification via the live AWM server."""
         client = self._clients[agent_id]
         try:
-            return client.verify()
+            result: Dict[str, Any] = client.verify()
+            return result
         except Exception as exc:
             logger.warning(
                 "Live verification failed for agent=%s: %s", agent_id, exc

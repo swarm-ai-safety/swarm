@@ -1010,3 +1010,304 @@ class TestAWMHandlerLiveMode:
         # Should still succeed (action processed) but with errors in trace
         assert result.success is True
         assert result.metadata["verified"] is False
+
+
+# =========================================================================
+# AWM Multi-Turn (Phase 3) — Agent + ActionType + Observation
+# =========================================================================
+
+
+class TestAWMMultiTurn:
+    """Test multi-turn action types, observation fields, and agent step mode."""
+
+    def test_action_types_exist(self):
+        assert ActionType.AWM_TOOL_CALL.value == "awm_tool_call"
+        assert ActionType.AWM_FINISH_TASK.value == "awm_finish_task"
+
+    def test_observation_multi_turn_fields(self):
+        obs = Observation()
+        assert obs.awm_last_result is None
+        assert obs.awm_episode_active is False
+        assert obs.awm_steps_remaining == 0
+
+    def test_config_step_mode_default(self):
+        config = AWMConfig()
+        assert config.step_mode is False
+
+    def test_agent_step_mode_config(self):
+        agent = AWMAgent(
+            agent_id="awm_step",
+            config={"step_mode": True},
+        )
+        assert agent.step_mode is True
+
+    def test_agent_batch_mode_unchanged(self):
+        agent = AWMAgent(
+            agent_id="awm_batch",
+            config={"step_mode": False, "tool_call_count": 3},
+        )
+        obs = Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=[{"name": "query_database", "description": "SQL"}],
+        )
+        action = agent.act(obs)
+        assert action.action_type == ActionType.AWM_EXECUTE_TASK
+
+    def test_agent_step_mode_first_call(self):
+        import random
+
+        rng = random.Random(42)
+        agent = AWMAgent(
+            agent_id="awm_step",
+            config={"step_mode": True, "tool_call_count": 3},
+            rng=rng,
+        )
+        obs = Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=[{"name": "query_database", "description": "SQL"}],
+            awm_episode_active=False,
+            awm_steps_remaining=10,
+        )
+        action = agent.act(obs)
+        assert action.action_type == ActionType.AWM_TOOL_CALL
+        assert "tool_name" in action.metadata
+
+    def test_agent_step_mode_continues_with_active_episode(self):
+        import random
+
+        rng = random.Random(42)
+        agent = AWMAgent(
+            agent_id="awm_step",
+            config={"step_mode": True, "tool_call_count": 3},
+            rng=rng,
+        )
+        # First call: generates plan
+        obs1 = Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=[{"name": "query_database", "description": "SQL"}],
+            awm_episode_active=False,
+            awm_steps_remaining=10,
+        )
+        action1 = agent.act(obs1)
+        assert action1.action_type == ActionType.AWM_TOOL_CALL
+
+        # Second call: episode is active, continues plan
+        obs2 = Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=[{"name": "query_database", "description": "SQL"}],
+            awm_episode_active=True,
+            awm_steps_remaining=9,
+            awm_last_result={"tool_name": "query_database", "success": True},
+        )
+        action2 = agent.act(obs2)
+        assert action2.action_type == ActionType.AWM_TOOL_CALL
+
+    def test_agent_step_mode_finish_when_done(self):
+        import random
+
+        rng = random.Random(42)
+        agent = AWMAgent(
+            agent_id="awm_step",
+            config={"step_mode": True, "tool_call_count": 1},
+            rng=rng,
+        )
+        # First call: generates 1-call plan
+        obs1 = Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=[{"name": "query_database", "description": "SQL"}],
+            awm_episode_active=False,
+            awm_steps_remaining=10,
+        )
+        action1 = agent.act(obs1)
+        assert action1.action_type == ActionType.AWM_TOOL_CALL
+
+        # Second call: plan exhausted → finish
+        obs2 = Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=[{"name": "query_database", "description": "SQL"}],
+            awm_episode_active=True,
+            awm_steps_remaining=9,
+        )
+        action2 = agent.act(obs2)
+        assert action2.action_type == ActionType.AWM_FINISH_TASK
+
+    def test_agent_step_mode_finish_on_zero_steps(self):
+        import random
+
+        rng = random.Random(42)
+        agent = AWMAgent(
+            agent_id="awm_step",
+            config={"step_mode": True, "tool_call_count": 5},
+            rng=rng,
+        )
+        # Generate the plan first
+        obs1 = Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=[{"name": "query_database", "description": "SQL"}],
+            awm_episode_active=False,
+            awm_steps_remaining=10,
+        )
+        agent.act(obs1)
+
+        # Episode active but no steps remaining → finish
+        obs2 = Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=[{"name": "query_database", "description": "SQL"}],
+            awm_episode_active=True,
+            awm_steps_remaining=0,
+        )
+        action = agent.act(obs2)
+        assert action.action_type == ActionType.AWM_FINISH_TASK
+
+
+# =========================================================================
+# AWM Handler Multi-Turn (Phase 3)
+# =========================================================================
+
+
+class TestAWMHandlerMultiTurn:
+    """Test AWMHandler multi-turn dispatch and observation building."""
+
+    def _make_handler(self, seed=42):
+        from swarm.core.awm_handler import AWMHandler
+        from swarm.logging.event_bus import EventBus
+
+        config = AWMConfig(seed=seed, max_tasks_per_epoch=2)
+        bus = EventBus()
+        return AWMHandler(config=config, event_bus=bus, seed=seed)
+
+    def _make_state(self, agent_ids=None):
+        from swarm.env.state import EnvState
+
+        state = EnvState()
+        for aid in (agent_ids or ["agent_1"]):
+            state.add_agent(aid, name=aid, agent_type=AgentType.HONEST)
+        return state
+
+    def test_handler_claims_new_action_types(self):
+        handler = self._make_handler()
+        types = handler.handled_action_types()
+        assert ActionType.AWM_TOOL_CALL in types
+        assert ActionType.AWM_FINISH_TASK in types
+        assert ActionType.AWM_EXECUTE_TASK in types
+
+    def test_observation_mapping_includes_new_fields(self):
+        handler = self._make_handler()
+        mapping = handler.observation_field_mapping()
+        assert "awm_last_result" in mapping
+        assert "awm_episode_active" in mapping
+        assert "awm_steps_remaining" in mapping
+
+    def test_tool_call_returns_no_observables(self):
+        from swarm.agents.base import Action
+
+        handler = self._make_handler()
+        state = self._make_state(["agent_1"])
+        handler.on_epoch_start(state)
+
+        action = Action(
+            action_type=ActionType.AWM_TOOL_CALL,
+            agent_id="agent_1",
+            metadata={"tool_name": "query_database", "arguments": {"q": "SELECT 1"}},
+        )
+        result = handler.handle_action(action, state)
+        assert result.success is True
+        assert result.observables is None  # Episode continues
+
+    def test_tool_call_stores_last_result(self):
+        from swarm.agents.base import Action
+
+        handler = self._make_handler()
+        state = self._make_state(["agent_1"])
+        handler.on_epoch_start(state)
+
+        action = Action(
+            action_type=ActionType.AWM_TOOL_CALL,
+            agent_id="agent_1",
+            metadata={"tool_name": "query_database", "arguments": {}},
+        )
+        handler.handle_action(action, state)
+
+        # Last result should be stored
+        assert "agent_1" in handler._last_results
+        last = handler._last_results["agent_1"]
+        assert last["tool_name"] == "query_database"
+
+        # Observation should include it
+        fields = handler.build_observation_fields("agent_1", state)
+        assert fields["awm_episode_active"] is True
+        assert fields["awm_steps_remaining"] >= 0
+        assert "awm_last_result" in fields
+
+    def test_finish_task_returns_observables(self):
+        from swarm.agents.base import Action
+
+        handler = self._make_handler()
+        state = self._make_state(["agent_1"])
+        handler.on_epoch_start(state)
+
+        # First: make a tool call so the trace has something
+        tc_action = Action(
+            action_type=ActionType.AWM_TOOL_CALL,
+            agent_id="agent_1",
+            metadata={"tool_name": "query_database", "arguments": {}},
+        )
+        handler.handle_action(tc_action, state)
+
+        # Then: finish the task
+        finish_action = Action(
+            action_type=ActionType.AWM_FINISH_TASK,
+            agent_id="agent_1",
+        )
+        result = handler.handle_action(finish_action, state)
+        assert result.success is True
+        assert result.observables is not None  # Triggers proxy computation
+        assert "verified" in result.metadata
+
+    def test_multi_turn_full_flow(self):
+        """End-to-end: tool_call → tool_call → finish_task."""
+        from swarm.agents.base import Action
+
+        handler = self._make_handler()
+        state = self._make_state(["agent_1"])
+        handler.on_epoch_start(state)
+
+        # Step 1: first tool call
+        action1 = Action(
+            action_type=ActionType.AWM_TOOL_CALL,
+            agent_id="agent_1",
+            metadata={"tool_name": "query_database", "arguments": {"q": "SELECT 1"}},
+        )
+        r1 = handler.handle_action(action1, state)
+        assert r1.success is True
+        assert r1.observables is None
+
+        # Verify observation fields between steps
+        fields = handler.build_observation_fields("agent_1", state)
+        assert fields["awm_episode_active"] is True
+        assert fields["awm_steps_remaining"] >= 0
+        assert fields["awm_last_result"]["tool_name"] == "query_database"
+
+        # Step 2: second tool call
+        action2 = Action(
+            action_type=ActionType.AWM_TOOL_CALL,
+            agent_id="agent_1",
+            metadata={"tool_name": "update_record", "arguments": {"id": 1}},
+        )
+        r2 = handler.handle_action(action2, state)
+        assert r2.success is True
+        assert r2.observables is None
+
+        # Step 3: finish
+        action3 = Action(
+            action_type=ActionType.AWM_FINISH_TASK,
+            agent_id="agent_1",
+        )
+        r3 = handler.handle_action(action3, state)
+        assert r3.success is True
+        assert r3.observables is not None
+        assert r3.metadata["steps_used"] == 2
+
+        # Trace should be cleaned up
+        assert "agent_1" not in handler._traces
+        assert "agent_1" not in handler._last_results
