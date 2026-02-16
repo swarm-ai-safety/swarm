@@ -84,6 +84,8 @@ class ActionType(Enum):
 
     # AWM (Agent World Model) actions
     AWM_EXECUTE_TASK = "awm_execute_task"
+    AWM_TOOL_CALL = "awm_tool_call"        # Single tool call, episode continues
+    AWM_FINISH_TASK = "awm_finish_task"    # Finalize episode, run verification
 
     # Special actions
     NOOP = "noop"  # Do nothing this turn
@@ -228,6 +230,9 @@ class Observation:
     # AWM (Agent World Model) observations
     awm_task: Optional[Dict] = None  # Current AWM task description
     awm_available_tools: List[Dict] = field(default_factory=list)  # Available MCP tools
+    awm_last_result: Optional[Dict] = None  # Result of previous tool call
+    awm_episode_active: bool = False  # Whether episode is in progress
+    awm_steps_remaining: int = 0  # Steps left before max_steps
 
 
 @dataclass
@@ -830,6 +835,30 @@ class BaseAgent(ABC):
             action_type=ActionType.AWM_EXECUTE_TASK,
             agent_id=self.agent_id,
             metadata={"tool_calls": tool_calls or []},
+        )
+
+    def create_awm_tool_call_action(
+        self,
+        tool_name: str,
+        arguments: Optional[Dict] = None,
+    ) -> Action:
+        """Create a single tool call action (multi-turn mode).
+
+        Args:
+            tool_name: Name of the tool to call.
+            arguments: Arguments for the tool call.
+        """
+        return Action(
+            action_type=ActionType.AWM_TOOL_CALL,
+            agent_id=self.agent_id,
+            metadata={"tool_name": tool_name, "arguments": arguments or {}},
+        )
+
+    def create_awm_finish_task_action(self) -> Action:
+        """Create a finish-task action to finalize the AWM episode."""
+        return Action(
+            action_type=ActionType.AWM_FINISH_TASK,
+            agent_id=self.agent_id,
         )
 
     def __repr__(self) -> str:
