@@ -15,6 +15,26 @@ if [ -z "$ROOT" ]; then
 fi
 cd "$ROOT"
 
+# ── Branch guard (parallel session race detection) ──
+# If SESSION_BRANCH is set (by detect-session.sh), verify we're still on it.
+# Another tmux session sharing the same worktree can silently switch branches.
+if [ -n "${SESSION_BRANCH:-}" ]; then
+  CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || true)
+  if [ -n "$CURRENT_BRANCH" ] && [ "$CURRENT_BRANCH" != "$SESSION_BRANCH" ]; then
+    echo "=========================================="
+    echo "COMMIT BLOCKED: Branch drift detected"
+    echo "=========================================="
+    echo ""
+    echo "  Expected: $SESSION_BRANCH"
+    echo "  Actual:   $CURRENT_BRANCH"
+    echo ""
+    echo "Another session likely switched branches in this worktree."
+    echo "Fix: use ./scripts/claude-tmux.sh to launch isolated worktrees."
+    echo ""
+    exit 1
+  fi
+fi
+
 # ── 0. Gitignore enforcement (auto-unstage junk before anything else) ──
 JUNK=$(git diff --cached --name-only | grep -E '(\.DS_Store|\.db$|\.env$|credentials)' || true)
 if [ -n "$JUNK" ]; then
@@ -195,21 +215,10 @@ else
 fi
 
 # ── 4. Tests ──
-# Skip pytest when only non-code files are staged (docs, config, etc.)
-# This reduces commit time from ~28s to ~2s and avoids HEAD race conditions
-# when parallel processes (Codex, other Claude Code sessions) also commit.
-STAGED_ANY_CODE=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(py|sh)$' || true)
-if [ -z "$STAGED_ANY_CODE" ]; then
-    echo "[swarm pre-commit] no staged .py/.sh files; skipping pytest"
-else
-    echo "[swarm pre-commit] pytest"
-    PYTEST_EXIT=0
-    python -m pytest tests/ -x -q || PYTEST_EXIT=$?
-    if [ $PYTEST_EXIT -ne 0 ]; then
-        echo "[swarm pre-commit] pytest FAILED (exit $PYTEST_EXIT)"
-        exit 1
-    fi
-fi
+# Tests run in pre-push (via `make ci`), NOT pre-commit.
+# This keeps commits fast (~2s) and avoids HEAD race conditions
+# when parallel sessions share a worktree.
+# To run tests before committing: python -m pytest tests/ -x -q
 
 echo "[swarm pre-commit] done"
 exit 0
