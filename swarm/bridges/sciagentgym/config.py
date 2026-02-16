@@ -3,12 +3,12 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 
 class EnvironmentTopology(str, Enum):
     """Environment isolation topology for agents.
-    
+
     Attributes:
         SHARED_EPISODE: All agents share the same environment instance.
             Tools and filesystem are shared across agents.
@@ -17,7 +17,7 @@ class EnvironmentTopology(str, Enum):
         PER_TASK: Each task gets its own environment instance.
             Tools and filesystem are isolated per task execution.
     """
-    
+
     SHARED_EPISODE = "shared_episode"
     PER_AGENT = "per_agent"
     PER_TASK = "per_task"
@@ -26,7 +26,7 @@ class EnvironmentTopology(str, Enum):
 @dataclass
 class SciAgentGymConfig:
     """Configuration for the SciAgentGym bridge.
-    
+
     Attributes:
         enabled: Whether the bridge is enabled.
         sciagentgym_path: Path to SciAgentGym installation.
@@ -45,14 +45,14 @@ class SciAgentGymConfig:
         tool_filter: Optional list of specific tool names to register (if None, all tools).
         verification_confidence: Confidence level for binary_to_soft_p conversion.
     """
-    
+
     enabled: bool = True
     sciagentgym_path: Path = field(default_factory=lambda: Path("external/SciAgentGYM"))
     topology: EnvironmentTopology = EnvironmentTopology.PER_AGENT
     disciplines: List[str] = field(
         default_factory=lambda: [
             "physics",
-            "chemistry", 
+            "chemistry",
             "materials_science",
             "life_science",
         ]
@@ -60,35 +60,35 @@ class SciAgentGymConfig:
     workspace_base_path: Path = field(
         default_factory=lambda: Path("/tmp/sciagentgym_workspaces")
     )
-    
+
     # Runtime mode
     live_mode: bool = False
     mock_tool_execution: bool = False
-    
+
     # Execution parameters
     seed: Optional[int] = None
     max_steps_per_task: int = 50
     timeout_per_step: float = 30.0
-    
+
     # Environment features
     enable_filesystem: bool = True
     enable_databases: bool = True
     enable_python_interpreter: bool = True
-    
+
     # Tool configuration
     tool_filter: Optional[List[str]] = None
-    
+
     # Observable mapping weights
     error_weight: float = 1.0
     tool_misuse_weight: float = 1.0
-    
+
     # Verification
     verification_confidence: float = 0.8
-    
+
     # Resource limits
     max_workspace_size_mb: int = 1000
     max_concurrent_environments: int = 10
-    
+
     def __post_init__(self) -> None:
         """Validate configuration."""
         if self.max_steps_per_task < 1:
