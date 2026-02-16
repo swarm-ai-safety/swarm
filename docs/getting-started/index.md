@@ -22,6 +22,12 @@ Get up and running with SWARM in minutes.
 
     Build a custom scenario from scratch
 
+-   :material-refresh: **[Reproducibility Guide](reproducibility.md)**
+
+    ---
+
+    Run reproducible experiments with proper artifact management
+
 -   :material-notebook: **[Quickstart Notebook](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb)**
 
     ---
