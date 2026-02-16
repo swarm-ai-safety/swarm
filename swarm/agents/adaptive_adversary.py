@@ -9,9 +9,6 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
-# ----- Memory bounds -----
-MAX_TRACKING_SET_SIZE: int = 200
-
 from swarm.agents.base import (
     Action,
     ActionType,
@@ -24,6 +21,9 @@ from swarm.models.interaction import InteractionType
 
 if TYPE_CHECKING:
     from swarm.models.interaction import SoftInteraction
+
+# ----- Memory bounds -----
+MAX_TRACKING_SET_SIZE: int = 200
 
 
 class AttackStrategy(Enum):

@@ -5,23 +5,11 @@ are fixed: BaseAgent deque caps, RLM counterparty model eviction,
 AdaptiveAdversary tracking set caps, and PromptAuditLog entry cap.
 """
 
-import json
-import tempfile
+import logging
 from pathlib import Path
-from unittest.mock import MagicMock, patch
 
-import pytest
-
-from swarm.agents.adaptive_adversary import (
-    MAX_TRACKING_SET_SIZE,
-    AdaptiveAdversary,
-)
-from swarm.agents.base import (
-    MAX_INTERACTION_HISTORY,
-    MAX_MEMORY_SIZE,
-    BaseAgent,
-    Observation,
-)
+from swarm.agents.adaptive_adversary import MAX_TRACKING_SET_SIZE, AdaptiveAdversary
+from swarm.agents.base import MAX_INTERACTION_HISTORY, MAX_MEMORY_SIZE
 from swarm.agents.rlm_agent import (
     MAX_COUNTERPARTY_MODELS,
     MAX_MODEL_HISTORY,
@@ -31,7 +19,6 @@ from swarm.agents.rlm_agent import (
 )
 from swarm.logging.prompt_audit import PromptAuditConfig, PromptAuditLog
 from swarm.models.interaction import SoftInteraction
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -224,8 +211,6 @@ class TestPromptAuditLogCap:
 
     def test_cap_warning_logged(self, tmp_path: Path, caplog):
         """Warning is logged when cap is reached."""
-        import logging
-
         log_path = tmp_path / "audit.jsonl"
         config = PromptAuditConfig(path=log_path, max_entries=3)
         log = PromptAuditLog(config)
