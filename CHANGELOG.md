@@ -6,15 +6,73 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-02-15
+
+### Added
+- **Agent sandbox** with exponential backoff retry, async failover, virtual filesystem, and checkpoint isolation (#152, #157)
+- **CrewAI adapter** for integrating SWARM agent policies into CrewAI workflows (#167)
+- **PettingZoo bridge** for multi-agent RL environment interop
+- **AWM (Agent World Model) bridge** — database-backed task environment with MCP server lifecycle (Phase 1 + 2)
+- **AI-Scientist bridge** for autonomous research pipeline integration
+- **LangGraph Swarm bridge** with governance-aware agent orchestration (#151)
+- **Concordia entity agent** with entity sweep, run logger, and governance report
+- **Ralph poll loop agent** for continuous governance monitoring
+- **Gather-Trade-Build domain** with bilevel tax policy and adversarial agents (#164)
+- **Self-modification governance lever** — Two-Gate policy for agent self-edit control (#165)
+- **Recursive subagent spawning** infrastructure with spawn metrics, scenario loader, and red-team evaluation
+- **Team-of-Rivals adversarial review pipeline** with Lean proof modules
+- **AgentLab study refinement pipeline** (`/refine_study` command)
+- **Visual upgrade**: 12 analysis modules with dark/light theme system, KPI cards, gradient fills, and multi-scenario dashboard (#163)
+- **Obfuscation Atlas** integration (FAR.AI paper)
+- **SkillRL dynamics** visualization runner, plotter, and blog post
+- **Deeper acausal reasoning** (depths 4-5) for LDT agent
+- **Perturbation engine** for governance robustness testing
+- **Thread-safe caching** and deterministic RNG plumbed through all agent subclasses for reproducibility
+- **Agent API** with runs, posts, persistence, and security hardening (#156)
+- **Interactive Plotly embeds** for AI Economist blog post
+- **p5.js event replay visualization** for SWARM simulation data
+- **Blog posts**: Self-optimizer distributional safety, Claude Code 10 concurrent subagents, AI Economist GTB dashboard, SkillRL dynamics
+- **Research papers**: AI Economist GTB multi-seed, deeper acausality (clawxiv.2602.00101), collusion tax effect
+- **Slash commands**: `/rename_symbol`, `/session_guard`, `/audit_fix`, `/fix_commit`, `/load_keys`, `/render_promo`, `/council_review`, `/scrub_id`, `/deploy_blog`, `/cherry_pick_pr`, `/post_skillevolve`, `/refine_study`
+- **Pre-merge-commit hook** to gate merges on CI status (#154)
+- **Research integrity auditor** agent for verifying claims against run data
+- **Financial disclaimer enforcement** via CLAUDE.md rule and pre-commit hook for blog posts referencing markets
+- **Test fix discipline** guideline in CLAUDE.md
+
 ### Changed
-- **Artifacts repo migration**: Moved `runs/`, `lean/`, `promo/`, `research/`, `docs/papers/`, `IMPLEMENTATION_PLAN.md`, and `DESIGN_CRITIQUE.md` to [`swarm-ai-safety/swarm-artifacts`](https://github.com/swarm-ai-safety/swarm-artifacts) to reduce main repo clone size by ~5 GB
-- Updated `.gitignore` to prevent re-addition of migrated directories
-- Updated 9 slash commands, agents, and `CLAUDE.md` to reflect new artifact locations
+- **Artifacts repo migration**: Moved `runs/`, `lean/`, `promo/`, `research/`, `docs/papers/`, `IMPLEMENTATION_PLAN.md`, and `DESIGN_CRITIQUE.md` to [`swarm-ai-safety/swarm-artifacts`](https://github.com/swarm-ai-safety/swarm-artifacts) — reduces main repo clone size by ~5 GB
+- Updated 9 slash commands, agents, and `CLAUDE.md` to reflect artifact repo locations
+- `TestableClaim` renamed to `VerifiableClaim` across codebase
+- EventBus initialization simplified in all handlers
+- Promo video updated with accurate stats and replicated-only findings
+- Lean toolchain upgraded to v4.28.0 with refined sigmoid proofs
+- All Lean proof files cleaned up — eliminated `sorry`, fixed autoImplicit compatibility
+- Examples and notebooks polished for beginner accessibility
+- ArXiv similarity analysis consolidated: 197 lines → 46, renamed to `PRIOR_WORK_COMPARISON.md`
+- LDT caches now clear on update for all counterparties, not just current (#161)
+- Lazy-load theme symbols so `swarm.analysis` works without matplotlib
+
+### Fixed
+- **Critical invariant violations**: Unseeded RNG and destructive `EventLog.clear()` patched
+- 18 security audit findings in agent sandbox hardened
+- Circuit breaker, cost tracking, Holm-Bonferroni correction, and missing scipy dependency (#158)
+- Governed swarm: cycle threshold, composite redirect, handoff counter (#159)
+- GasTown bridge: branch fallback in mixed envs, CI-fail grep pattern (#160)
+- Council review div-by-zero in study evaluator
+- AWM observation wiring in ObservationBuilder
+- Sandbox: async failover crash, error sanitization, checkpoint collision
+- Near-zero-mean CV calculation in horizon evaluator
+- Blog post titles hidden by homepage CSS rule
+- iframe embeds stripped by markdown processor
+- Flaky tests stabilized: `test_governance_reduces_toxicity`, `test_deceptive_agent_builds_trust`, `test_adversarial_has_higher_toxicity`, `test_circuit_breaker_governance`
+- Narrative score thresholds widened for platform RNG drift
+- Confounded baseline comparison flagged in RL eval lessons (#162)
+- Duplicate Prime Intellect entry in bridges index (#166)
+- 5 mypy errors and lint issues in CrewAI adapter and rain/river agents
 
 ### Removed
-- `skill.json`, `skill.md` — redundant with `pyproject.toml` (not yet removed, pending cleanup)
-- `Procfile` — unused Heroku config (not yet removed, pending cleanup)
-- `security_model_personal.yaml` — one-off scenario at root (not yet removed, pending cleanup)
+- 574 tracked artifact files from main repo (migrated to `swarm-artifacts`)
+- `IMPLEMENTATION_PLAN.md` and `DESIGN_CRITIQUE.md` from root (moved to `swarm-artifacts`)
 
 ## [1.5.0] - 2026-02-13
 
@@ -24,7 +82,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **Pre-commit private infra scan**: Blocks accidental commit of Prime Intellect dashboard URLs and run IDs in public-facing files
 
 ### Changed
-- IMPLEMENTATION_PLAN.md updated to reflect v1.4.0 stats (2922 tests, 55 scenarios, 12 domain handlers, 22 agent modules)
+- Implementation plan updated to reflect v1.4.0 stats (2922 tests, 55 scenarios, 12 domain handlers, 22 agent modules)
 
 ## [1.4.0] - 2026-02-12
 

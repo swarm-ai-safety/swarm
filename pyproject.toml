@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "swarm-safety"
-version = "1.5.0"
+version = "1.6.0"
 description = "SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework"
 readme = "README.md"
 requires-python = ">=3.10"
