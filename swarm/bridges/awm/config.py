@@ -60,6 +60,11 @@ class AWMConfig(BaseModel):
     # Phase 3: Multi-turn mode (False = batch for backward compat)
     step_mode: bool = False
 
+    # Phase 4: Shared-state multi-agent coordination
+    shared_database: bool = False
+    isolation_level: str = "read_committed"  # "none" | "read_committed" | "serializable"
+    conflict_probability: float = Field(default=0.3, ge=0.0, le=1.0)
+
     # Phase 3: LLM-based tool planning
     llm_planning: bool = False
     llm_provider: Optional[str] = None  # "anthropic", "openai", etc.

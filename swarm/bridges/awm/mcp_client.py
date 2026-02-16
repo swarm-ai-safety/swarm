@@ -27,6 +27,7 @@ class ToolCallRecord:
     # Classification
     is_malformed: bool = False  # Invalid arguments / schema violation
     is_error_response: bool = False  # Server returned error
+    conflict_detected: bool = False  # Phase 4: write conflict in shared mode
 
 
 @dataclass
@@ -309,6 +310,27 @@ class AWMMCPSyncClient:
         try:
             client = self._ensure_client()
             response = client.get("/tools")
+            return bool(response.status_code == 200)
+        except Exception:
+            return False
+
+    def begin_transaction(self) -> bool:
+        """Begin a transaction on the AWM server (Phase 4: shared mode)."""
+        try:
+            client = self._ensure_client()
+            response = client.post("/transaction/begin")
+            return bool(response.status_code == 200)
+        except Exception:
+            return False
+
+    def end_transaction(self, commit: bool = True) -> bool:
+        """End a transaction on the AWM server (Phase 4: shared mode)."""
+        try:
+            client = self._ensure_client()
+            response = client.post(
+                "/transaction/end",
+                json={"commit": commit},
+            )
             return bool(response.status_code == 200)
         except Exception:
             return False

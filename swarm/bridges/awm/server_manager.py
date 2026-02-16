@@ -178,6 +178,7 @@ class AWMServerManager:
         self.config = config
         self._servers: Dict[str, AWMServerInstance] = {}
         self._next_port = config.base_port
+        self._shared_server: Optional[AWMServerInstance] = None
 
     def _allocate_port(self) -> int:
         """Allocate the next available port."""
@@ -188,8 +189,45 @@ class AWMServerManager:
     async def start_server(self, agent_id: str) -> Optional[AWMServerInstance]:
         """Start (or return existing) server for an agent.
 
+        In shared_database mode, all agents share one server instance.
         Returns None if max_concurrent_servers would be exceeded.
         """
+        if self.config.shared_database:
+            return await self._start_shared_server(agent_id)
+        return await self._start_dedicated_server(agent_id)
+
+    async def _start_shared_server(
+        self, agent_id: str
+    ) -> Optional[AWMServerInstance]:
+        """Return the single shared server, creating it on first call."""
+        if self._shared_server is not None:
+            # Track agent → server mapping for lookup
+            self._servers[agent_id] = self._shared_server
+            if not self._shared_server.running:
+                await self._shared_server.start()
+            return self._shared_server
+
+        port = self._allocate_port()
+        server = AWMServerInstance(
+            agent_id="shared",
+            port=port,
+            environment_id=self.config.environment_id,
+            envs_path=str(self.config.envs_path),
+            live_mode=self.config.live_mode,
+            server_command_template=self.config.server_command_template,
+            host=self.config.host,
+            startup_timeout=self.config.server_startup_timeout,
+            health_check_interval=self.config.health_check_interval,
+        )
+        await server.start()
+        self._shared_server = server
+        self._servers[agent_id] = server
+        return server
+
+    async def _start_dedicated_server(
+        self, agent_id: str
+    ) -> Optional[AWMServerInstance]:
+        """Start a dedicated server for one agent (original behavior)."""
         if agent_id in self._servers:
             server = self._servers[agent_id]
             if not server.running:
@@ -225,16 +263,29 @@ class AWMServerManager:
         return self._servers.get(agent_id)
 
     async def reset_all(self) -> None:
-        """Reset all servers' databases (called between epochs)."""
+        """Reset all servers' databases (called between epochs).
+
+        In shared mode, reset the shared server once instead of per-agent.
+        """
+        if self._shared_server is not None:
+            if self._shared_server.running:
+                await self._shared_server.reset_db()
+            return
+
         for server in self._servers.values():
             if server.running:
                 await server.reset_db()
 
     async def shutdown(self) -> None:
         """Stop all servers and clean up."""
-        for server in list(self._servers.values()):
-            await server.stop()
-        self._servers.clear()
+        if self._shared_server is not None:
+            await self._shared_server.stop()
+            self._shared_server = None
+            self._servers.clear()
+        else:
+            for server in list(self._servers.values()):
+                await server.stop()
+            self._servers.clear()
         self._next_port = self.config.base_port
 
     @property
