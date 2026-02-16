@@ -715,7 +715,8 @@ class SelfModificationLever(GovernanceLever):
         """
         # The complexity weight is already computed in __post_init__
         # Just return it if it's already set, otherwise use default of 1.0
-        return max(proposal.complexity_weight, 1.0)
+        result: float = max(proposal.complexity_weight, 1.0)
+        return result
 
     def _evaluate_tau_gate_for_refinement(
         self,
@@ -738,7 +739,7 @@ class SelfModificationLever(GovernanceLever):
         Returns:
             GateResult with passed/failed status and details.
         """
-        details = {}
+        details: Dict[str, Any] = {}
 
         # Check 1: Effect direction (higher threshold_delta = more conservative)
         effect_safe_direction = False
