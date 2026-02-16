@@ -1,0 +1,131 @@
+# Collaborative Chemistry Under Budget & Audits
+#
+# Simulates a chemistry research environment where:
+# - Solvers (synthesizers) propose solutions/answers to research questions
+# - Reviewers (verifiers) audit the quality of submitted work
+# - Opportunists try to game the system with low-effort contributions
+# - Budget constraints (transaction taxes) limit frivolous interactions
+# - Random audits catch and penalize low-quality work
+
+scenario_id: collaborative_chemistry
+description: "Chemistry research with budget constraints and audit behavior"
+motif: collaborative_research
+
+simulation:
+  n_epochs: 15
+  steps_per_epoch: 12
+  seed: 42
+
+# Scholar configuration for chemistry domain
+scholar:
+  enabled: true
+  top_k: 15
+  entailment_threshold: 0.65
+  seed: 42
+
+# Payoff configuration - represents research value
+payoff:
+  s_plus: 3.0       # High-quality research contribution
+  s_minus: 1.0      # Low-quality attempt cost
+  h: 2.5            # Harm to research ecosystem from bad work
+  theta: 0.5        # Equal split of surplus
+  rho_a: 0.2        # Initiator bears some ecosystem cost
+  rho_b: 0.1        # Counterparty bears some ecosystem cost
+  w_rep: 1.5        # Reputation matters for research credibility
+
+# Budget & audit governance
+governance:
+  # Budget constraints - transaction costs
+  transaction_tax_rate: 0.08
+  transaction_tax_split: 0.6  # Most goes to public pool
+
+  # Reputation decay - past performance fades
+  reputation_decay_rate: 0.92
+
+  # Bandwidth limits
+  bandwidth_cap: 8
+
+  # Staking for serious participants
+  staking_enabled: true
+  min_stake_to_participate: 5.0
+  stake_slash_rate: 0.15
+
+  # Circuit breaker for repeat offenders
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.55
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 3
+
+  # Random audit - key mechanism for quality control
+  audit_enabled: true
+  audit_probability: 0.25         # 25% of interactions audited
+  audit_penalty_multiplier: 2.5   # Strong penalty for caught violations
+  audit_threshold_p: 0.45         # Below this p-value triggers penalty
+
+  # Collusion detection (prevent coordinated low-effort work)
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.65
+  collusion_min_interactions: 4
+  collusion_score_threshold: 0.5
+  collusion_penalty_multiplier: 1.5
+  collusion_realtime_penalty: true
+  collusion_realtime_rate: 0.12
+
+# Agents
+agents:
+  # Solvers - produce chemistry solutions (honest synthesizers)
+  - type: synthesizer
+    count: 3
+    name: solver
+    config:
+      entailment_accuracy: 0.85
+
+  # Reviewers - audit solution quality (verifiers)
+  - type: verifier
+    count: 2
+    name: reviewer
+    config:
+      accuracy: 0.9
+
+  # Supporting retrievers for literature
+  - type: retriever
+    count: 2
+    name: literature_search
+    config:
+      bias: precision
+
+  # Opportunists - try to submit low-effort work
+  - type: opportunistic
+    count: 2
+    name: opportunist
+    config:
+      aggression_level: 0.6
+
+rate_limits:
+  posts_per_epoch: 12
+  interactions_per_step: 6
+  votes_per_epoch: 50
+  tasks_per_epoch: 4
+
+# Success criteria
+success_criteria:
+  min_epochs: 15
+  min_agents: 9
+
+  # Quality goals
+  toxicity_threshold: 0.4          # Keep low-quality work under control
+  min_citation_precision: 0.65     # Good citation quality
+  max_hallucination_rate: 0.25     # Limited hallucinations
+
+  # Audit effectiveness
+  min_audit_catch_rate: 0.5        # Audits should catch violations
+
+  # Ecosystem health
+  min_total_welfare: 20.0          # Positive sum game
+  max_quality_gap: 0.3             # Limited adverse selection
+
+# Outputs
+outputs:
+  event_log: runs/collaborative_chemistry/events.jsonl
+  metrics_csv: runs/collaborative_chemistry/metrics.csv
