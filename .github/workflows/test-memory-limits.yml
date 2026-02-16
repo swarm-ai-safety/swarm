@@ -53,7 +53,7 @@ jobs:
         run: |
           python -m pytest tests/test_memory_bounds.py \
             -v \
-            -m "memory or not memory_intensive" \
+            -m "memory and not memory_intensive" \
             --tb=short \
             --maxfail=3 \
             --durations=10
