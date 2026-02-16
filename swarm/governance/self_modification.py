@@ -25,6 +25,7 @@ from swarm.governance.levers import GovernanceLever, LeverEffect
 if TYPE_CHECKING:
     from swarm.env.state import EnvState
     from swarm.governance.config import GovernanceConfig
+    from swarm.governance.refinement_proposal import RefinementProposal
     from swarm.models.interaction import SoftInteraction
 
 # Maximum number of proposals retained per agent for oscillation detection.
@@ -622,3 +623,169 @@ class SelfModificationLever(GovernanceLever):
         """Reset an agent's modification budget (after consolidation)."""
         self._agent_budgets[agent_id] = 0.0
         self._agent_history[agent_id] = deque(maxlen=_MAX_HISTORY_PER_AGENT)
+
+    def evaluate_refinement(
+        self,
+        proposal: "RefinementProposal",
+        baseline_metrics: Dict[str, float],
+        metric_uncertainties: Dict[str, float],
+    ) -> Tuple[bool, GateResult, GateResult]:
+        """Evaluate a skill refinement against Two-Gate policy.
+        
+        Args:
+            proposal: The refinement proposal to evaluate.
+            baseline_metrics: Current agent performance metrics.
+            metric_uncertainties: Uncertainty estimates for metrics.
+            
+        Returns:
+            (approved, tau_result, k_max_result)
+        """
+        # Classify risk tier and complexity (governance-controlled)
+        proposal.risk_tier = self._classify_refinement_risk(proposal)
+        proposal.complexity_weight = self._compute_refinement_complexity(proposal)
+        proposal.entry_hash = proposal.compute_hash()
+        
+        # Gate 1: τ (safety gate)
+        tau_result = self._evaluate_tau_gate_for_refinement(
+            proposal, baseline_metrics, metric_uncertainties
+        )
+        
+        # Gate 2: K_max (capacity gate) — under lock for atomic budget check-and-update
+        lock = self._agent_locks[proposal.agent_id]
+        with lock:
+            current_budget = self._agent_budgets[proposal.agent_id]
+            k_max_result = evaluate_k_max_gate(proposal, current_budget)
+            
+            approved = tau_result.passed and k_max_result.passed
+            
+            if approved:
+                # Atomic budget update
+                self._agent_budgets[proposal.agent_id] += proposal.complexity_weight
+                self._agent_history[proposal.agent_id].append(proposal)
+                proposal.constitutional_result = tau_result.passed
+                proposal.compositional_result = k_max_result.passed
+                proposal.transition(ModificationState.SANDBOXED, "gates passed")
+            else:
+                reasons = []
+                if not tau_result.passed:
+                    reasons.append(f"tau gate: {tau_result.details}")
+                if not k_max_result.passed:
+                    reasons.append(f"k_max gate: {k_max_result.details}")
+                proposal.transition(ModificationState.REJECTED, "; ".join(reasons))
+        
+        return approved, tau_result, k_max_result
+
+    def _classify_refinement_risk(self, proposal: "RefinementProposal") -> RiskTier:
+        """Classify risk tier based on refinement magnitude.
+        
+        Classification rules:
+        - CRITICAL: Large effect changes (>0.2) or composite skills
+        - HIGH: Medium effect changes (>0.1)
+        - MEDIUM: Moderate condition changes (>0.15) with small effect changes
+        - LOW: Small changes
+        """
+        max_cond_delta = 0.0
+        max_eff_delta = 0.0
+        
+        # Compute max condition delta
+        for key, (old, new) in proposal.condition_delta.items():
+            if isinstance(old, (int, float)) and isinstance(new, (int, float)):
+                max_cond_delta = max(max_cond_delta, abs(new - old))
+        
+        # Compute max effect delta
+        for key, (old, new) in proposal.effect_delta.items():
+            if isinstance(old, (int, float)) and isinstance(new, (int, float)):
+                max_eff_delta = max(max_eff_delta, abs(new - old))
+        
+        # Classification logic (highest severity wins)
+        if max_eff_delta > 0.2 or proposal.skill_type == "COMPOSITE":
+            return RiskTier.CRITICAL
+        elif max_eff_delta > 0.1:
+            return RiskTier.HIGH
+        elif max_cond_delta > 0.15 and max_eff_delta > 0.05:
+            return RiskTier.MEDIUM
+        else:
+            return RiskTier.LOW
+
+    def _compute_refinement_complexity(self, proposal: "RefinementProposal") -> float:
+        """Compute complexity weight for a refinement.
+        
+        Already computed in RefinementProposal.__post_init__(), but this
+        method allows for override logic if needed.
+        """
+        # The complexity weight is already computed in __post_init__
+        # Just return it if it's already set, otherwise use default of 1.0
+        return max(proposal.complexity_weight, 1.0)
+
+    def _evaluate_tau_gate_for_refinement(
+        self,
+        proposal: "RefinementProposal",
+        baseline_metrics: Dict[str, float],
+        uncertainties: Dict[str, float],
+    ) -> GateResult:
+        """Evaluate τ gate: Does refinement improve safety?
+        
+        Two checks:
+        1. Effect direction: Does refinement move parameters toward safety?
+           (e.g., higher acceptance_threshold_delta = more conservative)
+        2. Condition justification: Is refinement justified by poor performance?
+        
+        Args:
+            proposal: The refinement proposal.
+            baseline_metrics: Current agent performance metrics.
+            uncertainties: Uncertainty estimates for metrics.
+            
+        Returns:
+            GateResult with passed/failed status and details.
+        """
+        details = {}
+        
+        # Check 1: Effect direction (higher threshold_delta = more conservative)
+        effect_safe_direction = False
+        for key, (old, new) in proposal.effect_delta.items():
+            if key == "acceptance_threshold_delta":
+                if isinstance(old, (int, float)) and isinstance(new, (int, float)):
+                    if new > old:
+                        effect_safe_direction = True
+                        details["effect_safe_direction"] = True
+                    else:
+                        effect_safe_direction = False
+                        details["effect_safe_direction"] = False
+                        details["warning"] = f"{key}: moved in risky direction"
+        
+        # If no acceptance_threshold_delta change, assume neutral
+        if "effect_safe_direction" not in details:
+            effect_safe_direction = True
+            details["effect_safe_direction"] = True
+        
+        # Check 2: Condition vs performance
+        # Refinement is justified if skill is under-performing
+        condition_justified = False
+        success_rate = proposal.perf_before.get("success_rate", 1.0)
+        if success_rate < 0.4:
+            condition_justified = True
+            details["condition_tightening_justified"] = True
+        else:
+            condition_justified = False
+            details["condition_tightening_justified"] = False
+            details["warning"] = "Refining well-performing skill"
+        
+        # Get tau_min threshold for this risk tier
+        tau_min = _TAU_MIN_DEFAULTS.get(proposal.risk_tier, 0.0)
+        
+        # Compute tau value (0-1 scale, two components)
+        tau_value = 0.0
+        if effect_safe_direction:
+            tau_value += 0.5
+        if condition_justified:
+            tau_value += 0.5
+        
+        passed = tau_value >= tau_min if tau_min is not None else False
+        
+        return GateResult(
+            passed=passed,
+            gate_name="tau_refinement",
+            value=tau_value,
+            threshold=tau_min if tau_min is not None else 0.0,
+            details=details,
+        )

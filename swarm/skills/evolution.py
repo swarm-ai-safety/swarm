@@ -550,6 +550,105 @@ class SkillEvolutionEngine:
 
         return refined
 
+    def refine_skills_with_governance(
+        self,
+        library: "SkillLibrary",
+        agent_id: str,
+        governance_lever: Optional["SelfModificationLever"] = None,
+    ) -> Tuple[List[str], List["RefinementProposal"]]:
+        """Refine skills, returning both IDs and governance proposals.
+        
+        This method collects refinement proposals for skills that need
+        refinement, but does NOT apply them directly. Instead, it returns
+        the proposals for evaluation by the governance lever.
+        
+        Args:
+            library: The agent's skill library.
+            agent_id: ID of the agent proposing refinements.
+            governance_lever: Optional governance lever for evaluation.
+            
+        Returns:
+            (refined_skill_ids, proposals_submitted_to_governance)
+        """
+        from swarm.governance.refinement_proposal import RefinementProposal
+        
+        if not self.config.recursive_evolution_enabled:
+            return [], []
+        
+        proposals = []
+        refined = []
+        
+        for skill in list(library.all_skills):
+            if self._refinements_this_epoch >= self.config.max_refinements_per_epoch:
+                break
+            
+            perf = library.get_performance(skill.skill_id)
+            
+            # Eligibility check
+            if perf is None or perf.invocations < self.config.refinement_min_invocations:
+                continue
+            if perf.success_rate >= self.config.refinement_success_threshold:
+                continue
+            if skill.skill_type == SkillType.COMPOSITE:
+                continue
+            
+            # COLLECT CHANGES (don't apply yet)
+            old_condition = dict(skill.condition)
+            old_effect = dict(skill.effect)
+            
+            # Compute refined condition
+            shrink = self.config.refinement_band_shrink
+            new_condition = dict(old_condition)
+            if "min_p" in old_condition and "max_p" in old_condition:
+                mid = (old_condition["min_p"] + old_condition["max_p"]) / 2.0
+                half = max(0.05, (old_condition["max_p"] - old_condition["min_p"]) / 2.0 - shrink)
+                new_condition["min_p"] = max(0.0, mid - half)
+                new_condition["max_p"] = min(1.0, mid + half)
+            
+            # Compute refined effect
+            new_effect = dict(old_effect)
+            if skill.skill_type == SkillType.STRATEGY:
+                delta = old_effect.get("acceptance_threshold_delta", 0.0)
+                new_effect["acceptance_threshold_delta"] = max(-0.5, min(0.5, delta + 0.02))
+            elif skill.skill_type == SkillType.LESSON:
+                delta = old_effect.get("acceptance_threshold_delta", 0.0)
+                new_effect["acceptance_threshold_delta"] = max(-0.5, min(0.5, delta + 0.03))
+            
+            # CREATE PROPOSAL
+            proposal = RefinementProposal(
+                skill_id=skill.skill_id,
+                original_version=skill.version,
+                refined_version=skill.version + 1,
+                condition_delta={
+                    "min_p": (old_condition.get("min_p"), new_condition.get("min_p")),
+                    "max_p": (old_condition.get("max_p"), new_condition.get("max_p")),
+                },
+                effect_delta={
+                    k: (old_effect.get(k), new_effect.get(k))
+                    for k in set(old_effect.keys()) | set(new_effect.keys())
+                },
+                perf_before={
+                    "success_rate": perf.success_rate,
+                    "invocations": perf.invocations,
+                    "avg_payoff": perf.avg_payoff,
+                },
+                skill_type=skill.skill_type.value,
+                agent_id=agent_id,
+            )
+            proposals.append(proposal)
+            
+            # CONDITIONAL: Apply only if governance is None (backward compatible)
+            if governance_lever is None:
+                # No governance: apply immediately (backward compatible)
+                skill.condition = new_condition
+                skill.effect = new_effect
+                skill.version += 1
+                skill.tags = set(skill.tags) | {"refined"}
+                self._refinements_this_epoch += 1
+                refined.append(skill.skill_id)
+        
+        return refined, proposals
+
     # ------------------------------------------------------------------
     # Automatic tier promotion
     # ------------------------------------------------------------------
