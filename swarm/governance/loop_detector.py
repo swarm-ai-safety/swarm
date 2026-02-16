@@ -2,7 +2,7 @@
 
 from collections import defaultdict, deque
 from dataclasses import dataclass, field
-from typing import Deque, Dict, List, Set, Tuple
+from typing import Deque, Dict, Tuple
 
 from swarm.env.state import EnvState
 from swarm.governance.config import GovernanceConfig
@@ -16,25 +16,25 @@ class LoopTracker:
 
     # Recent interaction patterns (counterparty, interaction_type)
     recent_interactions: Deque[Tuple[str, str]] = field(default_factory=lambda: deque(maxlen=10))
-    
+
     # Recent quality scores
     recent_p_scores: Deque[float] = field(default_factory=lambda: deque(maxlen=10))
-    
+
     # Recent tool misuse counts
     recent_tool_misuse: Deque[int] = field(default_factory=lambda: deque(maxlen=10))
-    
+
     # Recent rework counts
     recent_rework: Deque[int] = field(default_factory=lambda: deque(maxlen=10))
-    
+
     # Loop violations counter
     violations: int = 0
-    
+
     # Freeze state
     freeze_until_epoch: int = -1  # -1 means not frozen
-    
+
     # Replan counter (tracks forced replans)
     replan_count: int = 0
-    
+
     # Last replan epoch
     last_replan_epoch: int = -1
 
@@ -55,18 +55,18 @@ class LoopTracker:
     def detect_repetition_loop(self) -> bool:
         """
         Detect if agent is in a repetition loop.
-        
+
         A repetition loop is detected when the agent has repeated
         the same (counterparty, interaction_type) pattern too frequently.
         """
         if len(self.recent_interactions) < 5:
             return False
-        
+
         # Count frequency of each pattern
         pattern_counts: Dict[Tuple[str, str], int] = defaultdict(int)
         for pattern in self.recent_interactions:
             pattern_counts[pattern] += 1
-        
+
         # Check if any pattern repeats too much (>60% of recent interactions)
         max_count = max(pattern_counts.values())
         return max_count >= len(self.recent_interactions) * 0.6
@@ -74,36 +74,36 @@ class LoopTracker:
     def detect_quality_loop(self, threshold: float) -> bool:
         """
         Detect if agent is in a low-quality loop.
-        
+
         A quality loop is detected when average quality is persistently low.
         """
         if len(self.recent_p_scores) < 5:
             return False
-        
+
         avg_p = sum(self.recent_p_scores) / len(self.recent_p_scores)
         return avg_p < threshold
 
     def detect_tool_misuse_loop(self, threshold: int) -> bool:
         """
         Detect if agent is in a tool misuse loop.
-        
+
         A tool misuse loop is detected when tool misuse flags are frequent.
         """
         if len(self.recent_tool_misuse) < 3:
             return False
-        
+
         total_misuse = sum(self.recent_tool_misuse)
         return total_misuse >= threshold
 
     def detect_rework_loop(self, threshold: int) -> bool:
         """
         Detect if agent is in a rework loop.
-        
+
         A rework loop is detected when rework counts are persistently high.
         """
         if len(self.recent_rework) < 3:
             return False
-        
+
         total_rework = sum(self.recent_rework)
         return total_rework >= threshold
 
@@ -115,7 +115,7 @@ class LoopTracker:
 class LoopDetectorLever(GovernanceLever):
     """
     Loop detector governance lever.
-    
+
     Detects when agents are stuck in loops (repetitive behavior patterns)
     and triggers three types of actions:
     1. Circuit breaker: Freeze the agent temporarily
@@ -205,7 +205,7 @@ class LoopDetectorLever(GovernanceLever):
         # Detect loop patterns
         loop_detected = False
         loop_type = None
-        
+
         if tracker.detect_repetition_loop():
             loop_detected = True
             loop_type = "repetition"
@@ -233,19 +233,19 @@ class LoopDetectorLever(GovernanceLever):
 
         # Build the effect
         effect = LeverEffect(lever_name=self.name)
-        
+
         # 1. Tool-budget penalties (always apply on loop detection)
         penalty_cost = self.config.loop_detector_penalty_multiplier * (
             interaction.p if interaction.accepted else 0.5
         )
         effect.cost_a = penalty_cost
-        
+
         # 2. Forced replan (apply if enough violations and not recently replanned)
         needs_replan = (
             tracker.violations >= self.config.loop_detector_replan_threshold
             and tracker.last_replan_epoch != state.current_epoch
         )
-        
+
         if needs_replan:
             tracker.replan_count += 1
             tracker.last_replan_epoch = state.current_epoch
