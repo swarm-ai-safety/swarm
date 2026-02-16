@@ -6,7 +6,7 @@ SoftInteraction objects and logging them to the SWARM event log.
 
 from __future__ import annotations
 
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 from swarm.bridges.sciagentgym.client import SciAgentGymClient
 from swarm.bridges.sciagentgym.config import SciAgentGymConfig
@@ -196,12 +196,12 @@ class SciAgentGymBridge:
                 timestamp=event.timestamp,
                 agent_id=event.agent_id,
                 payload={
-                    "interaction_type": interaction.interaction_type,
+                    "interaction_type": interaction.interaction_type.value,
                     "p": interaction.p,
                     "accepted": interaction.accepted,
                 },
             )
-            self._event_log.log_event(swarm_event)
+            self._event_log.append(swarm_event)
 
     # --- Accessors ---
 
@@ -221,7 +221,7 @@ class SciAgentGymBridge:
         """
         return self._events.copy()
 
-    def get_policy_stats(self) -> Dict[str, any]:
+    def get_policy_stats(self) -> Dict[str, Any]:
         """Get policy engine statistics.
         
         Returns:
@@ -237,7 +237,7 @@ class SciAgentGymBridge:
         self._policy.reset_circuit_breaker()
         self._policy._total_tokens_used = 0
 
-    def get_tool_registry(self) -> Dict[str, any]:
+    def get_tool_registry(self) -> Dict[str, Any]:
         """Get the loaded tool registry.
         
         Returns:

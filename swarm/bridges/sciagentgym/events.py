@@ -108,7 +108,7 @@ class WorkflowStepEvent:
     step_type: str
     success: bool
     dependencies_met: bool = True
-    next_steps: list[int] = None
+    next_steps: list[int] | None = None
 
     def __post_init__(self) -> None:
         if self.next_steps is None:
@@ -172,7 +172,7 @@ class SafetyCheckEvent:
     check_type: str
     passed: bool
     safety_score: float
-    risk_factors: list[str] = None
+    risk_factors: list[str] | None = None
     mitigation_applied: bool = False
 
     def __post_init__(self) -> None:
