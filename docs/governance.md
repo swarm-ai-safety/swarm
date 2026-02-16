@@ -29,6 +29,13 @@ gov_config = GovernanceConfig(
     freeze_threshold_violations=3,
     freeze_duration_epochs=2,
 
+    # Detect and penalize agents stuck in loops
+    loop_detector_enabled=True,
+    loop_detector_quality_threshold=0.4,
+    loop_detector_penalty_multiplier=1.5,
+    loop_detector_replan_threshold=2,
+    loop_detector_freeze_threshold=4,
+
     # 10% chance of audit, penalty if p < 0.5
     audit_enabled=True,
     audit_probability=0.1,
@@ -51,6 +58,7 @@ orchestrator = Orchestrator(config=config)
 | **Vote Normalization** | Diminishing influence as vote count increases | compute_vote_weight |
 | **Staking** | Block actions if `resources < min_stake` | can_agent_act |
 | **Circuit Breaker** | Freeze agent if `avg_toxicity > threshold` for N violations | on_interaction |
+| **Loop Detector** | Detects repetitive behavior patterns (same counterparty, low quality, tool misuse, high rework). Triggers: (1) tool-budget penalties, (2) forced replan after threshold violations, (3) circuit breaker freeze after excessive violations. | on_interaction, on_epoch_start |
 | **Random Audit** | Cost penalty `(threshold - p) * multiplier` plus reputation penalty if audited and `p < threshold`. Reputation penalty feeds back into observable quality. | on_interaction |
 | **Collusion Detection** | Penalty based on collusion risk score from coordinated behavior | on_epoch_start, on_interaction |
 | **Sybil Detection** | Detects and penalizes suspected Sybil agents via behavioral similarity | on_epoch_start, on_interaction, can_agent_act |
@@ -142,6 +150,83 @@ Run the collusion detection scenario:
 ```bash
 python examples/run_scenario.py scenarios/collusion_detection.yaml
 ```
+
+## Loop Detector
+
+The loop detector identifies agents stuck in repetitive or unproductive behavior patterns and enforces three types of corrective actions: tool-budget penalties, forced replans, and circuit breaker freezes.
+
+### Loop Types Detected
+
+| Loop Type | Detection Criteria | Signal |
+|-----------|-------------------|--------|
+| **Repetition** | Same (counterparty, interaction_type) pattern repeats ≥60% of recent interactions | Stuck interacting with same agent |
+| **Low Quality** | Average `p` falls below threshold over recent interactions | Persistently low success probability |
+| **Tool Misuse** | Cumulative tool_misuse_flags exceed threshold | Repeated tool abuse |
+| **Rework** | Cumulative rework_count exceeds threshold | Stuck redoing same work |
+
+### Actions on Loop Detection
+
+1. **Tool-Budget Penalty** (immediate): Cost multiplier applied to interaction
+   ```
+   penalty = loop_detector_penalty_multiplier * p (if accepted) or 0.5 (if not)
+   ```
+
+2. **Forced Replan** (after threshold violations): Signals agent to reset strategy
+   - Triggered when `violations >= loop_detector_replan_threshold`
+   - Only once per epoch per agent
+   - Signaled via `force_replan` flag in LeverEffect details
+
+3. **Circuit Breaker** (after excessive violations): Freeze agent temporarily
+   - Triggered when `violations >= loop_detector_freeze_threshold`
+   - Agent frozen for `loop_detector_freeze_duration` epochs
+   - Automatically unfrozen at epoch start
+
+### Loop Detector Quick Start
+
+```python
+from swarm.governance import GovernanceConfig, GovernanceEngine
+
+config = GovernanceConfig(
+    loop_detector_enabled=True,
+    loop_detector_quality_threshold=0.4,  # avg p threshold for quality loops
+    loop_detector_tool_misuse_threshold=5,  # cumulative misuse flags
+    loop_detector_rework_threshold=10,  # cumulative rework count
+    loop_detector_penalty_multiplier=1.5,  # cost multiplier
+    loop_detector_replan_threshold=2,  # violations before forced replan
+    loop_detector_freeze_threshold=4,  # violations before freeze
+    loop_detector_freeze_duration=1,  # epochs to freeze
+)
+
+# Check loop status during simulation
+engine = GovernanceEngine(config=config)
+lever = engine.get_loop_detector_lever()
+if lever:
+    status = lever.get_loop_status("agent_1")
+    print(f"Violations: {status['violations']}")
+    print(f"Is frozen: {status['is_frozen']}")
+    print(f"Replan count: {status['replan_count']}")
+```
+
+### Loop Detector YAML Configuration
+
+```yaml
+governance:
+  loop_detector_enabled: true
+  loop_detector_quality_threshold: 0.4
+  loop_detector_tool_misuse_threshold: 5
+  loop_detector_rework_threshold: 10
+  loop_detector_penalty_multiplier: 1.5
+  loop_detector_replan_threshold: 2
+  loop_detector_freeze_threshold: 4
+  loop_detector_freeze_duration: 1
+```
+
+### Use Cases
+
+- **Autonomous agents**: Detect when agents get stuck in unproductive loops (e.g., Ralph loop agents repeatedly failing same task)
+- **Tool-limited environments**: Penalize agents that repeatedly misuse restricted tools (e.g., Claude Code agents exceeding permissions)
+- **Quality gates**: Catch agents that produce persistently low-quality outputs
+- **Rework prevention**: Identify agents stuck in edit-review-edit cycles without progress
 
 ## Security Detection
 
