@@ -16,7 +16,11 @@ Test Coverage:
 
 import pytest
 
-from swarm.domains.gather_trade_build.config import GTBConfig, MapConfig, TaxScheduleConfig
+from swarm.domains.gather_trade_build.config import (
+    GTBConfig,
+    MapConfig,
+    TaxScheduleConfig,
+)
 from swarm.domains.gather_trade_build.entities import (
     Direction,
     GTBActionType,
@@ -26,7 +30,6 @@ from swarm.domains.gather_trade_build.env import GTBAction, GTBEnvironment
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.self_modification import (
     ModificationProposal,
-    ModificationState,
     RiskTier,
     SelfModificationLever,
     classify_risk_tier,
@@ -34,7 +37,6 @@ from swarm.governance.self_modification import (
     evaluate_k_max_gate,
     evaluate_tau_gate,
 )
-
 
 # ---------------------------------------------------------------------------
 # Test Group 1: GTB Environment Determinism (6 tests)
@@ -55,7 +57,7 @@ class TestGTBDeterminism:
         # Add workers
         worker1a = env1.add_worker("agent_1")
         worker1b = env1.add_worker("agent_2")
-        
+
         worker2a = env2.add_worker("agent_1")
         worker2b = env2.add_worker("agent_2")
 
@@ -78,9 +80,9 @@ class TestGTBDeterminism:
         env1 = GTBEnvironment(config1)
         env2 = GTBEnvironment(config2)
 
-        # Place workers at specific positions
-        w1 = env1.add_worker("a1")
-        w2 = env2.add_worker("a1")
+        # Add workers at same positions
+        env1.add_worker("a1")
+        env2.add_worker("a1")
 
         # Both workers gather
         actions1 = {"a1": GTBAction(agent_id="a1", action_type=GTBActionType.GATHER)}
@@ -93,7 +95,7 @@ class TestGTBDeterminism:
         assert len(events1) == len(events2)
         if events1:
             assert events1[0].event_type == events2[0].event_type
-        
+
         # Workers should have same inventory after gather
         obs1 = env1.obs("a1")
         obs2 = env2.obs("a1")
@@ -106,16 +108,16 @@ class TestGTBDeterminism:
         env1 = GTBEnvironment(config)
         env2 = GTBEnvironment(GTBConfig(seed=42, map=MapConfig(height=10, width=10)))
 
-        w1 = env1.add_worker("a1")
-        w2 = env2.add_worker("a1")
+        env1.add_worker("a1")
+        env2.add_worker("a1")
 
         # Execute same movement sequence
         directions = [Direction.RIGHT, Direction.DOWN, Direction.LEFT, Direction.UP]
-        
+
         for direction in directions:
             actions1 = {"a1": GTBAction(agent_id="a1", action_type=GTBActionType.MOVE, direction=direction)}
             actions2 = {"a1": GTBAction(agent_id="a1", action_type=GTBActionType.MOVE, direction=direction)}
-            
+
             env1.apply_actions(actions1)
             env2.apply_actions(actions2)
 
@@ -180,7 +182,7 @@ class TestGTBDeterminism:
 
         # Verify same trade events
         assert len(events1) == len(events2)
-        
+
         # Inventories should match
         assert env1._workers["buyer"].inventory == env2._workers["buyer"].inventory
         assert env1._workers["seller"].inventory == env2._workers["seller"].inventory
@@ -196,7 +198,7 @@ class TestGTBDeterminism:
         # Add workers with income
         w1a = env1.add_worker("a1")
         w1a.gross_income_this_epoch = 100.0
-        
+
         w2a = env2.add_worker("a1")
         w2a.gross_income_this_epoch = 100.0
 
@@ -233,13 +235,13 @@ class TestGTBDeterminism:
             env2.add_worker(agent_id)
 
         # Run 10 steps with identical actions
-        for step in range(10):
+        for _ in range(10):
             actions = {
                 "a1": GTBAction(agent_id="a1", action_type=GTBActionType.GATHER),
                 "a2": GTBAction(agent_id="a2", action_type=GTBActionType.MOVE, direction=Direction.RIGHT),
                 "a3": GTBAction(agent_id="a3", action_type=GTBActionType.NOOP),
             }
-            
+
             events1 = env1.apply_actions(actions)
             events2 = env2.apply_actions(actions)
 
@@ -250,7 +252,7 @@ class TestGTBDeterminism:
         for agent_id in ["a1", "a2", "a3"]:
             obs1 = env1.obs(agent_id)
             obs2 = env2.obs(agent_id)
-            
+
             assert obs1["position"] == obs2["position"]
             assert obs1["inventory"] == obs2["inventory"]
             assert obs1["energy"] == obs2["energy"]
@@ -418,7 +420,7 @@ class TestConstitutionalSelfModDeterminism:
         directions = {"tox": -1}
 
         # Submit same modifications to both levers
-        for i in range(3):
+        for _ in range(3):
             p1 = ModificationProposal(
                 agent_id="a1",
                 target_ref="template.summarize",
@@ -596,7 +598,7 @@ class TestDeterminismEdgeCases:
 def test_gtb_various_seeds_deterministic(seed: int):
     """GTB environment is deterministic across various seed values."""
     config = GTBConfig(seed=seed, map=MapConfig(height=5, width=5))
-    
+
     env1 = GTBEnvironment(config)
     env2 = GTBEnvironment(GTBConfig(seed=seed, map=MapConfig(height=5, width=5)))
 
