@@ -4,6 +4,7 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## Posts
 
+- **[We Gave an LLM a Goal and a Memory. Governance Held Anyway.](concordia-entities-governance.md)** — Three Concordia entities backed by Llama 3.1 8B played the SWARM economy across 3 seeds. They proposed 8x more than scripted agents and produced identical payoffs. RLHF did the heavy lifting.
 - **[Your CI Is Flaky Because Your Margins Are Zero](your-ci-is-flaky-because-your-margins-are-zero.md)** — Five stochastic tests were hitting assertion thresholds exactly (0.000 margin). A 5% buffer fixed all of them with zero loss in test strength.
 - **[SkillRL Agents Learn 5x Faster Than Honest Ones. They Mostly Learn What Not to Do.](skillrl-dynamics.md)** — 10 seeds, 30 epochs, 6 plots: SkillRL agents build libraries of 18+ skills and dominate payoffs — but 95% of what they learn are lessons from failure, not strategies from success.
 - **[I Got Claude Code to Spin Up 10 Subagents at Once](claude-code-10-subagents.md)** — 10 concurrent subagents turn a 25-minute serial research session into a 6-minute parallel one. Recursive subagent spawning? That's a hard no.
