@@ -1,0 +1,129 @@
+name: Memory Trend Analysis
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  memory-trends:
+    name: Track Memory Trends
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # Need history for trend analysis
+      
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,runtime,analysis]"
+      
+      - name: Run memory tests with profiling
+        run: |
+          python -m pytest tests/test_memory_bounds.py \
+            -v \
+            -m memory \
+            --tb=line \
+            --durations=20 \
+            > memory_test_output.txt 2>&1 || true
+      
+      - name: Collect memory metrics
+        run: |
+          python -c "
+          import json
+          import re
+          from pathlib import Path
+          from datetime import datetime
+          import subprocess
+          
+          # Get commit info
+          commit_sha = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()[:8]
+          commit_date = subprocess.check_output(['git', 'log', '-1', '--format=%ci']).decode().strip()
+          
+          # Parse test output (if available)
+          output_file = Path('memory_test_output.txt')
+          metrics = {
+              'commit_sha': commit_sha,
+              'commit_date': commit_date,
+              'timestamp': datetime.utcnow().isoformat(),
+              'tests_run': 0,
+              'tests_passed': 0,
+              'tests_failed': 0,
+          }
+          
+          if output_file.exists():
+              content = output_file.read_text()
+              # Extract test summary
+              if match := re.search(r'(\d+) passed', content):
+                  metrics['tests_passed'] = int(match.group(1))
+              if match := re.search(r'(\d+) failed', content):
+                  metrics['tests_failed'] = int(match.group(1))
+              metrics['tests_run'] = metrics['tests_passed'] + metrics['tests_failed']
+          
+          # Save metrics
+          metrics_file = Path('memory_metrics.json')
+          metrics_file.write_text(json.dumps(metrics, indent=2))
+          
+          print('Memory Metrics:')
+          print(json.dumps(metrics, indent=2))
+          "
+      
+      - name: Upload memory metrics
+        uses: actions/upload-artifact@v6
+        with:
+          name: memory-metrics-${{ github.sha }}
+          path: memory_metrics.json
+          if-no-files-found: warn
+      
+      - name: Generate trend report
+        if: always()
+        run: |
+          echo "## Memory Trend Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Current Commit" >> $GITHUB_STEP_SUMMARY
+          echo "- **SHA:** \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "- **Date:** $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Memory Test Results" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f memory_metrics.json ]; then
+            python -c "
+          import json
+          metrics = json.loads(open('memory_metrics.json').read())
+          print(f\"- **Tests Run:** {metrics['tests_run']}\")
+          print(f\"- **Tests Passed:** {metrics['tests_passed']}\")
+          print(f\"- **Tests Failed:** {metrics['tests_failed']}\")
+            " >> $GITHUB_STEP_SUMMARY
+          fi
+          
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Memory Baselines" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f tests/memory_baselines.json ]; then
+            python -c "
+          import json
+          baselines = json.loads(open('tests/memory_baselines.json').read())
+          print('| Agent Type | Max Memory | Description |')
+          print('|------------|-----------|-------------|')
+          for agent, config in baselines.get('baselines', {}).items():
+              max_mb = next((v for k, v in config.items() if k.startswith('max_mb')), 'N/A')
+              desc = config.get('description', '')
+              print(f'| {agent} | {max_mb} MB | {desc} |')
+            " >> $GITHUB_STEP_SUMMARY
+          fi
+      
+      - name: Upload test output
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: memory-test-output-${{ github.sha }}
+          path: memory_test_output.txt
+          if-no-files-found: warn

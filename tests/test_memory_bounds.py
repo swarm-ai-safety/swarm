@@ -8,6 +8,8 @@ AdaptiveAdversary tracking set caps, and PromptAuditLog entry cap.
 import logging
 from pathlib import Path
 
+import pytest
+
 from swarm.agents.adaptive_adversary import MAX_TRACKING_SET_SIZE, AdaptiveAdversary
 from swarm.agents.base import MAX_INTERACTION_HISTORY, MAX_MEMORY_SIZE
 from swarm.agents.rlm_agent import (
@@ -39,6 +41,7 @@ def _make_interaction(initiator: str = "a", counterparty: str = "b", p: float = 
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.memory
 class TestBaseAgentMemoryBounds:
     def test_memory_deque_cap(self):
         """_memory is capped at MAX_MEMORY_SIZE."""
@@ -96,6 +99,7 @@ class TestBaseAgentMemoryBounds:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.memory
 class TestRLMCounterpartyModelBounds:
     def test_counterparty_model_eviction(self):
         """When MAX_COUNTERPARTY_MODELS is reached, LRU eviction kicks in."""
@@ -148,6 +152,7 @@ class TestRLMCounterpartyModelBounds:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.memory
 class TestAdversaryTrackingSetBounds:
     def test_vulnerable_targets_capped(self):
         """vulnerable_targets set is capped at MAX_TRACKING_SET_SIZE."""
@@ -186,6 +191,7 @@ class TestAdversaryTrackingSetBounds:
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.memory
 class TestPromptAuditLogCap:
     def test_entries_capped(self, tmp_path: Path):
         """PromptAuditLog stops writing after max_entries."""
