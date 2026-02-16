@@ -137,10 +137,15 @@ class AWMAgent(BaseAgent):
             provider_str = cfg.get("llm_provider", "anthropic")
             provider = LLMProvider(provider_str)
 
+            # Unwrap SecretStr if the key came from an AWMConfig model
+            raw_key = cfg.get("llm_api_key")
+            if raw_key is not None and hasattr(raw_key, "get_secret_value"):
+                raw_key = raw_key.get_secret_value()
+
             llm_config = LLMConfig(
                 provider=provider,
                 model=cfg.get("llm_model", "claude-sonnet-4-20250514"),
-                api_key=cfg.get("llm_api_key"),
+                api_key=raw_key,
                 base_url=cfg.get("llm_base_url"),
                 temperature=cfg.get("llm_temperature", 0.3),
                 max_tokens=cfg.get("llm_max_tokens", 1024),

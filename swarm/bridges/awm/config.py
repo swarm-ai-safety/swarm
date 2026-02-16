@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 
 
 class AWMConfig(BaseModel):
@@ -64,7 +64,7 @@ class AWMConfig(BaseModel):
     llm_planning: bool = False
     llm_provider: Optional[str] = None  # "anthropic", "openai", etc.
     llm_model: Optional[str] = None
-    llm_api_key: Optional[str] = None
+    llm_api_key: Optional[SecretStr] = None
     llm_base_url: Optional[str] = None
     llm_temperature: float = 0.3
     llm_max_tokens: int = 1024
