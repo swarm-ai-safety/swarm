@@ -249,3 +249,161 @@ class EventLog:
     def __iter__(self) -> Iterator[Event]:
         """Iterate over events."""
         return self.replay()
+
+    def to_csv(self, output_path: Path, include_payload: bool = False) -> Path:
+        """Export events to CSV format.
+
+        Args:
+            output_path: Path to output CSV file
+            include_payload: If True, include payload as JSON string column
+
+        Returns:
+            Path to created CSV file
+        """
+        import csv
+
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Define CSV columns
+        base_columns = [
+            "event_id",
+            "timestamp",
+            "event_type",
+            "interaction_id",
+            "agent_id",
+            "initiator_id",
+            "counterparty_id",
+            "epoch",
+            "step",
+            "scenario_id",
+            "replay_k",
+            "seed",
+            "provenance_id",
+            "parent_event_id",
+            "tool_call_id",
+            "artifact_id",
+            "audit_id",
+            "intervention_id",
+        ]
+
+        if include_payload:
+            base_columns.append("payload")
+
+        with open(output_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=base_columns)
+            writer.writeheader()
+
+            for event in self.replay():
+                row = {
+                    "event_id": event.event_id,
+                    "timestamp": event.timestamp.isoformat(),
+                    "event_type": event.event_type.value,
+                    "interaction_id": event.interaction_id or "",
+                    "agent_id": event.agent_id or "",
+                    "initiator_id": event.initiator_id or "",
+                    "counterparty_id": event.counterparty_id or "",
+                    "epoch": event.epoch if event.epoch is not None else "",
+                    "step": event.step if event.step is not None else "",
+                    "scenario_id": event.scenario_id or "",
+                    "replay_k": event.replay_k if event.replay_k is not None else "",
+                    "seed": event.seed if event.seed is not None else "",
+                    "provenance_id": event.provenance_id or "",
+                    "parent_event_id": event.parent_event_id or "",
+                    "tool_call_id": event.tool_call_id or "",
+                    "artifact_id": event.artifact_id or "",
+                    "audit_id": event.audit_id or "",
+                    "intervention_id": event.intervention_id or "",
+                }
+
+                if include_payload:
+                    import json
+                    row["payload"] = json.dumps(event.payload) if event.payload else ""
+
+                writer.writerow(row)
+
+        return output_path
+
+    def to_provenance_csv(self, output_path: Path) -> Path:
+        """Export provenance chain to focused CSV.
+
+        Includes only events with provenance IDs and focuses on
+        tool calls, artifacts, audits, and interventions.
+
+        Args:
+            output_path: Path to output CSV file
+
+        Returns:
+            Path to created CSV file
+        """
+        import csv
+        import json
+
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        columns = [
+            "provenance_id",
+            "event_type",
+            "timestamp",
+            "agent_id",
+            "parent_event_id",
+            "tool_call_id",
+            "artifact_id",
+            "audit_id",
+            "intervention_id",
+            "tool_name",
+            "artifact_type",
+            "audit_type",
+            "intervention_type",
+            "success",
+            "payload_summary",
+        ]
+
+        with open(output_path, "w", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=columns)
+            writer.writeheader()
+
+            for event in self.replay():
+                # Only export events with provenance tracking
+                if not event.provenance_id:
+                    continue
+
+                # Extract key fields from payload
+                payload = event.payload or {}
+                tool_name = payload.get("tool_name", "")
+                artifact_type = payload.get("artifact_type", "")
+                audit_type = payload.get("audit_type", "")
+                intervention_type = payload.get("intervention_type", "")
+                success = payload.get("success", "")
+
+                # Create summary of payload for debugging
+                payload_summary = json.dumps(
+                    {k: v for k, v in payload.items() if k not in [
+                        "tool_name", "artifact_type", "audit_type",
+                        "intervention_type", "success", "arguments", "result"
+                    ]},
+                    default=str
+                )[:200]  # Limit to 200 chars
+
+                row = {
+                    "provenance_id": event.provenance_id,
+                    "event_type": event.event_type.value,
+                    "timestamp": event.timestamp.isoformat(),
+                    "agent_id": event.agent_id or "",
+                    "parent_event_id": event.parent_event_id or "",
+                    "tool_call_id": event.tool_call_id or "",
+                    "artifact_id": event.artifact_id or "",
+                    "audit_id": event.audit_id or "",
+                    "intervention_id": event.intervention_id or "",
+                    "tool_name": tool_name,
+                    "artifact_type": artifact_type,
+                    "audit_type": audit_type,
+                    "intervention_type": intervention_type,
+                    "success": str(success) if success != "" else "",
+                    "payload_summary": payload_summary,
+                }
+
+                writer.writerow(row)
+
+        return output_path

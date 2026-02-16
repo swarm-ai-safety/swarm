@@ -2,12 +2,43 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import uuid
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional
 
 from pydantic import BaseModel, Field
+
+
+def generate_deterministic_id(
+    event_type: str,
+    agent_id: Optional[str] = None,
+    timestamp: Optional[datetime] = None,
+    **kwargs: Any,
+) -> str:
+    """Generate a deterministic provenance ID based on event attributes.
+
+    Args:
+        event_type: Type of the event
+        agent_id: Agent identifier
+        timestamp: Event timestamp
+        **kwargs: Additional attributes to include in hash
+
+    Returns:
+        12-character hex string suitable for provenance tracking
+    """
+    components = {
+        "event_type": event_type,
+        "agent_id": agent_id,
+        "timestamp": timestamp.isoformat() if timestamp else None,
+        **kwargs,
+    }
+    # Sort keys for deterministic hashing
+    canonical = json.dumps(components, sort_keys=True)
+    hash_digest = hashlib.sha256(canonical.encode()).hexdigest()
+    return hash_digest[:12]
 
 
 class EventType(Enum):
@@ -146,6 +177,14 @@ class Event(BaseModel):
     replay_k: Optional[int] = None
     seed: Optional[int] = None
 
+    # Provenance tracking - unified across all event types
+    provenance_id: Optional[str] = None  # Deterministic ID for this event in provenance chain
+    parent_event_id: Optional[str] = None  # Links to parent event for causal chain
+    tool_call_id: Optional[str] = None  # ID for tool call if this is a tool execution
+    artifact_id: Optional[str] = None  # ID for artifact if this event produces/references one
+    audit_id: Optional[str] = None  # ID for audit if this is an audit event
+    intervention_id: Optional[str] = None  # ID for governance intervention
+
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -162,6 +201,12 @@ class Event(BaseModel):
             "scenario_id": self.scenario_id,
             "replay_k": self.replay_k,
             "seed": self.seed,
+            "provenance_id": self.provenance_id,
+            "parent_event_id": self.parent_event_id,
+            "tool_call_id": self.tool_call_id,
+            "artifact_id": self.artifact_id,
+            "audit_id": self.audit_id,
+            "intervention_id": self.intervention_id,
         }
 
     @classmethod
@@ -181,6 +226,12 @@ class Event(BaseModel):
             scenario_id=data.get("scenario_id"),
             replay_k=data.get("replay_k"),
             seed=data.get("seed"),
+            provenance_id=data.get("provenance_id"),
+            parent_event_id=data.get("parent_event_id"),
+            tool_call_id=data.get("tool_call_id"),
+            artifact_id=data.get("artifact_id"),
+            audit_id=data.get("audit_id"),
+            intervention_id=data.get("intervention_id"),
         )
 
 
@@ -316,6 +367,270 @@ def reputation_updated_event(
             "delta": delta,
             "reason": reason,
         },
+        epoch=epoch,
+        step=step,
+    )
+
+
+# Provenance-aware event factories
+
+
+def tool_call_executed_event(
+    agent_id: str,
+    tool_name: str,
+    arguments: Dict[str, Any],
+    result: Any,
+    success: bool,
+    parent_event_id: Optional[str] = None,
+    epoch: Optional[int] = None,
+    step: Optional[int] = None,
+) -> Event:
+    """Create a tool call execution event with provenance tracking.
+
+    Args:
+        agent_id: Agent executing the tool
+        tool_name: Name of the tool
+        arguments: Tool arguments
+        result: Tool execution result
+        success: Whether execution succeeded
+        parent_event_id: ID of parent event that triggered this call
+        epoch: Current epoch
+        step: Current step
+
+    Returns:
+        Event with tool call provenance
+    """
+    timestamp = datetime.now()
+    tool_call_id = generate_deterministic_id(
+        event_type="tool_call",
+        agent_id=agent_id,
+        tool_name=tool_name,
+        timestamp=timestamp,
+    )
+    provenance_id = generate_deterministic_id(
+        event_type="awm_tool_call_executed",
+        agent_id=agent_id,
+        tool_call_id=tool_call_id,
+        timestamp=timestamp,
+    )
+
+    return Event(
+        event_type=EventType.AWM_TOOL_CALL_EXECUTED,
+        agent_id=agent_id,
+        timestamp=timestamp,
+        payload={
+            "tool_name": tool_name,
+            "arguments": arguments,
+            "result": result,
+            "success": success,
+        },
+        provenance_id=provenance_id,
+        tool_call_id=tool_call_id,
+        parent_event_id=parent_event_id,
+        epoch=epoch,
+        step=step,
+    )
+
+
+def artifact_created_event(
+    agent_id: str,
+    artifact_id: str,
+    artifact_type: str,
+    artifact_data: Dict[str, Any],
+    parent_event_id: Optional[str] = None,
+    epoch: Optional[int] = None,
+    step: Optional[int] = None,
+) -> Event:
+    """Create an artifact creation event with provenance tracking.
+
+    Args:
+        agent_id: Agent creating the artifact
+        artifact_id: Unique artifact identifier
+        artifact_type: Type of artifact (e.g., "memory", "skill", "kernel")
+        artifact_data: Artifact payload
+        parent_event_id: ID of parent event
+        epoch: Current epoch
+        step: Current step
+
+    Returns:
+        Event with artifact provenance
+    """
+    timestamp = datetime.now()
+    provenance_id = generate_deterministic_id(
+        event_type="artifact_created",
+        agent_id=agent_id,
+        artifact_id=artifact_id,
+        timestamp=timestamp,
+    )
+
+    return Event(
+        event_type=EventType.MEMORY_WRITTEN,  # Reuse existing event type
+        agent_id=agent_id,
+        timestamp=timestamp,
+        payload={
+            "artifact_type": artifact_type,
+            "artifact_data": artifact_data,
+        },
+        provenance_id=provenance_id,
+        artifact_id=artifact_id,
+        parent_event_id=parent_event_id,
+        epoch=epoch,
+        step=step,
+    )
+
+
+def audit_event(
+    agent_id: str,
+    audit_type: str,
+    audit_result: Dict[str, Any],
+    audited_event_id: Optional[str] = None,
+    parent_event_id: Optional[str] = None,
+    epoch: Optional[int] = None,
+    step: Optional[int] = None,
+) -> Event:
+    """Create an audit event with provenance tracking.
+
+    Args:
+        agent_id: Agent or system performing audit
+        audit_type: Type of audit (e.g., "council", "kernel", "proxy")
+        audit_result: Audit findings and decisions
+        audited_event_id: ID of event being audited
+        parent_event_id: ID of parent event
+        epoch: Current epoch
+        step: Current step
+
+    Returns:
+        Event with audit provenance
+    """
+    timestamp = datetime.now()
+    audit_id = generate_deterministic_id(
+        event_type="audit",
+        agent_id=agent_id,
+        audit_type=audit_type,
+        timestamp=timestamp,
+    )
+    provenance_id = generate_deterministic_id(
+        event_type="council_audit",
+        agent_id=agent_id,
+        audit_id=audit_id,
+        timestamp=timestamp,
+    )
+
+    return Event(
+        event_type=EventType.COUNCIL_AUDIT,
+        agent_id=agent_id,
+        timestamp=timestamp,
+        payload={
+            "audit_type": audit_type,
+            "audit_result": audit_result,
+            "audited_event_id": audited_event_id,
+        },
+        provenance_id=provenance_id,
+        audit_id=audit_id,
+        parent_event_id=parent_event_id,
+        epoch=epoch,
+        step=step,
+    )
+
+
+def intervention_event(
+    agent_id: str,
+    intervention_type: str,
+    intervention_action: str,
+    intervention_reason: str,
+    affected_agents: list[str],
+    parent_event_id: Optional[str] = None,
+    epoch: Optional[int] = None,
+    step: Optional[int] = None,
+) -> Event:
+    """Create a governance intervention event with provenance tracking.
+
+    Args:
+        agent_id: Governance system or agent performing intervention
+        intervention_type: Type of intervention (e.g., "freeze", "quarantine", "throttle")
+        intervention_action: Specific action taken
+        intervention_reason: Justification for intervention
+        affected_agents: List of affected agent IDs
+        parent_event_id: ID of parent event that triggered intervention
+        epoch: Current epoch
+        step: Current step
+
+    Returns:
+        Event with intervention provenance
+    """
+    timestamp = datetime.now()
+    intervention_id = generate_deterministic_id(
+        event_type="intervention",
+        agent_id=agent_id,
+        intervention_type=intervention_type,
+        timestamp=timestamp,
+    )
+    provenance_id = generate_deterministic_id(
+        event_type="governance_intervention",
+        agent_id=agent_id,
+        intervention_id=intervention_id,
+        timestamp=timestamp,
+    )
+
+    return Event(
+        event_type=EventType.GOVERNANCE_COST_APPLIED,  # Reuse existing type
+        agent_id=agent_id,
+        timestamp=timestamp,
+        payload={
+            "intervention_type": intervention_type,
+            "intervention_action": intervention_action,
+            "intervention_reason": intervention_reason,
+            "affected_agents": affected_agents,
+        },
+        provenance_id=provenance_id,
+        intervention_id=intervention_id,
+        parent_event_id=parent_event_id,
+        epoch=epoch,
+        step=step,
+    )
+
+
+def agent_message_event(
+    agent_id: str,
+    message_role: str,
+    message_content: str,
+    tool_calls: Optional[list[Dict[str, Any]]] = None,
+    parent_event_id: Optional[str] = None,
+    epoch: Optional[int] = None,
+    step: Optional[int] = None,
+) -> Event:
+    """Create an agent message event with provenance tracking.
+
+    Args:
+        agent_id: Agent sending the message
+        message_role: Role (e.g., "user", "assistant", "system")
+        message_content: Message content
+        tool_calls: Optional list of tool calls in the message
+        parent_event_id: ID of parent event
+        epoch: Current epoch
+        step: Current step
+
+    Returns:
+        Event with message provenance
+    """
+    timestamp = datetime.now()
+    provenance_id = generate_deterministic_id(
+        event_type="agent_message",
+        agent_id=agent_id,
+        timestamp=timestamp,
+    )
+
+    return Event(
+        event_type=EventType.AGENT_STATE_UPDATED,  # Reuse existing type
+        agent_id=agent_id,
+        timestamp=timestamp,
+        payload={
+            "message_role": message_role,
+            "message_content": message_content,
+            "tool_calls": tool_calls or [],
+        },
+        provenance_id=provenance_id,
+        parent_event_id=parent_event_id,
         epoch=epoch,
         step=step,
     )
