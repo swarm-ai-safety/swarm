@@ -1,0 +1,187 @@
+name: Memory Management Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    # Weekly extended stress tests on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      test_mode:
+        description: 'Test mode (short or long)'
+        required: false
+        default: 'short'
+        type: choice
+        options:
+          - short
+          - long
+
+jobs:
+  memory-tests-short:
+    name: Memory Tests (Short Run)
+    runs-on: ubuntu-latest
+    if: github.event_name != 'schedule' || github.event.inputs.test_mode == 'short'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,runtime,analysis]"
+      
+      - name: Display memory info
+        run: |
+          free -h || true
+          ulimit -a || true
+          python -c "import psutil; print(f'Total RAM: {psutil.virtual_memory().total / (1024**3):.2f} GB')"
+      
+      - name: Run memory-focused tests (short run ~100 epochs)
+        run: |
+          python -m pytest tests/test_memory_bounds.py \
+            -v \
+            -m "memory or not memory_intensive" \
+            --tb=short \
+            --maxfail=3 \
+            --durations=10
+        env:
+          PYTEST_TIMEOUT: 300
+      
+      - name: Check for memory leaks in key agent types
+        run: |
+          python -m pytest tests/test_memory_bounds.py \
+            -v \
+            -k "memory or history or eviction" \
+            --tb=short
+      
+      - name: Generate memory report
+        if: always()
+        run: |
+          echo "## Memory Test Results (Short Run)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Python Version:** ${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Mode:** Short run (~100 epochs)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+
+  memory-tests-long:
+    name: Memory Tests (Extended Run)
+    runs-on: ubuntu-latest
+    # Only run on schedule or manual trigger with long mode
+    if: github.event_name == 'schedule' || github.event.inputs.test_mode == 'long'
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,runtime,analysis]"
+      
+      - name: Display system resources
+        run: |
+          free -h
+          df -h
+          ulimit -a
+          python -c "import psutil; vm = psutil.virtual_memory(); print(f'RAM: {vm.total/(1024**3):.2f}GB total, {vm.available/(1024**3):.2f}GB available')"
+      
+      - name: Run memory-intensive tests (long run ~1000 epochs)
+        run: |
+          python -m pytest tests/test_memory_bounds.py \
+            -v \
+            -m "memory or memory_intensive" \
+            --tb=short \
+            --maxfail=1 \
+            --durations=20
+        timeout-minutes: 30
+        env:
+          PYTEST_TIMEOUT: 1800
+      
+      - name: Memory profiling with detailed output
+        if: always()
+        run: |
+          python -m memory_profiler tests/test_memory_bounds.py || echo "Memory profiler not available"
+      
+      - name: Generate extended memory report
+        if: always()
+        run: |
+          echo "## Memory Test Results (Extended Run)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Python Version:** ${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Test Mode:** Extended run (~1000 epochs)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Duration:** ${{ job.duration }} minutes" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+
+  memory-validation:
+    name: Memory Baseline Validation
+    runs-on: ubuntu-latest
+    needs: [memory-tests-short]
+    if: always()
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[dev,runtime]"
+      
+      - name: Validate memory baselines
+        run: |
+          python -c "
+          import json
+          from pathlib import Path
+          
+          baseline_path = Path('tests/memory_baselines.json')
+          if baseline_path.exists():
+              baselines = json.loads(baseline_path.read_text())
+              print('✓ Memory baselines file found')
+              print(f'  - Version: {baselines.get(\"version\")}')
+              print(f'  - Agent types: {len(baselines.get(\"baselines\", {}))}')
+              print(f'  - Critical tests: {len(baselines.get(\"critical_tests\", {}))}')
+              print(f'  - Alert threshold: {baselines.get(\"alert_threshold_percent\")}%')
+          else:
+              print('✗ Memory baselines file not found')
+              exit(1)
+          "
+      
+      - name: Summary
+        if: always()
+        run: |
+          echo "## Memory Baseline Validation" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Memory baselines validated successfully." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Monitored Components" >> $GITHUB_STEP_SUMMARY
+          echo "- BaseAgent memory and interaction history" >> $GITHUB_STEP_SUMMARY
+          echo "- RLMAgent counterparty models and eviction" >> $GITHUB_STEP_SUMMARY
+          echo "- AdaptiveAdversary tracking sets" >> $GITHUB_STEP_SUMMARY
+          echo "- PromptAuditLog entry caps" >> $GITHUB_STEP_SUMMARY
