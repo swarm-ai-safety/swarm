@@ -13,6 +13,7 @@ Available bridge subpackages (lazy import to avoid pulling in optional deps):
     swarm.bridges.pettingzoo        — PettingZoo multi-agent RL environment bridge
     swarm.bridges.prime_intellect   — Prime Intellect RL training bridge
     swarm.bridges.ai_scientist     — AI-Scientist autonomous research pipeline bridge
+    swarm.bridges.sciagentgym      — SciAgentGym tool substrate integration bridge
 """
 
 __all__: list[str] = []
