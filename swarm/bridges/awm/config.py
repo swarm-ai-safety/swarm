@@ -59,3 +59,19 @@ class AWMConfig(BaseModel):
 
     # Phase 3: Multi-turn mode (False = batch for backward compat)
     step_mode: bool = False
+
+    # Phase 3: LLM-based tool planning
+    llm_planning: bool = False
+    llm_provider: Optional[str] = None  # "anthropic", "openai", etc.
+    llm_model: Optional[str] = None
+    llm_api_key: Optional[str] = None
+    llm_base_url: Optional[str] = None
+    llm_temperature: float = 0.3
+    llm_max_tokens: int = 1024
+    llm_timeout: float = 30.0
+    llm_max_retries: int = 2
+    llm_system_prompt: Optional[str] = None
+    llm_cost_tracking: bool = True
+    llm_prompt_audit_path: Optional[str] = None
+    llm_fallback_to_scripted: bool = True
+    llm_max_calls_per_plan: int = 10

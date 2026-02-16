@@ -1311,3 +1311,269 @@ class TestAWMHandlerMultiTurn:
         # Trace should be cleaned up
         assert "agent_1" not in handler._traces
         assert "agent_1" not in handler._last_results
+
+
+# =========================================================================
+# AWMAgent LLM Planning (Phase 3)
+# =========================================================================
+
+
+class TestAWMAgentLLMPlanning:
+    """Test LLM-based tool planning — all LLM calls are mocked."""
+
+    _TOOLS = [
+        {"name": "query_database", "description": "Run SQL queries"},
+        {"name": "update_record", "description": "Update a row"},
+    ]
+
+    def _obs(self, **kwargs):
+        defaults = {
+            "awm_task": {"task_id": "t1", "description": "Complete task"},
+            "awm_available_tools": self._TOOLS,
+        }
+        defaults.update(kwargs)
+        return Observation(**defaults)
+
+    # ---- 1. disabled by default ----
+    def test_llm_planning_disabled_by_default(self):
+        agent = AWMAgent(agent_id="awm_1")
+        assert agent._llm_enabled is False
+        assert agent._llm_delegate is None
+        action = agent.act(self._obs())
+        assert action.action_type == ActionType.AWM_EXECUTE_TASK
+
+    # ---- 2. enabled via config ----
+    def test_llm_planning_enabled_via_config(self):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={"llm_planning": True, "llm_provider": "anthropic"},
+        )
+        assert agent._llm_enabled is True
+
+    # ---- 3. successful LLM plan ----
+    def test_llm_plan_tool_calls_success(self, monkeypatch):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "llm_model": "claude-sonnet-4-20250514",
+            },
+        )
+
+        # Create a mock delegate
+        from unittest.mock import MagicMock
+
+        from swarm.agents.llm_config import LLMUsageStats
+
+        mock_delegate = MagicMock()
+        mock_delegate._call_llm_sync.return_value = (
+            '{"reasoning": "read first", "tool_calls": [{"tool_name": "query_database", "arguments": {"query": "SELECT 1"}}]}',
+            100,
+            50,
+        )
+        mock_delegate._parse_action_response.return_value = {
+            "reasoning": "read first",
+            "tool_calls": [
+                {"tool_name": "query_database", "arguments": {"query": "SELECT 1"}},
+            ],
+        }
+        mock_delegate.usage_stats = LLMUsageStats()
+
+        agent._llm_delegate = mock_delegate
+        result = agent._plan_tool_calls(self._obs())
+        assert len(result) == 1
+        assert result[0]["tool_name"] == "query_database"
+
+    # ---- 4. fallback to scripted on failure ----
+    def test_llm_fallback_to_scripted_on_failure(self, monkeypatch):
+        import random as stdlib_random
+
+        rng = stdlib_random.Random(42)
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "llm_fallback_to_scripted": True,
+                "tool_call_count": 2,
+            },
+            rng=rng,
+        )
+
+        from unittest.mock import MagicMock
+
+        mock_delegate = MagicMock()
+        mock_delegate._call_llm_sync.side_effect = RuntimeError("API down")
+        agent._llm_delegate = mock_delegate
+
+        result = agent._plan_tool_calls(self._obs())
+        # Should fall back to scripted and return 2 calls
+        assert len(result) == 2
+
+    # ---- 5. no fallback returns empty ----
+    def test_llm_no_fallback_returns_empty(self):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "llm_fallback_to_scripted": False,
+            },
+        )
+
+        from unittest.mock import MagicMock
+
+        mock_delegate = MagicMock()
+        mock_delegate._call_llm_sync.side_effect = RuntimeError("API down")
+        agent._llm_delegate = mock_delegate
+
+        result = agent._plan_tool_calls(self._obs())
+        assert result == []
+
+    # ---- 6. malformed LLM response ----
+    def test_llm_parse_malformed_response(self):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={"llm_planning": True, "llm_provider": "anthropic"},
+        )
+
+        from unittest.mock import MagicMock
+
+        mock_delegate = MagicMock()
+        mock_delegate._parse_action_response.side_effect = ValueError("No JSON")
+        agent._llm_delegate = mock_delegate
+
+        result = agent._parse_tool_call_response("not json at all", self._obs())
+        assert result is None
+
+    # ---- 7. caps tool calls ----
+    def test_llm_caps_tool_calls(self):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "llm_max_calls_per_plan": 2,
+            },
+        )
+
+        from unittest.mock import MagicMock
+
+        mock_delegate = MagicMock()
+        mock_delegate._parse_action_response.return_value = {
+            "tool_calls": [
+                {"tool_name": "query_database", "arguments": {}},
+                {"tool_name": "update_record", "arguments": {}},
+                {"tool_name": "query_database", "arguments": {}},
+                {"tool_name": "update_record", "arguments": {}},
+            ],
+        }
+        agent._llm_delegate = mock_delegate
+
+        result = agent._parse_tool_call_response("ignored", self._obs())
+        assert result is not None
+        assert len(result) == 2
+
+    # ---- 8. step mode prompt ----
+    def test_llm_step_mode_prompt(self):
+        agent = AWMAgent(
+            agent_id="awm_step_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "step_mode": True,
+            },
+        )
+        obs = self._obs(awm_steps_remaining=5, awm_episode_active=False)
+        _sys, user = agent._build_awm_tool_prompt(obs)
+        assert "Plan ONE tool call" in user
+        assert "Steps remaining: 5" in user
+
+    # ---- 9. batch mode prompt ----
+    def test_llm_batch_mode_prompt(self):
+        agent = AWMAgent(
+            agent_id="awm_batch_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "llm_max_calls_per_plan": 7,
+            },
+        )
+        _sys, user = agent._build_awm_tool_prompt(self._obs())
+        assert "Plan up to 7 tool calls" in user
+
+    # ---- 10. usage stats exposed ----
+    def test_llm_usage_stats_exposed(self):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={"llm_planning": True, "llm_provider": "anthropic"},
+        )
+        # No delegate yet
+        assert agent.llm_usage_stats is None
+
+        from unittest.mock import MagicMock
+
+        from swarm.agents.llm_config import LLMUsageStats
+
+        mock_delegate = MagicMock()
+        stats = LLMUsageStats()
+        stats.total_requests = 3
+        mock_delegate.usage_stats = stats
+        agent._llm_delegate = mock_delegate
+
+        result = agent.llm_usage_stats
+        assert result is not None
+        assert result["total_requests"] == 3
+
+    # ---- 11. init failure disables LLM ----
+    def test_llm_init_failure_disables(self, monkeypatch):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "nonexistent_provider_xyz",
+            },
+        )
+        assert agent._llm_enabled is True
+        delegate = agent._init_llm()
+        assert delegate is None
+        assert agent._llm_enabled is False
+
+    # ---- 12. tool call history resets ----
+    def test_tool_call_history_reset(self):
+        import random as stdlib_random
+
+        rng = stdlib_random.Random(42)
+        agent = AWMAgent(
+            agent_id="awm_step",
+            config={"step_mode": True, "tool_call_count": 2},
+            rng=rng,
+        )
+
+        obs1 = Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=self._TOOLS,
+            awm_episode_active=False,
+            awm_steps_remaining=10,
+        )
+        agent.act(obs1)
+        assert len(agent._tool_call_history) == 1
+
+        agent.act(Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=self._TOOLS,
+            awm_episode_active=True,
+            awm_steps_remaining=9,
+        ))
+        assert len(agent._tool_call_history) == 2
+
+        # New episode resets history
+        obs_new = Observation(
+            awm_task={"task_id": "t2"},
+            awm_available_tools=self._TOOLS,
+            awm_episode_active=False,
+            awm_steps_remaining=10,
+        )
+        agent.act(obs_new)
+        assert len(agent._tool_call_history) == 1
