@@ -1,5 +1,7 @@
-import type { Particle } from "../types";
+import type { Particle, DigitalRainState, RainColumn, CodeTrailParticle, RecompileState } from "../types";
 import { rgba } from "@/utils/color";
+import { randomMatrixChar, matrixGreen, matrixColorForP, MATRIX_FONT, MATRIX_FONT_SMALL } from "./matrix-chars";
+import { clamp } from "@/utils/math";
 
 export function renderParticles(ctx: CanvasRenderingContext2D, particles: Particle[]) {
   for (const p of particles) {
@@ -158,6 +160,226 @@ export function createHazardParticles(x: number, y: number, count: number): Part
     });
   }
   return particles;
+}
+
+// ─── Digital Rain ──────────────────────────────────────────────────
+
+/** Initialize digital rain columns based on canvas width */
+export function initDigitalRain(width: number): DigitalRainState {
+  const colWidth = 18;
+  const colCount = Math.ceil(width / colWidth);
+  const columns: RainColumn[] = [];
+
+  for (let i = 0; i < colCount; i++) {
+    const trailLen = 8 + Math.floor(Math.random() * 14);
+    const chars: string[] = [];
+    for (let j = 0; j < trailLen; j++) {
+      chars.push(randomMatrixChar());
+    }
+    // X-position jitter (+/- 3px from grid) to break uniform spacing
+    const xJitter = (Math.random() - 0.5) * 6;
+    columns.push({
+      x: i * colWidth + colWidth / 2 + xJitter,
+      speed: 0.02 + Math.random() * 0.10, // Wider range: 0.02-0.12
+      chars,
+      headY: Math.random() * -500,
+      charInterval: colWidth + (Math.random() - 0.5) * 4, // Variable per column
+      brightness: 0.6 + Math.random() * 0.4,
+      nextMutateTime: 50 + Math.random() * 150,
+    });
+  }
+  return { columns, initialized: true };
+}
+
+/** Update rain state each frame */
+export function updateDigitalRain(
+  state: DigitalRainState,
+  dt: number,
+  height: number,
+  threatLevel: number,
+) {
+  for (const col of state.columns) {
+    // Speed increases with threat
+    const speedMul = 1 + threatLevel * 0.6;
+    col.headY += col.speed * dt * speedMul;
+
+    // Wrap around when fully off screen
+    const trailLen = col.chars.length * col.charInterval;
+    if (col.headY - trailLen > height) {
+      col.headY = Math.random() * -200 - 50;
+      col.speed = 0.02 + Math.random() * 0.10; // Wider speed range on wrap
+      // Occasionally change trail length when column wraps
+      if (Math.random() < 0.3) {
+        const newLen = 8 + Math.floor(Math.random() * 14);
+        while (col.chars.length < newLen) col.chars.push(randomMatrixChar());
+        if (col.chars.length > newLen) col.chars.length = newLen;
+      }
+    }
+
+    // Mutate random chars periodically
+    col.nextMutateTime -= dt;
+    if (col.nextMutateTime <= 0) {
+      const idx = Math.floor(Math.random() * col.chars.length);
+      col.chars[idx] = randomMatrixChar();
+      col.nextMutateTime = 50 + Math.random() * 150;
+    }
+  }
+}
+
+/** Render digital rain columns (screen-space, before camera transform) */
+export function renderDigitalRain(
+  ctx: CanvasRenderingContext2D,
+  state: DigitalRainState,
+  width: number,
+  height: number,
+  threatLevel: number,
+) {
+  ctx.save();
+  ctx.font = MATRIX_FONT;
+  ctx.textAlign = "center";
+
+  const t = clamp(threatLevel, 0, 1);
+  // Density: skip more columns at low threat for sparse feel
+  const skipRate = Math.max(0, 0.4 - t * 0.4);
+
+  for (let ci = 0; ci < state.columns.length; ci++) {
+    // Sparse at calm, dense at high threat
+    if (skipRate > 0 && ((ci * 7) % 10) / 10 < skipRate) continue;
+
+    const col = state.columns[ci];
+    const chars = col.chars;
+
+    for (let j = 0; j < chars.length; j++) {
+      const charY = col.headY - j * col.charInterval;
+      if (charY < -20 || charY > height + 20) continue;
+
+      const isHead = j === 0;
+      // Quadratic fade: hold brightness longer, then drop off sharply
+      const linearRatio = 1 - j / chars.length;
+      const fadeRatio = linearRatio * linearRatio;
+
+      if (isHead) {
+        // Lead character: brightest (white-green)
+        ctx.fillStyle = t > 0.5
+          ? `rgba(255,${Math.round(180 - t * 100)},${Math.round(80 - t * 60)},${col.brightness * 0.95})`
+          : `rgba(200,255,220,${col.brightness * 0.9})`;
+      } else {
+        // Trailing: green fading, red-shifted with threat
+        const alpha = fadeRatio * col.brightness * 0.6;
+        if (t > 0.3) {
+          const redShift = (t - 0.3) / 0.7;
+          const r = Math.round(redShift * 200);
+          const g = Math.round(255 * (1 - redShift * 0.5));
+          ctx.fillStyle = `rgba(${r},${g},65,${alpha})`;
+        } else {
+          ctx.fillStyle = matrixGreen(alpha);
+        }
+      }
+
+      ctx.fillText(chars[j], col.x, charY);
+    }
+  }
+
+  ctx.restore();
+}
+
+// ─── Code Trails ───────────────────────────────────────────────────
+
+/** Render code trail particles (world-space, before depth-sorted entities) */
+export function renderCodeTrails(
+  ctx: CanvasRenderingContext2D,
+  particles: CodeTrailParticle[],
+) {
+  if (particles.length === 0) return;
+  ctx.save();
+  ctx.textAlign = "center";
+
+  for (const p of particles) {
+    if (p.alpha <= 0) continue;
+    ctx.font = `bold ${p.fontSize}px 'Courier New', monospace`;
+    ctx.fillStyle = p.color.replace(/[\d.]+\)$/, `${p.alpha})`);
+    ctx.fillText(p.char, p.x, p.y);
+  }
+
+  ctx.restore();
+}
+
+// ─── Recompile Flash ───────────────────────────────────────────────
+
+/** Render epoch recompile scanline flash (screen-space) */
+export function renderRecompileFlash(
+  ctx: CanvasRenderingContext2D,
+  state: RecompileState,
+  width: number,
+  height: number,
+) {
+  if (!state.active) return;
+
+  const elapsed = Date.now() - state.startTime;
+  if (elapsed > state.duration) return;
+
+  const progress = elapsed / state.duration;
+
+  // Scanline sweep: top → bottom over first 50% of duration
+  if (progress < 0.5) {
+    const scanProgress = progress / 0.5;
+    const scanY = scanProgress * height;
+    const bandHeight = 30;
+
+    const grad = ctx.createLinearGradient(0, scanY - bandHeight, 0, scanY + bandHeight);
+    grad.addColorStop(0, matrixGreen(0));
+    grad.addColorStop(0.4, matrixGreen(0.3));
+    grad.addColorStop(0.5, matrixGreen(0.6));
+    grad.addColorStop(0.6, matrixGreen(0.3));
+    grad.addColorStop(1, matrixGreen(0));
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, scanY - bandHeight, width, bandHeight * 2);
+  }
+
+  // Full screen fade-out flash in second half
+  if (progress > 0.3) {
+    const fadeAlpha = Math.max(0, (1 - (progress - 0.3) / 0.7) * 0.08);
+    ctx.fillStyle = matrixGreen(fadeAlpha);
+    ctx.fillRect(0, 0, width, height);
+  }
+}
+
+/** Render agent recompile character burst (world-space, above agent head) */
+export function renderAgentRecompileBurst(
+  ctx: CanvasRenderingContext2D,
+  bx: number,
+  by: number,
+  scale: number,
+  startTime: number,
+  duration: number,
+) {
+  const elapsed = Date.now() - startTime;
+  if (elapsed > duration || elapsed < 0) return;
+
+  const progress = elapsed / duration;
+  const alpha = 1 - progress;
+  const charH = 56 * scale;
+  const orbY = by - charH - 8 * scale;
+
+  ctx.save();
+  ctx.font = MATRIX_FONT_SMALL;
+  ctx.textAlign = "center";
+
+  // Show 3-5 rapidly cycling characters above head
+  const charCount = 3 + Math.floor(Math.random() * 3);
+  const timeBucket = Math.floor(elapsed / 40); // Change every 40ms
+  for (let i = 0; i < charCount; i++) {
+    const seed = timeBucket * 31 + i * 17;
+    const charIdx = ((seed >>> 0) % 56);
+    // Use matrixCharFromSeed logic inline for perf
+    const ch = String.fromCharCode(0xff66 + (charIdx % 56));
+    const offsetX = (i - (charCount - 1) / 2) * 8;
+    const offsetY = -Math.sin(progress * Math.PI) * 6;
+    ctx.fillStyle = matrixGreen(alpha * 0.8);
+    ctx.fillText(ch, bx + offsetX, orbY + offsetY);
+  }
+
+  ctx.restore();
 }
 
 /** Create glow particles for high-payoff agents */

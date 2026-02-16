@@ -53,3 +53,37 @@ export const ANIM = {
   arcLifetime: 1500,
   particleLife: 1000,
 } as const;
+
+/** Per-type motion personality */
+export interface AgentMotion {
+  walkRate: number;
+  bobAmplitude: number;
+  bobAsymmetry: number;
+  legSwingScale: number;
+  armSwingScale: number;
+  swayAmplitude: number;
+  idleBob: number;
+}
+
+export const AGENT_MOTION: Record<AgentType, AgentMotion> = {
+  honest:        { walkRate: 0.011, bobAmplitude: 1.2, bobAsymmetry: 0.1,  legSwingScale: 0.9, armSwingScale: 0.8, swayAmplitude: 0.3, idleBob: 0.4 },
+  opportunistic: { walkRate: 0.014, bobAmplitude: 1.8, bobAsymmetry: 0.2,  legSwingScale: 1.1, armSwingScale: 1.2, swayAmplitude: 0.6, idleBob: 0.6 },
+  deceptive:     { walkRate: 0.010, bobAmplitude: 0.8, bobAsymmetry: 0.3,  legSwingScale: 0.7, armSwingScale: 0.6, swayAmplitude: 0.8, idleBob: 0.3 },
+  adversarial:   { walkRate: 0.016, bobAmplitude: 2.2, bobAsymmetry: 0.0,  legSwingScale: 1.3, armSwingScale: 1.4, swayAmplitude: 0.2, idleBob: 0.5 },
+  rlm:           { walkRate: 0.012, bobAmplitude: 1.0, bobAsymmetry: 0.15, legSwingScale: 1.0, armSwingScale: 0.9, swayAmplitude: 0.4, idleBob: 0.35 },
+  crewai:        { walkRate: 0.013, bobAmplitude: 1.5, bobAsymmetry: 0.1,  legSwingScale: 1.0, armSwingScale: 1.0, swayAmplitude: 0.5, idleBob: 0.5 },
+};
+
+/** Arc data stream config — ranges keyed by p-value */
+export const ARC_STREAM = {
+  charCountMin: 5,
+  charCountMax: 14,
+  charSpacingMin: 0.05,
+  charSpacingMax: 0.12,
+  mutateIntervalMin: 50,
+  mutateIntervalMax: 120,
+  glowRadiusMin: 5,
+  glowRadiusMax: 12,
+  gridSize: 3,
+  gridSpacing: 6,
+} as const;

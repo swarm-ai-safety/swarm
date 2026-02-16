@@ -31,6 +31,9 @@ export interface AgentVisual extends GridPos {
   scale: number;
   interactionsInitiated: number;
   interactionsReceived: number;
+  walkOffsetX: number;   // screen-space px offset from grid center
+  walkOffsetY: number;
+  walkPhase: number;     // continuous radian, drives leg swing cycle
 }
 
 export interface InteractionArc {
@@ -62,9 +65,53 @@ export interface OverlayState {
   collusionLines: boolean;
   particles: boolean;
   minimap: boolean;
+  digitalRain: boolean;
+  tierraStrip: boolean;
 }
 
 export type RenderEntity = {
   depth: number;
   render: (ctx: CanvasRenderingContext2D) => void;
 };
+
+// --- Digital Rain ---
+
+export interface RainColumn {
+  x: number;
+  speed: number;
+  chars: string[];
+  headY: number;
+  charInterval: number;
+  brightness: number;
+  nextMutateTime: number;
+}
+
+export interface DigitalRainState {
+  columns: RainColumn[];
+  initialized: boolean;
+}
+
+// --- Code Trail ---
+
+export interface CodeTrailParticle {
+  x: number;
+  y: number;
+  char: string;
+  color: string;
+  alpha: number;
+  life: number;
+  maxLife: number;
+  vy: number;
+  vx: number;
+  gravity: number;
+  fontSize: number;
+}
+
+// --- Recompile Flash ---
+
+export interface RecompileState {
+  active: boolean;
+  startTime: number;
+  duration: number;
+  scanlineY: number;
+}

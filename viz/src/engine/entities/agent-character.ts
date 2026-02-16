@@ -1,5 +1,5 @@
 import type { AgentVisual, RenderEntity } from "../types";
-import { AGENT_COLORS, CHARACTER, TILE_WIDTH, TILE_HEIGHT } from "../constants";
+import { AGENT_COLORS, AGENT_MOTION, CHARACTER, TILE_WIDTH, TILE_HEIGHT } from "../constants";
 import { gridToScreen } from "../isometric";
 import { rgba, pToHealthColor } from "@/utils/color";
 import { clamp, remap } from "@/utils/math";
@@ -18,7 +18,9 @@ function drawCharacter(
   agent: AgentVisual,
   hovered: boolean,
 ) {
-  const { x: baseX, y: baseY } = gridToScreen(agent.gridX, agent.gridY);
+  const gridPos = gridToScreen(agent.gridX, agent.gridY);
+  const baseX = gridPos.x + agent.walkOffsetX;
+  const baseY = gridPos.y + agent.walkOffsetY;
   const colors = AGENT_COLORS[agent.agentType];
   const scale = agent.scale;
 
@@ -36,7 +38,8 @@ function drawCharacter(
   }
 
   // Character body + type features
-  drawBody(ctx, baseX, baseY, agent.agentType, colors, scale);
+  const isWalking = agent.walkOffsetX !== 0 || agent.walkOffsetY !== 0;
+  drawBody(ctx, baseX, baseY, agent.agentType, colors, scale, agent.walkPhase, isWalking);
   drawTypeFeatures(ctx, baseX, baseY, agent.agentType, colors, scale);
 
   // Frozen overlay
@@ -117,33 +120,52 @@ function drawBody(
   agentType: AgentType,
   colors: { primary: string; secondary: string; accent: string },
   scale: number,
+  walkPhase: number = 0,
+  isWalking: boolean = false,
 ) {
+  const motion = AGENT_MOTION[agentType];
   const w = CHARACTER.baseWidth * scale;
   const h = CHARACTER.baseHeight * scale;
   const hw = w / 2;
 
-  // Feet at by, head at by - h
+  // Asymmetric bob: agents spend more time at top of bounce than bottom
+  let bobOffset: number;
+  if (isWalking) {
+    const rawBob = Math.sin(walkPhase * 2);
+    // Asymmetry shifts the wave — positive asymmetry = more time at top
+    const asymBob = rawBob + motion.bobAsymmetry * rawBob * rawBob;
+    bobOffset = Math.abs(asymBob) * motion.bobAmplitude * scale;
+  } else {
+    // Idle breathing — slow sinusoidal so agents are never stone-still
+    bobOffset = motion.idleBob * Math.sin(Date.now() * 0.0012) * scale;
+  }
+  const bodyBy = by - bobOffset;
+
+  // Feet at by, head at bodyBy - h
   const feetY = by;
-  const headY = by - h;
+  const headY = bodyBy - h;
   const shoulderY = headY + h * 0.28;
   const waistY = headY + h * 0.55;
   const hipY = headY + h * 0.62;
+
+  // Per-type leg swing
+  const legSwing = isWalking ? Math.sin(walkPhase) * hw * 0.2 * motion.legSwingScale : 0;
 
   // --- Legs ---
   ctx.fillStyle = colors.primary;
   // Left leg
   ctx.beginPath();
   ctx.moveTo(bx - hw * 0.3, hipY);
-  ctx.lineTo(bx - hw * 0.45, feetY);
-  ctx.lineTo(bx - hw * 0.05, feetY);
+  ctx.lineTo(bx - hw * 0.45 + legSwing, feetY);
+  ctx.lineTo(bx - hw * 0.05 + legSwing, feetY);
   ctx.lineTo(bx - hw * 0.05, hipY);
   ctx.closePath();
   ctx.fill();
   // Right leg
   ctx.beginPath();
   ctx.moveTo(bx + hw * 0.05, hipY);
-  ctx.lineTo(bx + hw * 0.05, feetY);
-  ctx.lineTo(bx + hw * 0.45, feetY);
+  ctx.lineTo(bx + hw * 0.05 - legSwing, feetY);
+  ctx.lineTo(bx + hw * 0.45 - legSwing, feetY);
   ctx.lineTo(bx + hw * 0.3, hipY);
   ctx.closePath();
   ctx.fill();
@@ -158,22 +180,23 @@ function drawBody(
   ctx.closePath();
   ctx.fill();
 
-  // --- Arms ---
+  // --- Arms (contralateral: left arm swings opposite to left leg) ---
   const armAngle = agentType === "deceptive" ? 0.8 : 0.2;
+  const armSwing = isWalking ? Math.sin(walkPhase) * 0.3 * motion.armSwingScale : 0;
   ctx.fillStyle = colors.primary;
-  // Left arm
+  // Left arm — swings FORWARD when right leg goes forward (contralateral)
   ctx.beginPath();
   ctx.moveTo(bx - hw * 0.45, shoulderY);
-  ctx.lineTo(bx - hw * (0.6 + armAngle * 0.3), shoulderY + h * 0.22);
-  ctx.lineTo(bx - hw * (0.5 + armAngle * 0.2), shoulderY + h * 0.26);
+  ctx.lineTo(bx - hw * (0.6 + armAngle * 0.3) + armSwing * hw, shoulderY + h * 0.22);
+  ctx.lineTo(bx - hw * (0.5 + armAngle * 0.2) + armSwing * hw, shoulderY + h * 0.26);
   ctx.lineTo(bx - hw * 0.35, shoulderY + h * 0.05);
   ctx.closePath();
   ctx.fill();
-  // Right arm
+  // Right arm — swings opposite to left arm
   ctx.beginPath();
   ctx.moveTo(bx + hw * 0.45, shoulderY);
-  ctx.lineTo(bx + hw * (0.6 + armAngle * 0.3), shoulderY + h * 0.22);
-  ctx.lineTo(bx + hw * (0.5 + armAngle * 0.2), shoulderY + h * 0.26);
+  ctx.lineTo(bx + hw * (0.6 + armAngle * 0.3) - armSwing * hw, shoulderY + h * 0.22);
+  ctx.lineTo(bx + hw * (0.5 + armAngle * 0.2) - armSwing * hw, shoulderY + h * 0.26);
   ctx.lineTo(bx + hw * 0.35, shoulderY + h * 0.05);
   ctx.closePath();
   ctx.fill();
@@ -584,12 +607,14 @@ function drawHoverOutline(
 /** Get character hitbox bounds in screen space for click detection */
 export function getCharacterBounds(agent: AgentVisual): { minX: number; minY: number; maxX: number; maxY: number } {
   const { x, y } = gridToScreen(agent.gridX, agent.gridY);
+  const px = x + agent.walkOffsetX;
+  const py = y + agent.walkOffsetY;
   const w = CHARACTER.baseWidth * agent.scale;
   const h = CHARACTER.baseHeight * agent.scale;
   return {
-    minX: x - w / 2,
-    minY: y - h - 10,
-    maxX: x + w / 2,
-    maxY: y,
+    minX: px - w / 2,
+    minY: py - h - 10,
+    maxX: px + w / 2,
+    maxY: py,
   };
 }

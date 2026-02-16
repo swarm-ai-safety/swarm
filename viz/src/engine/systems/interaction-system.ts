@@ -50,11 +50,13 @@ export class InteractionSystem {
     }
   }
 
-  /** Update all arc animations */
+  /** Update all arc animations — confident arcs travel faster */
   update(dt: number, currentEpoch: number) {
     for (let i = this.arcs.length - 1; i >= 0; i--) {
       const arc = this.arcs[i];
-      arc.progress += dt / ANIM.arcLifetime;
+      const pClamped = Math.max(0, Math.min(1, arc.p));
+      const pSpeedFactor = 0.8 + pClamped * 0.4; // high-p = faster
+      arc.progress += (dt / ANIM.arcLifetime) * pSpeedFactor;
       // Remove completed arcs from non-current epochs
       if (arc.progress >= 1 && arc.epoch !== currentEpoch) {
         this.arcs.splice(i, 1);
