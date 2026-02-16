@@ -8,35 +8,34 @@ Security-related tests are grouped under ``TestSecurity*`` classes.
 
 import json
 import random
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 
 from swarm.agents.base import Action, ActionType, Observation
 from swarm.agents.crewai_adapter import (
+    _ACTION_KIND_MAP,
+    _BUILTIN_PROFILE_NAMES,
+    _VALID_KINDS,
     DEFAULT_CREW_TIMEOUT_SECONDS,
     MAX_CONTENT_LENGTH,
     MAX_DELIBERATION_MEMORY,
     MAX_ID_LENGTH,
     MAX_METADATA_KEYS,
     MAX_METADATA_VALUE_LENGTH,
-    MAX_RAW_TRACE_LENGTH,
     MAX_RATIONALE_LENGTH,
+    MAX_RAW_TRACE_LENGTH,
     MAX_STAGED_ACTIONS,
+    CrewAgentRole,
     CrewAIToolAdapter,
     CrewBackedAgent,
     CrewConfig,
     SwarmActionSchema,
-    _ACTION_KIND_MAP,
-    _BUILTIN_PROFILE_NAMES,
-    _VALID_KINDS,
     _sanitize_crew_metadata,
     get_profile_agents,
     register_crew_profile,
-    CrewAgentRole,
 )
 from swarm.models.agent import AgentState, AgentType
-
 
 # ---------------------------------------------------------------------------
 # Fixtures
@@ -654,7 +653,6 @@ class TestSecurityTimeout:
         self, agent: CrewBackedAgent, default_observation: Observation
     ):
         """After timeout, act() returns promptly (no wait for thread)."""
-        import concurrent.futures
         import time
 
         mock_crew = MagicMock()
@@ -927,7 +925,6 @@ class TestLoaderIntegration:
 class TestActionKindMapping:
     @pytest.mark.parametrize("kind", _VALID_KINDS)
     def test_each_kind_maps_to_action_type(self, kind: str):
-        schema = SwarmActionSchema(kind=kind)
         action_type = _ACTION_KIND_MAP[kind]
         assert isinstance(action_type, ActionType)
 
