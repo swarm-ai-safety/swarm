@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- **Artifacts repo migration**: Moved `runs/`, `lean/`, `promo/`, `research/`, `docs/papers/`, `IMPLEMENTATION_PLAN.md`, and `DESIGN_CRITIQUE.md` to [`swarm-ai-safety/swarm-artifacts`](https://github.com/swarm-ai-safety/swarm-artifacts) to reduce main repo clone size by ~5 GB
+- Updated `.gitignore` to prevent re-addition of migrated directories
+- Updated 9 slash commands, agents, and `CLAUDE.md` to reflect new artifact locations
+
+### Removed
+- `skill.json`, `skill.md` — redundant with `pyproject.toml` (not yet removed, pending cleanup)
+- `Procfile` — unused Heroku config (not yet removed, pending cleanup)
+- `security_model_personal.yaml` — one-off scenario at root (not yet removed, pending cleanup)
+
 ## [1.5.0] - 2026-02-13
 
 ### Added
