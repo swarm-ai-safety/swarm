@@ -465,6 +465,40 @@ class TestEndToEnd:
 
         assert len(metrics) == 2
 
+    def test_collaborative_chemistry_scenario_runs(self):
+        """Collaborative chemistry scenario should run with audits and budget constraints."""
+        path = Path("scenarios/collaborative_chemistry.yaml")
+        if not path.exists():
+            pytest.skip("collaborative_chemistry.yaml not found")
+
+        scenario = load_scenario(path)
+        scenario.orchestrator_config.log_path = None
+        scenario.orchestrator_config.log_events = False
+        orchestrator = build_orchestrator(scenario)
+
+        # Verify governance is configured with audits and budget
+        gov = orchestrator.governance_engine.config
+        assert gov.audit_enabled is True
+        assert gov.audit_probability > 0
+        assert gov.transaction_tax_rate > 0
+        assert gov.staking_enabled is True
+
+        # Verify agents include solvers (synthesizer/retriever/verifier) and opportunists
+        # Scholar agents (synthesizer, verifier, retriever) are registered as AgentType.HONEST
+        # Opportunistic agents are registered as AgentType.OPPORTUNISTIC
+        agents = orchestrator.get_all_agents()
+        agent_types = [a.agent_type.value for a in agents]
+        assert "honest" in agent_types, "Should have honest agents (solvers/reviewers)"
+        assert "opportunistic" in agent_types, "Should have opportunistic agents"
+        assert len(agents) == 9, "Should have 9 total agents (3 solvers + 2 reviewers + 2 retrievers + 2 opportunists)"
+
+        # Run 2 epochs for speed
+        orchestrator.config.n_epochs = 2
+        metrics = orchestrator.run()
+
+        assert len(metrics) == 2
+        assert all(m.total_interactions >= 0 for m in metrics)
+
     def test_incoherence_tier_scenarios_load(self):
         """New incoherence tier scenario files should load successfully."""
         paths = [
