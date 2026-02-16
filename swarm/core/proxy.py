@@ -3,7 +3,7 @@
 import logging
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 
 from swarm.core.sigmoid import calibrated_sigmoid
 
@@ -19,6 +19,8 @@ class ProxyWeights(BaseModel):
     - rework_penalty: 0.2 (quality signal)
     - verifier_penalty: 0.2 (safety signal)
     - engagement_signal: 0.2 (counterparty response)
+
+    All weights must be non-negative.
     """
 
     task_progress: float = 0.4
@@ -27,6 +29,17 @@ class ProxyWeights(BaseModel):
     engagement_signal: float = 0.2
 
     model_config = {"frozen": False}
+
+    @field_validator("task_progress", "rework_penalty", "verifier_penalty", "engagement_signal")
+    @classmethod
+    def validate_non_negative(cls, v: float, info) -> float:
+        """Validate that weights are non-negative."""
+        if v < 0:
+            raise ValueError(
+                f"{info.field_name} must be non-negative, got {v}. "
+                "Negative weights can lead to unintended behavior in proxy computation."
+            )
+        return v
 
     def normalize(self) -> "ProxyWeights":
         """Return normalized weights that sum to 1."""
@@ -106,11 +119,45 @@ class ProxyComputer:
 
         Args:
             weights: Weights for combining signals (default: ProxyWeights())
-            sigmoid_k: Calibration sharpness for p computation
-            rework_decay: Decay factor per rework cycle
-            rejection_decay: Decay factor per verifier rejection
-            misuse_decay: Decay factor per tool misuse flag
+            sigmoid_k: Calibration sharpness for p computation (must be > 0 and <= 100)
+            rework_decay: Decay factor per rework cycle (must be in (0, 1))
+            rejection_decay: Decay factor per verifier rejection (must be in (0, 1))
+            misuse_decay: Decay factor per tool misuse flag (must be in (0, 1))
+
+        Raises:
+            ValueError: If any parameter is out of valid range
         """
+        # Validate sigmoid_k
+        if sigmoid_k <= 0:
+            raise ValueError(f"sigmoid_k must be positive, got {sigmoid_k}")
+        if sigmoid_k > 100:
+            raise ValueError(
+                f"sigmoid_k is extremely large ({sigmoid_k}), which may indicate a bug. "
+                "Values above 100 are rejected."
+            )
+
+        # Validate decay parameters
+        for param_name, param_value in [
+            ("rework_decay", rework_decay),
+            ("rejection_decay", rejection_decay),
+            ("misuse_decay", misuse_decay),
+        ]:
+            if param_value <= 0:
+                raise ValueError(
+                    f"{param_name} must be positive, got {param_value}. "
+                    "Decay values <= 0 would cause incorrect signal computation."
+                )
+            if param_value >= 1:
+                raise ValueError(
+                    f"{param_name} must be less than 1, got {param_value}. "
+                    "Decay values >= 1 would cause signals to increase with penalties."
+                )
+            if param_value < 0.01:
+                raise ValueError(
+                    f"{param_name} is extremely small ({param_value}), which may indicate a bug. "
+                    "Values below 0.01 cause signals to decay too rapidly."
+                )
+
         self.weights = (weights or ProxyWeights()).normalize()
         self.sigmoid_k = sigmoid_k
         self.rework_decay = rework_decay
@@ -195,14 +242,24 @@ class ProxyComputer:
             + self.weights.engagement_signal * engagement_signal
         )
 
-        # Clamp to [-1, +1] and warn if out of range
-        if v_hat < -1.0 or v_hat > 1.0:
+        # Clamp to [-1, +1] and warn if clamping occurs
+        original_v_hat = v_hat
+        v_hat = max(-1.0, min(1.0, v_hat))
+        if v_hat != original_v_hat:
             logger.warning(
-                "v_hat out of expected range [-1, +1]: %.4f. Clamping to valid range. "
-                "This may indicate upstream bugs in signal computation or weights.",
+                "v_hat clamped from %.4f to %.4f in compute_v_hat. "
+                "This may indicate incorrect weight normalization or signal computation. "
+                "Observables: progress=%.2f, rework=%d, rejections=%d, misuse=%d, engagement=%.2f",
+                original_v_hat,
                 v_hat,
+                observables.task_progress_delta,
+                observables.rework_count,
+                observables.verifier_rejections,
+                observables.tool_misuse_flags,
+                observables.counterparty_engagement_delta,
             )
-        return max(-1.0, min(1.0, v_hat))
+
+        return v_hat
 
     def compute_p(self, v_hat: float) -> float:
         """

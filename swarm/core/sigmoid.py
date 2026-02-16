@@ -21,8 +21,20 @@ def calibrated_sigmoid(v_hat: float, k: float = 2.0) -> float:
 
     Returns:
         p: Probability in [0, 1]
+
+    Raises:
+        ValueError: If k <= 0 or k > 100 (extremely large values indicate potential bugs)
     """
-    # Clamp v_hat to avoid numerical issues and warn if out of expected range
+    # Validate k parameter
+    if k <= 0:
+        raise ValueError(f"sigmoid_k must be positive, got {k}")
+    if k > 100:
+        raise ValueError(
+            f"sigmoid_k is extremely large ({k}), which may indicate a bug. "
+            "Values above 100 are rejected."
+        )
+
+    # Warn if v_hat is out of expected range [-1, +1]
     if v_hat < -1.0 or v_hat > 1.0:
         logger.warning(
             "v_hat out of expected range [-1, +1]: %.4f. "
@@ -30,7 +42,17 @@ def calibrated_sigmoid(v_hat: float, k: float = 2.0) -> float:
             "This may indicate upstream bugs in proxy computation.",
             v_hat,
         )
+
+    # Clamp v_hat to avoid numerical issues and warn if clamping occurs
+    original_v_hat = v_hat
     v_hat = max(-10.0, min(10.0, v_hat))
+    if v_hat != original_v_hat:
+        logger.warning(
+            "v_hat clamped from %.4f to %.4f in calibrated_sigmoid. "
+            "This may indicate an upstream bug in proxy computation.",
+            original_v_hat,
+            v_hat,
+        )
 
     # Compute sigmoid
     exp_term = math.exp(-k * v_hat)

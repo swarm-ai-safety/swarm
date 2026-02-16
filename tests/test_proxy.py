@@ -331,7 +331,9 @@ class TestClampingWarnings:
         verifier_penalty=0.0,
         engagement_signal=0.0,
     )
-    EXCESSIVE_NEGATIVE_WEIGHTS = ProxyWeights(
+    # Use model_construct to bypass validation, simulating a bug scenario
+    # where weights end up negative (e.g., from manual override)
+    EXCESSIVE_NEGATIVE_WEIGHTS = ProxyWeights.model_construct(
         task_progress=-2.0,
         rework_penalty=-2.0,
         verifier_penalty=0.0,
@@ -391,9 +393,9 @@ class TestClampingWarnings:
 
         v_hat = computer.compute_v_hat(obs)
 
-        # Should have logged a warning
+        # Should have logged a warning about clamping
         assert any(
-            "v_hat out of expected range [-1, +1]" in record.message
+            "v_hat clamped from" in record.message
             for record in caplog.records
         )
 
