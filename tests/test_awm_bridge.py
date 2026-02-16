@@ -645,3 +645,368 @@ class TestBaseAgentAWMHelper:
         agent = AWMAgent(agent_id="awm_1")
         action = agent.create_awm_execute_task_action()
         assert action.metadata["tool_calls"] == []
+
+
+# =========================================================================
+# AWMMCPSyncClient (Phase 2)
+# =========================================================================
+
+
+class TestAWMMCPSyncClient:
+    """Test the synchronous MCP client for live mode."""
+
+    def test_list_tools_success(self, monkeypatch):
+        from swarm.bridges.awm.mcp_client import AWMMCPSyncClient
+
+        class FakeResponse:
+            status_code = 200
+            def json(self):
+                return {"tools": [{"name": "query_database"}]}
+            def raise_for_status(self):
+                pass
+
+        class FakeHTTPClient:
+            def __init__(self, **kwargs):
+                pass
+            def get(self, url, **kwargs):
+                return FakeResponse()
+            def close(self):
+                pass
+
+        import httpx
+        monkeypatch.setattr(httpx, "Client", FakeHTTPClient)
+
+        client = AWMMCPSyncClient(base_url="http://127.0.0.1:9100")
+        tools = client.list_tools()
+        assert len(tools) == 1
+        assert tools[0]["name"] == "query_database"
+        client.close()
+
+    def test_call_tool_success(self, monkeypatch):
+        from swarm.bridges.awm.mcp_client import AWMMCPSyncClient
+
+        class FakeResponse:
+            status_code = 200
+            text = ""
+            def json(self):
+                return {"result": {"rows": [1]}}
+
+        class FakeHTTPClient:
+            def __init__(self, **kwargs):
+                pass
+            def post(self, url, **kwargs):
+                return FakeResponse()
+            def close(self):
+                pass
+
+        import httpx
+        monkeypatch.setattr(httpx, "Client", FakeHTTPClient)
+
+        client = AWMMCPSyncClient()
+        record = client.call_tool("query_database", {"query": "SELECT 1"})
+        assert record.success is True
+        assert record.result == {"rows": [1]}
+        client.close()
+
+    def test_call_tool_malformed_422(self, monkeypatch):
+        from swarm.bridges.awm.mcp_client import AWMMCPSyncClient
+
+        class FakeResponse:
+            status_code = 422
+            text = "Validation error"
+
+        class FakeHTTPClient:
+            def __init__(self, **kwargs):
+                pass
+            def post(self, url, **kwargs):
+                return FakeResponse()
+            def close(self):
+                pass
+
+        import httpx
+        monkeypatch.setattr(httpx, "Client", FakeHTTPClient)
+
+        client = AWMMCPSyncClient()
+        record = client.call_tool("bad_tool", {})
+        assert record.is_malformed is True
+        assert record.is_error_response is True
+        client.close()
+
+    def test_call_tool_connection_error(self, monkeypatch):
+        from swarm.bridges.awm.mcp_client import AWMMCPSyncClient
+
+        class FakeHTTPClient:
+            def __init__(self, **kwargs):
+                pass
+            def post(self, url, **kwargs):
+                raise ConnectionError("refused")
+            def close(self):
+                pass
+
+        import httpx
+        monkeypatch.setattr(httpx, "Client", FakeHTTPClient)
+
+        client = AWMMCPSyncClient()
+        record = client.call_tool("query_database", {})
+        assert record.is_error_response is True
+        assert "refused" in record.error
+        client.close()
+
+    def test_verify_success(self, monkeypatch):
+        from swarm.bridges.awm.mcp_client import AWMMCPSyncClient
+
+        class FakeResponse:
+            status_code = 200
+            def json(self):
+                return {"passed": True, "confidence": 0.9}
+
+        class FakeHTTPClient:
+            def __init__(self, **kwargs):
+                pass
+            def post(self, url, **kwargs):
+                return FakeResponse()
+            def close(self):
+                pass
+
+        import httpx
+        monkeypatch.setattr(httpx, "Client", FakeHTTPClient)
+
+        client = AWMMCPSyncClient()
+        result = client.verify()
+        assert result["passed"] is True
+        client.close()
+
+    def test_health_check(self, monkeypatch):
+        from swarm.bridges.awm.mcp_client import AWMMCPSyncClient
+
+        class FakeResponse:
+            status_code = 200
+            def json(self):
+                return {"tools": []}
+            def raise_for_status(self):
+                pass
+
+        class FakeHTTPClient:
+            def __init__(self, **kwargs):
+                pass
+            def get(self, url, **kwargs):
+                return FakeResponse()
+            def close(self):
+                pass
+
+        import httpx
+        monkeypatch.setattr(httpx, "Client", FakeHTTPClient)
+
+        client = AWMMCPSyncClient()
+        assert client.health_check() is True
+        client.close()
+
+
+# =========================================================================
+# AWMServerManager live mode (Phase 2)
+# =========================================================================
+
+
+class TestAWMServerManagerLive:
+    """Test AWMServerManager with live_mode=True (mocked subprocess)."""
+
+    @pytest.mark.asyncio
+    async def test_start_server_live_mode(self, monkeypatch):
+        from swarm.bridges.awm.server_manager import AWMServerManager
+
+        class FakeProcess:
+            returncode = None
+            def poll(self):
+                return None
+            def terminate(self):
+                pass
+            def wait(self, timeout=None):
+                pass
+            def kill(self):
+                pass
+
+        monkeypatch.setattr(
+            "swarm.bridges.awm.server_manager.subprocess.Popen",
+            lambda *a, **kw: FakeProcess(),
+        )
+
+        # Make health check pass immediately
+        from swarm.bridges.awm import mcp_client as mc_mod
+
+        class FakeSyncClient:
+            def __init__(self, **kwargs):
+                pass
+            def health_check(self):
+                return True
+            def close(self):
+                pass
+
+        monkeypatch.setattr(mc_mod, "AWMMCPSyncClient", FakeSyncClient)
+
+        config = AWMConfig(base_port=19200, live_mode=True)
+        mgr = AWMServerManager(config)
+        server = await mgr.start_server("agent_1")
+        assert server is not None
+        assert server.running is True
+
+    @pytest.mark.asyncio
+    async def test_stop_server_terminates_process(self, monkeypatch):
+        from swarm.bridges.awm.server_manager import AWMServerInstance
+
+        terminated = []
+
+        class FakeProcess:
+            returncode = None
+            def poll(self):
+                return None
+            def terminate(self):
+                terminated.append(True)
+            def wait(self, timeout=None):
+                pass
+            def kill(self):
+                pass
+
+        server = AWMServerInstance(
+            agent_id="agent_1",
+            port=19200,
+            environment_id="test",
+            envs_path="/tmp",
+            live_mode=True,
+        )
+        server._process = FakeProcess()
+        server.running = True
+
+        await server.stop()
+        assert len(terminated) == 1
+        assert server.running is False
+
+    @pytest.mark.asyncio
+    async def test_reset_db_calls_endpoint(self, monkeypatch):
+        from swarm.bridges.awm.server_manager import AWMServerInstance
+
+        reset_called = []
+
+        from swarm.bridges.awm import mcp_client as mc_mod
+
+        class FakeSyncClient:
+            def __init__(self, **kwargs):
+                pass
+            def reset_environment(self):
+                reset_called.append(True)
+                return True
+            def close(self):
+                pass
+
+        monkeypatch.setattr(mc_mod, "AWMMCPSyncClient", FakeSyncClient)
+
+        server = AWMServerInstance(
+            agent_id="agent_1",
+            port=19200,
+            environment_id="test",
+            envs_path="/tmp",
+            live_mode=True,
+        )
+        result = await server.reset_db()
+        assert result is True
+        assert len(reset_called) == 1
+
+
+# =========================================================================
+# AWMHandler live mode (Phase 2)
+# =========================================================================
+
+
+class TestAWMHandlerLiveMode:
+    """Test AWMHandler with live_mode=True (mocked clients)."""
+
+    def _make_live_handler(self, seed=42):
+        from swarm.core.awm_handler import AWMHandler
+        from swarm.logging.event_bus import EventBus
+
+        config = AWMConfig(seed=seed, max_tasks_per_epoch=2, live_mode=True)
+        bus = EventBus()
+        handler = AWMHandler(config=config, event_bus=bus, seed=seed)
+        return handler
+
+    def _make_state(self, agent_ids=None):
+        from swarm.env.state import EnvState
+        from swarm.models.agent import AgentType
+
+        state = EnvState()
+        for aid in (agent_ids or ["agent_1"]):
+            state.add_agent(aid, name=aid, agent_type=AgentType.HONEST)
+        return state
+
+    def test_handle_action_live_mode(self, monkeypatch):
+        from swarm.agents.base import Action
+
+        handler = self._make_live_handler()
+
+        # Mock the sync client for the agent
+        class MockSyncClient:
+            def call_tool(self, tool_name, arguments):
+                return ToolCallRecord(
+                    tool_name=tool_name,
+                    arguments=arguments,
+                    success=True,
+                    result={"status": "ok"},
+                )
+            def verify(self):
+                return {"passed": True, "confidence": 0.9}
+            def list_tools(self):
+                return [{"name": "query_database"}]
+            def close(self):
+                pass
+
+        # Bypass server manager startup by directly injecting client
+        handler._clients["agent_1"] = MockSyncClient()
+
+        state = self._make_state(["agent_1"])
+        handler.on_epoch_start(state)
+
+        action = Action(
+            action_type=ActionType.AWM_EXECUTE_TASK,
+            agent_id="agent_1",
+            metadata={
+                "tool_calls": [
+                    {"tool_name": "query_database", "arguments": {"q": "SELECT 1"}},
+                ]
+            },
+        )
+        result = handler.handle_action(action, state)
+        assert result.success is True
+        assert result.metadata["verified"] is True
+
+    def test_fallback_on_connection_error(self, monkeypatch):
+        from swarm.agents.base import Action
+
+        handler = self._make_live_handler()
+
+        class FailingSyncClient:
+            def call_tool(self, tool_name, arguments):
+                raise ConnectionError("server down")
+            def verify(self):
+                raise ConnectionError("server down")
+            def list_tools(self):
+                raise ConnectionError("server down")
+            def close(self):
+                pass
+
+        handler._clients["agent_1"] = FailingSyncClient()
+
+        state = self._make_state(["agent_1"])
+        handler.on_epoch_start(state)
+
+        action = Action(
+            action_type=ActionType.AWM_EXECUTE_TASK,
+            agent_id="agent_1",
+            metadata={
+                "tool_calls": [
+                    {"tool_name": "query_database", "arguments": {}},
+                ]
+            },
+        )
+        result = handler.handle_action(action, state)
+        # Should still succeed (action processed) but with errors in trace
+        assert result.success is True
+        assert result.metadata["verified"] is False

@@ -11,6 +11,9 @@ Phase 2 will add real server lifecycle management.
 from __future__ import annotations
 
 import logging
+import subprocess
+import sys
+import time
 from typing import Any, Dict, Optional
 
 from swarm.bridges.awm.config import AWMConfig
@@ -27,37 +30,114 @@ class AWMServerInstance:
         port: int,
         environment_id: str,
         envs_path: str,
+        *,
+        live_mode: bool = False,
+        server_command_template: str = "",
+        host: str = "127.0.0.1",
+        startup_timeout: float = 30.0,
+        health_check_interval: float = 0.5,
     ) -> None:
         self.agent_id = agent_id
         self.port = port
         self.environment_id = environment_id
         self.envs_path = envs_path
+        self.live_mode = live_mode
+        self.server_command_template = server_command_template
+        self.host = host
+        self.startup_timeout = startup_timeout
+        self.health_check_interval = health_check_interval
         self.running = False
-        self._process: Any = None  # subprocess.Popen in Phase 2
+        self._process: Any = None  # subprocess.Popen when live_mode
 
     @property
     def base_url(self) -> str:
-        return f"http://127.0.0.1:{self.port}"
+        return f"http://{self.host}:{self.port}"
 
     async def start(self) -> bool:
         """Start the AWM server.
 
-        Phase 1: No-op (simulation only).
-        Phase 2: Will launch FastAPI subprocess.
+        When live_mode is False: no-op (simulation).
+        When live_mode is True: spawn subprocess + poll health check.
         """
-        logger.info(
-            "AWM server start (simulated) for agent=%s port=%d env=%s",
-            self.agent_id,
-            self.port,
-            self.environment_id,
+        if not self.live_mode:
+            logger.info(
+                "AWM server start (simulated) for agent=%s port=%d env=%s",
+                self.agent_id,
+                self.port,
+                self.environment_id,
+            )
+            self.running = True
+            return True
+
+        cmd = self.server_command_template.format(
+            python=sys.executable,
+            host=self.host,
+            port=self.port,
+            env_path=self.envs_path,
+            env_id=self.environment_id,
         )
-        self.running = True
-        return True
+        logger.info(
+            "Starting AWM server for agent=%s: %s", self.agent_id, cmd
+        )
+
+        self._process = subprocess.Popen(
+            cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+        )
+
+        # Poll health check until server responds or timeout
+        from swarm.bridges.awm.mcp_client import AWMMCPSyncClient
+
+        client = AWMMCPSyncClient(
+            base_url=self.base_url, timeout=self.health_check_interval
+        )
+        deadline = time.monotonic() + self.startup_timeout
+        try:
+            while time.monotonic() < deadline:
+                if self._process.poll() is not None:
+                    logger.error(
+                        "AWM server process exited early for agent=%s (rc=%d)",
+                        self.agent_id,
+                        self._process.returncode,
+                    )
+                    self._process = None
+                    return False
+                if client.health_check():
+                    self.running = True
+                    logger.info(
+                        "AWM server healthy for agent=%s port=%d",
+                        self.agent_id,
+                        self.port,
+                    )
+                    return True
+                time.sleep(self.health_check_interval)
+        finally:
+            client.close()
+
+        logger.error(
+            "AWM server startup timeout for agent=%s after %.1fs",
+            self.agent_id,
+            self.startup_timeout,
+        )
+        # Kill the timed-out process
+        self._process.terminate()
+        try:
+            self._process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            self._process.kill()
+        self._process = None
+        return False
 
     async def stop(self) -> None:
         """Stop the AWM server."""
         if self._process is not None:
             self._process.terminate()
+            try:
+                self._process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                self._process.kill()
             self._process = None
         self.running = False
         logger.info(
@@ -69,11 +149,20 @@ class AWMServerInstance:
     async def reset_db(self) -> bool:
         """Reset the database to initial state.
 
-        Phase 1: No-op.
-        Phase 2: Will call /reset endpoint.
+        When live_mode is False: no-op.
+        When live_mode is True: POST /reset via sync client.
         """
-        logger.debug("AWM DB reset (simulated) for agent=%s", self.agent_id)
-        return True
+        if not self.live_mode:
+            logger.debug("AWM DB reset (simulated) for agent=%s", self.agent_id)
+            return True
+
+        from swarm.bridges.awm.mcp_client import AWMMCPSyncClient
+
+        client = AWMMCPSyncClient(base_url=self.base_url)
+        try:
+            return client.reset_environment()
+        finally:
+            client.close()
 
 
 class AWMServerManager:
@@ -121,6 +210,11 @@ class AWMServerManager:
             port=port,
             environment_id=self.config.environment_id,
             envs_path=str(self.config.envs_path),
+            live_mode=self.config.live_mode,
+            server_command_template=self.config.server_command_template,
+            host=self.config.host,
+            startup_timeout=self.config.server_startup_timeout,
+            health_check_interval=self.config.health_check_interval,
         )
         await server.start()
         self._servers[agent_id] = server

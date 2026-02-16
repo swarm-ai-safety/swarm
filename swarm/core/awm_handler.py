@@ -9,6 +9,7 @@ Manages the lifecycle of AWM tasks within SWARM simulations:
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
 import uuid
@@ -16,8 +17,13 @@ from typing import Any, Dict, FrozenSet, List, Optional
 
 from swarm.agents.base import Action, ActionType
 from swarm.bridges.awm.config import AWMConfig
-from swarm.bridges.awm.mcp_client import AWMEpisodeTrace, ToolCallRecord
+from swarm.bridges.awm.mcp_client import (
+    AWMEpisodeTrace,
+    AWMMCPSyncClient,
+    ToolCallRecord,
+)
 from swarm.bridges.awm.observable_mapper import AWMObservableMapper
+from swarm.bridges.awm.server_manager import AWMServerManager
 from swarm.bridges.awm.verifier_bridge import AWMVerifierBridge
 from swarm.core.handler import Handler, HandlerActionResult
 from swarm.env.state import EnvState
@@ -71,14 +77,62 @@ class AWMHandler(Handler):
         # Task queue for the current epoch
         self._task_queue: List[Dict[str, Any]] = []
 
+        # Phase 2: Live mode support
+        self._server_manager: Optional[AWMServerManager] = None
+        self._clients: Dict[str, AWMMCPSyncClient] = {}
+        if config.live_mode:
+            self._server_manager = AWMServerManager(config)
+
     @staticmethod
     def handled_action_types() -> FrozenSet:
         return frozenset({ActionType.AWM_EXECUTE_TASK})
+
+    def _run_async(self, coro: Any) -> Any:
+        """Run an async coroutine from synchronous handler methods."""
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None and loop.is_running():
+            # We're inside an existing event loop — create a new one in a thread
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, coro).result()
+        return asyncio.run(coro)
+
+    def _ensure_server(self, agent_id: str) -> Optional[str]:
+        """Ensure a live AWM server is running for the agent.
+
+        Returns the base_url on success, None on failure.
+        """
+        if self._server_manager is None:
+            return None
+
+        server = self._run_async(
+            self._server_manager.start_server(agent_id)
+        )
+        if server is None:
+            return None
+
+        # Create/cache sync client for this agent
+        base_url: str = server.base_url
+        if agent_id not in self._clients:
+            self._clients[agent_id] = AWMMCPSyncClient(
+                base_url=base_url,
+                timeout=self.config.verification_timeout,
+            )
+        return base_url
 
     def on_epoch_start(self, state: EnvState) -> None:
         """Generate AWM task assignments for the epoch."""
         self._assignments.clear()
         self._traces.clear()
+
+        # In live mode, ensure servers are started for all agents
+        if self.config.live_mode and self._server_manager is not None:
+            for agent_id in state.agents:
+                self._ensure_server(agent_id)
 
         # Generate synthetic tasks for this epoch
         self._task_queue = self._generate_tasks()
@@ -119,6 +173,14 @@ class AWMHandler(Handler):
         self._assignments.clear()
         self._traces.clear()
 
+        # In live mode, reset all DBs between epochs
+        if (
+            self.config.live_mode
+            and self.config.reset_between_epochs
+            and self._server_manager is not None
+        ):
+            self._run_async(self._server_manager.reset_all())
+
     def _generate_tasks(self) -> List[Dict[str, Any]]:
         """Generate synthetic AWM tasks for the epoch."""
         tasks = []
@@ -138,7 +200,19 @@ class AWMHandler(Handler):
         """Get the list of available tools for the current environment."""
         if self._available_tools:
             return self._available_tools
-        # Default tools for Phase 1 (synthetic)
+
+        # In live mode, try to fetch tools from a running server
+        if self.config.live_mode and self._clients:
+            client = next(iter(self._clients.values()))
+            try:
+                tools = client.list_tools()
+                if tools:
+                    self._available_tools = tools
+                    return self._available_tools
+            except Exception:
+                logger.debug("Failed to fetch live tools, using defaults")
+
+        # Default tools (synthetic)
         return [
             {"name": "query_database", "description": "Execute a SQL query"},
             {"name": "update_record", "description": "Update a database record"},
@@ -192,15 +266,15 @@ class AWMHandler(Handler):
         # Process tool calls from the action
         tool_calls = action.metadata.get("tool_calls", [])
         for tc_data in tool_calls:
-            record = self._simulate_tool_call(tc_data)
+            record = self._execute_tool_call(tc_data, agent_id)
             trace.tool_calls.append(record)
             trace.steps_used += 1
 
             if trace.steps_used >= self.config.max_steps_per_task:
                 break
 
-        # Run verification (simulated in Phase 1)
-        verification_result = self._simulate_verification(trace)
+        # Run verification
+        verification_result = self._execute_verification(trace, agent_id)
         trace.verified = verification_result.get("passed", False)
         trace.verification_details = verification_result
 
@@ -243,6 +317,56 @@ class AWMHandler(Handler):
                 "steps_used": trace.steps_used,
             },
         )
+
+    def _execute_tool_call(
+        self, tc_data: Dict[str, Any], agent_id: str
+    ) -> ToolCallRecord:
+        """Dispatch tool call to live or simulated implementation."""
+        if self.config.live_mode and agent_id in self._clients:
+            return self._live_tool_call(tc_data, agent_id)
+        return self._simulate_tool_call(tc_data)
+
+    def _live_tool_call(
+        self, tc_data: Dict[str, Any], agent_id: str
+    ) -> ToolCallRecord:
+        """Execute a tool call via the live AWM server."""
+        tool_name = tc_data.get("tool_name", "")
+        arguments = tc_data.get("arguments", {})
+        client = self._clients[agent_id]
+        try:
+            return client.call_tool(tool_name, arguments)
+        except Exception as exc:
+            logger.warning(
+                "Live tool call failed for agent=%s tool=%s: %s",
+                agent_id,
+                tool_name,
+                exc,
+            )
+            record = ToolCallRecord(tool_name=tool_name, arguments=arguments)
+            record.is_error_response = True
+            record.error = str(exc)
+            return record
+
+    def _execute_verification(
+        self, trace: AWMEpisodeTrace, agent_id: str
+    ) -> Dict[str, Any]:
+        """Dispatch verification to live or simulated implementation."""
+        if self.config.live_mode and agent_id in self._clients:
+            return self._live_verification(trace, agent_id)
+        return self._simulate_verification(trace)
+
+    def _live_verification(
+        self, trace: AWMEpisodeTrace, agent_id: str
+    ) -> Dict[str, Any]:
+        """Run verification via the live AWM server."""
+        client = self._clients[agent_id]
+        try:
+            return client.verify()
+        except Exception as exc:
+            logger.warning(
+                "Live verification failed for agent=%s: %s", agent_id, exc
+            )
+            return {"passed": False, "error": str(exc)}
 
     def _simulate_tool_call(
         self, tc_data: Dict[str, Any]

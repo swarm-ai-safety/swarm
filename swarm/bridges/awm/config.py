@@ -49,3 +49,10 @@ class AWMConfig(BaseModel):
 
     # Number of concurrent servers (one per agent)
     max_concurrent_servers: int = Field(default=10, ge=1)
+
+    # Phase 2: Live mode (False = simulation, True = real HTTP + subprocess)
+    live_mode: bool = False
+    server_command_template: str = (
+        "{python} -m awm.server --host {host} --port {port} --env-path {env_path}"
+    )
+    health_check_interval: float = 0.5

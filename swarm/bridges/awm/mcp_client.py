@@ -191,3 +191,130 @@ class AWMMCPClient:
         if self._client is not None:
             await self._client.aclose()
             self._client = None
+
+
+class AWMMCPSyncClient:
+    """Synchronous HTTP client for AWM MCP tool-use servers.
+
+    Used by AWMHandler's synchronous handle_action() path in live mode.
+    Mirrors AWMMCPClient's API but uses httpx.Client (sync).
+    """
+
+    def __init__(
+        self,
+        base_url: str = "http://127.0.0.1:9100",
+        timeout: float = 30.0,
+    ) -> None:
+        self.base_url = base_url.rstrip("/")
+        self.timeout = timeout
+        self._client: Any = None  # httpx.Client, lazily created
+
+    def _ensure_client(self) -> Any:
+        """Lazily create sync httpx client."""
+        if self._client is None:
+            import httpx
+
+            self._client = httpx.Client(
+                base_url=self.base_url,
+                timeout=self.timeout,
+            )
+        return self._client
+
+    def list_tools(self) -> List[Dict[str, Any]]:
+        """List available tools from the AWM environment."""
+        client = self._ensure_client()
+        response = client.get("/tools")
+        response.raise_for_status()
+        result: List[Dict[str, Any]] = response.json().get("tools", [])
+        return result
+
+    def call_tool(
+        self,
+        tool_name: str,
+        arguments: Dict[str, Any],
+    ) -> ToolCallRecord:
+        """Execute a single tool call against the AWM environment."""
+        record = ToolCallRecord(
+            tool_name=tool_name,
+            arguments=arguments,
+        )
+
+        try:
+            client = self._ensure_client()
+            response = client.post(
+                "/tools/call",
+                json={
+                    "name": tool_name,
+                    "arguments": arguments,
+                },
+            )
+
+            if response.status_code == 422:
+                record.is_malformed = True
+                record.is_error_response = True
+                record.error = response.text
+            elif response.status_code >= 400:
+                record.is_error_response = True
+                record.error = response.text
+            else:
+                data = response.json()
+                record.success = True
+                record.result = data.get("result")
+                if data.get("isError"):
+                    record.is_error_response = True
+                    record.error = str(data.get("result", ""))
+                    record.success = False
+
+        except Exception as exc:
+            record.is_error_response = True
+            record.error = str(exc)
+
+        return record
+
+    def reset_environment(self) -> bool:
+        """Reset the AWM environment to initial DB state."""
+        try:
+            client = self._ensure_client()
+            response = client.post("/reset")
+            return bool(response.status_code == 200)
+        except Exception:
+            return False
+
+    def get_task(self) -> Optional[Dict[str, Any]]:
+        """Get the current task description from the environment."""
+        try:
+            client = self._ensure_client()
+            response = client.get("/task")
+            if response.status_code == 200:
+                result: Dict[str, Any] = response.json()
+                return result
+        except Exception:
+            pass
+        return None
+
+    def verify(self) -> Dict[str, Any]:
+        """Run AWM verification on the current DB state."""
+        try:
+            client = self._ensure_client()
+            response = client.post("/verify")
+            if response.status_code == 200:
+                result: Dict[str, Any] = response.json()
+                return result
+        except Exception:
+            pass
+        return {"passed": False, "error": "verification_failed"}
+
+    def health_check(self) -> bool:
+        """Check if the AWM server is healthy (GET /tools returns 200)."""
+        try:
+            client = self._ensure_client()
+            response = client.get("/tools")
+            return bool(response.status_code == 200)
+        except Exception:
+            return False
+
+    def close(self) -> None:
+        """Close the HTTP client."""
+        if self._client is not None:
+            self._client.close()
+            self._client = None
