@@ -1,0 +1,82 @@
+import type { AgentVisual } from "../types";
+import type { AgentSnapshot } from "@/data/types";
+import { lerp, clamp } from "@/utils/math";
+import { BUILDING, AGENT_GRID_SPACING } from "../constants";
+
+/** Interpolate agent states between two epoch snapshots */
+export function interpolateAgents(
+  prevAgents: Map<string, AgentSnapshot>,
+  nextAgents: Map<string, AgentSnapshot>,
+  t: number,
+  agentPositions: Map<string, { gridX: number; gridY: number }>,
+): AgentVisual[] {
+  const result: AgentVisual[] = [];
+  const allIds = new Set([...prevAgents.keys(), ...nextAgents.keys()]);
+
+  for (const id of allIds) {
+    const prev = prevAgents.get(id);
+    const next = nextAgents.get(id);
+    const pos = agentPositions.get(id);
+    if (!pos) continue;
+
+    const source = prev ?? next!;
+    const target = next ?? prev!;
+
+    const reputation = lerp(source.reputation, target.reputation, t);
+    const resources = lerp(source.resources, target.resources, t);
+    const totalPayoff = lerp(source.total_payoff, target.total_payoff, t);
+    const avgP = lerp(
+      (source.avg_p_initiated + source.avg_p_received) / 2 || 0.5,
+      (target.avg_p_initiated + target.avg_p_received) / 2 || 0.5,
+      t,
+    );
+
+    // Boolean states snap at t=0.5
+    const isFrozen = t < 0.5 ? source.is_frozen : target.is_frozen;
+    const isQuarantined = t < 0.5 ? source.is_quarantined : target.is_quarantined;
+
+    // Map reputation to floors (1-8)
+    const floors = clamp(
+      Math.round(1 + (reputation + 1) * 3.5), // reputation ~[-1,1] -> 1-8
+      BUILDING.minFloors,
+      BUILDING.maxFloors,
+    );
+
+    result.push({
+      id,
+      name: target.name ?? id.slice(0, 8),
+      agentType: target.agent_type ?? "honest",
+      reputation,
+      resources,
+      totalPayoff,
+      avgP,
+      isFrozen,
+      isQuarantined,
+      floors,
+      gridX: pos.gridX,
+      gridY: pos.gridY,
+      interactionsInitiated: Math.round(lerp(source.interactions_initiated, target.interactions_initiated, t)),
+      interactionsReceived: Math.round(lerp(source.interactions_received, target.interactions_received, t)),
+    });
+  }
+
+  return result;
+}
+
+/** Compute grid positions for agents (spiral layout) */
+export function computeAgentPositions(agentIds: string[]): Map<string, { gridX: number; gridY: number }> {
+  const positions = new Map<string, { gridX: number; gridY: number }>();
+  const n = agentIds.length;
+  const cols = Math.ceil(Math.sqrt(n));
+
+  for (let i = 0; i < n; i++) {
+    const row = Math.floor(i / cols);
+    const col = i % cols;
+    positions.set(agentIds[i], {
+      gridX: col * AGENT_GRID_SPACING + 1,
+      gridY: row * AGENT_GRID_SPACING + 1,
+    });
+  }
+
+  return positions;
+}
