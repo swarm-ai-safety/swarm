@@ -10,19 +10,34 @@ Each SWARM agent step becomes:
 
 CrewAI is an *optional* dependency.  Import this module only when
 ``crewai`` is installed (the loader uses lazy importing).
+
+Security notes
+--------------
+* Crew output is **untrusted**.  All fields are validated and clamped
+  before being converted to SWARM ``Action`` objects.
+* ``target_id`` and ``counterparty_id`` are validated against the
+  current observation's visible IDs.
+* Crew-supplied metadata is namespaced under ``"crew_metadata"`` to
+  prevent collision with SWARM-internal keys.
+* ``crew.kickoff()`` is wrapped in a timeout to prevent DoS.
+* Deliberation memory is capped to prevent unbounded growth.
+* Observation content from other agents may contain adversarial
+  payloads (prompt injection).  This is an **accepted risk** in the
+  simulation threat model -- the adapter's job is to contain the
+  *output* side, not to sanitize every LLM input.
 """
 
 from __future__ import annotations
 
+import concurrent.futures
 import json
 import logging
 import random
-import uuid
-from dataclasses import dataclass, field
+import re
 from enum import Enum
-from typing import Any, Callable, Dict, List, Literal, Optional, Sequence
+from typing import Any, Dict, List, Optional, Set
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from swarm.agents.base import (
     Action,
@@ -36,6 +51,20 @@ from swarm.models.agent import AgentType
 from swarm.models.interaction import InteractionType
 
 logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Limits (security hardening)
+# ---------------------------------------------------------------------------
+
+MAX_CONTENT_LENGTH = 10_000
+MAX_RATIONALE_LENGTH = 2_000
+MAX_ID_LENGTH = 200
+MAX_METADATA_KEYS = 20
+MAX_METADATA_VALUE_LENGTH = 1_000
+MAX_RAW_TRACE_LENGTH = 2_000
+MAX_DELIBERATION_MEMORY = 200
+MAX_STAGED_ACTIONS = 10
+DEFAULT_CREW_TIMEOUT_SECONDS = 120.0
 
 # ---------------------------------------------------------------------------
 # Action schema (Pydantic) that CrewAI outputs must conform to
@@ -66,6 +95,7 @@ class SwarmActionSchema(BaseModel):
     """Schema that a CrewAI crew must output.
 
     This is the "action API" boundary between CrewAI and SWARM.
+    All string fields are length-clamped for safety.
     """
 
     kind: str = Field(
@@ -76,14 +106,17 @@ class SwarmActionSchema(BaseModel):
     )
     content: str = Field(
         default="",
+        max_length=MAX_CONTENT_LENGTH,
         description="Text payload (post content, reply text, output, etc.)",
     )
     target_id: str = Field(
         default="",
+        max_length=MAX_ID_LENGTH,
         description="Target entity ID (post_id, task_id, bounty_id, etc.)",
     )
     counterparty_id: str = Field(
         default="",
+        max_length=MAX_ID_LENGTH,
         description="Counterparty agent ID for interactions.",
     )
     confidence: float = Field(
@@ -94,12 +127,23 @@ class SwarmActionSchema(BaseModel):
     )
     rationale: str = Field(
         default="",
+        max_length=MAX_RATIONALE_LENGTH,
         description="Free-text explanation of why this action was chosen.",
     )
     metadata: Dict[str, Any] = Field(
         default_factory=dict,
         description="Extra key-value metadata.",
     )
+
+    @field_validator("kind")
+    @classmethod
+    def validate_kind(cls, v: str) -> str:
+        """Reject unknown action kinds at parse time."""
+        if v not in _ACTION_KIND_MAP:
+            raise ValueError(
+                f"Invalid action kind: {v!r}. Valid: {_VALID_KINDS}"
+            )
+        return v
 
 
 # ---------------------------------------------------------------------------
@@ -180,8 +224,11 @@ class CrewAIToolAdapter:
     def stage_action(self, action_dict: Dict[str, Any]) -> str:
         """Stage a candidate action for the Executor to pick.
 
+        Capped at ``MAX_STAGED_ACTIONS`` to prevent memory abuse.
         Returns a short confirmation string.
         """
+        if len(self._staged_actions) >= MAX_STAGED_ACTIONS:
+            return f"rejected (limit {MAX_STAGED_ACTIONS} reached)"
         self._staged_actions.append(action_dict)
         return f"staged ({len(self._staged_actions)} total)"
 
@@ -239,6 +286,11 @@ class CrewConfig(BaseModel):
     enable_trace: bool = Field(
         default=True,
         description="Attach crew deliberation trace to action metadata.",
+    )
+    timeout: float = Field(
+        default=DEFAULT_CREW_TIMEOUT_SECONDS,
+        gt=0.0,
+        description="Max seconds for a single crew.kickoff() call.",
     )
     sub_agents: List[CrewAgentRole] = Field(
         default_factory=list,
@@ -307,6 +359,9 @@ _DEFAULT_PROFILES: Dict[str, List[CrewAgentRole]] = {
     ],
 }
 
+# Names that cannot be overwritten by register_crew_profile().
+_BUILTIN_PROFILE_NAMES: frozenset = frozenset(_DEFAULT_PROFILES.keys())
+
 
 def get_profile_agents(profile_name: str) -> List[CrewAgentRole]:
     """Get the sub-agent definitions for a crew profile."""
@@ -319,7 +374,15 @@ def get_profile_agents(profile_name: str) -> List[CrewAgentRole]:
 
 
 def register_crew_profile(name: str, agents: List[CrewAgentRole]) -> None:
-    """Register a custom crew profile."""
+    """Register a custom crew profile.
+
+    Raises ``ValueError`` if *name* collides with a built-in profile.
+    """
+    if name in _BUILTIN_PROFILE_NAMES:
+        raise ValueError(
+            f"Cannot overwrite built-in profile: {name!r}. "
+            f"Built-in profiles: {sorted(_BUILTIN_PROFILE_NAMES)}"
+        )
     _DEFAULT_PROFILES[name] = list(agents)
 
 
@@ -476,6 +539,28 @@ def _build_crewai_tools(tool_adapter: CrewAIToolAdapter) -> list:
 
 
 # ---------------------------------------------------------------------------
+# Metadata sanitization
+# ---------------------------------------------------------------------------
+
+
+def _sanitize_crew_metadata(raw: Dict[str, Any]) -> Dict[str, Any]:
+    """Sanitize crew-supplied metadata.
+
+    * Limits number of keys to ``MAX_METADATA_KEYS``.
+    * Only allows str, int, float, bool values.
+    * Truncates string values to ``MAX_METADATA_VALUE_LENGTH``.
+    """
+    sanitized: Dict[str, Any] = {}
+    for key, value in list(raw.items())[:MAX_METADATA_KEYS]:
+        if isinstance(value, str):
+            sanitized[key] = value[:MAX_METADATA_VALUE_LENGTH]
+        elif isinstance(value, (int, float, bool)):
+            sanitized[key] = value
+        # Drop complex/nested values silently
+    return sanitized
+
+
+# ---------------------------------------------------------------------------
 # CrewBackedAgent: the SWARM agent adapter
 # ---------------------------------------------------------------------------
 
@@ -491,6 +576,19 @@ class CrewBackedAgent(BaseAgent):
     The ``act()`` method builds a context dict from the SWARM observation,
     passes it to the crew, parses the result into a SWARM ``Action``,
     and optionally attaches the deliberation trace.
+
+    Security model
+    ~~~~~~~~~~~~~~
+    Crew output is untrusted.  The adapter validates and clamps all
+    fields before converting them to ``Action`` objects:
+
+    * ``agent_id`` is always pinned to ``self.agent_id`` (never from crew).
+    * ``target_id`` / ``counterparty_id`` are checked against the current
+      observation's visible IDs; unknown IDs are rejected to empty string.
+    * Crew-supplied ``metadata`` is namespaced under ``"crew_metadata"``
+      to prevent collision with SWARM-internal keys.
+    * ``crew.kickoff()`` is wrapped in a configurable timeout.
+    * Deliberation memory is capped at ``MAX_DELIBERATION_MEMORY``.
 
     Parameters
     ----------
@@ -519,7 +617,7 @@ class CrewBackedAgent(BaseAgent):
     ):
         super().__init__(
             agent_id=agent_id,
-            agent_type=AgentType.HONEST,  # behavioural type comes from crew
+            agent_type=AgentType.CREWAI,
             roles=roles,
             config=config or {},
             name=name,
@@ -529,6 +627,9 @@ class CrewBackedAgent(BaseAgent):
         self.tool_adapter = CrewAIToolAdapter()
         self._crew = None  # lazy-built on first act()
         self._deliberation_memory: List[Dict[str, Any]] = []
+        # Populated each tick from the observation for ID validation.
+        self._valid_target_ids: Set[str] = set()
+        self._valid_counterparty_ids: Set[str] = set()
 
     # -- lazy crew construction -------------------------------------------
 
@@ -544,18 +645,20 @@ class CrewBackedAgent(BaseAgent):
         """Produce a SWARM Action by running the CrewAI crew.
 
         1. Build a context dict from the observation.
-        2. Pass context to the crew.
+        2. Pass context to the crew (with timeout).
         3. Parse the crew's output into ``SwarmActionSchema``.
-        4. Convert to a SWARM ``Action``.
-        5. Optionally attach trace to ``action.metadata``.
+        4. Validate IDs against the observation.
+        5. Convert to a SWARM ``Action``.
+        6. Optionally attach trace to ``action.metadata``.
         """
         self.tool_adapter.update_observation(observation)
+        self._collect_valid_ids(observation)
 
         context = self._build_context(observation)
 
         try:
             crew = self._ensure_crew()
-            crew_result = crew.kickoff(inputs=context)
+            crew_result = self._kickoff_with_timeout(crew, context)
             raw_output = self._extract_crew_output(crew_result)
             action_schema = self._parse_action(raw_output)
         except Exception:
@@ -569,27 +672,32 @@ class CrewBackedAgent(BaseAgent):
 
         # Attach trace
         if self.crew_config.enable_trace:
+            raw_str = (
+                raw_output if isinstance(raw_output, str) else str(raw_output)
+            )
             trace = {
                 "crew_profile": self.crew_config.crew_profile,
                 "role_name": self.crew_config.role_name,
                 "confidence": action_schema.confidence,
-                "rationale": action_schema.rationale,
-                "raw_output": raw_output
-                if isinstance(raw_output, str)
-                else str(raw_output),
+                "rationale": action_schema.rationale[:MAX_RATIONALE_LENGTH],
+                "raw_output": raw_str[:MAX_RAW_TRACE_LENGTH],
             }
             action.metadata["_crew_trace"] = trace
 
-        # Record to deliberation memory
+        # Record to deliberation memory (capped)
         self._deliberation_memory.append(
             {
                 "epoch": observation.current_epoch,
                 "step": observation.current_step,
                 "action_kind": action_schema.kind,
                 "confidence": action_schema.confidence,
-                "rationale": action_schema.rationale,
+                "rationale": action_schema.rationale[:500],
             }
         )
+        if len(self._deliberation_memory) > MAX_DELIBERATION_MEMORY:
+            self._deliberation_memory = self._deliberation_memory[
+                -MAX_DELIBERATION_MEMORY:
+            ]
 
         return action
 
@@ -626,10 +734,67 @@ class CrewBackedAgent(BaseAgent):
             content="CrewAI agent proposing collaboration.",
         )
 
+    # -- timeout wrapper --------------------------------------------------
+
+    def _kickoff_with_timeout(self, crew: Any, context: Dict[str, Any]) -> Any:
+        """Run ``crew.kickoff()`` with a timeout.
+
+        Raises ``TimeoutError`` if the crew exceeds the configured limit.
+        """
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(crew.kickoff, inputs=context)
+            return future.result(timeout=self.crew_config.timeout)
+
+    # -- observation ID collection ----------------------------------------
+
+    def _collect_valid_ids(self, obs: Observation) -> None:
+        """Build the sets of valid target and counterparty IDs."""
+        self._valid_target_ids = set()
+        self._valid_counterparty_ids = set()
+
+        for post in obs.visible_posts:
+            pid = post.get("post_id", "")
+            if pid:
+                self._valid_target_ids.add(pid)
+        for task in obs.available_tasks:
+            tid = task.get("task_id", "")
+            if tid:
+                self._valid_target_ids.add(tid)
+        for task in obs.active_tasks:
+            tid = task.get("task_id", "")
+            if tid:
+                self._valid_target_ids.add(tid)
+        for proposal in obs.pending_proposals:
+            pid = proposal.get("proposal_id", "")
+            if pid:
+                self._valid_target_ids.add(pid)
+        for bounty in obs.available_bounties:
+            bid = bounty.get("bounty_id", "")
+            if bid:
+                self._valid_target_ids.add(bid)
+        for bid_decision in obs.pending_bid_decisions:
+            for key in ("bounty_id", "bid_id"):
+                val = bid_decision.get(key, "")
+                if val:
+                    self._valid_target_ids.add(val)
+
+        for agent in obs.visible_agents:
+            aid = agent.get("agent_id", "")
+            if aid:
+                self._valid_counterparty_ids.add(aid)
+
     # -- context building -------------------------------------------------
 
     def _build_context(self, obs: Observation) -> Dict[str, Any]:
-        """Build the context dict passed to the CrewAI crew."""
+        """Build the context dict passed to the CrewAI crew.
+
+        .. warning::
+
+           Observation content (posts, proposals, etc.) originates from
+           other agents and may contain adversarial prompt-injection
+           payloads.  This is an accepted risk in the simulation threat
+           model.  The adapter hardens the *output* side instead.
+        """
         return {
             "epoch": obs.current_epoch,
             "step": obs.current_step,
@@ -691,8 +856,6 @@ class CrewBackedAgent(BaseAgent):
             pass
 
         # Try extracting JSON from ```json ... ``` block
-        import re
-
         match = re.search(r"```(?:json)?\s*(\{.*?\})\s*```", text, re.DOTALL)
         if match:
             try:
@@ -714,19 +877,49 @@ class CrewBackedAgent(BaseAgent):
         )
 
     def _schema_to_action(self, schema: SwarmActionSchema) -> Action:
-        """Convert a parsed SwarmActionSchema to a SWARM Action."""
+        """Convert a parsed SwarmActionSchema to a SWARM Action.
+
+        Validates ``target_id`` and ``counterparty_id`` against the
+        current observation.  Unknown IDs are rejected to empty string.
+        Crew-supplied metadata is namespaced under ``"crew_metadata"``.
+        """
         action_type = _ACTION_KIND_MAP.get(schema.kind, ActionType.NOOP)
+
+        # Validate IDs against the observation whitelist
+        target_id = (
+            schema.target_id
+            if schema.target_id in self._valid_target_ids
+            else ""
+        )
+        counterparty_id = (
+            schema.counterparty_id
+            if schema.counterparty_id in self._valid_counterparty_ids
+            else ""
+        )
+
+        if schema.target_id and not target_id:
+            logger.debug(
+                "Rejected crew target_id %r (not in observation) for %s",
+                schema.target_id,
+                self.agent_id,
+            )
+        if schema.counterparty_id and not counterparty_id:
+            logger.debug(
+                "Rejected crew counterparty_id %r (not in observation) for %s",
+                schema.counterparty_id,
+                self.agent_id,
+            )
 
         return Action(
             action_type=action_type,
             agent_id=self.agent_id,
             content=schema.content,
-            target_id=schema.target_id,
-            counterparty_id=schema.counterparty_id,
+            target_id=target_id,
+            counterparty_id=counterparty_id,
             metadata={
-                **schema.metadata,
+                "crew_metadata": _sanitize_crew_metadata(schema.metadata),
                 "confidence": schema.confidence,
-                "rationale": schema.rationale,
+                "rationale": schema.rationale[:MAX_RATIONALE_LENGTH],
             },
         )
 

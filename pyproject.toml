@@ -72,7 +72,7 @@ concordia = [
     "concordia>=1.0",
 ]
 crewai = [
-    "crewai>=0.80.0",
+    "crewai>=0.80.0,<1.0",
 ]
 awm = [
     "httpx>=0.27.0",

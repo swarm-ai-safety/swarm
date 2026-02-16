@@ -2,6 +2,8 @@
 
 These tests verify the adapter layer without requiring the real ``crewai``
 package.  The crew is mocked so that tests stay fast and deterministic.
+
+Security-related tests are grouped under ``TestSecurity*`` classes.
 """
 
 import json
@@ -12,17 +14,28 @@ import pytest
 
 from swarm.agents.base import Action, ActionType, Observation
 from swarm.agents.crewai_adapter import (
+    DEFAULT_CREW_TIMEOUT_SECONDS,
+    MAX_CONTENT_LENGTH,
+    MAX_DELIBERATION_MEMORY,
+    MAX_ID_LENGTH,
+    MAX_METADATA_KEYS,
+    MAX_METADATA_VALUE_LENGTH,
+    MAX_RAW_TRACE_LENGTH,
+    MAX_RATIONALE_LENGTH,
+    MAX_STAGED_ACTIONS,
     CrewAIToolAdapter,
     CrewBackedAgent,
     CrewConfig,
     SwarmActionSchema,
     _ACTION_KIND_MAP,
+    _BUILTIN_PROFILE_NAMES,
     _VALID_KINDS,
+    _sanitize_crew_metadata,
     get_profile_agents,
     register_crew_profile,
     CrewAgentRole,
 )
-from swarm.models.agent import AgentState
+from swarm.models.agent import AgentState, AgentType
 
 
 # ---------------------------------------------------------------------------
@@ -32,7 +45,7 @@ from swarm.models.agent import AgentState
 
 @pytest.fixture()
 def default_observation() -> Observation:
-    """Minimal valid observation."""
+    """Minimal valid observation with IDs for validation tests."""
     return Observation(
         agent_state=AgentState(
             agent_id="test_agent",
@@ -48,8 +61,9 @@ def default_observation() -> Observation:
         visible_posts=[{"post_id": "p1", "content": "hello"}],
         visible_agents=[{"agent_id": "other_1", "reputation": 0.5}],
         available_tasks=[{"task_id": "t1", "difficulty": "easy"}],
-        pending_proposals=[],
+        pending_proposals=[{"proposal_id": "prop_1", "initiator_id": "other_1"}],
         ecosystem_metrics={"toxicity": 0.1},
+        available_bounties=[{"bounty_id": "b1", "reward_amount": 10.0}],
     )
 
 
@@ -110,6 +124,31 @@ class TestSwarmActionSchema:
         for kind in _VALID_KINDS:
             assert kind in _ACTION_KIND_MAP
 
+    def test_invalid_kind_rejected(self):
+        """Fix #7: Unknown kind strings are rejected at parse time."""
+        with pytest.raises(ValueError, match="Invalid action kind"):
+            SwarmActionSchema(kind="totally_bogus")
+
+    def test_content_max_length(self):
+        """Fix #3: Content exceeding MAX_CONTENT_LENGTH is rejected."""
+        with pytest.raises(ValueError):
+            SwarmActionSchema(kind="post", content="x" * (MAX_CONTENT_LENGTH + 1))
+
+    def test_rationale_max_length(self):
+        """Fix #3: Rationale exceeding MAX_RATIONALE_LENGTH is rejected."""
+        with pytest.raises(ValueError):
+            SwarmActionSchema(kind="noop", rationale="r" * (MAX_RATIONALE_LENGTH + 1))
+
+    def test_target_id_max_length(self):
+        """Fix #3: target_id exceeding MAX_ID_LENGTH is rejected."""
+        with pytest.raises(ValueError):
+            SwarmActionSchema(kind="noop", target_id="i" * (MAX_ID_LENGTH + 1))
+
+    def test_counterparty_id_max_length(self):
+        """Fix #3: counterparty_id exceeding MAX_ID_LENGTH is rejected."""
+        with pytest.raises(ValueError):
+            SwarmActionSchema(kind="noop", counterparty_id="c" * (MAX_ID_LENGTH + 1))
+
 
 # ---------------------------------------------------------------------------
 # CrewAIToolAdapter tests
@@ -162,6 +201,18 @@ class TestCrewAIToolAdapter:
         adapter.update_observation(default_observation)
         assert len(adapter.get_staged_actions()) == 0
 
+    def test_stage_action_cap(self):
+        """Fix #14: stage_action rejects beyond MAX_STAGED_ACTIONS."""
+        adapter = CrewAIToolAdapter()
+        for i in range(MAX_STAGED_ACTIONS):
+            result = adapter.stage_action({"kind": "post", "i": i})
+            assert "staged" in result
+
+        # Next one should be rejected
+        result = adapter.stage_action({"kind": "post", "i": "overflow"})
+        assert "rejected" in result
+        assert len(adapter.get_staged_actions()) == MAX_STAGED_ACTIONS
+
 
 # ---------------------------------------------------------------------------
 # Crew profile tests
@@ -183,10 +234,18 @@ class TestCrewProfiles:
         custom_agents = [
             CrewAgentRole(role="CustomRole", goal="Do something"),
         ]
-        register_crew_profile("test_custom", custom_agents)
-        retrieved = get_profile_agents("test_custom")
+        register_crew_profile("test_custom_safe", custom_agents)
+        retrieved = get_profile_agents("test_custom_safe")
         assert len(retrieved) == 1
         assert retrieved[0].role == "CustomRole"
+
+    def test_cannot_overwrite_builtin_profile(self):
+        """Fix #9: Built-in profiles are protected from overwrite."""
+        for name in _BUILTIN_PROFILE_NAMES:
+            with pytest.raises(ValueError, match="Cannot overwrite built-in"):
+                register_crew_profile(
+                    name, [CrewAgentRole(role="Evil", goal="Hijack")]
+                )
 
 
 # ---------------------------------------------------------------------------
@@ -200,6 +259,7 @@ class TestCrewConfig:
         assert config.crew_profile == "general_v1"
         assert config.temperature == 0.7
         assert config.enable_trace is True
+        assert config.timeout == DEFAULT_CREW_TIMEOUT_SECONDS
 
     def test_custom_values(self):
         config = CrewConfig(
@@ -207,9 +267,47 @@ class TestCrewConfig:
             role_name="Auditor",
             model="claude-sonnet-4-5-20250929",
             temperature=0.3,
+            timeout=60.0,
         )
         assert config.crew_profile == "audit_team_v1"
         assert config.role_name == "Auditor"
+        assert config.timeout == 60.0
+
+
+# ---------------------------------------------------------------------------
+# Metadata sanitization tests
+# ---------------------------------------------------------------------------
+
+
+class TestSanitizeCrewMetadata:
+    def test_allows_safe_types(self):
+        raw = {"key_str": "value", "key_int": 42, "key_float": 3.14, "key_bool": True}
+        result = _sanitize_crew_metadata(raw)
+        assert result == raw
+
+    def test_drops_nested_dicts(self):
+        raw = {"safe": "ok", "nested": {"inner": "dropped"}}
+        result = _sanitize_crew_metadata(raw)
+        assert "safe" in result
+        assert "nested" not in result
+
+    def test_drops_lists(self):
+        raw = {"safe": 1, "items": [1, 2, 3]}
+        result = _sanitize_crew_metadata(raw)
+        assert "items" not in result
+
+    def test_truncates_long_strings(self):
+        raw = {"long": "x" * 5000}
+        result = _sanitize_crew_metadata(raw)
+        assert len(result["long"]) == MAX_METADATA_VALUE_LENGTH
+
+    def test_caps_number_of_keys(self):
+        raw = {f"key_{i}": i for i in range(100)}
+        result = _sanitize_crew_metadata(raw)
+        assert len(result) == MAX_METADATA_KEYS
+
+    def test_empty_input(self):
+        assert _sanitize_crew_metadata({}) == {}
 
 
 # ---------------------------------------------------------------------------
@@ -222,6 +320,10 @@ class TestCrewBackedAgent:
         assert agent.agent_id == "crew_test_1"
         assert agent.crew_config.crew_profile == "general_v1"
         assert agent._crew is None  # lazy
+
+    def test_agent_type_is_crewai(self, agent: CrewBackedAgent):
+        """Fix #15: Agent type should be CREWAI, not HONEST."""
+        assert agent.agent_type == AgentType.CREWAI
 
     def test_build_context(
         self, agent: CrewBackedAgent, default_observation: Observation
@@ -256,7 +358,17 @@ class TestCrewBackedAgent:
         assert schema.kind == "noop"
         assert "Parse failure" in schema.rationale
 
-    def test_schema_to_action(self, agent: CrewBackedAgent):
+    def test_parse_action_invalid_kind_fallback_noop(self, agent: CrewBackedAgent):
+        """Fix #7: An invalid kind in valid JSON falls back to noop."""
+        raw = json.dumps({"kind": "hacky_exploit"})
+        schema = agent._parse_action(raw)
+        assert schema.kind == "noop"
+
+    def test_schema_to_action(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        # Must collect valid IDs first
+        agent._collect_valid_ids(default_observation)
         schema = SwarmActionSchema(
             kind="post",
             content="Hello world",
@@ -269,13 +381,6 @@ class TestCrewBackedAgent:
         assert action.content == "Hello world"
         assert action.agent_id == "crew_test_1"
         assert action.metadata["confidence"] == 0.85
-
-    def test_schema_to_action_unknown_kind_defaults_noop(
-        self, agent: CrewBackedAgent
-    ):
-        schema = SwarmActionSchema(kind="unknown_action_xyz")
-        action = agent._schema_to_action(schema)
-        assert action.action_type == ActionType.NOOP
 
     def test_act_with_mocked_crew(
         self, agent: CrewBackedAgent, default_observation: Observation
@@ -389,6 +494,251 @@ class TestCrewBackedAgent:
 
 
 # ---------------------------------------------------------------------------
+# Security: ID validation (Fix #1)
+# ---------------------------------------------------------------------------
+
+
+class TestSecurityIDValidation:
+    def test_valid_target_id_accepted(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """target_id present in observation is accepted."""
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(kind="vote", target_id="p1")
+        action = agent._schema_to_action(schema)
+        assert action.target_id == "p1"
+
+    def test_invalid_target_id_rejected(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """target_id NOT in observation is rejected to empty string."""
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(kind="vote", target_id="fake_post_999")
+        action = agent._schema_to_action(schema)
+        assert action.target_id == ""
+
+    def test_valid_counterparty_id_accepted(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """counterparty_id present in visible_agents is accepted."""
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(
+            kind="propose_interaction", counterparty_id="other_1"
+        )
+        action = agent._schema_to_action(schema)
+        assert action.counterparty_id == "other_1"
+
+    def test_invalid_counterparty_id_rejected(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """counterparty_id NOT in visible_agents is rejected to empty string."""
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(
+            kind="propose_interaction", counterparty_id="secret_admin_agent"
+        )
+        action = agent._schema_to_action(schema)
+        assert action.counterparty_id == ""
+
+    def test_task_id_in_available_tasks(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(kind="claim_task", target_id="t1")
+        action = agent._schema_to_action(schema)
+        assert action.target_id == "t1"
+
+    def test_bounty_id_accepted(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(kind="place_bid", target_id="b1")
+        action = agent._schema_to_action(schema)
+        assert action.target_id == "b1"
+
+    def test_proposal_id_accepted(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(
+            kind="accept_interaction", target_id="prop_1"
+        )
+        action = agent._schema_to_action(schema)
+        assert action.target_id == "prop_1"
+
+    def test_empty_ids_pass_through(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """Empty IDs (default) should remain empty, not rejected."""
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(kind="noop")
+        action = agent._schema_to_action(schema)
+        assert action.target_id == ""
+        assert action.counterparty_id == ""
+
+
+# ---------------------------------------------------------------------------
+# Security: Metadata namespace isolation (Fix #2)
+# ---------------------------------------------------------------------------
+
+
+class TestSecurityMetadataNamespacing:
+    def test_crew_metadata_is_namespaced(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """Crew-supplied metadata lives under 'crew_metadata' key."""
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(
+            kind="noop",
+            metadata={"custom_key": "custom_val"},
+        )
+        action = agent._schema_to_action(schema)
+        assert "crew_metadata" in action.metadata
+        assert action.metadata["crew_metadata"]["custom_key"] == "custom_val"
+        # Should NOT have crew keys at top level
+        assert "custom_key" not in action.metadata
+
+    def test_crew_cannot_inject_internal_keys(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """Crew metadata with keys like 'bid_id' won't pollute top-level."""
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(
+            kind="noop",
+            metadata={
+                "bid_id": "attacker_bid",
+                "reward_amount": 99999,
+                "_crew_trace": {"fake": True},
+            },
+        )
+        action = agent._schema_to_action(schema)
+        # These should only be inside crew_metadata, not at root
+        assert action.metadata.get("bid_id") is None
+        assert action.metadata.get("reward_amount") is None
+        # _crew_trace in crew_metadata is dropped (nested dict)
+        assert "_crew_trace" not in action.metadata["crew_metadata"]
+
+
+# ---------------------------------------------------------------------------
+# Security: Timeout (Fix #4)
+# ---------------------------------------------------------------------------
+
+
+class TestSecurityTimeout:
+    def test_timeout_raises_on_slow_crew(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """Fix #4: A crew that exceeds the timeout triggers noop fallback."""
+        import time
+
+        mock_crew = MagicMock()
+
+        def slow_kickoff(**kwargs):
+            time.sleep(5)
+            return MagicMock(raw='{"kind": "post"}')
+
+        mock_crew.kickoff.side_effect = slow_kickoff
+        agent._crew = mock_crew
+        agent.crew_config = CrewConfig(timeout=0.1)  # 100ms
+
+        action = agent.act(default_observation)
+        assert action.action_type == ActionType.NOOP
+
+    def test_kickoff_with_timeout_normal(self, agent: CrewBackedAgent):
+        """Normal kickoff within timeout succeeds."""
+        mock_crew = MagicMock()
+        mock_crew.kickoff.return_value = "result"
+        result = agent._kickoff_with_timeout(mock_crew, {})
+        assert result == "result"
+
+
+# ---------------------------------------------------------------------------
+# Security: Deliberation memory cap (Fix #6)
+# ---------------------------------------------------------------------------
+
+
+class TestSecurityDeliberationMemory:
+    def test_memory_capped(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """Fix #6: Memory never exceeds MAX_DELIBERATION_MEMORY."""
+        mock_crew = MagicMock()
+        mock_result = MagicMock()
+        mock_result.raw = json.dumps({"kind": "noop"})
+        mock_crew.kickoff.return_value = mock_result
+        agent._crew = mock_crew
+
+        for i in range(MAX_DELIBERATION_MEMORY + 50):
+            obs = Observation(
+                agent_state=default_observation.agent_state,
+                current_epoch=i,
+                current_step=0,
+            )
+            agent.act(obs)
+
+        assert len(agent._deliberation_memory) == MAX_DELIBERATION_MEMORY
+
+    def test_memory_rationale_truncated(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """Fix #6: Rationales in memory are truncated to 500 chars."""
+        mock_crew = MagicMock()
+        mock_result = MagicMock()
+        mock_result.raw = json.dumps({
+            "kind": "noop",
+            "rationale": "x" * 1500,
+        })
+        mock_crew.kickoff.return_value = mock_result
+        agent._crew = mock_crew
+
+        agent.act(default_observation)
+
+        entry = agent._deliberation_memory[-1]
+        assert len(entry["rationale"]) == 500
+
+
+# ---------------------------------------------------------------------------
+# Security: Trace truncation (Fix #8)
+# ---------------------------------------------------------------------------
+
+
+class TestSecurityTraceOutput:
+    def test_raw_output_truncated_in_trace(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """Fix #8: raw_output in trace is capped at MAX_RAW_TRACE_LENGTH."""
+        mock_crew = MagicMock()
+        mock_result = MagicMock()
+        # Return valid JSON but with a huge rationale
+        mock_result.raw = json.dumps({"kind": "noop"}) + " " * 10_000
+        mock_crew.kickoff.return_value = mock_result
+        agent._crew = mock_crew
+
+        action = agent.act(default_observation)
+
+        trace = action.metadata.get("_crew_trace", {})
+        assert len(trace.get("raw_output", "")) <= MAX_RAW_TRACE_LENGTH
+
+    def test_rationale_truncated_in_trace(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """Fix #8: rationale in trace is capped at MAX_RATIONALE_LENGTH."""
+        mock_crew = MagicMock()
+        long_rationale = "r" * 1999  # within schema limit
+        mock_result = MagicMock()
+        mock_result.raw = json.dumps({
+            "kind": "noop",
+            "rationale": long_rationale,
+        })
+        mock_crew.kickoff.return_value = mock_result
+        agent._crew = mock_crew
+
+        action = agent.act(default_observation)
+
+        trace = action.metadata.get("_crew_trace", {})
+        assert len(trace.get("rationale", "")) <= MAX_RATIONALE_LENGTH
+
+
+# ---------------------------------------------------------------------------
 # Loader integration tests
 # ---------------------------------------------------------------------------
 
@@ -458,6 +808,4 @@ class TestActionKindMapping:
     def test_all_mapped_action_types_are_unique(self):
         """Each kind string maps to a distinct ActionType."""
         values = list(_ACTION_KIND_MAP.values())
-        # noop might be the default for unmapped, but each explicit
-        # mapping should be distinct
         assert len(values) == len(set(values))
