@@ -9,6 +9,9 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional, Set
 
+# ----- Memory bounds -----
+MAX_TRACKING_SET_SIZE: int = 200
+
 from swarm.agents.base import (
     Action,
     ActionType,
@@ -614,12 +617,23 @@ class AdaptiveAdversary(BaseAgent):
             self.memory.estimated_frequency_threshold *= 0.95
 
     def _keep_memory_bounded(self) -> None:
-        """Keep memory lists at bounded size."""
+        """Keep memory lists and tracking sets at bounded size."""
         max_memory = 50
         if len(self.memory.recent_payoffs) > max_memory:
             self.memory.recent_payoffs = self.memory.recent_payoffs[-max_memory:]
             self.memory.recent_penalties = self.memory.recent_penalties[-max_memory:]
             self.memory.recent_detections = self.memory.recent_detections[-max_memory:]
+        # Cap tracking sets to prevent unbounded growth in large populations
+        for tracking_set in (
+            self.memory.vulnerable_targets,
+            self.memory.dangerous_agents,
+            self.memory.potential_allies,
+        ):
+            if len(tracking_set) > MAX_TRACKING_SET_SIZE:
+                # Keep an arbitrary subset (sets are unordered)
+                excess = len(tracking_set) - MAX_TRACKING_SET_SIZE
+                for _ in range(excess):
+                    tracking_set.pop()
 
     def get_strategy_report(self) -> Dict:
         """Get report on strategy effectiveness."""
