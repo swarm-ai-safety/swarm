@@ -650,6 +650,101 @@ class TestSecurityTimeout:
         result = agent._kickoff_with_timeout(mock_crew, {})
         assert result == "result"
 
+    def test_timeout_does_not_block_caller(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """After timeout, act() returns promptly (no wait for thread)."""
+        import concurrent.futures
+        import time
+
+        mock_crew = MagicMock()
+
+        def slow_kickoff(**kwargs):
+            time.sleep(10)
+            return MagicMock(raw='{"kind": "post"}')
+
+        mock_crew.kickoff.side_effect = slow_kickoff
+        agent._crew = mock_crew
+        agent.crew_config = CrewConfig(timeout=0.1)
+
+        start = time.monotonic()
+        action = agent.act(default_observation)
+        elapsed = time.monotonic() - start
+
+        assert action.action_type == ActionType.NOOP
+        # Must return in well under the 10s sleep
+        assert elapsed < 2.0
+
+    def test_pool_reused_across_ticks(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """Thread pool is reused across normal ticks."""
+        mock_crew = MagicMock()
+        mock_result = MagicMock()
+        mock_result.raw = json.dumps({"kind": "noop"})
+        mock_crew.kickoff.return_value = mock_result
+        agent._crew = mock_crew
+
+        agent.act(default_observation)
+        pool_after_first = agent._executor_pool
+
+        agent.act(default_observation)
+        pool_after_second = agent._executor_pool
+
+        assert pool_after_first is pool_after_second
+
+    def test_pool_recreated_after_timeout(
+        self, agent: CrewBackedAgent, default_observation: Observation
+    ):
+        """After a timeout, the old pool is discarded and a fresh one is created."""
+        import time
+
+        mock_crew = MagicMock()
+
+        def slow_then_fast(**kwargs):
+            if mock_crew.kickoff.call_count <= 1:
+                time.sleep(5)
+            return MagicMock(raw='{"kind": "noop"}')
+
+        mock_crew.kickoff.side_effect = slow_then_fast
+        agent._crew = mock_crew
+        agent.crew_config = CrewConfig(timeout=0.1)
+
+        # First call times out
+        agent.act(default_observation)
+        assert agent._executor_pool is None  # discarded
+
+        # Second call creates a fresh pool
+        mock_crew.kickoff.side_effect = None
+        mock_result = MagicMock()
+        mock_result.raw = json.dumps({"kind": "noop"})
+        mock_crew.kickoff.return_value = mock_result
+        agent.crew_config = CrewConfig(timeout=120.0)
+
+        action = agent.act(default_observation)
+        assert action.action_type == ActionType.NOOP
+        assert agent._executor_pool is not None
+
+    def test_timeout_specific_log_message(
+        self, agent: CrewBackedAgent, default_observation: Observation, caplog
+    ):
+        """Timeout produces a distinct warning, not the generic exception log."""
+        import logging
+        import time
+
+        mock_crew = MagicMock()
+        mock_crew.kickoff.side_effect = lambda **kw: time.sleep(5)
+        agent._crew = mock_crew
+        agent.crew_config = CrewConfig(timeout=0.1)
+
+        with caplog.at_level(logging.WARNING):
+            agent.act(default_observation)
+
+        assert any("timed out after" in r.message for r in caplog.records)
+        assert not any(
+            "deliberation failed" in r.message for r in caplog.records
+        )
+
 
 # ---------------------------------------------------------------------------
 # Security: Deliberation memory cap (Fix #6)
@@ -773,6 +868,37 @@ class TestLoaderIntegration:
         assert agents[1].agent_id == "crewai_2"
         assert agents[0].crew_config.role_name == "Trader"
         assert agents[0].crew_config.crew_profile == "market_team_v1"
+
+    def test_create_agents_timeout_from_yaml(self):
+        """timeout param in YAML is wired to CrewConfig."""
+        from swarm.scenarios.loader import create_agents
+
+        specs = [
+            {
+                "type": "crewai_adapter",
+                "count": 1,
+                "params": {
+                    "role_name": "Fast Agent",
+                    "timeout": 30.0,
+                },
+            }
+        ]
+        agents = create_agents(specs, seed=1)
+        assert agents[0].crew_config.timeout == 30.0
+
+    def test_create_agents_default_timeout(self):
+        """Without timeout in YAML, default is used."""
+        from swarm.scenarios.loader import create_agents
+
+        specs = [
+            {
+                "type": "crewai_adapter",
+                "count": 1,
+                "params": {"role_name": "Default"},
+            }
+        ]
+        agents = create_agents(specs, seed=1)
+        assert agents[0].crew_config.timeout == DEFAULT_CREW_TIMEOUT_SECONDS
 
     def test_create_agents_mixed(self):
         """CrewAI agents can coexist with scripted agents."""

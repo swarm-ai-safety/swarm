@@ -630,6 +630,8 @@ class CrewBackedAgent(BaseAgent):
         # Populated each tick from the observation for ID validation.
         self._valid_target_ids: Set[str] = set()
         self._valid_counterparty_ids: Set[str] = set()
+        # Reuse a single thread pool across ticks to avoid per-call overhead.
+        self._executor_pool: Optional[concurrent.futures.ThreadPoolExecutor] = None
 
     # -- lazy crew construction -------------------------------------------
 
@@ -661,6 +663,13 @@ class CrewBackedAgent(BaseAgent):
             crew_result = self._kickoff_with_timeout(crew, context)
             raw_output = self._extract_crew_output(crew_result)
             action_schema = self._parse_action(raw_output)
+        except concurrent.futures.TimeoutError:
+            logger.warning(
+                "CrewAI crew timed out after %.1fs for %s; falling back to noop",
+                self.crew_config.timeout,
+                self.agent_id,
+            )
+            return self.create_noop_action()
         except Exception:
             logger.exception(
                 "CrewAI deliberation failed for %s; falling back to noop",
@@ -736,14 +745,36 @@ class CrewBackedAgent(BaseAgent):
 
     # -- timeout wrapper --------------------------------------------------
 
+    def _get_executor_pool(self) -> concurrent.futures.ThreadPoolExecutor:
+        """Return (and lazily create) a reusable single-thread pool."""
+        if self._executor_pool is None or self._executor_pool._shutdown:
+            self._executor_pool = concurrent.futures.ThreadPoolExecutor(
+                max_workers=1,
+                thread_name_prefix=f"crewai-{self.agent_id}",
+            )
+        return self._executor_pool
+
     def _kickoff_with_timeout(self, crew: Any, context: Dict[str, Any]) -> Any:
         """Run ``crew.kickoff()`` with a timeout.
 
-        Raises ``TimeoutError`` if the crew exceeds the configured limit.
+        Uses ``shutdown(wait=False, cancel_futures=True)`` on timeout so
+        the simulation is not blocked waiting for the abandoned HTTP call
+        to complete.  A fresh pool is created on the next tick.
+
+        Raises
+        ------
+        concurrent.futures.TimeoutError
+            If the crew exceeds ``self.crew_config.timeout``.
         """
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            future = pool.submit(crew.kickoff, inputs=context)
+        pool = self._get_executor_pool()
+        future = pool.submit(crew.kickoff, inputs=context)
+        try:
             return future.result(timeout=self.crew_config.timeout)
+        except concurrent.futures.TimeoutError:
+            future.cancel()
+            pool.shutdown(wait=False, cancel_futures=True)
+            self._executor_pool = None  # force fresh pool next tick
+            raise
 
     # -- observation ID collection ----------------------------------------
 

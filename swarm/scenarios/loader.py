@@ -1124,15 +1124,18 @@ def create_agents(
         elif agent_type == "crewai_adapter":
             CrewBackedAgent, CrewConfig = _get_crewai_classes()
             crew_params = spec.get("params", {})
-            crew_config = CrewConfig(
-                crew_profile=crew_params.get("crew_profile", "general_v1"),
-                role_name=crew_params.get("role_name", "General Agent"),
-                model=crew_params.get("model", "gpt-4o-mini"),
-                temperature=crew_params.get("temperature", 0.7),
-                max_tokens=crew_params.get("max_tokens", 1024),
-                verbose=crew_params.get("verbose", False),
-                enable_trace=crew_params.get("enable_trace", True),
-            )
+            crew_config_kwargs = {
+                "crew_profile": crew_params.get("crew_profile", "general_v1"),
+                "role_name": crew_params.get("role_name", "General Agent"),
+                "model": crew_params.get("model", "gpt-4o-mini"),
+                "temperature": crew_params.get("temperature", 0.7),
+                "max_tokens": crew_params.get("max_tokens", 1024),
+                "verbose": crew_params.get("verbose", False),
+                "enable_trace": crew_params.get("enable_trace", True),
+            }
+            if "timeout" in crew_params:
+                crew_config_kwargs["timeout"] = crew_params["timeout"]
+            crew_config = CrewConfig(**crew_config_kwargs)
 
             for _ in range(count):
                 counters["crewai_adapter"] = (
