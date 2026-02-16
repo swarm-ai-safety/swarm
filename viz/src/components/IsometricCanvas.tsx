@@ -6,7 +6,7 @@ import { useCamera } from "@/state/use-camera";
 import { render } from "@/engine/renderer";
 import { screenToWorld } from "@/engine/camera";
 import { screenToGrid } from "@/engine/isometric";
-import { getBuildingBounds } from "@/engine/entities/agent-building";
+import { getCharacterBounds } from "@/engine/entities/agent-character";
 
 export function IsometricCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -85,7 +85,7 @@ export function IsometricCanvas() {
         (a, b) => b.gridX + b.gridY - (a.gridX + a.gridY),
       );
       for (const agent of sorted) {
-        const bounds = getBuildingBounds(agent);
+        const bounds = getCharacterBounds(agent);
         if (
           world.x >= bounds.minX &&
           world.x <= bounds.maxX &&

@@ -2,7 +2,7 @@ import type { AgentVisual, InteractionArc, Viewport, RenderEntity, OverlayState,
 import type { EpochSnapshot } from "@/data/types";
 import { COLORS } from "./constants";
 import { depthSort } from "./depth-sort";
-import { createBuildingEntity } from "./entities/agent-building";
+import { createCharacterEntity } from "./entities/agent-character";
 import { createArcEntity, renderCollusionTendril } from "./entities/interaction-arc";
 import { renderGroundGrid, renderGiniCracks } from "./entities/ground-tile";
 import { renderSky, renderHaze, renderParticles, renderThreatZone } from "./entities/effects";
@@ -62,7 +62,7 @@ export function render(ctx: CanvasRenderingContext2D, state: RenderState) {
 
   // Buildings
   for (const agent of state.agents) {
-    entities.push(createBuildingEntity(agent, state.hoveredAgent));
+    entities.push(createCharacterEntity(agent, state.hoveredAgent));
   }
 
   // Interaction arcs
@@ -112,7 +112,7 @@ export function render(ctx: CanvasRenderingContext2D, state: RenderState) {
 function renderTooltip(ctx: CanvasRenderingContext2D, vp: Viewport, agent: AgentVisual) {
   const pos = gridToScreen(agent.gridX, agent.gridY);
   const sx = pos.x * vp.zoom + vp.x;
-  const sy = (pos.y - agent.floors * 10 - 30) * vp.zoom + vp.y;
+  const sy = (pos.y - agent.scale * 56 - 30) * vp.zoom + vp.y;
 
   const text = `${agent.name} (${agent.agentType})`;
   const subtext = `Rep: ${agent.reputation.toFixed(2)} | P: ${agent.avgP.toFixed(2)}`;

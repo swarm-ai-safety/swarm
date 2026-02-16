@@ -146,7 +146,7 @@ export function InfoPanel() {
 
       {/* Epoch indicator */}
       <div className="px-4 py-1.5 border-t border-border text-[10px] text-muted text-center">
-        Epoch {currentEpoch} | {agent.floors} floor{agent.floors !== 1 ? "s" : ""}
+        Epoch {currentEpoch} | Power: {(agent.scale * 100).toFixed(0)}%
       </div>
     </div>
   );

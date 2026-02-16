@@ -1,7 +1,7 @@
 import type { AgentVisual } from "../types";
 import type { AgentSnapshot } from "@/data/types";
 import { lerp, clamp } from "@/utils/math";
-import { BUILDING, AGENT_GRID_SPACING } from "../constants";
+import { AGENT_GRID_SPACING } from "../constants";
 
 /** Interpolate agent states between two epoch snapshots */
 export function interpolateAgents(
@@ -35,11 +35,11 @@ export function interpolateAgents(
     const isFrozen = t < 0.5 ? source.is_frozen : target.is_frozen;
     const isQuarantined = t < 0.5 ? source.is_quarantined : target.is_quarantined;
 
-    // Map reputation to floors (1-8)
-    const floors = clamp(
-      Math.round(1 + (reputation + 1) * 3.5), // reputation ~[-1,1] -> 1-8
-      BUILDING.minFloors,
-      BUILDING.maxFloors,
+    // Map reputation to scale (0.6-1.4)
+    const scale = clamp(
+      0.6 + (reputation + 1) * 0.4, // reputation ~[-1,1] -> 0.6-1.4
+      0.6,
+      1.4,
     );
 
     result.push({
@@ -52,7 +52,7 @@ export function interpolateAgents(
       avgP,
       isFrozen,
       isQuarantined,
-      floors,
+      scale,
       gridX: pos.gridX,
       gridY: pos.gridY,
       interactionsInitiated: Math.round(lerp(source.interactions_initiated, target.interactions_initiated, t)),

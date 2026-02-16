@@ -76,7 +76,7 @@ export function usePlayback() {
         for (const agent of agents) {
           const screen = gridToScreen(agent.gridX, agent.gridY);
           if (agent.isFrozen) {
-            particleSystem.current.add(createSnowflakes(screen.x, screen.y - agent.floors * 10, 2));
+            particleSystem.current.add(createSnowflakes(screen.x, screen.y - agent.scale * 56, 2));
           }
           if (agent.isQuarantined) {
             particleSystem.current.add(createHazardParticles(screen.x, screen.y, 2));

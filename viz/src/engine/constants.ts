@@ -30,24 +30,21 @@ export const AGENT_COLORS: Record<AgentType, { primary: string; secondary: strin
 };
 
 export const AGENT_LABELS: Record<AgentType, string> = {
-  honest: "Tower",
-  opportunistic: "Bazaar",
-  deceptive: "Mirror",
-  adversarial: "Fortress",
-  rlm: "Data Center",
-  crewai: "Workshop",
+  honest: "Paladin",
+  opportunistic: "Merchant",
+  deceptive: "Illusionist",
+  adversarial: "Enforcer",
+  rlm: "Technomancer",
+  crewai: "Builder",
 };
 
 /** Grid spacing between agents */
 export const AGENT_GRID_SPACING = 3;
 
-/** Building pixel dimensions */
-export const BUILDING = {
-  baseWidth: 48,
-  baseDepth: 48,
-  floorHeight: 10,
-  minFloors: 1,
-  maxFloors: 8,
+/** Character pixel dimensions */
+export const CHARACTER = {
+  baseWidth: 32,
+  baseHeight: 56,
 } as const;
 
 /** Animation durations in ms */

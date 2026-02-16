@@ -1,6 +1,6 @@
 import type { InteractionArc, AgentVisual, RenderEntity } from "../types";
 import { gridToScreen } from "../isometric";
-import { BUILDING } from "../constants";
+import { CHARACTER } from "../constants";
 import { rgba, pToHealthColor } from "@/utils/color";
 import { easeOut, easeInOut } from "@/utils/math";
 
@@ -46,8 +46,8 @@ function renderArc(
 ) {
   const fromScreen = gridToScreen(from.gridX, from.gridY);
   const toScreen = gridToScreen(to.gridX, to.gridY);
-  const fromY = fromScreen.y - from.floors * BUILDING.floorHeight * 0.6;
-  const toY = toScreen.y - to.floors * BUILDING.floorHeight * 0.6;
+  const fromY = fromScreen.y - from.scale * CHARACTER.baseHeight * 0.6;
+  const toY = toScreen.y - to.scale * CHARACTER.baseHeight * 0.6;
 
   const color = pToHealthColor(arc.p);
   const progress = easeOut(arc.progress);
@@ -187,8 +187,8 @@ export function renderCollusionTendril(
 ) {
   const s1 = gridToScreen(a1.gridX, a1.gridY);
   const s2 = gridToScreen(a2.gridX, a2.gridY);
-  const y1 = s1.y - a1.floors * BUILDING.floorHeight * 0.3;
-  const y2 = s2.y - a2.floors * BUILDING.floorHeight * 0.3;
+  const y1 = s1.y - a1.scale * CHARACTER.baseHeight * 0.3;
+  const y2 = s2.y - a2.scale * CHARACTER.baseHeight * 0.3;
 
   ctx.save();
   const t = Date.now() / 1000;

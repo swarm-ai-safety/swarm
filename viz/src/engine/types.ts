@@ -28,7 +28,7 @@ export interface AgentVisual extends GridPos {
   avgP: number;
   isFrozen: boolean;
   isQuarantined: boolean;
-  floors: number;
+  scale: number;
   interactionsInitiated: number;
   interactionsReceived: number;
 }
