@@ -446,18 +446,19 @@ class SkillRLAgent(BaseAgent):
 
         self._last_refinement_epoch = epoch
 
-        # Collect refinement proposals
-        refined_ids, proposals = self.skill_evolution.refine_skills_with_governance(
+        governance_lever = getattr(self, "governance_lever", None)
+
+        # Collect refinement proposals without auto-applying when governance exists.
+        _, proposals = self.skill_evolution.refine_skills_with_governance(
             self.skill_library,
             self.agent_id,
-            governance_lever=None,  # First pass: collect proposals
+            governance_lever=governance_lever,
         )
 
         if not proposals:
             return
 
         # Apply governance if enabled
-        governance_lever = getattr(self, 'governance_lever', None)
         if governance_lever is not None and env_state is not None:
             approved_proposals = []
 
