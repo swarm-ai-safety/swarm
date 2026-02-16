@@ -156,7 +156,7 @@ class TestLoopinessScore:
         # Window size 4 should detect [a,b,a,b] which is a perfect repeat of [a,b]
         score_4 = loopiness_score(sequence, window_size=4)
         assert score_4 > 0.0
-        
+
         # For window size 2, test with a different sequence that has repeating pairs
         sequence2 = ["x", "x", "y", "y", "z", "z"]
         score_2 = loopiness_score(sequence2, window_size=2)

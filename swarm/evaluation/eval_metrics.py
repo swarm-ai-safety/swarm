@@ -8,7 +8,7 @@ Provides metrics for measuring:
 - Deception detection: Ability to identify deceptive agent behavior
 """
 
-from typing import Dict, List, Optional
+from typing import Dict, List
 
 import numpy as np
 
