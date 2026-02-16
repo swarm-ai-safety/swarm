@@ -34,6 +34,7 @@ export interface AgentVisual extends GridPos {
   walkOffsetX: number;   // screen-space px offset from grid center
   walkOffsetY: number;
   walkPhase: number;     // continuous radian, drives leg swing cycle
+  facing: number;        // -1 = left, 1 = right
 }
 
 export interface InteractionArc {

@@ -37,10 +37,18 @@ function drawCharacter(
     drawQuarantineBarrier(ctx, baseX, baseY);
   }
 
-  // Character body + type features
-  const isWalking = agent.walkOffsetX !== 0 || agent.walkOffsetY !== 0;
-  drawBody(ctx, baseX, baseY, agent.agentType, colors, scale, agent.walkPhase, isWalking);
+  // Character body + type features — flip horizontally based on facing
+  const walkDist = Math.sqrt(agent.walkOffsetX ** 2 + agent.walkOffsetY ** 2);
+  const isWalking = walkDist > 0.5;
+  const facing = agent.facing;
+
+  ctx.save();
+  ctx.translate(baseX, 0);
+  ctx.scale(facing, 1);
+  ctx.translate(-baseX, 0);
+  drawBody(ctx, baseX, baseY, agent.agentType, colors, scale, agent.walkPhase, isWalking, walkDist);
   drawTypeFeatures(ctx, baseX, baseY, agent.agentType, colors, scale);
+  ctx.restore();
 
   // Frozen overlay
   if (agent.isFrozen) {
@@ -122,77 +130,50 @@ function drawBody(
   scale: number,
   walkPhase: number = 0,
   isWalking: boolean = false,
+  walkDist: number = 0,
 ) {
   const motion = AGENT_MOTION[agentType];
   const w = CHARACTER.baseWidth * scale;
   const h = CHARACTER.baseHeight * scale;
   const hw = w / 2;
 
-  // Asymmetric bob: agents spend more time at top of bounce than bottom
+  // Stride intensity: 0-1 based on how far the agent is from home (max ~80px)
+  const stride = Math.min(1, walkDist / 80);
+
+  // Asymmetric bob
   let bobOffset: number;
   if (isWalking) {
     const rawBob = Math.sin(walkPhase * 2);
-    // Asymmetry shifts the wave — positive asymmetry = more time at top
     const asymBob = rawBob + motion.bobAsymmetry * rawBob * rawBob;
-    bobOffset = Math.abs(asymBob) * motion.bobAmplitude * scale;
+    bobOffset = Math.abs(asymBob) * motion.bobAmplitude * scale * stride;
   } else {
-    // Idle breathing — slow sinusoidal so agents are never stone-still
     bobOffset = motion.idleBob * Math.sin(Date.now() * 0.0012) * scale;
   }
   const bodyBy = by - bobOffset;
 
-  // Feet at by, head at bodyBy - h
   const feetY = by;
   const headY = bodyBy - h;
   const shoulderY = headY + h * 0.28;
   const waistY = headY + h * 0.55;
   const hipY = headY + h * 0.62;
 
-  // Per-type leg swing
-  const legSwing = isWalking ? Math.sin(walkPhase) * hw * 0.2 * motion.legSwingScale : 0;
-
-  // --- Legs ---
-  ctx.fillStyle = colors.primary;
-  // Left leg
-  ctx.beginPath();
-  ctx.moveTo(bx - hw * 0.3, hipY);
-  ctx.lineTo(bx - hw * 0.45 + legSwing, feetY);
-  ctx.lineTo(bx - hw * 0.05 + legSwing, feetY);
-  ctx.lineTo(bx - hw * 0.05, hipY);
-  ctx.closePath();
-  ctx.fill();
-  // Right leg
-  ctx.beginPath();
-  ctx.moveTo(bx + hw * 0.05, hipY);
-  ctx.lineTo(bx + hw * 0.05 - legSwing, feetY);
-  ctx.lineTo(bx + hw * 0.45 - legSwing, feetY);
-  ctx.lineTo(bx + hw * 0.3, hipY);
-  ctx.closePath();
-  ctx.fill();
-
-  // --- Torso ---
-  ctx.fillStyle = colors.secondary;
-  ctx.beginPath();
-  ctx.moveTo(bx - hw * 0.45, shoulderY);
-  ctx.lineTo(bx + hw * 0.45, shoulderY);
-  ctx.lineTo(bx + hw * 0.35, waistY);
-  ctx.lineTo(bx - hw * 0.35, waistY);
-  ctx.closePath();
-  ctx.fill();
-
-  // --- Arms (contralateral: left arm swings opposite to left leg) ---
+  const legSwing = isWalking ? Math.sin(walkPhase) * hw * 0.12 * motion.legSwingScale * stride : 0;
   const armAngle = agentType === "deceptive" ? 0.8 : 0.2;
-  const armSwing = isWalking ? Math.sin(walkPhase) * 0.3 * motion.armSwingScale : 0;
-  ctx.fillStyle = colors.primary;
-  // Left arm — swings FORWARD when right leg goes forward (contralateral)
+  const armSwing = isWalking ? -Math.sin(walkPhase) * 0.15 * motion.armSwingScale * stride : 0;
+
+  // --- Ground shadow ---
+  ctx.fillStyle = rgba("#000000", 0.18);
   ctx.beginPath();
-  ctx.moveTo(bx - hw * 0.45, shoulderY);
-  ctx.lineTo(bx - hw * (0.6 + armAngle * 0.3) + armSwing * hw, shoulderY + h * 0.22);
-  ctx.lineTo(bx - hw * (0.5 + armAngle * 0.2) + armSwing * hw, shoulderY + h * 0.26);
-  ctx.lineTo(bx - hw * 0.35, shoulderY + h * 0.05);
-  ctx.closePath();
+  ctx.ellipse(bx, feetY + 2, hw * 0.5, hw * 0.15, 0, 0, Math.PI * 2);
   ctx.fill();
-  // Right arm — swings opposite to left arm
+
+  // --- Back arm (behind torso) ---
+  const backArmGrad = ctx.createLinearGradient(
+    bx + hw * 0.3, shoulderY, bx + hw * 0.7, shoulderY + h * 0.26,
+  );
+  backArmGrad.addColorStop(0, colors.primary);
+  backArmGrad.addColorStop(1, rgba(colors.primary, 0.6));
+  ctx.fillStyle = backArmGrad;
   ctx.beginPath();
   ctx.moveTo(bx + hw * 0.45, shoulderY);
   ctx.lineTo(bx + hw * (0.6 + armAngle * 0.3) - armSwing * hw, shoulderY + h * 0.22);
@@ -201,17 +182,96 @@ function drawBody(
   ctx.closePath();
   ctx.fill();
 
-  // --- Head (circle) ---
+  // --- Legs (shaded: left = lit, right = shadowed) ---
+  // Left leg (lit side)
+  const leftLegGrad = ctx.createLinearGradient(
+    bx - hw * 0.45, hipY, bx - hw * 0.05, feetY,
+  );
+  leftLegGrad.addColorStop(0, colors.primary);
+  leftLegGrad.addColorStop(1, rgba(colors.primary, 0.85));
+  ctx.fillStyle = leftLegGrad;
+  ctx.beginPath();
+  ctx.moveTo(bx - hw * 0.3, hipY);
+  ctx.lineTo(bx - hw * 0.45 + legSwing, feetY);
+  ctx.lineTo(bx - hw * 0.05 + legSwing, feetY);
+  ctx.lineTo(bx - hw * 0.05, hipY);
+  ctx.closePath();
+  ctx.fill();
+  // Right leg (shadow side — darker)
+  ctx.fillStyle = rgba(colors.primary, 0.7);
+  ctx.beginPath();
+  ctx.moveTo(bx + hw * 0.05, hipY);
+  ctx.lineTo(bx + hw * 0.05 - legSwing, feetY);
+  ctx.lineTo(bx + hw * 0.45 - legSwing, feetY);
+  ctx.lineTo(bx + hw * 0.3, hipY);
+  ctx.closePath();
+  ctx.fill();
+
+  // --- Torso (gradient: lit left → shadow right) ---
+  const torsoGrad = ctx.createLinearGradient(
+    bx - hw * 0.45, shoulderY, bx + hw * 0.45, waistY,
+  );
+  torsoGrad.addColorStop(0, colors.secondary);
+  torsoGrad.addColorStop(0.6, colors.secondary);
+  torsoGrad.addColorStop(1, colors.primary);
+  ctx.fillStyle = torsoGrad;
+  ctx.beginPath();
+  ctx.moveTo(bx - hw * 0.45, shoulderY);
+  ctx.lineTo(bx + hw * 0.45, shoulderY);
+  ctx.lineTo(bx + hw * 0.35, waistY);
+  ctx.lineTo(bx - hw * 0.35, waistY);
+  ctx.closePath();
+  ctx.fill();
+  // Torso edge highlight (left lit edge)
+  ctx.strokeStyle = rgba(colors.accent, 0.25);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(bx - hw * 0.45, shoulderY);
+  ctx.lineTo(bx - hw * 0.35, waistY);
+  ctx.stroke();
+
+  // --- Front arm (in front of torso) ---
+  const frontArmGrad = ctx.createLinearGradient(
+    bx - hw * 0.6, shoulderY, bx - hw * 0.3, shoulderY + h * 0.26,
+  );
+  frontArmGrad.addColorStop(0, colors.primary);
+  frontArmGrad.addColorStop(1, rgba(colors.primary, 0.8));
+  ctx.fillStyle = frontArmGrad;
+  ctx.beginPath();
+  ctx.moveTo(bx - hw * 0.45, shoulderY);
+  ctx.lineTo(bx - hw * (0.6 + armAngle * 0.3) + armSwing * hw, shoulderY + h * 0.22);
+  ctx.lineTo(bx - hw * (0.5 + armAngle * 0.2) + armSwing * hw, shoulderY + h * 0.26);
+  ctx.lineTo(bx - hw * 0.35, shoulderY + h * 0.05);
+  ctx.closePath();
+  ctx.fill();
+
+  // --- Head ---
   const headRadius = hw * 0.35;
   const headCenterY = headY + headRadius + h * 0.04;
-  ctx.fillStyle = colors.accent;
+  // Head gradient: lit top-left → shadow bottom-right
+  const headGrad = ctx.createRadialGradient(
+    bx - headRadius * 0.3, headCenterY - headRadius * 0.3, headRadius * 0.1,
+    bx, headCenterY, headRadius,
+  );
+  headGrad.addColorStop(0, colors.accent);
+  headGrad.addColorStop(0.7, colors.accent);
+  headGrad.addColorStop(1, colors.secondary);
+  ctx.fillStyle = headGrad;
   ctx.beginPath();
   ctx.arc(bx, headCenterY, headRadius, 0, Math.PI * 2);
   ctx.fill();
 
+  // Head specular highlight
+  ctx.fillStyle = rgba("#FFFFFF", 0.2);
+  ctx.beginPath();
+  ctx.arc(bx - headRadius * 0.25, headCenterY - headRadius * 0.25, headRadius * 0.25, 0, Math.PI * 2);
+  ctx.fill();
+
   // Outline
-  ctx.strokeStyle = rgba("#000000", 0.25);
+  ctx.strokeStyle = rgba("#000000", 0.2);
   ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(bx, headCenterY, headRadius, 0, Math.PI * 2);
   ctx.stroke();
 }
 

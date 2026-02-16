@@ -63,6 +63,7 @@ export function interpolateAgents(
       walkOffsetX: 0,
       walkOffsetY: 0,
       walkPhase: 0,
+      facing: 1,
     });
   }
 

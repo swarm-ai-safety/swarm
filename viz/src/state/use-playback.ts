@@ -20,6 +20,8 @@ export function usePlayback() {
   const lastParticleSpawn = useRef<number>(0);
   const lastTrailSpawn = useRef<number>(0);
   const prevEpochRef = useRef<number>(-1);
+  const walkPhaseMap = useRef<Map<string, number>>(new Map());
+  const facingMap = useRef<Map<string, number>>(new Map());
   const tickRef = useRef<(timestamp: number) => void>(() => {});
 
   const tick = useCallback(
@@ -145,14 +147,33 @@ export function usePlayback() {
 
         fromAgent.walkOffsetX = dx + (perpX * swayAmount) + (perpX * curveOffset);
         fromAgent.walkOffsetY = dy + (perpY * swayAmount) + (perpY * curveOffset);
+
+        // Update facing based on walk direction
+        const walkDirX = targetPos.x - homePos.x;
+        if (Math.abs(walkDirX) > 1) {
+          facingMap.current.set(arc.fromId, walkDirX > 0 ? 1 : -1);
+        }
         walkingAgents.add(arc.fromId);
       }
 
-      // Advance walk phase for walking agents using per-type walk rate
+      // Advance walk phase using persistent map so it accumulates across frames
       for (const id of walkingAgents) {
         const agent = agentMap.get(id)!;
         const motion = AGENT_MOTION[agent.agentType];
-        agent.walkPhase += dt * motion.walkRate;
+        const prev = walkPhaseMap.current.get(id) ?? 0;
+        const next = prev + dt * motion.walkRate;
+        walkPhaseMap.current.set(id, next);
+        agent.walkPhase = next;
+      }
+      // Apply facing (persists after walking stops)
+      for (const agent of agents) {
+        agent.facing = facingMap.current.get(agent.id) ?? 1;
+      }
+      // Decay phase for agents that stopped walking (so they don't resume mid-swing)
+      for (const [id] of walkPhaseMap.current) {
+        if (!walkingAgents.has(id)) {
+          walkPhaseMap.current.delete(id);
+        }
       }
 
       // Spawn code trail particles — interval oscillates 25-55ms for organic feel
