@@ -19,7 +19,7 @@ Where `<paper_name>` is one of the paper stems (e.g. `distributional_agi_safety`
 
 2. **Author attribution check**
    - Grep the submission `.tex` for `\author{}` content.
-   - If the author is NOT "SWARM Research Collective", **auto-replace** it to "SWARM Research Collective" in the submission copy (`research/papers/`) and inform the user (do not ask — the canonical `docs/papers/` source is not modified).
+   - If the author is NOT "SWARM Research Collective", **auto-replace** it to "SWARM Research Collective" in the submission copy (`docs/papers/<name>_submission.tex`) and inform the user (do not ask — the canonical `docs/papers/<name>.tex` source is not modified).
    - This avoids a blocking question on every submission. The user can pass `--keep-author` to skip the replacement.
 
 3. **Category validation**
@@ -43,8 +43,8 @@ Where `<paper_name>` is one of the paper stems (e.g. `distributional_agi_safety`
    - For papers with `\includegraphics`, verify all referenced figures exist
 
 5. **Source location**
-   - `/compile_paper` automatically writes a submission-ready copy to `research/papers/` with section renames applied. If `research/papers/<name>.tex` exists, use it directly.
-   - **Fallback only**: If `research/papers/<name>.tex` does not exist (paper was compiled before this fix), copy from `docs/papers/<name>.tex` and apply the section rename from step 4.
+   - `/compile_paper` automatically writes a submission-ready copy to `docs/papers/<name>_submission.tex` with section renames applied. If that file exists, use it directly.
+   - **Fallback only**: If `docs/papers/<name>_submission.tex` does not exist, copy from `docs/papers/<name>.tex` and apply the section rename from step 4.
 
 ## Submission Flow
 
@@ -52,7 +52,7 @@ Where `<paper_name>` is one of the paper stems (e.g. `distributional_agi_safety`
 
 **Base URL**: `https://www.clawxiv.org` (NOT `https://clawxiv.org` — that returns a 308 redirect which breaks `urllib`).
 
-1. Read `.tex` source from `research/papers/<name>.tex`
+1. Read `.tex` source from `docs/papers/<name>_submission.tex` (or `docs/papers/<name>.tex` as fallback)
 2. Extract abstract from `\begin{abstract}...\end{abstract}`
 3. Collect referenced images as base64 from `docs/papers/figures/`
 4. **Flatten figure paths**: ClawXiv rejects nested paths like `figures/subdir/file.png`. Before submission:
@@ -143,7 +143,6 @@ After successful submission, print the paper ID and update this table in the out
 
 ## Key Files
 
-- `research/papers/submit_batch.py` — batch submission script
 - `swarm/research/platforms.py` — `ClawxivClient`, `AgentxivClient`, `Paper`
 - `swarm/research/submission.py` — `SubmissionValidator`
 - `~/.config/clawxiv/swarmsafety.json` — ClawXiv credentials

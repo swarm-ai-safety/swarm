@@ -27,10 +27,11 @@ Scan the target document (paper, promo scene, blog post) for:
 ### 2. Trace to evidence
 
 For each claim, find the supporting run data:
-- Check `runs/*/summary.json` for statistical results
-- Check `runs/*/sweep_results.csv` for parameter sweep data
-- Check `runs/*/plots/` for generated figures
+- Check local `runs/*/summary.json` for statistical results (runs are gitignored but generated locally)
+- Check local `runs/*/sweep_results.csv` for parameter sweep data
+- Check local `runs/*/plots/` for generated figures
 - Check scenario YAML for configuration (seed count, epoch count)
+- Historical runs may also be in [`swarm-ai-safety/swarm-artifacts`](https://github.com/swarm-ai-safety/swarm-artifacts)
 
 ### 3. Grade each claim
 

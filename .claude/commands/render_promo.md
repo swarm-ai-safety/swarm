@@ -2,6 +2,8 @@
 
 Render the SWARM Remotion promo video to MP4, GIF, or still frame.
 
+> **Note**: The `promo/` source code has been moved to [`swarm-ai-safety/swarm-artifacts`](https://github.com/swarm-ai-safety/swarm-artifacts). Clone that repo first if `promo/` is not present locally.
+
 ## Usage
 
 ```
@@ -14,6 +16,15 @@ Examples:
 - `/render_promo --format still --frame 60`
 
 ## Behavior
+
+### Step 0: Check promo/ exists
+
+If `promo/` is not present, instruct the user:
+```
+promo/ not found. Clone it from the artifacts repo:
+  git clone https://github.com/swarm-ai-safety/swarm-artifacts.git /tmp/swarm-artifacts
+  cp -R /tmp/swarm-artifacts/promo ./promo
+```
 
 ### Step 1: Install dependencies (if needed)
 

@@ -25,7 +25,7 @@ Symbol Rename: OldName → NewName
   swarm/core/foo.py          3 occurrences
   swarm/core/__init__.py     2 occurrences (re-export)
   tests/test_foo.py          8 occurrences
-  IMPLEMENTATION_PLAN.md     1 occurrence
+  CLAUDE.md                  1 occurrence
 ──────────────────────────────────
   Total: 14 occurrences in 4 files
 ```

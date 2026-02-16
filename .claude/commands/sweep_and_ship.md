@@ -29,9 +29,7 @@ Examples:
 
 5) Generate commit message if not provided:
    - Scan staged files and group by category:
-     - `runs/` → "run artifacts"
      - `docs/` → "documentation"
-     - `research/` → "research outputs"
      - `tests/` → "tests"
      - `swarm/` → "source updates"
      - other → list filenames

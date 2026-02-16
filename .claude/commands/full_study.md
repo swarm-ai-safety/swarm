@@ -139,7 +139,7 @@ The paper should automatically incorporate:
 - Figure references from Phase 3
 - Reproducibility commands (the exact sweep invocation)
 
-Output: `docs/papers/<title_slug>.md`
+Output: `docs/papers/<title_slug>.md` (local only, gitignored)
 
 ### Phase 5: Summary
 

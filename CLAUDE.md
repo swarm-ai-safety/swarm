@@ -12,6 +12,13 @@ This repo is set up as a **Claude Code template** for SWARM-style research work:
 - Optional git hygiene hooks live in `.claude/hooks/` (install via `/install_hooks`).
 - MCP integrations are configured in `.mcp.json` (safe-by-default placeholders; no secrets committed).
 
+### Artifacts repo
+
+Large/supplementary files live in a separate repo: [`swarm-ai-safety/swarm-artifacts`](https://github.com/swarm-ai-safety/swarm-artifacts). This includes:
+- Historical experiment runs, Lean proofs, promo site, research notes, reference papers, `IMPLEMENTATION_PLAN.md`, `DESIGN_CRITIQUE.md`.
+
+These directories are gitignored in main. Local `runs/` and `docs/papers/` are still used as working directories — they just aren't committed here.
+
 ### Run artifacts
 
 Prefer writing experiment outputs to a self-contained run folder:
@@ -20,7 +27,7 @@ Prefer writing experiment outputs to a self-contained run folder:
 - `runs/<timestamp>_<scenario>_seed<seed>/csv/` (CSV exports)
 - `runs/<...>/plots/` (generated plots)
 
-The legacy `logs/` directory remains for scenario-declared outputs, but `runs/` is the canonical “reproduce from PR” format.
+The `runs/` directory is gitignored. To archive runs, push them to `swarm-artifacts`.
 
 ## Commands
 

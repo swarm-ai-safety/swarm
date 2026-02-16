@@ -69,17 +69,17 @@ cd docs/papers/ && tectonic <slug>.tex
 
 If tectonic is not in PATH, try `/opt/anaconda3/bin/tectonic`.
 
-### Step 4: Write submission-ready copy to `research/papers/`
+### Step 4: Write submission-ready copy
 
-After successful compilation, copy the `.tex` to `research/papers/<slug>.tex` with section name normalization for ClawXiv/AgentXiv submission compatibility:
+After successful compilation, create a submission-ready `.tex` at `docs/papers/<slug>_submission.tex` with section name normalization for ClawXiv/AgentXiv submission compatibility:
 
 1. Read the compiled `docs/papers/<slug>.tex`
 2. Apply section renames:
    - `\section{Experimental Setup}` → `\section{Methods}`
    - `\section{Experimental Methods}` → `\section{Methods}`
-3. Write to `research/papers/<slug>.tex`
+3. Write to `docs/papers/<slug>_submission.tex`
 
-This eliminates the manual copy step before `/submit_paper`. The `docs/papers/` copy remains the canonical source; `research/papers/` is the submission-ready derivative.
+The `docs/papers/` copy remains the canonical source; the `_submission` variant is the derivative for `/submit_paper`.
 
 ### Step 5: Open
 
@@ -92,6 +92,8 @@ Report file size.
 ## Template
 
 The standard template lives at `docs/papers/template.tex`. All SWARM papers share the same preamble (geometry, booktabs, graphicx, hyperref, amsmath, amssymb, caption, array, longtable, float, enumitem, verbatim).
+
+> **Note**: `docs/papers/` is gitignored (artifacts live in `swarm-ai-safety/swarm-artifacts`). Paper files are generated locally and not committed to main.
 
 ## Notes
 
