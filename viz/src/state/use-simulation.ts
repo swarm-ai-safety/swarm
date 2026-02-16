@@ -9,6 +9,7 @@ export function useSimulation() {
 
   return {
     ...state,
+    agentSnapshots: state.data?.agent_snapshots ?? [],
     loadData: (data: SimulationData) => dispatch({ type: "LOAD_DATA", data }),
     setHovered: (id: string | null) => dispatch({ type: "SET_HOVERED", agentId: id }),
     setSelected: (id: string | null) => dispatch({ type: "SET_SELECTED", agentId: id }),

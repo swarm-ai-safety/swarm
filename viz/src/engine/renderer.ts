@@ -3,9 +3,9 @@ import type { EpochSnapshot } from "@/data/types";
 import { COLORS } from "./constants";
 import { depthSort } from "./depth-sort";
 import { createBuildingEntity } from "./entities/agent-building";
-import { createArcEntity } from "./entities/interaction-arc";
+import { createArcEntity, renderCollusionTendril } from "./entities/interaction-arc";
 import { renderGroundGrid, renderGiniCracks } from "./entities/ground-tile";
-import { renderSky, renderHaze, renderParticles } from "./entities/effects";
+import { renderSky, renderHaze, renderParticles, renderThreatZone } from "./entities/effects";
 import { gridToScreen } from "./isometric";
 import type { EnvironmentState } from "./systems/environment-system";
 
@@ -42,8 +42,21 @@ export function render(ctx: CanvasRenderingContext2D, state: RenderState) {
   // 5. Gini cracks
   renderGiniCracks(ctx, state.gridSize, state.environment.giniCoefficient);
 
-  // 6. Collect renderable entities
+  // 6. Threat zones (rendered under buildings)
+  if (state.overlays.threatZones) {
+    for (const agent of state.agents) {
+      if (agent.agentType === "adversarial" || agent.agentType === "deceptive") {
+        const pos = gridToScreen(agent.gridX, agent.gridY);
+        renderThreatZone(ctx, pos.x, pos.y, state.environment.threatLevel, agent.agentType);
+      }
+    }
+  }
+
+  // 7. Collect renderable entities
   const entities: RenderEntity[] = [];
+
+  // Build agent map once
+  const agentMap = new Map(state.agents.map((a) => [a.id, a]));
 
   // Buildings
   for (const agent of state.agents) {
@@ -53,29 +66,39 @@ export function render(ctx: CanvasRenderingContext2D, state: RenderState) {
   // Interaction arcs
   if (state.overlays.interactions) {
     for (const arc of state.arcs) {
-      const agentMap = new Map(state.agents.map((a) => [a.id, a]));
       const entity = createArcEntity(arc, agentMap, state.hoveredAgent);
       if (entity) entities.push(entity);
     }
   }
 
-  // 7. Depth sort and render
+  // 8. Depth sort and render
   const sorted = depthSort(entities);
   for (const entity of sorted) {
     entity.render(ctx);
   }
 
-  // 8. Particles
+  // 9. Collusion tendrils (rendered above buildings)
+  if (state.overlays.collusionLines && state.environment.collusionRisk > 0.1) {
+    const flaggedTypes = new Set(["adversarial", "deceptive", "opportunistic"]);
+    const flagged = state.agents.filter((a) => flaggedTypes.has(a.agentType));
+    for (let i = 0; i < flagged.length; i++) {
+      for (let j = i + 1; j < flagged.length; j++) {
+        renderCollusionTendril(ctx, flagged[i], flagged[j], state.environment.collusionRisk);
+      }
+    }
+  }
+
+  // 10. Particles
   if (state.overlays.particles) {
     renderParticles(ctx, state.particles);
   }
 
   ctx.restore();
 
-  // 9. Ground haze (screen space)
+  // 11. Ground haze (screen space)
   renderHaze(ctx, width, height, state.environment.toxicity);
 
-  // 10. Tooltip for hovered agent
+  // 12. Tooltip for hovered agent
   if (state.hoveredAgent) {
     const agent = state.agents.find((a) => a.id === state.hoveredAgent);
     if (agent) {
@@ -91,29 +114,60 @@ function renderTooltip(ctx: CanvasRenderingContext2D, vp: Viewport, agent: Agent
 
   const text = `${agent.name} (${agent.agentType})`;
   const subtext = `Rep: ${agent.reputation.toFixed(2)} | P: ${agent.avgP.toFixed(2)}`;
+  const statusText = agent.isFrozen ? "FROZEN" : agent.isQuarantined ? "QUARANTINED" : "";
 
   ctx.save();
   ctx.font = "bold 12px -apple-system, sans-serif";
-  const tw = Math.max(ctx.measureText(text).width, ctx.measureText(subtext).width) + 16;
+  const tw = Math.max(
+    ctx.measureText(text).width,
+    ctx.measureText(subtext).width,
+    statusText ? ctx.measureText(statusText).width : 0,
+  ) + 20;
+  const th = statusText ? 48 : 38;
+
+  const rx = sx - tw / 2;
+  const ry = sy - th - 8;
+
+  // Shadow
+  ctx.shadowColor = "rgba(0,0,0,0.4)";
+  ctx.shadowBlur = 8;
+  ctx.shadowOffsetY = 2;
 
   // Background
   ctx.fillStyle = COLORS.panel;
   ctx.strokeStyle = COLORS.border;
   ctx.lineWidth = 1;
-  const rx = sx - tw / 2;
-  const ry = sy - 36;
   ctx.beginPath();
-  ctx.roundRect(rx, ry, tw, 34, 4);
+  ctx.roundRect(rx, ry, tw, th, 6);
   ctx.fill();
+
+  // Reset shadow for border
+  ctx.shadowColor = "transparent";
   ctx.stroke();
+
+  // Arrow
+  ctx.fillStyle = COLORS.panel;
+  ctx.beginPath();
+  ctx.moveTo(sx - 5, ry + th);
+  ctx.lineTo(sx, ry + th + 5);
+  ctx.lineTo(sx + 5, ry + th);
+  ctx.closePath();
+  ctx.fill();
 
   // Text
   ctx.fillStyle = COLORS.text;
   ctx.textAlign = "center";
-  ctx.fillText(text, sx, ry + 14);
+  ctx.fillText(text, sx, ry + 15);
   ctx.font = "11px -apple-system, sans-serif";
   ctx.fillStyle = COLORS.muted;
-  ctx.fillText(subtext, sx, ry + 28);
+  ctx.fillText(subtext, sx, ry + 29);
+
+  // Status text
+  if (statusText) {
+    ctx.font = "bold 10px -apple-system, sans-serif";
+    ctx.fillStyle = agent.isFrozen ? "#A8CFF5" : "#EB5757";
+    ctx.fillText(statusText, sx, ry + 42);
+  }
 
   ctx.restore();
 }
