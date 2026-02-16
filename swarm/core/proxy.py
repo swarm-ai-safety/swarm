@@ -35,7 +35,7 @@ class ProxyWeights(BaseModel):
     def validate_non_negative(cls, v: float, info) -> float:
         """
         Validate that weights are non-negative.
-        
+
         Note: This single validator applies to all four weight fields.
         The validation logic is identical for all fields (non-negative check).
         If field-specific validation is needed in the future, split into
@@ -278,7 +278,8 @@ class ProxyComputer:
         Returns:
             p: P(v = +1) in [0, 1]
         """
-        return calibrated_sigmoid(v_hat, self.sigmoid_k)
+        result: float = calibrated_sigmoid(v_hat, self.sigmoid_k)
+        return result
 
     def compute_labels(self, observables: ProxyObservables) -> tuple[float, float]:
         """
