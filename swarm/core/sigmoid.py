@@ -25,7 +25,8 @@ def calibrated_sigmoid(v_hat: float, k: float = 2.0) -> float:
     # Clamp v_hat to avoid numerical issues and warn if out of expected range
     if v_hat < -1.0 or v_hat > 1.0:
         logger.warning(
-            "v_hat out of expected range [-1, +1]: %.4f. Clamping to [-10, +10] for sigmoid. "
+            "v_hat out of expected range [-1, +1]: %.4f. "
+            "Value will be clamped before sigmoid computation. "
             "This may indicate upstream bugs in proxy computation.",
             v_hat,
         )

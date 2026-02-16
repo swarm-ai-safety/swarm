@@ -322,6 +322,20 @@ class TestProxyComputer:
 class TestClampingWarnings:
     """Tests for clamping warning behavior."""
 
+    # Test constants for weight configurations that force out-of-range values
+    EXCESSIVE_POSITIVE_WEIGHTS = ProxyWeights(
+        task_progress=2.0,
+        rework_penalty=2.0,
+        verifier_penalty=0.0,
+        engagement_signal=0.0,
+    )
+    EXCESSIVE_NEGATIVE_WEIGHTS = ProxyWeights(
+        task_progress=-2.0,
+        rework_penalty=-2.0,
+        verifier_penalty=0.0,
+        engagement_signal=0.0,
+    )
+
     def test_sigmoid_warns_on_out_of_range_v_hat(self, caplog):
         """calibrated_sigmoid should warn when v_hat is outside [-1, +1]."""
         import logging
@@ -368,12 +382,7 @@ class TestClampingWarnings:
 
         # Manually override the normalized weights to force out-of-range scenario
         # This simulates a bug where weights aren't properly normalized
-        computer.weights = ProxyWeights(
-            task_progress=2.0,
-            rework_penalty=2.0,
-            verifier_penalty=0.0,
-            engagement_signal=0.0,
-        )
+        computer.weights = self.EXCESSIVE_POSITIVE_WEIGHTS
 
         # All positive signals should trigger warning
         obs = ProxyObservables(
@@ -433,12 +442,7 @@ class TestClampingWarnings:
         computer = ProxyComputer()
 
         # Manually override to force out-of-range positive
-        computer.weights = ProxyWeights(
-            task_progress=2.0,
-            rework_penalty=2.0,
-            verifier_penalty=0.0,
-            engagement_signal=0.0,
-        )
+        computer.weights = self.EXCESSIVE_POSITIVE_WEIGHTS
 
         obs_positive = ProxyObservables(
             task_progress_delta=1.0,
@@ -452,12 +456,7 @@ class TestClampingWarnings:
         assert v_hat_pos > 0  # Should be clamped to +1.0
 
         # Manually override to force out-of-range negative
-        computer.weights = ProxyWeights(
-            task_progress=-2.0,
-            rework_penalty=-2.0,
-            verifier_penalty=0.0,
-            engagement_signal=0.0,
-        )
+        computer.weights = self.EXCESSIVE_NEGATIVE_WEIGHTS
 
         obs_negative = ProxyObservables(
             task_progress_delta=1.0,
