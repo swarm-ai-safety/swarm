@@ -16,6 +16,11 @@ from swarm.bridges.sciagentgym.events import (
 from swarm.core.proxy import ProxyComputer, ProxyObservables
 from swarm.models.interaction import InteractionType, SoftInteraction
 
+# Engagement normalization constants
+ENGAGEMENT_NORMALIZATION_SECONDS = 60.0  # Tool calls >60s = max engagement
+DEFAULT_WORKFLOW_ENGAGEMENT = 0.7  # Medium engagement for workflow steps
+DEFAULT_ARTIFACT_ENGAGEMENT = 0.5  # Medium-low engagement for artifacts
+
 
 class SciAgentGymMapper:
     """Maps SciAgentGym events to SWARM SoftInteractions.
@@ -50,7 +55,9 @@ class SciAgentGymMapper:
             task_progress_delta=1.0 if tool_data.success else -1.0,
             rework_count=0 if tool_data.success else 1,
             verifier_rejections=0,
-            counterparty_engagement_delta=min(1.0, tool_data.execution_time_seconds / 60.0),
+            counterparty_engagement_delta=min(
+                1.0, tool_data.execution_time_seconds / ENGAGEMENT_NORMALIZATION_SECONDS
+            ),
         )
 
         v_hat, p = self._proxy.compute_labels(observables)
@@ -90,7 +97,7 @@ class SciAgentGymMapper:
             task_progress_delta=1.0 if step_data.success else -1.0,
             rework_count=0 if step_data.success else 1,
             verifier_rejections=0 if step_data.dependencies_met else 1,
-            counterparty_engagement_delta=0.7,  # Default medium engagement for workflow steps
+            counterparty_engagement_delta=DEFAULT_WORKFLOW_ENGAGEMENT,
         )
 
         v_hat, p = self._proxy.compute_labels(observables)
@@ -129,7 +136,7 @@ class SciAgentGymMapper:
             task_progress_delta=2.0 * artifact_data.validation_score - 1.0,
             rework_count=0 if artifact_data.validated else 1,
             verifier_rejections=0 if artifact_data.validated else 1,
-            counterparty_engagement_delta=0.5,
+            counterparty_engagement_delta=DEFAULT_ARTIFACT_ENGAGEMENT,
         )
 
         v_hat, p = self._proxy.compute_labels(observables)

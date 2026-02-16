@@ -6,6 +6,12 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Optional
 
+# Governance cost constants
+SAFETY_GATE_COST = 0.1  # Cost of denying a tool call due to safety
+CIRCUIT_BREAKER_COST = 1.0  # Cost of triggering circuit breaker
+COST_BUDGET_DENIAL_COST = 0.5  # Cost of denying due to budget exceeded
+QUALITY_THRESHOLD_COST = 0.2  # Cost of rejecting low-quality result
+
 
 class PolicyDecision(Enum):
     """Policy decision outcomes."""
@@ -71,7 +77,7 @@ class SciAgentGymPolicy:
                 decision=PolicyDecision.DENY,
                 reason=f"Safety score {safety_score:.3f} below threshold "
                 f"{self._config.min_tool_safety_score:.3f}",
-                governance_cost=0.1,
+                governance_cost=SAFETY_GATE_COST,
             )
 
         return PolicyResult(
@@ -102,7 +108,7 @@ class SciAgentGymPolicy:
                 decision=PolicyDecision.DENY,
                 reason=f"Circuit breaker triggered: {self._consecutive_failures} "
                 f"consecutive failures",
-                governance_cost=1.0,
+                governance_cost=CIRCUIT_BREAKER_COST,
             )
 
         if failed:
@@ -133,7 +139,7 @@ class SciAgentGymPolicy:
                 decision=PolicyDecision.DENY,
                 reason=f"Cost budget exceeded: {projected_total} > "
                 f"{self._config.cost_budget_tokens} tokens",
-                governance_cost=0.5,
+                governance_cost=COST_BUDGET_DENIAL_COST,
             )
 
         self._total_tokens_used = projected_total
@@ -157,7 +163,7 @@ class SciAgentGymPolicy:
                 decision=PolicyDecision.DENY,
                 reason=f"Quality score {quality_score:.3f} below threshold "
                 f"{self._config.result_quality_threshold:.3f}",
-                governance_cost=0.2,
+                governance_cost=QUALITY_THRESHOLD_COST,
             )
 
         return PolicyResult(
