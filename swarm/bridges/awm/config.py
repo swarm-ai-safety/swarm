@@ -52,10 +52,18 @@ class AWMConfig(BaseModel):
     # Number of concurrent servers (one per agent)
     max_concurrent_servers: int = Field(default=10, ge=1)
 
+    # Path to AWM-1K data (gen_envs.jsonl, gen_tasks.jsonl, etc.)
+    data_path: Path = Path("data/awm-1k")
+
     # Phase 2: Live mode (False = simulation, True = real HTTP + subprocess)
     live_mode: bool = False
     server_command_template: str = (
-        "{python} -m awm.server --host {host} --port {port} --env-path {env_path}"
+        "{python} -m swarm.bridges.awm.adapter_server"
+        " --scenario {env_id}"
+        " --envs-jsonl {data_path}/gen_envs.jsonl"
+        " --db-dir {env_path}/outputs/databases"
+        " --host {host} --port {port}"
+        " --data-path {data_path}"
     )
     health_check_interval: float = 0.5
 

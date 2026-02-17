@@ -37,6 +37,7 @@ class AWMServerInstance:
         host: str = "127.0.0.1",
         startup_timeout: float = 30.0,
         health_check_interval: float = 0.5,
+        data_path: str = "data/awm-1k",
     ) -> None:
         self.agent_id = agent_id
         self.port = port
@@ -47,6 +48,7 @@ class AWMServerInstance:
         self.host = host
         self.startup_timeout = startup_timeout
         self.health_check_interval = health_check_interval
+        self.data_path = data_path
         self.running = False
         self._process: Any = None  # subprocess.Popen when live_mode
 
@@ -76,6 +78,7 @@ class AWMServerInstance:
             port=self.port,
             env_path=self.envs_path,
             env_id=self.environment_id,
+            data_path=self.data_path,
         )
         cmd_args = shlex.split(cmd)
         logger.info(
@@ -221,6 +224,7 @@ class AWMServerManager:
             host=self.config.host,
             startup_timeout=self.config.server_startup_timeout,
             health_check_interval=self.config.health_check_interval,
+            data_path=str(self.config.data_path),
         )
         await server.start()
         self._shared_server = server
@@ -256,6 +260,7 @@ class AWMServerManager:
             host=self.config.host,
             startup_timeout=self.config.server_startup_timeout,
             health_check_interval=self.config.health_check_interval,
+            data_path=str(self.config.data_path),
         )
         await server.start()
         self._servers[agent_id] = server

@@ -23,6 +23,7 @@ except ImportError:
     _HTTPX_AVAILABLE = False
 
 _ENVS_PATH = Path("external/awm-envs")
+_DATA_PATH = Path("data/awm-1k")
 
 if not _HTTPX_AVAILABLE:
     pytest.skip(
@@ -33,6 +34,12 @@ if not _HTTPX_AVAILABLE:
 if not _ENVS_PATH.exists():
     pytest.skip(
         "AWM environments not downloaded (bash scripts/download_awm_envs.sh)",
+        allow_module_level=True,
+    )
+
+if not _DATA_PATH.exists():
+    pytest.skip(
+        "AWM-1K data not downloaded (data/awm-1k/)",
         allow_module_level=True,
     )
 
@@ -69,6 +76,8 @@ def _make_config(base_port: int) -> AWMConfig:
     return AWMConfig(
         live_mode=True,
         envs_path=_ENVS_PATH,
+        data_path=_DATA_PATH,
+        environment_id="content_platform_1",
         base_port=base_port,
         max_concurrent_servers=4,
         server_startup_timeout=30.0,
@@ -234,7 +243,7 @@ class TestAWMHandlerLiveIntegration:
 
         state = EnvState()
         for aid in agent_ids:
-            state.register_agent(aid)
+            state.add_agent(aid)
         return state
 
     def test_handler_live_batch_mode(self, live_handler):
