@@ -11,6 +11,7 @@ Phase 2 will add real server lifecycle management.
 from __future__ import annotations
 
 import logging
+import shlex
 import subprocess
 import sys
 import time
@@ -76,13 +77,14 @@ class AWMServerInstance:
             env_path=self.envs_path,
             env_id=self.environment_id,
         )
+        cmd_args = shlex.split(cmd)
         logger.info(
-            "Starting AWM server for agent=%s: %s", self.agent_id, cmd
+            "Starting AWM server for agent=%s: %s", self.agent_id, cmd_args
         )
 
         self._process = subprocess.Popen(
-            cmd,
-            shell=True,
+            cmd_args,
+            shell=False,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
         )
@@ -160,7 +162,8 @@ class AWMServerInstance:
 
         client = AWMMCPSyncClient(base_url=self.base_url)
         try:
-            return client.reset_environment()
+            result: bool = client.reset_environment()
+            return result
         finally:
             client.close()
 

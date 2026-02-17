@@ -1,9 +1,11 @@
 """Configuration for the AWM bridge."""
 
+import ipaddress
 from pathlib import Path
 from typing import Optional
+from urllib.parse import urlparse
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, Field, SecretStr, field_validator
 
 
 class AWMConfig(BaseModel):
@@ -80,3 +82,24 @@ class AWMConfig(BaseModel):
     llm_prompt_audit_path: Optional[str] = None
     llm_fallback_to_scripted: bool = True
     llm_max_calls_per_plan: int = 10
+
+    @field_validator("llm_base_url")
+    @classmethod
+    def _validate_llm_base_url(cls, v: Optional[str]) -> Optional[str]:
+        """Reject llm_base_url pointing at private/link-local networks."""
+        if v is None:
+            return v
+        parsed = urlparse(v)
+        hostname = parsed.hostname or ""
+        try:
+            addr = ipaddress.ip_address(hostname)
+            if addr.is_private or addr.is_loopback or addr.is_link_local:
+                raise ValueError(
+                    f"llm_base_url must not target private/loopback "
+                    f"addresses, got {hostname}"
+                )
+        except ValueError as exc:
+            if "must not target" in str(exc):
+                raise
+            # hostname is a DNS name, not a literal IP — allow it
+        return v

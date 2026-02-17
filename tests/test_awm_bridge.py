@@ -47,6 +47,26 @@ class TestAWMConfig:
         config = AWMConfig(enabled=False)
         assert config.enabled is False
 
+    def test_llm_base_url_rejects_private_ip(self):
+        with pytest.raises(Exception, match="must not target private"):
+            AWMConfig(llm_base_url="http://192.168.1.1:8080/v1")
+
+    def test_llm_base_url_rejects_loopback(self):
+        with pytest.raises(Exception, match="must not target private"):
+            AWMConfig(llm_base_url="http://127.0.0.1:11434/api")
+
+    def test_llm_base_url_rejects_link_local(self):
+        with pytest.raises(Exception, match="must not target private"):
+            AWMConfig(llm_base_url="http://169.254.169.254/latest/meta-data")
+
+    def test_llm_base_url_allows_public_hostname(self):
+        config = AWMConfig(llm_base_url="https://api.openai.com/v1")
+        assert config.llm_base_url == "https://api.openai.com/v1"
+
+    def test_llm_base_url_allows_none(self):
+        config = AWMConfig(llm_base_url=None)
+        assert config.llm_base_url is None
+
 
 # =========================================================================
 # ToolCallRecord and AWMEpisodeTrace
@@ -848,6 +868,55 @@ class TestAWMServerManagerLive:
         server = await mgr.start_server("agent_1")
         assert server is not None
         assert server.running is True
+
+    @pytest.mark.asyncio
+    async def test_popen_uses_list_not_shell(self, monkeypatch):
+        """Verify Popen is called with a list (shell=False) for safety."""
+        from swarm.bridges.awm.server_manager import AWMServerManager
+
+        captured = {}
+
+        class FakeProcess:
+            returncode = None
+            def poll(self):
+                return None
+            def terminate(self):
+                pass
+            def wait(self, timeout=None):
+                pass
+            def kill(self):
+                pass
+
+        def fake_popen(*args, **kwargs):
+            captured["args"] = args
+            captured["kwargs"] = kwargs
+            return FakeProcess()
+
+        monkeypatch.setattr(
+            "swarm.bridges.awm.server_manager.subprocess.Popen",
+            fake_popen,
+        )
+
+        from swarm.bridges.awm import mcp_client as mc_mod
+
+        class FakeSyncClient:
+            def __init__(self, **kwargs):
+                pass
+            def health_check(self):
+                return True
+            def close(self):
+                pass
+
+        monkeypatch.setattr(mc_mod, "AWMMCPSyncClient", FakeSyncClient)
+
+        config = AWMConfig(base_port=19200, live_mode=True)
+        mgr = AWMServerManager(config)
+        await mgr.start_server("agent_1")
+
+        # Must be a list, not a string
+        assert isinstance(captured["args"][0], list)
+        # shell must be False
+        assert captured["kwargs"].get("shell") is False
 
     @pytest.mark.asyncio
     async def test_stop_server_terminates_process(self, monkeypatch):
