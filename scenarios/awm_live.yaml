@@ -25,7 +25,7 @@ simulation:
 
 awm:
   enabled: true
-  environment_id: content_platform_1
+  environment_id: e_commerce_1
   envs_path: external/awm-envs
   data_path: data/awm-1k
   live_mode: true

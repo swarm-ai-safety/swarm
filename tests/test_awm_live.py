@@ -77,7 +77,7 @@ def _make_config(base_port: int) -> AWMConfig:
         live_mode=True,
         envs_path=_ENVS_PATH,
         data_path=_DATA_PATH,
-        environment_id="content_platform_1",
+        environment_id="e_commerce_1",
         base_port=base_port,
         max_concurrent_servers=4,
         server_startup_timeout=30.0,
