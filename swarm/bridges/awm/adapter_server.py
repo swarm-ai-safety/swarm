@@ -26,6 +26,7 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+import urllib.parse
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -244,6 +245,17 @@ def build_adapter(
             s = str(value)
         # Basic path hardening: ensure we stay on the same host/base_url
         # and do not allow obviously dangerous path patterns.
+        # Validate that rendered_path is a relative application path, not a full URL.
+        parsed_path = urllib.parse.urlparse(rendered_path)
+        if parsed_path.scheme or parsed_path.netloc or not rendered_path.startswith("/"):
+            return JSONResponse(
+                {
+                    "isError": True,
+                    "result": f"Invalid tool path: {rendered_path!r}",
+                },
+                status_code=400,
+            )
+
         if "://" in rendered_path or "\\" in rendered_path:
             return JSONResponse(
                 {
