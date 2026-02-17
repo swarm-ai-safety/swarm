@@ -273,7 +273,8 @@ class TestWorkspaceManager:
 
             workspace_path = manager.mount_workspace("test_env")
 
-            # Create a small file
+            # Create a small file (repeat "test" 100 times = ~400 bytes)
+            # This is sufficient to verify size tracking without being excessive
             (workspace_path / "data" / "test.txt").write_text("test" * 100)
 
             size = manager.get_workspace_size("test_env")

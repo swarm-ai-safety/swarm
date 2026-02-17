@@ -20,7 +20,8 @@ from swarm.bridges.sciagentgym.workspace import WorkspaceManager
 logger = logging.getLogger(__name__)
 
 
-# Number of mock tools to generate per discipline for testing
+# Number of mock tools per discipline (for testing without SciAgentGym)
+# This arbitrary value (5) provides sufficient coverage for testing without being excessive
 MOCK_TOOLS_PER_DISCIPLINE = 5
 
 
@@ -198,7 +199,9 @@ class SciAgentGymEnvironmentManager:
                 "SciAgentGym is not installed. "
                 "Install it to use live_mode: "
                 "git clone https://github.com/CMarsRover/SciAgentGYM && "
-                "pip install -e SciAgentGYM/"
+                "cd SciAgentGYM && "
+                "pip install -r requirements.txt && "
+                "pip install -e ."
             ) from e
 
         logger.info("Initializing LIVE SciAgentGym environment: %s", instance.env_id)

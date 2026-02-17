@@ -73,7 +73,12 @@ class WorkspaceManager:
             (workspace_path / subdir).mkdir(exist_ok=True)
 
         # Set permissions (read/write for owner only)
-        os.chmod(workspace_path, 0o700)
+        # Note: On Windows, os.chmod has limited support. This is a no-op on Windows.
+        try:
+            os.chmod(workspace_path, 0o700)
+        except (OSError, NotImplementedError):
+            # Windows or other systems where chmod is not fully supported
+            pass
 
         logger.info("Workspace mounted successfully: %s", workspace_path)
         return workspace_path
