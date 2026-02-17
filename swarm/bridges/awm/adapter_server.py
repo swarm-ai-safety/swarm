@@ -242,6 +242,23 @@ def build_adapter(
             raises a ValueError.
             """
             s = str(value)
+        # Basic path hardening: ensure we stay on the same host/base_url
+        # and do not allow obviously dangerous path patterns.
+        if "://" in rendered_path or "\\" in rendered_path:
+            return JSONResponse(
+                {
+                    "isError": True,
+                    "result": "Invalid tool path.",
+                },
+                status_code=400,
+            )
+
+        # Normalize to an absolute path relative to the base_url.
+        if not rendered_path.startswith("/"):
+            safe_rendered_path = "/" + rendered_path.lstrip("./")
+        else:
+            safe_rendered_path = rendered_path
+
             # Disallow path separators and control characters
             if "/" in s or "\\" in s:
                 raise ValueError(f"Invalid path parameter '{name}': unexpected '/' or '\\\\'")
@@ -250,15 +267,15 @@ def build_adapter(
             # Basic traversal protection
             if s.startswith(".") or ".." in s:
                 raise ValueError(f"Invalid path parameter '{name}': potentially unsafe value")
-            return s
+                        resp = await client.put(safe_rendered_path, json=remaining)
 
-
+                        resp = await client.patch(safe_rendered_path, json=remaining)
         def _validate_path_param_value(name: str, value: Any) -> str:
-            """
+                        resp = await client.post(safe_rendered_path, json=remaining)
                 try:
-                    safe_value = _validate_path_param_value(param_name, arguments[param_name])
+                    resp = await client.delete(safe_rendered_path, params=remaining)
                 except ValueError as exc:
-                    return JSONResponse(
+                    resp = await client.get(safe_rendered_path, params=remaining)
                         {"isError": True, "result": str(exc)},
                         status_code=400,
                     )
