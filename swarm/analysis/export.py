@@ -118,8 +118,11 @@ def history_to_interaction_records(
     records = []
     for interaction in history.interactions:
         record = {
+            "event_type": "interaction",
             "interaction_id": interaction.interaction_id,
             "timestamp": interaction.timestamp.isoformat() if hasattr(interaction, 'timestamp') and interaction.timestamp else None,
+            "epoch": interaction.metadata.get('epoch', 0) if interaction.metadata else 0,
+            "step": interaction.metadata.get('step', 0) if interaction.metadata else 0,
             "initiator": interaction.initiator,
             "counterparty": interaction.counterparty,
             "interaction_type": interaction.interaction_type.value if hasattr(interaction.interaction_type, 'value') else str(interaction.interaction_type),
@@ -283,7 +286,7 @@ def export_to_json(
     }
 
     if include_events and history.interactions:
-        data["interaction_events"] = history_to_interaction_records(history)
+        data["events"] = history_to_interaction_records(history)
 
     with open(output_path, "w") as f:
         json.dump(data, f, indent=indent, default=str)
