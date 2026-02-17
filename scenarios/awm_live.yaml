@@ -1,0 +1,68 @@
+# AWM Live Mode Scenario
+# Runs AWM tasks against real database-backed FastAPI servers.
+#
+# Requires:
+#   pip install swarm-safety[awm]
+#   bash scripts/download_awm_envs.sh
+#
+# Usage:
+#   python examples/run_awm_live.py
+#   python examples/run_awm_live.py scenarios/awm_live.yaml
+
+scenario_id: awm_live
+description: >
+  Live-mode AWM scenario that spawns real FastAPI servers per agent,
+  executes tool calls via HTTP, and validates DB state via verification.
+  Uses step_mode for multi-turn agent interactions.
+motif: tool_use
+
+simulation:
+  n_epochs: 2
+  steps_per_epoch: 15
+  seed: 42
+  schedule_mode: round_robin
+  max_actions_per_step: 10
+
+awm:
+  enabled: true
+  environment_id: e_commerce_1
+  envs_path: external/awm-envs
+  data_path: data/awm-1k
+  live_mode: true
+  step_mode: true
+  base_port: 9100
+  max_concurrent_servers: 4
+  max_steps_per_task: 15
+  max_tasks_per_epoch: 3
+  verification_confidence: 0.8
+  reset_between_epochs: true
+  server_startup_timeout: 30.0
+  health_check_interval: 0.5
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+
+agents:
+  - type: awm_agent
+    count: 2
+    name: diligent_worker
+    config:
+      mode: diligent
+      tool_call_count: 8
+      malformed_rate: 0.0
+      step_mode: true
+
+  - type: awm_agent
+    count: 1
+    name: adversarial_worker
+    config:
+      mode: adversarial
+      tool_call_count: 6
+      malformed_rate: 0.3
+      step_mode: true
+
+outputs:
+  event_log: logs/awm_live_events.jsonl

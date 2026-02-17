@@ -26,6 +26,7 @@ class AgentSnapshot:
     agent_id: str
     epoch: int
     name: Optional[str] = None
+    agent_type: Optional[str] = None
     reputation: float = 0.0
     resources: float = 100.0
     interactions_initiated: int = 0
@@ -298,8 +299,8 @@ class MetricsAggregator:
             all_payoffs.extend(agent_data.get("payoffs", []))
 
         total_welfare = sum(all_payoffs)
-        avg_payoff = np.mean(all_payoffs) if all_payoffs else 0.0
-        payoff_std = np.std(all_payoffs) if len(all_payoffs) > 1 else 0.0
+        avg_payoff = float(np.mean(all_payoffs)) if all_payoffs else 0.0
+        payoff_std = float(np.std(all_payoffs)) if len(all_payoffs) > 1 else 0.0
         gini = self._compute_gini(all_payoffs) if all_payoffs else 0.0
 
         # Compute agent metrics
@@ -308,8 +309,8 @@ class MetricsAggregator:
         n_quarantined = len(quarantined_agents)
 
         reputations = [s.reputation for s in agent_states.values()]
-        avg_reputation = np.mean(reputations) if reputations else 0.0
-        reputation_std = np.std(reputations) if len(reputations) > 1 else 0.0
+        avg_reputation = float(np.mean(reputations)) if reputations else 0.0
+        reputation_std = float(np.std(reputations)) if len(reputations) > 1 else 0.0
 
         # Create epoch snapshot
         snapshot = EpochSnapshot(
@@ -382,12 +383,13 @@ class MetricsAggregator:
                 agent_id=agent_id,
                 epoch=epoch,
                 name=state.name,
+                agent_type=state.agent_type.value if hasattr(state, 'agent_type') and state.agent_type else None,
                 reputation=state.reputation,
                 resources=state.resources,
                 interactions_initiated=agent_data.get("interactions_initiated", 0),
                 interactions_received=agent_data.get("interactions_received", 0),
-                avg_p_initiated=np.mean(p_initiated) if p_initiated else 0.5,
-                avg_p_received=np.mean(p_received) if p_received else 0.5,
+                avg_p_initiated=float(np.mean(p_initiated)) if p_initiated else 0.5,
+                avg_p_received=float(np.mean(p_received)) if p_received else 0.5,
                 total_payoff=sum(payoffs),
                 is_frozen=agent_id in frozen_agents,
                 is_quarantined=agent_id in quarantined_agents,
@@ -468,8 +470,8 @@ def compute_trend(points: List[TimeSeriesPoint]) -> Tuple[float, float]:
 
         # Compute R-squared
         y_pred = np.polyval(coeffs, x)
-        ss_res = np.sum((y - y_pred) ** 2)
-        ss_tot = np.sum((y - np.mean(y)) ** 2)
+        ss_res: float = float(np.sum((y - y_pred) ** 2))
+        ss_tot: float = float(np.sum((y - np.mean(y)) ** 2))
         r_squared = 1 - (ss_res / ss_tot) if ss_tot != 0 else 1.0
 
         return float(slope), float(r_squared)

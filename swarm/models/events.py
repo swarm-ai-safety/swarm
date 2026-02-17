@@ -142,6 +142,8 @@ class EventType(Enum):
     AWM_TASK_ASSIGNED = "awm_task_assigned"
     AWM_TASK_COMPLETED = "awm_task_completed"
     AWM_TOOL_CALL_EXECUTED = "awm_tool_call_executed"
+    AWM_CONFLICT_DETECTED = "awm_conflict_detected"
+    AWM_TRANSACTION_COMPLETED = "awm_transaction_completed"
 
     # System events
     SIMULATION_STARTED = "simulation_started"

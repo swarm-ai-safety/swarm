@@ -47,6 +47,26 @@ class TestAWMConfig:
         config = AWMConfig(enabled=False)
         assert config.enabled is False
 
+    def test_llm_base_url_rejects_private_ip(self):
+        with pytest.raises(Exception, match="must not target private"):
+            AWMConfig(llm_base_url="http://192.168.1.1:8080/v1")
+
+    def test_llm_base_url_rejects_loopback(self):
+        with pytest.raises(Exception, match="must not target private"):
+            AWMConfig(llm_base_url="http://127.0.0.1:11434/api")
+
+    def test_llm_base_url_rejects_link_local(self):
+        with pytest.raises(Exception, match="must not target private"):
+            AWMConfig(llm_base_url="http://169.254.169.254/latest/meta-data")
+
+    def test_llm_base_url_allows_public_hostname(self):
+        config = AWMConfig(llm_base_url="https://api.openai.com/v1")
+        assert config.llm_base_url == "https://api.openai.com/v1"
+
+    def test_llm_base_url_allows_none(self):
+        config = AWMConfig(llm_base_url=None)
+        assert config.llm_base_url is None
+
 
 # =========================================================================
 # ToolCallRecord and AWMEpisodeTrace
@@ -850,6 +870,55 @@ class TestAWMServerManagerLive:
         assert server.running is True
 
     @pytest.mark.asyncio
+    async def test_popen_uses_list_not_shell(self, monkeypatch):
+        """Verify Popen is called with a list (shell=False) for safety."""
+        from swarm.bridges.awm.server_manager import AWMServerManager
+
+        captured = {}
+
+        class FakeProcess:
+            returncode = None
+            def poll(self):
+                return None
+            def terminate(self):
+                pass
+            def wait(self, timeout=None):
+                pass
+            def kill(self):
+                pass
+
+        def fake_popen(*args, **kwargs):
+            captured["args"] = args
+            captured["kwargs"] = kwargs
+            return FakeProcess()
+
+        monkeypatch.setattr(
+            "swarm.bridges.awm.server_manager.subprocess.Popen",
+            fake_popen,
+        )
+
+        from swarm.bridges.awm import mcp_client as mc_mod
+
+        class FakeSyncClient:
+            def __init__(self, **kwargs):
+                pass
+            def health_check(self):
+                return True
+            def close(self):
+                pass
+
+        monkeypatch.setattr(mc_mod, "AWMMCPSyncClient", FakeSyncClient)
+
+        config = AWMConfig(base_port=19200, live_mode=True)
+        mgr = AWMServerManager(config)
+        await mgr.start_server("agent_1")
+
+        # Must be a list, not a string
+        assert isinstance(captured["args"][0], list)
+        # shell must be False
+        assert captured["kwargs"].get("shell") is False
+
+    @pytest.mark.asyncio
     async def test_stop_server_terminates_process(self, monkeypatch):
         from swarm.bridges.awm.server_manager import AWMServerInstance
 
@@ -1311,3 +1380,546 @@ class TestAWMHandlerMultiTurn:
         # Trace should be cleaned up
         assert "agent_1" not in handler._traces
         assert "agent_1" not in handler._last_results
+
+
+# =========================================================================
+# AWMAgent LLM Planning (Phase 3)
+# =========================================================================
+
+
+class TestAWMAgentLLMPlanning:
+    """Test LLM-based tool planning — all LLM calls are mocked."""
+
+    _TOOLS = [
+        {"name": "query_database", "description": "Run SQL queries"},
+        {"name": "update_record", "description": "Update a row"},
+    ]
+
+    def _obs(self, **kwargs):
+        defaults = {
+            "awm_task": {"task_id": "t1", "description": "Complete task"},
+            "awm_available_tools": self._TOOLS,
+        }
+        defaults.update(kwargs)
+        return Observation(**defaults)
+
+    # ---- 1. disabled by default ----
+    def test_llm_planning_disabled_by_default(self):
+        agent = AWMAgent(agent_id="awm_1")
+        assert agent._llm_enabled is False
+        assert agent._llm_delegate is None
+        action = agent.act(self._obs())
+        assert action.action_type == ActionType.AWM_EXECUTE_TASK
+
+    # ---- 2. enabled via config ----
+    def test_llm_planning_enabled_via_config(self):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={"llm_planning": True, "llm_provider": "anthropic"},
+        )
+        assert agent._llm_enabled is True
+
+    # ---- 3. successful LLM plan ----
+    def test_llm_plan_tool_calls_success(self, monkeypatch):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "llm_model": "claude-sonnet-4-20250514",
+            },
+        )
+
+        # Create a mock delegate
+        from unittest.mock import MagicMock
+
+        from swarm.agents.llm_config import LLMUsageStats
+
+        mock_delegate = MagicMock()
+        mock_delegate._call_llm_sync.return_value = (
+            '{"reasoning": "read first", "tool_calls": [{"tool_name": "query_database", "arguments": {"query": "SELECT 1"}}]}',
+            100,
+            50,
+        )
+        mock_delegate._parse_action_response.return_value = {
+            "reasoning": "read first",
+            "tool_calls": [
+                {"tool_name": "query_database", "arguments": {"query": "SELECT 1"}},
+            ],
+        }
+        mock_delegate.usage_stats = LLMUsageStats()
+
+        agent._llm_delegate = mock_delegate
+        result = agent._plan_tool_calls(self._obs())
+        assert len(result) == 1
+        assert result[0]["tool_name"] == "query_database"
+
+    # ---- 4. fallback to scripted on failure ----
+    def test_llm_fallback_to_scripted_on_failure(self, monkeypatch):
+        import random as stdlib_random
+
+        rng = stdlib_random.Random(42)
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "llm_fallback_to_scripted": True,
+                "tool_call_count": 2,
+            },
+            rng=rng,
+        )
+
+        from unittest.mock import MagicMock
+
+        mock_delegate = MagicMock()
+        mock_delegate._call_llm_sync.side_effect = RuntimeError("API down")
+        agent._llm_delegate = mock_delegate
+
+        result = agent._plan_tool_calls(self._obs())
+        # Should fall back to scripted and return 2 calls
+        assert len(result) == 2
+
+    # ---- 5. no fallback returns empty ----
+    def test_llm_no_fallback_returns_empty(self):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "llm_fallback_to_scripted": False,
+            },
+        )
+
+        from unittest.mock import MagicMock
+
+        mock_delegate = MagicMock()
+        mock_delegate._call_llm_sync.side_effect = RuntimeError("API down")
+        agent._llm_delegate = mock_delegate
+
+        result = agent._plan_tool_calls(self._obs())
+        assert result == []
+
+    # ---- 6. malformed LLM response ----
+    def test_llm_parse_malformed_response(self):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={"llm_planning": True, "llm_provider": "anthropic"},
+        )
+
+        from unittest.mock import MagicMock
+
+        mock_delegate = MagicMock()
+        mock_delegate._parse_action_response.side_effect = ValueError("No JSON")
+        agent._llm_delegate = mock_delegate
+
+        result = agent._parse_tool_call_response("not json at all", self._obs())
+        assert result is None
+
+    # ---- 7. caps tool calls ----
+    def test_llm_caps_tool_calls(self):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "llm_max_calls_per_plan": 2,
+            },
+        )
+
+        from unittest.mock import MagicMock
+
+        mock_delegate = MagicMock()
+        mock_delegate._parse_action_response.return_value = {
+            "tool_calls": [
+                {"tool_name": "query_database", "arguments": {}},
+                {"tool_name": "update_record", "arguments": {}},
+                {"tool_name": "query_database", "arguments": {}},
+                {"tool_name": "update_record", "arguments": {}},
+            ],
+        }
+        agent._llm_delegate = mock_delegate
+
+        result = agent._parse_tool_call_response("ignored", self._obs())
+        assert result is not None
+        assert len(result) == 2
+
+    # ---- 8. step mode prompt ----
+    def test_llm_step_mode_prompt(self):
+        agent = AWMAgent(
+            agent_id="awm_step_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "step_mode": True,
+            },
+        )
+        obs = self._obs(awm_steps_remaining=5, awm_episode_active=False)
+        _sys, user = agent._build_awm_tool_prompt(obs)
+        assert "Plan ONE tool call" in user
+        assert "Steps remaining: 5" in user
+
+    # ---- 9. batch mode prompt ----
+    def test_llm_batch_mode_prompt(self):
+        agent = AWMAgent(
+            agent_id="awm_batch_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "anthropic",
+                "llm_max_calls_per_plan": 7,
+            },
+        )
+        _sys, user = agent._build_awm_tool_prompt(self._obs())
+        assert "Plan up to 7 tool calls" in user
+
+    # ---- 10. usage stats exposed ----
+    def test_llm_usage_stats_exposed(self):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={"llm_planning": True, "llm_provider": "anthropic"},
+        )
+        # No delegate yet
+        assert agent.llm_usage_stats is None
+
+        from unittest.mock import MagicMock
+
+        from swarm.agents.llm_config import LLMUsageStats
+
+        mock_delegate = MagicMock()
+        stats = LLMUsageStats()
+        stats.total_requests = 3
+        mock_delegate.usage_stats = stats
+        agent._llm_delegate = mock_delegate
+
+        result = agent.llm_usage_stats
+        assert result is not None
+        assert result["total_requests"] == 3
+
+    # ---- 11. init failure disables LLM ----
+    def test_llm_init_failure_disables(self, monkeypatch):
+        agent = AWMAgent(
+            agent_id="awm_llm",
+            config={
+                "llm_planning": True,
+                "llm_provider": "nonexistent_provider_xyz",
+            },
+        )
+        assert agent._llm_enabled is True
+        delegate = agent._init_llm()
+        assert delegate is None
+        assert agent._llm_enabled is False
+
+    # ---- 12. tool call history resets ----
+    def test_tool_call_history_reset(self):
+        import random as stdlib_random
+
+        rng = stdlib_random.Random(42)
+        agent = AWMAgent(
+            agent_id="awm_step",
+            config={"step_mode": True, "tool_call_count": 2},
+            rng=rng,
+        )
+
+        obs1 = Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=self._TOOLS,
+            awm_episode_active=False,
+            awm_steps_remaining=10,
+        )
+        agent.act(obs1)
+        assert len(agent._tool_call_history) == 1
+
+        agent.act(Observation(
+            awm_task={"task_id": "t1"},
+            awm_available_tools=self._TOOLS,
+            awm_episode_active=True,
+            awm_steps_remaining=9,
+        ))
+        assert len(agent._tool_call_history) == 2
+
+        # New episode resets history
+        obs_new = Observation(
+            awm_task={"task_id": "t2"},
+            awm_available_tools=self._TOOLS,
+            awm_episode_active=False,
+            awm_steps_remaining=10,
+        )
+        agent.act(obs_new)
+        assert len(agent._tool_call_history) == 1
+
+
+# =========================================================================
+# AWM Shared Database (Phase 4)
+# =========================================================================
+
+
+class TestAWMSharedDatabase:
+    """Test shared-database multi-agent coordination (Phase 4)."""
+
+    def _make_handler(self, seed=42, **overrides):
+        from swarm.core.awm_handler import AWMHandler
+        from swarm.logging.event_bus import EventBus
+
+        kwargs = {"seed": seed, "max_tasks_per_epoch": 2}
+        kwargs.update(overrides)
+        config = AWMConfig(**kwargs)
+        bus = EventBus()
+        collected: list = []
+        bus.subscribe(lambda e: collected.append(e))
+        bus.events = collected  # type: ignore[attr-defined]
+        return AWMHandler(config=config, event_bus=bus, seed=seed), bus
+
+    def _make_state(self, agent_ids=None):
+        from swarm.env.state import EnvState
+
+        state = EnvState()
+        for aid in (agent_ids or ["agent_1", "agent_2"]):
+            state.add_agent(aid, name=aid, agent_type=AgentType.HONEST)
+        return state
+
+    def test_config_defaults_preserved(self):
+        """shared_database=False by default — no change to existing behavior."""
+        config = AWMConfig()
+        assert config.shared_database is False
+        assert config.isolation_level == "read_committed"
+        assert config.conflict_probability == 0.3
+
+    def test_simulated_no_conflict_read_only(self):
+        """Read-only tools never trigger conflicts even in shared mode."""
+        from swarm.agents.base import Action
+
+        handler, bus = self._make_handler(
+            shared_database=True, conflict_probability=1.0,
+        )
+        state = self._make_state(["agent_1", "agent_2"])
+        handler.on_epoch_start(state)
+
+        # Both agents do read-only calls
+        for aid in ["agent_1", "agent_2"]:
+            if aid not in handler._assignments:
+                continue
+            action = Action(
+                action_type=ActionType.AWM_EXECUTE_TASK,
+                agent_id=aid,
+                metadata={
+                    "tool_calls": [
+                        {"tool_name": "query_database", "arguments": {"q": "SELECT 1"}},
+                        {"tool_name": "list_tables", "arguments": {}},
+                    ]
+                },
+            )
+            result = handler.handle_action(action, state)
+            assert result.success is True
+
+        # No conflict events should have been emitted
+        conflict_events = [
+            e for e in bus.events
+            if e.event_type == EventType.AWM_CONFLICT_DETECTED
+        ]
+        assert len(conflict_events) == 0
+
+    def test_simulated_write_conflict_deterministic(self):
+        """With conflict_probability=1.0, overlapping writes always conflict."""
+        from swarm.agents.base import Action
+
+        handler, bus = self._make_handler(
+            shared_database=True, conflict_probability=1.0,
+        )
+        state = self._make_state(["agent_1", "agent_2"])
+        handler.on_epoch_start(state)
+
+        # Agent 1 does a write (populates write set)
+        if "agent_1" in handler._assignments:
+            action1 = Action(
+                action_type=ActionType.AWM_EXECUTE_TASK,
+                agent_id="agent_1",
+                metadata={
+                    "tool_calls": [
+                        {"tool_name": "update_record", "arguments": {"id": 1}},
+                    ]
+                },
+            )
+            handler.handle_action(action1, state)
+
+        # Agent 2 does a write to the same table → conflict
+        if "agent_2" in handler._assignments:
+            action2 = Action(
+                action_type=ActionType.AWM_EXECUTE_TASK,
+                agent_id="agent_2",
+                metadata={
+                    "tool_calls": [
+                        {"tool_name": "update_record", "arguments": {"id": 2}},
+                    ]
+                },
+            )
+            handler.handle_action(action2, state)
+
+        conflict_events = [
+            e for e in bus.events
+            if e.event_type == EventType.AWM_CONFLICT_DETECTED
+        ]
+        assert len(conflict_events) >= 1
+        assert conflict_events[0].payload["conflict_type"] == "simulated_write_set_overlap"
+
+    def test_transaction_events_emitted_on_batch(self):
+        """Batch mode emits AWM_TRANSACTION_COMPLETED events in shared mode."""
+        from swarm.agents.base import Action
+
+        handler, bus = self._make_handler(
+            shared_database=True, conflict_probability=0.0,
+        )
+        state = self._make_state(["agent_1"])
+        handler.on_epoch_start(state)
+
+        action = Action(
+            action_type=ActionType.AWM_EXECUTE_TASK,
+            agent_id="agent_1",
+            metadata={
+                "tool_calls": [
+                    {"tool_name": "query_database", "arguments": {}},
+                ]
+            },
+        )
+        handler.handle_action(action, state)
+
+        tx_events = [
+            e for e in bus.events
+            if e.event_type == EventType.AWM_TRANSACTION_COMPLETED
+        ]
+        assert len(tx_events) == 1
+        assert tx_events[0].payload["committed"] is True
+
+    def test_epoch_end_clears_write_sets(self):
+        """on_epoch_end clears write sets and transaction state."""
+        handler, _bus = self._make_handler(shared_database=True)
+        state = self._make_state(["agent_1"])
+        handler.on_epoch_start(state)
+
+        # Manually populate to verify clearing
+        handler._write_sets["agent_1"] = {"default_table"}
+        handler._agent_transactions["agent_1"] = True
+
+        handler.on_epoch_end(state)
+        assert handler._write_sets == {}
+        assert handler._agent_transactions == {}
+
+    def test_isolation_level_none_skips_transactions(self):
+        """isolation_level='none' skips begin/end transaction."""
+        from swarm.agents.base import Action
+
+        handler, bus = self._make_handler(
+            shared_database=True, isolation_level="none",
+        )
+        state = self._make_state(["agent_1"])
+        handler.on_epoch_start(state)
+
+        action = Action(
+            action_type=ActionType.AWM_EXECUTE_TASK,
+            agent_id="agent_1",
+            metadata={
+                "tool_calls": [
+                    {"tool_name": "query_database", "arguments": {}},
+                ]
+            },
+        )
+        handler.handle_action(action, state)
+
+        # No transaction events when isolation_level="none"
+        tx_events = [
+            e for e in bus.events
+            if e.event_type == EventType.AWM_TRANSACTION_COMPLETED
+        ]
+        assert len(tx_events) == 0
+
+    def test_non_shared_mode_no_conflict_events(self):
+        """With shared_database=False (default), no conflict events emitted."""
+        from swarm.agents.base import Action
+
+        handler, bus = self._make_handler(shared_database=False)
+        state = self._make_state(["agent_1", "agent_2"])
+        handler.on_epoch_start(state)
+
+        for aid in ["agent_1", "agent_2"]:
+            if aid not in handler._assignments:
+                continue
+            action = Action(
+                action_type=ActionType.AWM_EXECUTE_TASK,
+                agent_id=aid,
+                metadata={
+                    "tool_calls": [
+                        {"tool_name": "update_record", "arguments": {"id": 1}},
+                    ]
+                },
+            )
+            handler.handle_action(action, state)
+
+        conflict_events = [
+            e for e in bus.events
+            if e.event_type == EventType.AWM_CONFLICT_DETECTED
+        ]
+        assert len(conflict_events) == 0
+
+        tx_events = [
+            e for e in bus.events
+            if e.event_type == EventType.AWM_TRANSACTION_COMPLETED
+        ]
+        assert len(tx_events) == 0
+
+
+# =========================================================================
+# AWM Server Manager Shared (Phase 4)
+# =========================================================================
+
+
+class TestAWMServerManagerShared:
+    """Test AWMServerManager shared-database mode (Phase 4)."""
+
+    @pytest.mark.asyncio
+    async def test_shared_server_same_instance(self):
+        """Two agents get the same server instance in shared mode."""
+        from swarm.bridges.awm.server_manager import AWMServerManager
+
+        config = AWMConfig(base_port=19300, shared_database=True)
+        mgr = AWMServerManager(config)
+        s1 = await mgr.start_server("agent_1")
+        s2 = await mgr.start_server("agent_2")
+        assert s1 is s2
+        assert s1 is not None
+        assert s1.agent_id == "shared"
+
+    @pytest.mark.asyncio
+    async def test_shared_reset_all_calls_once(self):
+        """reset_all resets the shared server once, not per-agent."""
+        from swarm.bridges.awm.server_manager import AWMServerManager
+
+        config = AWMConfig(base_port=19300, shared_database=True)
+        mgr = AWMServerManager(config)
+        await mgr.start_server("agent_1")
+        await mgr.start_server("agent_2")
+
+        reset_count = 0
+        original_reset = mgr._shared_server.reset_db
+
+        async def counting_reset():
+            nonlocal reset_count
+            reset_count += 1
+            return await original_reset()
+
+        mgr._shared_server.reset_db = counting_reset
+        await mgr.reset_all()
+        assert reset_count == 1
+
+    @pytest.mark.asyncio
+    async def test_shared_shutdown_cleans_up(self):
+        """shutdown stops the shared server and clears state."""
+        from swarm.bridges.awm.server_manager import AWMServerManager
+
+        config = AWMConfig(base_port=19300, shared_database=True)
+        mgr = AWMServerManager(config)
+        await mgr.start_server("agent_1")
+        await mgr.start_server("agent_2")
+        assert mgr.active_count == 2  # Both mapped to same server
+
+        await mgr.shutdown()
+        assert mgr.active_count == 0
+        assert mgr._shared_server is None

@@ -13,7 +13,7 @@ import asyncio
 import logging
 import random
 import uuid
-from typing import Any, Dict, FrozenSet, List, Optional
+from typing import Any, Dict, FrozenSet, List, Optional, Set
 
 from swarm.agents.base import Action, ActionType
 from swarm.bridges.awm.config import AWMConfig
@@ -85,6 +85,10 @@ class AWMHandler(Handler):
         self._clients: Dict[str, AWMMCPSyncClient] = {}
         if config.live_mode:
             self._server_manager = AWMServerManager(config)
+
+        # Phase 4: Shared-state multi-agent coordination
+        self._write_sets: Dict[str, Set[str]] = {}
+        self._agent_transactions: Dict[str, bool] = {}
 
     @staticmethod
     def handled_action_types() -> FrozenSet:
@@ -180,6 +184,8 @@ class AWMHandler(Handler):
         self._assignments.clear()
         self._traces.clear()
         self._last_results.clear()
+        self._write_sets.clear()
+        self._agent_transactions.clear()
 
         # In live mode, reset all DBs between epochs
         if (
@@ -276,10 +282,91 @@ class AWMHandler(Handler):
             return self._handle_finish_task(action, state)
         return HandlerActionResult(success=False)
 
+    # ------------------------------------------------------------------
+    # Phase 4: Shared-state coordination helpers
+    # ------------------------------------------------------------------
+
+    def _begin_agent_transaction(self, agent_id: str) -> None:
+        """Begin a transaction for an agent in shared-database mode."""
+        if not self.config.shared_database:
+            return
+        if self.config.isolation_level == "none":
+            return
+
+        self._agent_transactions[agent_id] = True
+
+        # In live mode, send HTTP begin
+        if self.config.live_mode and agent_id in self._clients:
+            self._clients[agent_id].begin_transaction()
+
+    def _end_agent_transaction(
+        self, agent_id: str, commit: bool = True
+    ) -> None:
+        """End a transaction for an agent in shared-database mode."""
+        if not self.config.shared_database:
+            return
+        if self.config.isolation_level == "none":
+            return
+        if not self._agent_transactions.get(agent_id, False):
+            return
+
+        self._agent_transactions[agent_id] = False
+
+        # In live mode, send HTTP end
+        if self.config.live_mode and agent_id in self._clients:
+            self._clients[agent_id].end_transaction(commit)
+
+        self._emit_event(Event(
+            event_type=EventType.AWM_TRANSACTION_COMPLETED,
+            agent_id=agent_id,
+            payload={"committed": commit},
+        ))
+
+    @staticmethod
+    def _infer_write_tables(tool_name: str) -> Set[str]:
+        """Heuristic: which tables a tool writes to.
+
+        Write tools (update, create, delete) → ``{"default_table"}``.
+        Read-only tools (query, list) → empty set.
+        """
+        write_prefixes = ("update_", "create_", "delete_", "insert_")
+        if any(tool_name.startswith(p) for p in write_prefixes):
+            return {"default_table"}
+        return set()
+
+    def _check_write_conflict(
+        self, agent_id: str, tool_name: str
+    ) -> bool:
+        """Simulated conflict detection via write-set overlap + RNG.
+
+        Returns True if a conflict is detected.
+        """
+        if not self.config.shared_database:
+            return False
+
+        tables = self._infer_write_tables(tool_name)
+        if not tables:
+            return False  # Read-only, no conflict possible
+
+        # Check overlap with other agents' write sets
+        for other_id, other_tables in self._write_sets.items():
+            if other_id == agent_id:
+                continue
+            if tables & other_tables:
+                # Overlap exists — probabilistic conflict
+                if self._rng.random() < self.config.conflict_probability:
+                    return True
+
+        # Track this agent's writes
+        if agent_id not in self._write_sets:
+            self._write_sets[agent_id] = set()
+        self._write_sets[agent_id] |= tables
+        return False
+
     def _handle_batch_mode(
         self, action: Action, state: EnvState
     ) -> HandlerActionResult:
-        """Process an AWM_EXECUTE_TASK action (batch mode, unchanged)."""
+        """Process an AWM_EXECUTE_TASK action (batch mode)."""
         agent_id = action.agent_id
         trace = self._traces.get(agent_id)
 
@@ -292,14 +379,25 @@ class AWMHandler(Handler):
                 metadata={"error": "max_steps_exceeded"},
             )
 
+        # Phase 4: begin transaction in shared mode
+        self._begin_agent_transaction(agent_id)
+
+        conflict_occurred = False
         tool_calls = action.metadata.get("tool_calls", [])
         for tc_data in tool_calls:
             record = self._execute_tool_call(tc_data, agent_id)
             trace.tool_calls.append(record)
             trace.steps_used += 1
 
+            if record.conflict_detected:
+                conflict_occurred = True
+                break
+
             if trace.steps_used >= self.config.max_steps_per_task:
                 break
+
+        # Phase 4: end transaction (rollback on conflict)
+        self._end_agent_transaction(agent_id, commit=not conflict_occurred)
 
         # Run verification
         verification_result = self._execute_verification(trace, agent_id)
@@ -398,6 +496,9 @@ class AWMHandler(Handler):
         if trace is None:
             return HandlerActionResult(success=False)
 
+        # Phase 4: end any open transaction before verification
+        self._end_agent_transaction(agent_id, commit=True)
+
         # Run verification
         verification_result = self._execute_verification(trace, agent_id)
         trace.verified = verification_result.get("passed", False)
@@ -443,10 +544,55 @@ class AWMHandler(Handler):
     def _execute_tool_call(
         self, tc_data: Dict[str, Any], agent_id: str
     ) -> ToolCallRecord:
-        """Dispatch tool call to live or simulated implementation."""
+        """Dispatch tool call to live or simulated implementation.
+
+        In shared-database mode, checks for simulated write conflicts
+        before dispatch and detects SQLITE_BUSY errors after live calls.
+        """
+        tool_name = tc_data.get("tool_name", "")
+
+        # Phase 4: simulated conflict check (before dispatch)
+        if self._check_write_conflict(agent_id, tool_name):
+            record = ToolCallRecord(
+                tool_name=tool_name,
+                arguments=tc_data.get("arguments", {}),
+            )
+            record.conflict_detected = True
+            record.is_error_response = True
+            record.error = "write_conflict"
+            self._emit_event(Event(
+                event_type=EventType.AWM_CONFLICT_DETECTED,
+                agent_id=agent_id,
+                payload={
+                    "tool_name": tool_name,
+                    "conflict_type": "simulated_write_set_overlap",
+                },
+            ))
+            return record
+
         if self.config.live_mode and agent_id in self._clients:
-            return self._live_tool_call(tc_data, agent_id)
-        return self._simulate_tool_call(tc_data)
+            record = self._live_tool_call(tc_data, agent_id)
+        else:
+            record = self._simulate_tool_call(tc_data)
+
+        # Phase 4: detect SQLITE_BUSY from live call errors
+        if (
+            self.config.shared_database
+            and record.is_error_response
+            and record.error
+            and "SQLITE_BUSY" in record.error.upper()
+        ):
+            record.conflict_detected = True
+            self._emit_event(Event(
+                event_type=EventType.AWM_CONFLICT_DETECTED,
+                agent_id=agent_id,
+                payload={
+                    "tool_name": tool_name,
+                    "conflict_type": "sqlite_busy",
+                },
+            ))
+
+        return record
 
     def _live_tool_call(
         self, tc_data: Dict[str, Any], agent_id: str

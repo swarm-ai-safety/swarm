@@ -94,6 +94,7 @@ def history_to_agent_records(
                 "simulation_id": history.simulation_id,
                 "agent_id": agent_id,
                 "name": snapshot.name,
+                "agent_type": snapshot.agent_type,
                 "epoch": snapshot.epoch,
                 "reputation": snapshot.reputation,
                 "resources": snapshot.resources,
@@ -107,6 +108,26 @@ def history_to_agent_records(
             }
             records.append(record)
 
+    return records
+
+
+def history_to_interaction_records(
+    history: SimulationHistory,
+) -> List[Dict[str, Any]]:
+    """Convert interaction history to list of records for export."""
+    records = []
+    for interaction in history.interactions:
+        record = {
+            "interaction_id": interaction.interaction_id,
+            "timestamp": interaction.timestamp.isoformat() if hasattr(interaction, 'timestamp') and interaction.timestamp else None,
+            "initiator": interaction.initiator,
+            "counterparty": interaction.counterparty,
+            "interaction_type": interaction.interaction_type.value if hasattr(interaction.interaction_type, 'value') else str(interaction.interaction_type),
+            "accepted": interaction.accepted,
+            "p": interaction.p,
+            "v_hat": interaction.v_hat,
+        }
+        records.append(record)
     return records
 
 
@@ -231,6 +252,7 @@ def export_to_json(
     history: SimulationHistory,
     output_path: Union[str, Path],
     indent: int = 2,
+    include_events: bool = False,
 ) -> Path:
     """
     Export full simulation history to JSON.
@@ -239,6 +261,8 @@ def export_to_json(
         history: Simulation history
         output_path: Output file path
         indent: JSON indentation
+        include_events: If True, include per-interaction events under the
+            ``interaction_events`` key
 
     Returns:
         Output path
@@ -257,6 +281,9 @@ def export_to_json(
         "epoch_snapshots": history_to_epoch_records(history),
         "agent_snapshots": history_to_agent_records(history),
     }
+
+    if include_events and history.interactions:
+        data["interaction_events"] = history_to_interaction_records(history)
 
     with open(output_path, "w") as f:
         json.dump(data, f, indent=indent, default=str)
@@ -341,6 +368,7 @@ def load_from_json(
             agent_id=record["agent_id"],
             epoch=record["epoch"],
             name=record.get("name"),
+            agent_type=record.get("agent_type"),
             reputation=record.get("reputation", 0.0),
             resources=record.get("resources", 100.0),
             interactions_initiated=record.get("interactions_initiated", 0),
@@ -421,6 +449,7 @@ def load_from_csv(
                 agent_id=str(row["agent_id"]),
                 epoch=int(row.get("epoch", 0)),
                 name=str(name) if name is not None else None,
+                agent_type=str(row.get("agent_type")) if "agent_type" in row and not pd.isna(row.get("agent_type")) else None,
                 reputation=float(row.get("reputation", 0.0)),
                 resources=float(row.get("resources", 100.0)),
                 total_payoff=float(row.get("total_payoff", 0.0)),
