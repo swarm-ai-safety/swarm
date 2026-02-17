@@ -26,6 +26,7 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
@@ -237,11 +238,39 @@ def build_adapter(
         def _validate_path_param_value(name: str, value: Any) -> str:
             """
             Ensure path-parameter values cannot escape the intended route.
-
-            Disallow '/' to prevent injection of additional path segments and
-            disallow values starting with '.' to avoid '../' style traversal.
+                value = str(arguments[param_name])
+                rendered_path = rendered_path.replace(f"{{{param_name}}}", value)
             """
             value_str = str(value)
+        # Ensure the rendered path is safe and not an absolute URL
+        def _validate_rendered_path(p: str) -> Optional[str]:
+            """
+            Validate that the rendered path cannot be used to perform SSRF.
+
+            - Must not contain a scheme (no "http://", "https://", etc.).
+            - Must not start with '//' (scheme-relative URL).
+            - Must start with '/' to be a normal path on the fixed base_url.
+            - Must not contain path traversal components that escape the API root.
+            """
+            parsed = urlparse(p)
+            if parsed.scheme or parsed.netloc:
+                return "Absolute URLs are not allowed in tool paths."
+            if p.startswith("//"):
+                return "Scheme-relative URLs are not allowed in tool paths."
+            if not p.startswith("/"):
+                return "Tool paths must start with '/'."
+            # Basic traversal check; adjust if more flexibility is needed.
+            if "/../" in p or p.endswith("/.."):
+                return "Path traversal components are not allowed in tool paths."
+            return None
+
+        path_error = _validate_rendered_path(rendered_path)
+        if path_error is not None:
+            return JSONResponse(
+                {"isError": True, "result": path_error},
+                status_code=400,
+            )
+
             if "/" in value_str or value_str.startswith("."):
                 raise ValueError(f"Invalid value for path parameter '{name}'")
             return value_str
