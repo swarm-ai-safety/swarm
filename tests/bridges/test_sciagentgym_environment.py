@@ -15,6 +15,9 @@ from swarm.bridges.sciagentgym.environment import (
 )
 from swarm.bridges.sciagentgym.workspace import WorkspaceManager
 
+# Test constants
+TEST_FILE_REPEATS = 100  # Generates ~400 bytes, sufficient for size tracking tests
+
 
 class TestSciAgentGymConfig:
     """Test SciAgentGym configuration."""
@@ -273,9 +276,8 @@ class TestWorkspaceManager:
 
             workspace_path = manager.mount_workspace("test_env")
 
-            # Create a small file (repeat "test" 100 times = ~400 bytes)
-            # This is sufficient to verify size tracking without being excessive
-            (workspace_path / "data" / "test.txt").write_text("test" * 100)
+            # Create a small file for testing size tracking
+            (workspace_path / "data" / "test.txt").write_text("test" * TEST_FILE_REPEATS)
 
             size = manager.get_workspace_size("test_env")
             assert size > 0

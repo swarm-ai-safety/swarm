@@ -18,6 +18,12 @@ logger = logging.getLogger(__name__)
 # Default subdirectories for workspaces
 DEFAULT_WORKSPACE_SUBDIRS = ["data", "outputs", "artifacts", "tmp"]
 
+# File permission constants
+WORKSPACE_PERMISSIONS = 0o700  # Owner-only read/write/execute
+
+# Size conversion constants
+BYTES_PER_MB = 1024 * 1024
+
 
 class WorkspaceManager:
     """Manages workspace filesystems for SciAgentGym environments.
@@ -75,7 +81,7 @@ class WorkspaceManager:
         # Set permissions (read/write for owner only)
         # Note: On Windows, os.chmod has limited support. This is a no-op on Windows.
         try:
-            os.chmod(workspace_path, 0o700)
+            os.chmod(workspace_path, WORKSPACE_PERMISSIONS)
         except (OSError, NotImplementedError):
             # Windows or other systems where chmod is not fully supported
             pass
@@ -131,7 +137,7 @@ class WorkspaceManager:
             True if within quota, False otherwise.
         """
         size_bytes = self.get_workspace_size(env_id)
-        size_mb = size_bytes / (1024 * 1024)
+        size_mb = size_bytes / BYTES_PER_MB
 
         if size_mb > self.max_size_mb:
             logger.warning(
@@ -203,7 +209,7 @@ class WorkspaceManager:
             if workspace_dir.is_dir():
                 env_id = workspace_dir.name
                 size_bytes = self.get_workspace_size(env_id)
-                size_mb = size_bytes / (1024 * 1024)
+                size_mb = size_bytes / BYTES_PER_MB
                 total_size += size_bytes
 
                 workspaces[env_id] = {
@@ -214,7 +220,7 @@ class WorkspaceManager:
 
         return {
             "total_workspaces": len(workspaces),
-            "total_size_mb": round(total_size / (1024 * 1024), 2),
+            "total_size_mb": round(total_size / BYTES_PER_MB, 2),
             "max_size_mb": self.max_size_mb,
             "workspaces": workspaces,
         }
