@@ -26,7 +26,6 @@ import sys
 import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Optional
-import urllib.parse
 from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
@@ -232,101 +231,20 @@ def build_adapter(
         method = meta["method"]
         path = meta["path"]
 
-        # Substitute path parameters from arguments
-        rendered_path = path
-        path_params_used: set = set()
         def _validate_path_param_value(name: str, value: Any) -> str:
-            """
-            Validate a path parameter value to avoid unsafe characters that could
-            alter the intended route (for example, path traversal or injection of
-            additional segments). Returns the stringified value if valid, otherwise
-            raises a ValueError.
-            """
+            """Validate a path parameter value to prevent traversal/injection."""
             s = str(value)
-        # Basic path hardening: ensure we stay on the same host/base_url
-        # and do not allow obviously dangerous path patterns.
-        # Validate that rendered_path is a relative application path, not a full URL.
-        parsed_path = urllib.parse.urlparse(rendered_path)
-        if parsed_path.scheme or parsed_path.netloc or not rendered_path.startswith("/"):
-            return JSONResponse(
-                {
-                    "isError": True,
-                    "result": f"Invalid tool path: {rendered_path!r}",
-                },
-                status_code=400,
-            )
-
-        if "://" in rendered_path or "\\" in rendered_path:
-            return JSONResponse(
-                {
-                    "isError": True,
-                    "result": "Invalid tool path.",
-                },
-                status_code=400,
-            )
-
-        # Normalize to an absolute path relative to the base_url.
-        if not rendered_path.startswith("/"):
-            safe_rendered_path = "/" + rendered_path.lstrip("./")
-        else:
-            safe_rendered_path = rendered_path
-
-            # Disallow path separators and control characters
             if "/" in s or "\\" in s:
                 raise ValueError(f"Invalid path parameter '{name}': unexpected '/' or '\\\\'")
             if "\n" in s or "\r" in s or "\t" in s:
                 raise ValueError(f"Invalid path parameter '{name}': unexpected whitespace")
-            # Basic traversal protection
             if s.startswith(".") or ".." in s:
                 raise ValueError(f"Invalid path parameter '{name}': potentially unsafe value")
-                        resp = await client.put(safe_rendered_path, json=remaining)
+            return s
 
-                        resp = await client.patch(safe_rendered_path, json=remaining)
-        def _validate_path_param_value(name: str, value: Any) -> str:
-                        resp = await client.post(safe_rendered_path, json=remaining)
-                try:
-                    resp = await client.delete(safe_rendered_path, params=remaining)
-                except ValueError as exc:
-                    resp = await client.get(safe_rendered_path, params=remaining)
-                        {"isError": True, "result": str(exc)},
-                        status_code=400,
-                    )
-                rendered_path = rendered_path.replace(f"{{{param_name}}}", safe_value)
-            """
-            value_str = str(value)
-        # Ensure the rendered path is safe and not an absolute URL
-        def _validate_rendered_path(p: str) -> Optional[str]:
-            """
-            Validate that the rendered path cannot be used to perform SSRF.
-
-            - Must not contain a scheme (no "http://", "https://", etc.).
-            - Must not start with '//' (scheme-relative URL).
-            - Must start with '/' to be a normal path on the fixed base_url.
-            - Must not contain path traversal components that escape the API root.
-            """
-            parsed = urlparse(p)
-            if parsed.scheme or parsed.netloc:
-                return "Absolute URLs are not allowed in tool paths."
-            if p.startswith("//"):
-                return "Scheme-relative URLs are not allowed in tool paths."
-            if not p.startswith("/"):
-                return "Tool paths must start with '/'."
-            # Basic traversal check; adjust if more flexibility is needed.
-            if "/../" in p or p.endswith("/.."):
-                return "Path traversal components are not allowed in tool paths."
-            return None
-
-        path_error = _validate_rendered_path(rendered_path)
-        if path_error is not None:
-            return JSONResponse(
-                {"isError": True, "result": path_error},
-                status_code=400,
-            )
-
-            if "/" in value_str or value_str.startswith("."):
-                raise ValueError(f"Invalid value for path parameter '{name}'")
-            return value_str
-
+        # Substitute path parameters from arguments
+        rendered_path = path
+        path_params_used: set = set()
         for match in re.finditer(r"\{(\w+)\}", path):
             param_name = match.group(1)
             if param_name in arguments:
@@ -339,6 +257,29 @@ def build_adapter(
                     )
                 rendered_path = rendered_path.replace(f"{{{param_name}}}", safe_value)
                 path_params_used.add(param_name)
+
+        # Validate rendered path is a safe relative path (SSRF protection)
+        parsed_path = urlparse(rendered_path)
+        if parsed_path.scheme or parsed_path.netloc:
+            return JSONResponse(
+                {"isError": True, "result": "Absolute URLs are not allowed in tool paths."},
+                status_code=400,
+            )
+        if rendered_path.startswith("//"):
+            return JSONResponse(
+                {"isError": True, "result": "Scheme-relative URLs are not allowed."},
+                status_code=400,
+            )
+        if not rendered_path.startswith("/"):
+            return JSONResponse(
+                {"isError": True, "result": "Tool paths must start with '/'."},
+                status_code=400,
+            )
+        if "/../" in rendered_path or rendered_path.endswith("/.."):
+            return JSONResponse(
+                {"isError": True, "result": "Path traversal is not allowed."},
+                status_code=400,
+            )
 
         remaining = {k: v for k, v in arguments.items() if k not in path_params_used}
 
