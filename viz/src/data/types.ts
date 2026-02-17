@@ -91,4 +91,5 @@ export interface SimulationData {
   seed: number | null;
   epoch_snapshots: EpochSnapshot[];
   agent_snapshots: AgentSnapshot[];
+  events?: InteractionEvent[];
 }

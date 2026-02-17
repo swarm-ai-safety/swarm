@@ -5,11 +5,14 @@ import { SimContext } from "./simulation-context";
 import * as cam from "@/engine/camera";
 import { gridToScreen } from "@/engine/isometric";
 
+import type { SimContextValue } from "./simulation-context";
+type Viewport = SimContextValue["state"]["viewport"];
+
 export function useCamera() {
   const { state, dispatch, agentPositions } = useContext(SimContext);
 
   const setViewport = useCallback(
-    (viewport: typeof state.viewport) => dispatch({ type: "SET_VIEWPORT", viewport }),
+    (viewport: Viewport) => dispatch({ type: "SET_VIEWPORT", viewport }),
     [dispatch],
   );
 

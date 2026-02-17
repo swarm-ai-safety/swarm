@@ -1,7 +1,7 @@
 import type { AgentType } from "@/data/types";
 
-export const TILE_WIDTH = 64;
-export const TILE_HEIGHT = 32;
+export const TILE_WIDTH = 96;
+export const TILE_HEIGHT = 48;
 
 export const MIN_ZOOM = 0.3;
 export const MAX_ZOOM = 4;
@@ -43,8 +43,8 @@ export const AGENT_GRID_SPACING = 3;
 
 /** Character pixel dimensions */
 export const CHARACTER = {
-  baseWidth: 32,
-  baseHeight: 56,
+  baseWidth: 48,
+  baseHeight: 84,
 } as const;
 
 /** Animation durations in ms */

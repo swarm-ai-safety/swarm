@@ -18,6 +18,7 @@ export class InteractionSystem {
         accepted: evt.accepted,
         progress: 0,
         epoch,
+        interactionType: mapInteractionType(evt.interaction_type),
       });
     }
   }
@@ -46,6 +47,7 @@ export class InteractionSystem {
         accepted: rng() < acceptRate,
         progress: rng() * 0.3, // stagger start
         epoch,
+        interactionType: "unknown",
       });
     }
   }
@@ -75,6 +77,24 @@ export class InteractionSystem {
   /** Get active arcs */
   getActive(): InteractionArc[] {
     return this.arcs.filter((a) => a.progress < 1);
+  }
+}
+
+/** Map backend InteractionType to visual arc type */
+function mapInteractionType(
+  type: string | undefined,
+): InteractionArc["interactionType"] {
+  switch (type) {
+    case "trade":
+      return "trade";
+    case "reply":
+      return "communication";
+    case "collaboration":
+      return "task";
+    case "vote":
+      return "governance";
+    default:
+      return "unknown";
   }
 }
 

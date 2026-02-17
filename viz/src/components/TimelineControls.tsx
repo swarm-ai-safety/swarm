@@ -10,7 +10,7 @@ export function TimelineControls() {
     usePlayback();
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 h-14 bg-panel border-t border-border flex items-center gap-3 px-4 z-20">
+    <div className="absolute bottom-0 left-0 right-0 h-14 bg-panel border-t border-border flex items-center gap-3 px-4 z-[10000]">
       {/* Play/Pause */}
       <button
         onClick={() => (playing ? pause() : play())}

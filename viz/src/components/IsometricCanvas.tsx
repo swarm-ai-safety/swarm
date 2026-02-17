@@ -23,6 +23,9 @@ export function IsometricCanvas() {
     gridSize,
     setHovered,
     setSelected,
+    codeTrailSystem,
+    digitalRainRef,
+    recompileStateRef,
   } = useSimulation();
   const { handlePan, handleZoom, resetCamera, resize } = useCamera();
 
@@ -58,6 +61,8 @@ export function IsometricCanvas() {
     if (!ctx) return;
 
     ctx.save();
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctx.scale(devicePixelRatio, devicePixelRatio);
 
     render(ctx, {
@@ -71,6 +76,9 @@ export function IsometricCanvas() {
       overlays,
       particles,
       gridSize,
+      digitalRain: digitalRainRef.current,
+      codeTrails: codeTrailSystem.current.particles,
+      recompileState: recompileStateRef.current,
     });
 
     ctx.restore();

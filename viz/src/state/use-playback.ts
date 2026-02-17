@@ -43,21 +43,26 @@ export function usePlayback() {
           epochTimeRef.current = 0;
           epoch = Math.min(epoch + 1, state.data.epoch_snapshots.length - 1);
 
-          // Spawn arcs for new epoch
+          // Spawn arcs for new epoch — use real events when available
           const epochSnap = state.data.epoch_snapshots[epoch];
           if (epochSnap) {
-            const agentIds = [...agentPositions.current.keys()];
-            const acceptRate =
-              epochSnap.total_interactions > 0
-                ? epochSnap.accepted_interactions / epochSnap.total_interactions
-                : 0.5;
-            interactionSystem.current.addSyntheticArcs(
-              agentIds,
-              epoch,
-              epochSnap.total_interactions,
-              epochSnap.avg_p,
-              acceptRate,
-            );
+            const events = state.data.events;
+            if (events && events.length > 0) {
+              interactionSystem.current.addFromEvents(events, epoch);
+            } else {
+              const agentIds = [...agentPositions.current.keys()];
+              const acceptRate =
+                epochSnap.total_interactions > 0
+                  ? epochSnap.accepted_interactions / epochSnap.total_interactions
+                  : 0.5;
+              interactionSystem.current.addSyntheticArcs(
+                agentIds,
+                epoch,
+                epochSnap.total_interactions,
+                epochSnap.avg_p,
+                acceptRate,
+              );
+            }
           }
 
           if (epoch >= state.data.epoch_snapshots.length - 1) {
@@ -249,23 +254,28 @@ export function usePlayback() {
       epochTimeRef.current = 0;
       dispatch({ type: "SET_EPOCH", epoch });
 
-      // Generate arcs for this epoch
+      // Generate arcs for this epoch — use real events when available
       if (state.data) {
         interactionSystem.current.clear();
         const epochSnap = state.data.epoch_snapshots[epoch];
         if (epochSnap) {
-          const agentIds = [...agentPositions.current.keys()];
-          const acceptRate =
-            epochSnap.total_interactions > 0
-              ? epochSnap.accepted_interactions / epochSnap.total_interactions
-              : 0.5;
-          interactionSystem.current.addSyntheticArcs(
-            agentIds,
-            epoch,
-            epochSnap.total_interactions,
-            epochSnap.avg_p,
-            acceptRate,
-          );
+          const events = state.data.events;
+          if (events && events.length > 0) {
+            interactionSystem.current.addFromEvents(events, epoch);
+          } else {
+            const agentIds = [...agentPositions.current.keys()];
+            const acceptRate =
+              epochSnap.total_interactions > 0
+                ? epochSnap.accepted_interactions / epochSnap.total_interactions
+                : 0.5;
+            interactionSystem.current.addSyntheticArcs(
+              agentIds,
+              epoch,
+              epochSnap.total_interactions,
+              epochSnap.avg_p,
+              acceptRate,
+            );
+          }
         }
       }
     },

@@ -5,6 +5,7 @@ import { useSimulation } from "@/state/use-simulation";
 import { loadSimulationData } from "@/data/loader";
 
 const SAMPLE_FILES = [
+  { name: "24-Agent Mixed Demo", path: "/sample-data/demo-history-24.json" },
   { name: "6-Agent Mixed Demo", path: "/sample-data/demo-history.json" },
 ];
 

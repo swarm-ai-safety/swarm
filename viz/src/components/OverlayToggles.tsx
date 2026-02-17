@@ -11,6 +11,9 @@ const TOGGLE_ITEMS: { key: keyof OverlayState; label: string }[] = [
   { key: "minimap", label: "Map" },
   { key: "collusionLines", label: "Collusion" },
   { key: "threatZones", label: "Threats" },
+  { key: "digitalRain", label: "Rain" },
+  { key: "tierraStrip", label: "Memory" },
+  { key: "networkWeb", label: "Network" },
 ];
 
 export function OverlayToggles() {
@@ -19,7 +22,7 @@ export function OverlayToggles() {
   if (!data) return null;
 
   return (
-    <div className="absolute bottom-16 left-4 flex gap-1 z-20">
+    <div className="absolute bottom-24 left-4 flex flex-wrap gap-1 z-20 max-w-xs">
       {TOGGLE_ITEMS.map(({ key, label }) => (
         <button
           key={key}

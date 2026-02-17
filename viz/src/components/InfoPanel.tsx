@@ -17,7 +17,7 @@ export function InfoPanel() {
     return agentSnapshots
       .filter((s) => s.agent_id === agent.id)
       .sort((a, b) => a.epoch - b.epoch);
-  }, [agentSnapshots, agent?.id]);
+  }, [agentSnapshots, agent]);
 
   const repHistory = useMemo(() => history.map((h) => h.reputation), [history]);
   const payoffHistory = useMemo(

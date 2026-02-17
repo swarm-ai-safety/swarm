@@ -9,6 +9,7 @@ import { MetricsOverlay } from "./MetricsOverlay";
 import { Minimap } from "./Minimap";
 import { DataLoader } from "./DataLoader";
 import { OverlayToggles } from "./OverlayToggles";
+import { SplashScreen } from "./SplashScreen";
 
 export function SimulationViewer() {
   return (
@@ -26,6 +27,7 @@ export function SimulationViewer() {
         <Minimap />
         <OverlayToggles />
         <TimelineControls />
+        <SplashScreen />
       </div>
     </SimulationProvider>
   );

@@ -2,12 +2,13 @@
 
 import React, { createContext, useReducer, useCallback, useRef, useEffect } from "react";
 import type { SimulationData, EpochSnapshot, AgentSnapshot } from "@/data/types";
-import type { AgentVisual, InteractionArc, Viewport, OverlayState, Particle } from "@/engine/types";
+import type { AgentVisual, InteractionArc, Viewport, OverlayState, Particle, DigitalRainState, CodeTrailParticle, RecompileState } from "@/engine/types";
 import type { EnvironmentState } from "@/engine/systems/environment-system";
 import { interpolateEnvironment } from "@/engine/systems/environment-system";
 import { interpolateAgents, computeAgentPositions } from "@/engine/systems/animation-system";
 import { InteractionSystem } from "@/engine/systems/interaction-system";
 import { ParticleSystem } from "@/engine/systems/particle-system";
+import { CodeTrailSystem } from "@/engine/systems/code-trail-system";
 import { interpolateEpoch } from "@/data/interpolator";
 import { groupAgentsByEpoch, getUniqueAgentIds } from "@/data/normalizer";
 import { createViewport, fitBounds } from "@/engine/camera";
@@ -43,6 +44,9 @@ const defaultOverlays: OverlayState = {
   collusionLines: true,
   particles: true,
   minimap: true,
+  digitalRain: true,
+  tierraStrip: true,
+  networkWeb: false,
 };
 
 const initialState: SimState = {
@@ -57,7 +61,7 @@ const initialState: SimState = {
   overlays: defaultOverlays,
   agents: [],
   arcs: [],
-  environment: { threatLevel: 0, toxicity: 0, giniCoefficient: 0, collusionRisk: 0 },
+  environment: { threatLevel: 0, toxicity: 0, giniCoefficient: 0, collusionRisk: 0, incoherence: 0, contagionDepth: 0, activeThreats: 0, reputationStd: 0, payoffStd: 0, avgSynergyScore: 0, avgCoordinationScore: 0, avgDegree: 0, avgClustering: 0 },
   particles: [],
   currentEpochSnap: null,
   gridSize: 10,
@@ -133,6 +137,9 @@ export interface SimContextValue {
   dispatch: React.Dispatch<Action>;
   interactionSystem: React.RefObject<InteractionSystem>;
   particleSystem: React.RefObject<ParticleSystem>;
+  codeTrailSystem: React.RefObject<CodeTrailSystem>;
+  digitalRainRef: React.RefObject<DigitalRainState | null>;
+  recompileStateRef: React.RefObject<RecompileState>;
   agentPositions: React.RefObject<Map<string, { gridX: number; gridY: number }>>;
   agentsByEpoch: React.RefObject<Map<number, Map<string, AgentSnapshot>>>;
 }
@@ -143,6 +150,9 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
   const [state, dispatch] = useReducer(reducer, initialState);
   const interactionSystem = useRef(new InteractionSystem());
   const particleSystem = useRef(new ParticleSystem());
+  const codeTrailSystem = useRef(new CodeTrailSystem());
+  const digitalRainRef = useRef<DigitalRainState | null>(null);
+  const recompileStateRef = useRef<RecompileState>({ active: false, startTime: 0, duration: 400, scanlineY: 0 });
   const agentPositions = useRef(new Map<string, { gridX: number; gridY: number }>());
   const agentsByEpoch = useRef(new Map<number, Map<string, AgentSnapshot>>());
 
@@ -154,6 +164,8 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
     agentsByEpoch.current = groupAgentsByEpoch(state.data.agent_snapshots);
     interactionSystem.current.clear();
     particleSystem.current.clear();
+    codeTrailSystem.current.clear();
+    digitalRainRef.current = null;
 
     // Auto-fit camera to agent positions
     if (agentPositions.current.size > 0) {
@@ -167,11 +179,12 @@ export function SimulationProvider({ children }: { children: React.ReactNode }) 
       }
       dispatch({ type: "SET_VIEWPORT", viewport: fitBounds(state.viewport, minX, minY, maxX, maxY) });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- viewport intentionally excluded to avoid infinite loop
   }, [state.data]);
 
   return (
     <SimContext.Provider
-      value={{ state, dispatch, interactionSystem, particleSystem, agentPositions, agentsByEpoch }}
+      value={{ state, dispatch, interactionSystem, particleSystem, codeTrailSystem, digitalRainRef, recompileStateRef, agentPositions, agentsByEpoch }}
     >
       {children}
     </SimContext.Provider>

@@ -577,7 +577,7 @@ class TestOrchestratorIntegration:
 
         assert metrics[-1].network_metrics is not None
         assert "n_edges" in metrics[-1].network_metrics
-        assert "average_degree" in metrics[-1].network_metrics
+        assert "avg_degree" in metrics[-1].network_metrics
 
     def test_dynamic_network_decay(self):
         """Test network edges decay over epochs."""

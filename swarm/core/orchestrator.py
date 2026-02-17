@@ -163,6 +163,8 @@ class EpochMetrics(BaseModel):
     network_metrics: Optional[Dict[str, float]] = None
     capability_metrics: Optional[EmergentCapabilityMetrics] = None
     spawn_metrics: Optional[Dict[str, Any]] = None
+    security_report: Optional[Any] = None
+    collusion_report: Optional[Any] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -187,6 +189,17 @@ class EpochMetrics(BaseModel):
         else:
             result["capability_metrics"] = None
         result["spawn_metrics"] = self.spawn_metrics
+        if self.security_report is not None:
+            result["security_report"] = {
+                "ecosystem_threat_level": getattr(self.security_report, "ecosystem_threat_level", 0.0),
+                "active_threat_count": getattr(self.security_report, "active_threat_count", 0),
+                "contagion_depth": getattr(self.security_report, "contagion_depth", 0),
+            }
+        if self.collusion_report is not None:
+            result["collusion_report"] = {
+                "ecosystem_collusion_risk": getattr(self.collusion_report, "ecosystem_collusion_risk", 0.0),
+                "n_flagged_pairs": getattr(self.collusion_report, "n_flagged_pairs", 0),
+            }
         return result
 
 
@@ -1226,6 +1239,16 @@ class Orchestrator:
         if self.capability_analyzer is not None:
             capability_metrics = self.capability_analyzer.compute_metrics()
 
+        # Get security report if available
+        security_report = None
+        if self.governance_engine is not None:
+            security_report = self.governance_engine.get_security_report()
+
+        # Get collusion report if available
+        collusion_report = None
+        if self.governance_engine is not None:
+            collusion_report = self.governance_engine.get_collusion_report()
+
         # Collect spawn metrics if spawn tree exists
         spawn_metrics_dict = None
         if self._spawn_tree is not None:
@@ -1242,6 +1265,8 @@ class Orchestrator:
                 network_metrics=network_metrics,
                 capability_metrics=capability_metrics,
                 spawn_metrics=spawn_metrics_dict,
+                security_report=security_report,
+                collusion_report=collusion_report,
             )
 
         accepted = [i for i in interactions if i.accepted]
@@ -1264,6 +1289,8 @@ class Orchestrator:
             network_metrics=network_metrics,
             capability_metrics=capability_metrics,
             spawn_metrics=spawn_metrics_dict,
+            security_report=security_report,
+            collusion_report=collusion_report,
         )
 
     def _emit_event(self, event: Event) -> None:

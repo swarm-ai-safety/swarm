@@ -38,6 +38,16 @@ export function createArcEntity(
   };
 }
 
+/** Get visual style modifiers based on interaction type */
+function getArcStyle(type?: InteractionArc["interactionType"]): { dash: number[]; widthBonus: number; double: boolean } {
+  switch (type) {
+    case "communication": return { dash: [2, 4], widthBonus: 0, double: false };
+    case "task":          return { dash: [], widthBonus: 0.5, double: false };
+    case "governance":    return { dash: [], widthBonus: 0, double: true };
+    default:              return { dash: [], widthBonus: 0, double: false };
+  }
+}
+
 function renderArc(
   ctx: CanvasRenderingContext2D,
   arc: InteractionArc,
@@ -63,19 +73,30 @@ function renderArc(
 
   ctx.save();
 
+  const arcStyle = getArcStyle(arc.interactionType);
+
   if (arc.accepted) {
     // Ghost line showing full path
     ctx.strokeStyle = rgba(color, highlight ? 0.15 : 0.08);
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1 + arcStyle.widthBonus;
+    if (arcStyle.dash.length > 0) ctx.setLineDash(arcStyle.dash);
     ctx.beginPath();
     ctx.moveTo(fromScreen.x, fromY);
     ctx.quadraticCurveTo(midX, midY, toScreen.x, toY);
     ctx.stroke();
+    if (arcStyle.double) {
+      ctx.beginPath();
+      ctx.moveTo(fromScreen.x, fromY - 2);
+      ctx.quadraticCurveTo(midX, midY - 2, toScreen.x, toY - 2);
+      ctx.stroke();
+    }
+    if (arcStyle.dash.length > 0) ctx.setLineDash([]);
 
     // Trailing path up to current progress
     if (progress > 0.01) {
       ctx.strokeStyle = rgba(color, highlight ? 0.5 : 0.25);
-      ctx.lineWidth = highlight ? 2 : 1;
+      ctx.lineWidth = (highlight ? 2 : 1) + arcStyle.widthBonus;
+      if (arcStyle.dash.length > 0) ctx.setLineDash(arcStyle.dash);
       ctx.beginPath();
       ctx.moveTo(fromScreen.x, fromY);
       const steps = Math.max(8, Math.floor(progress * 30));
@@ -85,6 +106,18 @@ function renderArc(
         ctx.lineTo(pt.x, pt.y);
       }
       ctx.stroke();
+      if (arcStyle.double) {
+        ctx.beginPath();
+        ctx.moveTo(fromScreen.x, fromY - 2);
+        const steps2 = Math.max(8, Math.floor(progress * 30));
+        for (let i = 1; i <= steps2; i++) {
+          const t = (i / steps2) * progress;
+          const pt = bezierPoint(fromScreen.x, fromY - 2, midX, midY - 2, toScreen.x, toY - 2, t);
+          ctx.lineTo(pt.x, pt.y);
+        }
+        ctx.stroke();
+      }
+      if (arcStyle.dash.length > 0) ctx.setLineDash([]);
     }
 
     // Data stream: flowing characters along the bezier
@@ -354,6 +387,47 @@ export function renderCollusionTendril(
     ctx.fillStyle = rgba("#BB6BD9", dotAlpha);
     ctx.beginPath();
     ctx.arc(dx, dy, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+/** Render golden synergy link between cooperating agents */
+export function renderSynergyLink(
+  ctx: CanvasRenderingContext2D,
+  a1: AgentVisual,
+  a2: AgentVisual,
+  intensity: number,
+) {
+  const s1 = gridToScreen(a1.gridX, a1.gridY);
+  const s2 = gridToScreen(a2.gridX, a2.gridY);
+  const y1 = s1.y - a1.scale * CHARACTER.baseHeight * 0.3;
+  const y2 = s2.y - a2.scale * CHARACTER.baseHeight * 0.3;
+
+  ctx.save();
+  const t = Date.now() / 1000;
+
+  // Soft golden bezier arc
+  const mx = (s1.x + s2.x) / 2;
+  const my = (y1 + y2) / 2 - 20;
+  ctx.strokeStyle = rgba("#F2C94C", intensity * 0.3);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.moveTo(s1.x, y1);
+  ctx.quadraticCurveTo(mx, my, s2.x, y2);
+  ctx.stroke();
+
+  // Flowing particle dots along arc
+  for (let d = 0; d < 4; d++) {
+    const dotT = ((t * 0.5 + d * 0.25) % 1);
+    const mt2 = 1 - dotT;
+    const dx = mt2 * mt2 * s1.x + 2 * mt2 * dotT * mx + dotT * dotT * s2.x;
+    const dy = mt2 * mt2 * y1 + 2 * mt2 * dotT * my + dotT * dotT * y2;
+    const dotAlpha = Math.sin(dotT * Math.PI) * intensity * 0.5;
+    ctx.fillStyle = rgba("#F2C94C", dotAlpha);
+    ctx.beginPath();
+    ctx.arc(dx, dy, 2, 0, Math.PI * 2);
     ctx.fill();
   }
 

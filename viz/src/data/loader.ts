@@ -19,6 +19,15 @@ export async function loadSimulationData(source: string | File): Promise<Simulat
     data.agent_snapshots = synthesizeAgentSnapshots(data);
   }
 
+  // Normalize events: ensure it's an array if present, filter to interactions
+  if (data.events && Array.isArray(data.events)) {
+    data.events = data.events.filter(
+      (evt) => !evt.event_type || evt.event_type === "interaction",
+    );
+  } else {
+    data.events = undefined;
+  }
+
   return data;
 }
 

@@ -33,3 +33,32 @@ body {
   background: var(--color-border);
   border-radius: 4px;
 }
+
+@keyframes splash-enter {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes splash-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(62, 207, 180, 0.3));
+  }
+  50% {
+    filter: drop-shadow(0 0 24px rgba(62, 207, 180, 0.6));
+  }
+}
+
+@keyframes splash-exit {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}

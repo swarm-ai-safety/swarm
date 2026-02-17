@@ -382,6 +382,42 @@ export function renderAgentRecompileBurst(
   ctx.restore();
 }
 
+/** Render contagion ripple rings around threat agents */
+export function renderContagionRipples(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  contagionDepth: number,
+  activeThreats: number,
+  agentType: string,
+) {
+  if (contagionDepth < 1) return;
+
+  const now = Date.now() / 1000;
+  const numRings = Math.min(Math.floor(contagionDepth), 5);
+  const pulseSpeed = 0.8 + Math.min(activeThreats, 5) * 0.3;
+  const color = agentType === "adversarial" ? "#EB5757" : "#BB6BD9";
+
+  ctx.save();
+  ctx.lineWidth = 1;
+
+  for (let i = 0; i < numRings; i++) {
+    const phase = ((now * pulseSpeed + i * 0.6) % 2);
+    if (phase > 1) continue; // Only show during expansion phase
+
+    const radius = 20 + phase * 40 * (1 + i * 0.3);
+    const alpha = (1 - phase) * 0.25;
+
+    // Isometric ellipse (wider than tall)
+    ctx.beginPath();
+    ctx.ellipse(x, y, radius, radius * 0.5, 0, 0, Math.PI * 2);
+    ctx.strokeStyle = rgba(color, alpha);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
 /** Create glow particles for high-payoff agents */
 export function createGlowParticles(x: number, y: number, payoff: number, color: string): Particle[] {
   if (payoff < 5) return [];

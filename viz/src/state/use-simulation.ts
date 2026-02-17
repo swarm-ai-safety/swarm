@@ -5,7 +5,7 @@ import { SimContext } from "./simulation-context";
 import type { SimulationData } from "@/data/types";
 
 export function useSimulation() {
-  const { state, dispatch } = useContext(SimContext);
+  const { state, dispatch, codeTrailSystem, digitalRainRef, recompileStateRef } = useContext(SimContext);
 
   return {
     ...state,
@@ -15,5 +15,8 @@ export function useSimulation() {
     setSelected: (id: string | null) => dispatch({ type: "SET_SELECTED", agentId: id }),
     toggleOverlay: (key: keyof typeof state.overlays) =>
       dispatch({ type: "TOGGLE_OVERLAY", key }),
+    codeTrailSystem,
+    digitalRainRef,
+    recompileStateRef,
   };
 }

@@ -592,8 +592,8 @@ class AgentNetwork:
         return {
             "n_agents": n_agents,
             "n_edges": n_edges,
-            "average_degree": self.average_degree(),
-            "average_clustering": self.average_clustering(),
+            "avg_degree": self.average_degree(),
+            "avg_clustering": self.average_clustering(),
             "average_path_length": self.average_path_length(),
             "is_connected": float(self.is_connected()),
             "n_components": len(self.connected_components()),

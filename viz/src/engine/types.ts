@@ -45,6 +45,7 @@ export interface InteractionArc {
   accepted: boolean;
   progress: number; // 0-1 animation
   epoch: number;
+  interactionType?: "trade" | "communication" | "task" | "governance" | "unknown";
 }
 
 export interface Particle {
@@ -68,6 +69,7 @@ export interface OverlayState {
   minimap: boolean;
   digitalRain: boolean;
   tierraStrip: boolean;
+  networkWeb: boolean;
 }
 
 export type RenderEntity = {
