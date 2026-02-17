@@ -1,0 +1,121 @@
+name: Epic
+description: A large multi-milestone initiative tracking dependencies and success criteria
+title: "[EPIC] "
+labels: ["epic", "tracking"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Epic Issue
+        This is a parent tracking issue for a large initiative with multiple milestones.
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Epic Summary
+      description: High-level description of the epic and its purpose
+      placeholder: |
+        Integration of SWARM with external system X to enable Y capabilities.
+    validations:
+      required: true
+
+  - type: textarea
+    id: goals
+    attributes:
+      label: Goals
+      description: What are the key objectives of this epic?
+      placeholder: |
+        - Enable SWARM agents to interact with system X
+        - Provide metrics and governance for X workflows
+        - Support reproducible benchmarking
+    validations:
+      required: true
+
+  - type: textarea
+    id: milestones
+    attributes:
+      label: Milestones
+      description: Break down the epic into tracked milestones
+      value: |
+        - [ ] Milestone 1: Discovery and design
+        - [ ] Milestone 2: Core implementation
+        - [ ] Milestone 3: Testing and validation
+        - [ ] Milestone 4: Documentation and examples
+    validations:
+      required: true
+
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies
+      description: List dependencies on other issues, repos, or external systems
+      placeholder: |
+        - Depends on: #123 (some other issue)
+        - External: Requires access to system X API
+        - Blocked by: Upstream library version Y
+    validations:
+      required: false
+
+  - type: textarea
+    id: success_criteria
+    attributes:
+      label: Success Criteria
+      description: How will we know this epic is complete?
+      placeholder: |
+        - [ ] All milestones completed
+        - [ ] Integration tests passing
+        - [ ] Documentation published
+        - [ ] Example workflows demonstrated
+    validations:
+      required: true
+
+  - type: input
+    id: estimate
+    attributes:
+      label: Time Estimate
+      description: Estimated time to complete (e.g., "2 weeks", "1 month")
+      placeholder: "1 week"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - Low
+        - Medium
+        - High
+        - Critical
+      default: 1
+    validations:
+      required: false
+
+  - type: textarea
+    id: risks
+    attributes:
+      label: Risks and Open Questions
+      description: Known risks, blockers, or unresolved questions
+      placeholder: |
+        - Risk: System X API may change without notice
+        - Question: How to handle edge case Y?
+    validations:
+      required: false
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional Context
+      description: Any additional information, references, or related work
+      placeholder: |
+        See research paper: https://arxiv.org/abs/...
+        Related: #456
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        **Tracking:** This epic will be updated as milestones progress.
+        **Recognition:** Contributors to milestones are credited in CHANGELOG.md.
