@@ -234,12 +234,29 @@ def build_adapter(
         rendered_path = path
         path_params_used: set = set()
 
+        def _validate_path_param_value(name: str, value: Any) -> str:
+            """
+            Ensure path-parameter values cannot escape the intended route.
+
+            Disallow '/' to prevent injection of additional path segments and
+            disallow values starting with '.' to avoid '../' style traversal.
+            """
+            value_str = str(value)
+            if "/" in value_str or value_str.startswith("."):
+                raise ValueError(f"Invalid value for path parameter '{name}'")
+            return value_str
+
         for match in re.finditer(r"\{(\w+)\}", path):
             param_name = match.group(1)
             if param_name in arguments:
-                rendered_path = rendered_path.replace(
-                    f"{{{param_name}}}", str(arguments[param_name])
-                )
+                try:
+                    safe_value = _validate_path_param_value(param_name, arguments[param_name])
+                except ValueError as exc:
+                    return JSONResponse(
+                        {"isError": True, "result": str(exc)},
+                        status_code=400,
+                    )
+                rendered_path = rendered_path.replace(f"{{{param_name}}}", safe_value)
                 path_params_used.add(param_name)
 
         remaining = {k: v for k, v in arguments.items() if k not in path_params_used}
