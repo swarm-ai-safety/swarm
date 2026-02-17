@@ -234,12 +234,35 @@ def build_adapter(
         # Substitute path parameters from arguments
         rendered_path = path
         path_params_used: set = set()
+        def _validate_path_param_value(name: str, value: Any) -> str:
+            """
+            Validate a path parameter value to avoid unsafe characters that could
+            alter the intended route (for example, path traversal or injection of
+            additional segments). Returns the stringified value if valid, otherwise
+            raises a ValueError.
+            """
+            s = str(value)
+            # Disallow path separators and control characters
+            if "/" in s or "\\" in s:
+                raise ValueError(f"Invalid path parameter '{name}': unexpected '/' or '\\\\'")
+            if "\n" in s or "\r" in s or "\t" in s:
+                raise ValueError(f"Invalid path parameter '{name}': unexpected whitespace")
+            # Basic traversal protection
+            if s.startswith(".") or ".." in s:
+                raise ValueError(f"Invalid path parameter '{name}': potentially unsafe value")
+            return s
+
 
         def _validate_path_param_value(name: str, value: Any) -> str:
             """
-            Ensure path-parameter values cannot escape the intended route.
-                value = str(arguments[param_name])
-                rendered_path = rendered_path.replace(f"{{{param_name}}}", value)
+                try:
+                    safe_value = _validate_path_param_value(param_name, arguments[param_name])
+                except ValueError as exc:
+                    return JSONResponse(
+                        {"isError": True, "result": str(exc)},
+                        status_code=400,
+                    )
+                rendered_path = rendered_path.replace(f"{{{param_name}}}", safe_value)
             """
             value_str = str(value)
         # Ensure the rendered path is safe and not an absolute URL
