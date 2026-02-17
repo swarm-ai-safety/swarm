@@ -190,6 +190,30 @@ swarm run scenarios/baseline.yaml --seed 42 --epochs 20 --steps 15
 swarm run scenarios/baseline.yaml --export-json results.json --export-csv outputs/
 ```
 
+## Reproducible Runs
+
+Run a complete reproducible experiment with all artifacts:
+
+```bash
+# One-command reproducible run
+python -m swarm run scenarios/baseline.yaml \
+  --seed 42 \
+  --epochs 10 \
+  --steps 10 \
+  --export-json runs/baseline_seed42/history.json \
+  --export-csv runs/baseline_seed42/csv/
+
+# Generate plots from run
+python examples/plot_run.py runs/baseline_seed42/
+```
+
+**Artifact paths:**
+- History JSON: `runs/<timestamp>_<scenario>_seed<seed>/history.json`
+- Metrics CSV: `runs/<timestamp>_<scenario>_seed<seed>/csv/metrics.csv`
+- Plots: `runs/<timestamp>_<scenario>_seed<seed>/plots/*.png`
+
+See the [Reproducibility Guide](docs/getting-started/reproducibility.md) for complete workflows, multi-seed runs, and archival best practices.
+
 ## Examples & Notebooks
 
 All examples run standalone with no API keys unless noted. Start with the quickstart notebook, then explore by interest area.
@@ -197,6 +221,7 @@ All examples run standalone with no API keys unless noted. Start with the quicks
 | Example | Description | Colab | Difficulty |
 |---------|-------------|-------|------------|
 | **[quickstart.ipynb](examples/quickstart.ipynb)** | Two scenarios end-to-end with plots | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb) | Beginner |
+| **[reproducible_run_demo.py](examples/reproducible_run_demo.py)** | Complete reproducible workflow with artifacts | — | Beginner |
 | **[illusion_delta_minimal.py](examples/illusion_delta_minimal.py)** | Replay-based incoherence detection (3 agents) | — | Beginner |
 | **[mvp_demo.py](examples/mvp_demo.py)** | Full 5-agent simulation with metric printout | — | Beginner |
 | **[run_scenario.py](examples/run_scenario.py)** | Run any YAML scenario from CLI | — | Beginner |
