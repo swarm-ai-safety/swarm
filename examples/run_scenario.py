@@ -9,11 +9,13 @@ Usage:
 """
 
 import sys
+import uuid
 from pathlib import Path
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from swarm.analysis.export import export_to_json
 from swarm.scenarios import build_orchestrator, load_scenario
 
 
@@ -71,6 +73,42 @@ def main():
     print("Building orchestrator...")
     orchestrator = build_orchestrator(scenario)
 
+    # Wire MetricsAggregator for rich export data
+    from swarm.analysis.aggregation import MetricsAggregator
+
+    aggregator = MetricsAggregator()
+    config = scenario.orchestrator_config
+    aggregator.start_simulation(
+        simulation_id=scenario.scenario_id,
+        n_epochs=config.n_epochs,
+        steps_per_epoch=config.steps_per_epoch,
+        n_agents=len(orchestrator.get_all_agents()),
+        seed=config.seed,
+    )
+
+    def _on_interaction(interaction, initiator_payoff, counterparty_payoff):
+        interaction.metadata["epoch"] = orchestrator.state.current_epoch
+        interaction.metadata["step"] = orchestrator.state.current_step
+        aggregator.record_interaction(interaction)
+        aggregator.record_payoff(interaction.initiator, initiator_payoff)
+        aggregator.record_payoff(interaction.counterparty, counterparty_payoff)
+        aggregator.get_history().interactions.append(interaction)
+
+    orchestrator.on_interaction_complete(_on_interaction)
+
+    def _on_epoch_end(epoch_metrics):
+        agent_states = orchestrator.state.agents
+        frozen = orchestrator.state.frozen_agents
+        quarantined = getattr(orchestrator.state, 'quarantined_agents', set())
+        aggregator.finalize_epoch(
+            epoch=epoch_metrics.epoch,
+            agent_states=agent_states,
+            frozen_agents=frozen,
+            quarantined_agents=quarantined,
+        )
+
+    orchestrator.on_epoch_end(_on_epoch_end)
+
     # Show agents
     print(f"\nRegistered {len(orchestrator.get_all_agents())} agents:")
     for agent in orchestrator.get_all_agents():
@@ -81,7 +119,6 @@ def main():
     print()
 
     # Run simulation
-    config = scenario.orchestrator_config
     print(
         f"Running simulation: {config.n_epochs} epochs x {config.steps_per_epoch} steps"
     )
@@ -140,6 +177,17 @@ def main():
             f"payoff={state.total_payoff:.2f}"
             f"{status}"
         )
+    print()
+
+    # Auto-export rich history
+    history = aggregator.end_simulation()
+    run_id = str(uuid.uuid4())[:8]
+    export_dir = Path("runs") / f"{run_id}_{scenario.scenario_id}"
+    export_path = export_dir / "history.json"
+    export_to_json(history, export_path, include_events=True)
+    print(f"Exported rich history: {export_path}")
+    print(f"  Agent snapshots: {sum(len(v) for v in history.agent_snapshots.values())}")
+    print(f"  Interaction events: {len(history.interactions)}")
     print()
 
     # Check success criteria

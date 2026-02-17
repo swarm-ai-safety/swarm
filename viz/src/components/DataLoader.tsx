@@ -5,6 +5,9 @@ import { useSimulation } from "@/state/use-simulation";
 import { loadSimulationData } from "@/data/loader";
 
 const SAMPLE_FILES = [
+  { name: "Adversarial Red Team (75 epochs)", path: "/sample-data/adversarial-redteam-75.json" },
+  { name: "RLM Governance Lag (50 epochs)", path: "/sample-data/rlm-governance-lag-50.json" },
+  { name: "Collusion Detection (60 epochs)", path: "/sample-data/collusion-detection-60.json" },
   { name: "24-Agent Mixed Demo", path: "/sample-data/demo-history-24.json" },
   { name: "6-Agent Mixed Demo", path: "/sample-data/demo-history.json" },
 ];

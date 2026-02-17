@@ -70,6 +70,48 @@ def cmd_run(args: argparse.Namespace) -> int:
             )
             llm_config.prompt_audit_hash_system_prompt = True
 
+    # Wire MetricsAggregator for rich export data
+    want_rich_export = args.export_json or args.export_csv or args.export_dolt
+    aggregator = None
+    if want_rich_export:
+        from swarm.analysis.aggregation import MetricsAggregator
+
+        aggregator = MetricsAggregator()
+        aggregator.start_simulation(
+            simulation_id=scenario.scenario_id,
+            n_epochs=scenario.orchestrator_config.n_epochs,
+            steps_per_epoch=scenario.orchestrator_config.steps_per_epoch,
+            n_agents=len(orchestrator.get_all_agents()),
+            seed=scenario.orchestrator_config.seed,
+        )
+
+        # Record each interaction + payoffs
+        def _on_interaction(interaction, initiator_payoff, counterparty_payoff):
+            # Tag with epoch/step for viz event export
+            interaction.metadata["epoch"] = orchestrator.state.current_epoch
+            interaction.metadata["step"] = orchestrator.state.current_step
+            aggregator.record_interaction(interaction)
+            aggregator.record_payoff(interaction.initiator, initiator_payoff)
+            aggregator.record_payoff(interaction.counterparty, counterparty_payoff)
+            # Store interactions for event export
+            aggregator.get_history().interactions.append(interaction)
+
+        orchestrator.on_interaction_complete(_on_interaction)
+
+        # Finalize each epoch with full agent states
+        def _on_epoch_end(epoch_metrics):
+            agent_states = orchestrator.state.agents
+            frozen = orchestrator.state.frozen_agents
+            quarantined = getattr(orchestrator.state, 'quarantined_agents', set())
+            aggregator.finalize_epoch(
+                epoch=epoch_metrics.epoch,
+                agent_states=agent_states,
+                frozen_agents=frozen,
+                quarantined_agents=quarantined,
+            )
+
+        orchestrator.on_epoch_end(_on_epoch_end)
+
     if not args.quiet:
         print(f"Agents: {len(orchestrator.get_all_agents())}")
         for agent in orchestrator.get_all_agents():
@@ -114,35 +156,13 @@ def cmd_run(args: argparse.Namespace) -> int:
             print()
 
     # Export if requested
-    if args.export_json or args.export_csv or args.export_dolt:
-        from swarm.analysis.aggregation import EpochSnapshot, SimulationHistory
-
-        history = SimulationHistory(
-            simulation_id=scenario.scenario_id,
-            n_epochs=scenario.orchestrator_config.n_epochs,
-            steps_per_epoch=scenario.orchestrator_config.steps_per_epoch,
-            n_agents=len(orchestrator.get_all_agents()),
-            seed=scenario.orchestrator_config.seed,
-        )
-
-        for m in metrics_history:
-            snapshot = EpochSnapshot(
-                epoch=m.epoch,
-                total_interactions=m.total_interactions,
-                accepted_interactions=m.accepted_interactions,
-                rejected_interactions=m.total_interactions - m.accepted_interactions,
-                toxicity_rate=m.toxicity_rate,
-                quality_gap=m.quality_gap,
-                total_welfare=m.total_welfare,
-                avg_payoff=m.avg_payoff,
-                n_agents=len(orchestrator.get_all_agents()),
-            )
-            history.add_epoch_snapshot(snapshot)
+    if want_rich_export and aggregator is not None:
+        history = aggregator.end_simulation()
 
         if args.export_json:
             from swarm.analysis.export import export_to_json
 
-            path = export_to_json(history, args.export_json)
+            path = export_to_json(history, args.export_json, include_events=True)
             print(f"Exported JSON: {path}")
 
         if args.export_csv:
