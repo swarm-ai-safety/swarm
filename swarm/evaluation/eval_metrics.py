@@ -76,7 +76,7 @@ def calls_per_success(
         return float("inf")
 
     total_calls = sum(s.get(calls_key, 0) for s in successes)
-    return total_calls / len(successes)
+    return float(total_calls) / len(successes)
 
 
 def loopiness_score(

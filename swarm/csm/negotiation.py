@@ -86,8 +86,8 @@ class BoulwareStrategy(NegotiationStrategy):
 class AdaptiveStrategy(NegotiationStrategy):
     """Adaptive: adjusts based on opponent's pattern."""
 
-    def __init__(self):
-        self._opponent_offers: list = []
+    def __init__(self) -> None:
+        self._opponent_offers: list[float] = []
 
     def make_offer(self, state: NegotiationState, is_buyer: bool) -> float:
         t = state.round_number / max(state.max_rounds, 1)
