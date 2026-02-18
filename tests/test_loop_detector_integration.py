@@ -1,6 +1,5 @@
 """Integration tests for loop detector with governance engine."""
 
-import pytest
 
 from swarm.env.state import EnvState
 from swarm.governance.config import GovernanceConfig

@@ -189,7 +189,7 @@ class TestLoopDetectorLever:
         state.add_agent("agent_1")
 
         # Create a quality loop
-        for i in range(6):
+        for _i in range(6):
             interaction = SoftInteraction(
                 initiator="agent_1",
                 counterparty="agent_2",
@@ -220,7 +220,7 @@ class TestLoopDetectorLever:
 
         # Create repetitive pattern to build violations
         violations = 0
-        for i in range(10):
+        for _i in range(10):
             interaction = SoftInteraction(
                 initiator="agent_1",
                 counterparty="agent_2",
@@ -250,7 +250,7 @@ class TestLoopDetectorLever:
         state.add_agent("agent_1")
 
         # Create repetitive pattern to build violations
-        for i in range(10):
+        for _i in range(10):
             interaction = SoftInteraction(
                 initiator="agent_1",
                 counterparty="agent_2",
@@ -281,7 +281,7 @@ class TestLoopDetectorLever:
         state.add_agent("agent_1")
 
         # Trigger freeze
-        for i in range(6):
+        for _i in range(6):
             interaction = SoftInteraction(
                 initiator="agent_1",
                 counterparty="agent_2",
@@ -321,7 +321,7 @@ class TestLoopDetectorLever:
         state.add_agent("agent_1")
 
         replan_count = 0
-        for i in range(15):
+        for _i in range(15):
             interaction = SoftInteraction(
                 initiator="agent_1",
                 counterparty="agent_2",
