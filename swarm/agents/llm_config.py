@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 
 class LLMProvider(Enum):
@@ -67,6 +67,7 @@ class LLMConfig:
     prompt_audit_include_system_prompt: bool = False
     prompt_audit_hash_system_prompt: bool = True
     prompt_audit_max_chars: int = 20_000
+    memori_config: Optional[Dict[str, Any]] = None
 
     def __post_init__(self) -> None:
         """Validate configuration."""
