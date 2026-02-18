@@ -13,6 +13,7 @@ import pytest
 
 from swarm.agents.base import InteractionProposal, Observation
 from swarm.agents.skillrl_agent import PolicyGradientState, SkillRLAgent
+from swarm.governance.self_modification import GateResult
 from swarm.models.agent import AgentState, AgentType
 from swarm.models.interaction import InteractionType, SoftInteraction
 from swarm.skills.evolution import EvolutionConfig, SkillEvolutionEngine
@@ -664,6 +665,70 @@ class TestSkillRLAgent:
         # Should fall back to general since no task-specific skills exist
         assert skill is not None
         assert skill.tier == SkillTier.GENERAL
+
+    def test_refinement_rejection_does_not_mutate_skill(self):
+        """Rejected governance proposals must not mutate skills."""
+
+        class RejectAllGovernance:
+            def evaluate_refinement(self, proposal, baseline, uncertainties):
+                return (
+                    False,
+                    GateResult(
+                        passed=False,
+                        gate_name="tau_refinement",
+                        value=0.0,
+                        threshold=0.0,
+                        details={},
+                    ),
+                    GateResult(
+                        passed=True,
+                        gate_name="k_max",
+                        value=0.0,
+                        threshold=0.0,
+                        details={},
+                    ),
+                )
+
+        class Metric:
+            def __init__(self, mean: float, std: float):
+                self.mean = mean
+                self.std = std
+
+        class DummyEnvState:
+            def get_agent_metrics(self, _agent_id: str):
+                return {"payoff": Metric(0.0, 0.1)}
+
+        agent = SkillRLAgent(
+            agent_id="rl_alice",
+            config={"refinement_interval": 1},
+            evolution_config=EvolutionConfig(
+                recursive_evolution_enabled=True,
+                refinement_min_invocations=2,
+                refinement_success_threshold=0.8,
+            ),
+        )
+        agent.governance_lever = RejectAllGovernance()
+        skill = Skill(
+            name="needs_refinement",
+            skill_type=SkillType.STRATEGY,
+            domain=SkillDomain.INTERACTION,
+            condition={"min_p": 0.2, "max_p": 0.8},
+            effect={"acceptance_threshold_delta": -0.05},
+        )
+        agent.skill_library.add_skill(skill)
+        agent.skill_library.record_invocation(skill.skill_id, payoff=-1.0, p=0.3)
+        agent.skill_library.record_invocation(skill.skill_id, payoff=-1.0, p=0.3)
+
+        original_version = skill.version
+        original_condition = dict(skill.condition)
+        original_effect = dict(skill.effect)
+
+        agent._maybe_refine(epoch=1, env_state=DummyEnvState())
+
+        assert skill.version == original_version
+        assert skill.condition == original_condition
+        assert skill.effect == original_effect
+        assert "refined" not in skill.tags
 
     def test_p_invariant_maintained(self):
         """p must remain in [0, 1] throughout skill evolution."""
