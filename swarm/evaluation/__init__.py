@@ -5,6 +5,14 @@ with five evaluation axes: experimental validity, reproducibility,
 artifact integrity, emergence detection, and failure mode coverage.
 """
 
+from swarm.evaluation.eval_metrics import (
+    aggregate_success_metrics,
+    audit_effectiveness,
+    calls_per_success,
+    deception_detection_rate,
+    loopiness_score,
+    success_rate,
+)
 from swarm.evaluation.evaluators import (
     ArtifactIntegrityEvaluator,
     EmergenceDetectionEvaluator,
@@ -55,4 +63,11 @@ __all__ = [
     # Schema
     "REVIEW_SCHEMA",
     "validate_review",
+    # Metrics
+    "success_rate",
+    "calls_per_success",
+    "loopiness_score",
+    "audit_effectiveness",
+    "deception_detection_rate",
+    "aggregate_success_metrics",
 ]
