@@ -1025,6 +1025,7 @@ def parse_llm_config(data: Dict[str, Any]) -> Any:
             "prompt_audit_hash_system_prompt", True
         ),
         prompt_audit_max_chars=data.get("prompt_audit_max_chars", 20_000),
+        memori_config=data.get("memori"),
     )
 
 

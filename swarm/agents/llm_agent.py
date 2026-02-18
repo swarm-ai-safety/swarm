@@ -76,6 +76,10 @@ class LLMAgent(BaseAgent):
         self._anthropic_client = None
         self._openai_client = None
 
+        # Memori middleware (lazy-loaded from config dict)
+        self._memori_middleware = None
+        self._memori_config_raw = llm_config.memori_config
+
     def _get_prompt_audit_log(self) -> Optional[PromptAuditLog]:
         """Lazy-create prompt audit log if enabled."""
         if not self.llm_config.prompt_audit_path:
@@ -142,6 +146,20 @@ class LLMAgent(BaseAgent):
             return os.environ.get("GOOGLE_API_KEY")
         return None
 
+    def _get_memori_middleware(self):
+        """Lazy-init Memori middleware from raw config dict."""
+        if self._memori_middleware is not None:
+            return self._memori_middleware
+        if self._memori_config_raw is None:
+            return None
+        from swarm.agents.memori_middleware import MemoriConfig, MemoriMiddleware
+
+        config = MemoriConfig.from_dict(self._memori_config_raw)
+        if not config.enabled:
+            return None
+        self._memori_middleware = MemoriMiddleware(config, agent_id=self.agent_id)
+        return self._memori_middleware
+
     def _get_anthropic_client(self):
         """Lazy-load Anthropic client."""
         if self._anthropic_client is None:
@@ -157,6 +175,9 @@ class LLMAgent(BaseAgent):
                     "anthropic package not installed. "
                     "Install with: python -m pip install anthropic"
                 ) from err
+            middleware = self._get_memori_middleware()
+            if middleware is not None:
+                middleware.wrap_client(self._anthropic_client)
         return self._anthropic_client
 
     def _get_openai_client(self):
@@ -174,6 +195,9 @@ class LLMAgent(BaseAgent):
                     "openai package not installed. "
                     "Install with: python -m pip install openai"
                 ) from err
+            middleware = self._get_memori_middleware()
+            if middleware is not None:
+                middleware.wrap_client(self._openai_client)
         return self._openai_client
 
     async def _call_llm_async(
@@ -953,6 +977,16 @@ class LLMAgent(BaseAgent):
         # LLM agents propose interactions through the act() method
         # This is here for interface compatibility
         return None
+
+    def apply_memory_decay(self, epoch: int) -> None:
+        """Apply memory decay, including Memori session rotation."""
+        super().apply_memory_decay(epoch)
+
+        middleware = self._get_memori_middleware()
+        if middleware is not None:
+            middleware.on_epoch_boundary(
+                epoch, self.memory_config.epistemic_persistence
+            )
 
     def get_usage_stats(self) -> Dict[str, Any]:
         """Get LLM usage statistics."""
