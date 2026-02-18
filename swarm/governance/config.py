@@ -166,6 +166,16 @@ class GovernanceConfig(BaseModel):
     refinery_enabled: bool = False
     refinery_p_threshold: float = 0.5  # reject interactions with p below this
 
+    # Loop detector
+    loop_detector_enabled: bool = False
+    loop_detector_quality_threshold: float = 0.4  # avg p threshold for quality loops
+    loop_detector_tool_misuse_threshold: int = 5  # total tool misuse flags for loop
+    loop_detector_rework_threshold: int = 10  # total rework count for loop
+    loop_detector_penalty_multiplier: float = 1.5  # cost multiplier for loop detection
+    loop_detector_replan_threshold: int = 2  # violations before forced replan
+    loop_detector_freeze_threshold: int = 4  # violations before circuit breaker
+    loop_detector_freeze_duration: int = 1  # epochs to freeze
+
     # Diversity as Defense (DaD)
     diversity_enabled: bool = False
     diversity_rho_max: float = 0.5  # Correlation cap (Rule 1)
@@ -359,6 +369,22 @@ class GovernanceConfig(BaseModel):
         # Refinery validation
         if not 0.0 <= self.refinery_p_threshold <= 1.0:
             raise ValueError("refinery_p_threshold must be in [0, 1]")
+
+        # Loop detector validation
+        if not 0.0 <= self.loop_detector_quality_threshold <= 1.0:
+            raise ValueError("loop_detector_quality_threshold must be in [0, 1]")
+        if self.loop_detector_tool_misuse_threshold < 0:
+            raise ValueError("loop_detector_tool_misuse_threshold must be non-negative")
+        if self.loop_detector_rework_threshold < 0:
+            raise ValueError("loop_detector_rework_threshold must be non-negative")
+        if self.loop_detector_penalty_multiplier < 0:
+            raise ValueError("loop_detector_penalty_multiplier must be non-negative")
+        if self.loop_detector_replan_threshold < 1:
+            raise ValueError("loop_detector_replan_threshold must be >= 1")
+        if self.loop_detector_freeze_threshold < 1:
+            raise ValueError("loop_detector_freeze_threshold must be >= 1")
+        if self.loop_detector_freeze_duration < 1:
+            raise ValueError("loop_detector_freeze_duration must be >= 1")
 
         # Diversity as Defense validation
         if not 0.0 <= self.diversity_rho_max <= 1.0:
