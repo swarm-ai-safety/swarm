@@ -40,6 +40,7 @@ coverage:
 ci: lint typecheck coverage
 
 docs:
+	cd viz && npm run build:deploy && cd ..
 	mkdocs build --strict
 
 docs-serve:

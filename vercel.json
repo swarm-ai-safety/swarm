@@ -1,4 +1,4 @@
 {
-  "buildCommand": "uv pip install --system mkdocs-material 'mkdocstrings[python]' pymdown-extensions && mkdocs build",
+  "buildCommand": "uv pip install --system mkdocs-material 'mkdocstrings[python]' pymdown-extensions && cd viz && npm install && npm run build:deploy && cd .. && mkdocs build",
   "outputDirectory": "site"
 }
