@@ -146,6 +146,12 @@ nav:
     - What Financial Markets Teach Us About AI Safety: blog/markets-and-safety.md
     - The Purity Paradox: blog/purity-paradox.md
     - When Agent Ecosystems Collapse: blog/ecosystem-collapse.md
+    - "What 13 Agent Versions Taught Us About Interactive Reasoning": blog/arc-agi-3-agent-development-lessons.md
+    - "We Gave an LLM a Goal and a Memory. Governance Held Anyway.": blog/concordia-entities-governance.md
+    - "Three Models, One Study — LLM Council Peer-Review": blog/llm-council-three-models-one-study.md
+    - "Training an LLM Agent to Navigate a Multi-Agent Economy with RL": blog/qwen3-30b-trains-in-the-swarm-economy.md
+    - "SkillRL Agents Learn 5x Faster Than Honest Ones": blog/skillrl-dynamics.md
+    - "Three Agents, Three Philosophies, One Benchmark": blog/three-agents-three-philosophies.md
 
 extra:
   social:
