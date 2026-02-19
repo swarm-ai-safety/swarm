@@ -4,12 +4,14 @@ import React, { useCallback, useRef } from "react";
 import { useSimulation } from "@/state/use-simulation";
 import { loadSimulationData } from "@/data/loader";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 const SAMPLE_FILES = [
-  { name: "Adversarial Red Team (75 epochs)", path: "/sample-data/adversarial-redteam-75.json" },
-  { name: "RLM Governance Lag (50 epochs)", path: "/sample-data/rlm-governance-lag-50.json" },
-  { name: "Collusion Detection (60 epochs)", path: "/sample-data/collusion-detection-60.json" },
-  { name: "24-Agent Mixed Demo", path: "/sample-data/demo-history-24.json" },
-  { name: "6-Agent Mixed Demo", path: "/sample-data/demo-history.json" },
+  { name: "Adversarial Red Team (75 epochs)", path: `${BASE_PATH}/sample-data/adversarial-redteam-75.json` },
+  { name: "RLM Governance Lag (50 epochs)", path: `${BASE_PATH}/sample-data/rlm-governance-lag-50.json` },
+  { name: "Collusion Detection (60 epochs)", path: `${BASE_PATH}/sample-data/collusion-detection-60.json` },
+  { name: "24-Agent Mixed Demo", path: `${BASE_PATH}/sample-data/demo-history-24.json` },
+  { name: "6-Agent Mixed Demo", path: `${BASE_PATH}/sample-data/demo-history.json` },
 ];
 
 export function DataLoader() {

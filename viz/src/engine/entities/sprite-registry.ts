@@ -1,5 +1,7 @@
 import type { AgentType } from "@/data/types";
 
+const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+
 /** Canvas-space draw dimensions (must match CHARACTER.baseWidth/baseHeight) */
 const DRAW_W = 48;
 const DRAW_H = 84;
@@ -46,7 +48,7 @@ class SpriteRegistry {
         entry.loaded = true;
       };
       img.onerror = () => { /* silently fail — procedural fallback */ };
-      img.src = `/sprites/${agentType}_idle.png`;
+      img.src = `${BASE_PATH}/sprites/${agentType}_idle.png`;
 
       this.sprites.set(key, entry);
     }
@@ -62,7 +64,7 @@ class SpriteRegistry {
         entry.loaded = true;
       };
       img.onerror = () => { /* silently fail — procedural fallback */ };
-      img.src = `/sprites/${key}.png`;
+      img.src = `${BASE_PATH}/sprites/${key}.png`;
 
       this.envSprites.set(key, entry);
     }
