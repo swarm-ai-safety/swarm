@@ -77,8 +77,9 @@ secrets.json
 # Binary/regeneratable artifacts (prevent index race conditions across sessions)
 *.pdf
 *.png
-# Exception: viz sprite assets (committed, served by Next.js)
+# Exception: viz assets (committed, served by Next.js)
 !viz/public/sprites/*.png
+!viz/public/splash.png
 *.parquet
 **/fontlist*.json
 
