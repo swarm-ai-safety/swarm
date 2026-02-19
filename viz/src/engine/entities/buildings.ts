@@ -4,6 +4,7 @@ import { rgba, lerpColor } from "@/utils/color";
 import type { RenderEntity } from "../types";
 import type { EnvironmentState } from "../systems/environment-system";
 import type { EpochSnapshot } from "@/data/types";
+import { spriteRegistry } from "./sprite-registry";
 
 export interface BuildingDef {
   gridX: number;
@@ -129,45 +130,54 @@ function drawTower(
   const hw = TILE_WIDTH * 0.22;
   const hh = TILE_HEIGHT * 0.22;
   const height = 20 + welfare * 100; // 20-120px
+  const drawWidth = hw * 2 + 2; // ~42px
 
-  // Right face (lighter)
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + hw, cy - hh);
-  ctx.lineTo(cx + hw, cy - hh - height);
-  ctx.lineTo(cx, cy - height);
-  ctx.closePath();
-  ctx.fillStyle = rgba("#1A2233", alpha * 0.9);
-  ctx.fill();
-  ctx.strokeStyle = rgba(glowHex, alpha * 0.3);
-  ctx.lineWidth = 0.5;
-  ctx.stroke();
+  // Try sprite base first
+  const spriteDrawn = spriteRegistry.drawBuilding(ctx, "tower", cx, cy, drawWidth, height);
 
-  // Left face (darker)
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx - hw, cy - hh);
-  ctx.lineTo(cx - hw, cy - hh - height);
-  ctx.lineTo(cx, cy - height);
-  ctx.closePath();
-  ctx.fillStyle = rgba("#0F1620", alpha * 0.9);
-  ctx.fill();
-  ctx.strokeStyle = rgba(glowHex, alpha * 0.25);
-  ctx.lineWidth = 0.5;
-  ctx.stroke();
+  if (!spriteDrawn) {
+    // Full procedural fallback
+    // Right face (lighter)
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + hw, cy - hh);
+    ctx.lineTo(cx + hw, cy - hh - height);
+    ctx.lineTo(cx, cy - height);
+    ctx.closePath();
+    ctx.fillStyle = rgba("#1A2233", alpha * 0.9);
+    ctx.fill();
+    ctx.strokeStyle = rgba(glowHex, alpha * 0.3);
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
 
-  // Top diamond
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - height - hh);
-  ctx.lineTo(cx + hw, cy - hh - height);
-  ctx.lineTo(cx, cy - height);
-  ctx.lineTo(cx - hw, cy - hh - height);
-  ctx.closePath();
-  ctx.fillStyle = rgba("#243040", alpha * 0.9);
-  ctx.fill();
-  ctx.strokeStyle = rgba(glowHex, alpha * 0.4);
-  ctx.lineWidth = 0.5;
-  ctx.stroke();
+    // Left face (darker)
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx - hw, cy - hh);
+    ctx.lineTo(cx - hw, cy - hh - height);
+    ctx.lineTo(cx, cy - height);
+    ctx.closePath();
+    ctx.fillStyle = rgba("#0F1620", alpha * 0.9);
+    ctx.fill();
+    ctx.strokeStyle = rgba(glowHex, alpha * 0.25);
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+
+    // Top diamond
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - height - hh);
+    ctx.lineTo(cx + hw, cy - hh - height);
+    ctx.lineTo(cx, cy - height);
+    ctx.lineTo(cx - hw, cy - hh - height);
+    ctx.closePath();
+    ctx.fillStyle = rgba("#243040", alpha * 0.9);
+    ctx.fill();
+    ctx.strokeStyle = rgba(glowHex, alpha * 0.4);
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  // Procedural overlays (on top of sprite or procedural base)
 
   // Window grid on right face
   const rng = mulberry32(seed);
@@ -240,19 +250,27 @@ function drawSpire(
   const connectivity = epoch?.avg_degree ?? 2;
   const normConn = Math.min(connectivity / 8, 1);
   const height = 30 + normConn * 90;
+  const drawWidth = 6;
 
-  // Tapered pole
-  ctx.beginPath();
-  ctx.moveTo(cx - 3, cy);
-  ctx.lineTo(cx + 3, cy);
-  ctx.lineTo(cx + 1, cy - height);
-  ctx.lineTo(cx - 1, cy - height);
-  ctx.closePath();
-  ctx.fillStyle = rgba("#1A2233", alpha * 0.8);
-  ctx.fill();
-  ctx.strokeStyle = rgba(glowHex, alpha * 0.3);
-  ctx.lineWidth = 0.5;
-  ctx.stroke();
+  // Try sprite base first
+  const spriteDrawn = spriteRegistry.drawBuilding(ctx, "spire", cx, cy, drawWidth, height);
+
+  if (!spriteDrawn) {
+    // Full procedural fallback: tapered pole
+    ctx.beginPath();
+    ctx.moveTo(cx - 3, cy);
+    ctx.lineTo(cx + 3, cy);
+    ctx.lineTo(cx + 1, cy - height);
+    ctx.lineTo(cx - 1, cy - height);
+    ctx.closePath();
+    ctx.fillStyle = rgba("#1A2233", alpha * 0.8);
+    ctx.fill();
+    ctx.strokeStyle = rgba(glowHex, alpha * 0.3);
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
+
+  // Procedural overlays (on top of sprite or procedural base)
 
   // Pulsing signal rings (2-3 concentric ellipses)
   const now = Date.now();
@@ -293,36 +311,61 @@ function drawNode(
   const hw = TILE_WIDTH * 0.18;
   const hh = TILE_HEIGHT * 0.18;
   const height = 12 + safety * 18;
+  const drawWidth = hw * 2 + 2; // ~35px
 
-  // Right face
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + hw, cy - hh);
-  ctx.lineTo(cx + hw, cy - hh - height);
-  ctx.lineTo(cx, cy - height);
-  ctx.closePath();
-  ctx.fillStyle = rgba("#1A2233", alpha * 0.85);
-  ctx.fill();
+  // Try sprite base first
+  const spriteDrawn = spriteRegistry.drawBuilding(ctx, "node", cx, cy, drawWidth, height);
 
-  // Left face
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx - hw, cy - hh);
-  ctx.lineTo(cx - hw, cy - hh - height);
-  ctx.lineTo(cx, cy - height);
-  ctx.closePath();
-  ctx.fillStyle = rgba("#0F1620", alpha * 0.85);
-  ctx.fill();
+  if (!spriteDrawn) {
+    // Full procedural fallback
+    // Right face
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + hw, cy - hh);
+    ctx.lineTo(cx + hw, cy - hh - height);
+    ctx.lineTo(cx, cy - height);
+    ctx.closePath();
+    ctx.fillStyle = rgba("#1A2233", alpha * 0.85);
+    ctx.fill();
 
-  // Top diamond
-  ctx.beginPath();
-  ctx.moveTo(cx, cy - height - hh);
-  ctx.lineTo(cx + hw, cy - hh - height);
-  ctx.lineTo(cx, cy - height);
-  ctx.lineTo(cx - hw, cy - hh - height);
-  ctx.closePath();
-  ctx.fillStyle = rgba("#243040", alpha * 0.85);
-  ctx.fill();
+    // Left face
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx - hw, cy - hh);
+    ctx.lineTo(cx - hw, cy - hh - height);
+    ctx.lineTo(cx, cy - height);
+    ctx.closePath();
+    ctx.fillStyle = rgba("#0F1620", alpha * 0.85);
+    ctx.fill();
+
+    // Top diamond
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - height - hh);
+    ctx.lineTo(cx + hw, cy - hh - height);
+    ctx.lineTo(cx, cy - height);
+    ctx.lineTo(cx - hw, cy - hh - height);
+    ctx.closePath();
+    ctx.fillStyle = rgba("#243040", alpha * 0.85);
+    ctx.fill();
+
+    // Outline
+    ctx.strokeStyle = rgba(glowHex, alpha * 0.3);
+    ctx.lineWidth = 0.5;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx + hw, cy - hh);
+    ctx.lineTo(cx + hw, cy - hh - height);
+    ctx.lineTo(cx, cy - height);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.lineTo(cx - hw, cy - hh);
+    ctx.lineTo(cx - hw, cy - hh - height);
+    ctx.lineTo(cx, cy - height);
+    ctx.stroke();
+  }
+
+  // Procedural overlays (on top of sprite or procedural base)
 
   // Radial energy glow halo on top
   const glowRadius = 10 + safety * 14;
@@ -339,22 +382,4 @@ function drawNode(
   ctx.beginPath();
   ctx.arc(cx, cy - height - hh * 0.5, glowRadius, 0, Math.PI * 2);
   ctx.fill();
-
-  // Outline
-  ctx.strokeStyle = rgba(glowHex, alpha * 0.3);
-  ctx.lineWidth = 0.5;
-  // Right
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx + hw, cy - hh);
-  ctx.lineTo(cx + hw, cy - hh - height);
-  ctx.lineTo(cx, cy - height);
-  ctx.stroke();
-  // Left
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(cx - hw, cy - hh);
-  ctx.lineTo(cx - hw, cy - hh - height);
-  ctx.lineTo(cx, cy - height);
-  ctx.stroke();
 }

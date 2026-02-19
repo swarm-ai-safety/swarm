@@ -192,13 +192,65 @@ async function processWalkSprite(pngBuffer) {
   }
 }
 
+// --- Environment sprite definitions (tiles + buildings) ---
+
+const ENV_SPRITES = {
+  tile: {
+    width: 384,
+    height: 192,
+    prompt: [
+      "A single rhombus (diamond) shape centered in the image, like a playing card diamond rotated 90 degrees.",
+      "The diamond points left, right, up, and down. It is wider than tall (2:1 width to height ratio).",
+      "Plain white background filling the entire image outside the diamond.",
+      "The diamond interior is dark navy/charcoal with faint glowing teal circuit-board traces and grid lines.",
+      "Tiny glowing solder-point dots at circuit intersections. Cyberpunk PCB aesthetic.",
+      "384x192 pixels. Perfectly symmetrical diamond. No text, no UI, no watermarks.",
+    ].join(" "),
+  },
+  tower: {
+    width: 128,
+    height: 512,
+    prompt: [
+      "Isometric 3/4 view of a tall cyberpunk server rack / data tower building.",
+      "Plain white background, no colored background, no gradient.",
+      "Dark navy metallic panels, teal-glowing seams, small rectangular windows in grid pattern.",
+      "Isometric box shape: narrow width, tall height. Flat top with small antenna.",
+      "128x512 pixels. No text, no UI elements, no watermarks.",
+    ].join(" "),
+  },
+  spire: {
+    width: 64,
+    height: 512,
+    prompt: [
+      "Isometric 3/4 view of a thin tall cyberpunk relay antenna spire.",
+      "Plain white background, no colored background, no gradient.",
+      "Dark metallic pole tapering to a point, with a small satellite dish partway up.",
+      "Faint teal glow at the tip. Very thin and vertical.",
+      "64x512 pixels. No text, no UI elements, no watermarks.",
+    ].join(" "),
+  },
+  node: {
+    width: 128,
+    height: 128,
+    prompt: [
+      "Isometric 3/4 view of a compact cyberpunk power cube / energy node.",
+      "Plain white background, no colored background, no gradient.",
+      "Small dark isometric box with glowing teal energy core visible through panel gaps.",
+      "Subtle holographic shimmer on top face. Compact and squat shape.",
+      "128x128 pixels. No text, no UI elements, no watermarks.",
+    ].join(" "),
+  },
+};
+
 async function main() {
   const types = Object.entries(AGENT_TYPES);
+  const envEntries = Object.entries(ENV_SPRITES);
   let generated = 0;
-  const total = types.length * 2;
+  const total = types.length * 2 + envEntries.length;
 
   console.log(`Generating ${total} sprite images in ${OUT_DIR}/\n`);
 
+  // --- Character sprites ---
   for (const [agentType, config] of types) {
     for (const state of ["idle", "walk"]) {
       const outPath = join(OUT_DIR, `${agentType}_${state}.png`);
@@ -226,11 +278,31 @@ async function main() {
     }
   }
 
+  // --- Environment sprites (tile + buildings) ---
+  console.log("\n--- Environment sprites ---\n");
+  for (const [name, def] of envEntries) {
+    const outPath = join(OUT_DIR, `${name}.png`);
+    console.log(`[${++generated}/${total}] ${name}...`);
+    console.log(`  Prompt: ${def.prompt.substring(0, 120)}...`);
+
+    try {
+      const pngBuffer = await generateImage(def.prompt);
+      writeFileSync(outPath, pngBuffer);
+      console.log(`  -> ${outPath}`);
+    } catch (err) {
+      console.error(`  ERROR: ${err.message}`);
+      console.error(`  Skipping ${name}. Use manual fallback.`);
+    }
+  }
+
   console.log("\nDone! Place any missing sprites manually in viz/public/sprites/");
   console.log("Expected files:");
   for (const [agentType] of types) {
     console.log(`  ${agentType}_idle.png  (${FRAME_W}x${FRAME_H})`);
     console.log(`  ${agentType}_walk.png  (${FRAME_W}x${FRAME_H * WALK_FRAMES} vertical strip)`);
+  }
+  for (const [name, def] of envEntries) {
+    console.log(`  ${name}.png  (${def.width}x${def.height})`);
   }
 }
 
@@ -257,5 +329,21 @@ main().catch((err) => {
  * Same as above but 4-frame walk cycle sprite sheet.
  *
  * (Repeat for: opportunistic, deceptive, adversarial, rlm, crewai)
+ *
+ * --- tile.png (384x192) ---
+ * Isometric diamond-shaped floor tile. White background.
+ * Dark cyberpunk circuit-board aesthetic with faint glowing teal traces.
+ *
+ * --- tower.png (128x512) ---
+ * Isometric 3/4 view cyberpunk server rack / data tower. White background.
+ * Dark navy panels, teal-glowing seams, window grid pattern.
+ *
+ * --- spire.png (64x512) ---
+ * Isometric 3/4 view thin cyberpunk relay antenna. White background.
+ * Dark metallic pole tapering to point, small satellite dish.
+ *
+ * --- node.png (128x128) ---
+ * Isometric 3/4 view compact cyberpunk power cube. White background.
+ * Dark isometric box with glowing teal energy core.
  * ============================================================
  */

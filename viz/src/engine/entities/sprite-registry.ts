@@ -8,6 +8,10 @@ const AGENT_TYPES: AgentType[] = [
   "honest", "opportunistic", "deceptive", "adversarial", "rlm", "crewai",
 ];
 
+/** Environment sprite keys */
+const ENV_KEYS = ["tile", "tower", "spire", "node"] as const;
+type EnvSpriteKey = (typeof ENV_KEYS)[number];
+
 interface SpriteEntry {
   img: HTMLImageElement;
   /** Cleaned sprite with background removed, ready to draw */
@@ -23,6 +27,7 @@ interface SpriteEntry {
  */
 class SpriteRegistry {
   private sprites = new Map<string, SpriteEntry>();
+  private envSprites = new Map<EnvSpriteKey, SpriteEntry>();
   private initialized = false;
 
   /** Eagerly load all sprite images. Safe to call multiple times. */
@@ -30,6 +35,7 @@ class SpriteRegistry {
     if (this.initialized) return;
     this.initialized = true;
 
+    // Character sprites
     for (const agentType of AGENT_TYPES) {
       const key = agentType;
       const img = new Image();
@@ -43,6 +49,22 @@ class SpriteRegistry {
       img.src = `/sprites/${agentType}_idle.png`;
 
       this.sprites.set(key, entry);
+    }
+
+    // Environment sprites (tile + buildings) — trim transparent padding
+    for (const key of ENV_KEYS) {
+      const img = new Image();
+      const entry: SpriteEntry = { img, cleaned: null, loaded: false };
+
+      img.onload = () => {
+        const cleaned = this.removeBackground(img);
+        entry.cleaned = this.trimTransparent(cleaned);
+        entry.loaded = true;
+      };
+      img.onerror = () => { /* silently fail — procedural fallback */ };
+      img.src = `/sprites/${key}.png`;
+
+      this.envSprites.set(key, entry);
     }
   }
 
@@ -180,6 +202,41 @@ class SpriteRegistry {
   }
 
   /**
+   * Crop a canvas to the tight bounding box of its non-transparent pixels.
+   * Eliminates padding so the sprite fills its full draw rect.
+   */
+  private trimTransparent(src: HTMLCanvasElement): HTMLCanvasElement {
+    const w = src.width;
+    const h = src.height;
+    const ctx = src.getContext("2d")!;
+    const data = ctx.getImageData(0, 0, w, h).data;
+
+    let top = h, bottom = 0, left = w, right = 0;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) {
+        if (data[(y * w + x) * 4 + 3] > 0) {
+          if (y < top) top = y;
+          if (y > bottom) bottom = y;
+          if (x < left) left = x;
+          if (x > right) right = x;
+        }
+      }
+    }
+
+    // No opaque pixels found — return as-is
+    if (top > bottom || left > right) return src;
+
+    const trimW = right - left + 1;
+    const trimH = bottom - top + 1;
+    const trimmed = document.createElement("canvas");
+    trimmed.width = trimW;
+    trimmed.height = trimH;
+    const tCtx = trimmed.getContext("2d")!;
+    tCtx.drawImage(src, left, top, trimW, trimH, 0, 0, trimW, trimH);
+    return trimmed;
+  }
+
+  /**
    * Draw the sprite for the given agent type onto the canvas.
    *
    * @param ctx       - Canvas 2D context
@@ -227,6 +284,60 @@ class SpriteRegistry {
     );
 
     ctx.restore();
+    return true;
+  }
+
+  /**
+   * Draw the ground tile sprite.
+   *
+   * @returns true if sprite was drawn, false if caller should fall back to procedural
+   */
+  drawTile(
+    ctx: CanvasRenderingContext2D,
+    cx: number,
+    cy: number,
+    w: number,
+    h: number,
+  ): boolean {
+    const entry = this.envSprites.get("tile");
+    if (!entry?.loaded || !entry.cleaned) return false;
+
+    const src = entry.cleaned;
+    ctx.drawImage(src, 0, 0, src.width, src.height, cx - w / 2, cy - h / 2, w, h);
+    return true;
+  }
+
+  /**
+   * Draw a building sprite scaled to dynamic height.
+   *
+   * @param type   - "tower" | "spire" | "node"
+   * @param cx     - Screen X center of building base
+   * @param cy     - Screen Y center of building base
+   * @param width  - Draw width
+   * @param height - Draw height (dynamic, based on welfare/connectivity/threat)
+   * @returns true if sprite was drawn, false if caller should fall back to procedural
+   */
+  drawBuilding(
+    ctx: CanvasRenderingContext2D,
+    type: "tower" | "spire" | "node",
+    cx: number,
+    cy: number,
+    width: number,
+    height: number,
+  ): boolean {
+    const entry = this.envSprites.get(type);
+    if (!entry?.loaded || !entry.cleaned) return false;
+
+    const src = entry.cleaned;
+    // Draw with bottom-center at (cx, cy), stretching to dynamic height
+    ctx.drawImage(
+      src,
+      0, 0, src.width, src.height,
+      cx - width / 2,
+      cy - height,
+      width,
+      height,
+    );
     return true;
   }
 }
