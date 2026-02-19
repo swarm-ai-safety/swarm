@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "generate-sprites": "node scripts/generate-sprites.mjs"
   },
   "dependencies": {
     "next": "^15.1.0",
@@ -19,6 +20,8 @@
     "@types/node": "^22.0.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "@google/genai": "^1.0.0",
+    "@napi-rs/canvas": "^0.1.63",
     "eslint": "^9.39.2",
     "eslint-config-next": "^16.1.6",
     "postcss": "^8.5.0",
