@@ -145,6 +145,24 @@ mjx-container[jax="CHTML"][display="true"] {
   }
 }
 
+/* Game embed — full-viewport iframe */
+.game-embed {
+  position: relative;
+  width: 100%;
+  height: 90vh;
+  overflow: hidden;
+  border: none;
+  border-radius: 0.5rem;
+  margin: 0;
+}
+
+.game-embed iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
 /* Hide auto-generated H1 on homepage only (homepage uses .hero for its own title) */
 .md-content__inner:has(.hero) > h1:first-child {
   display: none;

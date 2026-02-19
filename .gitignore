@@ -97,6 +97,9 @@ sandboxes/
 # runs/ is fully ignored above (migrated to swarm-artifacts)
 node_modules/
 
+# Next.js static export build artifact
+docs/game/
+
 # Allow documentation images
 !docs/**/*.png
 
