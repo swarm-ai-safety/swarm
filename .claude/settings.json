@@ -31,6 +31,12 @@
             "command": "bash .claude/hooks/post_write_lint_check.sh",
             "timeout": 15,
             "statusMessage": "Linting Python file"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post_write_blog_index_check.sh",
+            "timeout": 5,
+            "statusMessage": "Checking blog index"
           }
         ]
       },
@@ -54,6 +60,12 @@
             "command": "bash .claude/hooks/post_write_lint_check.sh",
             "timeout": 15,
             "statusMessage": "Linting Python file"
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/post_write_blog_index_check.sh",
+            "timeout": 5,
+            "statusMessage": "Checking blog index"
           }
         ]
       }

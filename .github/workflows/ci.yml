@@ -70,3 +70,26 @@ jobs:
           name: testmondata-latest
           path: .testmondata
           if-no-files-found: ignore
+
+  # Single required status check that gates PR merges.
+  # Add "quality-gate" as a required check in GitHub branch protection.
+  quality-gate:
+    if: always()
+    needs: [lint, type-check, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check all jobs passed
+        run: |
+          if [[ "${{ needs.lint.result }}" != "success" ]]; then
+            echo "::error::Lint failed"
+            exit 1
+          fi
+          if [[ "${{ needs.type-check.result }}" != "success" ]]; then
+            echo "::error::Type check failed"
+            exit 1
+          fi
+          if [[ "${{ needs.test.result }}" != "success" ]]; then
+            echo "::error::Tests failed"
+            exit 1
+          fi
+          echo "All quality gates passed"
