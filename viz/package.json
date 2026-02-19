@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint .",
     "generate-sprites": "node scripts/generate-sprites.mjs",
-    "build:deploy": "next build && rm -rf ../docs/game && cp -r out ../docs/game"
+    "build:deploy": "next build && rm -rf ../docs/game-app && cp -r out ../docs/game-app"
   },
   "dependencies": {
     "next": "^15.1.0",

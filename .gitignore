@@ -98,7 +98,7 @@ sandboxes/
 node_modules/
 
 # Next.js static export build artifact
-docs/game/
+docs/game-app/
 
 # Allow documentation images
 !docs/**/*.png
