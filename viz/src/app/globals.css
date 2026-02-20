@@ -62,3 +62,24 @@ body {
     opacity: 0;
   }
 }
+
+@keyframes narrative-toast {
+  0% {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  8% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  75% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.animate-narrative-toast {
+  animation: narrative-toast 3.5s ease-out forwards;
+}
