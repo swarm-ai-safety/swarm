@@ -295,7 +295,7 @@ def build_adapter(
                                  "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
                                  "0123456789"
                                  "/._-~")
-        if any(ch not in allowed_path_chars for ch in path_only):
+        if any(ch not in allowed_path_chars for ch in normalized):
             return JSONResponse(
                 {
                     "isError": True,
@@ -303,6 +303,21 @@ def build_adapter(
                 },
                 status_code=400,
             )
+        # Enforce a whitelist for the query string as well so that injected '?'
+        # in path parameters cannot smuggle arbitrary content past validation.
+        if query:
+            allowed_query_chars = allowed_path_chars | set("=&+%@!$'()*,;:")
+            if any(ch not in allowed_query_chars for ch in query):
+                return JSONResponse(
+                    {
+                        "isError": True,
+                        "result": "Tool path query contains invalid characters.",
+                    },
+                    status_code=400,
+                )
+
+        # Use the normalized path for dispatch so collapsible segments are resolved
+        dispatch_path = normalized + sep + query
 
         remaining = {k: v for k, v in arguments.items() if k not in path_params_used}
 
@@ -312,15 +327,15 @@ def build_adapter(
             try:
                 if method.upper() in ("POST", "PUT", "PATCH"):
                     if method.upper() == "PUT":
-                        resp = await client.put(rendered_path, json=remaining)
+                        resp = await client.put(dispatch_path, json=remaining)
                     elif method.upper() == "PATCH":
-                        resp = await client.patch(rendered_path, json=remaining)
+                        resp = await client.patch(dispatch_path, json=remaining)
                     else:
-                        resp = await client.post(rendered_path, json=remaining)
+                        resp = await client.post(dispatch_path, json=remaining)
                 elif method.upper() == "DELETE":
-                    resp = await client.delete(rendered_path, params=remaining)
+                    resp = await client.delete(dispatch_path, params=remaining)
                 else:
-                    resp = await client.get(rendered_path, params=remaining)
+                    resp = await client.get(dispatch_path, params=remaining)
             except Exception as exc:
                 return JSONResponse(
                     {"isError": True, "result": str(exc)},
