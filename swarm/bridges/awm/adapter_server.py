@@ -20,6 +20,7 @@ import inspect
 import json
 import logging
 import os
+import posixpath
 import re
 import shutil
 import sys
@@ -278,6 +279,28 @@ def build_adapter(
         if "/../" in rendered_path or rendered_path.endswith("/.."):
             return JSONResponse(
                 {"isError": True, "result": "Path traversal is not allowed."},
+                status_code=400,
+            )
+
+        # Normalize and strictly validate the path component to prevent SSRF/traversal
+        path_only, sep, query = rendered_path.partition("?")
+        normalized = posixpath.normpath(path_only)
+        if not normalized.startswith("/"):
+            return JSONResponse(
+                {"isError": True, "result": "Normalized tool path must stay within root."},
+                status_code=400,
+            )
+        # Enforce a conservative character whitelist for the path
+        allowed_path_chars = set("abcdefghijklmnopqrstuvwxyz"
+                                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                                 "0123456789"
+                                 "/._-~")
+        if any(ch not in allowed_path_chars for ch in path_only):
+            return JSONResponse(
+                {
+                    "isError": True,
+                    "result": "Tool path contains invalid characters.",
+                },
                 status_code=400,
             )
 

@@ -15,7 +15,7 @@ from typing import Literal, Optional
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from swarm.api.middleware import require_api_key
+from swarm.api.middleware import Scope, require_scope
 from swarm.api.models.post import PostCreate, PostResponse
 from swarm.api.models.run import RunStatus
 from swarm.api.persistence import PostStore, RunStore
@@ -95,7 +95,7 @@ class VoteRequest(BaseModel):
 async def create_post(
     body: PostCreate,
     request: Request,
-    agent_id: str = Depends(require_api_key),
+    agent_id: str = Depends(require_scope(Scope.WRITE)),
 ) -> PostResponse:
     """Publish a result card to the feed."""
     store = get_post_store()
@@ -177,7 +177,7 @@ async def get_post(post_id: str, request: Request) -> PostResponse:
 async def vote_on_post(
     post_id: str,
     body: VoteRequest,
-    agent_id: str = Depends(require_api_key),
+    agent_id: str = Depends(require_scope(Scope.PARTICIPATE)),
 ) -> dict:
     """Upvote or downvote a post.
 

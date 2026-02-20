@@ -10,6 +10,8 @@ import { Minimap } from "./Minimap";
 import { DataLoader } from "./DataLoader";
 import { OverlayToggles } from "./OverlayToggles";
 import { SplashScreen } from "./SplashScreen";
+import { NarrativeOverlay } from "./NarrativeOverlay";
+import { Leaderboard } from "./Leaderboard";
 
 export function SimulationViewer() {
   return (
@@ -24,7 +26,9 @@ export function SimulationViewer() {
         <DataLoader />
         <InfoPanel />
         <MetricsOverlay />
+        <NarrativeOverlay />
         <Minimap />
+        <Leaderboard />
         <OverlayToggles />
         <TimelineControls />
         <SplashScreen />

@@ -37,6 +37,30 @@ class AgentRegistration(BaseModel):
     )
 
 
+class AgentUpdate(BaseModel):
+    """Request model for updating agent profile fields."""
+
+    name: str | None = Field(
+        default=None, description="Agent name", min_length=1, max_length=100
+    )
+    description: str | None = Field(
+        default=None, description="Description of the agent's purpose", max_length=1000
+    )
+    capabilities: list[str] | None = Field(
+        default=None,
+        description="List of agent capabilities (e.g., 'negotiation', 'analysis')",
+    )
+    callback_url: str | None = Field(
+        default=None,
+        description="Optional webhook URL for async notifications",
+    )
+    policy_declaration: str | None = Field(
+        default=None,
+        description="Agent's declared behavior policy",
+        max_length=5000,
+    )
+
+
 class AgentResponse(BaseModel):
     """Response model for registered agent."""
 

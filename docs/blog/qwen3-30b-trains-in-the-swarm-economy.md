@@ -306,8 +306,6 @@ prime rl run configs/rl/swarm-economy.toml
 prime rl run configs/rl/swarm-economy-v2.toml
 ```
 
-The full source is available at [github.com/rsavitt/my-lab](https://github.com/rsavitt/my-lab).
-
 ## Takeaways
 
 1. **Multi-agent economies are a rich RL environment.** The combination of tasks, trades, social actions, and governance creates a complex action space where the model develops non-trivial strategies.
