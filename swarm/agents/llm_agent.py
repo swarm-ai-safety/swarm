@@ -75,6 +75,7 @@ class LLMAgent(BaseAgent):
         # Lazy-loaded clients
         self._anthropic_client = None
         self._openai_client = None
+        self._llama_model = None  # llama-cpp-python Llama instance (Option B)
 
         # Memori middleware (lazy-loaded from config dict)
         self._memori_middleware = None
@@ -144,6 +145,9 @@ class LLMAgent(BaseAgent):
             return os.environ.get("DEEPSEEK_API_KEY")
         elif self.llm_config.provider == LLMProvider.GOOGLE:
             return os.environ.get("GOOGLE_API_KEY")
+        elif self.llm_config.provider == LLMProvider.LLAMA_CPP:
+            # llama-server ignores API keys, but OpenAI client requires non-empty
+            return "not-needed"
         return None
 
     def _get_memori_middleware(self):
@@ -241,6 +245,15 @@ class LLMAgent(BaseAgent):
                     )
                 elif self.llm_config.provider == LLMProvider.GOOGLE:
                     return await self._call_google_async(system_prompt, user_prompt)
+                elif self.llm_config.provider == LLMProvider.LLAMA_CPP:
+                    if self.llm_config.model_path:
+                        return await self._call_llama_cpp_direct_async(
+                            system_prompt, user_prompt
+                        )
+                    else:
+                        return await self._call_openai_compatible_async(
+                            system_prompt, user_prompt
+                        )
                 else:
                     raise ValueError(f"Unknown provider: {self.llm_config.provider}")
 
@@ -486,6 +499,67 @@ class LLMAgent(BaseAgent):
         # Ollama doesn't always provide token counts
         input_tokens = data.get("prompt_eval_count", 0)
         output_tokens = data.get("eval_count", 0)
+
+        if self.llm_config.cost_tracking:
+            self.usage_stats.record_usage(
+                model=self.llm_config.model,
+                input_tokens=input_tokens,
+                output_tokens=output_tokens,
+            )
+
+        return text, input_tokens, output_tokens
+
+    def _get_llama_model(self):
+        """Lazy-load llama-cpp-python Llama model for in-process inference."""
+        if self._llama_model is not None:
+            return self._llama_model
+        try:
+            from llama_cpp import Llama
+        except ImportError as err:
+            raise ImportError(
+                "llama-cpp-python package not installed. "
+                "Install with: python -m pip install llama-cpp-python"
+            ) from err
+
+        if not self.llm_config.model_path:
+            raise ValueError(
+                "model_path is required for in-process llama.cpp inference"
+            )
+
+        self._llama_model = Llama(
+            model_path=self.llm_config.model_path,
+            n_ctx=self.llm_config.n_ctx,
+            n_threads=self.llm_config.n_threads,
+            seed=self.llm_config.llama_seed,
+            verbose=False,
+        )
+        return self._llama_model
+
+    async def _call_llama_cpp_direct_async(
+        self,
+        system_prompt: str,
+        user_prompt: str,
+    ) -> tuple[str, int, int]:
+        """Call llama-cpp-python in-process (Option B)."""
+        model = self._get_llama_model()
+
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            lambda: model.create_chat_completion(
+                messages=[
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ],
+                max_tokens=self.llm_config.max_tokens,
+                temperature=self.llm_config.temperature,
+            ),
+        )
+
+        text = response["choices"][0]["message"]["content"] or ""
+        usage = response.get("usage", {})
+        input_tokens = usage.get("prompt_tokens", 0)
+        output_tokens = usage.get("completion_tokens", 0)
 
         if self.llm_config.cost_tracking:
             self.usage_stats.record_usage(
