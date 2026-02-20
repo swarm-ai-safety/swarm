@@ -252,8 +252,17 @@ def build_adapter(
                 try:
                     safe_value = _validate_path_param_value(param_name, arguments[param_name])
                 except ValueError as exc:
+                    logger.warning(
+                        "Invalid path parameter value for tool '%s', param '%s': %s",
+                        tool_name,
+                        param_name,
+                        exc,
+                    )
                     return JSONResponse(
-                        {"isError": True, "result": str(exc)},
+                        {
+                            "isError": True,
+                            "result": "Invalid path parameter value.",
+                        },
                         status_code=400,
                     )
                 rendered_path = rendered_path.replace(f"{{{param_name}}}", safe_value)
