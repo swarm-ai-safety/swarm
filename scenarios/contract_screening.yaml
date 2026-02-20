@@ -1,0 +1,107 @@
+# Contract Screening Scenario
+# Tests whether contract-based screening produces separating equilibria:
+# - Good agents concentrate in governed pools (truthful auction, fair division)
+# - Adversarial agents concentrate in the default market
+# - Welfare is higher in governed pools
+# - Attacks displace to the unprotected default pool
+
+scenario_id: contract_screening
+description: "Contract screening with Vickrey/VCG truthful mechanism + fair division + default market"
+motif: screening_equilibrium
+
+agents:
+  - type: honest
+    count: 5
+  - type: opportunistic
+    count: 3
+  - type: deceptive
+    count: 2
+
+governance:
+  # Staking enabled (feeds into contract signing cost)
+  staking_enabled: true
+  min_stake_to_participate: 5.0
+  stake_slash_rate: 0.1
+
+  # Random audits (used within truthful auction contract)
+  audit_enabled: true
+  audit_probability: 0.2
+  audit_penalty_multiplier: 2.0
+  audit_threshold_p: 0.4
+
+  # Transaction tax (small, applies to all)
+  transaction_tax_rate: 0.02
+  transaction_tax_split: 0.5
+
+  # Reputation decay
+  reputation_decay_rate: 0.95
+
+  # Bandwidth
+  bandwidth_cap: 10
+
+  # Circuit breaker
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+contracts:
+  truthful_auction:
+    stake_fraction: 0.05
+    audit_probability: 0.2
+    audit_threshold_p: 0.4
+    penalty_multiplier: 3.0
+    surplus_bonus: 0.1
+
+  fair_division:
+    entry_fee: 2.0
+    fairness_bonus: 0.05
+    redistribution_rate: 0.1
+
+  default_market:
+    friction_premium: 0.05
+
+  market:
+    allow_switching: true
+    switching_cost_multiplier: 0.5
+    belief_update_rate: 0.3
+    honest_truthful_preference: 0.8
+    honest_fair_preference: 0.6
+    opportunistic_truthful_preference: 0.3
+    opportunistic_fair_preference: 0.4
+    adversarial_truthful_preference: 0.1
+    adversarial_fair_preference: 0.15
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 20
+  min_agents: 10
+  toxicity_threshold: 0.4
+  # Contract-specific criteria
+  min_separation_quality: 0.3
+  max_infiltration_rate: 0.3
+  min_welfare_delta: 0.0
+  min_attack_displacement: 0.5
+
+outputs:
+  event_log: "logs/contract_screening_events.jsonl"
+  metrics_csv: "logs/contract_screening_metrics.csv"
