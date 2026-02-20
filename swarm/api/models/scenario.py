@@ -42,3 +42,6 @@ class ScenarioResponse(BaseModel):
     )
     submitted_at: datetime = Field(..., description="Submission timestamp")
     tags: list[str] = Field(default_factory=list, description="Scenario tags")
+    resource_estimate: dict | None = Field(
+        default=None, description="Estimated resource usage for the scenario"
+    )

@@ -16,11 +16,13 @@ from swarm.api.models.simulation import SimulationMode, SimulationStatus  # noqa
 
 @pytest.fixture(autouse=True)
 def _clear_registration_state():
-    """Reset registration rate-limit state between tests."""
+    """Reset registration and agent state between tests."""
     import swarm.api.routers.agents as agents_mod
     agents_mod._registration_rate.clear()
+    agents_mod._registered_agents.clear()
     yield
     agents_mod._registration_rate.clear()
+    agents_mod._registered_agents.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -726,6 +728,207 @@ class TestStructuredErrors:
         assert "trace_id" in body
 
 
+class TestListFilteringAndPagination:
+    """Tests for list endpoint filtering and pagination."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_stores(self):
+        """Clear in-memory stores so each test starts fresh."""
+        import swarm.api.routers.agents as agents_mod
+        import swarm.api.routers.scenarios as scenarios_mod
+        import swarm.api.routers.simulations as simulations_mod
+
+        agents_mod._registered_agents.clear()
+        scenarios_mod._scenarios.clear()
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        yield
+        agents_mod._registered_agents.clear()
+        scenarios_mod._scenarios.clear()
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+
+    def _register_agent(self, client, name, capabilities=None):
+        """Helper to register an agent and return the response data."""
+        payload = {"name": name, "description": f"Agent {name}"}
+        if capabilities is not None:
+            payload["capabilities"] = capabilities
+        resp = client.post("/api/v1/agents/register", json=payload)
+        assert resp.status_code == 200
+        return resp.json()
+
+    def _submit_scenario(self, client, name, tags=None, yaml_content="x: 1"):
+        """Helper to submit a scenario and return the response data."""
+        payload = {
+            "name": name,
+            "description": f"Scenario {name}",
+            "yaml_content": yaml_content,
+        }
+        if tags is not None:
+            payload["tags"] = tags
+        resp = client.post("/api/v1/scenarios/submit", json=payload)
+        assert resp.status_code == 200
+        return resp.json()
+
+    def _create_simulation(self, client, scenario_id="test-scenario"):
+        """Helper to create a simulation and return the response data."""
+        resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": scenario_id},
+        )
+        assert resp.status_code == 200
+        return resp.json()
+
+    # --- Agents ---
+
+    def test_agents_filter_by_status(self, client):
+        """Register agents and filter by APPROVED status."""
+        self._register_agent(client, "Alpha")
+        self._register_agent(client, "Beta")
+
+        resp = client.get("/api/v1/agents/", params={"status": "approved"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+        assert all(a["status"] == AgentStatus.APPROVED.value for a in data)
+
+        # Filter by a status with no matches
+        resp = client.get("/api/v1/agents/", params={"status": "suspended"})
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_agents_filter_by_capability(self, client):
+        """Filter agents by capability."""
+        self._register_agent(client, "Analyst", capabilities=["analysis"])
+        self._register_agent(client, "Negotiator", capabilities=["negotiation"])
+        self._register_agent(
+            client, "Both", capabilities=["analysis", "negotiation"]
+        )
+
+        resp = client.get("/api/v1/agents/", params={"capability": "analysis"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+        names = {a["name"] for a in data}
+        assert names == {"Analyst", "Both"}
+
+    def test_agents_pagination(self, client):
+        """Register 5 agents, limit=2 offset=1 returns 2."""
+        for i in range(5):
+            self._register_agent(client, f"PagAgent{i}")
+
+        resp = client.get("/api/v1/agents/", params={"limit": 2, "offset": 1})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+
+    def test_agents_pagination_offset_past_end(self, client):
+        """Offset past the end returns empty list."""
+        self._register_agent(client, "Solo")
+
+        resp = client.get("/api/v1/agents/", params={"offset": 100})
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_agents_default_returns_all(self, client):
+        """Calling without params still returns all agents (backward compat)."""
+        for i in range(3):
+            self._register_agent(client, f"DefaultAgent{i}")
+
+        resp = client.get("/api/v1/agents/")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 3
+
+    # --- Scenarios ---
+
+    def test_scenarios_filter_by_status(self, client):
+        """Filter scenarios by VALID status."""
+        self._submit_scenario(client, "Good", yaml_content="a: 1")
+        self._submit_scenario(client, "Bad", yaml_content="   ")  # invalid
+
+        resp = client.get("/api/v1/scenarios/", params={"status": "valid"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 1
+        assert data[0]["name"] == "Good"
+
+    def test_scenarios_filter_by_tag(self, client):
+        """Filter scenarios by tag."""
+        self._submit_scenario(client, "Safety", tags=["safety", "alignment"])
+        self._submit_scenario(client, "Game", tags=["game-theory"])
+        self._submit_scenario(client, "Both", tags=["safety", "game-theory"])
+
+        resp = client.get("/api/v1/scenarios/", params={"tag": "safety"})
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+        names = {s["name"] for s in data}
+        assert names == {"Safety", "Both"}
+
+    def test_scenarios_pagination(self, client):
+        """Submit 3 scenarios, limit=1 returns 1."""
+        for i in range(3):
+            self._submit_scenario(client, f"PagScenario{i}")
+
+        resp = client.get("/api/v1/scenarios/", params={"limit": 1})
+        assert resp.status_code == 200
+        assert len(resp.json()) == 1
+
+    def test_scenarios_default_returns_all(self, client):
+        """Calling without params still returns all scenarios."""
+        for i in range(3):
+            self._submit_scenario(client, f"DefScenario{i}")
+
+        resp = client.get("/api/v1/scenarios/")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 3
+
+    # --- Simulations ---
+
+    def test_simulations_filter_by_status(self, client):
+        """Filter simulations by WAITING status."""
+        self._create_simulation(client, "scenario-a")
+        self._create_simulation(client, "scenario-b")
+
+        resp = client.get(
+            "/api/v1/simulations/",
+            params={"status": "waiting_for_participants"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 2
+        assert all(
+            s["status"] == SimulationStatus.WAITING.value for s in data
+        )
+
+        # No matches for COMPLETED
+        resp = client.get(
+            "/api/v1/simulations/", params={"status": "completed"}
+        )
+        assert resp.status_code == 200
+        assert resp.json() == []
+
+    def test_simulations_pagination(self, client):
+        """Create 4 simulations, limit=2 offset=1 returns 2."""
+        for i in range(4):
+            self._create_simulation(client, f"scenario-{i}")
+
+        resp = client.get(
+            "/api/v1/simulations/", params={"limit": 2, "offset": 1}
+        )
+        assert resp.status_code == 200
+        assert len(resp.json()) == 2
+
+    def test_simulations_default_returns_all(self, client):
+        """Calling without params still returns all simulations."""
+        for i in range(3):
+            self._create_simulation(client, f"scenario-{i}")
+
+        resp = client.get("/api/v1/simulations/")
+        assert resp.status_code == 200
+        assert len(resp.json()) == 3
+
+
 class TestRouterStubs:
     """Tests for governance and metrics router stubs."""
 
@@ -746,3 +949,345 @@ class TestRouterStubs:
         resp = client.get("/api/v1/metrics/some-sim-id")
         assert resp.status_code == 200
         assert resp.json()["status"] == "not_implemented"
+
+
+class TestAgentPatchAndTransitions:
+    """Tests for PATCH /agents/{id} and status transition endpoints."""
+
+    def _register_agent(self, client):
+        """Helper: register an agent and return (agent_id, api_key)."""
+        resp = client.post(
+            "/api/v1/agents/register",
+            json={"name": "PatchAgent", "description": "For patch tests"},
+        )
+        data = resp.json()
+        return data["agent_id"], data["api_key"]
+
+    def test_patch_own_agent(self, client):
+        """Updating own name and description succeeds."""
+        agent_id, api_key = self._register_agent(client)
+
+        resp = client.patch(
+            f"/api/v1/agents/{agent_id}",
+            json={"name": "UpdatedName", "description": "Updated desc"},
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["name"] == "UpdatedName"
+        assert data["description"] == "Updated desc"
+        assert data["api_key"] == "[REDACTED]"
+
+    def test_patch_other_agent_forbidden(self, client):
+        """Updating another agent's profile returns 403."""
+        agent_id_1, _api_key_1 = self._register_agent(client)
+        _agent_id_2, api_key_2 = self._register_agent(client)
+
+        resp = client.patch(
+            f"/api/v1/agents/{agent_id_1}",
+            json={"name": "Hijacked"},
+            headers={"Authorization": f"Bearer {api_key_2}"},
+        )
+        assert resp.status_code == 403
+
+    def test_suspend_agent(self, client):
+        """Admin can suspend an approved agent."""
+        from swarm.api.middleware.auth import register_api_key
+
+        agent_id, _api_key = self._register_agent(client)
+
+        # Register an admin key
+        register_api_key("admin-key", "admin-agent", trusted=True)
+
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/suspend",
+            headers={"Authorization": "Bearer admin-key"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == AgentStatus.SUSPENDED.value
+
+    def test_reactivate_agent(self, client):
+        """Admin can reactivate a suspended agent."""
+        from swarm.api.middleware.auth import register_api_key
+
+        agent_id, _api_key = self._register_agent(client)
+
+        register_api_key("admin-key", "admin-agent", trusted=True)
+
+        # First suspend
+        client.post(
+            f"/api/v1/agents/{agent_id}/suspend",
+            headers={"Authorization": "Bearer admin-key"},
+        )
+
+        # Then reactivate
+        resp = client.post(
+            f"/api/v1/agents/{agent_id}/reactivate",
+            headers={"Authorization": "Bearer admin-key"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == AgentStatus.APPROVED.value
+
+    def test_invalid_transition(self, client):
+        """Suspending a pending agent returns 400."""
+        # Directly insert a PENDING agent into the store
+        from datetime import datetime, timezone
+
+        import swarm.api.routers.agents as agents_mod
+        from swarm.api.middleware.auth import register_api_key
+        from swarm.api.models.agent import AgentResponse as AR
+
+        pending_id = "pending-agent-123"
+        agents_mod._registered_agents[pending_id] = AR(
+            agent_id=pending_id,
+            api_key="unused",
+            name="PendingAgent",
+            description="Stuck in review",
+            capabilities=[],
+            status=AgentStatus.PENDING,
+            registered_at=datetime.now(timezone.utc),
+        )
+
+        register_api_key("admin-key", "admin-agent", trusted=True)
+
+        resp = client.post(
+            f"/api/v1/agents/{pending_id}/suspend",
+            headers={"Authorization": "Bearer admin-key"},
+        )
+        assert resp.status_code == 400
+        assert "pending_review" in resp.json()["detail"]
+
+
+class TestYAMLValidation:
+    """Tests for YAML schema validation and resource estimation."""
+
+    def test_valid_yaml_accepted(self, client):
+        """Submit valid YAML with agents/epochs, expect status=VALID."""
+        response = client.post(
+            "/api/v1/scenarios/submit",
+            json={
+                "name": "Valid Scenario",
+                "description": "A valid scenario with params",
+                "yaml_content": "agents: 5\nepochs: 20\nsteps_per_epoch: 50",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == ScenarioStatus.VALID.value
+        assert data["validation_errors"] == []
+
+    def test_empty_yaml_invalid(self, client):
+        """Empty content returns INVALID (existing behavior preserved)."""
+        response = client.post(
+            "/api/v1/scenarios/submit",
+            json={
+                "name": "Empty",
+                "description": "Empty YAML",
+                "yaml_content": "   ",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == ScenarioStatus.INVALID.value
+        assert len(data["validation_errors"]) > 0
+        assert any("empty" in e.lower() for e in data["validation_errors"])
+
+    def test_malformed_yaml_invalid(self, client):
+        """Malformed YAML returns INVALID with parse error."""
+        response = client.post(
+            "/api/v1/scenarios/submit",
+            json={
+                "name": "Malformed",
+                "description": "Bad YAML",
+                "yaml_content": "{{bad yaml",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == ScenarioStatus.INVALID.value
+        assert any("parse error" in e.lower() for e in data["validation_errors"])
+
+    def test_wrong_type_yaml_invalid(self, client):
+        """YAML that parses to a string (not dict) returns INVALID."""
+        response = client.post(
+            "/api/v1/scenarios/submit",
+            json={
+                "name": "WrongType",
+                "description": "String YAML",
+                "yaml_content": "just a string",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == ScenarioStatus.INVALID.value
+        assert any(
+            "mapping" in e.lower() or "dict" in e.lower()
+            for e in data["validation_errors"]
+        )
+
+    def test_invalid_param_types(self, client):
+        """YAML with wrong param types returns INVALID."""
+        response = client.post(
+            "/api/v1/scenarios/submit",
+            json={
+                "name": "BadTypes",
+                "description": "Wrong types",
+                "yaml_content": "agents: not_a_number",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == ScenarioStatus.INVALID.value
+        assert any(
+            "agents" in e and "integer" in e for e in data["validation_errors"]
+        )
+
+    def test_resource_estimate_present(self, client):
+        """Valid scenario includes resource_estimate dict."""
+        response = client.post(
+            "/api/v1/scenarios/submit",
+            json={
+                "name": "ResourceEst",
+                "description": "Check resource estimate",
+                "yaml_content": "agents: 4\nepochs: 5\nsteps_per_epoch: 10",
+            },
+        )
+        assert response.status_code == 200
+        data = response.json()
+        assert data["status"] == ScenarioStatus.VALID.value
+        est = data["resource_estimate"]
+        assert est is not None
+        assert est["n_agents"] == 4
+        assert est["n_epochs"] == 5
+        assert est["steps"] == 10
+        assert est["estimated_interactions"] == 4 * 5 * 10
+        assert est["estimated_runtime_seconds"] == 4 * 5 * 10 * 0.01
+        assert "estimated_memory_mb" in est
+        assert est["within_limits"] is True
+
+
+class TestSimulationMechanics:
+    """Tests for join deadline enforcement, state endpoint, and start."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_simulation_state(self):
+        """Reset simulation storage between tests."""
+        import swarm.api.routers.simulations as simulations_mod
+
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        yield
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+
+    def _create_simulation(self, client, **overrides):
+        """Helper: create a simulation and return the response data."""
+        payload = {"scenario_id": "test-scenario", "max_participants": 10}
+        payload.update(overrides)
+        resp = client.post("/api/v1/simulations/create", json=payload)
+        assert resp.status_code == 200
+        return resp.json()
+
+    def test_join_after_deadline_rejected(self, client):
+        """Joining after the join deadline returns 400."""
+        from datetime import datetime, timedelta, timezone
+
+        import swarm.api.routers.simulations as simulations_mod
+
+        sim = self._create_simulation(client)
+        sim_id = sim["simulation_id"]
+
+        # Set the deadline to the past
+        past = datetime.now(timezone.utc) - timedelta(hours=1)
+        simulations_mod._simulations[sim_id].join_deadline = past
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/join",
+            json={"agent_id": "agent-late", "role": "participant"},
+        )
+        assert resp.status_code == 400
+        assert resp.json()["detail"] == "Join deadline has passed"
+
+    def test_state_endpoint(self, client):
+        """GET /state returns participants and simulation details."""
+        sim = self._create_simulation(
+            client, config_overrides={"epochs": 50}
+        )
+        sim_id = sim["simulation_id"]
+
+        # Join with an agent
+        client.post(
+            f"/api/v1/simulations/{sim_id}/join",
+            json={"agent_id": "agent-1", "role": "initiator"},
+        )
+
+        resp = client.get(f"/api/v1/simulations/{sim_id}/state")
+        assert resp.status_code == 200
+        data = resp.json()
+
+        assert data["simulation_id"] == sim_id
+        assert data["status"] == SimulationStatus.WAITING.value
+        assert len(data["participants"]) == 1
+        assert data["participants"][0]["agent_id"] == "agent-1"
+        assert data["participants"][0]["role"] == "initiator"
+        assert "joined_at" in data["participants"][0]
+        assert data["config_overrides"] == {"epochs": 50}
+        assert "join_deadline" in data
+        assert data["time_remaining_seconds"] >= 0
+
+    def test_start_simulation(self, client):
+        """POST /start transitions WAITING -> RUNNING with enough participants."""
+        sim = self._create_simulation(client)
+        sim_id = sim["simulation_id"]
+
+        # Join with 2 agents
+        for i in range(2):
+            client.post(
+                f"/api/v1/simulations/{sim_id}/join",
+                json={"agent_id": f"agent-{i}", "role": "participant"},
+            )
+
+        resp = client.post(f"/api/v1/simulations/{sim_id}/start")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["simulation_id"] == sim_id
+        assert data["status"] == "running"
+
+        # Verify the simulation is now running via GET
+        get_resp = client.get(f"/api/v1/simulations/{sim_id}")
+        assert get_resp.json()["status"] == SimulationStatus.RUNNING.value
+
+    def test_start_without_enough_participants(self, client):
+        """POST /start with < 2 participants returns 400."""
+        sim = self._create_simulation(client)
+        sim_id = sim["simulation_id"]
+
+        # Join with only 1 agent
+        client.post(
+            f"/api/v1/simulations/{sim_id}/join",
+            json={"agent_id": "solo-agent", "role": "participant"},
+        )
+
+        resp = client.post(f"/api/v1/simulations/{sim_id}/start")
+        assert resp.status_code == 400
+        assert "Not enough participants" in resp.json()["detail"]
+
+    def test_start_non_waiting_simulation(self, client):
+        """POST /start on an already-running simulation returns 400."""
+        sim = self._create_simulation(client)
+        sim_id = sim["simulation_id"]
+
+        # Join with 2 agents and start
+        for i in range(2):
+            client.post(
+                f"/api/v1/simulations/{sim_id}/join",
+                json={"agent_id": f"agent-{i}", "role": "participant"},
+            )
+        client.post(f"/api/v1/simulations/{sim_id}/start")
+
+        # Try to start again
+        resp = client.post(f"/api/v1/simulations/{sim_id}/start")
+        assert resp.status_code == 400
+        assert "not in waiting state" in resp.json()["detail"]
