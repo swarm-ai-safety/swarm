@@ -31,6 +31,71 @@ from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 
+# Conservative character whitelists for SSRF-safe path dispatch
+_ALLOWED_PATH_CHARS = frozenset(
+    "abcdefghijklmnopqrstuvwxyz"
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    "0123456789"
+    "/._-~"
+)
+_ALLOWED_QUERY_CHARS = _ALLOWED_PATH_CHARS | frozenset("=&+%@!$'()*,;:")
+
+
+def _sanitize_dispatch_path(normalized: str, sep: str, query: str) -> Optional[str]:
+    """Validate and rebuild the dispatch path from whitelisted characters.
+
+    Returns the sanitized path string, or ``None`` if any character fails
+    the whitelist.  Each character is validated and appended to a fresh list
+    inside the same loop, so the output is built entirely from vetted
+    primitives — breaking any taint chain from user-supplied input.
+    """
+    # Validate and rebuild the path component from allowed characters only.
+    safe_path_chars: list[str] = []
+    for ch in normalized:
+        if ch not in _ALLOWED_PATH_CHARS:
+            return None
+        safe_path_chars.append(ch)
+
+    # Validate and rebuild the query component (if any) from allowed characters only.
+    safe_query_chars: list[str] = []
+    if query:
+        for ch in query:
+            if ch not in _ALLOWED_QUERY_CHARS:
+                return None
+            safe_query_chars.append(ch)
+
+    safe_path = "".join(safe_path_chars)
+    safe_query = "".join(safe_query_chars)
+    return safe_path + sep + safe_query
+
+
+def _is_safe_dispatch_path(dispatch_path: str) -> bool:
+    """Final structural validation for the dispatch path before HTTP requests.
+
+    Runs after character-level sanitization to enforce that the path is a
+    simple absolute path under the current service — not a full/scheme-relative
+    URL, and free of traversal or ambiguous segments.
+    """
+    if not dispatch_path.startswith("/"):
+        return False
+    if dispatch_path.startswith("//"):
+        return False
+    if "://" in dispatch_path:
+        return False
+    if ".." in dispatch_path:
+        return False
+    if "//" in dispatch_path or "/./" in dispatch_path:
+        return False
+    # Belt-and-suspenders: urlparse must see no scheme or netloc
+    parsed = urlparse(dispatch_path)
+    if parsed.scheme or parsed.netloc:
+        return False
+    # Enforce that the path component matches the whitelist structurally
+    path_only, _, _ = dispatch_path.partition("?")
+    if not re.fullmatch(r"/[A-Za-z0-9/_.\-~]*", path_only):
+        return False
+    return True
+
 
 def _load_scenario_code(envs_jsonl: Path, scenario: str) -> str:
     """Return the ``full_code`` string for *scenario* from *envs_jsonl*."""
@@ -237,6 +302,10 @@ def build_adapter(
             s = str(value)
             if "/" in s or "\\" in s:
                 raise ValueError(f"Invalid path parameter '{name}': unexpected '/' or '\\\\'")
+            if "?" in s or "#" in s:
+                raise ValueError(
+                    f"Invalid path parameter '{name}': unexpected query/fragment delimiter"
+                )
             if "\n" in s or "\r" in s or "\t" in s:
                 raise ValueError(f"Invalid path parameter '{name}': unexpected whitespace")
             if s.startswith(".") or ".." in s:
@@ -294,42 +363,68 @@ def build_adapter(
         # Normalize and strictly validate the path component to prevent SSRF/traversal
         path_only, sep, query = rendered_path.partition("?")
         normalized = posixpath.normpath(path_only)
+        # Preserve trailing slash (normpath strips it, but FastAPI routes may require it)
+        if path_only.endswith("/") and normalized != "/":
+            normalized += "/"
         if not normalized.startswith("/"):
             return JSONResponse(
                 {"isError": True, "result": "Normalized tool path must stay within root."},
                 status_code=400,
             )
-        # Enforce a conservative character whitelist for the path
-        allowed_path_chars = set("abcdefghijklmnopqrstuvwxyz"
-                                 "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                                 "0123456789"
-                                 "/._-~")
-        if any(ch not in allowed_path_chars for ch in path_only):
+        # Validate and rebuild the dispatch path from whitelisted characters.
+        # _sanitize_dispatch_path reconstructs the string character-by-character
+        # so the result is free of any user-supplied taint.
+        dispatch_path = _sanitize_dispatch_path(normalized, sep, query)
+        if dispatch_path is None:
             return JSONResponse(
                 {
                     "isError": True,
-                    "result": "Tool path contains invalid characters.",
+                    "result": "Tool path or query string contains invalid characters.",
+                },
+                status_code=400,
+            )
+        # Defensively re-parse to ensure no scheme/netloc slipped through.
+        parsed_dispatch = urlparse(dispatch_path)
+        if parsed_dispatch.scheme or parsed_dispatch.netloc:
+            return JSONResponse(
+                {
+                    "isError": True,
+                    "result": "Tool path must be a relative URL without scheme or host.",
+                },
+                status_code=400,
+            )
+        dispatch_relative_path = dispatch_path
+        # Final structural validation: ensure the dispatch path is a safe,
+        # absolute path under the current service with no SSRF/traversal risk.
+        if not _is_safe_dispatch_path(dispatch_relative_path):
+            return JSONResponse(
+                {
+                    "isError": True,
+                    "result": "Tool path is not structurally valid.",
                 },
                 status_code=400,
             )
 
         remaining = {k: v for k, v in arguments.items() if k not in path_params_used}
 
-        # Dispatch via httpx ASGITransport directly to the AWM app
+        # Dispatch via httpx ASGITransport directly to the AWM app.
+        # The HTTP client is configured with a fixed base_url ("http://awm")
+        # routed to the in-process ASGI app; we only ever pass a sanitized,
+        # relative path so callers cannot control the destination host or scheme.
         transport = httpx.ASGITransport(app=awm_app)  # type: ignore[arg-type]
         async with httpx.AsyncClient(transport=transport, base_url="http://awm") as client:
             try:
                 if method.upper() in ("POST", "PUT", "PATCH"):
                     if method.upper() == "PUT":
-                        resp = await client.put(rendered_path, json=remaining)
+                        resp = await client.put(dispatch_relative_path, json=remaining)
                     elif method.upper() == "PATCH":
-                        resp = await client.patch(rendered_path, json=remaining)
+                        resp = await client.patch(dispatch_relative_path, json=remaining)
                     else:
-                        resp = await client.post(rendered_path, json=remaining)
+                        resp = await client.post(dispatch_relative_path, json=remaining)
                 elif method.upper() == "DELETE":
-                    resp = await client.delete(rendered_path, params=remaining)
+                    resp = await client.delete(dispatch_relative_path, params=remaining)
                 else:
-                    resp = await client.get(rendered_path, params=remaining)
+                    resp = await client.get(dispatch_relative_path, params=remaining)
             except Exception as exc:
                 return JSONResponse(
                     {"isError": True, "result": str(exc)},
