@@ -68,8 +68,9 @@ def create_app(config: APIConfig | None = None) -> FastAPI:
         lifespan=lifespan,
     )
 
-    # Stash rate-limit config on the app for the middleware to read
+    # Stash config on the app for middleware/routers to read
     app._swarm_rate_limit = config.rate_limit_per_minute  # type: ignore[attr-defined]
+    app._swarm_auto_approve = config.auto_approve_agents  # type: ignore[attr-defined]
 
     # Configure CORS — only allow methods and headers actually used by the
     # API to reduce attack surface (security fix 6.1).

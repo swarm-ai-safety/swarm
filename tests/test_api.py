@@ -20,9 +20,11 @@ def _clear_registration_state():
     import swarm.api.routers.agents as agents_mod
     agents_mod._registration_rate.clear()
     agents_mod._registered_agents.clear()
+    agents_mod._pending_keys.clear()
     yield
     agents_mod._registration_rate.clear()
     agents_mod._registered_agents.clear()
+    agents_mod._pending_keys.clear()
 
 
 @pytest.fixture(autouse=True)
@@ -1291,3 +1293,130 @@ class TestSimulationMechanics:
         resp = client.post(f"/api/v1/simulations/{sim_id}/start")
         assert resp.status_code == 400
         assert "not in waiting state" in resp.json()["detail"]
+
+
+class TestApprovalWorkflow:
+    """Tests for the agent approval workflow (auto_approve=False)."""
+
+    @pytest.fixture
+    def review_client(self):
+        """Client with auto_approve_agents=False."""
+        app = create_app(APIConfig(debug=True, auto_approve_agents=False))
+        return TestClient(app)
+
+    def test_registration_returns_pending_when_auto_approve_off(self, review_client):
+        """Registering with auto_approve=False gives pending_review status."""
+        resp = review_client.post(
+            "/api/v1/agents/register",
+            json={"name": "PendingBot", "description": "awaiting review"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "pending_review"
+        assert "api_key" in data
+
+    def test_pending_key_inactive_until_approved(self, review_client):
+        """A pending agent's API key cannot authenticate."""
+        resp = review_client.post(
+            "/api/v1/agents/register",
+            json={"name": "InactiveBot", "description": "test"},
+        )
+        api_key = resp.json()["api_key"]
+
+        # Try to use the key — should fail (key not registered yet)
+        runs_resp = review_client.get(
+            "/api/runs",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+        assert runs_resp.status_code == 401
+
+    def test_admin_approves_pending_agent(self, review_client):
+        """Admin can approve a pending agent, activating their key."""
+        from swarm.api.middleware.auth import register_api_key
+
+        # Register admin key
+        register_api_key("admin-approval-key", "admin-1", trusted=True)
+
+        # Register a pending agent
+        resp = review_client.post(
+            "/api/v1/agents/register",
+            json={"name": "ToApprove", "description": "test"},
+        )
+        agent_id = resp.json()["agent_id"]
+        api_key = resp.json()["api_key"]
+        assert resp.json()["status"] == "pending_review"
+
+        # Admin approves
+        approve_resp = review_client.post(
+            f"/api/v1/agents/{agent_id}/approve",
+            headers={"Authorization": "Bearer admin-approval-key"},
+        )
+        assert approve_resp.status_code == 200
+        assert approve_resp.json()["status"] == "approved"
+
+        # Key is now active
+        runs_resp = review_client.get(
+            "/api/runs",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+        assert runs_resp.status_code == 200
+
+    def test_admin_rejects_pending_agent(self, review_client):
+        """Admin can reject a pending agent."""
+        from swarm.api.middleware.auth import register_api_key
+
+        register_api_key("admin-reject-key", "admin-2", trusted=True)
+
+        resp = review_client.post(
+            "/api/v1/agents/register",
+            json={"name": "ToReject", "description": "test"},
+        )
+        agent_id = resp.json()["agent_id"]
+        api_key = resp.json()["api_key"]
+
+        reject_resp = review_client.post(
+            f"/api/v1/agents/{agent_id}/reject",
+            headers={"Authorization": "Bearer admin-reject-key"},
+        )
+        assert reject_resp.status_code == 200
+        assert reject_resp.json()["status"] == "rejected"
+
+        # Key stays inactive
+        runs_resp = review_client.get(
+            "/api/runs",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+        assert runs_resp.status_code == 401
+
+    def test_approve_non_pending_agent_fails(self, review_client):
+        """Cannot approve an agent that isn't pending."""
+        from swarm.api.middleware.auth import register_api_key
+
+        register_api_key("admin-key-3", "admin-3", trusted=True)
+
+        # Register and approve first
+        resp = review_client.post(
+            "/api/v1/agents/register",
+            json={"name": "AlreadyDone", "description": "test"},
+        )
+        agent_id = resp.json()["agent_id"]
+        review_client.post(
+            f"/api/v1/agents/{agent_id}/approve",
+            headers={"Authorization": "Bearer admin-key-3"},
+        )
+
+        # Try to approve again
+        resp2 = review_client.post(
+            f"/api/v1/agents/{agent_id}/approve",
+            headers={"Authorization": "Bearer admin-key-3"},
+        )
+        assert resp2.status_code == 400
+        assert "pending" in resp2.json()["detail"].lower()
+
+    def test_auto_approve_true_still_works(self, client):
+        """Default client (auto_approve=True) still auto-approves."""
+        resp = client.post(
+            "/api/v1/agents/register",
+            json={"name": "AutoBot", "description": "test"},
+        )
+        assert resp.json()["status"] == "approved"

@@ -39,6 +39,7 @@ def _clear_middleware_state():
     _trusted_keys.clear()
     agents_mod._registration_rate.clear()
     agents_mod._registered_agents.clear()
+    agents_mod._pending_keys.clear()
     posts_mod._public_rate.clear()
     yield
     _api_keys.clear()
@@ -48,6 +49,7 @@ def _clear_middleware_state():
     _trusted_keys.clear()
     agents_mod._registration_rate.clear()
     agents_mod._registered_agents.clear()
+    agents_mod._pending_keys.clear()
     posts_mod._public_rate.clear()
 
 

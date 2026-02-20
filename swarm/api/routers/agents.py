@@ -6,8 +6,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from swarm.api.middleware import DEFAULT_SCOPES, register_api_key
-from swarm.api.middleware.auth import Scope, require_scope
+from swarm.api.middleware import DEFAULT_SCOPES, Scope, register_api_key, require_scope
 from swarm.api.models.agent import (
     AgentRegistration,
     AgentResponse,
@@ -19,6 +18,9 @@ router = APIRouter()
 
 # In-memory storage for development (replace with database in production)
 _registered_agents: dict[str, AgentResponse] = {}
+
+# Maps agent_id -> raw API key (held until approval, then registered)
+_pending_keys: dict[str, str] = {}
 
 # Rate limiting for registration endpoint (per-IP).
 # Maps IP -> list of registration timestamps within the window.
@@ -63,20 +65,32 @@ async def register_agent(
     agent_id = str(uuid.uuid4())
     api_key = f"swarm_{uuid.uuid4().hex}"  # Simple key for now
 
+    # Check auto-approve config (stashed on the app instance)
+    auto_approve = getattr(request.app, "_swarm_auto_approve", True)
+
+    if auto_approve:
+        status = AgentStatus.APPROVED
+    else:
+        status = AgentStatus.PENDING
+
     agent = AgentResponse(
         agent_id=agent_id,
         api_key=api_key,
         name=registration.name,
         description=registration.description,
         capabilities=registration.capabilities,
-        status=AgentStatus.APPROVED,  # Auto-approve for now
+        status=status,
         registered_at=datetime.now(timezone.utc),
     )
 
     _registered_agents[agent_id] = agent
 
-    # Register the API key so it can be used for runs/posts endpoints
-    register_api_key(api_key, agent_id, scopes=DEFAULT_SCOPES)
+    if auto_approve:
+        # Register the API key immediately
+        register_api_key(api_key, agent_id, scopes=DEFAULT_SCOPES)
+    else:
+        # Hold the key until approved
+        _pending_keys[agent_id] = api_key
 
     return agent
 
@@ -263,6 +277,67 @@ async def reactivate_agent(
         )
 
     updated = agent.model_copy(update={"status": AgentStatus.APPROVED})
+    _registered_agents[agent_id] = updated
+
+    return _redacted_response(updated)
+
+
+@router.post("/{agent_id}/approve", response_model=AgentResponse)
+async def approve_agent(
+    agent_id: str,
+    _admin_agent_id: str = Depends(require_scope(Scope.ADMIN)),
+) -> AgentResponse:
+    """Approve a pending agent. Requires ADMIN scope.
+
+    Activates the agent's API key so it can make authenticated requests.
+    Valid transition: pending_review -> approved.
+    """
+    if agent_id not in _registered_agents:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    agent = _registered_agents[agent_id]
+    if agent.status != AgentStatus.PENDING:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot approve agent with status '{agent.status.value}'. "
+            f"Only pending agents can be approved.",
+        )
+
+    # Activate the held API key
+    raw_key = _pending_keys.pop(agent_id, None)
+    if raw_key is not None:
+        register_api_key(raw_key, agent_id, scopes=DEFAULT_SCOPES)
+
+    updated = agent.model_copy(update={"status": AgentStatus.APPROVED})
+    _registered_agents[agent_id] = updated
+
+    return _redacted_response(updated)
+
+
+@router.post("/{agent_id}/reject", response_model=AgentResponse)
+async def reject_agent(
+    agent_id: str,
+    _admin_agent_id: str = Depends(require_scope(Scope.ADMIN)),
+) -> AgentResponse:
+    """Reject a pending agent. Requires ADMIN scope.
+
+    Discards the held API key. Valid transition: pending_review -> rejected.
+    """
+    if agent_id not in _registered_agents:
+        raise HTTPException(status_code=404, detail="Agent not found")
+
+    agent = _registered_agents[agent_id]
+    if agent.status != AgentStatus.PENDING:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot reject agent with status '{agent.status.value}'. "
+            f"Only pending agents can be rejected.",
+        )
+
+    # Discard the held key
+    _pending_keys.pop(agent_id, None)
+
+    updated = agent.model_copy(update={"status": AgentStatus.REJECTED})
     _registered_agents[agent_id] = updated
 
     return _redacted_response(updated)
