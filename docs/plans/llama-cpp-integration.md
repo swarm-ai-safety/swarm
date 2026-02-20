@@ -50,7 +50,7 @@ SWARM already has `_call_openai_compatible_async` in `LLMAgent` — llama-server
   - `model_path: Optional[str] = None` — path to a local `.gguf` file (Option B only).
   - `n_ctx: int = 4096` — context window size for in-process mode.
   - `n_threads: Optional[int] = None` — CPU thread count (defaults to auto-detect).
-  - `seed: int = -1` — sampling seed for determinism (`-1` = random).
+  - `llama_seed: int = -1` — sampling seed for determinism (`-1` = random).
 - In `__post_init__`, set default `base_url = "http://localhost:8080/v1"` when provider is `LLAMA_CPP` and no `base_url` is provided.
 - Skip API key validation for `LLAMA_CPP` (like Ollama).
 - Add `LLAMA_CPP` cost entries to `LLMUsageStats` (all `0.0` since local).
