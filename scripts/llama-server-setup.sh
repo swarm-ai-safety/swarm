@@ -48,7 +48,7 @@ cmd_download() {
     _info "This may take a few minutes (~2 GB)."
 
     if command -v curl &>/dev/null; then
-        curl -L --proto =https,http --progress-bar -o "$MODEL_PATH" "$MODEL_URL"
+        curl -L --proto '=https,http' --proto-redir '=https,http' --progress-bar -o "$MODEL_PATH" "$MODEL_URL"
     elif command -v wget &>/dev/null; then
         wget --show-progress -O "$MODEL_PATH" "$MODEL_URL"
     else
