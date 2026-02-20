@@ -56,6 +56,138 @@ class TestLlamaCppConfig:
 
 
 # =============================================================================
+# LLMConfig — model_path validation (security hardening)
+# =============================================================================
+
+
+class TestModelPathValidation:
+    """Tests that model_path is validated against path traversal."""
+
+    def test_rejects_path_traversal(self):
+        with pytest.raises(ValueError, match="must not contain '..'"):
+            LLMConfig(
+                provider=LLMProvider.LLAMA_CPP,
+                model="local",
+                model_path="../../../etc/model.gguf",
+            )
+
+    def test_rejects_mid_path_traversal(self):
+        with pytest.raises(ValueError, match="must not contain '..'"):
+            LLMConfig(
+                provider=LLMProvider.LLAMA_CPP,
+                model="local",
+                model_path="/models/../secrets/model.gguf",
+            )
+
+    def test_rejects_non_gguf_extension(self):
+        with pytest.raises(ValueError, match="must end with .gguf"):
+            LLMConfig(
+                provider=LLMProvider.LLAMA_CPP,
+                model="local",
+                model_path="/tmp/model.bin",
+            )
+
+    def test_rejects_no_extension(self):
+        with pytest.raises(ValueError, match="must end with .gguf"):
+            LLMConfig(
+                provider=LLMProvider.LLAMA_CPP,
+                model="local",
+                model_path="/etc/passwd",
+            )
+
+    def test_rejects_empty_model_path(self):
+        with pytest.raises(ValueError, match="must not be empty"):
+            LLMConfig(
+                provider=LLMProvider.LLAMA_CPP,
+                model="local",
+                model_path="",
+            )
+
+    def test_accepts_valid_absolute_path(self):
+        cfg = LLMConfig(
+            provider=LLMProvider.LLAMA_CPP,
+            model="local",
+            model_path="/home/user/models/Llama-3.2-3B.gguf",
+        )
+        assert cfg.model_path == "/home/user/models/Llama-3.2-3B.gguf"
+
+    def test_accepts_valid_relative_path(self):
+        cfg = LLMConfig(
+            provider=LLMProvider.LLAMA_CPP,
+            model="local",
+            model_path="./models/model.gguf",
+        )
+        assert cfg.model_path == "./models/model.gguf"
+
+    def test_accepts_gguf_case_insensitive(self):
+        cfg = LLMConfig(
+            provider=LLMProvider.LLAMA_CPP,
+            model="local",
+            model_path="/tmp/Model.GGUF",
+        )
+        assert cfg.model_path == "/tmp/Model.GGUF"
+
+    def test_none_model_path_skips_validation(self):
+        """None model_path (Option A mode) should not trigger validation."""
+        cfg = LLMConfig(provider=LLMProvider.LLAMA_CPP, model="test")
+        assert cfg.model_path is None
+
+
+# =============================================================================
+# LLMConfig — base_url scheme validation (SSRF hardening)
+# =============================================================================
+
+
+class TestBaseUrlSchemeValidation:
+    """Tests that base_url only allows http/https schemes."""
+
+    def test_rejects_file_scheme(self):
+        with pytest.raises(ValueError, match="scheme must be http or https"):
+            LLMConfig(
+                provider=LLMProvider.LLAMA_CPP,
+                model="test",
+                base_url="file:///etc/passwd",
+            )
+
+    def test_rejects_ftp_scheme(self):
+        with pytest.raises(ValueError, match="scheme must be http or https"):
+            LLMConfig(
+                provider=LLMProvider.LLAMA_CPP,
+                model="test",
+                base_url="ftp://evil.com/model",
+            )
+
+    def test_rejects_gopher_scheme(self):
+        with pytest.raises(ValueError, match="scheme must be http or https"):
+            LLMConfig(
+                provider=LLMProvider.LLAMA_CPP,
+                model="test",
+                base_url="gopher://evil.com",
+            )
+
+    def test_accepts_http(self):
+        cfg = LLMConfig(
+            provider=LLMProvider.LLAMA_CPP,
+            model="test",
+            base_url="http://localhost:8080/v1",
+        )
+        assert cfg.base_url == "http://localhost:8080/v1"
+
+    def test_accepts_https(self):
+        cfg = LLMConfig(
+            provider=LLMProvider.LLAMA_CPP,
+            model="test",
+            base_url="https://my-server.com/v1",
+        )
+        assert cfg.base_url == "https://my-server.com/v1"
+
+    def test_none_base_url_uses_default(self):
+        """When base_url is None, default is applied before validation."""
+        cfg = LLMConfig(provider=LLMProvider.LLAMA_CPP, model="test")
+        assert cfg.base_url == "http://localhost:8080/v1"
+
+
+# =============================================================================
 # LLMAgent — provider routing
 # =============================================================================
 
@@ -192,6 +324,15 @@ class TestLlamaHealthCheck:
             base_url="http://localhost:19999/v1", timeout=1.0
         )
         assert result is False  # just verifying no crash
+
+    def test_check_rejects_file_scheme(self):
+        """Health check should reject file:// URLs."""
+        result = check_llama_server(base_url="file:///etc/passwd", timeout=1.0)
+        assert result is False
+
+    def test_check_rejects_ftp_scheme(self):
+        result = check_llama_server(base_url="ftp://evil.com", timeout=1.0)
+        assert result is False
 
     @patch("urllib.request.urlopen")
     def test_check_returns_true_when_healthy(self, mock_urlopen):

@@ -1005,28 +1005,42 @@ def parse_llm_config(data: Dict[str, Any]) -> Any:
     except ValueError as err:
         raise ValueError(f"Unknown persona type: {persona_str}") from err
 
-    return LLMConfig(
-        provider=provider,
-        model=data.get("model", "claude-sonnet-4-20250514"),
-        api_key=data.get("api_key"),  # Usually from env var
-        base_url=data.get("base_url"),
-        temperature=data.get("temperature", 0.7),
-        max_tokens=data.get("max_tokens", 512),
-        timeout=data.get("timeout", 30.0),
-        max_retries=data.get("max_retries", 3),
-        persona=persona,
-        system_prompt=data.get("system_prompt"),
-        cost_tracking=data.get("cost_tracking", True),
-        prompt_audit_path=data.get("prompt_audit_path"),
-        prompt_audit_include_system_prompt=data.get(
+    # Build kwargs, including optional llama.cpp in-process fields
+    kwargs: dict = {
+        "provider": provider,
+        "model": data.get("model", "claude-sonnet-4-20250514"),
+        "api_key": data.get("api_key"),  # Usually from env var
+        "base_url": data.get("base_url"),
+        "temperature": data.get("temperature", 0.7),
+        "max_tokens": data.get("max_tokens", 512),
+        "timeout": data.get("timeout", 30.0),
+        "max_retries": data.get("max_retries", 3),
+        "persona": persona,
+        "system_prompt": data.get("system_prompt"),
+        "cost_tracking": data.get("cost_tracking", True),
+        "prompt_audit_path": data.get("prompt_audit_path"),
+        "prompt_audit_include_system_prompt": data.get(
             "prompt_audit_include_system_prompt", False
         ),
-        prompt_audit_hash_system_prompt=data.get(
+        "prompt_audit_hash_system_prompt": data.get(
             "prompt_audit_hash_system_prompt", True
         ),
-        prompt_audit_max_chars=data.get("prompt_audit_max_chars", 20_000),
-        memori_config=data.get("memori"),
-    )
+        "prompt_audit_max_chars": data.get("prompt_audit_max_chars", 20_000),
+        "memori_config": data.get("memori"),
+    }
+
+    # llama.cpp in-process fields (only set when present in YAML;
+    # validation happens in LLMConfig.__post_init__)
+    if "model_path" in data:
+        kwargs["model_path"] = data["model_path"]
+    if "n_ctx" in data:
+        kwargs["n_ctx"] = data["n_ctx"]
+    if "n_threads" in data:
+        kwargs["n_threads"] = data["n_threads"]
+    if "llama_seed" in data:
+        kwargs["llama_seed"] = data["llama_seed"]
+
+    return LLMConfig(**kwargs)
 
 
 def create_agents(
