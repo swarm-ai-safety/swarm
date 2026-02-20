@@ -43,7 +43,7 @@ def check_llama_server(
     try:
         req = urllib.request.Request(health_url, method="GET")
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return resp.status == 200
+            return bool(resp.status == 200)
     except (urllib.error.URLError, OSError) as exc:
         logger.debug("llama-server health check failed: %s", exc)
         return False
