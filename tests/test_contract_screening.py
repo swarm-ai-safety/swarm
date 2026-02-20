@@ -387,9 +387,10 @@ class TestContractMarket:
         )
         modified = market.route_interaction(interaction)
 
-        # Should have audit penalty added
+        # Should have audit penalty added to both parties
         assert modified.metadata.get("audit_triggered") is True
         assert modified.c_a > interaction.c_a
+        assert modified.c_b > interaction.c_b
 
     def test_decision_history_tracked(self):
         market = ContractMarket(seed=42)
@@ -847,3 +848,93 @@ class TestContractScreeningIntegration:
             results.append(memberships)
 
         assert results[0] == results[1]
+
+
+# ============================================================
+# Security Regression Tests
+# ============================================================
+
+
+class TestSecurityRegressions:
+    """Regression tests for security vulnerabilities found in review."""
+
+    def test_zero_resources_cannot_bypass_bond(self):
+        """Vuln 6: Zero-resource agent must not get free entry to governed pools."""
+        contract = TruthfulAuctionContract(stake_fraction=0.05, min_bond=0.5)
+        zero_agent = _make_agent("zero", AgentType.ADVERSARIAL, resources=0.0)
+
+        # Signing cost must be at least min_bond
+        cost = contract.signing_cost(zero_agent)
+        assert cost >= 0.5
+
+        # Agent can't afford it: cost > resources
+        assert cost > zero_agent.resources
+
+    def test_negative_resources_cannot_bypass_bond(self):
+        """Vuln 6: Negative-resource agent must not get free entry."""
+        contract = TruthfulAuctionContract(stake_fraction=0.05, min_bond=0.5)
+        broke_agent = _make_agent("broke", AgentType.ADVERSARIAL, resources=-10.0)
+
+        cost = contract.signing_cost(broke_agent)
+        assert cost >= 0.5
+        assert cost > broke_agent.resources
+
+    def test_reason_string_does_not_leak_preference(self):
+        """Vuln 1: Reason string must not contain preference weight."""
+        market = ContractMarket(seed=42)
+        agents = _make_population()
+        market.run_signing_stage(agents, epoch=0)
+
+        for decision in market.decision_history:
+            assert "pref=" not in decision.reason
+
+    def test_dedup_prevents_double_recording(self):
+        """Vuln 2: Same interaction routed twice must not be recorded twice."""
+        market = ContractMarket(seed=42)
+        interaction = _make_interaction(initiator="a", counterparty="b")
+
+        market.route_interaction(interaction)
+        market.route_interaction(interaction)  # same interaction_id
+
+        total = sum(
+            len(ints) for ints in market.get_contract_interactions().values()
+        )
+        assert total == 1
+
+    def test_audit_penalty_applies_to_both_parties(self):
+        """Vuln 4: Audit must penalize both initiator and counterparty."""
+        contract = TruthfulAuctionContract(
+            audit_probability=1.0,
+            audit_threshold_p=0.5,
+            penalty_multiplier=2.0,
+        )
+        market = ContractMarket(contracts=[contract], seed=42)
+        market._memberships["a"] = "truthful_auction"
+        market._memberships["b"] = "truthful_auction"
+
+        interaction = _make_interaction(
+            initiator="a", counterparty="b", p=0.2, c_a=0.1, c_b=0.1,
+        )
+        modified = market.route_interaction(interaction)
+
+        # Both parties should bear audit cost
+        assert modified.c_a > interaction.c_a
+        assert modified.c_b > interaction.c_b
+
+    def test_validated_copy_catches_p_out_of_range(self):
+        """Vuln 7: _validated_copy must reject p outside [0, 1]."""
+        from swarm.contracts.contract import _validated_copy
+
+        interaction = _make_interaction(p=0.5)
+        with pytest.raises(ValueError, match="p invariant"):
+            _validated_copy(interaction, {"p": 1.5})
+        with pytest.raises(ValueError, match="p invariant"):
+            _validated_copy(interaction, {"p": -0.1})
+
+    def test_validated_copy_catches_v_hat_out_of_range(self):
+        """Vuln 7: _validated_copy must reject v_hat outside [-1, 1]."""
+        from swarm.contracts.contract import _validated_copy
+
+        interaction = _make_interaction(p=0.5)
+        with pytest.raises(ValueError, match="v_hat invariant"):
+            _validated_copy(interaction, {"v_hat": 2.0})

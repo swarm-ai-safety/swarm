@@ -23,6 +23,22 @@ from swarm.models.agent import AgentState, AgentType
 from swarm.models.interaction import SoftInteraction
 
 
+def _validated_copy(
+    interaction: SoftInteraction, updates: Dict[str, Any]
+) -> SoftInteraction:
+    """model_copy with post-copy invariant validation.
+
+    Pydantic v2's model_copy(update=...) skips field_validators,
+    so we manually enforce safety-critical invariants after copy.
+    """
+    result = interaction.model_copy(update=updates)
+    if not (0.0 <= result.p <= 1.0):
+        raise ValueError(f"p invariant violated after copy: {result.p}")
+    if not (-1.0 <= result.v_hat <= 1.0):
+        raise ValueError(f"v_hat invariant violated after copy: {result.v_hat}")
+    return result
+
+
 class ContractType(Enum):
     """Enumeration of available contract types."""
 
@@ -150,6 +166,7 @@ class TruthfulAuctionContract(Contract):
         audit_threshold_p: float = 0.4,
         penalty_multiplier: float = 3.0,
         surplus_bonus: float = 0.1,
+        min_bond: float = 0.5,
     ):
         """Initialize truthful auction contract.
 
@@ -159,6 +176,8 @@ class TruthfulAuctionContract(Contract):
             audit_threshold_p: p threshold below which audit triggers penalty.
             penalty_multiplier: Multiplier for violation penalties.
             surplus_bonus: Bonus added to surplus share for signed agents.
+            min_bond: Minimum signing cost floor, prevents zero-resource
+                agents from bypassing the bond.
         """
         if not 0.0 <= stake_fraction <= 1.0:
             raise ValueError("stake_fraction must be in [0, 1]")
@@ -170,12 +189,15 @@ class TruthfulAuctionContract(Contract):
             raise ValueError("penalty_multiplier must be non-negative")
         if surplus_bonus < 0:
             raise ValueError("surplus_bonus must be non-negative")
+        if min_bond < 0:
+            raise ValueError("min_bond must be non-negative")
 
         self.stake_fraction = stake_fraction
         self.audit_probability = audit_probability
         self.audit_threshold_p = audit_threshold_p
         self.penalty_multiplier = penalty_multiplier
         self.surplus_bonus = surplus_bonus
+        self.min_bond = min_bond
 
     @property
     def name(self) -> str:
@@ -186,8 +208,8 @@ class TruthfulAuctionContract(Contract):
         return ContractType.TRUTHFUL_AUCTION
 
     def signing_cost(self, agent: AgentState) -> float:
-        """Bond proportional to agent's resources."""
-        return max(0.0, agent.resources * self.stake_fraction)
+        """Bond proportional to agent's resources, with a minimum floor."""
+        return max(self.min_bond, agent.resources * self.stake_fraction)
 
     def execute(self, interaction: SoftInteraction) -> SoftInteraction:
         """Apply truthful mechanism: reduce governance cost, add surplus bonus.
@@ -210,7 +232,7 @@ class TruthfulAuctionContract(Contract):
                 "audit_eligible": True,
             },
         }
-        return interaction.model_copy(update=updates)
+        return _validated_copy(interaction, updates)
 
     def penalize(self, agent_id: str, violation_p: float) -> float:
         """Penalty proportional to how far below audit threshold."""
@@ -297,7 +319,7 @@ class FairDivisionContract(Contract):
                 "redistribution_applied": True,
             },
         }
-        return interaction.model_copy(update=updates)
+        return _validated_copy(interaction, updates)
 
     def penalize(self, agent_id: str, violation_p: float) -> float:
         """Minimal penalty - fairness is enforced structurally."""
@@ -353,7 +375,7 @@ class DefaultMarket(Contract):
                 "contract_type": self.contract_type.value,
             },
         }
-        return interaction.model_copy(update=updates)
+        return _validated_copy(interaction, updates)
 
     def penalize(self, agent_id: str, violation_p: float) -> float:
         """No penalty in the default market."""

@@ -19,7 +19,7 @@ their own type-dependent cost/benefit calculation.
 from __future__ import annotations
 
 import random
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 from pydantic import BaseModel, field_validator
 
@@ -28,6 +28,7 @@ from swarm.contracts.contract import (
     ContractDecision,
     ContractType,
     DefaultMarket,
+    _validated_copy,
 )
 from swarm.models.agent import AgentState, AgentType
 from swarm.models.interaction import SoftInteraction
@@ -77,7 +78,7 @@ class ContractMarket:
     Each epoch:
     1. run_signing_stage() - agents choose contracts based on beliefs
     2. route_interaction() - called per-interaction to apply contract protocol
-    3. record_outcome() - logs interaction results for metric computation
+       and record outcomes for metric computation
     """
 
     def __init__(
@@ -132,6 +133,9 @@ class ContractMarket:
         self._pool_agents: Dict[str, List[str]] = {
             name: [] for name in self._contracts
         }
+
+        # Dedup: prevent double-recording the same interaction
+        self._seen_interaction_ids: Set[str] = set()
 
     @property
     def contracts(self) -> Dict[str, Contract]:
@@ -228,45 +232,31 @@ class ContractMarket:
         contract = self._contracts[contract_name]
         modified = contract.execute(interaction)
 
-        # Check for audits under truthful auction
+        # Check for audits — penalize both parties symmetrically
         if contract.should_audit(modified, self._rng):
             penalty = contract.penalize(
                 interaction.initiator, interaction.p
             )
             if penalty > 0:
-                modified = modified.model_copy(
-                    update={
+                modified = _validated_copy(
+                    modified,
+                    {
                         "c_a": modified.c_a + penalty,
+                        "c_b": modified.c_b + penalty,
                         "metadata": {
                             **modified.metadata,
                             "audit_triggered": True,
                             "audit_penalty": penalty,
                         },
-                    }
+                    },
                 )
 
-        # Record for metrics
-        self._contract_interactions[contract_name].append(modified)
+        # Record for metrics (dedup by interaction_id)
+        if modified.interaction_id not in self._seen_interaction_ids:
+            self._seen_interaction_ids.add(modified.interaction_id)
+            self._contract_interactions[contract_name].append(modified)
 
         return modified
-
-    def record_outcome(
-        self,
-        interaction: SoftInteraction,
-        contract_name: Optional[str] = None,
-    ) -> None:
-        """Record an interaction outcome for metric computation.
-
-        Args:
-            interaction: The completed interaction.
-            contract_name: Override contract name (auto-detected if None).
-        """
-        if contract_name is None:
-            contract_name = interaction.metadata.get(
-                "contract", self._default_market.name
-            )
-        if contract_name in self._contract_interactions:
-            self._contract_interactions[contract_name].append(interaction)
 
     def update_beliefs(self) -> Dict[str, float]:
         """Update pool quality beliefs based on observed outcomes.
@@ -293,6 +283,7 @@ class ContractMarket:
         self._contract_interactions = {
             name: [] for name in self._contracts
         }
+        self._seen_interaction_ids = set()
 
     def get_pool_composition(self) -> Dict[str, Dict[str, int]]:
         """Get the type composition of each contract pool.
@@ -387,8 +378,7 @@ class ContractMarket:
                 best_cost = cost
                 reason = (
                     f"utility={utility:.3f} "
-                    f"(pref={preference:.2f}, "
-                    f"quality_belief={quality_belief:.2f}, "
+                    f"(quality_belief={quality_belief:.2f}, "
                     f"cost={cost:.2f})"
                 )
 

@@ -52,6 +52,7 @@ contracts:
     audit_threshold_p: 0.4
     penalty_multiplier: 3.0
     surplus_bonus: 0.1
+    min_bond: 0.5
 
   fair_division:
     entry_fee: 2.0
