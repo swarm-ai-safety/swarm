@@ -4,6 +4,9 @@ import React, { useCallback, useRef, useState } from "react";
 import { useSimulation } from "@/state/use-simulation";
 import { loadSimulationData } from "@/data/loader";
 import { SimConfigPanel } from "./SimConfigPanel";
+import { ComparePanel } from "./ComparePanel";
+import { SweepPanel } from "./SweepPanel";
+import { recordToLeaderboard } from "./Leaderboard";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -15,35 +18,50 @@ const SAMPLE_FILES = [
   { name: "6-Agent Mixed Demo", path: `${BASE_PATH}/sample-data/demo-history.json` },
 ];
 
-type Tab = "load" | "simulate";
+type Tab = "load" | "simulate" | "compare" | "sweep";
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "load", label: "Load" },
+  { key: "simulate", label: "Simulate" },
+  { key: "compare", label: "Compare" },
+  { key: "sweep", label: "Sweep" },
+];
 
 export function DataLoader() {
   const { data, loadData } = useSimulation();
   const fileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("load");
 
+  const handleLoadData = useCallback(
+    (sim: import("@/data/types").SimulationData) => {
+      recordToLeaderboard(sim);
+      loadData(sim);
+    },
+    [loadData],
+  );
+
   const handleFile = useCallback(
     async (file: File) => {
       try {
         const sim = await loadSimulationData(file);
-        loadData(sim);
+        handleLoadData(sim);
       } catch (e) {
         alert(`Error loading file: ${e instanceof Error ? e.message : e}`);
       }
     },
-    [loadData],
+    [handleLoadData],
   );
 
   const handleSample = useCallback(
     async (path: string) => {
       try {
         const sim = await loadSimulationData(path);
-        loadData(sim);
+        handleLoadData(sim);
       } catch (e) {
         alert(`Error loading sample: ${e instanceof Error ? e.message : e}`);
       }
     },
-    [loadData],
+    [handleLoadData],
   );
 
   if (data) return null; // Hide once data is loaded
@@ -57,26 +75,21 @@ export function DataLoader() {
         </p>
 
         {/* Tab toggle */}
-        <div className="flex gap-1 mb-4 bg-btn rounded-lg p-0.5">
-          <button
-            onClick={() => setTab("load")}
-            className={`flex-1 py-1.5 rounded text-xs font-bold transition-colors ${
-              tab === "load" ? "bg-panel text-text" : "text-muted hover:text-text"
-            }`}
-          >
-            Load File
-          </button>
-          <button
-            onClick={() => setTab("simulate")}
-            className={`flex-1 py-1.5 rounded text-xs font-bold transition-colors ${
-              tab === "simulate" ? "bg-panel text-text" : "text-muted hover:text-text"
-            }`}
-          >
-            Run Simulation
-          </button>
+        <div className="flex gap-0.5 mb-4 bg-btn rounded-lg p-0.5">
+          {TABS.map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setTab(t.key)}
+              className={`flex-1 py-1.5 rounded text-xs font-bold transition-colors ${
+                tab === t.key ? "bg-panel text-text" : "text-muted hover:text-text"
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
         </div>
 
-        {tab === "load" ? (
+        {tab === "load" && (
           <>
             {/* File upload */}
             <div
@@ -129,8 +142,18 @@ export function DataLoader() {
               </div>
             </div>
           </>
-        ) : (
-          <SimConfigPanel onComplete={loadData} />
+        )}
+
+        {tab === "simulate" && (
+          <SimConfigPanel onComplete={handleLoadData} />
+        )}
+
+        {tab === "compare" && (
+          <ComparePanel onSelect={handleLoadData} />
+        )}
+
+        {tab === "sweep" && (
+          <SweepPanel />
         )}
       </div>
     </div>

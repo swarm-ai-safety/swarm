@@ -3,6 +3,7 @@
 import React, { useCallback } from "react";
 import { usePlayback } from "@/state/use-playback";
 import { useSimulation } from "@/state/use-simulation";
+import { GovernanceIntervention } from "./GovernanceIntervention";
 
 const SPEEDS = [0.5, 1, 2, 4];
 
@@ -81,6 +82,9 @@ export function TimelineControls() {
           </button>
         ))}
       </div>
+
+      {/* Governance intervention */}
+      {data && <GovernanceIntervention />}
 
       {/* Export button */}
       {data && (

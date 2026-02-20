@@ -11,7 +11,15 @@ import { generateObservables } from "./observable-gen";
 import { applyTax, applyReputationDecay, checkCircuitBreaker, applyCircuitBreaker } from "./governance";
 import { buildEpochSnapshot, buildAgentSnapshot } from "./metrics";
 
+import { storeConfig } from "./config-store";
+
 type ProgressCallback = (epoch: number, totalEpochs: number) => void;
+
+/** Mid-run governance change */
+export interface GovernanceIntervention {
+  epoch: number;
+  governance: import("./types").GovernanceConfig;
+}
 
 /** Create initial agent states from config */
 function createAgents(config: ScenarioConfig, rng: () => number): SimAgentState[] {
@@ -154,27 +162,42 @@ function runStep(
   return { result: { p, accepted, initiatorPayoff, counterpartyPayoff }, event };
 }
 
-/** Run full simulation, return SimulationData */
+/** Run full simulation, return SimulationData.
+ *  Optional `interventions` array applies governance changes at specified epochs. */
 export function runSimulation(
   config: ScenarioConfig,
   onProgress?: ProgressCallback,
+  interventions?: GovernanceIntervention[],
 ): SimulationData {
+  storeConfig(config);
+
   const rng = mulberry32(config.seed);
   const simId = `sim-${Date.now()}`;
   const proxy = new ProxyComputer(undefined, config.sigmoidK);
   const payoffEngine = new SoftPayoffEngine(config.payoff);
   const agents = createAgents(config, rng);
 
+  // Sort interventions by epoch for efficient lookup
+  const sortedInterventions = interventions?.slice().sort((a, b) => a.epoch - b.epoch) ?? [];
+  let interventionIdx = 0;
+  let currentGovernance = { ...config.governance };
+
   const epochSnapshots: import("@/data/types").EpochSnapshot[] = [];
   const agentSnapshots: AgentSnapshot[] = [];
   const events: InteractionEvent[] = [];
 
   for (let epoch = 0; epoch < config.epochs; epoch++) {
+    // Apply any intervention at this epoch
+    while (interventionIdx < sortedInterventions.length && sortedInterventions[interventionIdx].epoch <= epoch) {
+      currentGovernance = { ...sortedInterventions[interventionIdx].governance };
+      interventionIdx++;
+    }
+
     const stepResults: StepResult[] = [];
 
     for (let step = 0; step < config.stepsPerEpoch; step++) {
       const { result, event } = runStep(
-        agents, proxy, payoffEngine, config.governance.taxRate,
+        agents, proxy, payoffEngine, currentGovernance.taxRate,
         rng, epoch, step, simId,
       );
       stepResults.push(result);
@@ -182,14 +205,14 @@ export function runSimulation(
     }
 
     // Governance: reputation decay
-    applyReputationDecay(agents, config.governance.reputationDecay);
+    applyReputationDecay(agents, currentGovernance.reputationDecay);
 
     // Build epoch snapshot
     const epochSnap = buildEpochSnapshot(epoch, stepResults, agents, simId);
     epochSnapshots.push(epochSnap);
 
     // Circuit breaker check
-    if (checkCircuitBreaker(config.governance, epochSnap.toxicity_rate)) {
+    if (checkCircuitBreaker(currentGovernance, epochSnap.toxicity_rate)) {
       applyCircuitBreaker(agents);
     }
 

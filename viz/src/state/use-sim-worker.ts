@@ -4,6 +4,7 @@ import { useState, useRef, useCallback } from "react";
 import type { SimulationData } from "@/data/types";
 import type { ScenarioConfig, WorkerResponse } from "@/engine/sim/types";
 import { runSimulation } from "@/engine/sim/orchestrator";
+import { storeConfig } from "@/engine/sim/config-store";
 
 export type SimWorkerStatus = "idle" | "running" | "done" | "error";
 
@@ -53,6 +54,7 @@ export function useSimWorker() {
           runOnMainThread(config, resolve);
         };
 
+        storeConfig(config);
         worker.postMessage({ type: "run", config });
       } catch {
         // Workers not available — run on main thread
