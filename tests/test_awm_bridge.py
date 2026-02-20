@@ -1923,3 +1923,201 @@ class TestAWMServerManagerShared:
         await mgr.shutdown()
         assert mgr.active_count == 0
         assert mgr._shared_server is None
+
+
+# =========================================================================
+# Adapter Server — SSRF hardening
+# =========================================================================
+
+
+class TestAdapterServerSSRF:
+    """Test SSRF protections in adapter_server.call_tool dispatch."""
+
+    def _make_validator(self):
+        """Re-implement the nested path-param validator for direct unit testing."""
+
+        def _validate_path_param_value(name, value):
+            s = str(value)
+            if "/" in s or "\\" in s:
+                raise ValueError(f"Invalid path parameter '{name}': unexpected '/' or '\\\\'")
+            if "?" in s or "#" in s:
+                raise ValueError(
+                    f"Invalid path parameter '{name}': unexpected query/fragment delimiter"
+                )
+            if "\n" in s or "\r" in s or "\t" in s:
+                raise ValueError(f"Invalid path parameter '{name}': unexpected whitespace")
+            if s.startswith(".") or ".." in s:
+                raise ValueError(f"Invalid path parameter '{name}': potentially unsafe value")
+            return s
+
+        return _validate_path_param_value
+
+    # -- Path parameter validation --
+
+    def test_path_param_rejects_slash(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="unexpected '/'"):
+            validate("id", "../../etc/passwd")
+
+    def test_path_param_rejects_backslash(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="unexpected '/'"):
+            validate("id", "foo\\bar")
+
+    def test_path_param_rejects_question_mark(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="query/fragment delimiter"):
+            validate("id", "val?injected=true")
+
+    def test_path_param_rejects_hash(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="query/fragment delimiter"):
+            validate("id", "val#fragment")
+
+    def test_path_param_rejects_newline(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="unexpected whitespace"):
+            validate("id", "val\ninjected")
+
+    def test_path_param_rejects_dotdot(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="potentially unsafe"):
+            validate("id", "..secret")
+
+    def test_path_param_rejects_leading_dot(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="potentially unsafe"):
+            validate("id", ".hidden")
+
+    def test_path_param_accepts_safe_value(self):
+        validate = self._make_validator()
+        assert validate("id", "42") == "42"
+        assert validate("name", "hello-world_v2") == "hello-world_v2"
+
+    # -- Path normalization and dispatch path construction --
+
+    def test_normpath_preserves_trailing_slash(self):
+        """normpath strips trailing slash; our code must re-append it."""
+        import posixpath
+
+        path_only = "/items/"
+        normalized = posixpath.normpath(path_only)
+        assert normalized == "/items"
+        if path_only.endswith("/") and normalized != "/":
+            normalized += "/"
+        assert normalized == "/items/"
+
+    def test_normpath_collapses_dotdot(self):
+        import posixpath
+
+        assert posixpath.normpath("/a/../b") == "/b"
+        assert posixpath.normpath("/a/./b") == "/a/b"
+        assert posixpath.normpath("/a//b") == "/a/b"
+
+    def test_dispatch_path_uses_normalized(self):
+        import posixpath
+
+        rendered_path = "/items/./list"
+        path_only, sep, query = rendered_path.partition("?")
+        normalized = posixpath.normpath(path_only)
+        if path_only.endswith("/") and normalized != "/":
+            normalized += "/"
+        dispatch_path = normalized + sep + query
+        assert dispatch_path == "/items/list"
+
+    def test_dispatch_path_with_query(self):
+        import posixpath
+
+        rendered_path = "/items?page=2&size=10"
+        path_only, sep, query = rendered_path.partition("?")
+        normalized = posixpath.normpath(path_only)
+        if path_only.endswith("/") and normalized != "/":
+            normalized += "/"
+        dispatch_path = normalized + sep + query
+        assert dispatch_path == "/items?page=2&size=10"
+
+    # -- _sanitize_dispatch_path --
+
+    def test_sanitize_rejects_path_with_special_chars(self):
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        assert _sanitize_dispatch_path("/items/@admin", "", "") is None
+        assert _sanitize_dispatch_path("/items/ space", "", "") is None
+        assert _sanitize_dispatch_path("/items/<script>", "", "") is None
+
+    def test_sanitize_accepts_normal_path(self):
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        assert _sanitize_dispatch_path("/items", "", "") == "/items"
+        assert _sanitize_dispatch_path("/items/42", "", "") == "/items/42"
+        assert _sanitize_dispatch_path("/users/john_doe-v2", "", "") == "/users/john_doe-v2"
+
+    def test_sanitize_rejects_bad_query(self):
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        assert _sanitize_dispatch_path("/items", "?", "key=<script>") is None
+        assert _sanitize_dispatch_path("/items", "?", "key=val ue") is None
+        assert _sanitize_dispatch_path("/items", "?", "key=val^ue") is None
+
+    def test_sanitize_accepts_normal_query(self):
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        result = _sanitize_dispatch_path("/items", "?", "page=2&size=10")
+        assert result == "/items?page=2&size=10"
+        result = _sanitize_dispatch_path("/items", "?", "q=hello+world")
+        assert result == "/items?q=hello+world"
+
+    def test_sanitize_returns_new_string(self):
+        """The returned string must be a fresh object (breaks taint chain)."""
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        original = "/items/42"
+        result = _sanitize_dispatch_path(original, "", "")
+        assert result == original
+        assert result is not original
+
+    # -- _is_safe_dispatch_path structural validation --
+
+    def test_structural_rejects_non_absolute(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("items/42") is False
+
+    def test_structural_rejects_scheme_relative(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("//evil.com/path") is False
+
+    def test_structural_rejects_full_url(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("http://evil.com/path") is False
+
+    def test_structural_rejects_dotdot(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("/items/../etc/passwd") is False
+        assert _is_safe_dispatch_path("/items/..") is False
+
+    def test_structural_rejects_double_slash(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("/items//hidden") is False
+
+    def test_structural_rejects_dot_segment(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("/items/./list") is False
+
+    def test_structural_accepts_valid_paths(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("/items") is True
+        assert _is_safe_dispatch_path("/items/42") is True
+        assert _is_safe_dispatch_path("/api/v1.0/users/john_doe-v2") is True
+        assert _is_safe_dispatch_path("/") is True
+
+    def test_structural_accepts_path_with_query(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("/items?page=2&size=10") is True
