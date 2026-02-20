@@ -90,6 +90,9 @@ lean/lake-packages/
 lean/lake-manifest.json
 lean/build/
 
+# GGUF model files (llama.cpp)
+models/
+
 # Runtime artifacts
 .DS_Store
 sandboxes/

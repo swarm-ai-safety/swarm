@@ -16,6 +16,7 @@ class LLMProvider(Enum):
     TOGETHER = "together"
     DEEPSEEK = "deepseek"
     GOOGLE = "google"
+    LLAMA_CPP = "llama_cpp"
 
 
 class PersonaType(Enum):
@@ -69,6 +70,12 @@ class LLMConfig:
     prompt_audit_max_chars: int = 20_000
     memori_config: Optional[Dict[str, Any]] = None
 
+    # llama.cpp in-process options (Option B only)
+    model_path: Optional[str] = None
+    n_ctx: int = 4096
+    n_threads: Optional[int] = None
+    llama_seed: int = -1
+
     def __post_init__(self) -> None:
         """Validate configuration."""
         if not 0.0 <= self.temperature <= 1.0:
@@ -100,12 +107,15 @@ class LLMConfig:
         if self.provider == LLMProvider.DEEPSEEK and not self.base_url:
             self.base_url = "https://api.deepseek.com/v1"
 
-        if self.provider not in (LLMProvider.OLLAMA, LLMProvider.OPENROUTER) and not self.api_key:
+        if self.provider not in (LLMProvider.OLLAMA, LLMProvider.OPENROUTER, LLMProvider.LLAMA_CPP) and not self.api_key:
             # Allow None - will be read from environment
             pass
 
         if self.provider == LLMProvider.OLLAMA and not self.base_url:
             self.base_url = "http://localhost:11434"
+
+        if self.provider == LLMProvider.LLAMA_CPP and not self.base_url:
+            self.base_url = "http://localhost:8080/v1"
 
         if self.prompt_audit_max_chars < 0:
             raise ValueError(
