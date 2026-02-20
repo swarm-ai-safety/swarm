@@ -158,7 +158,7 @@ case "${1:-help}" in
         echo "Usage: $0 {download|start|stop|status}"
         echo ""
         echo "  download  Fetch a recommended GGUF model (~2 GB)"
-        echo "  start     Start llama-server (downloads model if missing)"
+        echo "  start     Start llama-server (requires model to be downloaded first)"
         echo "  stop      Stop the running llama-server"
         echo "  status    Check server status"
         exit 1
