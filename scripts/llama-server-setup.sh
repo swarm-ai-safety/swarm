@@ -70,6 +70,8 @@ cmd_start() {
         exit 1
     fi
 
+    mkdir -p "$MODELS_DIR"
+
     if [ ! -f "$MODEL_PATH" ]; then
         _error "Model not found at $MODEL_PATH"
         echo "Run: $0 download"
