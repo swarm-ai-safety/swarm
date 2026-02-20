@@ -1,0 +1,98 @@
+name: Populate Releases
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run — print releases without creating them"
+        required: false
+        default: "false"
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  populate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0  # need full history for tagging
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Parse CHANGELOG
+        id: parse
+        run: |
+          python .github/scripts/parse-changelog.py CHANGELOG.md > /tmp/releases.json
+          echo "count=$(python -c 'import json; print(len(json.load(open("/tmp/releases.json"))))')" >> "$GITHUB_OUTPUT"
+          cat /tmp/releases.json
+
+      - name: Create releases
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+
+          RELEASES=$(cat /tmp/releases.json)
+          COUNT=$(echo "$RELEASES" | python3 -c "import json,sys; print(len(json.load(sys.stdin)))")
+          echo "Found $COUNT releases in CHANGELOG.md"
+
+          # Process releases in reverse order (oldest first) so GitHub
+          # shows the newest release as "Latest".
+          echo "$RELEASES" | python3 -c "
+          import json, sys
+          releases = json.load(sys.stdin)
+          for r in reversed(releases):
+              print(json.dumps(r))
+          " | while IFS= read -r entry; do
+            TAG=$(echo "$entry"  | python3 -c "import json,sys; print(json.load(sys.stdin)['tag'])")
+            NAME=$(echo "$entry" | python3 -c "import json,sys; print(json.load(sys.stdin)['name'])")
+            DATE=$(echo "$entry" | python3 -c "import json,sys; print(json.load(sys.stdin)['date'])")
+            BODY=$(echo "$entry" | python3 -c "import json,sys; print(json.load(sys.stdin)['body'])")
+            IS_LATEST=$(echo "$entry"     | python3 -c "import json,sys; print(json.load(sys.stdin)['latest'])")
+            IS_PRERELEASE=$(echo "$entry" | python3 -c "import json,sys; print(json.load(sys.stdin)['prerelease'])")
+
+            # Skip if release already exists
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              echo "⏭ $TAG already exists — skipping"
+              continue
+            fi
+
+            FLAGS=""
+            if [ "$IS_LATEST" = "True" ]; then
+              FLAGS="$FLAGS --latest"
+            else
+              FLAGS="$FLAGS --latest=false"
+            fi
+            if [ "$IS_PRERELEASE" = "True" ]; then
+              FLAGS="$FLAGS --prerelease"
+            fi
+
+            if [ "${{ inputs.dry_run }}" = "true" ]; then
+              echo "🔍 [DRY RUN] Would create release $TAG ($NAME) — date: $DATE, latest: $IS_LATEST, prerelease: $IS_PRERELEASE"
+              echo "   Body preview: $(echo "$BODY" | head -3)"
+              echo ""
+            else
+              echo "📦 Creating release $TAG..."
+              # Create a lightweight tag on HEAD if it doesn't exist.
+              # Historical releases share the current HEAD since the
+              # original commits are not available in this repo's history.
+              if ! git rev-parse "$TAG" >/dev/null 2>&1; then
+                git tag "$TAG"
+                git push origin "$TAG"
+              fi
+              gh release create "$TAG" \
+                --repo "$GITHUB_REPOSITORY" \
+                --title "$NAME" \
+                --notes "$BODY" \
+                $FLAGS
+              echo "✅ Created $TAG"
+            fi
+          done
+
+          echo ""
+          echo "Done. $COUNT releases processed."
