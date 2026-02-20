@@ -530,7 +530,7 @@ class LLMAgent(BaseAgent):
             model_path=self.llm_config.model_path,
             n_ctx=self.llm_config.n_ctx,
             n_threads=self.llm_config.n_threads,
-            seed=self.llm_config.llama_seed if self.llm_config.llama_seed >= 0 else -1,
+            seed=self.llm_config.llama_seed,
             verbose=False,
         )
         return self._llama_model

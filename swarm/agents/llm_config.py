@@ -123,6 +123,12 @@ class LLMConfig:
                 f"prompt_audit_max_chars must be >= 0, got {self.prompt_audit_max_chars}"
             )
 
+        # Validate llama_seed (must be -1 for random or >= 0 for deterministic)
+        if self.llama_seed < -1:
+            raise ValueError(
+                f"llama_seed must be >= -1 (-1 = random), got {self.llama_seed}"
+            )
+
         # Validate model_path (llama.cpp in-process)
         if self.model_path is not None:
             self._validate_model_path(self.model_path)

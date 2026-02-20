@@ -377,3 +377,137 @@ class TestGetLlamaModel:
         with patch.dict("sys.modules", {"llama_cpp": mock_llama_mod}):
             with pytest.raises(ValueError, match="model_path is required"):
                 agent._get_llama_model()
+
+
+# =============================================================================
+# llama_seed validation
+# =============================================================================
+
+
+class TestLlamaSeedValidation:
+    """Tests that llama_seed rejects invalid values."""
+
+    def test_rejects_seed_below_minus_one(self):
+        with pytest.raises(ValueError, match="llama_seed must be >= -1"):
+            LLMConfig(
+                provider=LLMProvider.LLAMA_CPP,
+                model="local",
+                llama_seed=-2,
+            )
+
+    def test_rejects_large_negative_seed(self):
+        with pytest.raises(ValueError, match="llama_seed must be >= -1"):
+            LLMConfig(
+                provider=LLMProvider.LLAMA_CPP,
+                model="local",
+                llama_seed=-100,
+            )
+
+    def test_accepts_minus_one(self):
+        cfg = LLMConfig(
+            provider=LLMProvider.LLAMA_CPP, model="test", llama_seed=-1
+        )
+        assert cfg.llama_seed == -1
+
+    def test_accepts_zero(self):
+        cfg = LLMConfig(
+            provider=LLMProvider.LLAMA_CPP, model="test", llama_seed=0
+        )
+        assert cfg.llama_seed == 0
+
+    def test_accepts_positive_seed(self):
+        cfg = LLMConfig(
+            provider=LLMProvider.LLAMA_CPP, model="test", llama_seed=42
+        )
+        assert cfg.llama_seed == 42
+
+
+# =============================================================================
+# parse_llm_config — roundtrip for llama.cpp fields
+# =============================================================================
+
+
+class TestParseLlmConfigLlamaCpp:
+    """Tests that parse_llm_config correctly passes through llama.cpp fields."""
+
+    def test_model_path_forwarded(self):
+        from swarm.scenarios.loader import parse_llm_config
+
+        data = {
+            "provider": "llama_cpp",
+            "model": "local-llama",
+            "model_path": "/tmp/model.gguf",
+        }
+        cfg = parse_llm_config(data)
+        assert cfg.model_path == "/tmp/model.gguf"
+
+    def test_n_ctx_forwarded(self):
+        from swarm.scenarios.loader import parse_llm_config
+
+        data = {
+            "provider": "llama_cpp",
+            "model": "local-llama",
+            "model_path": "/tmp/model.gguf",
+            "n_ctx": 2048,
+        }
+        cfg = parse_llm_config(data)
+        assert cfg.n_ctx == 2048
+
+    def test_n_threads_forwarded(self):
+        from swarm.scenarios.loader import parse_llm_config
+
+        data = {
+            "provider": "llama_cpp",
+            "model": "local-llama",
+            "model_path": "/tmp/model.gguf",
+            "n_threads": 4,
+        }
+        cfg = parse_llm_config(data)
+        assert cfg.n_threads == 4
+
+    def test_llama_seed_forwarded(self):
+        from swarm.scenarios.loader import parse_llm_config
+
+        data = {
+            "provider": "llama_cpp",
+            "model": "local-llama",
+            "model_path": "/tmp/model.gguf",
+            "llama_seed": 42,
+        }
+        cfg = parse_llm_config(data)
+        assert cfg.llama_seed == 42
+
+    def test_all_fields_roundtrip(self):
+        from swarm.scenarios.loader import parse_llm_config
+
+        data = {
+            "provider": "llama_cpp",
+            "model": "local-llama",
+            "model_path": "./models/test.gguf",
+            "n_ctx": 8192,
+            "n_threads": 8,
+            "llama_seed": 123,
+            "temperature": 0.1,
+            "max_tokens": 256,
+        }
+        cfg = parse_llm_config(data)
+        assert cfg.provider.value == "llama_cpp"
+        assert cfg.model_path == "./models/test.gguf"
+        assert cfg.n_ctx == 8192
+        assert cfg.n_threads == 8
+        assert cfg.llama_seed == 123
+        assert cfg.temperature == 0.1
+        assert cfg.max_tokens == 256
+
+    def test_option_a_without_model_path(self):
+        """Option A: no model_path, fields default correctly."""
+        from swarm.scenarios.loader import parse_llm_config
+
+        data = {
+            "provider": "llama_cpp",
+            "model": "llama-3.2-3b-instruct",
+            "base_url": "http://localhost:8080/v1",
+        }
+        cfg = parse_llm_config(data)
+        assert cfg.model_path is None
+        assert cfg.base_url == "http://localhost:8080/v1"
