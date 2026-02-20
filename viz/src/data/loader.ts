@@ -1,4 +1,6 @@
 import type { SimulationData, InteractionEvent, AgentSnapshot, AgentType, EpochSnapshot } from "./types";
+import { mulberry32 } from "@/engine/sim/rng";
+import { AGENT_PROFILES, AGENT_TYPES } from "@/engine/sim/agents";
 
 /** Load simulation data from a history.json file or File object */
 export async function loadSimulationData(source: string | File): Promise<SimulationData> {
@@ -63,27 +65,6 @@ function validateData(data: SimulationData) {
   }
 }
 
-/** Seeded PRNG (mulberry32) for deterministic synthesis */
-function mulberry32(seed: number): () => number {
-  return () => {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-const AGENT_TYPES: AgentType[] = ["honest", "opportunistic", "deceptive", "adversarial", "rlm", "crewai"];
-const AGENT_NAMES: Record<AgentType, string[]> = {
-  honest: ["Sentinel", "Guardian", "Beacon", "Anchor", "Steward"],
-  opportunistic: ["Broker", "Trader", "Hustler", "Maverick", "Gambit"],
-  deceptive: ["Mirage", "Phantom", "Shadow", "Facade", "Specter"],
-  adversarial: ["Viper", "Striker", "Havoc", "Razr", "Blitz"],
-  rlm: ["Nexus", "Cortex", "Axiom", "Vertex", "Synapse"],
-  crewai: ["Forge", "Assembly", "Cluster", "Hive", "Colony"],
-};
-
 /**
  * Synthesize per-agent-per-epoch snapshots from epoch-level data.
  * Uses seeded PRNG so the same history.json always produces the same agents.
@@ -99,18 +80,10 @@ function synthesizeAgentSnapshots(data: SimulationData): AgentSnapshot[] {
   for (let i = 0; i < nAgents; i++) {
     const typeIdx = i % AGENT_TYPES.length;
     const agentType = AGENT_TYPES[typeIdx];
-    const names = AGENT_NAMES[agentType];
+    const names = AGENT_PROFILES[agentType].names;
     const name = names[i % names.length] + (i >= AGENT_TYPES.length ? `-${Math.floor(i / AGENT_TYPES.length) + 1}` : "");
 
-    // Disposition: honest types tend positive, adversarial tend negative
-    const baseDisposition =
-      agentType === "honest" ? 0.7 :
-      agentType === "crewai" ? 0.6 :
-      agentType === "rlm" ? 0.5 :
-      agentType === "opportunistic" ? 0.3 :
-      agentType === "deceptive" ? -0.2 :
-      -0.5; // adversarial
-    const disposition = baseDisposition + (rng() - 0.5) * 0.3;
+    const disposition = AGENT_PROFILES[agentType].disposition + (rng() - 0.5) * 0.3;
 
     agents.push({
       id: `agent-${i}`,
