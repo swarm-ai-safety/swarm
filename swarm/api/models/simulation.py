@@ -58,3 +58,6 @@ class SimulationResponse(BaseModel):
     current_participants: int = Field(..., description="Current participant count")
     created_at: datetime = Field(..., description="Creation timestamp")
     join_deadline: datetime = Field(..., description="Deadline to join")
+    config_overrides: dict = Field(
+        default_factory=dict, description="Configuration overrides"
+    )

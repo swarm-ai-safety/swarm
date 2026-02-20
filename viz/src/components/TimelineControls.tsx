@@ -1,13 +1,31 @@
 "use client";
 
-import React from "react";
+import React, { useCallback } from "react";
 import { usePlayback } from "@/state/use-playback";
+import { useSimulation } from "@/state/use-simulation";
+import { GovernanceIntervention } from "./GovernanceIntervention";
 
 const SPEEDS = [0.5, 1, 2, 4];
+
+function exportSimData(data: import("@/data/types").SimulationData) {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `${data.simulation_id || "history"}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function TimelineControls() {
   const { play, pause, setEpoch, setSpeed, playing, speed, currentEpoch, maxEpoch } =
     usePlayback();
+  const { data } = useSimulation();
+
+  const handleExport = useCallback(() => {
+    if (data) exportSimData(data);
+  }, [data]);
 
   return (
     <div className="absolute bottom-0 left-0 right-0 h-14 bg-panel border-t border-border flex items-center gap-3 px-4 z-[10000]">
@@ -64,6 +82,22 @@ export function TimelineControls() {
           </button>
         ))}
       </div>
+
+      {/* Governance intervention */}
+      {data && <GovernanceIntervention />}
+
+      {/* Export button */}
+      {data && (
+        <button
+          onClick={handleExport}
+          className="w-9 h-9 flex items-center justify-center rounded bg-btn hover:bg-btn-hover transition-colors"
+          title="Export as history.json"
+        >
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M7 1v8M4 6l3 3 3-3M2 11v1.5h10V11" />
+          </svg>
+        </button>
+      )}
     </div>
   );
 }

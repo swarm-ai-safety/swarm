@@ -3,13 +3,14 @@
 import uuid
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from swarm.api.models.scenario import (
     ScenarioResponse,
     ScenarioStatus,
     ScenarioSubmission,
 )
+from swarm.api.validation import estimate_resources, validate_scenario_yaml
 
 router = APIRouter()
 
@@ -29,12 +30,17 @@ async def submit_scenario(submission: ScenarioSubmission) -> ScenarioResponse:
     """
     scenario_id = str(uuid.uuid4())
 
-    # Basic validation (expand in production)
-    validation_errors: list[str] = []
-    if not submission.yaml_content.strip():
-        validation_errors.append("YAML content cannot be empty")
+    # Validate YAML content (schema + type checks)
+    validation_errors, parsed_config = validate_scenario_yaml(
+        submission.yaml_content
+    )
 
     status = ScenarioStatus.INVALID if validation_errors else ScenarioStatus.VALID
+
+    # Compute resource estimate when we have a valid parsed config
+    resource_estimate = None
+    if parsed_config is not None and not validation_errors:
+        resource_estimate = estimate_resources(parsed_config)
 
     scenario = ScenarioResponse(
         scenario_id=scenario_id,
@@ -44,6 +50,7 @@ async def submit_scenario(submission: ScenarioSubmission) -> ScenarioResponse:
         validation_errors=validation_errors,
         submitted_at=datetime.now(timezone.utc),
         tags=submission.tags,
+        resource_estimate=resource_estimate,
     )
 
     _scenarios[scenario_id] = scenario
@@ -69,10 +76,29 @@ async def get_scenario(scenario_id: str) -> ScenarioResponse:
 
 
 @router.get("/", response_model=list[ScenarioResponse])
-async def list_scenarios() -> list[ScenarioResponse]:
-    """List all submitted scenarios.
+async def list_scenarios(
+    status: ScenarioStatus | None = None,
+    tag: str | None = None,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> list[ScenarioResponse]:
+    """List all submitted scenarios with optional filtering and pagination.
+
+    Args:
+        status: Filter by scenario status (VALID, INVALID, VALIDATING).
+        tag: Filter scenarios that have this tag.
+        limit: Maximum number of results to return.
+        offset: Number of results to skip.
 
     Returns:
         List of scenarios.
     """
-    return list(_scenarios.values())
+    scenarios = list(_scenarios.values())
+
+    if status is not None:
+        scenarios = [s for s in scenarios if s.status == status]
+
+    if tag is not None:
+        scenarios = [s for s in scenarios if tag in s.tags]
+
+    return scenarios[offset : offset + limit]
