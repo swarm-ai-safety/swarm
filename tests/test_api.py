@@ -23,6 +23,23 @@ def _clear_registration_state():
     agents_mod._registration_rate.clear()
 
 
+@pytest.fixture(autouse=True)
+def _clear_auth_state():
+    """Reset auth module state between tests."""
+    import swarm.api.middleware.auth as auth_mod
+    auth_mod._api_keys.clear()
+    auth_mod._key_quotas.clear()
+    auth_mod._trusted_keys.clear()
+    auth_mod._key_scopes.clear()
+    auth_mod._rate_limit_windows.clear()
+    yield
+    auth_mod._api_keys.clear()
+    auth_mod._key_quotas.clear()
+    auth_mod._trusted_keys.clear()
+    auth_mod._key_scopes.clear()
+    auth_mod._rate_limit_windows.clear()
+
+
 @pytest.fixture
 def client():
     """Create a test client for the API."""
@@ -570,3 +587,162 @@ class TestAPIModels:
         # max_participants must be <= 100
         with pytest.raises(ValidationError):
             SimulationCreate(scenario_id="test", max_participants=101)
+
+
+# ---------------------------------------------------------------------------
+# Phase 1 gap tests
+# ---------------------------------------------------------------------------
+
+
+class TestScopedPermissions:
+    """Tests for the Scope enum and require_scope dependency."""
+
+    def test_default_scopes_allow_read(self, client):
+        """Registering an agent gives default scopes (read + participate)."""
+        from swarm.api.middleware.auth import Scope, _hash_key, get_scopes_hash
+
+        resp = client.post(
+            "/api/v1/agents/register",
+            json={"name": "ScopeAgent", "description": "test"},
+        )
+        api_key = resp.json()["api_key"]
+        key_hash = _hash_key(api_key)
+        scopes = get_scopes_hash(key_hash)
+        assert Scope.READ in scopes
+        assert Scope.PARTICIPATE in scopes
+
+    def test_missing_scope_returns_403(self, client):
+        """A key lacking a required scope gets 403."""
+        from swarm.api.middleware.auth import Scope, register_api_key
+
+        # Register a key with only READ scope (no WRITE or PARTICIPATE)
+        register_api_key(
+            "read-only-key", "agent-ro", scopes=frozenset({Scope.READ})
+        )
+
+        post_resp = client.post(
+            "/api/posts",
+            json={
+                "run_id": "fake-run-id",
+                "title": "Test",
+                "blurb": "blurb",
+            },
+            headers={"Authorization": "Bearer read-only-key"},
+        )
+        assert post_resp.status_code == 403
+        assert "scope" in post_resp.json()["detail"].lower()
+
+    def test_trusted_key_maps_to_all_scopes(self):
+        """trusted=True grants all four scopes."""
+        from swarm.api.middleware.auth import (
+            Scope,
+            _hash_key,
+            get_scopes_hash,
+            register_api_key,
+        )
+
+        register_api_key("trusted-key-123", "agent-1", trusted=True)
+        key_hash = _hash_key("trusted-key-123")
+        scopes = get_scopes_hash(key_hash)
+        assert scopes == frozenset(Scope)
+
+    def test_admin_scope_implies_trusted(self):
+        """A key with ADMIN scope passes is_trusted_hash."""
+        from swarm.api.middleware.auth import (
+            Scope,
+            _hash_key,
+            is_trusted_hash,
+            register_api_key,
+        )
+
+        register_api_key(
+            "admin-key-456", "agent-2", scopes=frozenset({Scope.ADMIN})
+        )
+        key_hash = _hash_key("admin-key-456")
+        assert is_trusted_hash(key_hash)
+
+
+class TestTraceID:
+    """Tests for the TraceIDMiddleware."""
+
+    def test_response_includes_trace_id(self, client):
+        """Every response should include an X-Trace-ID header."""
+        resp = client.get("/health")
+        assert "X-Trace-ID" in resp.headers
+        assert len(resp.headers["X-Trace-ID"]) > 0
+
+    def test_client_trace_id_echoed(self, client):
+        """Client-provided X-Trace-ID should be echoed back."""
+        custom_id = "my-custom-trace-id-42"
+        resp = client.get("/health", headers={"X-Trace-ID": custom_id})
+        assert resp.headers["X-Trace-ID"] == custom_id
+
+    def test_error_body_contains_trace_id(self, client):
+        """Error responses should include trace_id in the JSON body."""
+        resp = client.get(
+            "/api/v1/agents/nonexistent-id",
+            headers={"X-Trace-ID": "err-trace-99"},
+        )
+        assert resp.status_code == 404
+        body = resp.json()
+        assert body["trace_id"] == "err-trace-99"
+
+
+class TestStructuredErrors:
+    """Tests for structured ErrorResponse format."""
+
+    def test_404_follows_schema(self, client):
+        """A 404 should follow the ErrorResponse schema."""
+        resp = client.get("/api/v1/agents/does-not-exist")
+        assert resp.status_code == 404
+        body = resp.json()
+        assert body["error"] == "Not Found"
+        assert "detail" in body
+        assert "trace_id" in body
+        assert body["status_code"] == 404
+
+    def test_401_follows_schema(self, client):
+        """A 401 should follow the ErrorResponse schema."""
+        resp = client.get(
+            "/api/runs",
+            headers={"Authorization": "Bearer bad-key"},
+        )
+        assert resp.status_code == 401
+        body = resp.json()
+        assert body["error"] == "Unauthorized"
+        assert body["status_code"] == 401
+        assert "trace_id" in body
+
+    def test_422_follows_schema(self, client):
+        """A 422 (validation) should follow the ErrorResponse schema."""
+        resp = client.post(
+            "/api/v1/agents/register",
+            json={"description": "Missing name"},
+        )
+        assert resp.status_code == 422
+        body = resp.json()
+        assert body["error"] == "Unprocessable Entity"
+        assert body["status_code"] == 422
+        assert "trace_id" in body
+
+
+class TestRouterStubs:
+    """Tests for governance and metrics router stubs."""
+
+    def test_governance_propose_stub(self, client):
+        """POST /api/v1/governance/propose returns not_implemented."""
+        resp = client.post("/api/v1/governance/propose")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "not_implemented"
+
+    def test_governance_proposals_stub(self, client):
+        """GET /api/v1/governance/proposals returns not_implemented."""
+        resp = client.get("/api/v1/governance/proposals")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "not_implemented"
+
+    def test_metrics_stub(self, client):
+        """GET /api/v1/metrics/{id} returns not_implemented."""
+        resp = client.get("/api/v1/metrics/some-sim-id")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "not_implemented"

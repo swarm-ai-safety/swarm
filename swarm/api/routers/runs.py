@@ -25,10 +25,11 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from swarm.api.middleware import (
+    Scope,
     get_quotas_hash,
     get_request_key_hash,
     is_trusted_hash,
-    require_api_key,
+    require_scope,
 )
 from swarm.api.models.run import (
     RunCreate,
@@ -513,7 +514,7 @@ def _get_run_artifacts_dir(run_id: str) -> Optional[Path]:
 async def create_run(
     body: RunCreate,
     request: Request,
-    agent_id: str = Depends(require_api_key),
+    agent_id: str = Depends(require_scope(Scope.PARTICIPATE)),
 ) -> RunKickoffResponse:
     """Kick off a new SWARM run."""
     store = get_store()
@@ -598,7 +599,7 @@ async def create_run(
 @router.get("/compare")
 async def compare_runs(
     ids: str = Query(..., description="Comma-separated run IDs to compare"),
-    agent_id: str = Depends(require_api_key),
+    agent_id: str = Depends(require_scope(Scope.READ)),
 ) -> JSONResponse:
     """Compare metrics across multiple runs side-by-side.
 
@@ -671,7 +672,7 @@ async def compare_runs(
 @router.get("/{run_id}/artifacts")
 async def list_artifacts(
     run_id: str,
-    agent_id: str = Depends(require_api_key),
+    agent_id: str = Depends(require_scope(Scope.READ)),
 ) -> JSONResponse:
     """List available artifact files for a completed run."""
     store = get_store()
@@ -708,7 +709,7 @@ async def list_artifacts(
 async def download_artifact(
     run_id: str,
     file_path: str,
-    agent_id: str = Depends(require_api_key),
+    agent_id: str = Depends(require_scope(Scope.READ)),
 ) -> FileResponse:
     """Download a specific artifact file."""
     store = get_store()
@@ -737,7 +738,7 @@ async def download_artifact(
 @router.get("/{run_id}", response_model=RunResponse)
 async def get_run(
     run_id: str,
-    agent_id: str = Depends(require_api_key),
+    agent_id: str = Depends(require_scope(Scope.READ)),
 ) -> RunResponse:
     """Get run status and results."""
     store = get_store()
@@ -757,7 +758,7 @@ async def get_run(
 
 @router.get("", response_model=list[RunResponse])
 async def list_runs(
-    agent_id: str = Depends(require_api_key),
+    agent_id: str = Depends(require_scope(Scope.READ)),
 ) -> list[RunResponse]:
     """List runs for the authenticated agent."""
     store = get_store()
@@ -768,7 +769,7 @@ async def list_runs(
 @router.post("/{run_id}/cancel")
 async def cancel_run(
     run_id: str,
-    agent_id: str = Depends(require_api_key),
+    agent_id: str = Depends(require_scope(Scope.PARTICIPATE)),
 ) -> dict:
     """Cancel a queued or running run."""
     store = get_store()

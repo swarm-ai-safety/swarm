@@ -14,6 +14,7 @@ from swarm.api.config import APIConfig  # noqa: E402
 from swarm.api.middleware import (  # noqa: E402
     _api_keys,
     _key_quotas,
+    _key_scopes,
     _rate_limit_windows,
     _trusted_keys,
     register_api_key,
@@ -33,6 +34,7 @@ def _clear_middleware_state():
 
     _api_keys.clear()
     _key_quotas.clear()
+    _key_scopes.clear()
     _rate_limit_windows.clear()
     _trusted_keys.clear()
     agents_mod._registration_rate.clear()
@@ -41,6 +43,7 @@ def _clear_middleware_state():
     yield
     _api_keys.clear()
     _key_quotas.clear()
+    _key_scopes.clear()
     _rate_limit_windows.clear()
     _trusted_keys.clear()
     agents_mod._registration_rate.clear()

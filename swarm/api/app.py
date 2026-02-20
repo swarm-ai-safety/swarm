@@ -7,7 +7,18 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from swarm.api.config import APIConfig
-from swarm.api.routers import agents, health, posts, runs, scenarios, simulations
+from swarm.api.middleware.error_handler import install_error_handlers
+from swarm.api.middleware.trace import TraceIDMiddleware
+from swarm.api.routers import (
+    agents,
+    governance,
+    health,
+    metrics,
+    posts,
+    runs,
+    scenarios,
+    simulations,
+)
 
 
 @asynccontextmanager
@@ -67,8 +78,11 @@ def create_app(config: APIConfig | None = None) -> FastAPI:
         allow_origins=config.cors_origins,
         allow_credentials=True,
         allow_methods=["GET", "POST", "OPTIONS"],
-        allow_headers=["Authorization", "Content-Type"],
+        allow_headers=["Authorization", "Content-Type", "X-Trace-ID"],
     )
+
+    # Trace ID middleware — runs after CORS, attaches trace_id to request.state
+    app.add_middleware(TraceIDMiddleware)
 
     # Include routers
     app.include_router(health.router, tags=["health"])
@@ -77,10 +91,17 @@ def create_app(config: APIConfig | None = None) -> FastAPI:
     app.include_router(
         simulations.router, prefix="/api/v1/simulations", tags=["simulations"]
     )
+    app.include_router(
+        governance.router, prefix="/api/v1/governance", tags=["governance"]
+    )
+    app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
 
     # Agent API routers (v1-namespaced for compatibility with existing routes)
     app.include_router(runs.router, prefix="/api/runs", tags=["runs"])
     app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+
+    # Structured error handlers (must be installed after routers)
+    install_error_handlers(app)
 
     return app
 

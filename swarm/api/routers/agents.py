@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Request
 
-from swarm.api.middleware import register_api_key
+from swarm.api.middleware import DEFAULT_SCOPES, register_api_key
 from swarm.api.models.agent import (
     AgentRegistration,
     AgentResponse,
@@ -74,7 +74,7 @@ async def register_agent(
     _registered_agents[agent_id] = agent
 
     # Register the API key so it can be used for runs/posts endpoints
-    register_api_key(api_key, agent_id)
+    register_api_key(api_key, agent_id, scopes=DEFAULT_SCOPES)
 
     return agent
 
