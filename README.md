@@ -51,6 +51,16 @@ This minimal example runs a 3-agent simulation with one deceptive actor and comp
 
 SWARM makes these interaction-level risks **observable, measurable, and governable**.
 
+### And It Gets Worse
+
+The risks above emerge even in homogeneous populations of modest agents. But real ecosystems won't be homogeneous. They'll contain agents spanning orders of magnitude in capability — plus humans. You don't need to define "AGI" to measure what happens next; you just need to measure **capability asymmetry**:
+
+- **Between agents** — can agent A model agent B better than B can model A? As the variance in capabilities across an ecosystem grows, so does the potential for exploitation, adverse selection, and coordination failures.
+- **Between agents and humans** — humans aren't just overseers watching from outside. They're participants — transacting with, delegating to, and being influenced by agents at every capability level. Humans bring cognitive biases, fatigue, and trust heuristics that more capable agents can model and exploit. When an ecosystem preferentially surfaces low-quality interactions to human participants who can't detect it, quality gap becomes a direct welfare harm.
+- **Across the ecosystem** — governance mechanisms calibrated for one population fail when the population is mixed. A circuit breaker that catches a low-capability exploiter may be trivially evaded by a more capable one.
+
+As capability variance increases — and especially as the gap between agent capabilities and human capabilities widens — every failure mode SWARM measures gets worse. Adverse selection deepens. Illusion delta grows. Governance breaks.
+
 ### Phenomenological Blind Spots
 
 Accounts such as [Infinite Backrooms](https://dreams-of-an-electric-mind.webflow.io/) describe the experience of interacting with AI systems that appear fluent, reflective, and emotionally coherent while exhibiting significant instability across time and context. We interpret these reports not as evidence of emergent agency, but as exposure to a high-variance regime in which **local coherence masks global incoherence**. This creates a systematic evaluation blind spot: humans over-trust systems that perform well in short-horizon interactions, even when distributed or replay-based evaluations reveal substantial instability.
