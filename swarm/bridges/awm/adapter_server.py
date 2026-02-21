@@ -531,8 +531,12 @@ def build_adapter(
                 else:
                     resp = await client.get(dispatch_relative_path, params=remaining)
             except Exception as exc:
+                logger.exception("Error while dispatching request to AWM app", exc_info=exc)
                 return JSONResponse(
-                    {"isError": True, "result": str(exc)},
+                    {
+                        "isError": True,
+                        "result": "An internal error occurred while dispatching the tool.",
+                    },
                     status_code=500,
                 )
 

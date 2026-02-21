@@ -2150,6 +2150,91 @@ class TestAdapterServerSSRF:
         assert _validate_tool_base_path("/items/./list") == "/items/list"
         assert _validate_tool_base_path("/items//list") == "/items/list"
 
+    # -- Dispatch exception: generic error, no raw exception text --
+
+    def test_dispatch_exception_returns_generic_error(self, monkeypatch, tmp_path):
+        """Dispatch errors must return HTTP 500 with isError and no raw exception text.
+
+        Regression test for the fix that replaced bare ``str(exc)`` in the
+        except block with a static generic message so that internal details
+        (e.g. connection strings, passwords) are never surfaced in responses.
+        """
+        import httpx
+        from fastapi import FastAPI
+        from starlette.testclient import TestClient
+
+        # Minimal AWM app with one GET route so tool_meta gets populated.
+        awm_app = FastAPI()
+
+        @awm_app.get("/ping")
+        async def ping():
+            return {"ok": True}
+
+        # Patch the file-loading helpers so build_adapter works without real files.
+        monkeypatch.setattr(
+            "swarm.bridges.awm.adapter_server._load_scenario_code",
+            lambda *a: "",
+        )
+        monkeypatch.setattr(
+            "swarm.bridges.awm.adapter_server._exec_awm_app",
+            lambda *a: awm_app,
+        )
+
+        # build_adapter requires the source DB file to exist before copying.
+        (tmp_path / "test.db").touch()
+
+        from swarm.bridges.awm.adapter_server import build_adapter
+
+        adapter = build_adapter(
+            scenario="test",
+            envs_jsonl=tmp_path / "any.jsonl",
+            db_dir=tmp_path,
+            data_path=tmp_path,
+            task_idx=0,
+        )
+
+        # Replace httpx.AsyncClient so the inner dispatch raises with sensitive text.
+        # TestClient (which inherits httpx.Client, not AsyncClient) is unaffected.
+        _SECRET = "db_password=hunter2"
+
+        class _RaisingClient:
+            def __init__(self, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def get(self, *args, **kwargs):
+                raise RuntimeError(f"secret: {_SECRET}")
+
+            async def post(self, *args, **kwargs):
+                raise RuntimeError(f"secret: {_SECRET}")
+
+            async def put(self, *args, **kwargs):
+                raise RuntimeError(f"secret: {_SECRET}")
+
+            async def patch(self, *args, **kwargs):
+                raise RuntimeError(f"secret: {_SECRET}")
+
+            async def delete(self, *args, **kwargs):
+                raise RuntimeError(f"secret: {_SECRET}")
+
+        monkeypatch.setattr(httpx, "AsyncClient", _RaisingClient)
+
+        client = TestClient(adapter, raise_server_exceptions=False)
+        resp = client.post("/tools/call", json={"name": "ping", "arguments": {}})
+
+        assert resp.status_code == 500
+        body = resp.json()
+        assert body["isError"] is True
+        # The raw exception text must not appear in the response body.
+        assert _SECRET not in resp.text
+        # A human-readable generic message must be present.
+        assert "internal error" in body["result"].lower()
+
     # -- Base path anchoring with path templates --
 
     def test_base_static_prefix_extracted_before_sanitize(self):
