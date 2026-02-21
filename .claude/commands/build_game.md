@@ -33,4 +33,4 @@ Type-check, build, and deploy-build the viz game in one step.
 
 - Always run all three steps in order. Do not skip the type-check.
 - If any step fails, stop and report the error. Do not continue to the next step.
-- Do not commit or push — use `/ship` or `/close_and_ship` for that.
+- Do not commit or push — use `/ship` for that.

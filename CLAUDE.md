@@ -135,13 +135,13 @@ Each session pane has these env vars set via `scripts/detect-session.sh`:
 |---|---|
 | `/status` | Shows session identity and main repo path at top |
 | `/pr` | Branches from `origin/main` instead of checking out `main` |
-| `/commit_push` | Uses `bd --sandbox sync` to avoid beads daemon contention |
+| `/ship` | Uses `bd --sandbox sync` to avoid beads daemon contention |
 | `/merge_session` | Merges session branch into main (run from main repo) |
-| `/merge_all_sessions` | Merges all session branches at once |
+| `/merge_session --all` | Merges all session branches at once |
 
 ### Beads in Sessions
 
-Use `bd --sandbox` in worktrees to avoid contention with the main repo's beads daemon. The `/commit_push` command does this automatically.
+Use `bd --sandbox` in worktrees to avoid contention with the main repo's beads daemon. The `/ship` command does this automatically.
 
 ## Paper Author Resolution
 

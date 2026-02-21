@@ -118,4 +118,4 @@ Run `/status` at the start of any resumed session or when unsure of current stat
 - `/status` tells you where you are — run it first
 - `/preflight` checks if staged code is ready to commit — run it before committing
 - `/pr` creates a pull request — run it after pushing
-- `/cleanup_branch` tidies up after merge — run it last
+- `/sync --cleanup` tidies up after merge — run it last

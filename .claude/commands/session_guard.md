@@ -50,7 +50,7 @@ If all files are flagged as externally modified:
 
 ## Integration with other commands
 
-- `/commit_push` does not need this — it operates on already-staged changes
+- `/ship` does not need this — it operates on already-staged changes
 - `/rename_symbol` should call `/session_guard` on all target files during Phase 2 (Apply)
 
 ## Why this exists

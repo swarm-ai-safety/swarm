@@ -63,9 +63,9 @@ tmux Hotkeys (prefix = Ctrl-b)
   between concurrent sessions.
 
   Workflow:
-    /sweep_and_ship      Commit to session branch
+    /ship --all           Commit to session branch
     /merge_session       Rebase + push session branch to main
-    /merge_all_sessions  Batch merge all session branches
+    /merge_session --all Batch merge all session branches
 ```
 
 Also run `tmux ls 2>/dev/null || echo "No active tmux sessions"` to show current sessions.

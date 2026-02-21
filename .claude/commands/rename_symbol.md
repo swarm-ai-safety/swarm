@@ -76,4 +76,4 @@ Symbol renames touch many files (source, tests, re-exports, docs) and are error-
 
 - Only renames exact symbol matches (word-boundary aware where possible).
 - Does not rename file paths — only content within files.
-- Does not auto-commit. Use `/commit_push` afterward.
+- Does not auto-commit. Use `/ship` afterward.
