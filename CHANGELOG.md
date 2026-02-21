@@ -70,9 +70,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - `test_agent_api` errors from missing `proposal_votes` table
 - Blog markdown attr on div blocks for proper rendering
 
-### Removed
-- SciAgentGym bridge (replaced with `/security-review` command) (#209)
-
 ## [1.6.0] - 2026-02-15
 
 ### Added
