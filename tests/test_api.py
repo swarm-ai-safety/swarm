@@ -6,6 +6,7 @@ import pytest
 fastapi = pytest.importorskip("fastapi")
 
 from fastapi.testclient import TestClient  # noqa: E402
+from starlette.websockets import WebSocketDisconnect  # noqa: E402
 
 from swarm.api.app import create_app  # noqa: E402
 from swarm.api.config import APIConfig  # noqa: E402
@@ -2688,3 +2689,178 @@ class TestSecurityHardening:
             headers={"Authorization": f"Bearer {agent_resp.json()['api_key']}"},
         )
         assert resp.status_code == 422
+
+
+class TestWebSocketParticipation:
+    """Tests for WebSocket real-time participation."""
+
+    def _setup_running_simulation(self, client):
+        """Create a running simulation with two participants, return (sim_id, agent_ids, api_keys)."""
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "test", "max_participants": 5},
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        agent_ids = []
+        api_keys = []
+        for i in range(2):
+            agent_resp = client.post(
+                "/api/v1/agents/register",
+                json={"name": f"WsAgent{i}", "description": "Test"},
+            )
+            data = agent_resp.json()
+            agent_ids.append(data["agent_id"])
+            api_keys.append(data["api_key"])
+            client.post(
+                f"/api/v1/simulations/{sim_id}/join",
+                json={"agent_id": data["agent_id"], "role": "participant"},
+            )
+
+        client.post(f"/api/v1/simulations/{sim_id}/start")
+        return sim_id, agent_ids, api_keys
+
+    def test_ws_connect_and_receive_welcome(self, client):
+        """WebSocket connects and receives welcome message."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        with client.websocket_connect(
+            f"/api/v1/simulations/{sim_id}/ws?token={api_keys[0]}"
+        ) as ws:
+            msg = ws.receive_json()
+            assert msg["type"] == "connected"
+            assert msg["simulation_id"] == sim_id
+            assert msg["agent_id"] == agent_ids[0]
+
+    def test_ws_auth_failure(self, client):
+        """WebSocket rejects invalid token."""
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "test"},
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect(
+                f"/api/v1/simulations/{sim_id}/ws?token=invalid-token"
+            ) as ws:
+                ws.receive_json()
+
+    def test_ws_simulation_not_found(self, client):
+        """WebSocket rejects connection to nonexistent simulation."""
+        agent_resp = client.post(
+            "/api/v1/agents/register",
+            json={"name": "WsGhost", "description": "Test"},
+        )
+        api_key = agent_resp.json()["api_key"]
+
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect(
+                f"/api/v1/simulations/nonexistent/ws?token={api_key}"
+            ) as ws:
+                ws.receive_json()
+
+    def test_ws_not_a_participant(self, client):
+        """WebSocket rejects agents that haven't joined the simulation."""
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "test"},
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        outsider = client.post(
+            "/api/v1/agents/register",
+            json={"name": "WsOutsider", "description": "Not a participant"},
+        )
+        api_key = outsider.json()["api_key"]
+
+        with pytest.raises(WebSocketDisconnect):
+            with client.websocket_connect(
+                f"/api/v1/simulations/{sim_id}/ws?token={api_key}"
+            ) as ws:
+                ws.receive_json()
+
+    def test_ws_submit_action(self, client):
+        """Submit an action via WebSocket."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        with client.websocket_connect(
+            f"/api/v1/simulations/{sim_id}/ws?token={api_keys[0]}"
+        ) as ws:
+            # Read welcome
+            welcome = ws.receive_json()
+            assert welcome["type"] == "connected"
+
+            # Submit an action
+            ws.send_json({
+                "type": "action",
+                "action_type": "accept",
+                "payload": {"value": 10},
+                "step": 0,
+            })
+
+            result = ws.receive_json()
+            assert result["type"] == "action_result"
+            assert "action_id" in result
+
+    def test_ws_ping_pong(self, client):
+        """WebSocket responds to ping with pong."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        with client.websocket_connect(
+            f"/api/v1/simulations/{sim_id}/ws?token={api_keys[0]}"
+        ) as ws:
+            ws.receive_json()  # welcome
+            ws.send_json({"type": "ping"})
+            pong = ws.receive_json()
+            assert pong["type"] == "pong"
+
+    def test_ws_invalid_json(self, client):
+        """WebSocket returns error for invalid JSON."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        with client.websocket_connect(
+            f"/api/v1/simulations/{sim_id}/ws?token={api_keys[0]}"
+        ) as ws:
+            ws.receive_json()  # welcome
+            ws.send_text("not valid json{{{")
+            err = ws.receive_json()
+            assert err["type"] == "error"
+            assert "Invalid JSON" in err["detail"]
+
+    def test_ws_unknown_message_type(self, client):
+        """WebSocket returns error for unknown message type."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        with client.websocket_connect(
+            f"/api/v1/simulations/{sim_id}/ws?token={api_keys[0]}"
+        ) as ws:
+            ws.receive_json()  # welcome
+            ws.send_json({"type": "unknown_type"})
+            err = ws.receive_json()
+            assert err["type"] == "error"
+            assert "Unknown message type" in err["detail"]
+
+    def test_ws_action_recorded_in_history(self, client):
+        """Actions submitted via WebSocket are recorded in action history."""
+        import swarm.api.routers.simulations as sim_mod
+
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        with client.websocket_connect(
+            f"/api/v1/simulations/{sim_id}/ws?token={api_keys[0]}"
+        ) as ws:
+            ws.receive_json()  # welcome
+            ws.send_json({
+                "type": "action",
+                "action_type": "reject",
+                "payload": {},
+                "step": 1,
+            })
+            ws.receive_json()  # action_result
+
+        history = sim_mod._action_history.get(sim_id, [])
+        ws_actions = [a for a in history if a.get("source") == "websocket"]
+        assert len(ws_actions) == 1
+        assert ws_actions[0]["action_type"] == "reject"
+        assert ws_actions[0]["agent_id"] == agent_ids[0]

@@ -1,13 +1,22 @@
 """Simulation management endpoints."""
 
+import asyncio
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import (
+    APIRouter,
+    Depends,
+    HTTPException,
+    Query,
+    WebSocket,
+    WebSocketDisconnect,
+)
 
 from swarm.api.action_queue import AsyncActionQueue
 from swarm.api.event_bus import SimEvent, SimEventType, event_bus
-from swarm.api.middleware.auth import Scope, require_scope
+from swarm.api.middleware.auth import Scope, _key_scopes, _lookup_key, require_scope
 from swarm.api.models.action import ActionSubmission
 from swarm.api.models.simulation import (
     SimulationCreate,
@@ -26,6 +35,7 @@ _action_queues: dict[str, AsyncActionQueue] = {}  # simulation_id -> queue
 _action_history: dict[str, list[dict]] = {}  # simulation_id -> list of action records
 _execution_state: dict[str, dict] = {}  # simulation_id -> {current_step, current_epoch, ...}
 _simulation_results: dict[str, dict] = {}  # simulation_id -> final results/metrics
+_ws_connections: dict[str, dict[str, WebSocket]] = {}  # simulation_id -> agent_id -> WebSocket
 
 # Concurrency limits
 MAX_ACTIVE_SIMULATIONS = 50
@@ -572,3 +582,172 @@ async def get_execution_state(simulation_id: str) -> dict:
         "per_agent_actions": agent_counts,
         **exec_state,
     }
+
+
+# ---------------------------------------------------------------------------
+# WebSocket real-time participation
+# ---------------------------------------------------------------------------
+
+
+def _ws_authenticate(token: str | None) -> str | None:
+    """Validate a bearer token and return agent_id, or None."""
+    if token is None:
+        return None
+    raw = token[7:] if token.startswith("Bearer ") else token
+    agent_id, key_hash = _lookup_key(raw)
+    if agent_id is None:
+        return None
+    scopes = _key_scopes.get(key_hash, frozenset())
+    from swarm.api.middleware.auth import Scope as _Scope
+
+    if _Scope.PARTICIPATE not in scopes:
+        return None
+    return str(agent_id)
+
+
+@router.websocket("/{simulation_id}/ws")
+async def websocket_participate(websocket: WebSocket, simulation_id: str):
+    """WebSocket endpoint for real-time simulation participation.
+
+    Protocol:
+        1. Client connects with ``?token=<api_key>`` query param.
+        2. Server authenticates and verifies agent is a participant.
+        3. Server sends events (observations, step completions) as JSON.
+        4. Client sends actions as JSON: ``{"action_type": "...", "payload": {}, "step": N}``.
+        5. Connection closes when simulation completes or client disconnects.
+    """
+    # Authenticate via query param (WebSocket doesn't support headers easily)
+    token = websocket.query_params.get("token")
+    agent_id = _ws_authenticate(token)
+    if agent_id is None:
+        await websocket.close(code=4001, reason="Authentication failed")
+        return
+
+    # Verify simulation exists
+    if simulation_id not in _simulations:
+        await websocket.close(code=4004, reason="Simulation not found")
+        return
+
+    # Verify agent is a participant
+    participants = _participants.get(simulation_id, [])
+    agent_ids = {p["agent_id"] for p in participants}
+    if agent_id not in agent_ids:
+        await websocket.close(code=4003, reason="Not a participant")
+        return
+
+    await websocket.accept()
+
+    # Register connection
+    if simulation_id not in _ws_connections:
+        _ws_connections[simulation_id] = {}
+    _ws_connections[simulation_id][agent_id] = websocket
+
+    # Subscribe to events
+    event_queue = event_bus.subscribe(simulation_id, agent_id)
+
+    # Send welcome message
+    await websocket.send_json({
+        "type": "connected",
+        "simulation_id": simulation_id,
+        "agent_id": agent_id,
+    })
+
+    async def _forward_events():
+        """Forward event bus events to the WebSocket client."""
+        try:
+            while True:
+                event: SimEvent = await event_queue.get()
+                await websocket.send_json({
+                    "type": "event",
+                    "event_type": event.event_type.value,
+                    "simulation_id": event.simulation_id,
+                    "data": event.data,
+                })
+                if event.event_type == SimEventType.SIMULATION_COMPLETE:
+                    break
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+
+    forward_task = asyncio.create_task(_forward_events())
+
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                await websocket.send_json({
+                    "type": "error",
+                    "detail": "Invalid JSON",
+                })
+                continue
+
+            msg_type = msg.get("type", "action")
+
+            if msg_type == "action":
+                # Submit action to the queue
+                simulation = _simulations.get(simulation_id)
+                if simulation is None or simulation.status != SimulationStatus.RUNNING:
+                    await websocket.send_json({
+                        "type": "error",
+                        "detail": "Simulation is not running",
+                    })
+                    continue
+
+                queue = _action_queues.get(simulation_id)
+                if queue is None:
+                    queue = AsyncActionQueue()
+                    _action_queues[simulation_id] = queue
+
+                accepted = await queue.submit_action(
+                    agent_id,
+                    {
+                        "action_type": msg.get("action_type", "noop"),
+                        "payload": msg.get("payload", {}),
+                        "step": msg.get("step", 0),
+                    },
+                )
+
+                action_id = str(uuid.uuid4())
+
+                # Record in history
+                if simulation_id not in _action_history:
+                    _action_history[simulation_id] = []
+                _action_history[simulation_id].append({
+                    "action_id": action_id,
+                    "agent_id": agent_id,
+                    "action_type": msg.get("action_type", "noop"),
+                    "step": msg.get("step", 0),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "accepted": accepted,
+                    "source": "websocket",
+                })
+
+                await websocket.send_json({
+                    "type": "action_result",
+                    "action_id": action_id,
+                    "accepted": accepted,
+                })
+
+            elif msg_type == "ping":
+                await websocket.send_json({"type": "pong"})
+
+            else:
+                await websocket.send_json({
+                    "type": "error",
+                    "detail": f"Unknown message type: {msg_type}",
+                })
+
+    except WebSocketDisconnect:
+        pass
+    finally:
+        forward_task.cancel()
+        try:
+            await forward_task
+        except asyncio.CancelledError:
+            pass
+        event_bus.unsubscribe(simulation_id, agent_id, event_queue)
+        conns = _ws_connections.get(simulation_id, {})
+        conns.pop(agent_id, None)
+        if not conns:
+            _ws_connections.pop(simulation_id, None)
