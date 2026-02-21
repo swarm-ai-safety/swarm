@@ -124,6 +124,7 @@ nav:
     - Claude Code: bridges/claude_code.md
     - Prime Intellect: bridges/prime_intellect.md
     - Ralph: bridges/ralph.md
+    - Research Swarm: bridges/research_swarm.md
     - OpenClaw LLM Router: bridges/openclaw-swarm-llmrouter.md
   - Research:
     - Overview: research/index.md
