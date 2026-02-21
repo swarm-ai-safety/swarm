@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "swarm-safety"
-version = "1.6.0"
+version = "1.7.0"
 description = "SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -59,6 +59,10 @@ llm = [
     "openai>=1.50.0",
     "httpx>=0.27.0",
     "google-genai>=1.0.0",
+]
+llama_cpp = [
+    "llama-cpp-python>=0.3.0",
+    "openai>=1.50.0",
 ]
 dashboard = [
     "streamlit>=1.30",

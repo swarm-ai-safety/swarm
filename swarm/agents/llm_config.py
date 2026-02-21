@@ -3,6 +3,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, Optional
+from urllib.parse import urlparse
 
 
 class LLMProvider(Enum):
@@ -16,6 +17,7 @@ class LLMProvider(Enum):
     TOGETHER = "together"
     DEEPSEEK = "deepseek"
     GOOGLE = "google"
+    LLAMA_CPP = "llama_cpp"
 
 
 class PersonaType(Enum):
@@ -69,6 +71,12 @@ class LLMConfig:
     prompt_audit_max_chars: int = 20_000
     memori_config: Optional[Dict[str, Any]] = None
 
+    # llama.cpp in-process options (Option B only)
+    model_path: Optional[str] = None
+    n_ctx: int = 4096
+    n_threads: Optional[int] = None
+    llama_seed: int = -1
+
     def __post_init__(self) -> None:
         """Validate configuration."""
         if not 0.0 <= self.temperature <= 1.0:
@@ -100,16 +108,61 @@ class LLMConfig:
         if self.provider == LLMProvider.DEEPSEEK and not self.base_url:
             self.base_url = "https://api.deepseek.com/v1"
 
-        if self.provider not in (LLMProvider.OLLAMA, LLMProvider.OPENROUTER) and not self.api_key:
+        if self.provider not in (LLMProvider.OLLAMA, LLMProvider.OPENROUTER, LLMProvider.LLAMA_CPP) and not self.api_key:
             # Allow None - will be read from environment
             pass
 
         if self.provider == LLMProvider.OLLAMA and not self.base_url:
             self.base_url = "http://localhost:11434"
 
+        if self.provider == LLMProvider.LLAMA_CPP and not self.base_url:
+            self.base_url = "http://localhost:8080/v1"
+
         if self.prompt_audit_max_chars < 0:
             raise ValueError(
                 f"prompt_audit_max_chars must be >= 0, got {self.prompt_audit_max_chars}"
+            )
+
+        # Validate llama_seed (must be -1 for random or >= 0 for deterministic)
+        if self.llama_seed < -1:
+            raise ValueError(
+                f"llama_seed must be >= -1 (-1 = random), got {self.llama_seed}"
+            )
+
+        # Validate model_path (llama.cpp in-process)
+        if self.model_path is not None:
+            self._validate_model_path(self.model_path)
+
+        # Validate base_url scheme (SSRF hardening)
+        if self.base_url is not None:
+            self._validate_base_url(self.base_url)
+
+    @staticmethod
+    def _validate_model_path(path: str) -> None:
+        """Validate model_path to prevent path traversal and arbitrary file loads."""
+        # Reject empty
+        if not path.strip():
+            raise ValueError("model_path must not be empty")
+
+        # Reject traversal components (check raw path before normalization)
+        if ".." in path.replace("\\", "/").split("/"):
+            raise ValueError(
+                f"model_path must not contain '..': {path}"
+            )
+
+        # Require .gguf extension
+        if not path.lower().endswith(".gguf"):
+            raise ValueError(
+                f"model_path must end with .gguf: {path}"
+            )
+
+    @staticmethod
+    def _validate_base_url(url: str) -> None:
+        """Validate base_url scheme to prevent SSRF via file:// etc."""
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError(
+                f"base_url scheme must be http or https, got: {parsed.scheme!r}"
             )
 
 

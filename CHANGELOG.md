@@ -6,6 +6,51 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-02-20
+
+### Added
+- **llama.cpp local inference** provider with server setup script, health checks, seed validation, and SSRF/path-traversal hardening (#232)
+- **Interactive isometric visualization game** (`viz/`): Next.js browser-based SWARM simulation with client-side engine, Gemini Imagen 4 sprite assets, compare mode, parameter sweep, leaderboard, governance intervention controls, preset scenarios, narrative annotations, and data export (#182, #212)
+- **Memori semantic memory middleware** for LLM agents with persistent fact recall, SQLite-backed storage, and OpenRouter scenario variant (#217)
+- **Loop detector governance lever** with graduated enforcement — tracks interaction patterns, quality scores, tool misuse, and rework to detect repetitive agent loops (#198)
+- **Agent API Phase 1–3**: scoped permissions, trace IDs, structured errors, PATCH endpoints, filtering, validation, agent approval workflow with approve/reject endpoints and `auto_approve` config
+- **SciAgentBench harness** with topology matrix support (#200)
+- **Evaluation metrics suite** for success rate, efficiency, and detection (#201)
+- **SciForge-style trace-to-task synthesis** with replay verification (#203)
+- **Parameter validation and clamping diagnostics** for proxy computation (#176)
+- **MetricsAggregator** wired into CLI and example export for rich visualization data, including 3 demo datasets (#212)
+- **Reproducibility documentation** with one-command run workflow and artifact paths (#204)
+- **Integration tests** for runtime environment lifecycle and tool invocation with leak detection (#197)
+- **EPIC tracking infrastructure** for bridge integrations (#194)
+- **Collaborative chemistry under budget and audits** scenario (#202)
+- **CI quality gate**, `/review_external_pr` command, and blog index hook
+- **Blog post**: "Qwen3-30B trains in the SWARM Economy" with v0.2 eval results
+- **Slash commands**: `/build_game`, `/obsidian`, `/sync_artifacts`, `/review_external_pr`, `/security-review`
+- **Populate-releases workflow** for creating GitHub releases from CHANGELOG
+
+### Changed
+- Moved pytest from pre-commit to pre-push hook, added branch guard (#177)
+- Removed `abs()` from `ProxyWeights.normalize()` to prevent silent negative weight handling (#178)
+- Updated crewai requirement from `<1.0,>=0.80.0` to `>=0.80.0,<2.0` (#221)
+- Bumped `dawidd6/action-download-artifact` from 14 to 15 (#220)
+- Regenerated demo datasets with correct epoch tagging in events
+
+### Fixed
+- **SSRF hardening**: consolidated path validation, dispatch, and taint-breaking sanitizer (#230)
+- Code scanning alert #20: full server-side request forgery (#223)
+- Code scanning alert #25: information exposure through an exception (#225)
+- SkillRL refinement governance bypass (#214)
+- 77 Ruff linting errors in test files (#218)
+- mypy type errors in eval_metrics and negotiation modules (#213)
+- mypy errors in `self_modification.py`, `llm_health.py`, and main entry point
+- Flaky test: deterministic RNG seeds for agents in `TestWelfareComparison`
+- Static asset paths for basePath-aware deployment in viz game
+- 8 missing blog posts added to mkdocs.yml navigation and blog index page
+- Personal repo reference removed
+
+### Removed
+- SciAgentGym bridge (replaced with `/security-review` command) (#209)
+
 ## [1.6.0] - 2026-02-15
 
 ### Added

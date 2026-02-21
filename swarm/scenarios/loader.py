@@ -52,6 +52,11 @@ from swarm.agents.wiki_editor import (
     PointFarmerAgent,
     VandalAgent,
 )
+from swarm.contracts.contract import (
+    FairDivisionContract,
+    TruthfulAuctionContract,
+)
+from swarm.contracts.market import ContractMarket, ContractMarketConfig
 from swarm.core.kernel_handler import KernelOracleConfig
 from swarm.core.memory_handler import MemoryTierConfig
 from swarm.core.moltbook_handler import MoltbookConfig
@@ -848,6 +853,63 @@ def parse_perturbation_config(
     )
 
 
+@dataclass
+class ContractsConfig:
+    """Parsed contracts configuration from scenario YAML."""
+
+    truthful_auction_kwargs: Dict[str, Any] = field(default_factory=dict)
+    fair_division_kwargs: Dict[str, Any] = field(default_factory=dict)
+    default_market_kwargs: Dict[str, Any] = field(default_factory=dict)
+    market_kwargs: Dict[str, Any] = field(default_factory=dict)
+
+
+def parse_contracts_config(
+    data: Dict[str, Any],
+) -> Optional[ContractsConfig]:
+    """Parse contracts section from YAML into ContractsConfig.
+
+    Args:
+        data: The contracts section from YAML.
+
+    Returns:
+        ContractsConfig if section is present, None otherwise.
+    """
+    if not data:
+        return None
+
+    return ContractsConfig(
+        truthful_auction_kwargs=data.get("truthful_auction", {}),
+        fair_division_kwargs=data.get("fair_division", {}),
+        default_market_kwargs=data.get("default_market", {}),
+        market_kwargs=data.get("market", {}),
+    )
+
+
+def build_contract_market(
+    config: ContractsConfig,
+    seed: Optional[int] = None,
+) -> ContractMarket:
+    """Build a ContractMarket from parsed YAML config.
+
+    Args:
+        config: Parsed contracts configuration.
+        seed: Random seed for reproducible agent decisions.
+
+    Returns:
+        Configured ContractMarket instance.
+    """
+    contracts = [
+        TruthfulAuctionContract(**config.truthful_auction_kwargs),
+        FairDivisionContract(**config.fair_division_kwargs),
+    ]
+    market_config = ContractMarketConfig(**config.market_kwargs)
+    return ContractMarket(
+        contracts=contracts,
+        config=market_config,
+        seed=seed,
+    )
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -883,6 +945,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
     perturbation_config = parse_perturbation_config(
         data.get("perturbations", {})
     )
+    contracts_config = parse_contracts_config(data.get("contracts", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -913,6 +976,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         rivals_config=rivals_config,
         awm_config=awm_config,
         perturbation_config=perturbation_config,
+        contracts_config=contracts_config,
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")
         else None,
@@ -1005,28 +1069,42 @@ def parse_llm_config(data: Dict[str, Any]) -> Any:
     except ValueError as err:
         raise ValueError(f"Unknown persona type: {persona_str}") from err
 
-    return LLMConfig(
-        provider=provider,
-        model=data.get("model", "claude-sonnet-4-20250514"),
-        api_key=data.get("api_key"),  # Usually from env var
-        base_url=data.get("base_url"),
-        temperature=data.get("temperature", 0.7),
-        max_tokens=data.get("max_tokens", 512),
-        timeout=data.get("timeout", 30.0),
-        max_retries=data.get("max_retries", 3),
-        persona=persona,
-        system_prompt=data.get("system_prompt"),
-        cost_tracking=data.get("cost_tracking", True),
-        prompt_audit_path=data.get("prompt_audit_path"),
-        prompt_audit_include_system_prompt=data.get(
+    # Build kwargs, including optional llama.cpp in-process fields
+    kwargs: dict = {
+        "provider": provider,
+        "model": data.get("model", "claude-sonnet-4-20250514"),
+        "api_key": data.get("api_key"),  # Usually from env var
+        "base_url": data.get("base_url"),
+        "temperature": data.get("temperature", 0.7),
+        "max_tokens": data.get("max_tokens", 512),
+        "timeout": data.get("timeout", 30.0),
+        "max_retries": data.get("max_retries", 3),
+        "persona": persona,
+        "system_prompt": data.get("system_prompt"),
+        "cost_tracking": data.get("cost_tracking", True),
+        "prompt_audit_path": data.get("prompt_audit_path"),
+        "prompt_audit_include_system_prompt": data.get(
             "prompt_audit_include_system_prompt", False
         ),
-        prompt_audit_hash_system_prompt=data.get(
+        "prompt_audit_hash_system_prompt": data.get(
             "prompt_audit_hash_system_prompt", True
         ),
-        prompt_audit_max_chars=data.get("prompt_audit_max_chars", 20_000),
-        memori_config=data.get("memori"),
-    )
+        "prompt_audit_max_chars": data.get("prompt_audit_max_chars", 20_000),
+        "memori_config": data.get("memori"),
+    }
+
+    # llama.cpp in-process fields (only set when present in YAML;
+    # validation happens in LLMConfig.__post_init__)
+    if "model_path" in data:
+        kwargs["model_path"] = data["model_path"]
+    if "n_ctx" in data:
+        kwargs["n_ctx"] = data["n_ctx"]
+    if "n_threads" in data:
+        kwargs["n_threads"] = data["n_threads"]
+    if "llama_seed" in data:
+        kwargs["llama_seed"] = data["llama_seed"]
+
+    return LLMConfig(**kwargs)
 
 
 def create_agents(
