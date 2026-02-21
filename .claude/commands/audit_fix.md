@@ -27,6 +27,7 @@ Spawn up to 10 parallel Explore agents, one per category. Each agent searches th
 | 8 | **Invariant violations** | `p` outside `[0,1]`, unseeded `random.*()` calls, destructive operations on append-only data |
 | 9 | **Config/schema** | Missing validation, undocumented required fields, schema drift between YAML and code |
 | 10 | **Documentation drift** | CLAUDE.md, docstrings, or READMEs that contradict current code behavior |
+| 11 | **Dependency health** | `file:` deps in `package.json` (recursive copy loops), deeply nested `node_modules/`, `git+https://` pins in `requirements.txt`, `file:`/`path:` dev deps in `pyproject.toml` that won't resolve in CI |
 
 If `--categories` is specified, only spawn agents for the listed categories.
 
@@ -76,3 +77,9 @@ For each **Critical** and **High** severity issue:
 - If a fix touches more than 3 files, flag it for manual review instead of auto-fixing.
 - If tests fail after fixes, revert the failing change and report it.
 - Respect the project's safety invariants (see CLAUDE.md): `p` in `[0,1]`, append-only logs, reproducible runs.
+
+## Migration from old commands
+
+| Old command | Equivalent |
+|---|---|
+| `/fix_deps` | `/audit_fix --categories=dependency` |

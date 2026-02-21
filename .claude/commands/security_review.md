@@ -28,7 +28,7 @@ Launch a subagent to analyze the diff for security issues. Focus on:
 
 Only flag issues with >70% confidence of actual exploitability. Skip:
 - DOS / resource exhaustion
-- Secrets on disk (handled by `/scan_secrets`)
+- Secrets on disk (handled by `/preflight --secrets`)
 - Rate limiting concerns
 - Theoretical race conditions
 - Log spoofing

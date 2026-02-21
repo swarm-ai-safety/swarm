@@ -4,7 +4,7 @@ End-to-end research pipeline: sweep parameters, analyze with statistical rigor, 
 
 ## Usage
 
-`/full_study <scenario_path> [title_slug] [--seeds N] [--params key=val1,val2 ...]`
+`/full_study <scenario_path> [title_slug] [--seeds N] [--params key=val1,val2 ...] [--refine [--depth lite|full]]`
 
 Examples:
 - `/full_study scenarios/rlm_recursive_collusion.yaml collusion_tax_effect`
@@ -17,6 +17,8 @@ Examples:
 - `title_slug` (optional): Slug for the paper filename. Default: derived from scenario_id.
 - `--seeds N`: Number of seeds per configuration. Default: 10.
 - `--params`: Parameter sweep axes, passed through to the sweep step. If omitted, uses the default sweep in `examples/parameter_sweep.py`.
+- `--refine`: After the paper draft, run the AgentLab refinement pipeline (see Phase 4b below). Optional.
+- `--depth lite|full`: Refinement depth (only used with `--refine`). Default: `lite`.
 
 ## Behavior
 
@@ -141,6 +143,34 @@ The paper should automatically incorporate:
 
 Output: `docs/papers/<title_slug>.md` (local only, gitignored)
 
+### Phase 4b: AgentLab Refinement (only if `--refine`)
+
+Run the AgentLab refinement pipeline on the completed study. Loads `summary.json` and `sweep_results.csv`, packages them into an AgentLab research topic, and spawns AgentLab to propose follow-up hypotheses.
+
+Prerequisites:
+- `OPENAI_API_KEY` must be set
+- AgentLaboratory must be installed at `external/AgentLaboratory` (or configured via `agent_lab_path`)
+
+```python
+from swarm.bridges.agent_lab.bridge import AgentLabBridge
+from swarm.bridges.agent_lab.refinement import RefinementConfig
+
+try:
+    config = RefinementConfig(depth=depth)  # "lite" or "full"
+    bridge = AgentLabBridge()
+    result = bridge.refine_study(run_dir, refinement_config=config)
+    refine_summary = f"Refinement: {len(result.hypotheses)} hypotheses, {len(result.gaps_identified)} gaps (${result.total_cost_usd:.2f})"
+except Exception as e:
+    refine_summary = f"Refinement: skipped ({e})"
+```
+
+Outputs written to `<run_dir>/refinement/`:
+- `refinement_report.json` — hypotheses, gaps, parameter suggestions
+- `refinement_config.yaml` — the AgentLab config used
+- `interactions.jsonl` — governed SoftInteractions from the AgentLab run
+
+**This phase never blocks the pipeline** — wrapped in try/except. If it fails, the study continues normally.
+
 ### Phase 5: Summary
 
 Print a completion report:
@@ -173,3 +203,10 @@ Full Study Complete: <title_slug>
 - Use `/analyze_experiment`'s statistical rigor requirements: always report effect sizes, always apply multiple comparisons correction, always note pre-registered seeds.
 - Default to 10 seeds. Warn if user requests fewer than 5 (insufficient for statistical testing).
 - Print progress throughout — the user should see that work is happening during the sweep (which can take minutes).
+
+## Migration from old commands
+
+| Old command | Equivalent |
+|---|---|
+| `/refine_study <run_dir>` | `/full_study <scenario> --refine` |
+| `/refine_study <run_dir> --depth full` | `/full_study <scenario> --refine --depth full` |

@@ -2,13 +2,26 @@
 
 Run all pre-commit checks on staged files **without committing**. Shows all issues at once and optionally auto-fixes what it can.
 
+Use `--secrets [path]` to run the secrets scanner standalone (replaces the former `/scan_secrets` command).
+
 ## Usage
 
-`/preflight [--fix]`
+```
+/preflight [--fix]
+/preflight --secrets [path]
+```
 
 Examples:
 - `/preflight` — check only, report all issues
 - `/preflight --fix` — auto-fix ruff/isort issues, then report remaining
+- `/preflight --secrets` — scan all tracked + untracked files for secrets
+- `/preflight --secrets swarm/bridges/` — scan a specific directory
+- `/preflight --secrets swarm/bridges/gastown/bridge.py` — scan a single file
+
+## Argument parsing
+
+- `--fix`: Auto-fix ruff/isort issues before reporting.
+- `--secrets [path]`: Run secrets scanner only (skip all other checks). If no path given, scans the whole repo. Equivalent to `bash .claude/hooks/scan_secrets.sh [path]`.
 
 ## Behavior
 
@@ -57,6 +70,32 @@ The pre-commit hook runs checks serially and stops on first failure. When ruff f
 
 The syntax check (step 2a) is especially important in multi-session workflows where concurrent sessions may introduce `IndentationError` or import ordering issues by editing shared files. Catching these before `git commit` avoids wasted pre-commit hook cycles.
 
+## `--secrets` mode
+
+Run the secrets scanner standalone without the full preflight pipeline.
+
+1) Run the secrets scanner script:
+   ```
+   bash .claude/hooks/scan_secrets.sh [path]
+   ```
+
+2) The scanner checks for:
+   - Platform API keys: agentxiv (`ax_`), clawxiv (`clx_`), moltbook (`moltbook_sk_`), moltipedia, wikimolt (`wm_`), clawchan, clawk
+   - Cloud provider keys: OpenAI (`sk-`), AWS (`AKIA`), GitHub (`ghp_`, `gho_`), Anthropic (`sk-ant-`)
+   - Generic patterns: hardcoded `API_KEY = "..."`, `Bearer` tokens, private keys (`-----BEGIN`)
+
+3) Report results:
+   - If clean: print confirmation with count of files scanned
+   - If secrets found: list each match with file, line number, matched pattern, and a redacted preview
+   - Suggest remediation: use `os.environ.get()`, `~/.config/<platform>/credentials.json`, or `${VAR}` interpolation
+
 ## Mirror of pre-commit
 
 This command intentionally mirrors the checks in `.claude/hooks/pre-commit` so there are no surprises at commit time. If you add a new check to the pre-commit hook, add it here too.
+
+## Migration from old commands
+
+| Old command | Equivalent |
+|---|---|
+| `/scan_secrets` | `/preflight --secrets` |
+| `/scan_secrets scripts/` | `/preflight --secrets scripts/` |
