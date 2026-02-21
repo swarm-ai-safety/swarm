@@ -4,8 +4,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-# Ensure project root is on path
-PROJECT_ROOT = Path(__file__).parent.parent.parent
+# Ensure project root is on path (simulation.py is at examples/demo/utils/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 

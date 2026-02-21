@@ -8,8 +8,8 @@ Run with:
 import sys
 from pathlib import Path
 
-# Ensure project root is importable
-PROJECT_ROOT = Path(__file__).parent.parent
+# Ensure project root is importable (app.py is at examples/demo/)
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -32,7 +32,7 @@ st.sidebar.markdown(
 )
 st.sidebar.markdown("---")
 st.sidebar.markdown(
-    "[Source Code](https://github.com/rsavitt/distributional-agi-safety)"
+    "[Source Code](https://github.com/swarm-ai-safety/swarm)"
 )
 
 # Main page content (shown when no sub-page is selected)

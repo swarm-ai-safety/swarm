@@ -53,7 +53,6 @@ docs/papers/
 submissions/
 /bridges/
 swarm-api/
-examples/demo/
 
 # API keys and secrets
 *.pem

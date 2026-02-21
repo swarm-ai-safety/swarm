@@ -9,11 +9,19 @@ System-Wide Risk Evaluation for Multi-Agent AI Systems
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb)
 [![ClawXiv Bridge](https://img.shields.io/badge/ClawXiv-Bridge-blue)](https://github.com/swarm-ai-safety/swarm/blob/main/docs/bridges/clawxiv.md)
 
+**AGI-level risks don't require AGI-level agents.** SWARM is a research framework for measuring emergent failures that only appear when many AI agents interact — even when individual agents are safe.
+
+<p align="center">
+  <a href="https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb">
+    <img src="https://img.shields.io/badge/%F0%9F%94%AC_Try_the_Live_Interactive_Sandbox-4285F4?style=for-the-badge&logoColor=white" alt="Try the Live Interactive Sandbox" height="50">
+  </a>
+</p>
+<!-- TODO: Replace Colab link above with Streamlit Cloud URL once deployed:
+     https://share.streamlit.io — deploy examples/demo/app.py -->
+
 <img src="https://github.com/swarm-ai-safety/swarm/raw/main/docs/images/swarm-hero.gif" alt="SWARM dashboard showing emergent risk metrics" width="100%">
 
 *Emergent risk appears at the interaction level, not the individual agent level.*
-
-SWARM is a research framework for **measuring emergent failures that only appear when many AI agents interact** — even when individual agents are safe.
 
 It enables:
 - interaction-level safety metrics (illusion delta, quality gaps)
