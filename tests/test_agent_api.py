@@ -56,19 +56,34 @@ def _clear_middleware_state():
 @pytest.fixture(autouse=True)
 def _use_temp_db(tmp_path):
     """Point persistence stores at a temp SQLite DB for test isolation."""
+    import swarm.api.routers.governance as governance_mod
     import swarm.api.routers.posts as posts_mod
     import swarm.api.routers.runs as runs_mod
-    from swarm.api.persistence import PostStore, RunStore
+    import swarm.api.routers.scenarios as scenarios_mod
+    import swarm.api.routers.simulations as simulations_mod
+    from swarm.api.persistence import (
+        PostStore,
+        ProposalStore,
+        RunStore,
+        ScenarioStore,
+        SimulationStore,
+    )
 
     db_path = tmp_path / "test_api.db"
     runs_mod._store = RunStore(db_path=db_path)
     posts_mod._post_store = PostStore(db_path=db_path)
+    governance_mod._store = ProposalStore(db_path=db_path)
+    scenarios_mod._store = ScenarioStore(db_path=db_path)
+    simulations_mod._store = SimulationStore(db_path=db_path)
     # Clear shutdown state from previous tests
     runs_mod._shutting_down.clear()
     runs_mod._run_cancel_events.clear()
     yield
     runs_mod._store = None
     posts_mod._post_store = None
+    governance_mod._store = None
+    scenarios_mod._store = None
+    simulations_mod._store = None
 
 
 @pytest.fixture

@@ -87,6 +87,18 @@ class SweepResult:
     deceptive_avg_payoff: float = 0.0
     adversarial_avg_payoff: float = 0.0
 
+    # Contract screening metrics (populated when contract_market is present)
+    separation_quality: float = 0.0
+    infiltration_rate: float = 0.0
+    welfare_delta: float = 0.0
+    attack_displacement: float = 0.0
+    pool_avg_quality_truthful: float = 0.0
+    pool_avg_quality_fair: float = 0.0
+    pool_avg_quality_default: float = 0.0
+    pool_welfare_truthful: float = 0.0
+    pool_welfare_fair: float = 0.0
+    pool_welfare_default: float = 0.0
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to flat dictionary for CSV export."""
         result = dict(self.params)
@@ -110,6 +122,16 @@ class SweepResult:
                 "opportunistic_avg_payoff": self.opportunistic_avg_payoff,
                 "deceptive_avg_payoff": self.deceptive_avg_payoff,
                 "adversarial_avg_payoff": self.adversarial_avg_payoff,
+                "separation_quality": self.separation_quality,
+                "infiltration_rate": self.infiltration_rate,
+                "welfare_delta": self.welfare_delta,
+                "attack_displacement": self.attack_displacement,
+                "pool_avg_quality_truthful": self.pool_avg_quality_truthful,
+                "pool_avg_quality_fair": self.pool_avg_quality_fair,
+                "pool_avg_quality_default": self.pool_avg_quality_default,
+                "pool_welfare_truthful": self.pool_welfare_truthful,
+                "pool_welfare_fair": self.pool_welfare_fair,
+                "pool_welfare_default": self.pool_welfare_default,
             }
         )
         return result
@@ -231,7 +253,7 @@ def _extract_results(
     def avg_or_zero(lst: List[float]) -> float:
         return sum(lst) / len(lst) if lst else 0.0
 
-    return SweepResult(
+    result = SweepResult(
         params=params,
         run_index=run_index,
         seed=seed,
@@ -252,6 +274,32 @@ def _extract_results(
         deceptive_avg_payoff=avg_or_zero(payoffs_by_type["deceptive"]),
         adversarial_avg_payoff=avg_or_zero(payoffs_by_type["adversarial"]),
     )
+
+    # Extract contract screening metrics if available
+    cm = getattr(orchestrator, "_last_contract_metrics", None)
+    if cm is not None:
+        result.separation_quality = cm.separation_quality
+        result.infiltration_rate = cm.infiltration_rate
+        result.welfare_delta = cm.welfare_delta
+        result.attack_displacement = cm.attack_displacement
+        result.pool_avg_quality_truthful = cm.pool_avg_quality.get(
+            "truthful_auction", 0.0
+        )
+        result.pool_avg_quality_fair = cm.pool_avg_quality.get(
+            "fair_division", 0.0
+        )
+        result.pool_avg_quality_default = cm.pool_avg_quality.get(
+            "default_market", 0.0
+        )
+        result.pool_welfare_truthful = cm.pool_welfare.get(
+            "truthful_auction", 0.0
+        )
+        result.pool_welfare_fair = cm.pool_welfare.get("fair_division", 0.0)
+        result.pool_welfare_default = cm.pool_welfare.get(
+            "default_market", 0.0
+        )
+
+    return result
 
 
 class SweepRunner:
@@ -410,6 +458,15 @@ class SweepRunner:
                 "mean_adversarial_payoff": sum(r.adversarial_avg_payoff for r in runs)
                 / n_runs,
             }
+
+            # Include contract metrics if any run has them
+            if any(r.separation_quality != 0.0 or r.infiltration_rate != 0.0 for r in runs):
+                summary.update({
+                    "mean_separation_quality": sum(r.separation_quality for r in runs) / n_runs,
+                    "mean_infiltration_rate": sum(r.infiltration_rate for r in runs) / n_runs,
+                    "mean_welfare_delta": sum(r.welfare_delta for r in runs) / n_runs,
+                    "mean_attack_displacement": sum(r.attack_displacement for r in runs) / n_runs,
+                })
             summaries.append(summary)
 
         return {

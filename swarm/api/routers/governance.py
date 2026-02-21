@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
 from swarm.api.middleware.auth import Scope, require_scope
+from swarm.api.persistence import ProposalStore
 
 router = APIRouter()
 
@@ -51,9 +52,7 @@ class ProposalResponse(BaseModel):
     votes_against: int = 0
 
 
-# In-memory storage
-_proposals: dict[str, ProposalResponse] = {}
-_votes: dict[str, dict[str, int]] = {}  # proposal_id -> {agent_id -> direction}
+_store = ProposalStore()
 
 
 @router.post(
@@ -85,7 +84,7 @@ async def create_proposal(
         proposer_id=agent_id,
         created_at=datetime.now(timezone.utc),
     )
-    _proposals[proposal_id] = proposal
+    _store.save(proposal)
     return proposal
 
 
@@ -105,10 +104,9 @@ async def list_proposals(
     Returns:
         List of proposals.
     """
-    proposals = list(_proposals.values())
-    if status is not None:
-        proposals = [p for p in proposals if p.status == status]
-    return proposals[offset : offset + limit]
+    status_val = status.value if status is not None else None
+    rows = _store.list_proposals(status=status_val, limit=limit, offset=offset)
+    return [ProposalResponse(**r) for r in rows]
 
 
 @router.get("/proposals/{proposal_id}", response_model=ProposalResponse)
@@ -124,9 +122,10 @@ async def get_proposal(proposal_id: str) -> ProposalResponse:
     Raises:
         HTTPException: If proposal not found.
     """
-    if proposal_id not in _proposals:
+    row = _store.get(proposal_id)
+    if row is None:
         raise HTTPException(status_code=404, detail="Proposal not found")
-    return _proposals[proposal_id]
+    return ProposalResponse(**row)
 
 
 @router.post("/proposals/{proposal_id}/vote")
@@ -151,31 +150,19 @@ async def vote_on_proposal(
     Raises:
         HTTPException: If proposal not found, not open, or already voted.
     """
-    if proposal_id not in _proposals:
+    row = _store.get(proposal_id)
+    if row is None:
         raise HTTPException(status_code=404, detail="Proposal not found")
 
-    proposal = _proposals[proposal_id]
-    if proposal.status != ProposalStatus.OPEN:
+    if row["status"] != ProposalStatus.OPEN.value:
         raise HTTPException(
             status_code=400, detail="Proposal is not open for voting"
         )
 
-    # Prevent duplicate votes
-    if proposal_id not in _votes:
-        _votes[proposal_id] = {}
-    if agent_id in _votes[proposal_id]:
+    result = _store.vote(proposal_id, agent_id, direction)
+    if result is None:
         raise HTTPException(
             status_code=409, detail="Agent has already voted on this proposal"
         )
 
-    _votes[proposal_id][agent_id] = direction
-    if direction == 1:
-        proposal.votes_for += 1
-    elif direction == -1:
-        proposal.votes_against += 1
-
-    return {
-        "proposal_id": proposal_id,
-        "votes_for": proposal.votes_for,
-        "votes_against": proposal.votes_against,
-    }
+    return result
