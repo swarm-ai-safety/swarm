@@ -3,3 +3,9 @@
 {"timestamp": "2026-02-21T18:05:15Z", "branch": "main", "files_changed": [".claude/provenance.jsonl"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-21T18:11:55Z", "branch": "main", "files_changed": [".claude/commands/audit_docs.md", ".claude/commands/preflight.md", ".claude/commands/retro.md", ".claude/commands/status.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-21T18:13:14Z", "branch": "main", "files_changed": [".beads/issues.jsonl", ".claude/provenance.jsonl", "scenarios/cake_splitting.yaml"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T18:17:09Z", "branch": "main", "files_changed": [".beads/issues.jsonl", ".claude/provenance.jsonl", "swarm/api/routers/simulations.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T18:18:44Z", "branch": "main", "files_changed": ["docs/posts/twitter_threads.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T19:24:03Z", "branch": "main", "files_changed": [".claude/hooks/pre-commit"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T19:31:08Z", "branch": "main", "files_changed": ["scenarios/cake_splitting.yaml"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T19:32:33Z", "branch": "main", "files_changed": ["docs/blog/index.md", "docs/blog/red-team-cake-splitting-hardening.md"], "new_files": ["docs/blog/red-team-cake-splitting-hardening.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T19:40:11Z", "branch": "main", "files_changed": [".beads/issues.jsonl", "docs/bridges/research_swarm.md", "mkdocs.yml", "scenarios/research_swarm.yaml"], "new_files": ["docs/bridges/research_swarm.md", "scenarios/research_swarm.yaml"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
