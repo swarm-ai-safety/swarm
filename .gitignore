@@ -110,3 +110,9 @@ docs/game-app/
 !.claude/hooks/scan_secrets.sh
 !.claude/hooks/post_write_check.sh
 !.claude/commands/scan_secrets.md
+
+# Session-local docs reminder queue (cleared each commit)
+.claude/docs_reminders.log
+
+# Allow provenance audit log (matched by *.jsonl above)
+!.claude/provenance.jsonl

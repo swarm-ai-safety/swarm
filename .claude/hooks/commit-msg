@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# ──────────────────────────────────────────────────────────────
+# commit-msg hook — Append provenance trailers to commit messages
+#
+# Adds structured metadata so `git log` shows who/what made each change.
+# Install: cp .claude/hooks/commit-msg .git/hooks/commit-msg && chmod +x .git/hooks/commit-msg
+# ──────────────────────────────────────────────────────────────
+set -euo pipefail
+
+COMMIT_MSG_FILE="$1"
+
+# Don't modify merge commits or amend commits that already have trailers
+if grep -q '^Session-ID:' "$COMMIT_MSG_FILE" 2>/dev/null; then
+    exit 0
+fi
+
+# Build trailers
+TRAILERS=""
+
+# Session/worktree identity
+if [ -n "${SESSION_ID:-}" ]; then
+    TRAILERS="${TRAILERS}Session-ID: ${SESSION_ID}\n"
+fi
+if [ -n "${SESSION_BRANCH:-}" ]; then
+    TRAILERS="${TRAILERS}Session-Branch: ${SESSION_BRANCH}\n"
+fi
+if [ -n "${WORKTREE_ID:-}" ]; then
+    TRAILERS="${TRAILERS}Worktree: ${WORKTREE_ID}\n"
+fi
+
+# Agent context (set by Claude Code when a specific agent is active)
+if [ -n "${SWARM_AGENT_ROLE:-}" ]; then
+    TRAILERS="${TRAILERS}Agent-Role: ${SWARM_AGENT_ROLE}\n"
+fi
+
+# Change scope summary
+STAGED_FILES=$(git diff --cached --name-only 2>/dev/null || true)
+CHANGED_DIRS=$(echo "$STAGED_FILES" | sed 's|/[^/]*$||' | sort -u | head -5 | tr '\n' ', ' | sed 's/,$//')
+FILE_COUNT=$(echo "$STAGED_FILES" | grep -c '.' 2>/dev/null || echo "0")
+
+if [ "$FILE_COUNT" -gt 0 ]; then
+    TRAILERS="${TRAILERS}Files-Changed: ${FILE_COUNT}\n"
+    TRAILERS="${TRAILERS}Scope: ${CHANGED_DIRS}\n"
+fi
+
+# Docs co-staged flag
+HAS_CHANGELOG=$(echo "$STAGED_FILES" | grep -c 'CHANGELOG.md' 2>/dev/null || echo "0")
+HAS_README=$(echo "$STAGED_FILES" | grep -c 'README.md' 2>/dev/null || echo "0")
+HAS_AGENTS_MD=$(echo "$STAGED_FILES" | grep -c 'AGENTS.md' 2>/dev/null || echo "0")
+
+DOCS_UPDATED=""
+[ "$HAS_CHANGELOG" -gt 0 ] && DOCS_UPDATED="${DOCS_UPDATED}CHANGELOG "
+[ "$HAS_README" -gt 0 ] && DOCS_UPDATED="${DOCS_UPDATED}README "
+[ "$HAS_AGENTS_MD" -gt 0 ] && DOCS_UPDATED="${DOCS_UPDATED}AGENTS "
+
+if [ -n "$DOCS_UPDATED" ]; then
+    TRAILERS="${TRAILERS}Docs-Updated: ${DOCS_UPDATED}\n"
+else
+    # Check if docs SHOULD have been updated (new code files without docs)
+    NEW_CODE=$(git diff --cached --name-only --diff-filter=A | grep -E '^(swarm|scenarios|\.claude/(commands|agents))/' || true)
+    if [ -n "$NEW_CODE" ]; then
+        TRAILERS="${TRAILERS}Docs-Updated: none (new files added)\n"
+    fi
+fi
+
+# Append trailers if we have any
+if [ -n "$TRAILERS" ]; then
+    # Ensure blank line before trailers
+    echo "" >> "$COMMIT_MSG_FILE"
+    echo -e "$TRAILERS" >> "$COMMIT_MSG_FILE"
+fi
+
+exit 0

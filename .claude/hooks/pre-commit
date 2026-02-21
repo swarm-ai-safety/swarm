@@ -245,7 +245,84 @@ if [ -n "$STAGED_CODE" ]; then
     fi
 fi
 
-# ── 5. Tests ──
+# ── 5. Docs reminder compliance check ──
+# Check if outstanding docs reminders from post-write hooks were addressed.
+RESOLVED=0
+UNRESOLVED=0
+REMINDER_LOG="$ROOT/.claude/docs_reminders.log"
+if [ -f "$REMINDER_LOG" ] && [ -s "$REMINDER_LOG" ]; then
+    TOTAL_REMINDERS=$(wc -l < "$REMINDER_LOG" | tr -d ' ')
+    RESOLVED=0
+    UNRESOLVED=0
+    UNRESOLVED_LIST=""
+
+    while IFS='|' read -r timestamp filepath hint; do
+        # Check if the reminder was about CHANGELOG and CHANGELOG is now staged
+        ADDRESSED=false
+        if echo "$hint" | grep -q "CHANGELOG" && [ -n "$STAGED_CHANGELOG" ]; then
+            ADDRESSED=true
+        fi
+        if echo "$hint" | grep -q "AGENTS.md"; then
+            STAGED_AGENTS_CHECK=$(git diff --cached --name-only | grep -F 'AGENTS.md' || true)
+            if [ -n "$STAGED_AGENTS_CHECK" ]; then
+                ADDRESSED=true
+            fi
+        fi
+        if echo "$hint" | grep -q "README" && [ -n "$STAGED_README" ]; then
+            ADDRESSED=true
+        fi
+
+        if [ "$ADDRESSED" = true ]; then
+            RESOLVED=$((RESOLVED + 1))
+        else
+            UNRESOLVED=$((UNRESOLVED + 1))
+            UNRESOLVED_LIST="${UNRESOLVED_LIST}    $(basename "$filepath"): $hint\n"
+        fi
+    done < "$REMINDER_LOG"
+
+    if [ "$UNRESOLVED" -gt 0 ]; then
+        echo "[swarm pre-commit] DOCS COMPLIANCE: $RESOLVED/$TOTAL_REMINDERS reminders addressed, $UNRESOLVED outstanding:"
+        echo -e "$UNRESOLVED_LIST"
+    else
+        echo "[swarm pre-commit] DOCS COMPLIANCE: all $TOTAL_REMINDERS reminder(s) addressed"
+    fi
+
+    # Clear the log after reporting (reminders are per-session, not persistent)
+    : > "$REMINDER_LOG"
+fi
+
+# ── 6. Provenance log ──
+# Append a JSONL entry recording what this commit touches and compliance status.
+PROVENANCE_LOG="$ROOT/.claude/provenance.jsonl"
+BRANCH_NAME=$(git branch --show-current 2>/dev/null || echo "detached")
+TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+STAGED_LIST=$(git diff --cached --name-only | tr '\n' ',' | sed 's/,$//')
+DOCS_COSTAGED=""
+[ -n "$STAGED_CHANGELOG" ] && DOCS_COSTAGED="${DOCS_COSTAGED}changelog,"
+[ -n "$STAGED_README" ] && DOCS_COSTAGED="${DOCS_COSTAGED}readme,"
+NEW_FILES_STAGED=$(git diff --cached --name-only --diff-filter=A | tr '\n' ',' | sed 's/,$//')
+
+# Use python for safe JSON serialization
+python3 -c "
+import json, sys
+entry = {
+    'timestamp': '$TIMESTAMP',
+    'branch': '$BRANCH_NAME',
+    'session_id': '${SESSION_ID:-}',
+    'worktree_id': '${WORKTREE_ID:-}',
+    'agent_role': '${SWARM_AGENT_ROLE:-}',
+    'files_changed': [f for f in '$STAGED_LIST'.split(',') if f],
+    'new_files': [f for f in '$NEW_FILES_STAGED'.split(',') if f],
+    'docs_co_staged': [d for d in '${DOCS_COSTAGED}'.split(',') if d],
+    'docs_reminders_resolved': $RESOLVED if '$RESOLVED' else 0,
+    'docs_reminders_unresolved': $UNRESOLVED if '$UNRESOLVED' else 0,
+}
+# Remove empty optional fields
+entry = {k: v for k, v in entry.items() if v or v == 0}
+print(json.dumps(entry))
+" >> "$PROVENANCE_LOG" 2>/dev/null || true
+
+# ── 7. Tests ──
 # Tests run in pre-push (via `make ci`), NOT pre-commit.
 # This keeps commits fast (~2s) and avoids HEAD race conditions
 # when parallel sessions share a worktree.

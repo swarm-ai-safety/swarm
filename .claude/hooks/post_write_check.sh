@@ -124,6 +124,9 @@ esac
 
 if [ -n "$DOCS_HINT" ]; then
     echo "[swarm docs-reminder] $DOCS_HINT"
+    # Log the reminder for compliance tracking at commit time
+    REMINDER_LOG="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")/.claude/docs_reminders.log"
+    echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)|$FILE_PATH|$DOCS_HINT" >> "$REMINDER_LOG"
 fi
 
 exit 0
