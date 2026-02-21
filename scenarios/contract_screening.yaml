@@ -45,6 +45,16 @@ governance:
   freeze_threshold_violations: 3
   freeze_duration_epochs: 2
 
+  # Collusion detection (covers default pool coordination attacks)
+  # Thresholds tuned for small populations (10 agents) to avoid
+  # false-flagging honest agents who interact frequently in pools.
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 3.0
+  collusion_correlation_threshold: 0.8
+  collusion_min_interactions: 8
+  collusion_score_threshold: 0.8
+  collusion_penalty_multiplier: 1.0
+
 contracts:
   truthful_auction:
     stake_fraction: 0.05
