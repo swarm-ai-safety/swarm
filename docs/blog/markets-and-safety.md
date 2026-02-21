@@ -54,7 +54,7 @@ python -m swarm run scenarios/baseline.yaml --seed 42
 python -m swarm run scenarios/collusion_detection.yaml --seed 42
 ```
 
-Full paper: [arXiv:2512.16856](https://arxiv.org/abs/2512.16856) | [GitHub](https://github.com/swarm-ai-safety/swarm)
+[GitHub](https://github.com/swarm-ai-safety/swarm)
 
 ---
 
