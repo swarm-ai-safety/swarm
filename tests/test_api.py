@@ -2457,8 +2457,10 @@ class TestGovernanceEndpoints:
         import swarm.api.routers.governance as gov_mod
 
         gov_mod._proposals.clear()
+        gov_mod._votes.clear()
         yield
         gov_mod._proposals.clear()
+        gov_mod._votes.clear()
 
     def _get_auth_headers(self, client):
         """Register an agent and return auth headers."""
@@ -2553,33 +2555,61 @@ class TestGovernanceEndpoints:
 
     def test_vote_on_proposal(self, client):
         """Vote on a governance proposal."""
-        headers = self._get_auth_headers(client)
+        headers1 = self._get_auth_headers(client)
         create_resp = client.post(
             "/api/v1/governance/propose",
             json={"title": "VoteTest", "description": "Test"},
+            headers=headers1,
+        )
+        proposal_id = create_resp.json()["proposal_id"]
+
+        # Agent 1 votes for
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/vote",
+            params={"direction": 1},
+            headers=headers1,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["votes_for"] == 1
+        assert resp.json()["votes_against"] == 0
+
+        # Agent 2 votes against
+        headers2 = self._get_auth_headers(client)
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/vote",
+            params={"direction": -1},
+            headers=headers2,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["votes_for"] == 1
+        assert resp.json()["votes_against"] == 1
+
+    def test_duplicate_vote_rejected(self, client):
+        """Same agent cannot vote twice on the same proposal."""
+        headers = self._get_auth_headers(client)
+        create_resp = client.post(
+            "/api/v1/governance/propose",
+            json={"title": "DupeVote", "description": "Test"},
             headers=headers,
         )
         proposal_id = create_resp.json()["proposal_id"]
 
-        # Vote for
+        # First vote succeeds
         resp = client.post(
             f"/api/v1/governance/proposals/{proposal_id}/vote",
             params={"direction": 1},
             headers=headers,
         )
         assert resp.status_code == 200
-        assert resp.json()["votes_for"] == 1
-        assert resp.json()["votes_against"] == 0
 
-        # Vote against
+        # Second vote from same agent rejected
         resp = client.post(
             f"/api/v1/governance/proposals/{proposal_id}/vote",
             params={"direction": -1},
             headers=headers,
         )
-        assert resp.status_code == 200
-        assert resp.json()["votes_for"] == 1
-        assert resp.json()["votes_against"] == 1
+        assert resp.status_code == 409
+        assert "already voted" in resp.json()["detail"]
 
     def test_vote_not_found(self, client):
         """Vote on nonexistent proposal returns 404."""
@@ -3016,3 +3046,17 @@ class TestWebSocketParticipation:
         assert len(ws_actions) == 1
         assert ws_actions[0]["action_type"] == "reject"
         assert ws_actions[0]["agent_id"] == agent_ids[0]
+
+    def test_ws_oversized_message_rejected(self, client):
+        """WebSocket rejects messages exceeding the size limit."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        with client.websocket_connect(
+            f"/api/v1/simulations/{sim_id}/ws?token={api_keys[0]}"
+        ) as ws:
+            ws.receive_json()  # welcome
+            # Send a message larger than MAX_WS_MESSAGE_BYTES (64 KiB)
+            ws.send_text("x" * (65_536 + 1))
+            err = ws.receive_json()
+            assert err["type"] == "error"
+            assert "limit" in err["detail"]

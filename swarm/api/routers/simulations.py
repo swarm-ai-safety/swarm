@@ -40,6 +40,7 @@ _ws_connections: dict[str, dict[str, WebSocket]] = {}  # simulation_id -> agent_
 # Concurrency limits
 MAX_ACTIVE_SIMULATIONS = 50
 MAX_RESULTS_BYTES = 1_048_576  # 1 MiB cap on serialized results payload
+MAX_WS_MESSAGE_BYTES = 65_536  # 64 KiB cap on incoming WebSocket messages
 
 
 @router.post(
@@ -448,7 +449,10 @@ async def simulation_events(
     if simulation_id not in _simulations:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    queue = event_bus.subscribe(simulation_id, agent_id)
+    try:
+        queue = event_bus.subscribe(simulation_id, agent_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
 
     async def event_generator():
         try:
@@ -693,13 +697,25 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
 
     await websocket.accept()
 
-    # Register connection
+    # Register connection — close any stale connection for the same agent
     if simulation_id not in _ws_connections:
         _ws_connections[simulation_id] = {}
+    old_ws = _ws_connections[simulation_id].get(agent_id)
+    if old_ws is not None:
+        try:
+            await old_ws.close(code=4008, reason="Replaced by new connection")
+        except RuntimeError:
+            # Old connection already closed; ignore.
+            pass
     _ws_connections[simulation_id][agent_id] = websocket
 
     # Subscribe to events
-    event_queue = event_bus.subscribe(simulation_id, agent_id)
+    try:
+        event_queue = event_bus.subscribe(simulation_id, agent_id)
+    except ValueError:
+        await websocket.close(code=4029, reason="Too many subscriptions")
+        _ws_connections[simulation_id].pop(agent_id, None)
+        return
 
     # Send welcome message
     await websocket.send_json({
@@ -733,6 +749,12 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
     try:
         while True:
             raw = await websocket.receive_text()
+            if len(raw) > MAX_WS_MESSAGE_BYTES:
+                await websocket.send_json({
+                    "type": "error",
+                    "detail": f"Message exceeds {MAX_WS_MESSAGE_BYTES} byte limit",
+                })
+                continue
             try:
                 msg = json.loads(raw)
             except json.JSONDecodeError:

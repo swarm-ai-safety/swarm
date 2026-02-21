@@ -1593,13 +1593,26 @@ class Orchestrator:
         except ValueError:
             action_type = ActionType.NOOP
 
+        def _safe_str(val: Any, max_len: int = 256) -> str:
+            """Coerce to str, rejecting non-scalar types and enforcing length."""
+            if val is None:
+                return ""
+            if not isinstance(val, (str, int, float, bool)):
+                return ""
+            s = str(val)
+            return s[:max_len]
+
+        metadata = raw.get("metadata", {})
+        if not isinstance(metadata, dict):
+            metadata = {}
+
         return Action(
             agent_id=agent_id,
             action_type=action_type,
-            target_id=str(raw["target_id"]) if raw.get("target_id") is not None else "",
-            counterparty_id=str(raw["counterparty_id"]) if raw.get("counterparty_id") is not None else "",
-            content=str(raw["content"]) if raw.get("content") is not None else "",
-            metadata=raw.get("metadata", {}),
+            target_id=_safe_str(raw.get("target_id")),
+            counterparty_id=_safe_str(raw.get("counterparty_id")),
+            content=_safe_str(raw.get("content"), max_len=4096),
+            metadata=metadata,
         )
 
     async def _resolve_pending_interactions_async(self) -> None:

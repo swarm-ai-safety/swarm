@@ -5,6 +5,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+MAX_SUBSCRIPTIONS_PER_AGENT = 2
+
 
 class SimEventType(str, Enum):
     OBSERVATION_READY = "observation_ready"
@@ -30,10 +32,25 @@ class EventBus:
         self._subscribers: dict[str, list[tuple[str, asyncio.Queue]]] = {}
 
     def subscribe(self, simulation_id: str, agent_id: str) -> asyncio.Queue:
-        """Subscribe to events for a simulation. Returns a Queue to read from."""
-        q: asyncio.Queue = asyncio.Queue(maxsize=100)
+        """Subscribe to events for a simulation. Returns a Queue to read from.
+
+        Raises ValueError if the agent already has
+        ``MAX_SUBSCRIPTIONS_PER_AGENT`` active subscriptions for this
+        simulation.
+        """
         if simulation_id not in self._subscribers:
             self._subscribers[simulation_id] = []
+
+        existing = sum(
+            1 for aid, _ in self._subscribers[simulation_id] if aid == agent_id
+        )
+        if existing >= MAX_SUBSCRIPTIONS_PER_AGENT:
+            raise ValueError(
+                f"Agent {agent_id} already has {existing} subscription(s) "
+                f"for simulation {simulation_id}"
+            )
+
+        q: asyncio.Queue = asyncio.Queue(maxsize=100)
         self._subscribers[simulation_id].append((agent_id, q))
         return q
 

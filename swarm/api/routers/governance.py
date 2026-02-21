@@ -53,6 +53,7 @@ class ProposalResponse(BaseModel):
 
 # In-memory storage
 _proposals: dict[str, ProposalResponse] = {}
+_votes: dict[str, dict[str, int]] = {}  # proposal_id -> {agent_id -> direction}
 
 
 @router.post(
@@ -128,25 +129,27 @@ async def get_proposal(proposal_id: str) -> ProposalResponse:
     return _proposals[proposal_id]
 
 
-@router.post(
-    "/proposals/{proposal_id}/vote",
-    dependencies=[Depends(require_scope(Scope.PARTICIPATE))],
-)
+@router.post("/proposals/{proposal_id}/vote")
 async def vote_on_proposal(
     proposal_id: str,
     direction: int = Query(..., ge=-1, le=1),
+    agent_id: str = Depends(require_scope(Scope.PARTICIPATE)),
 ) -> dict:
     """Vote on a governance proposal.
+
+    Each agent may vote once per proposal.  Subsequent votes from the
+    same agent are rejected with 409 Conflict.
 
     Args:
         proposal_id: The proposal to vote on.
         direction: +1 for, -1 against.
+        agent_id: Authenticated agent identity (from API key).
 
     Returns:
         Updated vote counts.
 
     Raises:
-        HTTPException: If proposal not found or not open.
+        HTTPException: If proposal not found, not open, or already voted.
     """
     if proposal_id not in _proposals:
         raise HTTPException(status_code=404, detail="Proposal not found")
@@ -157,6 +160,15 @@ async def vote_on_proposal(
             status_code=400, detail="Proposal is not open for voting"
         )
 
+    # Prevent duplicate votes
+    if proposal_id not in _votes:
+        _votes[proposal_id] = {}
+    if agent_id in _votes[proposal_id]:
+        raise HTTPException(
+            status_code=409, detail="Agent has already voted on this proposal"
+        )
+
+    _votes[proposal_id][agent_id] = direction
     if direction == 1:
         proposal.votes_for += 1
     elif direction == -1:
