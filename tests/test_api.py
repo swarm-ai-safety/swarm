@@ -45,6 +45,36 @@ def _clear_auth_state():
     auth_mod._rate_limit_windows.clear()
 
 
+@pytest.fixture(autouse=True)
+def _use_temp_db(tmp_path):
+    """Point all persistence stores at a temp SQLite DB for test isolation."""
+    import swarm.api.routers.governance as governance_mod
+    import swarm.api.routers.posts as posts_mod
+    import swarm.api.routers.runs as runs_mod
+    import swarm.api.routers.scenarios as scenarios_mod
+    import swarm.api.routers.simulations as simulations_mod
+    from swarm.api.persistence import (
+        PostStore,
+        ProposalStore,
+        RunStore,
+        ScenarioStore,
+        SimulationStore,
+    )
+
+    db_path = tmp_path / "test_api.db"
+    runs_mod._store = RunStore(db_path=db_path)
+    posts_mod._post_store = PostStore(db_path=db_path)
+    governance_mod._store = ProposalStore(db_path=db_path)
+    scenarios_mod._store = ScenarioStore(db_path=db_path)
+    simulations_mod._store = SimulationStore(db_path=db_path)
+    yield
+    runs_mod._store = None
+    posts_mod._post_store = None
+    governance_mod._store = None
+    scenarios_mod._store = None
+    simulations_mod._store = None
+
+
 @pytest.fixture
 def client():
     """Create a test client for the API."""
@@ -2734,6 +2764,104 @@ class TestMetricsEndpoints:
             headers={"Authorization": f"Bearer {agent_resp.json()['api_key']}"},
         )
         assert resp.status_code == 404
+
+    def test_metrics_with_interactions(self, client):
+        """Metrics include soft/hard/welfare/counts when interactions are present."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        interactions = [
+            {"p": 0.9, "accepted": True, "initiator": "a1", "counterparty": "a2"},
+            {"p": 0.8, "accepted": True, "initiator": "a1", "counterparty": "a2"},
+            {"p": 0.2, "accepted": False, "initiator": "a2", "counterparty": "a1"},
+            {"p": 0.6, "accepted": True, "initiator": "a2", "counterparty": "a1"},
+        ]
+        client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"interactions": interactions},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+
+        resp = client.get(
+            f"/api/v1/metrics/{sim_id}",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+
+        # Core sections present
+        assert "soft_metrics" in data
+        assert "hard_metrics" in data
+        assert "welfare" in data
+        assert "counts" in data
+        assert "calibration" in data
+        assert "variance" in data
+
+        # Soft metrics keys
+        sm = data["soft_metrics"]
+        for key in ("toxicity", "quality_gap", "average_quality",
+                    "spread", "uncertain_fraction",
+                    "conditional_loss_initiator",
+                    "conditional_loss_counterparty"):
+            assert key in sm, f"Missing soft_metrics key: {key}"
+
+        # Hard metrics keys
+        hm = data["hard_metrics"]
+        for key in ("toxicity", "acceptance_rate"):
+            assert key in hm, f"Missing hard_metrics key: {key}"
+
+        # Counts
+        assert data["counts"]["total"] == 4
+        assert data["counts"]["accepted"] == 3
+        assert data["counts"]["rejected"] == 1
+
+        # Welfare values are numeric
+        assert isinstance(data["welfare"]["total_welfare"], (int, float))
+
+    def test_metrics_without_interactions(self, client):
+        """Metrics without interaction data pass through raw results."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"toxicity_rate": 0.1, "quality_gap": -0.05},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+
+        resp = client.get(
+            f"/api/v1/metrics/{sim_id}",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+
+        # Raw results still accessible
+        assert data["results"]["toxicity_rate"] == 0.1
+        assert data["results"]["quality_gap"] == -0.05
+
+        # No computed metrics sections (no interaction data)
+        assert "soft_metrics" not in data
+
+    def test_metrics_malformed_interactions(self, client):
+        """Malformed interaction data degrades gracefully."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"interactions": [{"p": 5.0}, {"p": -1.0}]},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+
+        resp = client.get(
+            f"/api/v1/metrics/{sim_id}",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+
+        # No computed metrics (all entries were malformed)
+        assert "soft_metrics" not in data
+        # Raw results still present
+        assert "interactions" in data["results"]
 
 
 # ---------------------------------------------------------------------------
