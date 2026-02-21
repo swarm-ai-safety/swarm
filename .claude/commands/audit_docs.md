@@ -7,16 +7,71 @@ Use `--nav-only` to just check mkdocs.yml nav completeness (replaces the former 
 ## Usage
 
 ```
-/audit_docs [--nav-only]
+/audit_docs [--nav-only] [--provenance]
 ```
 
 Examples:
 - `/audit_docs` (full audit)
 - `/audit_docs --nav-only` (just check mkdocs nav)
+- `/audit_docs --provenance` (provenance log analysis only)
 
 ## Argument parsing
 
 - `--nav-only`: Only run Phase 6 (mkdocs nav check) and report. Skip all other phases.
+- `--provenance`: Analyze `.claude/provenance.jsonl` for documentation health trends. Skip all other phases.
+
+---
+
+## `--provenance` mode
+
+Analyze the full provenance log (`.claude/provenance.jsonl`) for documentation health trends. Each line is a JSON object with fields: `timestamp`, `branch`, `files_changed` (array), `new_files` (array, optional), `docs_reminders_resolved` (int), `docs_reminders_unresolved` (int).
+
+### 1. Parse provenance log
+
+Read `.claude/provenance.jsonl`. If it doesn't exist or is empty, report "No provenance data found" and exit.
+
+### 2. Compute overall stats
+
+- **Total commits tracked**: number of entries
+- **Documentation co-staging rate**: For each doc file type (CHANGELOG.md, README.md, AGENTS.md), count how many entries include that file in `files_changed`. Report as `N/total (%)`.
+- **Docs reminders issued**: sum of `docs_reminders_resolved + docs_reminders_unresolved` across all entries
+- **Docs reminders resolved**: sum of `docs_reminders_resolved`
+- **Docs reminders unresolved**: sum of `docs_reminders_unresolved`
+
+### 3. Recent trend
+
+Take the last 10 entries (or all if fewer than 10). Compute the same co-staging rate and unresolved count for this window.
+
+### 4. Files with most unresolved reminders
+
+Group entries by the directory prefix of files in `files_changed` (e.g. `swarm/core/`, `swarm/agents/`, `.claude/commands/`). For entries with `docs_reminders_unresolved > 0`, count how many times each directory appears. Report the top 5.
+
+### 5. Output format
+
+```
+Provenance Analysis (.claude/provenance.jsonl)
+═══════════════════════════════════════════════
+  Total commits tracked: 47
+
+  Documentation co-staging rate:
+    CHANGELOG: 12/47 (25%)
+    README:     3/47 (6%)
+    AGENTS.md:  2/47 (4%)
+
+  Docs reminders:
+    Total issued:    28
+    Resolved:        19 (68%)
+    Unresolved:      9 (32%)
+
+  Recent trend (last 10 commits):
+    Co-staged docs: 4/10 (40%)
+    Unresolved:     2/10 (20%)
+
+  Files with most unresolved reminders:
+    swarm/core/   — 4 commits without docs
+    swarm/agents/ — 3 commits without docs
+═══════════════════════════════════════════════
+```
 
 ---
 

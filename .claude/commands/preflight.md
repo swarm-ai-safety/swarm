@@ -58,9 +58,22 @@ Preflight Results
   Ruff lint:      PASS / FAIL (N issues, M auto-fixed)
   Mypy:           PASS / FAIL / SKIP (N errors)
   Tests:          PASS / FAIL (N passed, M failed)
+  Docs compliance: OK / WARN (details)
 ─────────────────────────────
   Verdict:        READY TO COMMIT / N issues remain
 ```
+
+The "Docs compliance" row checks two things:
+- Are there outstanding entries in `.claude/docs_reminders.log`? If so, report count.
+- Are new files being staged in key directories (`swarm/`, `scenarios/`, `.claude/commands/`, `.claude/agents/`) without `CHANGELOG.md` co-staged? If so, warn.
+
+Report as:
+- `OK` — no outstanding reminders and either CHANGELOG is co-staged or no key-directory files are staged
+- `WARN (N outstanding reminders)` — reminders log is non-empty
+- `WARN (CHANGELOG not staged)` — key-directory files staged without CHANGELOG
+- `WARN (N outstanding reminders, CHANGELOG not staged)` — both
+
+This row is **advisory only** — it does not affect the verdict. If `.claude/docs_reminders.log` doesn't exist, treat as no outstanding reminders. If no key-directory files are staged, skip the CHANGELOG check.
 
 4) If `--fix` was used and files were modified, remind to review changes and confirm they are re-staged.
 

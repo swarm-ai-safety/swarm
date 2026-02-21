@@ -28,6 +28,26 @@ Session Health
   Tasks: 4
 ```
 
+### Provenance Analysis
+
+If `.claude/provenance.jsonl` exists and is non-empty, filter entries relevant to this session (by `session_id` field if present, otherwise use entries from the last 4 hours as a heuristic). Report:
+
+```
+Provenance (this session)
+  Commits tracked: 4
+  Docs co-staged:  2/4 (50%)
+  Reminders resolved: 3/5 (60%)
+  Reminders unresolved: 2
+```
+
+Where:
+- **Commits tracked**: number of provenance entries matching the session filter
+- **Docs co-staged**: entries where `files_changed` includes CHANGELOG.md, README.md, or AGENTS.md
+- **Reminders resolved**: sum of `docs_reminders_resolved` across entries
+- **Reminders unresolved**: sum of `docs_reminders_unresolved` across entries
+
+If `.claude/provenance.jsonl` doesn't exist or has no matching entries, skip this sub-section silently.
+
 ## Phase 2: Trajectory Decomposition
 
 Before scanning for patterns, decompose the session into structured steps:
@@ -90,6 +110,7 @@ Rate the session on two axes (inspired by SWE-bench's F2P/P2P grading):
 
 - **Goal completion**: Did the intended tasks get done? (FULL / PARTIAL / BLOCKED)
 - **Maintenance**: Were existing tests/code kept passing? (CLEAN / REGRESSED)
+- **Docs compliance**: If provenance data is available for this session, factor the docs compliance rate into the grade. If >50% of commits had unresolved reminders (`docs_reminders_unresolved > 0`), note it as a maintenance concern (e.g. "Docs compliance: 2/4 commits had unresolved reminders — consider addressing before session close").
 - **Overall**: CLEAN (all goals met, nothing broken), MESSY (goals met but with corrections/retries), or BLOCKED (goals not fully achieved)
 
 ## Phase 7: Generate

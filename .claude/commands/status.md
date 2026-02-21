@@ -94,6 +94,18 @@ Only if there are staged files:
 - Flag any staged files matching gitignore patterns (would fail `git add`)
 - Flag any files that look like secrets/credentials
 
+### 5b. Provenance & Docs Compliance
+
+If `.claude/provenance.jsonl` exists and is non-empty, read the last 5 entries and report:
+- Total commits tracked in those entries
+- How many co-staged docs files (entries where `files_changed` includes CHANGELOG.md, README.md, or AGENTS.md)
+- How many had unresolved docs reminders (`docs_reminders_unresolved > 0`)
+- Whether the most recent entry has unresolved reminders
+
+If `.claude/docs_reminders.log` exists and is non-empty, also list pending reminders (each line is a reminder).
+
+If neither file exists or both are empty, skip this section silently (no error).
+
 ## Output Format
 
 ```
@@ -120,6 +132,14 @@ Session Status
     ...
 
   Pre-commit:  3 staged .py files — ready for /preflight
+
+  Provenance:  5 commits tracked
+    Docs co-staged: 3/5 (60%)
+    Unresolved reminders: 1 (last commit)
+
+  Pending reminders: 2                     ← only if .claude/docs_reminders.log exists
+    - new_module.py: Update CHANGELOG.md [Unreleased]
+    - new_agent.md: Update AGENTS.md
 ══════════════════════════════════════════
 ```
 
