@@ -65,11 +65,12 @@ Where:
 
 Also apply a **cost/benefit filter**: if creating the automation has more overhead than doing it manually 2-3 more times, mark it as "not worth automating yet" but still report it.
 
-Classify each candidate into one of three tiers:
+Classify each candidate into one of four tiers (prefer higher tiers):
 
 | Tier | Where it lives | When to use |
 |---|---|---|
-| **Slash command** | `.claude/commands/*.md` | General, cross-session, reusable workflow |
+| **Extend existing** | `.claude/commands/*.md` (modified) | Pattern fits as a new mode/arg on an existing command |
+| **New slash command** | `.claude/commands/*.md` (new file) | Genuinely unrelated to any existing command |
 | **Specialist agent** | `.claude/agents/*.md` | Domain-specific multi-step reasoning |
 | **Session-scoped** | (noted, not persisted) | Too narrow for permanence; worth remembering for similar future tasks |
 
@@ -93,10 +94,13 @@ Rate the session on two axes (inspired by SWE-bench's F2P/P2P grading):
 
 ## Phase 7: Generate
 
-Ask the user which candidates to create. For each selected candidate:
-- Generate the `.claude/commands/*.md` or `.claude/agents/*.md` file
+**Extend before creating.** Before proposing a new command, check if an existing command could absorb the pattern by adding a new mode, argument, or flag. Prefer extending an existing command over creating a new one — fewer commands with clear arg-driven modes are easier to discover and remember than many single-purpose commands. Only propose a new command when the pattern is genuinely unrelated to any existing command.
+
+Ask the user which candidates to implement. For each selected candidate:
+- If extending an existing command: show the proposed additions (new mode/args) and update the `.md` file
+- If creating a new command: generate the `.claude/commands/*.md` or `.claude/agents/*.md` file
 - Note edge cases observed in the session (e.g. stash needed, force-delete for squash)
-- Check `.claude/commands/` first to avoid duplicating existing commands
+- Check `.claude/commands/` first to avoid duplicating or fragmenting existing commands
 
 ## What to look for specifically
 
@@ -117,8 +121,7 @@ If prior retro outputs exist in `runs/*_retro/` or similar:
 
 ## Constraints
 
-- Do not create commands automatically; always present candidates and let the user choose.
-- Do not duplicate existing commands — check `.claude/commands/` and `.claude/agents/` first.
-- Keep proposed commands focused; prefer two small commands over one large one.
+- Do not create or modify commands automatically; always present candidates and let the user choose.
+- **Extend over create**: always check `.claude/commands/` and `.claude/agents/` first. If a pattern can be a new mode or arg on an existing command, propose that instead of a new file. Fewer commands with clear modes > many single-purpose commands.
 - Apply the cost/benefit filter — not every repeated pattern is worth automating.
 - Can be invoked mid-session (not just at end); mid-session invocations should focus on patterns observed so far and suggest tool creation that would help the remainder of the session.
