@@ -24,17 +24,16 @@ from swarm.api.models.simulation import (
     SimulationResponse,
     SimulationStatus,
 )
+from swarm.api.persistence import SimulationStore
 
 router = APIRouter()
 
-# In-memory storage for development
-_simulations: dict[str, SimulationResponse] = {}
-_participants: dict[str, list[dict]] = {}  # simulation_id -> list of participant dicts
+# Persistent storage
+_store = SimulationStore()
+
+# Runtime-only (ephemeral) state — not persisted
 _observations: dict[str, dict[str, dict]] = {}  # simulation_id -> agent_id -> observation
 _action_queues: dict[str, AsyncActionQueue] = {}  # simulation_id -> queue
-_action_history: dict[str, list[dict]] = {}  # simulation_id -> list of action records
-_execution_state: dict[str, dict] = {}  # simulation_id -> {current_step, current_epoch, ...}
-_simulation_results: dict[str, dict] = {}  # simulation_id -> final results/metrics
 _ws_connections: dict[str, dict[str, WebSocket]] = {}  # simulation_id -> agent_id -> WebSocket
 
 # Concurrency limits
@@ -61,11 +60,7 @@ async def create_simulation(request: SimulationCreate) -> SimulationResponse:
         HTTPException: If concurrency limit exceeded.
     """
     # Enforce global concurrency limit
-    active = sum(
-        1
-        for s in _simulations.values()
-        if s.status in (SimulationStatus.WAITING, SimulationStatus.RUNNING)
-    )
+    active = _store.count_active()
     if active >= MAX_ACTIVE_SIMULATIONS:
         raise HTTPException(
             status_code=429,
@@ -87,8 +82,7 @@ async def create_simulation(request: SimulationCreate) -> SimulationResponse:
         config_overrides=request.config_overrides,
     )
 
-    _simulations[simulation_id] = simulation
-    _participants[simulation_id] = []
+    _store.save(simulation)
     return simulation
 
 
@@ -109,10 +103,9 @@ async def join_simulation(simulation_id: str, request: SimulationJoin) -> dict:
     Raises:
         HTTPException: If simulation not found or join fails.
     """
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
-
-    simulation = _simulations[simulation_id]
 
     # Check join deadline before other checks
     if datetime.now(timezone.utc) > simulation.join_deadline:
@@ -126,14 +119,11 @@ async def join_simulation(simulation_id: str, request: SimulationJoin) -> dict:
     if simulation.current_participants >= simulation.max_participants:
         raise HTTPException(status_code=400, detail="Simulation is full")
 
-    # Add participant with metadata
+    # Add participant
     now = datetime.now(timezone.utc)
-    _participants[simulation_id].append({
-        "agent_id": request.agent_id,
-        "role": request.role,
-        "joined_at": now.isoformat(),
-    })
+    _store.add_participant(simulation_id, request.agent_id, request.role, now.isoformat())
     simulation.current_participants += 1
+    _store.save(simulation)
 
     participant_id = str(uuid.uuid4())
 
@@ -162,11 +152,11 @@ async def get_simulation_state(simulation_id: str) -> dict:
     Raises:
         HTTPException: If simulation not found.
     """
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    simulation = _simulations[simulation_id]
-    participants = _participants.get(simulation_id, [])
+    participants = _store.get_participants(simulation_id)
 
     now = datetime.now(timezone.utc)
     deadline = simulation.join_deadline
@@ -202,10 +192,9 @@ async def start_simulation(simulation_id: str) -> dict:
         HTTPException: If simulation not found, not in WAITING state,
             or doesn't have enough participants.
     """
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
-
-    simulation = _simulations[simulation_id]
 
     if simulation.status != SimulationStatus.WAITING:
         raise HTTPException(
@@ -218,6 +207,7 @@ async def start_simulation(simulation_id: str) -> dict:
         )
 
     simulation.status = SimulationStatus.RUNNING
+    _store.save(simulation)
 
     return {
         "simulation_id": simulation_id,
@@ -242,9 +232,10 @@ async def get_simulation(simulation_id: str) -> SimulationResponse:
     Raises:
         HTTPException: If simulation not found.
     """
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
-    return _simulations[simulation_id]
+    return simulation
 
 
 @router.get(
@@ -267,12 +258,7 @@ async def list_simulations(
     Returns:
         List of simulations.
     """
-    simulations = list(_simulations.values())
-
-    if status is not None:
-        simulations = [s for s in simulations if s.status == status]
-
-    return simulations[offset : offset + limit]
+    return _store.list_simulations(status=status, limit=limit, offset=offset)
 
 
 # ---------------------------------------------------------------------------
@@ -307,15 +293,15 @@ async def submit_action(
             detail="Cannot submit actions for another agent",
         )
 
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    simulation = _simulations[simulation_id]
     if simulation.status != SimulationStatus.RUNNING:
         raise HTTPException(status_code=400, detail="Simulation is not running")
 
     # Verify agent is a participant
-    participants = _participants.get(simulation_id, [])
+    participants = _store.get_participants(simulation_id)
     agent_ids = {p["agent_id"] for p in participants}
     if action.agent_id not in agent_ids:
         raise HTTPException(
@@ -339,10 +325,8 @@ async def submit_action(
 
     action_id = str(uuid.uuid4())
 
-    # Record action in history
-    if simulation_id not in _action_history:
-        _action_history[simulation_id] = []
-    _action_history[simulation_id].append({
+    # Record action in persistent store
+    _store.add_action(simulation_id, {
         "action_id": action_id,
         "agent_id": action.agent_id,
         "action_type": action.action_type.value,
@@ -390,11 +374,12 @@ async def get_observation(
             detail="Cannot read observations for another agent",
         )
 
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
     # Verify agent is a participant
-    participants = _participants.get(simulation_id, [])
+    participants = _store.get_participants(simulation_id)
     agent_ids = {p["agent_id"] for p in participants}
     if agent_id not in agent_ids:
         raise HTTPException(
@@ -446,7 +431,8 @@ async def simulation_events(
     """
     from starlette.responses import StreamingResponse
 
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
     try:
@@ -511,10 +497,10 @@ async def complete_simulation(
     Raises:
         HTTPException: If simulation not found or not running.
     """
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    simulation = _simulations[simulation_id]
     if simulation.status != SimulationStatus.RUNNING:
         raise HTTPException(
             status_code=400, detail="Simulation is not running"
@@ -535,10 +521,11 @@ async def complete_simulation(
             )
 
     simulation.status = SimulationStatus.COMPLETED
+    _store.save(simulation)
 
     # Store results
     if results is not None:
-        _simulation_results[simulation_id] = results
+        _store.save_results(simulation_id, results)
 
     # Clean up action queue
     queue = _action_queues.pop(simulation_id, None)
@@ -576,18 +563,18 @@ async def get_simulation_results(simulation_id: str) -> dict:
     Raises:
         HTTPException: If simulation not found or not completed.
     """
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    simulation = _simulations[simulation_id]
     if simulation.status != SimulationStatus.COMPLETED:
         raise HTTPException(
             status_code=400, detail="Simulation is not completed"
         )
 
-    results = _simulation_results.get(simulation_id, {})
-    history = _action_history.get(simulation_id, [])
-    participants = _participants.get(simulation_id, [])
+    results = _store.get_results(simulation_id) or {}
+    history = _store.get_action_history(simulation_id)
+    participants = _store.get_participants(simulation_id)
 
     return {
         "simulation_id": simulation_id,
@@ -623,11 +610,12 @@ async def get_execution_state(simulation_id: str) -> dict:
     Raises:
         HTTPException: If simulation not found.
     """
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    history = _action_history.get(simulation_id, [])
-    exec_state = _execution_state.get(simulation_id, {})
+    history = _store.get_action_history(simulation_id)
+    exec_state = _store.get_execution_state(simulation_id)
 
     # Compute per-agent action counts
     agent_counts: dict[str, int] = {}
@@ -637,7 +625,7 @@ async def get_execution_state(simulation_id: str) -> dict:
 
     return {
         "simulation_id": simulation_id,
-        "status": _simulations[simulation_id].status.value,
+        "status": simulation.status.value,
         "total_actions": len(history),
         "per_agent_actions": agent_counts,
         **exec_state,
@@ -684,12 +672,13 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
         return
 
     # Verify simulation exists
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         await websocket.close(code=4004, reason="Simulation not found")
         return
 
     # Verify agent is a participant
-    participants = _participants.get(simulation_id, [])
+    participants = _store.get_participants(simulation_id)
     agent_ids = {p["agent_id"] for p in participants}
     if agent_id not in agent_ids:
         await websocket.close(code=4003, reason="Not a participant")
@@ -768,20 +757,20 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
 
             if msg_type == "action":
                 # Submit action to the queue
-                simulation = _simulations.get(simulation_id)
-                if simulation is None or simulation.status != SimulationStatus.RUNNING:
+                sim = _store.get(simulation_id)
+                if sim is None or sim.status != SimulationStatus.RUNNING:
                     await websocket.send_json({
                         "type": "error",
                         "detail": "Simulation is not running",
                     })
                     continue
 
-                queue = _action_queues.get(simulation_id)
-                if queue is None:
-                    queue = AsyncActionQueue()
-                    _action_queues[simulation_id] = queue
+                action_queue = _action_queues.get(simulation_id)
+                if action_queue is None:
+                    action_queue = AsyncActionQueue()
+                    _action_queues[simulation_id] = action_queue
 
-                accepted = await queue.submit_action(
+                accepted = await action_queue.submit_action(
                     agent_id,
                     {
                         "action_type": msg.get("action_type", "noop"),
@@ -792,10 +781,8 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
 
                 action_id = str(uuid.uuid4())
 
-                # Record in history
-                if simulation_id not in _action_history:
-                    _action_history[simulation_id] = []
-                _action_history[simulation_id].append({
+                # Record in persistent store
+                _store.add_action(simulation_id, {
                     "action_id": action_id,
                     "agent_id": agent_id,
                     "action_type": msg.get("action_type", "noop"),

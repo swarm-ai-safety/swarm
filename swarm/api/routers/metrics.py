@@ -1,10 +1,51 @@
 """Metrics router — per-simulation metrics and analytics retrieval."""
 
+from __future__ import annotations
+
+import logging
+from typing import Any
+
 from fastapi import APIRouter, Depends, HTTPException
 
 from swarm.api.middleware.auth import Scope, require_scope
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+def _build_soft_metrics(results: dict[str, Any]) -> dict[str, Any]:
+    """Compute soft/hard metrics if interaction data is available in results.
+
+    Looks for an ``"interactions"`` key containing a list of dicts that can
+    be reconstructed into :class:`SoftInteraction` objects.  When present,
+    runs :class:`MetricsReporter` and returns the structured summary dict.
+
+    Returns an empty dict when interaction data is missing or unusable.
+    """
+    interactions_data = results.get("interactions")
+    if not interactions_data or not isinstance(interactions_data, list):
+        return {}
+
+    # Lazy imports to keep startup fast and avoid circular deps
+    from swarm.metrics.reporters import MetricsReporter
+    from swarm.models.interaction import SoftInteraction
+
+    interactions: list[SoftInteraction] = []
+    for entry in interactions_data:
+        if not isinstance(entry, dict):
+            continue
+        try:
+            interactions.append(SoftInteraction(**entry))
+        except Exception:
+            continue  # skip malformed entries
+
+    if not interactions:
+        return {}
+
+    reporter = MetricsReporter()
+    summary = reporter.summary(interactions)
+    result: dict[str, Any] = summary.to_dict()
+    return result
 
 
 @router.get(
@@ -18,6 +59,11 @@ async def get_metrics(simulation_id: str) -> dict:
     the stored metrics if the simulation has completed, or current
     execution state if still running.
 
+    When the stored results contain serialized interaction data (a list
+    of dicts under the ``"interactions"`` key), full soft/hard metrics
+    are computed via :class:`MetricsReporter` and included in the
+    response.
+
     Args:
         simulation_id: The simulation to get metrics for.
 
@@ -27,22 +73,16 @@ async def get_metrics(simulation_id: str) -> dict:
     Raises:
         HTTPException: If simulation not found.
     """
-    from swarm.api.routers.simulations import (
-        _action_history,
-        _execution_state,
-        _participants,
-        _simulation_results,
-        _simulations,
-    )
+    from swarm.api.routers.simulations import _store
 
-    if simulation_id not in _simulations:
+    simulation = _store.get(simulation_id)
+    if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    simulation = _simulations[simulation_id]
-    results = _simulation_results.get(simulation_id, {})
-    history = _action_history.get(simulation_id, [])
-    participants = _participants.get(simulation_id, [])
-    exec_state = _execution_state.get(simulation_id, {})
+    results = _store.get_results(simulation_id) or {}
+    history = _store.get_action_history(simulation_id)
+    participants = _store.get_participants(simulation_id)
+    exec_state = _store.get_execution_state(simulation_id)
 
     # Compute per-agent action counts
     agent_action_counts: dict[str, int] = {}
@@ -56,7 +96,7 @@ async def get_metrics(simulation_id: str) -> dict:
         at = record["action_type"]
         action_type_counts[at] = action_type_counts.get(at, 0) + 1
 
-    return {
+    response: dict[str, Any] = {
         "simulation_id": simulation_id,
         "status": simulation.status.value,
         "participant_count": len(participants),
@@ -66,3 +106,10 @@ async def get_metrics(simulation_id: str) -> dict:
         "results": results,
         "execution_state": exec_state,
     }
+
+    # Enrich with SoftMetrics / MetricsReporter output when possible
+    computed = _build_soft_metrics(results)
+    if computed:
+        response.update(computed)
+
+    return response
