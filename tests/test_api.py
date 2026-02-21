@@ -3060,3 +3060,470 @@ class TestWebSocketParticipation:
             err = ws.receive_json()
             assert err["type"] == "error"
             assert "limit" in err["detail"]
+
+
+class TestE2ESimulationLifecycle:
+    """End-to-end integration tests for the full simulation lifecycle.
+
+    Exercises the complete flow: create → join → observe → act → complete → results,
+    manipulating the router's in-memory dicts to simulate orchestrator behaviour.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _clear_all_state(self):
+        """Reset all in-memory stores and event bus between tests."""
+        import swarm.api.routers.simulations as sim_mod
+        from swarm.api.event_bus import event_bus as _event_bus
+
+        sim_mod._simulations.clear()
+        sim_mod._participants.clear()
+        sim_mod._observations.clear()
+        sim_mod._action_queues.clear()
+        sim_mod._action_history.clear()
+        sim_mod._execution_state.clear()
+        sim_mod._simulation_results.clear()
+        sim_mod._ws_connections.clear()
+        _event_bus._subscribers.clear()
+        yield
+        sim_mod._simulations.clear()
+        sim_mod._participants.clear()
+        sim_mod._observations.clear()
+        sim_mod._action_queues.clear()
+        sim_mod._action_history.clear()
+        sim_mod._execution_state.clear()
+        sim_mod._simulation_results.clear()
+        sim_mod._ws_connections.clear()
+        _event_bus._subscribers.clear()
+
+    @staticmethod
+    def _full_setup(client):
+        """Register 2 agents, create a simulation, join both, start it.
+
+        Returns (sim_id, agent_ids, api_keys).
+        """
+        _, creator_key = _register_agent(client, "E2ECreator")
+        creator_headers = {"Authorization": f"Bearer {creator_key}"}
+
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "e2e-test", "max_participants": 5},
+            headers=creator_headers,
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        agent_ids = []
+        api_keys = []
+        for i in range(2):
+            agent_resp = client.post(
+                "/api/v1/agents/register",
+                json={"name": f"E2EAgent{i}", "description": "E2E test agent"},
+            )
+            data = agent_resp.json()
+            agent_ids.append(data["agent_id"])
+            api_keys.append(data["api_key"])
+            client.post(
+                f"/api/v1/simulations/{sim_id}/join",
+                json={"agent_id": data["agent_id"], "role": "participant"},
+                headers={"Authorization": f"Bearer {data['api_key']}"},
+            )
+
+        client.post(
+            f"/api/v1/simulations/{sim_id}/start",
+            headers=creator_headers,
+        )
+        return sim_id, agent_ids, api_keys
+
+    # ------------------------------------------------------------------
+    # 1. Full lifecycle happy path
+    # ------------------------------------------------------------------
+
+    def test_full_lifecycle_happy_path(self, client):
+        """Full create → join → start → act → complete → results flow."""
+        _, creator_key = _register_agent(client, "LifecycleCreator")
+        creator_headers = {"Authorization": f"Bearer {creator_key}"}
+
+        # Create
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "lifecycle", "max_participants": 5},
+            headers=creator_headers,
+        )
+        assert sim_resp.status_code == 200
+        sim_id = sim_resp.json()["simulation_id"]
+        assert sim_resp.json()["status"] == SimulationStatus.WAITING.value
+
+        # Join 2 agents
+        agent_ids, api_keys = [], []
+        for i in range(2):
+            resp = client.post(
+                "/api/v1/agents/register",
+                json={"name": f"LCAgent{i}", "description": "Test"},
+            )
+            data = resp.json()
+            agent_ids.append(data["agent_id"])
+            api_keys.append(data["api_key"])
+            join_resp = client.post(
+                f"/api/v1/simulations/{sim_id}/join",
+                json={"agent_id": data["agent_id"], "role": "participant"},
+                headers={"Authorization": f"Bearer {data['api_key']}"},
+            )
+            assert join_resp.status_code == 200
+
+        # Start
+        start_resp = client.post(
+            f"/api/v1/simulations/{sim_id}/start",
+            headers=creator_headers,
+        )
+        assert start_resp.status_code == 200
+        assert start_resp.json()["status"] == "running"
+
+        # Verify RUNNING status via GET
+        get_resp = client.get(
+            f"/api/v1/simulations/{sim_id}",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert get_resp.json()["status"] == SimulationStatus.RUNNING.value
+
+        # Submit actions from both agents
+        for idx in range(2):
+            act_resp = client.post(
+                f"/api/v1/simulations/{sim_id}/actions",
+                json={
+                    "agent_id": agent_ids[idx],
+                    "action_type": "accept",
+                    "payload": {"value": idx},
+                    "step": 0,
+                },
+                headers={"Authorization": f"Bearer {api_keys[idx]}"},
+            )
+            assert act_resp.status_code == 200
+
+        # Complete
+        complete_resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"mean_payoff": 0.5},
+            headers=creator_headers,
+        )
+        assert complete_resp.status_code == 200
+        assert complete_resp.json()["status"] == "completed"
+
+        # Get results
+        results_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/results",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert results_resp.status_code == 200
+        results = results_resp.json()
+        assert results["status"] == "completed"
+        assert results["action_count"] == 2
+        assert results["participant_count"] == 2
+        assert results["results"]["mean_payoff"] == 0.5
+
+    # ------------------------------------------------------------------
+    # 2. Observation caching and retrieval
+    # ------------------------------------------------------------------
+
+    def test_observation_caching_and_retrieval(self, client):
+        """Inject observations and verify per-agent polling and identity binding."""
+        import swarm.api.routers.simulations as sim_mod
+
+        sim_id, agent_ids, api_keys = self._full_setup(client)
+
+        # Before injection: no observation
+        resp = client.get(
+            f"/api/v1/simulations/{sim_id}/observation",
+            params={"agent_id": agent_ids[0]},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "no_observation"
+
+        # Inject observations for both agents
+        sim_mod._observations[sim_id] = {
+            agent_ids[0]: {"step": 0, "market_price": 1.5},
+            agent_ids[1]: {"step": 0, "market_price": 2.0},
+        }
+
+        # Agent 0 sees its own observation
+        resp0 = client.get(
+            f"/api/v1/simulations/{sim_id}/observation",
+            params={"agent_id": agent_ids[0]},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp0.status_code == 200
+        assert resp0.json()["status"] == "ready"
+        assert resp0.json()["observation"]["market_price"] == 1.5
+
+        # Agent 1 sees its own observation
+        resp1 = client.get(
+            f"/api/v1/simulations/{sim_id}/observation",
+            params={"agent_id": agent_ids[1]},
+            headers={"Authorization": f"Bearer {api_keys[1]}"},
+        )
+        assert resp1.json()["observation"]["market_price"] == 2.0
+
+        # Identity binding: agent 0 can't read agent 1's observation
+        cross_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/observation",
+            params={"agent_id": agent_ids[1]},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert cross_resp.status_code == 403
+
+    # ------------------------------------------------------------------
+    # 3. Action queue bridges orchestrator
+    # ------------------------------------------------------------------
+
+    def test_action_queue_bridges_orchestrator(self, client):
+        """Submit action via HTTP and verify it resolves the orchestrator's Future."""
+        import asyncio
+        import threading
+        import time
+
+        import swarm.api.routers.simulations as sim_mod
+        from swarm.api.action_queue import AsyncActionQueue
+
+        sim_id, agent_ids, api_keys = self._full_setup(client)
+
+        # Install a queue and create a pending future for agent 0
+        queue = AsyncActionQueue()
+        sim_mod._action_queues[sim_id] = queue
+
+        loop = asyncio.new_event_loop()
+
+        async def _orchestrator_wait():
+            return await queue.wait_for_action(agent_ids[0])
+
+        # Start orchestrator waiting in background
+        result_holder = [None]
+
+        def _run_wait():
+            result_holder[0] = loop.run_until_complete(_orchestrator_wait())
+
+        wait_thread = threading.Thread(target=_run_wait)
+        wait_thread.start()
+
+        # Give the event loop a moment to set up the future
+        time.sleep(0.1)
+
+        # Submit action via HTTP
+        act_resp = client.post(
+            f"/api/v1/simulations/{sim_id}/actions",
+            json={
+                "agent_id": agent_ids[0],
+                "action_type": "propose",
+                "payload": {"bid": 42},
+                "step": 0,
+            },
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert act_resp.status_code == 200
+
+        wait_thread.join(timeout=5)
+        loop.close()
+
+        assert result_holder[0] is not None
+        assert result_holder[0]["action_type"] == "propose"
+        assert result_holder[0]["payload"]["bid"] == 42
+
+    # ------------------------------------------------------------------
+    # 4. Multi-agent interleaved actions
+    # ------------------------------------------------------------------
+
+    def test_multi_agent_interleaved_actions(self, client):
+        """Two agents submit 3 actions each; verify execution state counts."""
+        sim_id, agent_ids, api_keys = self._full_setup(client)
+
+        for step in range(3):
+            for idx in range(2):
+                client.post(
+                    f"/api/v1/simulations/{sim_id}/actions",
+                    json={
+                        "agent_id": agent_ids[idx],
+                        "action_type": "accept",
+                        "payload": {"step": step},
+                        "step": step,
+                    },
+                    headers={"Authorization": f"Bearer {api_keys[idx]}"},
+                )
+
+        # Check execution state
+        exec_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/execution",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert exec_resp.status_code == 200
+        data = exec_resp.json()
+        assert data["total_actions"] == 6
+        assert data["per_agent_actions"][agent_ids[0]] == 3
+        assert data["per_agent_actions"][agent_ids[1]] == 3
+
+        # Verify action history has correct agent_ids and steps
+        import swarm.api.routers.simulations as sim_mod
+        history = sim_mod._action_history[sim_id]
+        assert len(history) == 6
+        for record in history:
+            assert record["agent_id"] in agent_ids
+            assert record["action_type"] == "accept"
+            assert "timestamp" in record
+
+    # ------------------------------------------------------------------
+    # 5. WebSocket action during lifecycle
+    # ------------------------------------------------------------------
+
+    def test_websocket_action_during_lifecycle(self, client):
+        """Agent 0 via WebSocket, agent 1 via HTTP; verify combined results."""
+        sim_id, agent_ids, api_keys = self._full_setup(client)
+
+        # Agent 0 submits via WebSocket
+        with client.websocket_connect(
+            f"/api/v1/simulations/{sim_id}/ws?token={api_keys[0]}"
+        ) as ws:
+            ws.receive_json()  # welcome
+            ws.send_json({
+                "type": "action",
+                "action_type": "accept",
+                "payload": {"via": "ws"},
+                "step": 0,
+            })
+            result = ws.receive_json()
+            assert result["type"] == "action_result"
+
+        # Agent 1 submits via HTTP
+        client.post(
+            f"/api/v1/simulations/{sim_id}/actions",
+            json={
+                "agent_id": agent_ids[1],
+                "action_type": "reject",
+                "payload": {"via": "http"},
+                "step": 0,
+            },
+            headers={"Authorization": f"Bearer {api_keys[1]}"},
+        )
+
+        # Complete simulation
+        _, creator_key = _register_agent(client, "E2ECompleter")
+        client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            headers={"Authorization": f"Bearer {creator_key}"},
+        )
+
+        # Get results
+        results_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/results",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert results_resp.status_code == 200
+        assert results_resp.json()["action_count"] == 2
+
+    # ------------------------------------------------------------------
+    # 6. Observation → action roundtrip
+    # ------------------------------------------------------------------
+
+    def test_observation_then_action_roundtrip(self, client):
+        """Inject observation → agent polls → agent acts → update observation → re-poll."""
+        import swarm.api.routers.simulations as sim_mod
+
+        sim_id, agent_ids, api_keys = self._full_setup(client)
+
+        # Step 0: inject observation
+        sim_mod._observations[sim_id] = {
+            agent_ids[0]: {"step": 0, "signal": "buy"},
+        }
+
+        # Agent polls observation
+        obs_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/observation",
+            params={"agent_id": agent_ids[0]},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert obs_resp.json()["observation"]["signal"] == "buy"
+
+        # Agent submits action based on observation
+        act_resp = client.post(
+            f"/api/v1/simulations/{sim_id}/actions",
+            json={
+                "agent_id": agent_ids[0],
+                "action_type": "accept",
+                "payload": {"reason": "saw buy signal"},
+                "step": 0,
+            },
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert act_resp.status_code == 200
+
+        # Verify action recorded
+        history = sim_mod._action_history[sim_id]
+        assert len(history) == 1
+        assert history[0]["agent_id"] == agent_ids[0]
+
+        # Step 1: update observation
+        sim_mod._observations[sim_id][agent_ids[0]] = {"step": 1, "signal": "sell"}
+
+        obs_resp2 = client.get(
+            f"/api/v1/simulations/{sim_id}/observation",
+            params={"agent_id": agent_ids[0]},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert obs_resp2.json()["observation"]["step"] == 1
+        assert obs_resp2.json()["observation"]["signal"] == "sell"
+
+    # ------------------------------------------------------------------
+    # 7. SSE receives completion event
+    # ------------------------------------------------------------------
+
+    def test_sse_receives_completion_event(self, client):
+        """Open SSE stream, publish completion event via bus, verify it arrives."""
+        import asyncio
+        import json as _json
+        import threading
+
+        from swarm.api.event_bus import (
+            SimEvent,
+            SimEventType,
+        )
+        from swarm.api.event_bus import (
+            event_bus as _event_bus,
+        )
+
+        sim_id, agent_ids, api_keys = self._full_setup(client)
+
+        # Publish a completion event from a background thread (simulating orchestrator)
+        def _publish_completion():
+            import time
+            time.sleep(0.1)
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(
+                _event_bus.publish(
+                    SimEvent(
+                        event_type=SimEventType.SIMULATION_COMPLETE,
+                        simulation_id=sim_id,
+                        data={"final_metric": 0.99},
+                    )
+                )
+            )
+            loop.close()
+
+        pub_thread = threading.Thread(target=_publish_completion)
+        pub_thread.start()
+
+        # Read SSE stream from main thread
+        with client.stream(
+            "GET",
+            f"/api/v1/simulations/{sim_id}/events",
+            params={"agent_id": agent_ids[0]},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        ) as resp:
+            assert resp.status_code == 200
+            assert resp.headers["content-type"].startswith("text/event-stream")
+            lines = list(resp.iter_lines())
+
+        pub_thread.join(timeout=5)
+
+        # Parse data lines
+        event_lines = [ln for ln in lines if ln.startswith("data:")]
+        assert len(event_lines) >= 1
+        completion = _json.loads(event_lines[-1].removeprefix("data:").strip())
+        assert completion["event_type"] == "simulation_complete"
+        assert completion["simulation_id"] == sim_id
+        assert completion["data"]["final_metric"] == 0.99
