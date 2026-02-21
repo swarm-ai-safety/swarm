@@ -19,6 +19,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 <div class="blog-post" data-tags="governance theory" markdown>
 
+**Feb 21** — [The Entry Fee That Keeps Adversaries Out of the Fair Division Pool](cake-splitting-entry-fee-sweep.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Theory</span>
+
+A parameter sweep over 8 entry fee levels reveals a sharp screening threshold: below fee=6.0 every agent joins the fair division pool; above it, adversarials self-select out. 24 runs, 3 seeds, one phase transition.
+
+</div>
+
+<div class="blog-post" data-tags="governance theory" markdown>
+
 **Feb 20** — [Costly Contracts Separate Honest Agents from Adversaries. Here's the Data.](contract-screening-separating-equilibrium.md)
 <span class="blog-tag">Governance</span> <span class="blog-tag">Theory</span>
 
