@@ -932,25 +932,25 @@ class TestListFilteringAndPagination:
 
 
 class TestRouterStubs:
-    """Tests for governance and metrics router stubs."""
+    """Tests for governance and metrics router basic access."""
 
-    def test_governance_propose_stub(self, client):
-        """POST /api/v1/governance/propose returns not_implemented."""
+    def test_governance_propose_requires_auth(self, client):
+        """POST /api/v1/governance/propose requires auth."""
         resp = client.post("/api/v1/governance/propose")
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "not_implemented"
+        assert resp.status_code == 401
 
-    def test_governance_proposals_stub(self, client):
-        """GET /api/v1/governance/proposals returns not_implemented."""
+    def test_governance_proposals_returns_list(self, client):
+        """GET /api/v1/governance/proposals returns empty list by default."""
+        import swarm.api.routers.governance as gov_mod
+        gov_mod._proposals.clear()
         resp = client.get("/api/v1/governance/proposals")
         assert resp.status_code == 200
-        assert resp.json()["status"] == "not_implemented"
+        assert resp.json() == []
 
-    def test_metrics_stub(self, client):
-        """GET /api/v1/metrics/{id} returns not_implemented."""
+    def test_metrics_requires_auth(self, client):
+        """GET /api/v1/metrics/{id} requires auth."""
         resp = client.get("/api/v1/metrics/some-sim-id")
-        assert resp.status_code == 200
-        assert resp.json()["status"] == "not_implemented"
+        assert resp.status_code == 401
 
 
 class TestAgentPatchAndTransitions:
@@ -2112,3 +2112,465 @@ class TestSSEEndpoint:
         assert len(event_lines) >= 2
         first_data = json.loads(event_lines[0].removeprefix("data:").strip())
         assert first_data["event_type"] == "step_complete"
+
+
+# ---------------------------------------------------------------------------
+# Simulation completion and results tests
+# ---------------------------------------------------------------------------
+
+
+class TestSimulationCompletion:
+    """Tests for simulation completion, results, and execution state."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_simulation_state(self):
+        """Reset simulation storage between tests."""
+        import swarm.api.routers.simulations as simulations_mod
+
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
+        simulations_mod._action_history.clear()
+        simulations_mod._execution_state.clear()
+        simulations_mod._simulation_results.clear()
+        yield
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
+        simulations_mod._action_history.clear()
+        simulations_mod._execution_state.clear()
+        simulations_mod._simulation_results.clear()
+
+    def _setup_running_simulation(self, client):
+        """Create a running simulation with two participants."""
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "test", "max_participants": 5},
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        agent_ids = []
+        api_keys = []
+        for i in range(2):
+            agent_resp = client.post(
+                "/api/v1/agents/register",
+                json={"name": f"CompAgent{i}", "description": "Test"},
+            )
+            data = agent_resp.json()
+            agent_ids.append(data["agent_id"])
+            api_keys.append(data["api_key"])
+            client.post(
+                f"/api/v1/simulations/{sim_id}/join",
+                json={"agent_id": data["agent_id"], "role": "participant"},
+            )
+
+        client.post(f"/api/v1/simulations/{sim_id}/start")
+        return sim_id, agent_ids, api_keys
+
+    def test_complete_simulation(self, client):
+        """Complete a running simulation stores results."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"toxicity_rate": 0.05, "quality_gap": 0.2},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "completed"
+
+        # Verify simulation is now COMPLETED
+        get_resp = client.get(f"/api/v1/simulations/{sim_id}")
+        assert get_resp.json()["status"] == "completed"
+
+    def test_complete_non_running_fails(self, client):
+        """Cannot complete a simulation that isn't running."""
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "test"},
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        agent_resp = client.post(
+            "/api/v1/agents/register",
+            json={"name": "EarlyCompleter", "description": "Test"},
+        )
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            headers={"Authorization": f"Bearer {agent_resp.json()['api_key']}"},
+        )
+        assert resp.status_code == 400
+
+    def test_get_results(self, client):
+        """Get results for a completed simulation."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        # Submit an action first
+        client.post(
+            f"/api/v1/simulations/{sim_id}/actions",
+            json={
+                "agent_id": agent_ids[0],
+                "action_type": "accept",
+                "payload": {},
+                "step": 0,
+            },
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+
+        # Complete
+        client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"final_score": 42},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+
+        # Get results
+        resp = client.get(
+            f"/api/v1/simulations/{sim_id}/results",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "completed"
+        assert data["results"]["final_score"] == 42
+        assert data["action_count"] == 1
+        assert data["participant_count"] == 2
+
+    def test_get_results_not_completed(self, client):
+        """Cannot get results for a non-completed simulation."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.get(
+            f"/api/v1/simulations/{sim_id}/results",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 400
+        assert "not completed" in resp.json()["detail"]
+
+    def test_execution_state(self, client):
+        """Get execution state tracks per-agent actions."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        # Submit actions
+        for i in range(3):
+            client.post(
+                f"/api/v1/simulations/{sim_id}/actions",
+                json={
+                    "agent_id": agent_ids[0],
+                    "action_type": "noop",
+                    "payload": {},
+                    "step": i,
+                },
+                headers={"Authorization": f"Bearer {api_keys[0]}"},
+            )
+        client.post(
+            f"/api/v1/simulations/{sim_id}/actions",
+            json={
+                "agent_id": agent_ids[1],
+                "action_type": "accept",
+                "payload": {},
+                "step": 0,
+            },
+            headers={"Authorization": f"Bearer {api_keys[1]}"},
+        )
+
+        resp = client.get(f"/api/v1/simulations/{sim_id}/execution")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["total_actions"] == 4
+        assert data["per_agent_actions"][agent_ids[0]] == 3
+        assert data["per_agent_actions"][agent_ids[1]] == 1
+
+    def test_action_history_recorded(self, client):
+        """Actions are recorded in history with timestamps."""
+        import swarm.api.routers.simulations as simulations_mod
+
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        client.post(
+            f"/api/v1/simulations/{sim_id}/actions",
+            json={
+                "agent_id": agent_ids[0],
+                "action_type": "accept",
+                "payload": {"value": 1},
+                "step": 0,
+            },
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+
+        history = simulations_mod._action_history.get(sim_id, [])
+        assert len(history) == 1
+        assert history[0]["agent_id"] == agent_ids[0]
+        assert history[0]["action_type"] == "accept"
+        assert history[0]["step"] == 0
+        assert "timestamp" in history[0]
+        assert "action_id" in history[0]
+
+
+# ---------------------------------------------------------------------------
+# Governance endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestGovernanceEndpoints:
+    """Tests for governance proposal endpoints."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_governance_state(self):
+        """Reset governance storage between tests."""
+        import swarm.api.routers.governance as gov_mod
+
+        gov_mod._proposals.clear()
+        yield
+        gov_mod._proposals.clear()
+
+    def _get_auth_headers(self, client):
+        """Register an agent and return auth headers."""
+        resp = client.post(
+            "/api/v1/agents/register",
+            json={"name": "GovAgent", "description": "Governance test"},
+        )
+        return {"Authorization": f"Bearer {resp.json()['api_key']}"}
+
+    def test_create_proposal(self, client):
+        """Create a governance proposal."""
+        headers = self._get_auth_headers(client)
+        resp = client.post(
+            "/api/v1/governance/propose",
+            json={
+                "title": "Increase tax rate",
+                "description": "Propose increasing the tax rate to 0.2",
+                "policy_declaration": {"tax_rate": 0.2},
+                "target_scenarios": ["baseline"],
+            },
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["title"] == "Increase tax rate"
+        assert data["status"] == "open"
+        assert data["policy_declaration"] == {"tax_rate": 0.2}
+        assert data["target_scenarios"] == ["baseline"]
+        assert data["votes_for"] == 0
+        assert data["votes_against"] == 0
+        assert "proposal_id" in data
+
+    def test_list_proposals(self, client):
+        """List governance proposals."""
+        headers = self._get_auth_headers(client)
+        for i in range(3):
+            client.post(
+                "/api/v1/governance/propose",
+                json={
+                    "title": f"Proposal {i}",
+                    "description": f"Description {i}",
+                },
+                headers=headers,
+            )
+
+        resp = client.get("/api/v1/governance/proposals")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data) == 3
+
+    def test_list_proposals_filter_by_status(self, client):
+        """Filter proposals by status."""
+        headers = self._get_auth_headers(client)
+        client.post(
+            "/api/v1/governance/propose",
+            json={"title": "Open", "description": "Open proposal"},
+            headers=headers,
+        )
+
+        resp = client.get(
+            "/api/v1/governance/proposals",
+            params={"status": "open"},
+        )
+        assert resp.status_code == 200
+        assert len(resp.json()) == 1
+
+        resp = client.get(
+            "/api/v1/governance/proposals",
+            params={"status": "accepted"},
+        )
+        assert resp.status_code == 200
+        assert len(resp.json()) == 0
+
+    def test_get_proposal(self, client):
+        """Get a proposal by ID."""
+        headers = self._get_auth_headers(client)
+        create_resp = client.post(
+            "/api/v1/governance/propose",
+            json={"title": "GetTest", "description": "Test"},
+            headers=headers,
+        )
+        proposal_id = create_resp.json()["proposal_id"]
+
+        resp = client.get(f"/api/v1/governance/proposals/{proposal_id}")
+        assert resp.status_code == 200
+        assert resp.json()["title"] == "GetTest"
+
+    def test_get_proposal_not_found(self, client):
+        """Get nonexistent proposal returns 404."""
+        resp = client.get("/api/v1/governance/proposals/nonexistent")
+        assert resp.status_code == 404
+
+    def test_vote_on_proposal(self, client):
+        """Vote on a governance proposal."""
+        headers = self._get_auth_headers(client)
+        create_resp = client.post(
+            "/api/v1/governance/propose",
+            json={"title": "VoteTest", "description": "Test"},
+            headers=headers,
+        )
+        proposal_id = create_resp.json()["proposal_id"]
+
+        # Vote for
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/vote",
+            params={"direction": 1},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["votes_for"] == 1
+        assert resp.json()["votes_against"] == 0
+
+        # Vote against
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/vote",
+            params={"direction": -1},
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["votes_for"] == 1
+        assert resp.json()["votes_against"] == 1
+
+    def test_vote_not_found(self, client):
+        """Vote on nonexistent proposal returns 404."""
+        headers = self._get_auth_headers(client)
+        resp = client.post(
+            "/api/v1/governance/proposals/nonexistent/vote",
+            params={"direction": 1},
+            headers=headers,
+        )
+        assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Metrics endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestMetricsEndpoints:
+    """Tests for per-simulation metrics retrieval."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_simulation_state(self):
+        """Reset simulation storage between tests."""
+        import swarm.api.routers.simulations as simulations_mod
+
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
+        simulations_mod._action_history.clear()
+        simulations_mod._execution_state.clear()
+        simulations_mod._simulation_results.clear()
+        yield
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
+        simulations_mod._action_history.clear()
+        simulations_mod._execution_state.clear()
+        simulations_mod._simulation_results.clear()
+
+    def _setup_running_simulation(self, client):
+        """Create a running simulation with two participants."""
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "test", "max_participants": 5},
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        agent_ids = []
+        api_keys = []
+        for i in range(2):
+            agent_resp = client.post(
+                "/api/v1/agents/register",
+                json={"name": f"MetricAgent{i}", "description": "Test"},
+            )
+            data = agent_resp.json()
+            agent_ids.append(data["agent_id"])
+            api_keys.append(data["api_key"])
+            client.post(
+                f"/api/v1/simulations/{sim_id}/join",
+                json={"agent_id": data["agent_id"], "role": "participant"},
+            )
+
+        client.post(f"/api/v1/simulations/{sim_id}/start")
+        return sim_id, agent_ids, api_keys
+
+    def test_get_metrics_running(self, client):
+        """Get metrics for a running simulation."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        # Submit some actions
+        for i in range(3):
+            client.post(
+                f"/api/v1/simulations/{sim_id}/actions",
+                json={
+                    "agent_id": agent_ids[0],
+                    "action_type": "accept",
+                    "payload": {},
+                    "step": i,
+                },
+                headers={"Authorization": f"Bearer {api_keys[0]}"},
+            )
+
+        resp = client.get(
+            f"/api/v1/metrics/{sim_id}",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["simulation_id"] == sim_id
+        assert data["status"] == "running"
+        assert data["total_actions"] == 3
+        assert data["per_agent_actions"][agent_ids[0]] == 3
+        assert data["action_type_distribution"]["accept"] == 3
+        assert data["participant_count"] == 2
+
+    def test_get_metrics_completed(self, client):
+        """Get metrics for a completed simulation includes results."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        # Complete with results
+        client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"toxicity": 0.03},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+
+        resp = client.get(
+            f"/api/v1/metrics/{sim_id}",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "completed"
+        assert data["results"]["toxicity"] == 0.03
+
+    def test_get_metrics_not_found(self, client):
+        """Metrics for nonexistent simulation returns 404."""
+        agent_resp = client.post(
+            "/api/v1/agents/register",
+            json={"name": "MetricTest", "description": "Test"},
+        )
+        resp = client.get(
+            "/api/v1/metrics/nonexistent",
+            headers={"Authorization": f"Bearer {agent_resp.json()['api_key']}"},
+        )
+        assert resp.status_code == 404

@@ -23,6 +23,9 @@ _simulations: dict[str, SimulationResponse] = {}
 _participants: dict[str, list[dict]] = {}  # simulation_id -> list of participant dicts
 _observations: dict[str, dict[str, dict]] = {}  # simulation_id -> agent_id -> observation
 _action_queues: dict[str, AsyncActionQueue] = {}  # simulation_id -> queue
+_action_history: dict[str, list[dict]] = {}  # simulation_id -> list of action records
+_execution_state: dict[str, dict] = {}  # simulation_id -> {current_step, current_epoch, ...}
+_simulation_results: dict[str, dict] = {}  # simulation_id -> final results/metrics
 
 
 @router.post("/create", response_model=SimulationResponse)
@@ -275,6 +278,19 @@ async def submit_action(simulation_id: str, action: ActionSubmission) -> dict:
     )
 
     action_id = str(uuid.uuid4())
+
+    # Record action in history
+    if simulation_id not in _action_history:
+        _action_history[simulation_id] = []
+    _action_history[simulation_id].append({
+        "action_id": action_id,
+        "agent_id": action.agent_id,
+        "action_type": action.action_type.value,
+        "step": action.step,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "accepted": accepted,
+    })
+
     return {
         "action_id": action_id,
         "simulation_id": simulation_id,
@@ -398,3 +414,143 @@ async def simulation_events(
             "X-Accel-Buffering": "no",
         },
     )
+
+
+# ---------------------------------------------------------------------------
+# Simulation completion and results
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{simulation_id}/complete",
+    dependencies=[Depends(require_scope(Scope.PARTICIPATE))],
+)
+async def complete_simulation(
+    simulation_id: str, results: dict | None = None
+) -> dict:
+    """Mark a simulation as completed and store its results.
+
+    Args:
+        simulation_id: The simulation to complete.
+        results: Optional results/metrics dict to store.
+
+    Returns:
+        Updated simulation status.
+
+    Raises:
+        HTTPException: If simulation not found or not running.
+    """
+    if simulation_id not in _simulations:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+
+    simulation = _simulations[simulation_id]
+    if simulation.status != SimulationStatus.RUNNING:
+        raise HTTPException(
+            status_code=400, detail="Simulation is not running"
+        )
+
+    simulation.status = SimulationStatus.COMPLETED
+
+    # Store results
+    if results is not None:
+        _simulation_results[simulation_id] = results
+
+    # Clean up action queue
+    queue = _action_queues.pop(simulation_id, None)
+    if queue is not None:
+        await queue.cancel_all()
+
+    # Publish completion event
+    await event_bus.publish(
+        SimEvent(
+            event_type=SimEventType.SIMULATION_COMPLETE,
+            simulation_id=simulation_id,
+            data={"results": results or {}},
+        )
+    )
+
+    return {
+        "simulation_id": simulation_id,
+        "status": "completed",
+    }
+
+
+@router.get(
+    "/{simulation_id}/results",
+    dependencies=[Depends(require_scope(Scope.READ))],
+)
+async def get_simulation_results(simulation_id: str) -> dict:
+    """Get results for a completed simulation.
+
+    Args:
+        simulation_id: The simulation to get results for.
+
+    Returns:
+        Simulation results including metrics and action history.
+
+    Raises:
+        HTTPException: If simulation not found or not completed.
+    """
+    if simulation_id not in _simulations:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+
+    simulation = _simulations[simulation_id]
+    if simulation.status != SimulationStatus.COMPLETED:
+        raise HTTPException(
+            status_code=400, detail="Simulation is not completed"
+        )
+
+    results = _simulation_results.get(simulation_id, {})
+    history = _action_history.get(simulation_id, [])
+    participants = _participants.get(simulation_id, [])
+
+    return {
+        "simulation_id": simulation_id,
+        "status": "completed",
+        "results": results,
+        "action_count": len(history),
+        "participant_count": len(participants),
+        "participants": participants,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Execution state
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{simulation_id}/execution")
+async def get_execution_state(simulation_id: str) -> dict:
+    """Get execution state for a running simulation.
+
+    Returns per-agent action counts and the simulation's current
+    step/epoch if tracked.
+
+    Args:
+        simulation_id: The simulation to query.
+
+    Returns:
+        Execution state including per-agent action counts.
+
+    Raises:
+        HTTPException: If simulation not found.
+    """
+    if simulation_id not in _simulations:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+
+    history = _action_history.get(simulation_id, [])
+    exec_state = _execution_state.get(simulation_id, {})
+
+    # Compute per-agent action counts
+    agent_counts: dict[str, int] = {}
+    for record in history:
+        aid = record["agent_id"]
+        agent_counts[aid] = agent_counts.get(aid, 0) + 1
+
+    return {
+        "simulation_id": simulation_id,
+        "status": _simulations[simulation_id].status.value,
+        "total_actions": len(history),
+        "per_agent_actions": agent_counts,
+        **exec_state,
+    }
