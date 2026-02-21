@@ -66,7 +66,7 @@ Staging Summary
   Staged:   4 files (+128 / -23)
     .claude/commands/status.md (new)
     .claude/commands/stage.md (new)
-    .claude/hooks/post_write_lint_check.sh (new)
+    .claude/hooks/post_write_check.sh (new)
     .claude/settings.json (modified)
 
   Skipped:  1 file

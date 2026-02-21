@@ -108,5 +108,5 @@ docs/game-app/
 
 # Allow secrets scanner tooling (matched by *_secret* above)
 !.claude/hooks/scan_secrets.sh
-!.claude/hooks/post_write_secrets_check.sh
+!.claude/hooks/post_write_check.sh
 !.claude/commands/scan_secrets.md

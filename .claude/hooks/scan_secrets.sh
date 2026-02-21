@@ -81,7 +81,7 @@ for entry in "${PATTERNS[@]}"; do
             grep -Fv '1234567890' | \
             grep -Fv '[REDACTED]' | \
             grep -Fv 'scan_secrets' | \
-            grep -Fv 'pre-commit-secrets' | \
+            grep -Fv 'post_write_check' | \
             grep -Fv 'pre-commit:' | \
             grep -Fv 'example' | \
             grep -Fv 'placeholder' | \
