@@ -20,3 +20,4 @@
 {"timestamp": "2026-02-21T20:07:49Z", "branch": "main", "files_changed": ["docs/blog/ecosystem-collapse.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-21T20:08:16Z", "branch": "main", "files_changed": ["docs/blog/ecosystem-collapse.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-21T20:10:23Z", "branch": "main", "files_changed": ["docs/blog/markets-and-safety.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T20:25:19Z", "branch": "main", "files_changed": [".claude/provenance.jsonl", "tests/test_awm_bridge.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
