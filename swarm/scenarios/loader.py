@@ -77,6 +77,12 @@ from swarm.core.spawn import PayoffAttributionMode, SpawnConfig
 from swarm.env.marketplace import MarketplaceConfig
 from swarm.env.network import NetworkConfig, NetworkTopology
 from swarm.env.state import RateLimits
+from swarm.contracts.contract import (
+    DefaultMarket,
+    FairDivisionContract,
+    TruthfulAuctionContract,
+)
+from swarm.contracts.market import ContractMarket, ContractMarketConfig
 from swarm.governance.config import GovernanceConfig
 
 # Agent type registry for scripted agents
@@ -848,6 +854,63 @@ def parse_perturbation_config(
     )
 
 
+@dataclass
+class ContractsConfig:
+    """Parsed contracts configuration from scenario YAML."""
+
+    truthful_auction_kwargs: Dict[str, Any] = field(default_factory=dict)
+    fair_division_kwargs: Dict[str, Any] = field(default_factory=dict)
+    default_market_kwargs: Dict[str, Any] = field(default_factory=dict)
+    market_kwargs: Dict[str, Any] = field(default_factory=dict)
+
+
+def parse_contracts_config(
+    data: Dict[str, Any],
+) -> Optional[ContractsConfig]:
+    """Parse contracts section from YAML into ContractsConfig.
+
+    Args:
+        data: The contracts section from YAML.
+
+    Returns:
+        ContractsConfig if section is present, None otherwise.
+    """
+    if not data:
+        return None
+
+    return ContractsConfig(
+        truthful_auction_kwargs=data.get("truthful_auction", {}),
+        fair_division_kwargs=data.get("fair_division", {}),
+        default_market_kwargs=data.get("default_market", {}),
+        market_kwargs=data.get("market", {}),
+    )
+
+
+def build_contract_market(
+    config: ContractsConfig,
+    seed: Optional[int] = None,
+) -> ContractMarket:
+    """Build a ContractMarket from parsed YAML config.
+
+    Args:
+        config: Parsed contracts configuration.
+        seed: Random seed for reproducible agent decisions.
+
+    Returns:
+        Configured ContractMarket instance.
+    """
+    contracts = [
+        TruthfulAuctionContract(**config.truthful_auction_kwargs),
+        FairDivisionContract(**config.fair_division_kwargs),
+    ]
+    market_config = ContractMarketConfig(**config.market_kwargs)
+    return ContractMarket(
+        contracts=contracts,
+        config=market_config,
+        seed=seed,
+    )
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -883,6 +946,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
     perturbation_config = parse_perturbation_config(
         data.get("perturbations", {})
     )
+    contracts_config = parse_contracts_config(data.get("contracts", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -913,6 +977,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         rivals_config=rivals_config,
         awm_config=awm_config,
         perturbation_config=perturbation_config,
+        contracts_config=contracts_config,
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")
         else None,

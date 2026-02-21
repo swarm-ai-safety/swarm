@@ -183,13 +183,17 @@ def compute_contract_metrics(
         else:
             metrics.pool_toxicity[cname] = 0.0
 
-        # Welfare: sum of payoffs for accepted interactions
-        welfare = sum(
-            payoff_engine.total_welfare(i) for i in accepted
-        )
-        metrics.pool_welfare[cname] = welfare
+        # Welfare: average payoff per accepted interaction
+        welfare_values = [payoff_engine.total_welfare(i) for i in accepted]
+        if welfare_values:
+            metrics.pool_welfare[cname] = (
+                sum(welfare_values) / len(welfare_values)
+            )
+        else:
+            metrics.pool_welfare[cname] = 0.0
 
     # --- Welfare delta ---
+    # Compare mean per-interaction welfare across governed vs default pools
     governed_welfare: List[float] = []
     default_welfare = 0.0
 

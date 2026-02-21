@@ -336,6 +336,12 @@ class ContractMarket:
         best_cost = 0.0
         reason = "default_fallback"
 
+        # If switching is disabled and the agent already has a membership,
+        # lock them into their current contract.
+        prev_contract = self._memberships.get(agent.agent_id)
+        if not self.config.allow_switching and prev_contract is not None:
+            return prev_contract, 0.0, "locked_in (switching disabled)"
+
         for name, contract in self._contracts.items():
             if name == self._default_market.name:
                 continue
@@ -356,10 +362,8 @@ class ContractMarket:
 
             # Switching cost if agent was in a different contract last epoch
             switching_penalty = 0.0
-            if self.config.allow_switching:
-                prev_contract = self._memberships.get(agent.agent_id)
-                if prev_contract is not None and prev_contract != name:
-                    switching_penalty = cost * self.config.switching_cost_multiplier
+            if prev_contract is not None and prev_contract != name:
+                switching_penalty = cost * self.config.switching_cost_multiplier
 
             # Utility calculation
             # Good agents value quality highly; adversarial agents see less value

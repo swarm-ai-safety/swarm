@@ -938,3 +938,83 @@ class TestSecurityRegressions:
         interaction = _make_interaction(p=0.5)
         with pytest.raises(ValueError, match="v_hat invariant"):
             _validated_copy(interaction, {"v_hat": 2.0})
+
+    def test_allow_switching_false_locks_membership(self):
+        """allow_switching=False must prevent agents from changing contracts."""
+        config = ContractMarketConfig(allow_switching=False)
+        market = ContractMarket(config=config, seed=42)
+        agents = _make_population()
+
+        # Epoch 0: agents choose freely
+        memberships_0 = market.run_signing_stage(agents, epoch=0)
+
+        # Epoch 1: memberships must be identical (locked in)
+        memberships_1 = market.run_signing_stage(agents, epoch=1)
+        assert memberships_0 == memberships_1
+
+    def test_welfare_delta_uses_mean_not_sum(self):
+        """welfare_delta must compare mean welfare, not raw sums."""
+        from swarm.contracts.metrics import compute_contract_metrics
+        from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
+
+        payoff = SoftPayoffEngine(PayoffConfig())
+
+        # Create interactions: governed pool with 2 high-welfare items,
+        # default pool with 10 identical items. If welfare is summed,
+        # default pool total dominates; if averaged, they're comparable.
+        governed_interactions = [
+            _make_interaction(p=0.9, c_a=0.01, c_b=0.01, accepted=True),
+            _make_interaction(p=0.9, c_a=0.01, c_b=0.01, accepted=True),
+        ]
+        default_interactions = [
+            _make_interaction(p=0.9, c_a=0.01, c_b=0.01, accepted=True)
+            for _ in range(10)
+        ]
+        interactions = {
+            "truthful_auction": governed_interactions,
+            "default_market": default_interactions,
+        }
+
+        metrics = compute_contract_metrics(
+            decisions=[], contract_interactions=interactions,
+            payoff_engine=payoff,
+        )
+        # With mean welfare, both pools have same per-interaction welfare,
+        # so delta should be close to zero (not negative due to traffic)
+        assert abs(metrics.welfare_delta) < 0.1
+
+    def test_scenario_contracts_config_parsed(self):
+        """Scenario YAML contracts block must be parsed into config."""
+        from swarm.scenarios.loader import (
+            ContractsConfig,
+            parse_contracts_config,
+        )
+
+        data = {
+            "truthful_auction": {"stake_fraction": 0.1, "min_bond": 1.0},
+            "fair_division": {"entry_fee": 3.0},
+            "market": {"allow_switching": False},
+        }
+        config = parse_contracts_config(data)
+        assert config is not None
+        assert config.truthful_auction_kwargs["stake_fraction"] == 0.1
+        assert config.truthful_auction_kwargs["min_bond"] == 1.0
+        assert config.fair_division_kwargs["entry_fee"] == 3.0
+        assert config.market_kwargs["allow_switching"] is False
+
+    def test_build_contract_market_from_config(self):
+        """build_contract_market must produce a working ContractMarket."""
+        from swarm.scenarios.loader import (
+            ContractsConfig,
+            build_contract_market,
+        )
+
+        config = ContractsConfig(
+            truthful_auction_kwargs={"stake_fraction": 0.1, "min_bond": 1.0},
+            fair_division_kwargs={"entry_fee": 3.0},
+            market_kwargs={"allow_switching": False},
+        )
+        market = build_contract_market(config, seed=42)
+        assert "truthful_auction" in market.contracts
+        assert "fair_division" in market.contracts
+        assert "default_market" in market.contracts

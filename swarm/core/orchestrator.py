@@ -145,6 +145,9 @@ class OrchestratorConfig(BaseModel):
     # Perturbation engine configuration
     perturbation_config: Optional[PerturbationConfig] = None
 
+    # Contract screening configuration
+    contracts_config: Optional[Any] = None
+
 
 class EpochMetrics(BaseModel):
     """Metrics collected at the end of each epoch."""
@@ -463,6 +466,19 @@ class Orchestrator:
             self.leakage_detector = None
             self._boundary_handler = None
 
+        # Contract market (contract screening layer)
+        if self.config.contracts_config is not None:
+            from swarm.scenarios.loader import build_contract_market
+
+            self.contract_market: Optional["ContractMarket"] = (
+                build_contract_market(
+                    self.config.contracts_config,
+                    seed=self.config.seed,
+                )
+            )
+        else:
+            self.contract_market = None
+
         # Event logging
         if self.config.log_path:
             self.event_log: Optional[EventLog] = EventLog(self.config.log_path)
@@ -644,6 +660,14 @@ class Orchestrator:
         """Shared epoch-start logic for sync and async paths."""
         self._update_adaptive_governance()
 
+        # Contract market: run signing stage at epoch start
+        if self.contract_market is not None:
+            agents = list(self.state.agents.values())
+            self.contract_market.reset_epoch()
+            self.contract_market.run_signing_stage(
+                agents, self.state.current_epoch
+            )
+
         if self._perturbation_engine is not None:
             self._perturbation_engine.on_epoch_start(self.state.current_epoch)
 
@@ -679,6 +703,10 @@ class Orchestrator:
                 )
 
         self._apply_agent_memory_decay(epoch_start)
+
+        # Update contract market beliefs at epoch end
+        if self.contract_market is not None:
+            self.contract_market.update_beliefs()
 
         # Check condition-triggered perturbation shocks against epoch metrics
         if self._perturbation_engine is not None:
@@ -977,6 +1005,10 @@ class Orchestrator:
             metadata=result.metadata or {},
             **({"ground_truth": ground_truth_val} if ground_truth_val is not None else {}),
         )
+
+        # Route through contract market if configured
+        if self.contract_market is not None:
+            interaction = self.contract_market.route_interaction(interaction)
 
         gov_effect, _, _ = self._finalize_interaction(interaction)
 
