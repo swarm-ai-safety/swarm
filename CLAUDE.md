@@ -12,6 +12,16 @@ This repo is set up as a **Claude Code template** for SWARM-style research work:
 - Optional git hygiene hooks live in `.claude/hooks/` (install via `/install_hooks`).
 - MCP integrations are configured in `.mcp.json` (safe-by-default placeholders; no secrets committed).
 
+### Extend, don't proliferate
+
+**Do not create new slash commands, agents, or hooks when an existing one can absorb the functionality.** This repo has been through multiple consolidation passes. Before proposing anything new:
+
+1. **Check existing commands first.** Read `.claude/commands/` and look for a command that covers the same workflow area. If one exists, add a `--flag` or mode to it instead of creating a new file.
+2. **Prefer flags over files.** A command with 3 clear modes (`/ship`, `/ship --fix`, `/ship --all`) is better than 3 separate commands (`/commit_push`, `/fix_commit`, `/sweep_and_ship`).
+3. **Same rule for agents.** If a new role overlaps with an existing agent's domain, extend that agent's `.md` with a new section rather than creating a new agent file.
+4. **Same rule for hooks.** Post-write checks are consolidated into a single `post_write_check.sh`. Add new checks as a section in that file, not as a new hook script.
+5. **When in doubt, don't create.** If you're unsure whether something warrants a new command, it probably doesn't. Add it as a mode on the closest existing command and note it in the migration table.
+
 ### Artifacts repo
 
 Large/supplementary files live in a separate repo: [`swarm-ai-safety/swarm-artifacts`](https://github.com/swarm-ai-safety/swarm-artifacts). This includes:

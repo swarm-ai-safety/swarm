@@ -94,11 +94,16 @@ Rate the session on two axes (inspired by SWE-bench's F2P/P2P grading):
 
 ## Phase 7: Generate
 
-**Extend before creating.** Before proposing a new command, check if an existing command could absorb the pattern by adding a new mode, argument, or flag. Prefer extending an existing command over creating a new one — fewer commands with clear arg-driven modes are easier to discover and remember than many single-purpose commands. Only propose a new command when the pattern is genuinely unrelated to any existing command.
+**Extend, don't proliferate.** This is a hard rule (see CLAUDE.md "Extend, don't proliferate"). Before proposing ANY new command, agent, or hook:
+
+1. Read `.claude/commands/` and `.claude/agents/` to find the closest existing match.
+2. If one exists, propose a new `--flag` or mode section on it — not a new file.
+3. Only propose a new file when the pattern is genuinely unrelated to every existing command.
+4. Default tier should be "Extend existing", not "New slash command".
 
 Ask the user which candidates to implement. For each selected candidate:
 - If extending an existing command: show the proposed additions (new mode/args) and update the `.md` file
-- If creating a new command: generate the `.claude/commands/*.md` or `.claude/agents/*.md` file
+- If creating a new file (rare — requires justification): generate the `.claude/commands/*.md` or `.claude/agents/*.md` file
 - Note edge cases observed in the session (e.g. stash needed, force-delete for squash)
 - Check `.claude/commands/` first to avoid duplicating or fragmenting existing commands
 
