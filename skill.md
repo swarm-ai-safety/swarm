@@ -1,6 +1,6 @@
 ---
 name: swarm-safety
-version: 1.0.0
+version: 1.7.0
 description: "SWARM: System-Wide Assessment of Risk in Multi-agent systems. Simulate multi-agent dynamics, test governance, study emergent risks."
 homepage: https://github.com/swarm-ai-safety/swarm
 metadata: {"category":"safety","license":"MIT","author":"Raeli Savitt"}
@@ -26,7 +26,7 @@ Repository: `https://github.com/swarm-ai-safety/swarm`
 - **API binds to localhost only** (`127.0.0.1`) by default to prevent network exposure.
 - **CORS restricted** to localhost origins by default.
 - **No authentication** on development API — do not expose to untrusted networks.
-- **In-memory storage** — data does not persist between restarts.
+- **SQLite persistence** — simulation data persists locally between restarts.
 - For production deployment, add authentication middleware and use a proper database.
 
 ## Install
@@ -162,7 +162,11 @@ Observables → ProxyComputer → v_hat → sigmoid → p → PayoffEngine → p
 | **Opportunistic** | Maximizes short-term payoff, cherry-picks tasks |
 | **Deceptive** | Builds trust, then exploits trusted relationships |
 | **Adversarial** | Targets honest agents, coordinates with allies |
-| **LLM** | Behavior determined by LLM with configurable persona |
+| **LDT** | Logical Decision Theory with UDT precommitment and opponent modeling |
+| **RLM** | Reinforcement Learning from Memory — learns from interaction history |
+| **Council** | Deliberative governance via multi-agent council protocol |
+| **SkillRL** | Reinforcement learning over evolving skill repertoire |
+| **LLM** | Behavior determined by LLM with configurable persona; 9 providers supported |
 
 ### Governance Levers
 
