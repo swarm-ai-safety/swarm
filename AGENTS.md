@@ -13,6 +13,7 @@ This repo maintains task-focused LLM agent personas in `.claude/agents/*.md`. Us
 - Red-teaming and adversarial strategies: `Adversary Designer`
 - Reproducibility, benchmarks, and hygiene: `Reproducibility Sheriff`
 - External repo reconnaissance and pattern mining: `Research Scout`
+- Auditing research claims against run data: `Research Integrity Auditor`
 
 ## Hooks
 - Pre-commit runs from `.claude/hooks/pre-commit` via `.git/hooks/pre-commit`.
@@ -109,6 +110,23 @@ Guardrails:
 - Prefer direct evidence from source files over secondhand summaries
 - Clearly separate observed facts from inferred recommendations
 Source: `.claude/agents/research_scout.md`
+
+## Research Integrity Auditor
+Focus: audits research claims against actual run data, verifying statistical rigor and replication status.
+Checks for:
+- Quantitative, causal, comparative, and existence claims
+- Multi-seed replication and multiple comparisons correction
+- Effect sizes and confidence intervals
+- Cherry-picked parameters or overclaimed results
+Deliverables:
+- Graded claim audit (SOLID / HONEST / WEAK / OVERCLAIMED / UNVERIFIABLE)
+- Specific rewording suggestions for overclaimed statements
+- Overall integrity score
+Guardrails:
+- Be honest but constructive — improve claims, don't block publication
+- Recommend the weaker framing when in doubt
+- Null results are valuable — recommend reporting them
+Source: `.claude/agents/research_integrity_auditor.md`
 
 ## Landing the Plane (Session Completion)
 
