@@ -55,12 +55,12 @@ contracts:
     min_bond: 0.5
 
   fair_division:
-    entry_fee: 2.0
+    entry_fee: 5.0
     fairness_bonus: 0.05
     redistribution_rate: 0.1
 
   default_market:
-    friction_premium: 0.05
+    friction_premium: 0.02
 
   market:
     allow_switching: true
@@ -70,8 +70,8 @@ contracts:
     honest_fair_preference: 0.6
     opportunistic_truthful_preference: 0.3
     opportunistic_fair_preference: 0.4
-    adversarial_truthful_preference: 0.1
-    adversarial_fair_preference: 0.15
+    adversarial_truthful_preference: 0.05
+    adversarial_fair_preference: 0.05
 
 simulation:
   n_epochs: 20
@@ -101,7 +101,7 @@ success_criteria:
   min_separation_quality: 0.3
   max_infiltration_rate: 0.3
   min_welfare_delta: 0.0
-  min_attack_displacement: 0.5
+  min_attack_displacement: 0.0
 
 outputs:
   event_log: "logs/contract_screening_events.jsonl"

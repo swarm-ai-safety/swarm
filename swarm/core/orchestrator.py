@@ -168,6 +168,7 @@ class EpochMetrics(BaseModel):
     spawn_metrics: Optional[Dict[str, Any]] = None
     security_report: Optional[Any] = None
     collusion_report: Optional[Any] = None
+    contract_metrics: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -478,6 +479,7 @@ class Orchestrator:
             )
         else:
             self.contract_market = None
+        self._last_contract_metrics: Optional[Any] = None
 
         # Event logging
         if self.config.log_path:
@@ -668,8 +670,19 @@ class Orchestrator:
         if self.contract_market is not None:
             agents = list(self.state.agents.values())
             self.contract_market.reset_epoch()
-            self.contract_market.run_signing_stage(
+            memberships = self.contract_market.run_signing_stage(
                 agents, self.state.current_epoch
+            )
+            # Emit signing event with pool assignments
+            self._emit_event(
+                Event(
+                    event_type=EventType.CONTRACT_SIGNING,
+                    payload={
+                        "memberships": memberships,
+                        "pool_composition": self.contract_market.get_pool_composition(),
+                    },
+                    epoch=self.state.current_epoch,
+                )
             )
 
         if self._perturbation_engine is not None:
@@ -708,9 +721,29 @@ class Orchestrator:
 
         self._apply_agent_memory_decay(epoch_start)
 
-        # Update contract market beliefs at epoch end
+        # Update contract market beliefs and compute metrics at epoch end
         if self.contract_market is not None:
             self.contract_market.update_beliefs()
+            from swarm.contracts.metrics import compute_contract_metrics
+
+            # Use only current-epoch decisions (not full history)
+            current_epoch_decisions = [
+                d for d in self.contract_market.decision_history
+                if d.epoch == epoch_start
+            ]
+            contract_metrics = compute_contract_metrics(
+                current_epoch_decisions,
+                self.contract_market.get_contract_interactions(),
+                payoff_engine=self.payoff_engine,
+            )
+            self._last_contract_metrics = contract_metrics
+            self._emit_event(
+                Event(
+                    event_type=EventType.CONTRACT_METRICS,
+                    payload=contract_metrics.to_dict(),
+                    epoch=epoch_start,
+                )
+            )
 
         # Check condition-triggered perturbation shocks against epoch metrics
         if self._perturbation_engine is not None:
@@ -1207,7 +1240,32 @@ class Orchestrator:
         accepted: bool,
     ) -> None:
         """Complete an interaction and compute payoffs."""
-        self._finalizer.complete_interaction(proposal, accepted)
+        if self.contract_market is not None:
+            # Build interaction manually so we can route through contracts
+            observables = self._observable_generator.generate(
+                proposal, accepted, self.state
+            )
+            v_hat, p = self.proxy_computer.compute_labels(observables)
+            interaction = SoftInteraction(
+                interaction_id=proposal.proposal_id,
+                initiator=proposal.initiator_id,
+                counterparty=proposal.counterparty_id,
+                interaction_type=InteractionType(proposal.interaction_type),
+                accepted=accepted,
+                task_progress_delta=observables.task_progress_delta,
+                rework_count=observables.rework_count,
+                verifier_rejections=observables.verifier_rejections,
+                tool_misuse_flags=observables.tool_misuse_flags,
+                counterparty_engagement_delta=observables.counterparty_engagement_delta,
+                v_hat=v_hat,
+                p=p,
+                tau=proposal.metadata.get("offered_transfer", 0),
+                metadata=proposal.metadata,
+            )
+            interaction = self.contract_market.route_interaction(interaction)
+            self._finalizer.finalize_interaction(interaction)
+        else:
+            self._finalizer.complete_interaction(proposal, accepted)
 
     def _generate_observables(
         self,
@@ -1295,6 +1353,11 @@ class Orchestrator:
                 "tree_sizes": self._spawn_tree.tree_size_distribution(),
             }
 
+        # Get contract metrics if available
+        contract_metrics_dict = None
+        if hasattr(self, "_last_contract_metrics") and self._last_contract_metrics is not None:
+            contract_metrics_dict = self._last_contract_metrics.to_dict()
+
         if not interactions:
             return EpochMetrics(
                 epoch=self.state.current_epoch,
@@ -1303,6 +1366,7 @@ class Orchestrator:
                 spawn_metrics=spawn_metrics_dict,
                 security_report=security_report,
                 collusion_report=collusion_report,
+                contract_metrics=contract_metrics_dict,
             )
 
         accepted = [i for i in interactions if i.accepted]
@@ -1327,6 +1391,7 @@ class Orchestrator:
             spawn_metrics=spawn_metrics_dict,
             security_report=security_report,
             collusion_report=collusion_report,
+            contract_metrics=contract_metrics_dict,
         )
 
     def _emit_event(self, event: Event) -> None:

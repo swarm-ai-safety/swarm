@@ -153,6 +153,27 @@ def cmd_run(args: argparse.Namespace) -> int:
             print(f"Accepted:          {total_accepted}")
             print(f"Avg toxicity:      {avg_toxicity:.4f}")
             print(f"Final welfare:     {metrics_history[-1].total_welfare:.2f}")
+
+            # Contract screening summary
+            last_contract = metrics_history[-1].contract_metrics
+            if last_contract:
+                print()
+                print("Contract Screening Metrics:")
+                print(f"  Separation quality:  {last_contract.get('separation_quality', 0):.4f}")
+                print(f"  Infiltration rate:   {last_contract.get('infiltration_rate', 0):.4f}")
+                print(f"  Welfare delta:       {last_contract.get('welfare_delta', 0):.4f}")
+                print(f"  Attack displacement: {last_contract.get('attack_displacement', 0):.4f}")
+                pool_q = last_contract.get("pool_avg_quality", {})
+                if pool_q:
+                    print("  Pool avg quality:")
+                    for pool, q in sorted(pool_q.items()):
+                        print(f"    {pool}: {q:.4f}")
+                pool_sizes = last_contract.get("pool_sizes", {})
+                if pool_sizes:
+                    print("  Pool sizes:")
+                    for pool, n in sorted(pool_sizes.items()):
+                        print(f"    {pool}: {n}")
+
             print()
 
     # Export if requested
@@ -224,6 +245,39 @@ def _check_criteria(criteria: dict, metrics_history: list) -> None:
         print(
             f"  {tag} Toxicity: {avg_toxicity:.4f} <= {criteria['toxicity_threshold']}"
         )
+        all_passed = all_passed and passed
+
+    # Contract screening criteria (use last epoch's contract metrics)
+    last_contract = None
+    if metrics_history:
+        last_contract = metrics_history[-1].contract_metrics
+
+    if "min_separation_quality" in criteria:
+        val = last_contract.get("separation_quality", 0.0) if last_contract else 0.0
+        passed = val >= criteria["min_separation_quality"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(f"  {tag} Separation quality: {val:.4f} >= {criteria['min_separation_quality']}")
+        all_passed = all_passed and passed
+
+    if "max_infiltration_rate" in criteria:
+        val = last_contract.get("infiltration_rate", 1.0) if last_contract else 1.0
+        passed = val <= criteria["max_infiltration_rate"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(f"  {tag} Infiltration rate: {val:.4f} <= {criteria['max_infiltration_rate']}")
+        all_passed = all_passed and passed
+
+    if "min_welfare_delta" in criteria:
+        val = last_contract.get("welfare_delta", 0.0) if last_contract else 0.0
+        passed = val >= criteria["min_welfare_delta"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(f"  {tag} Welfare delta: {val:.4f} >= {criteria['min_welfare_delta']}")
+        all_passed = all_passed and passed
+
+    if "min_attack_displacement" in criteria:
+        val = last_contract.get("attack_displacement", 0.0) if last_contract else 0.0
+        passed = val >= criteria["min_attack_displacement"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(f"  {tag} Attack displacement: {val:.4f} >= {criteria['min_attack_displacement']}")
         all_passed = all_passed and passed
 
     print()

@@ -145,6 +145,10 @@ class EventType(Enum):
     AWM_CONFLICT_DETECTED = "awm_conflict_detected"
     AWM_TRANSACTION_COMPLETED = "awm_transaction_completed"
 
+    # Contract screening events
+    CONTRACT_SIGNING = "contract_signing"
+    CONTRACT_METRICS = "contract_metrics"
+
     # System events
     SIMULATION_STARTED = "simulation_started"
     SIMULATION_ENDED = "simulation_ended"
