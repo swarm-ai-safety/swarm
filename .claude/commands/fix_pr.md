@@ -1,15 +1,13 @@
 # /fix_pr
 
-Two modes:
-
-- **No PR reference** (default): Create a PR from uncommitted local changes.
-- **With PR reference**: Resolve merge conflicts on an existing PR and optionally merge it.
+Multi-mode PR operations: create a PR from local changes, resolve merge conflicts on an existing PR, or run quality gates on an external PR. Consolidates the former `/review_external_pr` command (now `/fix_pr --review`).
 
 ## Usage
 
 ```
-/fix_pr [branch-name]                    # Mode A: create PR from local changes
-/fix_pr <pr-number-or-url> [fix|merge]   # Mode B: resolve conflicts / merge existing PR
+/fix_pr [branch-name]                          # Mode A: create PR from local changes
+/fix_pr <pr-number-or-url> [fix|merge]          # Mode B: resolve conflicts / merge existing PR
+/fix_pr --review <pr-number>                    # Mode C: run quality gates on a PR
 ```
 
 Examples:
@@ -18,6 +16,14 @@ Examples:
 - `/fix_pr 239` (resolve conflicts on PR #239)
 - `/fix_pr https://github.com/swarm-ai-safety/swarm/pull/239 merge` (resolve conflicts and merge)
 - `/fix_pr 239 merge` (resolve + merge)
+- `/fix_pr --review 220` (check out PR, run quality gates, auto-fix, report)
+
+## Argument parsing
+
+Parse `$ARGUMENTS` to extract:
+- `--review`: Quality gate review mode (Mode C)
+- If first non-flag arg is a number or GitHub PR URL → Mode B (conflict resolution)
+- Otherwise → Mode A (create PR from local changes)
 
 ---
 
@@ -61,7 +67,7 @@ Unlike `/pr` which expects you to describe what changed, this mode is for when y
 
 ## Mode B: Resolve Conflicts / Merge Existing PR
 
-Triggered when the first argument is a PR number or GitHub PR URL.
+Triggered when the first argument is a PR number or GitHub PR URL (without `--review`).
 
 ### Behavior
 
@@ -113,19 +119,86 @@ Triggered when the first argument is a PR number or GitHub PR URL.
    - If a `/tmp/fix-pr-*` clone was created, remove it: `rm -rf /tmp/fix-pr-<pr_number>`.
    - If working in the current repo, return to the previous branch: `git checkout -`.
 
-### Constraints (Mode B)
+---
 
-- Never force-push.
-- Never auto-resolve conflicts that are ambiguous — ask the user.
-- Always verify no conflict markers remain before committing.
-- Do not merge unless the user explicitly requests it (via `merge` keyword or in conversation).
-- Prefer HTTPS for cloning external repos (SSH keys may not be configured).
+## Mode C: Quality Gate Review (`--review`)
+
+Check out a PR branch, run full quality gates, auto-fix what's possible, push fixes, and report remaining issues.
+
+### Behavior
+
+1. **Fetch PR metadata**:
+   ```bash
+   gh pr view <pr-number> --json number,title,headRefName,baseRefName,author,state,statusCheckRollup
+   ```
+   If the PR is already merged or closed, abort with a message.
+
+2. **Check out the PR branch locally**:
+   ```bash
+   gh pr checkout <pr-number>
+   ```
+
+3. **Run quality gates** (collect all results before reporting):
+
+   Run all checks, do NOT stop on first failure:
+
+   a) **Syntax check** — `python -m py_compile` on all `.py` files touched by the PR:
+   ```bash
+   gh pr diff <pr-number> --name-only | grep '\.py$'
+   ```
+
+   b) **Ruff lint with auto-fix** — run `ruff check --fix` on PR-touched files, then re-check.
+
+   c) **Mypy** — only for files under `swarm/`.
+
+   d) **Pytest** — full test suite: `python -m pytest tests/ -x -q --tb=short`
+
+4. **Report results**:
+   ```
+   PR #<number> Quality Review: <title>
+   Author: <author>   Branch: <headRefName>
+   ─────────────────────────────
+     Syntax check:   PASS / FAIL (N files with errors)
+     Ruff lint:      PASS / FAIL (N issues, M auto-fixed)
+     Mypy:           PASS / FAIL / SKIP (N errors)
+     Tests:          PASS / FAIL (N passed, M failed)
+   ─────────────────────────────
+     Verdict:        CLEAN / N issues remain
+   ```
+
+5. **If auto-fixes were applied**:
+   - Stage the fixed files, commit with `Fix lint issues from automated review`, push.
+   - Append `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`.
+
+6. **If unfixable issues remain**:
+   - Provide specific errors with file:line references and suggested fixes.
+   - Ask: "Should I attempt to fix the remaining issues, or leave a review comment on the PR?"
+
+7. **Optional: Leave a PR review** via `gh pr review`:
+   - `--approve` if all gates pass
+   - `--request-changes` if blockers remain
+   - `--comment` if only advisory issues remain
+
+8. **Return to previous branch**: `git checkout -`
 
 ---
 
-## Shared Constraints
+## Constraints
 
 - Never force-push.
 - Never commit `.DS_Store`, `*.db`, or files likely containing secrets.
-- If tests fail during pre-commit, stop and report unless the failure is clearly pre-existing.
-- If the branch name already exists on the remote (Mode A), abort and ask for a different name.
+- Never auto-resolve ambiguous merge conflicts — ask the user.
+- Always verify no conflict markers remain before committing (Mode B).
+- Do not merge unless the user explicitly requests it (Mode B).
+- Never merge the PR automatically (Mode C).
+- Do not modify files outside the PR's changed file set (Mode C).
+- If the PR branch is from a fork and you can't push, skip the auto-fix push and report as suggestions (Mode C).
+- If tests fail during pre-commit, stop and report unless clearly pre-existing.
+- Prefer HTTPS for cloning external repos (SSH keys may not be configured).
+- Always install dependencies first if needed: `python -m pip install -e ".[dev,runtime]"`.
+
+## Migration from old commands
+
+| Old command | Equivalent |
+|---|---|
+| `/review_external_pr 220` | `/fix_pr --review 220` |
