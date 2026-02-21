@@ -430,6 +430,11 @@ def build_adapter(
             )
         # Require that the runtime dispatch path is either exactly the base path
         # or a strict sub-path of it (path-prefix with '/' boundary).
+        # The '/' boundary is critical: it prevents false prefix matches where
+        # one path is a prefix of another but not a true parent directory.
+        # For example, base "/api/v1" must NOT match "/api/v1.5/users" even
+        # though "/api/v1.5/users" starts with "/api/v1". Appending "/" to the
+        # base before comparing ensures only genuine sub-paths are allowed.
         if dispatch_relative_path != base_dispatch_path:
             prefix = base_dispatch_path
             if not prefix.endswith("/"):
