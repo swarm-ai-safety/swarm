@@ -4,7 +4,7 @@ title: "SWARM: System-Wide Assessment of Risk in Multi-agent systems"
 type: software
 authors:
   - name: "Raeli Savitt"
-version: "1.0.0"
+version: "1.7.0"
 date-released: "2026-02-05"
 license: "MIT"
 url: "https://swarm-ai.org"
