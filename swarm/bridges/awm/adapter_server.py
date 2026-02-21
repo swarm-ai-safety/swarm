@@ -97,6 +97,29 @@ def _is_safe_dispatch_path(dispatch_path: str) -> bool:
     return True
 
 
+def _validate_tool_base_path(raw_path: str) -> str:
+    """Validate and sanitize a tool's configured base path at startup.
+
+    Raises ``ValueError`` if the path is structurally invalid so that
+    ``build_adapter`` can fail fast rather than serving a broken tool.
+    Returns the sanitized, normalized base path string on success.
+    """
+    base_path_only, base_sep, base_query = raw_path.partition("?")
+    base_normalized = posixpath.normpath(base_path_only)
+    if base_path_only.endswith("/") and base_normalized != "/":
+        base_normalized += "/"
+    if not base_normalized.startswith("/"):
+        raise ValueError(
+            f"Configured tool path {raw_path!r} must start at the application root."
+        )
+    sanitized = _sanitize_dispatch_path(base_normalized, base_sep, base_query)
+    if sanitized is None:
+        raise ValueError(
+            f"Configured tool path {raw_path!r} contains invalid characters."
+        )
+    return sanitized
+
+
 def _load_scenario_code(envs_jsonl: Path, scenario: str) -> str:
     """Return the ``full_code`` string for *scenario* from *envs_jsonl*."""
     with open(envs_jsonl) as fh:
@@ -253,7 +276,9 @@ def build_adapter(
     awm_app = _exec_awm_app(awm_code, db_url)
     tools_list = _extract_tools_from_app(awm_app)
 
-    # Build lookup: tool name → (method, path)
+    # Build lookup: tool name → (method, sanitized base path)
+    # Paths are validated and sanitized here at startup so that misconfigured
+    # tools are caught immediately rather than during each invocation.
     _SKIP = {"openapi", "swagger_ui_html", "swagger_ui_redirect", "redoc_html"}
     tool_meta: Dict[str, Dict[str, str]] = {}
     for route in awm_app.routes:
@@ -262,10 +287,21 @@ def build_adapter(
         op_id = getattr(route, "operation_id", None) or route.endpoint.__name__
         if op_id in _SKIP:
             continue
+        raw_path = getattr(route, "path", "/")
+        try:
+            sanitized_base = _validate_tool_base_path(raw_path)
+        except ValueError as exc:
+            logger.error(
+                "Tool '%s' has an invalid configured path %r — skipping. Reason: %s",
+                op_id,
+                raw_path,
+                exc,
+            )
+            continue
         methods = list(getattr(route, "methods", {"GET"}))
         tool_meta[op_id] = {
             "method": methods[0] if methods else "GET",
-            "path": getattr(route, "path", "/"),
+            "path": sanitized_base,
         }
 
     # Load tasks & current task index
@@ -405,29 +441,9 @@ def build_adapter(
                 status_code=400,
             )
         # Additional anchoring: ensure the final dispatch path stays under the
-        # trusted base path defined by the tool metadata. This prevents user
-        # input from changing the effective base path used for dispatch.
-        base_path_only, base_sep, base_query = path.partition("?")
-        base_normalized = posixpath.normpath(base_path_only)
-        if base_path_only.endswith("/") and base_normalized != "/":
-            base_normalized += "/"
-        if not base_normalized.startswith("/"):
-            return JSONResponse(
-                {
-                    "isError": True,
-                    "result": "Configured tool path must start at the application root.",
-                },
-                status_code=500,
-            )
-        base_dispatch_path = _sanitize_dispatch_path(base_normalized, base_sep, base_query)
-        if base_dispatch_path is None:
-            return JSONResponse(
-                {
-                    "isError": True,
-                    "result": "Configured tool path contains invalid characters.",
-                },
-                status_code=500,
-            )
+        # trusted base path defined by the tool metadata. The base path is
+        # pre-validated and sanitized at startup, so we use it directly here.
+        base_dispatch_path = path
         # Require that the runtime dispatch path is either exactly the base path
         # or a strict sub-path of it (path-prefix with '/' boundary).
         # The '/' boundary is critical: it prevents false prefix matches where
@@ -493,7 +509,7 @@ def build_adapter(
         shutil.copy2(initial_db, working_db)
         # Re-exec the AWM app so SQLAlchemy picks up the fresh DB
         awm_app = _exec_awm_app(awm_code, db_url)
-        # Rebuild tool metadata (should be identical)
+        # Rebuild tool metadata (should be identical); re-validate paths.
         nonlocal tool_meta
         tool_meta.clear()
         for route in awm_app.routes:
@@ -502,10 +518,21 @@ def build_adapter(
             op_id = getattr(route, "operation_id", None) or route.endpoint.__name__
             if op_id in _SKIP:
                 continue
+            raw_path = getattr(route, "path", "/")
+            try:
+                sanitized_base = _validate_tool_base_path(raw_path)
+            except ValueError as exc:
+                logger.error(
+                    "Tool '%s' has an invalid configured path %r after reset — skipping. Reason: %s",
+                    op_id,
+                    raw_path,
+                    exc,
+                )
+                continue
             methods = list(getattr(route, "methods", {"GET"}))
             tool_meta[op_id] = {
                 "method": methods[0] if methods else "GET",
-                "path": getattr(route, "path", "/"),
+                "path": sanitized_base,
             }
         return JSONResponse({"status": "reset"})
 
