@@ -3,8 +3,12 @@
 import uuid
 from datetime import datetime, timedelta, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 
+from swarm.api.action_queue import AsyncActionQueue
+from swarm.api.event_bus import SimEvent, SimEventType, event_bus
+from swarm.api.middleware.auth import Scope, require_scope
+from swarm.api.models.action import ActionSubmission
 from swarm.api.models.simulation import (
     SimulationCreate,
     SimulationJoin,
@@ -17,6 +21,8 @@ router = APIRouter()
 # In-memory storage for development
 _simulations: dict[str, SimulationResponse] = {}
 _participants: dict[str, list[dict]] = {}  # simulation_id -> list of participant dicts
+_observations: dict[str, dict[str, dict]] = {}  # simulation_id -> agent_id -> observation
+_action_queues: dict[str, AsyncActionQueue] = {}  # simulation_id -> queue
 
 
 @router.post("/create", response_model=SimulationResponse)
@@ -213,3 +219,182 @@ async def list_simulations(
         simulations = [s for s in simulations if s.status == status]
 
     return simulations[offset : offset + limit]
+
+
+# ---------------------------------------------------------------------------
+# Action submission
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/{simulation_id}/actions",
+    dependencies=[Depends(require_scope(Scope.PARTICIPATE))],
+)
+async def submit_action(simulation_id: str, action: ActionSubmission) -> dict:
+    """Submit an action for a running simulation step.
+
+    Args:
+        simulation_id: The simulation to act in.
+        action: The action to submit.
+
+    Returns:
+        Acceptance confirmation with action_id.
+
+    Raises:
+        HTTPException: If simulation not found, not running, or agent not a
+            participant.
+    """
+    if simulation_id not in _simulations:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+
+    simulation = _simulations[simulation_id]
+    if simulation.status != SimulationStatus.RUNNING:
+        raise HTTPException(status_code=400, detail="Simulation is not running")
+
+    # Verify agent is a participant
+    participants = _participants.get(simulation_id, [])
+    agent_ids = {p["agent_id"] for p in participants}
+    if action.agent_id not in agent_ids:
+        raise HTTPException(
+            status_code=403, detail="Agent is not a participant in this simulation"
+        )
+
+    # Submit to the action queue
+    queue = _action_queues.get(simulation_id)
+    if queue is None:
+        queue = AsyncActionQueue()
+        _action_queues[simulation_id] = queue
+
+    accepted = await queue.submit_action(
+        action.agent_id,
+        {
+            "action_type": action.action_type.value,
+            "payload": action.payload,
+            "step": action.step,
+        },
+    )
+
+    action_id = str(uuid.uuid4())
+    return {
+        "action_id": action_id,
+        "simulation_id": simulation_id,
+        "agent_id": action.agent_id,
+        "status": "accepted" if accepted else "no_waiter",
+    }
+
+
+# ---------------------------------------------------------------------------
+# Observation polling
+# ---------------------------------------------------------------------------
+
+
+@router.get(
+    "/{simulation_id}/observation",
+    dependencies=[Depends(require_scope(Scope.READ))],
+)
+async def get_observation(simulation_id: str, agent_id: str = Query(...)) -> dict:
+    """Get the current observation for an agent in a simulation.
+
+    Args:
+        simulation_id: The simulation to query.
+        agent_id: The agent whose observation to retrieve.
+
+    Returns:
+        The agent's current observation data.
+
+    Raises:
+        HTTPException: If simulation not found or agent not a participant.
+    """
+    if simulation_id not in _simulations:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+
+    # Verify agent is a participant
+    participants = _participants.get(simulation_id, [])
+    agent_ids = {p["agent_id"] for p in participants}
+    if agent_id not in agent_ids:
+        raise HTTPException(
+            status_code=403, detail="Agent is not a participant in this simulation"
+        )
+
+    sim_observations = _observations.get(simulation_id, {})
+    obs = sim_observations.get(agent_id)
+    if obs is None:
+        return {
+            "simulation_id": simulation_id,
+            "agent_id": agent_id,
+            "observation": None,
+            "status": "no_observation",
+        }
+
+    return {
+        "simulation_id": simulation_id,
+        "agent_id": agent_id,
+        "observation": obs,
+        "status": "ready",
+    }
+
+
+# ---------------------------------------------------------------------------
+# SSE event stream
+# ---------------------------------------------------------------------------
+
+
+@router.get("/{simulation_id}/events")
+async def simulation_events(
+    simulation_id: str,
+    agent_id: str = Query(..., description="Agent ID for filtering events"),
+):
+    """Stream simulation events via Server-Sent Events.
+
+    Args:
+        simulation_id: The simulation to stream events from.
+        agent_id: The agent to receive events for.
+
+    Returns:
+        SSE event stream.
+
+    Raises:
+        HTTPException: If simulation not found.
+    """
+    import asyncio
+
+    from starlette.responses import StreamingResponse
+
+    if simulation_id not in _simulations:
+        raise HTTPException(status_code=404, detail="Simulation not found")
+
+    queue = event_bus.subscribe(simulation_id, agent_id)
+
+    async def event_generator():
+        try:
+            while True:
+                try:
+                    event: SimEvent = await asyncio.wait_for(
+                        queue.get(), timeout=15.0
+                    )
+                    data = {
+                        "event_type": event.event_type.value,
+                        "simulation_id": event.simulation_id,
+                        "data": event.data,
+                    }
+                    import json
+
+                    yield f"event: {event.event_type.value}\ndata: {json.dumps(data)}\n\n"
+
+                    if event.event_type == SimEventType.SIMULATION_COMPLETE:
+                        break
+                except asyncio.TimeoutError:
+                    # Send heartbeat
+                    yield ": heartbeat\n\n"
+        finally:
+            event_bus.unsubscribe(simulation_id, agent_id, queue)
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )

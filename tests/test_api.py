@@ -1420,3 +1420,695 @@ class TestApprovalWorkflow:
             json={"name": "AutoBot", "description": "test"},
         )
         assert resp.json()["status"] == "approved"
+
+
+# ---------------------------------------------------------------------------
+# AsyncActionQueue unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestAsyncActionQueue:
+    """Tests for the AsyncActionQueue."""
+
+    @pytest.fixture(autouse=True)
+    def _setup(self):
+        """Import the queue class."""
+        from swarm.api.action_queue import AsyncActionQueue
+
+        self.AsyncActionQueue = AsyncActionQueue
+
+    def test_submit_resolves_waiting(self):
+        """submit_action resolves a pending wait_for_action."""
+        import asyncio
+
+        queue = self.AsyncActionQueue(timeout_ms=5000)
+
+        async def _run():
+            async def waiter():
+                return await queue.wait_for_action("agent-1")
+
+            async def submitter():
+                await asyncio.sleep(0.05)
+                return await queue.submit_action(
+                    "agent-1", {"action_type": "accept"}
+                )
+
+            result, accepted = await asyncio.gather(waiter(), submitter())
+            assert result == {"action_type": "accept"}
+            assert accepted is True
+
+        asyncio.run(_run())
+
+    def test_timeout_returns_none(self):
+        """wait_for_action returns None on timeout."""
+        import asyncio
+
+        queue = self.AsyncActionQueue(timeout_ms=50)
+
+        async def _run():
+            result = await queue.wait_for_action("agent-timeout")
+            assert result is None
+
+        asyncio.run(_run())
+
+    def test_cancel_all_clears_pending(self):
+        """cancel_all cancels all pending futures."""
+        import asyncio
+
+        queue = self.AsyncActionQueue(timeout_ms=5000)
+
+        async def _run():
+            async def waiter():
+                return await queue.wait_for_action("agent-cancel")
+
+            task = asyncio.create_task(waiter())
+            await asyncio.sleep(0.02)
+            assert queue.pending_count == 1
+
+            cancelled = await queue.cancel_all()
+            assert cancelled == 1
+
+            result = await task
+            assert result is None
+
+        asyncio.run(_run())
+
+    def test_submit_without_waiter_returns_false(self):
+        """submit_action with no waiter returns False."""
+        import asyncio
+
+        queue = self.AsyncActionQueue(timeout_ms=5000)
+
+        async def _run():
+            accepted = await queue.submit_action(
+                "no-waiter", {"action_type": "noop"}
+            )
+            assert accepted is False
+
+        asyncio.run(_run())
+
+    def test_rate_limit_per_step(self):
+        """Rate limit rejects actions beyond max per step."""
+        import asyncio
+
+        queue = self.AsyncActionQueue(timeout_ms=5000)
+        queue._max_actions_per_step = 2
+
+        async def _run():
+            # Submit 2 actions (no waiter, but counts should still track)
+            # We need waiters for the actions to be accepted
+            for i in range(3):
+
+                async def waiter():
+                    return await queue.wait_for_action("agent-rl")
+
+                task = asyncio.create_task(waiter())
+                await asyncio.sleep(0.01)
+                result = await queue.submit_action(
+                    "agent-rl", {"action_type": "accept", "i": i}
+                )
+                if i < 2:
+                    assert result is True
+                else:
+                    assert result is False
+                await task
+
+        asyncio.run(_run())
+
+    def test_reset_step_clears_counts(self):
+        """reset_step clears per-agent action counts."""
+        import asyncio
+
+        queue = self.AsyncActionQueue(timeout_ms=5000)
+        queue._max_actions_per_step = 1
+
+        async def _run():
+            # Use up the limit
+            task = asyncio.create_task(queue.wait_for_action("agent-rs"))
+            await asyncio.sleep(0.01)
+            await queue.submit_action("agent-rs", {"action_type": "accept"})
+            await task
+
+            # Should be blocked now
+            task2 = asyncio.create_task(queue.wait_for_action("agent-rs"))
+            await asyncio.sleep(0.01)
+            assert await queue.submit_action("agent-rs", {"x": 1}) is False
+            await queue.cancel_all()
+            await task2
+
+            # Reset and try again
+            queue.reset_step()
+            task3 = asyncio.create_task(queue.wait_for_action("agent-rs"))
+            await asyncio.sleep(0.01)
+            assert await queue.submit_action("agent-rs", {"x": 2}) is True
+            await task3
+
+        asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# EventBus unit tests
+# ---------------------------------------------------------------------------
+
+
+class TestEventBus:
+    """Tests for the EventBus."""
+
+    def test_subscribe_and_publish(self):
+        """Published events arrive at subscriber queues."""
+        import asyncio
+
+        from swarm.api.event_bus import EventBus, SimEvent, SimEventType
+
+        bus = EventBus()
+
+        async def _run():
+            q = bus.subscribe("sim-1", "agent-a")
+            event = SimEvent(
+                event_type=SimEventType.STEP_COMPLETE,
+                simulation_id="sim-1",
+                data={"step": 1},
+            )
+            count = await bus.publish(event)
+            assert count == 1
+
+            received = q.get_nowait()
+            assert received.event_type == SimEventType.STEP_COMPLETE
+            assert received.data == {"step": 1}
+
+        asyncio.run(_run())
+
+    def test_targeted_event_filtering(self):
+        """Targeted events only reach the specified agent."""
+        import asyncio
+
+        from swarm.api.event_bus import EventBus, SimEvent, SimEventType
+
+        bus = EventBus()
+
+        async def _run():
+            q_a = bus.subscribe("sim-1", "agent-a")
+            q_b = bus.subscribe("sim-1", "agent-b")
+
+            event = SimEvent(
+                event_type=SimEventType.OBSERVATION_READY,
+                simulation_id="sim-1",
+                data={"obs": "for-a"},
+                agent_id="agent-a",
+            )
+            count = await bus.publish(event)
+            assert count == 1
+
+            assert q_b.qsize() == 0
+            assert q_a.qsize() == 1
+
+        asyncio.run(_run())
+
+    def test_broadcast_reaches_all(self):
+        """Broadcast events (agent_id=None) reach all subscribers."""
+        import asyncio
+
+        from swarm.api.event_bus import EventBus, SimEvent, SimEventType
+
+        bus = EventBus()
+
+        async def _run():
+            q_a = bus.subscribe("sim-1", "agent-a")
+            q_b = bus.subscribe("sim-1", "agent-b")
+
+            event = SimEvent(
+                event_type=SimEventType.EPOCH_COMPLETE,
+                simulation_id="sim-1",
+                data={"epoch": 1},
+            )
+            count = await bus.publish(event)
+            assert count == 2
+            assert q_a.qsize() == 1
+            assert q_b.qsize() == 1
+
+        asyncio.run(_run())
+
+    def test_unsubscribe(self):
+        """Unsubscribed queues no longer receive events."""
+        import asyncio
+
+        from swarm.api.event_bus import EventBus, SimEvent, SimEventType
+
+        bus = EventBus()
+
+        async def _run():
+            q = bus.subscribe("sim-1", "agent-a")
+            bus.unsubscribe("sim-1", "agent-a", q)
+            assert bus.subscriber_count("sim-1") == 0
+
+            event = SimEvent(
+                event_type=SimEventType.STEP_COMPLETE,
+                simulation_id="sim-1",
+                data={},
+            )
+            count = await bus.publish(event)
+            assert count == 0
+
+        asyncio.run(_run())
+
+    def test_full_queue_drops_events(self):
+        """Events are dropped when a subscriber's queue is full."""
+        import asyncio
+
+        from swarm.api.event_bus import EventBus, SimEvent, SimEventType
+
+        bus = EventBus()
+
+        async def _run():
+            q = bus.subscribe("sim-1", "agent-a")
+            # Fill the queue (maxsize=100)
+            for i in range(100):
+                await bus.publish(
+                    SimEvent(
+                        event_type=SimEventType.STEP_COMPLETE,
+                        simulation_id="sim-1",
+                        data={"step": i},
+                    )
+                )
+
+            # Next publish should silently drop
+            count = await bus.publish(
+                SimEvent(
+                    event_type=SimEventType.STEP_COMPLETE,
+                    simulation_id="sim-1",
+                    data={"step": 100},
+                )
+            )
+            assert count == 0
+            assert q.qsize() == 100
+
+        asyncio.run(_run())
+
+
+# ---------------------------------------------------------------------------
+# Action submission endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestActionEndpoints:
+    """Tests for action submission and observation endpoints."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_simulation_state(self):
+        """Reset simulation storage between tests."""
+        import swarm.api.routers.simulations as simulations_mod
+
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
+        yield
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
+
+    def _setup_running_simulation(self, client):
+        """Create a running simulation with two participants, return (sim_id, agent_ids, api_keys)."""
+        # Create simulation
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "test", "max_participants": 5},
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        agent_ids = []
+        api_keys = []
+        for i in range(2):
+            agent_resp = client.post(
+                "/api/v1/agents/register",
+                json={"name": f"ActionAgent{i}", "description": "Test"},
+            )
+            data = agent_resp.json()
+            agent_ids.append(data["agent_id"])
+            api_keys.append(data["api_key"])
+            client.post(
+                f"/api/v1/simulations/{sim_id}/join",
+                json={"agent_id": data["agent_id"], "role": "participant"},
+            )
+
+        # Start the simulation
+        client.post(f"/api/v1/simulations/{sim_id}/start")
+
+        return sim_id, agent_ids, api_keys
+
+    def test_submit_action_accepted(self, client):
+        """Submit an action to a running simulation."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/actions",
+            json={
+                "agent_id": agent_ids[0],
+                "action_type": "accept",
+                "payload": {"value": 42},
+                "step": 0,
+            },
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["simulation_id"] == sim_id
+        assert data["agent_id"] == agent_ids[0]
+        assert data["status"] in ("accepted", "no_waiter")
+        assert "action_id" in data
+
+    def test_submit_action_not_running(self, client):
+        """Cannot submit actions to a non-running simulation."""
+        # Create but don't start
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "test"},
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        agent_resp = client.post(
+            "/api/v1/agents/register",
+            json={"name": "EarlyAgent", "description": "Test"},
+        )
+        api_key = agent_resp.json()["api_key"]
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/actions",
+            json={
+                "agent_id": agent_resp.json()["agent_id"],
+                "action_type": "noop",
+                "payload": {},
+                "step": 0,
+            },
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
+        assert resp.status_code == 400
+        assert "not running" in resp.json()["detail"]
+
+    def test_submit_action_non_participant(self, client):
+        """Non-participant agent cannot submit actions."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        # Register a new agent that's NOT a participant
+        outsider = client.post(
+            "/api/v1/agents/register",
+            json={"name": "Outsider", "description": "Not a participant"},
+        )
+        outsider_data = outsider.json()
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/actions",
+            json={
+                "agent_id": outsider_data["agent_id"],
+                "action_type": "accept",
+                "payload": {},
+                "step": 0,
+            },
+            headers={"Authorization": f"Bearer {outsider_data['api_key']}"},
+        )
+        assert resp.status_code == 403
+        assert "not a participant" in resp.json()["detail"]
+
+    def test_submit_action_simulation_not_found(self, client):
+        """Action submission to nonexistent simulation returns 404."""
+        agent_resp = client.post(
+            "/api/v1/agents/register",
+            json={"name": "LostAgent", "description": "Test"},
+        )
+        resp = client.post(
+            "/api/v1/simulations/nonexistent/actions",
+            json={
+                "agent_id": agent_resp.json()["agent_id"],
+                "action_type": "noop",
+                "payload": {},
+                "step": 0,
+            },
+            headers={"Authorization": f"Bearer {agent_resp.json()['api_key']}"},
+        )
+        assert resp.status_code == 404
+
+    def test_get_observation_no_data(self, client):
+        """Get observation when none available returns no_observation."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.get(
+            f"/api/v1/simulations/{sim_id}/observation",
+            params={"agent_id": agent_ids[0]},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "no_observation"
+        assert data["observation"] is None
+
+    def test_get_observation_with_data(self, client):
+        """Get observation returns stored observation data."""
+        import swarm.api.routers.simulations as simulations_mod
+
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        # Inject an observation
+        simulations_mod._observations[sim_id] = {
+            agent_ids[0]: {"step": 3, "payoff": 0.5},
+        }
+
+        resp = client.get(
+            f"/api/v1/simulations/{sim_id}/observation",
+            params={"agent_id": agent_ids[0]},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["status"] == "ready"
+        assert data["observation"] == {"step": 3, "payoff": 0.5}
+
+    def test_get_observation_non_participant(self, client):
+        """Non-participant cannot get observations."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        outsider = client.post(
+            "/api/v1/agents/register",
+            json={"name": "Snooper", "description": "Test"},
+        )
+
+        resp = client.get(
+            f"/api/v1/simulations/{sim_id}/observation",
+            params={"agent_id": outsider.json()["agent_id"]},
+            headers={"Authorization": f"Bearer {outsider.json()['api_key']}"},
+        )
+        assert resp.status_code == 403
+
+
+# ---------------------------------------------------------------------------
+# SSE endpoint tests
+# ---------------------------------------------------------------------------
+
+
+class TestExternalAgentOrchestrator:
+    """Tests for external agent integration with the orchestrator."""
+
+    def test_external_agent_action_integrated(self):
+        """External agent receives observation and submits action via queue."""
+        import asyncio
+
+        from swarm.agents.honest import HonestAgent
+        from swarm.api.action_queue import AsyncActionQueue
+        from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+
+        async def _run():
+            config = OrchestratorConfig(
+                n_epochs=1, steps_per_epoch=1, seed=42
+            )
+            orch = Orchestrator(config=config)
+
+            # Register an internal and an external agent
+            internal = HonestAgent(agent_id="internal-1", name="Internal")
+            external = HonestAgent(agent_id="external-1", name="External")
+            external.is_external = True
+
+            orch.register_agent(internal)
+            orch.register_agent(external)
+
+            # Attach action queue
+            queue = AsyncActionQueue(timeout_ms=2000)
+            orch.set_external_action_queue(queue)
+
+            # Run async — submit action for external agent before it times out
+            async def submit_external_action():
+                await asyncio.sleep(0.05)
+                # Check that observation was stored
+                obs = orch.get_external_observations()
+                assert "external-1" in obs
+                # Submit an action
+                await queue.submit_action(
+                    "external-1",
+                    {"action_type": "noop"},
+                )
+
+            submitter = asyncio.create_task(submit_external_action())
+            metrics = await orch.run_async()
+            await submitter
+
+            assert len(metrics) == 1
+
+        asyncio.run(_run())
+
+    def test_external_agent_timeout_uses_noop(self):
+        """External agent that times out gets NOOP fallback."""
+        import asyncio
+
+        from swarm.agents.honest import HonestAgent
+        from swarm.api.action_queue import AsyncActionQueue
+        from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+
+        async def _run():
+            config = OrchestratorConfig(
+                n_epochs=1, steps_per_epoch=1, seed=42
+            )
+            orch = Orchestrator(config=config)
+
+            external = HonestAgent(agent_id="timeout-agent", name="Timeout")
+            external.is_external = True
+            orch.register_agent(external)
+
+            # Short timeout so test is fast
+            queue = AsyncActionQueue(timeout_ms=50)
+            orch.set_external_action_queue(queue)
+
+            # Don't submit any action — should timeout gracefully
+            metrics = await orch.run_async()
+            assert len(metrics) == 1
+
+        asyncio.run(_run())
+
+    def test_mixed_internal_external_step(self):
+        """Mix of internal and external agents in same step works correctly."""
+        import asyncio
+
+        from swarm.agents.honest import HonestAgent
+        from swarm.api.action_queue import AsyncActionQueue
+        from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+
+        async def _run():
+            config = OrchestratorConfig(
+                n_epochs=1, steps_per_epoch=2, seed=42
+            )
+            orch = Orchestrator(config=config)
+
+            # 2 internal, 1 external
+            for i in range(2):
+                orch.register_agent(
+                    HonestAgent(agent_id=f"int-{i}", name=f"Int{i}")
+                )
+            ext = HonestAgent(agent_id="ext-0", name="Ext0")
+            ext.is_external = True
+            orch.register_agent(ext)
+
+            queue = AsyncActionQueue(timeout_ms=100)
+            orch.set_external_action_queue(queue)
+
+            # Auto-submit noop for external agent each step
+            async def auto_submit():
+                for _ in range(2):  # 2 steps
+                    await asyncio.sleep(0.02)
+                    await queue.submit_action("ext-0", {"action_type": "noop"})
+
+            submitter = asyncio.create_task(auto_submit())
+            metrics = await orch.run_async()
+            await submitter
+
+            assert len(metrics) == 1
+
+        asyncio.run(_run())
+
+
+class TestSSEEndpoint:
+    """Tests for the SSE event stream endpoint."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_simulation_state(self):
+        """Reset simulation storage between tests."""
+        import swarm.api.routers.simulations as simulations_mod
+
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
+        yield
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
+
+    def test_sse_not_found(self, client):
+        """SSE endpoint returns 404 for nonexistent simulation."""
+        resp = client.get(
+            "/api/v1/simulations/nonexistent/events",
+            params={"agent_id": "agent-1"},
+        )
+        assert resp.status_code == 404
+
+    def test_sse_connects(self, client):
+        """SSE endpoint returns streaming response for valid simulation."""
+        import json
+        import threading
+
+        from swarm.api.event_bus import SimEvent, SimEventType, event_bus
+
+        # Create a simulation
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": "test"},
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        # We need to publish an event and then a completion event
+        # so the stream terminates
+        def publish_events():
+            import asyncio
+            import time
+
+            time.sleep(0.1)
+            loop = asyncio.new_event_loop()
+            loop.run_until_complete(
+                event_bus.publish(
+                    SimEvent(
+                        event_type=SimEventType.STEP_COMPLETE,
+                        simulation_id=sim_id,
+                        data={"step": 0},
+                    )
+                )
+            )
+            loop.run_until_complete(
+                event_bus.publish(
+                    SimEvent(
+                        event_type=SimEventType.SIMULATION_COMPLETE,
+                        simulation_id=sim_id,
+                        data={},
+                    )
+                )
+            )
+            loop.close()
+
+        t = threading.Thread(target=publish_events)
+        t.start()
+
+        with client.stream(
+            "GET",
+            f"/api/v1/simulations/{sim_id}/events",
+            params={"agent_id": "agent-1"},
+        ) as resp:
+            assert resp.status_code == 200
+            assert resp.headers["content-type"].startswith("text/event-stream")
+            lines = []
+            for line in resp.iter_lines():
+                lines.append(line)
+
+        t.join(timeout=5)
+
+        # Should have received step_complete and simulation_complete events
+        event_lines = [line for line in lines if line.startswith("data:")]
+        assert len(event_lines) >= 2
+        first_data = json.loads(event_lines[0].removeprefix("data:").strip())
+        assert first_data["event_type"] == "step_complete"

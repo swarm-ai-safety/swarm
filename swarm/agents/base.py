@@ -285,6 +285,7 @@ class BaseAgent(ABC):
         self.agent_type = agent_type
         self.roles = roles or [Role.WORKER]
         self.config = config or {}
+        self.is_external: bool = False
         self._rng: random.Random = rng or random.Random()
 
         # Memory configuration (import here to avoid circular imports)

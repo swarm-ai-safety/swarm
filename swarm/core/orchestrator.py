@@ -539,6 +539,10 @@ class Orchestrator:
         # Red-team inspection (extracted component)
         self._redteam = RedTeamInspector(self._agents, self.state)
 
+        # External agent support: action queue and observation store
+        self._external_action_queue: Optional[Any] = None  # AsyncActionQueue
+        self._external_observations: Dict[str, Dict[str, Any]] = {}  # agent_id -> obs dict
+
     def register_agent(self, agent: BaseAgent) -> AgentState:
         """
         Register an agent with the simulation.
@@ -1476,14 +1480,39 @@ class Orchestrator:
         return self._epoch_post_hooks(epoch_start)
 
     async def _run_step_async(self) -> None:
-        """Run a single step asynchronously with concurrent LLM calls."""
+        """Run a single step asynchronously with concurrent LLM calls.
+
+        External agents (``is_external=True``) have their observation stored
+        and their action awaited via the external action queue rather than
+        calling ``agent.act()``.
+        """
         self._step_preamble()
+
+        if self._external_action_queue is not None:
+            self._external_action_queue.reset_step()
 
         agents_to_act = self._get_eligible_agents()
 
         async def get_agent_action(agent_id: str) -> Tuple[str, Action]:
             agent = self._agents[agent_id]
             observation = self._build_observation(agent_id)
+
+            if agent.is_external and self._external_action_queue is not None:
+                # Store observation for the API to serve
+                import dataclasses as _dc
+                self._external_observations[agent_id] = _dc.asdict(observation)
+
+                # Wait for action from external API
+                raw_action = await self._external_action_queue.wait_for_action(
+                    agent_id
+                )
+                if raw_action is None:
+                    # Timeout — use NOOP
+                    return agent_id, Action(
+                        agent_id=agent_id, action_type=ActionType.NOOP
+                    )
+                return agent_id, self._parse_external_action(agent_id, raw_action)
+
             action = await self._select_action_async(agent, observation)
             return agent_id, action
 
@@ -1497,6 +1526,39 @@ class Orchestrator:
             self._execute_action(action)
 
         await self._resolve_pending_interactions_async()
+
+    def set_external_action_queue(self, queue: Any) -> None:
+        """Attach an external action queue for API-driven agents.
+
+        Args:
+            queue: An ``AsyncActionQueue`` instance.
+        """
+        self._external_action_queue = queue
+
+    def get_external_observations(self) -> Dict[str, Dict[str, Any]]:
+        """Return the current external observation store.
+
+        This dict is updated each step for external agents so the API
+        layer can serve observations to polling clients.
+        """
+        return self._external_observations
+
+    def _parse_external_action(self, agent_id: str, raw: Dict) -> Action:
+        """Convert a raw dict from the action queue into an ``Action``."""
+        action_type_str = raw.get("action_type", "noop")
+        try:
+            action_type = ActionType(action_type_str)
+        except ValueError:
+            action_type = ActionType.NOOP
+
+        return Action(
+            agent_id=agent_id,
+            action_type=action_type,
+            target_id=str(raw["target_id"]) if raw.get("target_id") is not None else "",
+            counterparty_id=str(raw["counterparty_id"]) if raw.get("counterparty_id") is not None else "",
+            content=str(raw["content"]) if raw.get("content") is not None else "",
+            metadata=raw.get("metadata", {}),
+        )
 
     async def _resolve_pending_interactions_async(self) -> None:
         """Resolve pending interactions with async support for LLM agents."""
