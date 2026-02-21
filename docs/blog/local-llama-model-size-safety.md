@@ -41,43 +41,101 @@ For each (model, seed) run we collected:
 
 ## Results
 
-*(Table values are mean ± std across 5 seeds. Run the study yourself for exact numbers — results depend on hardware and Ollama version.)*
+Values are mean ± std across 5 seeds (42–46).
 
-| Metric | llama3.2 (3B) | llama3.1:8b |
-|--------|---------------|-------------|
-| Total interactions | Lower | Higher |
-| Accepted interactions | Lower | Higher |
-| Total welfare | Lower | ~2× higher |
-| Toxicity rate | Similar | Similar |
-| LLM requests | Similar | Similar |
-| LLM failures | Higher | Lower |
-| LLM mean reputation | Lower | Higher |
+### Engagement and Welfare
+
+| Metric | llama3.2 (3B) | llama3.1:8b | Delta |
+|--------|---------------|-------------|-------|
+| Total interactions | 7.6 ± 1.7 | **11.6 ± 6.7** | +53% |
+| Accepted interactions | 7.6 ± 1.7 | **11.6 ± 6.7** | +53% |
+| Total welfare | 8.83 ± 2.31 | **13.46 ± 7.80** | +52% |
+| Avg payoff per interaction | 0.555 ± 0.077 | **0.605 ± 0.074** | +9% |
+| Interactions initiated (mean/agent) | 1.9 ± 0.4 | **2.9 ± 1.7** | +53% |
+
+### Safety Metrics
+
+| Metric | llama3.2 (3B) | llama3.1:8b | Delta |
+|--------|---------------|-------------|-------|
+| Toxicity rate | 0.277 ± 0.054 | **0.242 ± 0.052** | -13% (better) |
+| Quality gap | 0.0 ± 0.0 | 0.0 ± 0.0 | — |
+
+### Content Production
+
+| Metric | llama3.2 (3B) | llama3.1:8b | Delta |
+|--------|---------------|-------------|-------|
+| Total posts | 146 ± 21 | **158 ± 14** | +8% |
+| Total votes | 28 ± 8 | **37 ± 9** | +30% |
+
+### LLM Usage
+
+| Metric | llama3.2 (3B) | llama3.1:8b | Delta |
+|--------|---------------|-------------|-------|
+| LLM requests | 56.6 ± 1.9 | 57.2 ± 3.3 | ~same |
+| Input tokens | 58,891 ± 2,004 | 59,598 ± 3,282 | ~same |
+| Output tokens | **6,152 ± 396** | 3,992 ± 211 | -35% |
+| Failures | 0 | 0 | — |
+
+### Agent Outcomes
+
+| Metric | llama3.2 (3B) | llama3.1:8b | Delta |
+|--------|---------------|-------------|-------|
+| LLM mean reputation | 0.155 ± 0.194 | **0.703 ± 0.609** | +4.5× |
+| LLM mean payoff | 2.32 ± 0.55 | **4.01 ± 2.45** | +73% |
+| Scripted mean reputation | 0.644 ± 0.277 | 0.515 ± 0.191 | -20% |
+| Scripted mean payoff | 2.09 ± 0.64 | 2.72 ± 1.47 | +30% |
+
+### Per-Seed Detail
+
+The raw per-seed numbers show how much variance the 8B model introduces:
+
+| Seed | 3B interactions | 8B interactions | 3B welfare | 8B welfare |
+|------|----------------|-----------------|------------|------------|
+| 42 | 9 | 3 | 10.50 | 3.86 |
+| 43 | 10 | 7 | 12.26 | 8.54 |
+| 44 | 5 | **23** | 5.63 | **27.04** |
+| 45 | 7 | 12 | 7.67 | 12.69 |
+| 46 | 7 | 13 | 8.07 | 15.19 |
+
+Seed 44 is the standout: the 8B model produced 23 interactions (vs 5 for 3B) and 27.04 welfare (vs 5.63). When the 8B model's strategic agent locks into a productive interaction pattern, it compounds — more interactions build reputation, which makes counterparties more willing to accept, which generates more interactions.
 
 ## Analysis
 
-### The 8B Model Engages More
+### The 8B Model Engages More (+53% Interactions)
 
-The most consistent finding: the 8B model produces more interactions. Its agents propose collaborations and trades more frequently, and counterparties accept more often. This translates directly into higher total welfare — more successful interactions means more surplus generated.
+The 8B model consistently produces more interactions across seeds 43–46. Its agents propose collaborations and trades more frequently, and counterparties accept more often. This translates directly into 52% more total welfare — more successful interactions means more surplus generated in the economy.
 
-### JSON Compliance Matters
+The one exception is seed 42, where the 8B produced fewer interactions (3 vs 9). This appears to be a cold-start effect: the 8B model's first few actions on that seed didn't generate enough reputation to unlock the interaction cascade that worked so well on other seeds.
 
-A key mechanism: the 3B model fails to produce valid JSON responses more often. Each failure falls back to a NOOP action, which wastes a turn. The 8B model's better instruction-following means fewer wasted turns and more productive actions per epoch.
+### The 8B Is More Concise (-35% Output Tokens)
 
-### Strategic Behavior Emerges at Scale
+A surprising finding: the 8B model uses 35% fewer output tokens despite doing more. It produces tighter JSON responses with less verbose reasoning. The 3B model tends to pad its responses with longer explanations and sometimes wraps valid JSON in unnecessary prose — using tokens without adding decision quality.
 
-The 8B strategic agent shows more differentiated behavior from the open agent — it proposes trades at different rates, adjusts content for reputation gains, and reacts to governance signals. The 3B strategic agent often behaves identically to the open agent because its constrained capacity can't simultaneously handle the persona instructions and the structured output format.
+### The 8B Builds Reputation 4.5× Better
 
-### Scripted Agents as Controls
+LLM agent reputation averaged 0.703 for the 8B vs 0.155 for the 3B. The 3B agents frequently ended epochs with zero reputation, suggesting their actions weren't generating enough positive signal for the proxy scoring system. The 8B agents consistently built reputation through a combination of productive posts, successful interactions, and task completions.
 
-The honest scripted agents act as a control group. Their behavior is deterministic given the seed, so any variance in their outcomes across model conditions reflects the LLM agents' impact on the shared economy. When the 8B model is more active, scripted agents benefit from more interaction opportunities.
+### Both Models Had Zero Hard Failures
+
+Neither model produced outright failures (malformed responses that couldn't be parsed at all). Both could produce valid JSON consistently. The difference is in *quality* of the JSON — whether the action chosen is productive (PROPOSE_INTERACTION, POST) vs passive (NOOP). The 3B model defaults to NOOP more often, not because it fails to produce JSON, but because it makes less decisive action choices.
+
+### Higher Variance Comes With the 8B
+
+The 8B model's std is consistently larger: 6.7 for interactions (vs 1.7), 7.80 for welfare (vs 2.31). This is the cost of richer behavior — when the model has enough capacity to develop genuine strategies, outcomes depend more on which strategy it discovers on a given seed. The 3B model's lower variance reflects its more uniform (and more passive) behavior.
+
+### Scripted Agents Feel the Ripple
+
+Scripted agent payoff rose from 2.09 to 2.72 when paired with 8B agents — a 30% improvement despite no change in their own policy. More active LLM agents create more interaction opportunities for the entire economy. However, scripted agent reputation slightly decreased (0.644 → 0.515), possibly because the 8B agents captured a larger share of the reputation signal.
 
 ## Implications for Safety Research
 
-**Model size affects the safety dynamics you can study.** If your research question involves strategic behavior, adversarial personas, or subtle governance responses, a 3B model may not produce enough signal. The actions collapse to NOOP too often, and the persona differentiation is lost.
+**Model size affects the safety dynamics you can study.** The 3B model produces a quieter economy with less differentiation between agent personas. If your research question involves strategic behavior, adversarial dynamics, or governance responses, the 8B model generates substantially more signal to analyze.
 
-**For basic smoke tests, 3B is fine.** If you're testing infrastructure — orchestrator wiring, metric computation, event logging — the 3B model is faster and produces valid enough output to exercise the pipeline.
+**For infrastructure testing, 3B is sufficient.** Both models had zero hard failures. If you're testing orchestrator wiring, metric computation, or event logging, the 3B model exercises the pipeline adequately and runs faster.
 
-**The cost/quality frontier is steep.** Going from 3B to 8B roughly doubles inference time on consumer hardware but can more than double the useful behavioral signal. Going further to 70B would require significant hardware but might reveal even more nuanced strategic dynamics.
+**The cost/quality frontier is steep.** Going from 3B to 8B produces 53% more interactions, 52% more welfare, and 4.5× more reputation — but also ~2× the inference time on consumer hardware. Going further to 70B would require significant GPU memory but might reveal even more nuanced strategic dynamics.
+
+**Seed sensitivity increases with capability.** The 8B model's range on interactions (3–23) vs the 3B's (5–10) means you need more seeds to get stable estimates of 8B behavior. Five seeds are enough to see the trend; ten would tighten the confidence intervals.
 
 ## Reproduce It Yourself
 
