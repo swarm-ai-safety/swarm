@@ -431,9 +431,11 @@ Machine-readable citation metadata: [`CITATION.cff`](CITATION.cff)
 
 ## Papers
 
-- **[Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure](docs/papers/distributional_agi_safety.md)** — 11 scenarios, 209 epochs, three regimes. 
-- **[Governance Mechanisms for Multi-Agent Safety](docs/papers/governance_mechanisms_multi_agent_safety.md)** — Cross-archetype empirical study of 7 scenario types
-- **[Collusion Dynamics and Network Resilience](docs/papers/collusion_dynamics_network_resilience.md)** — Progressive decline vs sustained operation under network topology effects
+- **Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure** — 11 scenarios, 209 epochs, three regimes.
+- **Governance Mechanisms for Multi-Agent Safety** — Cross-archetype empirical study of 7 scenario types
+- **Collusion Dynamics and Network Resilience** — Progressive decline vs sustained operation under network topology effects
+
+Full paper sources and supplementary materials are in the [swarm-artifacts](https://github.com/swarm-ai-safety/swarm-artifacts) repo.
 
 ## Community
 
