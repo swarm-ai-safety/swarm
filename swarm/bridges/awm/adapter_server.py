@@ -404,6 +404,44 @@ def build_adapter(
                 },
                 status_code=400,
             )
+        # Additional anchoring: ensure the final dispatch path stays under the
+        # trusted base path defined by the tool metadata. This prevents user
+        # input from changing the effective base path used for dispatch.
+        base_path_only, base_sep, base_query = path.partition("?")
+        base_normalized = posixpath.normpath(base_path_only)
+        if base_path_only.endswith("/") and base_normalized != "/":
+            base_normalized += "/"
+        if not base_normalized.startswith("/"):
+            return JSONResponse(
+                {
+                    "isError": True,
+                    "result": "Configured tool path must start at the application root.",
+                },
+                status_code=500,
+            )
+        base_dispatch_path = _sanitize_dispatch_path(base_normalized, base_sep, base_query)
+        if base_dispatch_path is None:
+            return JSONResponse(
+                {
+                    "isError": True,
+                    "result": "Configured tool path contains invalid characters.",
+                },
+                status_code=500,
+            )
+        # Require that the runtime dispatch path is either exactly the base path
+        # or a strict sub-path of it (path-prefix with '/' boundary).
+        if dispatch_relative_path != base_dispatch_path:
+            prefix = base_dispatch_path
+            if not prefix.endswith("/"):
+                prefix = prefix + "/"
+            if not dispatch_relative_path.startswith(prefix):
+                return JSONResponse(
+                    {
+                        "isError": True,
+                        "result": "Tool path must remain within its configured base path.",
+                    },
+                    status_code=400,
+                )
 
         remaining = {k: v for k, v in arguments.items() if k not in path_params_used}
 
