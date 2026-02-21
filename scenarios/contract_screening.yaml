@@ -55,6 +55,13 @@ governance:
   collusion_score_threshold: 0.8
   collusion_penalty_multiplier: 1.0
 
+  # Sybil detection (behavioral similarity clustering)
+  # High threshold (0.85) avoids false-flagging honest agents in small pools
+  sybil_detection_enabled: true
+  sybil_similarity_threshold: 0.85
+  sybil_penalty_multiplier: 1.0
+  sybil_max_cluster_size: 2
+
 contracts:
   truthful_auction:
     stake_fraction: 0.05

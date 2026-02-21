@@ -291,6 +291,13 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         security_clear_history_on_epoch=data.get(
             "security_clear_history_on_epoch", False
         ),
+        # Sybil detection (behavioral similarity clustering)
+        sybil_detection_enabled=data.get("sybil_detection_enabled", False),
+        sybil_similarity_threshold=data.get("sybil_similarity_threshold", 0.8),
+        sybil_penalty_multiplier=data.get("sybil_penalty_multiplier", 1.0),
+        sybil_realtime_penalty=data.get("sybil_realtime_penalty", False),
+        sybil_realtime_rate=data.get("sybil_realtime_rate", 0.1),
+        sybil_max_cluster_size=data.get("sybil_max_cluster_size", 1),
         # Council governance lever
         council_lever_enabled=data.get("council_lever_enabled", False),
         council_lever_review_probability=data.get(
