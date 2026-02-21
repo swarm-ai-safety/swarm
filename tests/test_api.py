@@ -2696,6 +2696,150 @@ class TestGovernanceEndpoints:
         )
         assert resp.status_code == 404
 
+    def _create_and_vote(self, client, headers, direction=1):
+        """Helper: create a proposal, cast one vote, return proposal_id."""
+        create_resp = client.post(
+            "/api/v1/governance/propose",
+            json={"title": "Lifecycle", "description": "Test"},
+            headers=headers,
+        )
+        proposal_id = create_resp.json()["proposal_id"]
+        voter_headers = self._get_auth_headers(client)
+        client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/vote",
+            params={"direction": direction},
+            headers=voter_headers,
+        )
+        return proposal_id
+
+    def test_finalize_proposal_accepted(self, client):
+        """Finalize a proposal with a for-vote → ACCEPTED."""
+        headers = self._get_auth_headers(client)
+        proposal_id = self._create_and_vote(client, headers, direction=1)
+
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/finalize",
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "accepted"
+
+    def test_finalize_proposal_rejected(self, client):
+        """Finalize a proposal with an against-vote → REJECTED."""
+        headers = self._get_auth_headers(client)
+        proposal_id = self._create_and_vote(client, headers, direction=-1)
+
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/finalize",
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "rejected"
+
+    def test_finalize_quorum_not_met(self, client):
+        """Finalize with quorum=5 but only 1 vote → 400."""
+        headers = self._get_auth_headers(client)
+        proposal_id = self._create_and_vote(client, headers, direction=1)
+
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/finalize",
+            params={"quorum": 5},
+            headers=headers,
+        )
+        assert resp.status_code == 400
+        assert "Quorum" in resp.json()["detail"]
+
+    def test_finalize_already_closed(self, client):
+        """Finalize twice → second attempt returns 400."""
+        headers = self._get_auth_headers(client)
+        proposal_id = self._create_and_vote(client, headers, direction=1)
+
+        client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/finalize",
+            headers=headers,
+        )
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/finalize",
+            headers=headers,
+        )
+        assert resp.status_code == 400
+        assert "not open" in resp.json()["detail"]
+
+    def test_close_proposal_by_proposer(self, client):
+        """Proposer can close (withdraw) their own proposal."""
+        headers = self._get_auth_headers(client)
+        create_resp = client.post(
+            "/api/v1/governance/propose",
+            json={"title": "CloseMe", "description": "Test"},
+            headers=headers,
+        )
+        proposal_id = create_resp.json()["proposal_id"]
+
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/close",
+            headers=headers,
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "rejected"
+
+    def test_close_proposal_unauthorized(self, client):
+        """Non-proposer without ADMIN scope cannot close."""
+        headers1 = self._get_auth_headers(client)
+        create_resp = client.post(
+            "/api/v1/governance/propose",
+            json={"title": "NoClose", "description": "Test"},
+            headers=headers1,
+        )
+        proposal_id = create_resp.json()["proposal_id"]
+
+        headers2 = self._get_auth_headers(client)
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/close",
+            headers=headers2,
+        )
+        assert resp.status_code == 403
+
+    def test_list_votes(self, client):
+        """List votes on a proposal."""
+        headers = self._get_auth_headers(client)
+        create_resp = client.post(
+            "/api/v1/governance/propose",
+            json={"title": "Votable", "description": "Test"},
+            headers=headers,
+        )
+        proposal_id = create_resp.json()["proposal_id"]
+
+        client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/vote",
+            params={"direction": 1},
+            headers=headers,
+        )
+
+        resp = client.get(f"/api/v1/governance/proposals/{proposal_id}/votes")
+        assert resp.status_code == 200
+        votes = resp.json()
+        assert len(votes) == 1
+        assert votes[0]["direction"] == 1
+
+    def test_vote_on_finalized_proposal(self, client):
+        """Cannot vote on a finalized proposal."""
+        headers = self._get_auth_headers(client)
+        proposal_id = self._create_and_vote(client, headers, direction=1)
+
+        client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/finalize",
+            headers=headers,
+        )
+
+        new_voter = self._get_auth_headers(client)
+        resp = client.post(
+            f"/api/v1/governance/proposals/{proposal_id}/vote",
+            params={"direction": 1},
+            headers=new_voter,
+        )
+        assert resp.status_code == 400
+        assert "not open" in resp.json()["detail"]
+
 
 # ---------------------------------------------------------------------------
 # Metrics endpoint tests
