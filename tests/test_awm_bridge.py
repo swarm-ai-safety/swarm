@@ -2121,3 +2121,97 @@ class TestAdapterServerSSRF:
         from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
 
         assert _is_safe_dispatch_path("/items?page=2&size=10") is True
+
+    # -- Base path anchoring with path templates --
+
+    def test_base_static_prefix_extracted_before_sanitize(self):
+        """Static prefix before first {placeholder} must not include curly braces."""
+        import re
+
+        path = "/users/{user_id}"
+        base_path_only = path.partition("?")[0]
+        base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+        assert base_static == "/users/"
+        # Confirm no curly braces remain
+        assert "{" not in base_static and "}" not in base_static
+
+    def test_base_static_prefix_multi_param(self):
+        """Only the prefix before the first placeholder is kept."""
+        import re
+
+        path = "/api/v1/{resource}/{id}/details"
+        base_path_only = path.partition("?")[0]
+        base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+        assert base_static == "/api/v1/"
+
+    def test_base_static_prefix_no_params(self):
+        """A path with no placeholders returns the full path as the static prefix."""
+        import re
+
+        path = "/items"
+        base_path_only = path.partition("?")[0]
+        base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+        assert base_static == "/items"
+
+    def test_sanitize_accepts_static_prefix_from_template(self):
+        """_sanitize_dispatch_path must accept the extracted static prefix."""
+        import re
+        import posixpath
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        for template, expected_base in [
+            ("/users/{user_id}", "/users/"),
+            ("/api/v1/{resource}/{id}", "/api/v1/"),
+            ("/items", "/items"),
+        ]:
+            base_path_only = template.partition("?")[0]
+            base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+            base_normalized = posixpath.normpath(base_static) if base_static else "/"
+            if base_static.endswith("/") and base_normalized != "/":
+                base_normalized += "/"
+            result = _sanitize_dispatch_path(base_normalized, "", "")
+            assert result == expected_base, f"template={template!r}: got {result!r}"
+
+    def test_dispatch_within_parameterized_base_accepted(self):
+        """/users/123 is within the /users/ prefix derived from /users/{user_id}."""
+        import re
+        import posixpath
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        path_template = "/users/{user_id}"
+        dispatch_relative_path = "/users/123"
+
+        base_path_only = path_template.partition("?")[0]
+        base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+        base_normalized = posixpath.normpath(base_static) if base_static else "/"
+        if base_static.endswith("/") and base_normalized != "/":
+            base_normalized += "/"
+        base_dispatch_path = _sanitize_dispatch_path(base_normalized, "", "")
+        assert base_dispatch_path is not None
+
+        if dispatch_relative_path != base_dispatch_path:
+            prefix = base_dispatch_path if base_dispatch_path.endswith("/") else base_dispatch_path + "/"
+            assert dispatch_relative_path.startswith(prefix)
+
+    def test_dispatch_outside_base_rejected(self):
+        """/evil/path is NOT within the /users/ prefix and must be rejected."""
+        import re
+        import posixpath
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        path_template = "/users/{user_id}"
+        dispatch_relative_path = "/evil/path"
+
+        base_path_only = path_template.partition("?")[0]
+        base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+        base_normalized = posixpath.normpath(base_static) if base_static else "/"
+        if base_static.endswith("/") and base_normalized != "/":
+            base_normalized += "/"
+        base_dispatch_path = _sanitize_dispatch_path(base_normalized, "", "")
+        assert base_dispatch_path is not None
+
+        in_base = dispatch_relative_path == base_dispatch_path
+        if not in_base:
+            prefix = base_dispatch_path if base_dispatch_path.endswith("/") else base_dispatch_path + "/"
+            in_base = dispatch_relative_path.startswith(prefix)
+        assert not in_base, "Path outside base should be rejected"
