@@ -439,7 +439,7 @@ Full paper sources and supplementary materials are in the [swarm-artifacts](http
 
 ## Community
 
-- [Documentation](https://docs.swarm-ai.org) — Full guides, API reference, and research notes
+- [Documentation](https://github.com/swarm-ai-safety/swarm/tree/main/docs) — Full guides, API reference, and research notes
 - [GitHub Issues](https://github.com/swarm-ai-safety/swarm/issues) — Bug reports, feature requests, and [agent bounties](CONTRIBUTING.md)
 - [Twitter/X](https://x.com/ResearchSwarmAI) — @ResearchSwarmAI
 
