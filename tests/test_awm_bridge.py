@@ -2122,6 +2122,34 @@ class TestAdapterServerSSRF:
 
         assert _is_safe_dispatch_path("/items?page=2&size=10") is True
 
+    # -- _validate_tool_base_path startup validation --
+
+    def test_validate_base_path_accepts_valid(self):
+        from swarm.bridges.awm.adapter_server import _validate_tool_base_path
+
+        assert _validate_tool_base_path("/items") == "/items"
+        assert _validate_tool_base_path("/api/v1/users") == "/api/v1/users"
+        assert _validate_tool_base_path("/items/") == "/items/"
+
+    def test_validate_base_path_rejects_no_leading_slash(self):
+        from swarm.bridges.awm.adapter_server import _validate_tool_base_path
+
+        with pytest.raises(ValueError, match="must start at the application root"):
+            _validate_tool_base_path("items/relative")
+
+    def test_validate_base_path_rejects_invalid_chars(self):
+        from swarm.bridges.awm.adapter_server import _validate_tool_base_path
+
+        with pytest.raises(ValueError, match="contains invalid characters"):
+            _validate_tool_base_path("/items/@admin")
+
+    def test_validate_base_path_normalizes(self):
+        from swarm.bridges.awm.adapter_server import _validate_tool_base_path
+
+        # normpath collapses redundant separators/dot segments
+        assert _validate_tool_base_path("/items/./list") == "/items/list"
+        assert _validate_tool_base_path("/items//list") == "/items/list"
+
     # -- Dispatch exception: generic error, no raw exception text --
 
     def test_dispatch_exception_returns_generic_error(self, monkeypatch, tmp_path):
