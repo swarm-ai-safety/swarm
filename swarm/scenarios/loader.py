@@ -142,6 +142,7 @@ _COUNCIL_AGENT_CLASS = None
 _CONCORDIA_ENTITY_CLASS = None
 _CREWAI_AGENT_CLASS = None
 _CREWAI_CONFIG_CLASS = None
+_LETTA_AGENT_CLASS = None
 
 
 def _get_crewai_classes():
@@ -153,6 +154,16 @@ def _get_crewai_classes():
         _CREWAI_AGENT_CLASS = CrewBackedAgent
         _CREWAI_CONFIG_CLASS = CrewConfig
     return _CREWAI_AGENT_CLASS, _CREWAI_CONFIG_CLASS
+
+
+def _get_letta_agent_class():
+    """Lazy import LettaAgent class."""
+    global _LETTA_AGENT_CLASS
+    if _LETTA_AGENT_CLASS is None:
+        from swarm.agents.letta_agent import LettaAgent
+
+        _LETTA_AGENT_CLASS = LettaAgent
+    return _LETTA_AGENT_CLASS
 
 
 def _get_llm_classes():
@@ -731,6 +742,26 @@ def parse_awm_config(data: Dict[str, Any]) -> Optional[Any]:
     return AWMConfig(**data)
 
 
+def parse_letta_config(data: Dict[str, Any]) -> Optional[Any]:
+    """Parse letta section from YAML into LettaConfig.
+
+    Args:
+        data: The letta section from YAML
+
+    Returns:
+        LettaConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    from swarm.bridges.letta.config import LettaConfig
+
+    return LettaConfig(**data)
+
+
 def parse_perturbation_config(
     data: Dict[str, Any],
 ) -> Optional[PerturbationConfig]:
@@ -949,6 +980,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
     spawn_config = parse_spawn_config(data.get("spawn", {}))
     rivals_config = parse_rivals_config(data.get("rivals", {}))
     awm_config = parse_awm_config(data.get("awm", {}))
+    letta_config = parse_letta_config(data.get("letta", {}))
     perturbation_config = parse_perturbation_config(
         data.get("perturbations", {})
     )
@@ -982,6 +1014,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         spawn_config=spawn_config,
         rivals_config=rivals_config,
         awm_config=awm_config,
+        letta_config=letta_config,
         perturbation_config=perturbation_config,
         contracts_config=contracts_config,
         log_path=Path(outputs_data["event_log"])
@@ -1251,6 +1284,35 @@ def create_agents(
                 agent = CrewBackedAgent(
                     agent_id=agent_id,
                     crew_config=crew_config,
+                    name=agent_name,
+                    config=agent_config,
+                    rng=agent_rng,
+                )
+                agents.append(agent)
+
+        # Handle Letta (MemGPT) agents
+        elif agent_type == "letta":
+            LettaAgent = _get_letta_agent_class()
+            letta_params = spec.get("letta", {})
+
+            for _ in range(count):
+                counters["letta"] = counters.get("letta", 0) + 1
+                agent_id = f"letta_{counters['letta']}"
+                agent_name = (
+                    f"{base_name}_{counters['letta']}"
+                    if base_name and count > 1
+                    else base_name
+                )
+
+                _agent_counter += 1
+                agent_rng = (
+                    random.Random(seed + _agent_counter)
+                    if seed is not None
+                    else None
+                )
+                agent = LettaAgent(
+                    agent_id=agent_id,
+                    letta_config=letta_params,
                     name=agent_name,
                     config=agent_config,
                     rng=agent_rng,

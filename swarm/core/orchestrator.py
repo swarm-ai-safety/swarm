@@ -120,6 +120,9 @@ class OrchestratorConfig(BaseModel):
     # AWM (Agent World Model) configuration
     awm_config: Optional[Any] = None
 
+    # Letta (MemGPT) configuration
+    letta_config: Optional[Any] = None
+
     # Composite task configuration
     enable_composite_tasks: bool = False
 
@@ -438,6 +441,16 @@ class Orchestrator:
         else:
             self._awm_handler = None
 
+        # Letta (MemGPT) lifecycle manager
+        if self.config.letta_config is not None:
+            from swarm.bridges.letta.lifecycle import LettaLifecycleManager
+
+            self._letta_lifecycle: Optional[Any] = LettaLifecycleManager(
+                self.config.letta_config,
+            )
+        else:
+            self._letta_lifecycle = None
+
         # Boundary handler
         if self.config.enable_boundaries:
             external_world = ExternalWorld().create_default_world()
@@ -612,6 +625,12 @@ class Orchestrator:
         # Set agent IDs for collusion detection
         if self.governance_engine is not None:
             self.governance_engine.set_collusion_agent_ids(agent_ids)
+        # Initialize Letta lifecycle and lazy-init Letta agents
+        if self._letta_lifecycle is not None:
+            self._letta_lifecycle.start()
+            for agent in self._agents.values():
+                if hasattr(agent, "_lazy_init") and hasattr(agent, "_letta_config"):
+                    agent._lazy_init(self._letta_lifecycle)
 
     def run(self) -> List[EpochMetrics]:
         """
@@ -647,6 +666,10 @@ class Orchestrator:
             for callback in self._on_epoch_end:
                 callback(epoch_metrics)
 
+        # Shutdown Letta lifecycle
+        if self._letta_lifecycle is not None:
+            self._letta_lifecycle.shutdown()
+
         # Log simulation end
         self._emit_event(
             Event(
@@ -665,6 +688,19 @@ class Orchestrator:
     def _epoch_pre_hooks(self) -> None:
         """Shared epoch-start logic for sync and async paths."""
         self._update_adaptive_governance()
+
+        # Update Letta shared governance block
+        if self._letta_lifecycle is not None:
+            interactions = self.state.completed_interactions
+            metrics = {}
+            if interactions:
+                metrics["toxicity_rate"] = self.metrics_calculator.toxicity_rate(
+                    interactions
+                )
+                metrics["quality_gap"] = self.metrics_calculator.quality_gap(
+                    interactions
+                )
+            self._letta_lifecycle.update_governance_block(metrics)
 
         # Contract market: run signing stage at epoch start
         if self.contract_market is not None:
