@@ -14,6 +14,7 @@ Available bridge subpackages (lazy import to avoid pulling in optional deps):
     swarm.bridges.prime_intellect   — Prime Intellect RL training bridge
     swarm.bridges.ai_scientist     — AI-Scientist autonomous research pipeline bridge
     swarm.bridges.sciagentgym      — SciAgentGym tool substrate integration bridge
+    swarm.bridges.hodoscope        — Hodoscope trajectory analysis & visualization bridge
 """
 
 __all__: list[str] = []
