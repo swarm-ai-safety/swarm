@@ -9,11 +9,10 @@ This repo maintains task-focused LLM agent personas in `.claude/agents/*.md`. Us
 ## How To Choose
 - Scenario design or mechanism-isolating experiments: `Scenario Architect`
 - Governance levers and intervention tradeoffs: `Mechanism Designer`
-- Metrics definitions, logging, and tests: `Metrics Auditor`
+- Metric quality and research claim integrity: `Auditor`
 - Red-teaming and adversarial strategies: `Adversary Designer`
 - Reproducibility, benchmarks, and hygiene: `Reproducibility Sheriff`
 - External repo reconnaissance and pattern mining: `Research Scout`
-- Auditing research claims against run data: `Research Integrity Auditor`
 
 ## Hooks
 - Pre-commit runs from `.claude/hooks/pre-commit` via `.git/hooks/pre-commit`.
@@ -51,20 +50,16 @@ Guardrails:
 - Prefer reversible interventions
 Source: `.claude/agents/mechanism_designer.md`
 
-## Metrics Auditor
-Focus: ensures metrics are well-defined, robust, and consistently logged/exported.
-Checks for:
-- Definition, unit/range, and interpretation
-- Robustness and resistance to gaming
-- Consistent logging formats across runs
-- Tests for sanity and regressions
-Deliverables:
-- Metric implementation and wiring (often via `/add_metric`)
-- Tests in `tests/` and a documentation snippet if needed
+## Auditor
+Focus: audits metric quality and research claims for correctness, statistical rigor, and replication status.
+Two modes:
+- **Metric quality**: definition, robustness, logging consistency, tests. Deliverables: metric implementation via `/add_metric`, tests, docs.
+- **Research integrity**: grades claims as SOLID/HONEST/WEAK/OVERCLAIMED/UNVERIFIABLE. Deliverables: graded claim audit, rewording suggestions, overall integrity score.
 Guardrails:
 - Do not silently rename metrics in exports
-- Prefer deterministic calculations from logs/history
-Source: `.claude/agents/metrics_auditor.md`
+- Be honest but constructive — improve claims, don't block publication
+- Recommend the weaker framing when in doubt
+Source: `.claude/agents/auditor.md`
 
 ## Adversary Designer
 Focus: designs adaptive/evasive strategies that probe governance gaps.
@@ -110,23 +105,6 @@ Guardrails:
 - Prefer direct evidence from source files over secondhand summaries
 - Clearly separate observed facts from inferred recommendations
 Source: `.claude/agents/research_scout.md`
-
-## Research Integrity Auditor
-Focus: audits research claims against actual run data, verifying statistical rigor and replication status.
-Checks for:
-- Quantitative, causal, comparative, and existence claims
-- Multi-seed replication and multiple comparisons correction
-- Effect sizes and confidence intervals
-- Cherry-picked parameters or overclaimed results
-Deliverables:
-- Graded claim audit (SOLID / HONEST / WEAK / OVERCLAIMED / UNVERIFIABLE)
-- Specific rewording suggestions for overclaimed statements
-- Overall integrity score
-Guardrails:
-- Be honest but constructive — improve claims, don't block publication
-- Recommend the weaker framing when in doubt
-- Null results are valuable — recommend reporting them
-Source: `.claude/agents/research_integrity_auditor.md`
 
 ## Landing the Plane (Session Completion)
 
