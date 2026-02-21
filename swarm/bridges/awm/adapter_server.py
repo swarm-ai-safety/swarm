@@ -23,8 +23,10 @@ import os
 import posixpath
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
+import textwrap
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 from urllib.parse import urlparse
@@ -150,6 +152,79 @@ def _load_verifier_code(verifier_jsonl: Path, scenario: str, task_idx: int) -> O
     return None
 
 
+_AWM_CODE_BLOCKLIST = re.compile(
+    r"""
+    \bsubprocess\b
+    | \bos\.system\b
+    | \bos\.popen\b
+    | \bos\.exec
+    | \bctypes\b
+    | \bsocket\b
+    | \bshutil\.rmtree\b
+    | \bos\.remove\b
+    | \bos\.unlink\b
+    | \beval\s*\(
+    | \bcompile\s*\(
+    """,
+    re.VERBOSE,
+)
+
+# Safe subset of builtins for exec'd AWM code.  Excludes dangerous
+# introspection/execution primitives while keeping everything needed
+# for typical FastAPI app code.
+_RESTRICTED_BUILTINS: Dict[str, Any] = {
+    # types & constructors
+    "bool": bool, "int": int, "float": float, "complex": complex,
+    "str": str, "bytes": bytes, "bytearray": bytearray,
+    "list": list, "tuple": tuple, "dict": dict, "set": set, "frozenset": frozenset,
+    "type": type, "object": object,
+    # iteration & functional
+    "range": range, "enumerate": enumerate, "zip": zip, "map": map,
+    "filter": filter, "reversed": reversed, "sorted": sorted,
+    "iter": iter, "next": next,
+    # math & comparisons
+    "abs": abs, "min": min, "max": max, "sum": sum, "round": round,
+    "pow": pow, "divmod": divmod,
+    # string & repr
+    "repr": repr, "ascii": ascii, "chr": chr, "ord": ord,
+    "format": format, "hash": hash, "id": id,
+    # type checks
+    "isinstance": isinstance, "issubclass": issubclass, "callable": callable,
+    "len": len,
+    # attribute access
+    "getattr": getattr, "setattr": setattr, "delattr": delattr, "hasattr": hasattr,
+    # collections helpers
+    "any": any, "all": all,
+    # I/O — needed for SQLite and file access within AWM apps
+    "open": open, "print": print, "input": input,
+    # exceptions
+    "Exception": Exception, "TypeError": TypeError, "ValueError": ValueError,
+    "KeyError": KeyError, "IndexError": IndexError, "AttributeError": AttributeError,
+    "RuntimeError": RuntimeError, "StopIteration": StopIteration,
+    "FileNotFoundError": FileNotFoundError, "IOError": IOError,
+    "OSError": OSError, "ImportError": ImportError, "NotImplementedError": NotImplementedError,
+    # misc
+    "__import__": __import__,
+    "__name__": "__main__",
+    "__build_class__": __build_class__,
+    "property": property, "staticmethod": staticmethod, "classmethod": classmethod,
+    "super": super,
+    "vars": vars, "dir": dir,
+    "None": None, "True": True, "False": False,
+    "Ellipsis": Ellipsis, "NotImplemented": NotImplemented,
+    "slice": slice, "memoryview": memoryview,
+}
+
+
+def _validate_awm_code(code: str) -> None:
+    """Static blocklist scan — raises ``ValueError`` on dangerous patterns."""
+    match = _AWM_CODE_BLOCKLIST.search(code)
+    if match:
+        raise ValueError(
+            f"AWM code contains blocked pattern: {match.group(0)!r}"
+        )
+
+
 def _exec_awm_app(code: str, db_url: str) -> Any:
     """``exec()`` the AWM full_code and return the FastAPI ``app`` object.
 
@@ -159,8 +234,15 @@ def _exec_awm_app(code: str, db_url: str) -> Any:
     A synthetic module is created so that Pydantic v2 can resolve
     forward-reference type annotations (``List``, ``Optional``, etc.)
     inside the exec'd namespace.
+
+    Two defense layers are applied before exec:
+    1. Static blocklist scan (``_validate_awm_code``)
+    2. Restricted ``__builtins__`` dict (no ``exec``, ``eval``, ``compile``,
+       ``globals``, ``locals``, ``breakpoint``, ``exit``, ``quit``)
     """
     import types
+
+    _validate_awm_code(code)
 
     os.environ["DATABASE_PATH"] = db_url
 
@@ -169,7 +251,10 @@ def _exec_awm_app(code: str, db_url: str) -> Any:
     mod.__file__ = "<awm-env>"
     sys.modules[mod.__name__] = mod
 
-    exec(code, mod.__dict__)  # noqa: S102 — trusted AWM-1K code
+    # Restrict builtins available inside the exec'd code
+    mod.__dict__["__builtins__"] = dict(_RESTRICTED_BUILTINS)
+
+    exec(code, mod.__dict__)  # noqa: S102 — AWM-1K code with restricted builtins
 
     app = getattr(mod, "app", None)
     if app is None:
@@ -186,6 +271,64 @@ def _exec_awm_app(code: str, db_url: str) -> Any:
                 pass
 
     return app
+
+
+def _run_verifier_subprocess(
+    code: str, initial_db: str, working_db: str, *, timeout: int = 10
+) -> Dict[str, Any]:
+    """Run verifier code in an isolated subprocess and return its result dict.
+
+    The child process ``exec()``s the verifier code, calls
+    ``verify_task_completion(initial_db, working_db)``, and writes the
+    result as JSON to stdout.  If the process times out or crashes, an
+    ``{"error": ...}`` dict is returned.
+    """
+    wrapper = textwrap.dedent("""\
+        import json, sys
+        _payload = json.loads(sys.stdin.read())
+        _code = _payload["code"]
+        _initial = _payload["initial_db"]
+        _working = _payload["working_db"]
+        _ns = {}
+        exec(_code, _ns)
+        _fn = _ns.get("verify_task_completion")
+        if _fn is None:
+            json.dump({"error": "verify_task_completion not found"}, sys.stdout)
+        else:
+            try:
+                _result = _fn(_initial, _working)
+                json.dump({"result": _result}, sys.stdout)
+            except Exception as _exc:
+                json.dump({"error": str(_exc)}, sys.stdout)
+    """)
+
+    payload = json.dumps({
+        "code": code,
+        "initial_db": initial_db,
+        "working_db": working_db,
+    })
+
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-c", wrapper],
+            input=payload,
+            capture_output=True,
+            text=True,
+            timeout=timeout,
+            shell=False,
+        )
+    except subprocess.TimeoutExpired:
+        return {"error": "verifier timed out"}
+
+    if proc.returncode != 0:
+        stderr_snippet = (proc.stderr or "")[:500]
+        return {"error": f"verifier process failed (rc={proc.returncode}): {stderr_snippet}"}
+
+    try:
+        parsed: Dict[str, Any] = json.loads(proc.stdout)
+        return parsed
+    except (json.JSONDecodeError, ValueError):
+        return {"error": f"verifier produced invalid JSON: {(proc.stdout or '')[:200]}"}
 
 
 def _extract_tools_from_app(awm_app: Any) -> List[Dict[str, Any]]:
@@ -596,19 +739,15 @@ def build_adapter(
         if code is None:
             return JSONResponse({"passed": False, "error": "verifier not found for task"})
 
-        ns: Dict[str, Any] = {}
-        exec(code, ns)  # noqa: S102 — trusted AWM-1K verifier code
-        verify_fn = ns.get("verify_task_completion")
-        if verify_fn is None:
-            return JSONResponse({"passed": False, "error": "verify_task_completion not found"})
+        result = _run_verifier_subprocess(code, str(initial_db), str(working_db))
 
-        try:
-            result = verify_fn(str(initial_db), str(working_db))
-        except Exception as exc:
-            return JSONResponse({"passed": False, "error": str(exc)})
+        # Subprocess returned only an error (no "result" key)
+        if "error" in result and "result" not in result:
+            return JSONResponse({"passed": False, "error": result["error"]})
 
-        passed = result.get("result") == "complete"
-        return JSONResponse({"passed": passed, "confidence": 0.8, "details": result})
+        inner = result.get("result", {})
+        passed = inner.get("result") == "complete" if isinstance(inner, dict) else False
+        return JSONResponse({"passed": passed, "confidence": 0.8, "details": inner})
 
     @adapter.get("/task")
     async def get_task() -> JSONResponse:

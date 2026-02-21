@@ -13,3 +13,5 @@
 {"timestamp": "2026-02-21T19:40:25Z", "branch": "main", "files_changed": ["swarm/api/persistence.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-21T19:41:14Z", "branch": "main", "files_changed": ["swarm/api/routers/governance.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-21T19:41:31Z", "branch": "main", "files_changed": ["tests/test_api.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T19:49:32Z", "branch": "main", "files_changed": [".claude/provenance.jsonl"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T19:53:28Z", "branch": "main", "files_changed": [".claude/provenance.jsonl", "swarm/api/routers/governance.py", "tests/test_api.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
