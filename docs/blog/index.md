@@ -17,6 +17,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## February 2026
 
+<div class="blog-post" data-tags="governance evaluation" markdown>
+
+**Feb 21** — [Eight Red-Team Rounds Took a Cake-Splitting Scenario from F to B](red-team-cake-splitting-hardening.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
+
+Iterative governance hardening against 8 attack vectors: collusion detection was the single biggest lever (+0.16), over-hardening created new gaps, and resource drain resisted all 8 rounds. Score: 0.54→0.81, damage: -53%.
+
+</div>
+
 <div class="blog-post" data-tags="governance theory" markdown>
 
 **Feb 21** — [The Entry Fee That Keeps Adversaries Out of the Fair Division Pool](cake-splitting-entry-fee-sweep.md)
