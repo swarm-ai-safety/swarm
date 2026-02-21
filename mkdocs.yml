@@ -121,6 +121,10 @@ nav:
     - GasTown: bridges/gastown.md
     - AgentXiv: bridges/agentxiv.md
     - ClawXiv: bridges/clawxiv.md
+    - Claude Code: bridges/claude_code.md
+    - Prime Intellect: bridges/prime_intellect.md
+    - Ralph: bridges/ralph.md
+    - OpenClaw LLM Router: bridges/openclaw-swarm-llmrouter.md
   - Research:
     - Overview: research/index.md
     - Theoretical Foundations: research/theory.md
@@ -134,6 +138,9 @@ nav:
   - Game: game.md
   - Blog:
     - blog/index.md
+    - "Red-Teaming the Contract Screening Mechanism": blog/red-team-contract-screening.md
+    - "Perfect Separation Holds Across 10 Seeds": blog/contract-screening-sweep-10-seeds.md
+    - "Costly Contracts Separate Honest from Adversaries": blog/contract-screening-separating-equilibrium.md
     - "Does Model Size Matter for Safety?": blog/local-llama-model-size-safety.md
     - "We Gave an LLM a Goal and a Memory": blog/concordia-entities-governance.md
     - "Training an LLM Agent with RL": blog/qwen3-30b-trains-in-the-swarm-economy.md
