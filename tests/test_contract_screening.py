@@ -985,10 +985,7 @@ class TestSecurityRegressions:
 
     def test_scenario_contracts_config_parsed(self):
         """Scenario YAML contracts block must be parsed into config."""
-        from swarm.scenarios.loader import (
-            ContractsConfig,
-            parse_contracts_config,
-        )
+        from swarm.scenarios.loader import parse_contracts_config
 
         data = {
             "truthful_auction": {"stake_fraction": 0.1, "min_bond": 1.0},

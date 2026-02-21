@@ -52,6 +52,11 @@ from swarm.agents.wiki_editor import (
     PointFarmerAgent,
     VandalAgent,
 )
+from swarm.contracts.contract import (
+    FairDivisionContract,
+    TruthfulAuctionContract,
+)
+from swarm.contracts.market import ContractMarket, ContractMarketConfig
 from swarm.core.kernel_handler import KernelOracleConfig
 from swarm.core.memory_handler import MemoryTierConfig
 from swarm.core.moltbook_handler import MoltbookConfig
@@ -77,12 +82,6 @@ from swarm.core.spawn import PayoffAttributionMode, SpawnConfig
 from swarm.env.marketplace import MarketplaceConfig
 from swarm.env.network import NetworkConfig, NetworkTopology
 from swarm.env.state import RateLimits
-from swarm.contracts.contract import (
-    DefaultMarket,
-    FairDivisionContract,
-    TruthfulAuctionContract,
-)
-from swarm.contracts.market import ContractMarket, ContractMarketConfig
 from swarm.governance.config import GovernanceConfig
 
 # Agent type registry for scripted agents

@@ -470,7 +470,7 @@ class Orchestrator:
         if self.config.contracts_config is not None:
             from swarm.scenarios.loader import build_contract_market
 
-            self.contract_market: Optional["ContractMarket"] = (
+            self.contract_market: Optional[Any] = (
                 build_contract_market(
                     self.config.contracts_config,
                     seed=self.config.seed,
