@@ -184,6 +184,12 @@ Never guess or infer from the OS username.
 - For posts that simulate economies (e.g. AI Economist), use the variant: `"...simulates a stylized economic environment for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any economic policy or trading strategy."`
 - The pre-commit hook enforces this automatically.
 
+## Core principles are append-only
+
+- Foundational framing in README.md (e.g. "The Core Insight"), CLAUDE.md ("Safety / invariants"), and `docs/research/theory.md` should be **extended, not replaced**.
+- When new understanding refines a core idea, add a new subsection or paragraph — do not rewrite the original.
+- The post-write hook will warn when edits touch foundational sections. Treat the warning seriously.
+
 ## Safety / invariants (do not break)
 
 - `p` must remain in `[0, 1]` everywhere it is surfaced or logged.

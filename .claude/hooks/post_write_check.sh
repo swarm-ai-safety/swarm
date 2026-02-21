@@ -8,7 +8,8 @@ set -euo pipefail
 #   2. Gitignore coverage (advisory)
 #   3. Ruff lint (Python files only)
 #   4. Blog nav check (docs/blog/*.md only)
-#   5. Documentation reminder (new files in key directories)
+#   5. Core principles guard (advisory)
+#   6. Documentation reminder (new files in key directories)
 #
 # Called automatically by Claude Code after Write/Edit tool calls.
 # Consolidates: post_write_secrets_check.sh, post_write_gitignore_check.sh,
@@ -87,7 +88,27 @@ case "$FILE_PATH" in
         ;;
 esac
 
-# ── 5. Documentation reminder (major changes) ──
+# ── 5. Core principles guard (advisory) ──
+# Warn when edits to foundational sections look like replacements rather than extensions.
+# Foundational files and their protected section headers:
+case "$FILE_PATH" in
+    */README.md|*/CLAUDE.md|*/docs/research/theory.md)
+        if [ -n "${TOOL_NAME:-}" ] && [ "$TOOL_NAME" = "Edit" ]; then
+            OLD_STRING=$(echo "$ARGUMENTS" | python3 -c "import sys,json; print(json.load(sys.stdin).get('old_string',''))" 2>/dev/null || true)
+            # Check if the edit removes a core section header or replaces foundational framing
+            CORE_PATTERNS="Core Insight|Safety / invariants|Domain Concepts|Formal Model|Foundational"
+            if echo "$OLD_STRING" | grep -qEi "$CORE_PATTERNS"; then
+                echo ""
+                echo "[swarm core-principles] WARNING: This edit touches a foundational section in $BASENAME."
+                echo "[swarm core-principles] Core principles should be EXTENDED, not replaced."
+                echo "[swarm core-principles] Prefer adding a new subsection rather than rewriting existing framing."
+                echo ""
+            fi
+        fi
+        ;;
+esac
+
+# ── 6. Documentation reminder (major changes) ──
 # Advisory: remind about CHANGELOG/README/docs when creating or modifying
 # files in key directories. Never blocks.
 IS_NEW=false
