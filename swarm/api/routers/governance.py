@@ -5,10 +5,15 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from swarm.api.middleware.auth import Scope, require_scope
+from swarm.api.middleware.auth import (
+    Scope,
+    get_request_key_hash,
+    get_scopes_hash,
+    require_scope,
+)
 from swarm.api.persistence import ProposalStore
 
 router = APIRouter()
@@ -175,3 +180,93 @@ async def vote_on_proposal(
         )
 
     return result  # type: ignore[no-any-return]
+
+
+@router.post("/proposals/{proposal_id}/finalize", response_model=ProposalResponse)
+async def finalize_proposal(
+    proposal_id: str,
+    quorum: int = Query(1, ge=1),
+    threshold: float = Query(0.5, gt=0.0, le=1.0),
+    agent_id: str = Depends(require_scope(Scope.WRITE)),
+) -> ProposalResponse:
+    """Finalize voting on a proposal — transitions to ACCEPTED or REJECTED.
+
+    Args:
+        proposal_id: The proposal to finalize.
+        quorum: Minimum total votes required.
+        threshold: Fraction of for-votes needed to accept (> threshold).
+        agent_id: Authenticated agent identity.
+    """
+    store = _get_store()
+    row = store.get(proposal_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+
+    if row["status"] != ProposalStatus.OPEN.value:
+        raise HTTPException(status_code=400, detail="Proposal is not open")
+
+    total = row["votes_for"] + row["votes_against"]
+    if total < quorum:
+        raise HTTPException(status_code=400, detail="Quorum not reached")
+
+    new_status = (
+        ProposalStatus.ACCEPTED if row["votes_for"] / total > threshold else ProposalStatus.REJECTED
+    )
+    store.close_proposal(proposal_id, new_status.value)
+
+    updated = store.get(proposal_id)
+    return ProposalResponse(**updated)  # type: ignore[arg-type]
+
+
+@router.post("/proposals/{proposal_id}/close", response_model=ProposalResponse)
+async def close_proposal(
+    proposal_id: str,
+    request: Request,
+    agent_id: str = Depends(require_scope(Scope.WRITE)),
+) -> ProposalResponse:
+    """Close (withdraw) a proposal. Only the original proposer or ADMIN can close.
+
+    Args:
+        proposal_id: The proposal to close.
+        request: FastAPI request (for scope lookup).
+        agent_id: Authenticated agent identity.
+    """
+    store = _get_store()
+    row = store.get(proposal_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+
+    if row["status"] != ProposalStatus.OPEN.value:
+        raise HTTPException(status_code=400, detail="Proposal is not open")
+
+    key_hash = get_request_key_hash(request)
+    scopes = get_scopes_hash(key_hash)
+    is_proposer = row["proposer_id"] == agent_id
+    is_admin = Scope.ADMIN in scopes
+
+    if not is_proposer and not is_admin:
+        raise HTTPException(
+            status_code=403, detail="Only the proposer or an admin can close a proposal"
+        )
+
+    store.close_proposal(proposal_id, ProposalStatus.REJECTED.value)
+
+    updated = store.get(proposal_id)
+    return ProposalResponse(**updated)  # type: ignore[arg-type]
+
+
+@router.get("/proposals/{proposal_id}/votes")
+async def list_proposal_votes(proposal_id: str) -> list[dict]:
+    """List all votes on a proposal.
+
+    Args:
+        proposal_id: The proposal to list votes for.
+
+    Returns:
+        List of vote records.
+    """
+    store = _get_store()
+    row = store.get(proposal_id)
+    if row is None:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    return list(store.list_votes(proposal_id))
