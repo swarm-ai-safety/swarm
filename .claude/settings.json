@@ -16,27 +16,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/post_write_secrets_check.sh",
-            "timeout": 10,
-            "statusMessage": "Scanning for secrets"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/post_write_gitignore_check.sh",
-            "timeout": 10,
-            "statusMessage": "Checking gitignore coverage"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/post_write_lint_check.sh",
+            "command": "bash .claude/hooks/post_write_check.sh",
             "timeout": 15,
-            "statusMessage": "Linting Python file"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/post_write_blog_index_check.sh",
-            "timeout": 5,
-            "statusMessage": "Checking blog index"
+            "statusMessage": "Running post-write checks"
           }
         ]
       },
@@ -45,27 +27,9 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/post_write_secrets_check.sh",
-            "timeout": 10,
-            "statusMessage": "Scanning for secrets"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/post_write_gitignore_check.sh",
-            "timeout": 10,
-            "statusMessage": "Checking gitignore coverage"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/post_write_lint_check.sh",
+            "command": "bash .claude/hooks/post_write_check.sh",
             "timeout": 15,
-            "statusMessage": "Linting Python file"
-          },
-          {
-            "type": "command",
-            "command": "bash .claude/hooks/post_write_blog_index_check.sh",
-            "timeout": 5,
-            "statusMessage": "Checking blog index"
+            "statusMessage": "Running post-write checks"
           }
         ]
       }
