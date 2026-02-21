@@ -134,25 +134,26 @@ nav:
   - Game: game.md
   - Blog:
     - blog/index.md
+    - "Does Model Size Matter for Safety?": blog/local-llama-model-size-safety.md
+    - "We Gave an LLM a Goal and a Memory": blog/concordia-entities-governance.md
+    - "Training an LLM Agent with RL": blog/qwen3-30b-trains-in-the-swarm-economy.md
+    - "SkillRL Agents Learn 5x Faster": blog/skillrl-dynamics.md
     - "Your CI Is Flaky Because Your Margins Are Zero": blog/your-ci-is-flaky-because-your-margins-are-zero.md
     - "I Got Claude Code to Spin Up 10 Subagents": blog/claude-code-10-subagents.md
     - "An AI Tax Planner Learned Progressive Taxation": blog/ai-economist-gtb-simulation.md
     - "An AI Agent Cut Its Own Costs by 98%": blog/self-optimizer-distributional-safety.md
+    - "Three Agents, Three Philosophies, One Benchmark": blog/three-agents-three-philosophies.md
+    - "What 13 Agent Versions Taught Us": blog/arc-agi-3-agent-development-lessons.md
+    - "Three Models, One Study — LLM Council Peer-Review": blog/llm-council-three-models-one-study.md
     - "Using LLM Councils for Multi-Agent Evaluation": blog/llm-councils-for-multi-agent-evaluation.md
     - "Two Eval Runs, One Model, 41% Apart": blog/two-eval-runs-one-model-41-percent-apart.md
-    - Governance Mechanisms Taxonomy: blog/governance-mechanisms-taxonomy.md
-    - GPT-4.1 Mini Plays the SWARM Economy: blog/gpt-41-mini-plays-the-swarm-economy.md
-    - RL Training Lessons for Multi-Agent Governance: blog/rl-training-lessons-multi-agent-governance.md
+    - "Governance Mechanisms Taxonomy": blog/governance-mechanisms-taxonomy.md
+    - "GPT-4.1 Mini Plays the SWARM Economy": blog/gpt-41-mini-plays-the-swarm-economy.md
+    - "RL Training Lessons for Multi-Agent Governance": blog/rl-training-lessons-multi-agent-governance.md
     - "11 Scenarios, 3 Regimes, 1 Critical Threshold": blog/cross-scenario-analysis.md
-    - What Financial Markets Teach Us About AI Safety: blog/markets-and-safety.md
-    - The Purity Paradox: blog/purity-paradox.md
-    - When Agent Ecosystems Collapse: blog/ecosystem-collapse.md
-    - "What 13 Agent Versions Taught Us About Interactive Reasoning": blog/arc-agi-3-agent-development-lessons.md
-    - "We Gave an LLM a Goal and a Memory. Governance Held Anyway.": blog/concordia-entities-governance.md
-    - "Three Models, One Study — LLM Council Peer-Review": blog/llm-council-three-models-one-study.md
-    - "Training an LLM Agent to Navigate a Multi-Agent Economy with RL": blog/qwen3-30b-trains-in-the-swarm-economy.md
-    - "SkillRL Agents Learn 5x Faster Than Honest Ones": blog/skillrl-dynamics.md
-    - "Three Agents, Three Philosophies, One Benchmark": blog/three-agents-three-philosophies.md
+    - "What Financial Markets Teach Us About AI Safety": blog/markets-and-safety.md
+    - "The Purity Paradox": blog/purity-paradox.md
+    - "When Agent Ecosystems Collapse": blog/ecosystem-collapse.md
 
 extra:
   social:
