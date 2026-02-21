@@ -6,6 +6,35 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **Contract screening system** for separating equilibrium analysis with lock-in semantics, welfare metric, multi-seed sweep (10 seeds), collusion detection, and plot script (#234)
+- **LangGraph governed handoff study** with 4-agent Claude swarm, 32-config sweep (seed 42), and sweep overview plot
+- **Hodoscope trajectory analysis bridge** for agent trace inspection
+- **SQLite persistence** for simulations, governance state, and scenarios
+- **SoftMetrics wired into Web API** `/api/v1/metrics` endpoint
+- **Sybil detection** enabled for contract screening governance
+- **E2E integration tests** for Web API simulation lifecycle
+- **Blog posts**: contract screening separating equilibrium, multi-seed results, red-team findings for contract screening governance
+- **Execution state** populated during simulation runs
+
+### Changed
+- **README audit**: Updated all module/file counts to match current codebase (4556 tests, 78 scenarios, 29 agent modules, 27 governance modules, 95 bridge files)
+- **README**: LLM provider list expanded from 3 to all 9 supported providers (added OpenRouter, Groq, Together, DeepSeek, Google, llama.cpp)
+- **AGENTS.md**: Added missing Research Integrity Auditor to role-selection guide
+- Extended `/fix_pr` to resolve PR conflicts and handle merge ceremony
+- Blog: sort posts newest-first, add dates and tag filtering
+- Pinned langgraph and langchain-core to exact versions
+
+### Fixed
+- **SSRF hardening**: Full server-side request forgery fix (#238), path template sanitization before base dispatch (#242)
+- **Information exposure** through exception in AWM adapter (#239)
+- SSRF hardening + Web API async participation layer with input validation and abuse prevention (#236)
+- 7 security vulnerabilities in contract screening system
+- Size limit (1 MiB) on simulation results payload
+- `test_agent_api` errors from missing `proposal_votes` table
+- Blog markdown attr on div blocks for proper rendering
+- Lint and mypy errors in contract screening wiring
+
 ## [1.7.0] - 2026-02-20
 
 ### Added
