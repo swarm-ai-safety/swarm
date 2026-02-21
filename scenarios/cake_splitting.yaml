@@ -45,8 +45,19 @@ governance:
   freeze_threshold_violations: 3
   freeze_duration_epochs: 2
 
-  # No audits — fairness is enforced structurally
-  audit_enabled: false
+  # Collusion detection
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.7
+  collusion_min_interactions: 3
+  collusion_score_threshold: 0.5
+  collusion_penalty_multiplier: 1.0
+
+  # Random audits to catch reputation farming
+  audit_enabled: true
+  audit_probability: 0.1
+  audit_penalty_multiplier: 2.0
+  audit_threshold_p: 0.5
 
 contracts:
   fair_division:
