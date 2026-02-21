@@ -223,7 +223,10 @@ STAGED_README=$(git diff --cached --name-only | grep -F 'README.md' || true)
 if [ -n "$STAGED_CODE" ]; then
     # Count new files (likely need docs updates)
     NEW_CODE_FILES=$(git diff --cached --name-only --diff-filter=A | grep -E '^(swarm|scenarios)/' || true)
-    NEW_COUNT=$(echo "$NEW_CODE_FILES" | grep -c '.' 2>/dev/null || echo "0")
+    NEW_COUNT=0
+    if [ -n "$NEW_CODE_FILES" ]; then
+        NEW_COUNT=$(echo "$NEW_CODE_FILES" | wc -l | tr -d ' ')
+    fi
 
     if [ "$NEW_COUNT" -gt 0 ] && [ -z "$STAGED_CHANGELOG" ]; then
         echo "[swarm pre-commit] NOTE: $NEW_COUNT new file(s) staged but CHANGELOG.md not updated."
