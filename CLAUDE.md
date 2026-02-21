@@ -21,6 +21,12 @@ This repo is set up as a **Claude Code template** for SWARM-style research work:
 3. **Same rule for agents.** If a new role overlaps with an existing agent's domain, extend that agent's `.md` with a new section rather than creating a new agent file.
 4. **Same rule for hooks.** Post-write checks are consolidated into a single `post_write_check.sh`. Add new checks as a section in that file, not as a new hook script.
 5. **When in doubt, don't create.** If you're unsure whether something warrants a new command, it probably doesn't. Add it as a mode on the closest existing command and note it in the migration table.
+6. **Document every change.** When extending a command with a new flag/mode or creating a new command:
+   - Update the command's `.md` file with usage examples, argument parsing, and behavior for the new mode.
+   - Add a migration table entry if replacing or absorbing an old command.
+   - Update cross-references in other commands that mention the changed command.
+   - Update `AGENTS.md` if agent roles change.
+   - Run `/audit_docs --nav-only` if docs pages were added or moved.
 
 ### Artifacts repo
 
