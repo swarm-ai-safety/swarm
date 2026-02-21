@@ -2,11 +2,27 @@
 
 Quick orientation command for session start or mid-session check-in. Answers "where am I?" in one shot.
 
+Use `--full` for a complete session warmup (status + healthcheck + tests). Consolidates the former `/warmup` command.
+
 ## Usage
 
-`/status`
+```
+/status [--full] [--skip-tests]
+```
 
-## Behavior
+Examples:
+- `/status` (quick orientation)
+- `/status --full` (status + healthcheck + tests)
+- `/status --full --skip-tests` (status + healthcheck, no tests)
+
+## Argument parsing
+
+- `--full`: Run the complete warmup sequence (see Full Mode below)
+- `--skip-tests`: Skip the test suite in `--full` mode
+
+---
+
+## Default behavior
 
 Run all of the following in parallel and present a single consolidated summary:
 
@@ -95,7 +111,7 @@ Session Status
     Modified:  1 file (unstaged)
     Untracked: 2 files
 
-  Open PR:     #42 "Add feature X" — checks passing ✓
+  Open PR:     #42 "Add feature X" — checks passing
                (or: No open PR)
 
   Recent commits:
@@ -107,11 +123,58 @@ Session Status
 ══════════════════════════════════════════
 ```
 
+---
+
+## `--full` mode (session warmup)
+
+Runs the complete session opening sequence: status + healthcheck + tests.
+
+### Step 1: Status
+
+Run the default behavior above. Present the consolidated summary.
+
+### Step 2: Healthcheck
+
+Run the full `/healthcheck` scan (duplicate defs, dead imports, import conflicts, merge artifacts, stale re-exports). Present the results.
+
+### Step 3: Tests (skip if `--skip-tests`)
+
+Run the test suite:
+
+```bash
+python -m pytest tests/ -x -q
+```
+
+Report pass/fail count and duration.
+
+### Output Format
+
+```
+Session Warmup
+══════════════════════════════════════════
+
+  1/3  STATUS
+  Branch:      main
+  Remote:      0 ahead, 0 behind — in sync
+  Working tree: clean
+  ...
+
+  2/3  HEALTHCHECK
+  Duplicates: 0 | Dead imports: 0 | Merge artifacts: 0
+  Status: CLEAN
+
+  3/3  TESTS
+  2202 passed in 28.1s
+
+══════════════════════════════════════════
+  Ready to work.
+```
+
 ## Why This Exists
 
 Session continuations from compacted context lose track of git state. Without `/status`, orientation requires 10-15 manual git commands and risks wasted work (e.g. trying to push commits that are already merged, creating branches that already exist).
 
-Run `/status` at the start of any resumed session or when unsure of current state.
+Run `/status` at the start of any resumed session or when unsure of current state. Use `/status --full` at the very start of a new session for complete orientation.
 
 ## Relation to Other Commands
 
@@ -119,3 +182,10 @@ Run `/status` at the start of any resumed session or when unsure of current stat
 - `/preflight` checks if staged code is ready to commit — run it before committing
 - `/pr` creates a pull request — run it after pushing
 - `/sync --cleanup` tidies up after merge — run it last
+
+## Migration from old commands
+
+| Old command | Equivalent |
+|---|---|
+| `/warmup` | `/status --full` |
+| `/warmup --skip-tests` | `/status --full --skip-tests` |

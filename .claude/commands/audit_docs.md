@@ -2,7 +2,80 @@
 
 Audit all project metadata files for stale counts, version mismatches, broken references, and missing entries. Reports discrepancies without auto-fixing.
 
-## Scope
+Use `--nav-only` to just check mkdocs.yml nav completeness (replaces the former `/check_nav` command).
+
+## Usage
+
+```
+/audit_docs [--nav-only]
+```
+
+Examples:
+- `/audit_docs` (full audit)
+- `/audit_docs --nav-only` (just check mkdocs nav)
+
+## Argument parsing
+
+- `--nav-only`: Only run Phase 6 (mkdocs nav check) and report. Skip all other phases.
+
+---
+
+## `--nav-only` mode
+
+Compare mkdocs.yml nav entries against actual files in `docs/`, reporting missing pages and orphaned files.
+
+### 1. Extract nav paths
+
+Read `mkdocs.yml` and extract all file paths from the `nav:` section (e.g. `getting-started/installation.md`, `blog/ecosystem-collapse.md`).
+
+### 2. List actual docs
+
+Glob `docs/**/*.md` to get all markdown files under `docs/`.
+
+### 3. Compare
+
+Report three categories:
+
+#### Missing from nav
+Files that exist in `docs/` but are NOT referenced in `mkdocs.yml` nav. Exclude:
+- Files inside `docs/overrides/`
+- Files inside `docs/posts/` (old blog location, if any)
+- Files inside `docs/papers/` (research papers, not site pages)
+- Files inside `docs/design/` (internal design docs)
+
+#### Missing from disk
+Nav entries that point to files that do NOT exist on disk.
+
+#### Orphaned directories
+Directories under `docs/` that contain `.md` files but have zero files in the nav.
+
+### 4. Output format
+
+```
+mkdocs.yml Nav Check
+====================
+
+Nav entries: 62
+Docs files:  85 (excluding overrides, posts, papers, design)
+
+Missing from nav (should probably be added):
+  - bridges/claude_code.md
+  - bridges/prime_intellect.md
+
+Missing from disk (broken links):
+  (none)
+
+Orphaned directories:
+  (none)
+
+Summary: 2 files not in nav, 0 broken links
+```
+
+---
+
+## Full audit (default)
+
+### Scope
 
 Check these files against the actual codebase:
 
@@ -44,7 +117,7 @@ Count actual files and compare against README claims:
 
 ### 6. mkdocs.yml nav completeness
 
-Run the `/check_nav` logic (see that command) and include results.
+Run the `--nav-only` logic above and include results.
 
 ### 7. Broken file references
 
@@ -90,3 +163,9 @@ Summary: 2 issues found
 - Read-only: do not edit any files, only report discrepancies
 - Use parallel tool calls where possible (e.g. glob multiple directories at once)
 - For test count, count `def test_` patterns rather than running pytest --collect-only (faster)
+
+## Migration from old commands
+
+| Old command | Equivalent |
+|---|---|
+| `/check_nav` | `/audit_docs --nav-only` |
