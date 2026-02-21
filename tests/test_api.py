@@ -197,6 +197,15 @@ class TestAgentEndpoints:
 class TestScenarioEndpoints:
     """Tests for scenario submission and management."""
 
+    @pytest.fixture(autouse=True)
+    def _clear_scenario_state(self, tmp_path):
+        """Reset scenario storage between tests."""
+        import swarm.api.routers.scenarios as scenarios_mod
+        from swarm.api.persistence import ScenarioStore
+
+        scenarios_mod._store = ScenarioStore(db_path=tmp_path / "test.db")
+        yield
+
     def test_submit_scenario(self, client):
         """Test submitting a valid scenario."""
         response = client.post(
@@ -795,21 +804,20 @@ class TestListFilteringAndPagination:
     """Tests for list endpoint filtering and pagination."""
 
     @pytest.fixture(autouse=True)
-    def _clear_stores(self):
-        """Clear in-memory stores so each test starts fresh."""
+    def _clear_stores(self, tmp_path):
+        """Clear stores so each test starts fresh."""
         import swarm.api.routers.agents as agents_mod
         import swarm.api.routers.scenarios as scenarios_mod
         import swarm.api.routers.simulations as simulations_mod
+        from swarm.api.persistence import ScenarioStore, SimulationStore
 
         agents_mod._registered_agents.clear()
-        scenarios_mod._scenarios.clear()
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
+        scenarios_mod._store = ScenarioStore(db_path=tmp_path / "test.db")
+        simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
         yield
         agents_mod._registered_agents.clear()
-        scenarios_mod._scenarios.clear()
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
 
     def _register_agent(self, client, name, capabilities=None):
         """Helper to register an agent and return the response data."""
@@ -1014,10 +1022,11 @@ class TestRouterStubs:
         resp = client.post("/api/v1/governance/propose")
         assert resp.status_code == 401
 
-    def test_governance_proposals_returns_list(self, client):
+    def test_governance_proposals_returns_list(self, client, tmp_path):
         """GET /api/v1/governance/proposals returns empty list by default."""
         import swarm.api.routers.governance as gov_mod
-        gov_mod._proposals.clear()
+        from swarm.api.persistence import ProposalStore
+        gov_mod._store = ProposalStore(db_path=tmp_path / "test.db")
         resp = client.get("/api/v1/governance/proposals")
         assert resp.status_code == 200
         assert resp.json() == []
@@ -1249,15 +1258,17 @@ class TestSimulationMechanics:
     """Tests for join deadline enforcement, state endpoint, and start."""
 
     @pytest.fixture(autouse=True)
-    def _clear_simulation_state(self):
+    def _clear_simulation_state(self, tmp_path):
         """Reset simulation storage between tests."""
         import swarm.api.routers.simulations as simulations_mod
+        from swarm.api.persistence import SimulationStore
 
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
+        simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
         yield
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
 
     def _create_simulation(self, client, **overrides):
         """Helper: create a simulation and return (response_data, api_key)."""
@@ -1280,7 +1291,9 @@ class TestSimulationMechanics:
 
         # Set the deadline to the past
         past = datetime.now(timezone.utc) - timedelta(hours=1)
-        simulations_mod._simulations[sim_id].join_deadline = past
+        sim_obj = simulations_mod._store.get(sim_id)
+        sim_obj.join_deadline = past
+        simulations_mod._store.save(sim_obj)
 
         _, joiner_key = _register_agent(client, "LateJoiner")
         resp = client.post(
@@ -1805,17 +1818,15 @@ class TestActionEndpoints:
     """Tests for action submission and observation endpoints."""
 
     @pytest.fixture(autouse=True)
-    def _clear_simulation_state(self):
+    def _clear_simulation_state(self, tmp_path):
         """Reset simulation storage between tests."""
         import swarm.api.routers.simulations as simulations_mod
+        from swarm.api.persistence import SimulationStore
 
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
+        simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
         yield
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
 
@@ -2126,17 +2137,15 @@ class TestSSEEndpoint:
     """Tests for the SSE event stream endpoint."""
 
     @pytest.fixture(autouse=True)
-    def _clear_simulation_state(self):
+    def _clear_simulation_state(self, tmp_path):
         """Reset simulation storage between tests."""
         import swarm.api.routers.simulations as simulations_mod
+        from swarm.api.persistence import SimulationStore
 
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
+        simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
         yield
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
 
@@ -2230,25 +2239,17 @@ class TestSimulationCompletion:
     """Tests for simulation completion, results, and execution state."""
 
     @pytest.fixture(autouse=True)
-    def _clear_simulation_state(self):
+    def _clear_simulation_state(self, tmp_path):
         """Reset simulation storage between tests."""
         import swarm.api.routers.simulations as simulations_mod
+        from swarm.api.persistence import SimulationStore
 
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
+        simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
-        simulations_mod._action_history.clear()
-        simulations_mod._execution_state.clear()
-        simulations_mod._simulation_results.clear()
         yield
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
-        simulations_mod._action_history.clear()
-        simulations_mod._execution_state.clear()
-        simulations_mod._simulation_results.clear()
 
     def _setup_running_simulation(self, client):
         """Create a running simulation with two participants."""
@@ -2420,7 +2421,7 @@ class TestSimulationCompletion:
             headers={"Authorization": f"Bearer {api_keys[0]}"},
         )
 
-        history = simulations_mod._action_history.get(sim_id, [])
+        history = simulations_mod._store.get_action_history(sim_id)
         assert len(history) == 1
         assert history[0]["agent_id"] == agent_ids[0]
         assert history[0]["action_type"] == "accept"
@@ -2452,15 +2453,13 @@ class TestGovernanceEndpoints:
     """Tests for governance proposal endpoints."""
 
     @pytest.fixture(autouse=True)
-    def _clear_governance_state(self):
+    def _clear_governance_state(self, tmp_path):
         """Reset governance storage between tests."""
         import swarm.api.routers.governance as gov_mod
+        from swarm.api.persistence import ProposalStore
 
-        gov_mod._proposals.clear()
-        gov_mod._votes.clear()
+        gov_mod._store = ProposalStore(db_path=tmp_path / "test.db")
         yield
-        gov_mod._proposals.clear()
-        gov_mod._votes.clear()
 
     def _get_auth_headers(self, client):
         """Register an agent and return auth headers."""
@@ -2631,25 +2630,17 @@ class TestMetricsEndpoints:
     """Tests for per-simulation metrics retrieval."""
 
     @pytest.fixture(autouse=True)
-    def _clear_simulation_state(self):
+    def _clear_simulation_state(self, tmp_path):
         """Reset simulation storage between tests."""
         import swarm.api.routers.simulations as simulations_mod
+        from swarm.api.persistence import SimulationStore
 
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
+        simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
-        simulations_mod._action_history.clear()
-        simulations_mod._execution_state.clear()
-        simulations_mod._simulation_results.clear()
         yield
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
-        simulations_mod._action_history.clear()
-        simulations_mod._execution_state.clear()
-        simulations_mod._simulation_results.clear()
 
     def _setup_running_simulation(self, client):
         """Create a running simulation with two participants."""
@@ -2754,25 +2745,17 @@ class TestSecurityHardening:
     """Tests for security hardening measures."""
 
     @pytest.fixture(autouse=True)
-    def _clear_state(self):
+    def _clear_state(self, tmp_path):
         """Reset all state between tests."""
         import swarm.api.routers.simulations as simulations_mod
+        from swarm.api.persistence import SimulationStore
 
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
+        simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
-        simulations_mod._action_history.clear()
-        simulations_mod._execution_state.clear()
-        simulations_mod._simulation_results.clear()
         yield
-        simulations_mod._simulations.clear()
-        simulations_mod._participants.clear()
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
-        simulations_mod._action_history.clear()
-        simulations_mod._execution_state.clear()
-        simulations_mod._simulation_results.clear()
 
     def test_simulation_concurrency_limit(self, client):
         """Cannot create more than MAX_ACTIVE_SIMULATIONS."""
@@ -3041,7 +3024,7 @@ class TestWebSocketParticipation:
             })
             ws.receive_json()  # action_result
 
-        history = sim_mod._action_history.get(sim_id, [])
+        history = sim_mod._store.get_action_history(sim_id)
         ws_actions = [a for a in history if a.get("source") == "websocket"]
         assert len(ws_actions) == 1
         assert ws_actions[0]["action_type"] == "reject"
@@ -3070,28 +3053,20 @@ class TestE2ESimulationLifecycle:
     """
 
     @pytest.fixture(autouse=True)
-    def _clear_all_state(self):
-        """Reset all in-memory stores and event bus between tests."""
+    def _clear_all_state(self, tmp_path):
+        """Reset all stores and event bus between tests."""
         import swarm.api.routers.simulations as sim_mod
         from swarm.api.event_bus import event_bus as _event_bus
+        from swarm.api.persistence import SimulationStore
 
-        sim_mod._simulations.clear()
-        sim_mod._participants.clear()
+        sim_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         sim_mod._observations.clear()
         sim_mod._action_queues.clear()
-        sim_mod._action_history.clear()
-        sim_mod._execution_state.clear()
-        sim_mod._simulation_results.clear()
         sim_mod._ws_connections.clear()
         _event_bus._subscribers.clear()
         yield
-        sim_mod._simulations.clear()
-        sim_mod._participants.clear()
         sim_mod._observations.clear()
         sim_mod._action_queues.clear()
-        sim_mod._action_history.clear()
-        sim_mod._execution_state.clear()
-        sim_mod._simulation_results.clear()
         sim_mod._ws_connections.clear()
         _event_bus._subscribers.clear()
 
@@ -3360,7 +3335,7 @@ class TestE2ESimulationLifecycle:
 
         # Verify action history has correct agent_ids and steps
         import swarm.api.routers.simulations as sim_mod
-        history = sim_mod._action_history[sim_id]
+        history = sim_mod._store.get_action_history(sim_id)
         assert len(history) == 6
         for record in history:
             assert record["agent_id"] in agent_ids
@@ -3453,7 +3428,7 @@ class TestE2ESimulationLifecycle:
         assert act_resp.status_code == 200
 
         # Verify action recorded
-        history = sim_mod._action_history[sim_id]
+        history = sim_mod._store.get_action_history(sim_id)
         assert len(history) == 1
         assert history[0]["agent_id"] == agent_ids[0]
 

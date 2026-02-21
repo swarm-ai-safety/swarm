@@ -13,7 +13,7 @@ import sqlite3
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 
 from swarm.api.models.post import PostResponse
 from swarm.api.models.run import (
@@ -21,6 +21,12 @@ from swarm.api.models.run import (
     RunStatus,
     RunSummaryMetrics,
     RunVisibility,
+)
+from swarm.api.models.scenario import ScenarioResponse, ScenarioStatus
+from swarm.api.models.simulation import (
+    SimulationMode,
+    SimulationResponse,
+    SimulationStatus,
 )
 
 logger = logging.getLogger(__name__)
@@ -75,6 +81,97 @@ CREATE TABLE IF NOT EXISTS votes (
 );
 """
 
+_CREATE_SCENARIOS_TABLE = """
+CREATE TABLE IF NOT EXISTS scenarios (
+    scenario_id        TEXT PRIMARY KEY,
+    name               TEXT NOT NULL,
+    description        TEXT NOT NULL,
+    status             TEXT NOT NULL,
+    validation_errors  TEXT NOT NULL DEFAULT '[]',
+    submitted_at       TEXT NOT NULL,
+    tags               TEXT NOT NULL DEFAULT '[]',
+    resource_estimate  TEXT
+);
+"""
+
+_CREATE_PROPOSALS_TABLE = """
+CREATE TABLE IF NOT EXISTS proposals (
+    proposal_id        TEXT PRIMARY KEY,
+    title              TEXT NOT NULL,
+    description        TEXT NOT NULL,
+    policy_declaration TEXT NOT NULL DEFAULT '{}',
+    target_scenarios   TEXT NOT NULL DEFAULT '[]',
+    status             TEXT NOT NULL,
+    proposer_id        TEXT NOT NULL,
+    created_at         TEXT NOT NULL,
+    votes_for          INTEGER NOT NULL DEFAULT 0,
+    votes_against      INTEGER NOT NULL DEFAULT 0
+);
+"""
+
+_CREATE_PROPOSAL_VOTES_TABLE = """
+CREATE TABLE IF NOT EXISTS proposal_votes (
+    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+    proposal_id  TEXT NOT NULL REFERENCES proposals(proposal_id),
+    agent_id     TEXT NOT NULL,
+    direction    INTEGER NOT NULL,
+    voted_at     TEXT NOT NULL,
+    UNIQUE(proposal_id, agent_id)
+);
+"""
+
+_CREATE_SIMULATIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS simulations (
+    simulation_id       TEXT PRIMARY KEY,
+    scenario_id         TEXT NOT NULL,
+    status              TEXT NOT NULL,
+    mode                TEXT NOT NULL,
+    max_participants    INTEGER NOT NULL,
+    current_participants INTEGER NOT NULL DEFAULT 0,
+    created_at          TEXT NOT NULL,
+    join_deadline       TEXT NOT NULL,
+    config_overrides    TEXT NOT NULL DEFAULT '{}'
+);
+"""
+
+_CREATE_SIM_PARTICIPANTS_TABLE = """
+CREATE TABLE IF NOT EXISTS simulation_participants (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    simulation_id   TEXT NOT NULL REFERENCES simulations(simulation_id),
+    agent_id        TEXT NOT NULL,
+    role            TEXT NOT NULL DEFAULT 'participant',
+    joined_at       TEXT NOT NULL
+);
+"""
+
+_CREATE_SIM_ACTIONS_TABLE = """
+CREATE TABLE IF NOT EXISTS simulation_actions (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    simulation_id   TEXT NOT NULL REFERENCES simulations(simulation_id),
+    action_id       TEXT NOT NULL,
+    agent_id        TEXT NOT NULL,
+    action_type     TEXT NOT NULL,
+    step            INTEGER NOT NULL,
+    timestamp       TEXT NOT NULL,
+    accepted        INTEGER NOT NULL DEFAULT 1,
+    source          TEXT
+);
+"""
+
+_CREATE_SIM_RESULTS_TABLE = """
+CREATE TABLE IF NOT EXISTS simulation_results (
+    simulation_id   TEXT PRIMARY KEY REFERENCES simulations(simulation_id),
+    results_json    TEXT NOT NULL DEFAULT '{}'
+);
+"""
+
+_CREATE_SIM_EXEC_STATE_TABLE = """
+CREATE TABLE IF NOT EXISTS simulation_execution_state (
+    simulation_id   TEXT PRIMARY KEY REFERENCES simulations(simulation_id),
+    state_json      TEXT NOT NULL DEFAULT '{}'
+);
+"""
+
 _CREATE_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_runs_agent ON runs(agent_id);",
     "CREATE INDEX IF NOT EXISTS idx_runs_status ON runs(status);",
@@ -82,6 +179,15 @@ _CREATE_INDEXES = [
     "CREATE INDEX IF NOT EXISTS idx_posts_published ON posts(published_at);",
     "CREATE INDEX IF NOT EXISTS idx_posts_agent ON posts(agent_id);",
     "CREATE INDEX IF NOT EXISTS idx_votes_post ON votes(post_id);",
+    "CREATE INDEX IF NOT EXISTS idx_scenarios_status ON scenarios(status);",
+    "CREATE INDEX IF NOT EXISTS idx_scenarios_submitted ON scenarios(submitted_at);",
+    "CREATE INDEX IF NOT EXISTS idx_proposals_status ON proposals(status);",
+    "CREATE INDEX IF NOT EXISTS idx_proposals_created ON proposals(created_at);",
+    "CREATE INDEX IF NOT EXISTS idx_proposal_votes_proposal ON proposal_votes(proposal_id);",
+    "CREATE INDEX IF NOT EXISTS idx_simulations_status ON simulations(status);",
+    "CREATE INDEX IF NOT EXISTS idx_simulations_created ON simulations(created_at);",
+    "CREATE INDEX IF NOT EXISTS idx_sim_participants_sim ON simulation_participants(simulation_id);",
+    "CREATE INDEX IF NOT EXISTS idx_sim_actions_sim ON simulation_actions(simulation_id);",
 ]
 
 
@@ -491,4 +597,546 @@ class PostStore:
             tags=tags,
             published_at=_parse_dt(row["published_at"]),  # type: ignore[arg-type]
             run_url=row["run_url"],
+        )
+
+
+class ScenarioStore:
+    """SQLite-backed scenario storage."""
+
+    def __init__(self, db_path: Optional[Path] = None) -> None:
+        self._db_path = db_path or _DEFAULT_DB_PATH
+        self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._init_db()
+
+    def _init_db(self) -> None:
+        with self._connect() as conn:
+            conn.execute(_CREATE_SCENARIOS_TABLE)
+            for idx in _CREATE_INDEXES:
+                if "scenarios" in idx:
+                    conn.execute(idx)
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(str(self._db_path), timeout=10)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
+        conn.execute("PRAGMA foreign_keys=ON;")
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def save(self, scenario: ScenarioResponse) -> None:
+        """Upsert a scenario."""
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO scenarios
+                    (scenario_id, name, description, status,
+                     validation_errors, submitted_at, tags, resource_estimate)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(scenario_id) DO UPDATE SET
+                    name=excluded.name,
+                    description=excluded.description,
+                    status=excluded.status,
+                    validation_errors=excluded.validation_errors,
+                    tags=excluded.tags,
+                    resource_estimate=excluded.resource_estimate
+                """,
+                (
+                    scenario.scenario_id,
+                    scenario.name,
+                    scenario.description,
+                    scenario.status.value,
+                    json.dumps(scenario.validation_errors),
+                    _iso(scenario.submitted_at),
+                    json.dumps(scenario.tags),
+                    json.dumps(scenario.resource_estimate) if scenario.resource_estimate else None,
+                ),
+            )
+
+    def get(self, scenario_id: str) -> Optional[ScenarioResponse]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM scenarios WHERE scenario_id = ?", (scenario_id,)
+            ).fetchone()
+        if row is None:
+            return None
+        return self._row_to_scenario(row)
+
+    def list_scenarios(
+        self,
+        *,
+        status: Optional[ScenarioStatus] = None,
+        tag: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[ScenarioResponse]:
+        conditions: list[str] = []
+        params: list = []
+
+        if status is not None:
+            conditions.append("s.status = ?")
+            params.append(status.value)
+
+        if tag is not None:
+            conditions.append(
+                "EXISTS (SELECT 1 FROM json_each(s.tags) WHERE json_each.value = ?)"
+            )
+            params.append(tag)
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = f"SELECT s.* FROM scenarios s {where} ORDER BY s.submitted_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [self._row_to_scenario(r) for r in rows]
+
+    def _row_to_scenario(self, row: sqlite3.Row) -> ScenarioResponse:
+        try:
+            validation_errors = json.loads(row["validation_errors"])
+        except (json.JSONDecodeError, TypeError):
+            validation_errors = []
+        try:
+            tags = json.loads(row["tags"])
+        except (json.JSONDecodeError, TypeError):
+            tags = []
+        resource_estimate = None
+        if row["resource_estimate"]:
+            try:
+                resource_estimate = json.loads(row["resource_estimate"])
+            except (json.JSONDecodeError, TypeError):
+                pass
+        return ScenarioResponse(
+            scenario_id=row["scenario_id"],
+            name=row["name"],
+            description=row["description"],
+            status=ScenarioStatus(row["status"]),
+            validation_errors=validation_errors,
+            submitted_at=_parse_dt(row["submitted_at"]),  # type: ignore[arg-type]
+            tags=tags,
+            resource_estimate=resource_estimate,
+        )
+
+
+class ProposalStore:
+    """SQLite-backed governance proposal storage with voting."""
+
+    def __init__(self, db_path: Optional[Path] = None) -> None:
+        self._db_path = db_path or _DEFAULT_DB_PATH
+        self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._init_db()
+
+    def _init_db(self) -> None:
+        with self._connect() as conn:
+            conn.execute(_CREATE_PROPOSALS_TABLE)
+            conn.execute(_CREATE_PROPOSAL_VOTES_TABLE)
+            for idx in _CREATE_INDEXES:
+                if "proposal" in idx:
+                    conn.execute(idx)
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(str(self._db_path), timeout=10)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
+        conn.execute("PRAGMA foreign_keys=ON;")
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    def save(self, proposal: Any) -> None:
+        """Upsert a proposal."""
+        with self._connect() as conn:
+            conn.execute(
+                """
+                INSERT INTO proposals
+                    (proposal_id, title, description, policy_declaration,
+                     target_scenarios, status, proposer_id, created_at,
+                     votes_for, votes_against)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(proposal_id) DO UPDATE SET
+                    title=excluded.title,
+                    description=excluded.description,
+                    status=excluded.status,
+                    votes_for=excluded.votes_for,
+                    votes_against=excluded.votes_against
+                """,
+                (
+                    proposal.proposal_id,
+                    proposal.title,
+                    proposal.description,
+                    json.dumps(proposal.policy_declaration),
+                    json.dumps(proposal.target_scenarios),
+                    proposal.status.value if hasattr(proposal.status, "value") else proposal.status,
+                    proposal.proposer_id,
+                    _iso(proposal.created_at),
+                    proposal.votes_for,
+                    proposal.votes_against,
+                ),
+            )
+
+    def get(self, proposal_id: str) -> Optional[dict]:
+        """Fetch a proposal as a dict (matches ProposalResponse fields)."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM proposals WHERE proposal_id = ?", (proposal_id,)
+            ).fetchone()
+        if row is None:
+            return None
+        return self._row_to_dict(row)
+
+    def list_proposals(
+        self,
+        *,
+        status: Optional[str] = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[dict]:
+        conditions: list[str] = []
+        params: list = []
+
+        if status is not None:
+            conditions.append("status = ?")
+            params.append(status)
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = f"SELECT * FROM proposals {where} ORDER BY created_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [self._row_to_dict(r) for r in rows]
+
+    def vote(self, proposal_id: str, agent_id: str, direction: int) -> Optional[dict]:
+        """Cast a vote. Returns updated counts or None if duplicate."""
+        now = datetime.now(timezone.utc).isoformat()
+
+        conn = self._connect()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+
+            existing = conn.execute(
+                "SELECT direction FROM proposal_votes WHERE proposal_id = ? AND agent_id = ?",
+                (proposal_id, agent_id),
+            ).fetchone()
+
+            if existing:
+                conn.execute("ROLLBACK")
+                return None  # duplicate vote
+
+            conn.execute(
+                "INSERT INTO proposal_votes (proposal_id, agent_id, direction, voted_at) VALUES (?, ?, ?, ?)",
+                (proposal_id, agent_id, direction, now),
+            )
+
+            # Recompute counts from ground truth
+            up_row = conn.execute(
+                "SELECT COUNT(*) FROM proposal_votes WHERE proposal_id = ? AND direction = 1",
+                (proposal_id,),
+            ).fetchone()
+            down_row = conn.execute(
+                "SELECT COUNT(*) FROM proposal_votes WHERE proposal_id = ? AND direction = -1",
+                (proposal_id,),
+            ).fetchone()
+
+            votes_for = up_row[0] if up_row else 0
+            votes_against = down_row[0] if down_row else 0
+
+            conn.execute(
+                "UPDATE proposals SET votes_for = ?, votes_against = ? WHERE proposal_id = ?",
+                (votes_for, votes_against, proposal_id),
+            )
+
+            conn.execute("COMMIT")
+        except Exception:
+            conn.execute("ROLLBACK")
+            raise
+        finally:
+            conn.close()
+
+        return {
+            "proposal_id": proposal_id,
+            "votes_for": votes_for,
+            "votes_against": votes_against,
+        }
+
+    def get_vote(self, proposal_id: str, agent_id: str) -> Optional[int]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT direction FROM proposal_votes WHERE proposal_id = ? AND agent_id = ?",
+                (proposal_id, agent_id),
+            ).fetchone()
+        return row["direction"] if row else None
+
+    def _row_to_dict(self, row: sqlite3.Row) -> dict:
+        try:
+            policy_declaration = json.loads(row["policy_declaration"])
+        except (json.JSONDecodeError, TypeError):
+            policy_declaration = {}
+        try:
+            target_scenarios = json.loads(row["target_scenarios"])
+        except (json.JSONDecodeError, TypeError):
+            target_scenarios = []
+        return {
+            "proposal_id": row["proposal_id"],
+            "title": row["title"],
+            "description": row["description"],
+            "policy_declaration": policy_declaration,
+            "target_scenarios": target_scenarios,
+            "status": row["status"],
+            "proposer_id": row["proposer_id"],
+            "created_at": row["created_at"],
+            "votes_for": row["votes_for"],
+            "votes_against": row["votes_against"],
+        }
+
+
+class SimulationStore:
+    """SQLite-backed simulation storage with write-through cache."""
+
+    def __init__(self, db_path: Optional[Path] = None) -> None:
+        self._db_path = db_path or _DEFAULT_DB_PATH
+        self._db_path.parent.mkdir(parents=True, exist_ok=True)
+        self._lock = threading.Lock()
+        self._cache: dict[str, SimulationResponse] = {}
+        self._init_db()
+
+    def _init_db(self) -> None:
+        with self._connect() as conn:
+            conn.execute(_CREATE_SIMULATIONS_TABLE)
+            conn.execute(_CREATE_SIM_PARTICIPANTS_TABLE)
+            conn.execute(_CREATE_SIM_ACTIONS_TABLE)
+            conn.execute(_CREATE_SIM_RESULTS_TABLE)
+            conn.execute(_CREATE_SIM_EXEC_STATE_TABLE)
+            for idx in _CREATE_INDEXES:
+                if "simulation" in idx or "sim_" in idx:
+                    conn.execute(idx)
+
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(str(self._db_path), timeout=10)
+        conn.execute("PRAGMA journal_mode=WAL;")
+        conn.execute("PRAGMA busy_timeout=5000;")
+        conn.execute("PRAGMA foreign_keys=ON;")
+        conn.row_factory = sqlite3.Row
+        return conn
+
+    # ------------------------------------------------------------------
+    # Simulation CRUD
+    # ------------------------------------------------------------------
+
+    def save(self, sim: SimulationResponse) -> None:
+        """Upsert a simulation into both cache and DB."""
+        with self._lock:
+            terminal = {SimulationStatus.COMPLETED, SimulationStatus.CANCELLED}
+            if sim.status not in terminal:
+                self._cache[sim.simulation_id] = sim
+            else:
+                self._cache.pop(sim.simulation_id, None)
+
+            with self._connect() as conn:
+                conn.execute(
+                    """
+                    INSERT INTO simulations
+                        (simulation_id, scenario_id, status, mode,
+                         max_participants, current_participants,
+                         created_at, join_deadline, config_overrides)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    ON CONFLICT(simulation_id) DO UPDATE SET
+                        status=excluded.status,
+                        current_participants=excluded.current_participants,
+                        config_overrides=excluded.config_overrides,
+                        join_deadline=excluded.join_deadline
+                    """,
+                    (
+                        sim.simulation_id,
+                        sim.scenario_id,
+                        sim.status.value,
+                        sim.mode.value,
+                        sim.max_participants,
+                        sim.current_participants,
+                        _iso(sim.created_at),
+                        _iso(sim.join_deadline),
+                        json.dumps(sim.config_overrides),
+                    ),
+                )
+
+    def get(self, simulation_id: str) -> Optional[SimulationResponse]:
+        """Fetch a simulation by ID. Cache-first."""
+        with self._lock:
+            cached = self._cache.get(simulation_id)
+            if cached is not None:
+                return cached
+
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT * FROM simulations WHERE simulation_id = ?", (simulation_id,)
+            ).fetchone()
+        if row is None:
+            return None
+        return self._row_to_sim(row)
+
+    def list_simulations(
+        self,
+        *,
+        status: Optional[SimulationStatus] = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[SimulationResponse]:
+        conditions: list[str] = []
+        params: list = []
+
+        if status is not None:
+            conditions.append("status = ?")
+            params.append(status.value)
+
+        where = f"WHERE {' AND '.join(conditions)}" if conditions else ""
+        query = f"SELECT * FROM simulations {where} ORDER BY created_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+
+        with self._connect() as conn:
+            rows = conn.execute(query, params).fetchall()
+        return [self._row_to_sim(r) for r in rows]
+
+    def count_active(self) -> int:
+        """Count simulations in waiting or running state."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM simulations WHERE status IN (?, ?)",
+                (SimulationStatus.WAITING.value, SimulationStatus.RUNNING.value),
+            ).fetchone()
+        return row[0] if row else 0
+
+    # ------------------------------------------------------------------
+    # Participants
+    # ------------------------------------------------------------------
+
+    def add_participant(
+        self, simulation_id: str, agent_id: str, role: str, joined_at: str
+    ) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                "INSERT INTO simulation_participants (simulation_id, agent_id, role, joined_at) VALUES (?, ?, ?, ?)",
+                (simulation_id, agent_id, role, joined_at),
+            )
+
+    def get_participants(self, simulation_id: str) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT agent_id, role, joined_at FROM simulation_participants WHERE simulation_id = ?",
+                (simulation_id,),
+            ).fetchall()
+        return [{"agent_id": r["agent_id"], "role": r["role"], "joined_at": r["joined_at"]} for r in rows]
+
+    # ------------------------------------------------------------------
+    # Actions
+    # ------------------------------------------------------------------
+
+    def add_action(self, simulation_id: str, record: dict) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO simulation_actions
+                    (simulation_id, action_id, agent_id, action_type, step, timestamp, accepted, source)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    simulation_id,
+                    record["action_id"],
+                    record["agent_id"],
+                    record["action_type"],
+                    record["step"],
+                    record["timestamp"],
+                    1 if record.get("accepted", True) else 0,
+                    record.get("source"),
+                ),
+            )
+
+    def get_action_history(self, simulation_id: str) -> list[dict]:
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT action_id, agent_id, action_type, step, timestamp, accepted, source "
+                "FROM simulation_actions WHERE simulation_id = ? ORDER BY id",
+                (simulation_id,),
+            ).fetchall()
+        return [
+            {
+                "action_id": r["action_id"],
+                "agent_id": r["agent_id"],
+                "action_type": r["action_type"],
+                "step": r["step"],
+                "timestamp": r["timestamp"],
+                "accepted": bool(r["accepted"]),
+                "source": r["source"],
+            }
+            for r in rows
+        ]
+
+    # ------------------------------------------------------------------
+    # Results
+    # ------------------------------------------------------------------
+
+    def save_results(self, simulation_id: str, results: dict) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO simulation_results (simulation_id, results_json)
+                   VALUES (?, ?)
+                   ON CONFLICT(simulation_id) DO UPDATE SET results_json=excluded.results_json""",
+                (simulation_id, json.dumps(results)),
+            )
+
+    def get_results(self, simulation_id: str) -> Optional[dict[str, Any]]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT results_json FROM simulation_results WHERE simulation_id = ?",
+                (simulation_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        try:
+            result: dict[str, Any] = json.loads(row["results_json"])
+            return result
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    # ------------------------------------------------------------------
+    # Execution state
+    # ------------------------------------------------------------------
+
+    def save_execution_state(self, simulation_id: str, state: dict) -> None:
+        with self._connect() as conn:
+            conn.execute(
+                """INSERT INTO simulation_execution_state (simulation_id, state_json)
+                   VALUES (?, ?)
+                   ON CONFLICT(simulation_id) DO UPDATE SET state_json=excluded.state_json""",
+                (simulation_id, json.dumps(state)),
+            )
+
+    def get_execution_state(self, simulation_id: str) -> dict[str, Any]:
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT state_json FROM simulation_execution_state WHERE simulation_id = ?",
+                (simulation_id,),
+            ).fetchone()
+        if row is None:
+            return {}
+        try:
+            state: dict[str, Any] = json.loads(row["state_json"])
+            return state
+        except (json.JSONDecodeError, TypeError):
+            return {}
+
+    # ------------------------------------------------------------------
+    # Internal
+    # ------------------------------------------------------------------
+
+    def _row_to_sim(self, row: sqlite3.Row) -> SimulationResponse:
+        try:
+            config_overrides = json.loads(row["config_overrides"])
+        except (json.JSONDecodeError, TypeError):
+            config_overrides = {}
+        return SimulationResponse(
+            simulation_id=row["simulation_id"],
+            scenario_id=row["scenario_id"],
+            status=SimulationStatus(row["status"]),
+            mode=SimulationMode(row["mode"]),
+            max_participants=row["max_participants"],
+            current_participants=row["current_participants"],
+            created_at=_parse_dt(row["created_at"]),  # type: ignore[arg-type]
+            join_deadline=_parse_dt(row["join_deadline"]),  # type: ignore[arg-type]
+            config_overrides=config_overrides,
         )

@@ -10,12 +10,12 @@ from swarm.api.models.scenario import (
     ScenarioStatus,
     ScenarioSubmission,
 )
+from swarm.api.persistence import ScenarioStore
 from swarm.api.validation import estimate_resources, validate_scenario_yaml
 
 router = APIRouter()
 
-# In-memory storage for development
-_scenarios: dict[str, ScenarioResponse] = {}
+_store = ScenarioStore()
 
 
 @router.post("/submit", response_model=ScenarioResponse)
@@ -53,7 +53,7 @@ async def submit_scenario(submission: ScenarioSubmission) -> ScenarioResponse:
         resource_estimate=resource_estimate,
     )
 
-    _scenarios[scenario_id] = scenario
+    _store.save(scenario)
     return scenario
 
 
@@ -70,9 +70,10 @@ async def get_scenario(scenario_id: str) -> ScenarioResponse:
     Raises:
         HTTPException: If scenario not found.
     """
-    if scenario_id not in _scenarios:
+    scenario = _store.get(scenario_id)
+    if scenario is None:
         raise HTTPException(status_code=404, detail="Scenario not found")
-    return _scenarios[scenario_id]
+    return scenario
 
 
 @router.get("/", response_model=list[ScenarioResponse])
@@ -93,12 +94,4 @@ async def list_scenarios(
     Returns:
         List of scenarios.
     """
-    scenarios = list(_scenarios.values())
-
-    if status is not None:
-        scenarios = [s for s in scenarios if s.status == status]
-
-    if tag is not None:
-        scenarios = [s for s in scenarios if tag in s.tags]
-
-    return scenarios[offset : offset + limit]
+    return _store.list_scenarios(status=status, tag=tag, limit=limit, offset=offset)
