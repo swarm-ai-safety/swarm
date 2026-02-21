@@ -33,8 +33,16 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-# Persistent storage
-_store = SimulationStore()
+# Persistent storage (lazy-init to avoid SQLite lock contention at import time)
+_store: SimulationStore | None = None
+
+
+def _get_store() -> SimulationStore:
+    """Lazy-init the simulation store singleton."""
+    global _store
+    if _store is None:
+        _store = SimulationStore()
+    return _store
 
 # Runtime-only (ephemeral) state — not persisted
 _observations: dict[str, dict[str, dict]] = {}  # simulation_id -> agent_id -> observation
@@ -86,7 +94,7 @@ async def _execute_simulation(simulation_id: str) -> None:
         simulation_id: The simulation to execute.
     """
     # Resolve scenario early — if missing, bail without touching state.
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         _sim_tasks.pop(simulation_id, None)
         return
@@ -110,7 +118,7 @@ async def _execute_simulation(simulation_id: str) -> None:
         orchestrator = build_orchestrator(scenario)
 
         # Register API participants as external agents
-        participants = _store.get_participants(simulation_id)
+        participants = _get_store().get_participants(simulation_id)
         for participant in participants:
             agent = HonestAgent(
                 agent_id=participant["agent_id"],
@@ -129,10 +137,10 @@ async def _execute_simulation(simulation_id: str) -> None:
         # Epoch callback: update execution state + publish events
         def _on_epoch_complete(epoch_metrics):
             now = datetime.now(timezone.utc).isoformat()
-            exec_state = _store.get_execution_state(simulation_id)
+            exec_state = _get_store().get_execution_state(simulation_id)
             exec_state["current_epoch"] = epoch_metrics.epoch
             exec_state["last_activity"] = now
-            _store.save_execution_state(simulation_id, exec_state)
+            _get_store().save_execution_state(simulation_id, exec_state)
 
             asyncio.ensure_future(event_bus.publish(
                 SimEvent(
@@ -157,7 +165,7 @@ async def _execute_simulation(simulation_id: str) -> None:
             if ext_obs:
                 _observations[simulation_id] = dict(ext_obs)
 
-        orchestrator._run_step_async = _wrapped_run_step
+        orchestrator._run_step_async = _wrapped_run_step  # type: ignore[method-assign]
 
         # Run the simulation
         metrics_list = await orchestrator.run_async()
@@ -169,11 +177,11 @@ async def _execute_simulation(simulation_id: str) -> None:
         }
 
         # Mark completed
-        simulation = _store.get(simulation_id)
+        simulation = _get_store().get(simulation_id)
         if simulation is not None:
             simulation.status = SimulationStatus.COMPLETED
-            _store.save(simulation)
-            _store.save_results(simulation_id, results)
+            _get_store().save(simulation)
+            _get_store().save_results(simulation_id, results)
 
         await event_bus.publish(
             SimEvent(
@@ -188,11 +196,11 @@ async def _execute_simulation(simulation_id: str) -> None:
         raise
     except Exception:
         logger.exception("Simulation %s failed", simulation_id)
-        simulation = _store.get(simulation_id)
+        simulation = _get_store().get(simulation_id)
         if simulation is not None:
             simulation.status = SimulationStatus.CANCELLED
-            _store.save(simulation)
-            _store.save_results(simulation_id, {
+            _get_store().save(simulation)
+            _get_store().save_results(simulation_id, {
                 "error": traceback.format_exc(),
             })
     finally:
@@ -226,7 +234,7 @@ async def create_simulation(request: SimulationCreate) -> SimulationResponse:
         HTTPException: If concurrency limit exceeded.
     """
     # Enforce global concurrency limit
-    active = _store.count_active()
+    active = _get_store().count_active()
     if active >= MAX_ACTIVE_SIMULATIONS:
         raise HTTPException(
             status_code=429,
@@ -248,7 +256,7 @@ async def create_simulation(request: SimulationCreate) -> SimulationResponse:
         config_overrides=request.config_overrides,
     )
 
-    _store.save(simulation)
+    _get_store().save(simulation)
     return simulation
 
 
@@ -269,7 +277,7 @@ async def join_simulation(simulation_id: str, request: SimulationJoin) -> dict:
     Raises:
         HTTPException: If simulation not found or join fails.
     """
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
@@ -287,9 +295,9 @@ async def join_simulation(simulation_id: str, request: SimulationJoin) -> dict:
 
     # Add participant
     now = datetime.now(timezone.utc)
-    _store.add_participant(simulation_id, request.agent_id, request.role, now.isoformat())
+    _get_store().add_participant(simulation_id, request.agent_id, request.role, now.isoformat())
     simulation.current_participants += 1
-    _store.save(simulation)
+    _get_store().save(simulation)
 
     participant_id = str(uuid.uuid4())
 
@@ -318,11 +326,11 @@ async def get_simulation_state(simulation_id: str) -> dict:
     Raises:
         HTTPException: If simulation not found.
     """
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    participants = _store.get_participants(simulation_id)
+    participants = _get_store().get_participants(simulation_id)
 
     now = datetime.now(timezone.utc)
     deadline = simulation.join_deadline
@@ -358,7 +366,7 @@ async def start_simulation(simulation_id: str) -> dict:
         HTTPException: If simulation not found, not in WAITING state,
             or doesn't have enough participants.
     """
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
@@ -373,10 +381,10 @@ async def start_simulation(simulation_id: str) -> dict:
         )
 
     simulation.status = SimulationStatus.RUNNING
-    _store.save(simulation)
+    _get_store().save(simulation)
 
     now = datetime.now(timezone.utc).isoformat()
-    _store.save_execution_state(simulation_id, {
+    _get_store().save_execution_state(simulation_id, {
         "current_step": 0,
         "current_epoch": 0,
         "started_at": now,
@@ -410,7 +418,7 @@ async def get_simulation(simulation_id: str) -> SimulationResponse:
     Raises:
         HTTPException: If simulation not found.
     """
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
     return simulation
@@ -436,7 +444,7 @@ async def list_simulations(
     Returns:
         List of simulations.
     """
-    result: list[SimulationResponse] = list(_store.list_simulations(status=status, limit=limit, offset=offset))
+    result: list[SimulationResponse] = list(_get_store().list_simulations(status=status, limit=limit, offset=offset))
     return result
 
 
@@ -472,7 +480,7 @@ async def submit_action(
             detail="Cannot submit actions for another agent",
         )
 
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
@@ -480,7 +488,7 @@ async def submit_action(
         raise HTTPException(status_code=400, detail="Simulation is not running")
 
     # Verify agent is a participant
-    participants = _store.get_participants(simulation_id)
+    participants = _get_store().get_participants(simulation_id)
     agent_ids = {p["agent_id"] for p in participants}
     if action.agent_id not in agent_ids:
         raise HTTPException(
@@ -507,7 +515,7 @@ async def submit_action(
     action_ts = datetime.now(timezone.utc).isoformat()
 
     # Record action in persistent store
-    _store.add_action(simulation_id, {
+    _get_store().add_action(simulation_id, {
         "action_id": action_id,
         "agent_id": action.agent_id,
         "action_type": action.action_type.value,
@@ -517,12 +525,12 @@ async def submit_action(
     })
 
     # Update execution state with latest step and activity timestamp
-    exec_state = _store.get_execution_state(simulation_id)
+    exec_state = _get_store().get_execution_state(simulation_id)
     exec_state["current_step"] = max(
         exec_state.get("current_step", 0), action.step,
     )
     exec_state["last_activity"] = action_ts
-    _store.save_execution_state(simulation_id, exec_state)
+    _get_store().save_execution_state(simulation_id, exec_state)
 
     return {
         "action_id": action_id,
@@ -563,12 +571,12 @@ async def get_observation(
             detail="Cannot read observations for another agent",
         )
 
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
     # Verify agent is a participant
-    participants = _store.get_participants(simulation_id)
+    participants = _get_store().get_participants(simulation_id)
     agent_ids = {p["agent_id"] for p in participants}
     if agent_id not in agent_ids:
         raise HTTPException(
@@ -620,7 +628,7 @@ async def simulation_events(
     """
     from starlette.responses import StreamingResponse
 
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
@@ -686,7 +694,7 @@ async def complete_simulation(
     Raises:
         HTTPException: If simulation not found or not running.
     """
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
@@ -715,11 +723,11 @@ async def complete_simulation(
         task.cancel()
 
     simulation.status = SimulationStatus.COMPLETED
-    _store.save(simulation)
+    _get_store().save(simulation)
 
     # Store results
     if results is not None:
-        _store.save_results(simulation_id, results)
+        _get_store().save_results(simulation_id, results)
 
     # Clean up action queue
     queue = _action_queues.pop(simulation_id, None)
@@ -757,7 +765,7 @@ async def get_simulation_results(simulation_id: str) -> dict:
     Raises:
         HTTPException: If simulation not found or not completed.
     """
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
@@ -766,9 +774,9 @@ async def get_simulation_results(simulation_id: str) -> dict:
             status_code=400, detail="Simulation is not completed"
         )
 
-    results = _store.get_results(simulation_id) or {}
-    history = _store.get_action_history(simulation_id)
-    participants = _store.get_participants(simulation_id)
+    results = _get_store().get_results(simulation_id) or {}
+    history = _get_store().get_action_history(simulation_id)
+    participants = _get_store().get_participants(simulation_id)
 
     return {
         "simulation_id": simulation_id,
@@ -804,12 +812,12 @@ async def get_execution_state(simulation_id: str) -> dict:
     Raises:
         HTTPException: If simulation not found.
     """
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    history = _store.get_action_history(simulation_id)
-    exec_state = _store.get_execution_state(simulation_id)
+    history = _get_store().get_action_history(simulation_id)
+    exec_state = _get_store().get_execution_state(simulation_id)
 
     # Compute per-agent action counts
     agent_counts: dict[str, int] = {}
@@ -866,13 +874,13 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
         return
 
     # Verify simulation exists
-    simulation = _store.get(simulation_id)
+    simulation = _get_store().get(simulation_id)
     if simulation is None:
         await websocket.close(code=4004, reason="Simulation not found")
         return
 
     # Verify agent is a participant
-    participants = _store.get_participants(simulation_id)
+    participants = _get_store().get_participants(simulation_id)
     agent_ids = {p["agent_id"] for p in participants}
     if agent_id not in agent_ids:
         await websocket.close(code=4003, reason="Not a participant")
@@ -951,7 +959,7 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
 
             if msg_type == "action":
                 # Submit action to the queue
-                sim = _store.get(simulation_id)
+                sim = _get_store().get(simulation_id)
                 if sim is None or sim.status != SimulationStatus.RUNNING:
                     await websocket.send_json({
                         "type": "error",
@@ -979,7 +987,7 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
                 ws_step = msg.get("step", 0)
 
                 # Record in persistent store
-                _store.add_action(simulation_id, {
+                _get_store().add_action(simulation_id, {
                     "action_id": action_id,
                     "agent_id": agent_id,
                     "action_type": msg.get("action_type", "noop"),
@@ -990,12 +998,12 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
                 })
 
                 # Update execution state
-                ws_exec = _store.get_execution_state(simulation_id)
+                ws_exec = _get_store().get_execution_state(simulation_id)
                 ws_exec["current_step"] = max(
                     ws_exec.get("current_step", 0), ws_step,
                 )
                 ws_exec["last_activity"] = ws_action_ts
-                _store.save_execution_state(simulation_id, ws_exec)
+                _get_store().save_execution_state(simulation_id, ws_exec)
 
                 await websocket.send_json({
                     "type": "action_result",

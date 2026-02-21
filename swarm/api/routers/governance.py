@@ -3,6 +3,7 @@
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -52,7 +53,15 @@ class ProposalResponse(BaseModel):
     votes_against: int = 0
 
 
-_store = ProposalStore()
+_store: Optional[ProposalStore] = None
+
+
+def _get_store() -> ProposalStore:
+    """Lazy-init the proposal store singleton."""
+    global _store
+    if _store is None:
+        _store = ProposalStore()
+    return _store
 
 
 @router.post(
@@ -84,7 +93,7 @@ async def create_proposal(
         proposer_id=agent_id,
         created_at=datetime.now(timezone.utc),
     )
-    _store.save(proposal)
+    _get_store().save(proposal)
     return proposal
 
 
@@ -105,7 +114,7 @@ async def list_proposals(
         List of proposals.
     """
     status_val = status.value if status is not None else None
-    rows = _store.list_proposals(status=status_val, limit=limit, offset=offset)
+    rows = _get_store().list_proposals(status=status_val, limit=limit, offset=offset)
     return [ProposalResponse(**r) for r in rows]
 
 
@@ -122,7 +131,7 @@ async def get_proposal(proposal_id: str) -> ProposalResponse:
     Raises:
         HTTPException: If proposal not found.
     """
-    row = _store.get(proposal_id)
+    row = _get_store().get(proposal_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Proposal not found")
     return ProposalResponse(**row)
@@ -150,7 +159,7 @@ async def vote_on_proposal(
     Raises:
         HTTPException: If proposal not found, not open, or already voted.
     """
-    row = _store.get(proposal_id)
+    row = _get_store().get(proposal_id)
     if row is None:
         raise HTTPException(status_code=404, detail="Proposal not found")
 
@@ -159,10 +168,10 @@ async def vote_on_proposal(
             status_code=400, detail="Proposal is not open for voting"
         )
 
-    result = _store.vote(proposal_id, agent_id, direction)
+    result = _get_store().vote(proposal_id, agent_id, direction)
     if result is None:
         raise HTTPException(
             status_code=409, detail="Agent has already voted on this proposal"
         )
 
-    return result
+    return result  # type: ignore[no-any-return]

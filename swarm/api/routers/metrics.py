@@ -73,16 +73,17 @@ async def get_metrics(simulation_id: str) -> dict:
     Raises:
         HTTPException: If simulation not found.
     """
-    from swarm.api.routers.simulations import _store
+    from swarm.api.routers.simulations import _get_store
 
-    simulation = _store.get(simulation_id)
+    store = _get_store()
+    simulation = store.get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
-    results = _store.get_results(simulation_id) or {}
-    history = _store.get_action_history(simulation_id)
-    participants = _store.get_participants(simulation_id)
-    exec_state = _store.get_execution_state(simulation_id)
+    results = store.get_results(simulation_id) or {}
+    history = store.get_action_history(simulation_id)
+    participants = store.get_participants(simulation_id)
+    exec_state = store.get_execution_state(simulation_id)
 
     # Compute per-agent action counts
     agent_action_counts: dict[str, int] = {}

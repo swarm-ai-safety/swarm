@@ -15,7 +15,15 @@ from swarm.api.validation import estimate_resources, validate_scenario_yaml
 
 router = APIRouter()
 
-_store = ScenarioStore()
+_store: ScenarioStore | None = None
+
+
+def _get_store() -> ScenarioStore:
+    """Lazy-init the scenario store singleton."""
+    global _store
+    if _store is None:
+        _store = ScenarioStore()
+    return _store
 
 
 @router.post("/submit", response_model=ScenarioResponse)
@@ -53,7 +61,7 @@ async def submit_scenario(submission: ScenarioSubmission) -> ScenarioResponse:
         resource_estimate=resource_estimate,
     )
 
-    _store.save(scenario)
+    _get_store().save(scenario)
     return scenario
 
 
@@ -70,7 +78,7 @@ async def get_scenario(scenario_id: str) -> ScenarioResponse:
     Raises:
         HTTPException: If scenario not found.
     """
-    scenario = _store.get(scenario_id)
+    scenario = _get_store().get(scenario_id)
     if scenario is None:
         raise HTTPException(status_code=404, detail="Scenario not found")
     return scenario
@@ -94,4 +102,4 @@ async def list_scenarios(
     Returns:
         List of scenarios.
     """
-    return _store.list_scenarios(status=status, tag=tag, limit=limit, offset=offset)
+    return _get_store().list_scenarios(status=status, tag=tag, limit=limit, offset=offset)  # type: ignore[no-any-return]
