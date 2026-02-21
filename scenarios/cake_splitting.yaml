@@ -24,20 +24,30 @@ agents:
     count: 1
 
 governance:
-  # Light transaction tax
-  transaction_tax_rate: 0.02
+  # Transaction tax (raised to counter resource drain)
+  transaction_tax_rate: 0.10
   transaction_tax_split: 0.5
 
   # Reputation decay
   reputation_decay_rate: 0.95
 
+  # Vote normalization
+  vote_normalization_enabled: true
+  max_vote_weight_per_agent: 5.0
+
   # Bandwidth
   bandwidth_cap: 10
+
+  # Sybil detection (behavioral similarity clustering)
+  sybil_detection_enabled: true
+  sybil_similarity_threshold: 0.8
+  sybil_penalty_multiplier: 1.0
+  sybil_max_cluster_size: 1
 
   # Staking enabled (barrier to governed pool)
   staking_enabled: true
   min_stake_to_participate: 3.0
-  stake_slash_rate: 0.1
+  stake_slash_rate: 0.2
 
   # Circuit breaker for extreme exploitation
   circuit_breaker_enabled: true
@@ -47,11 +57,11 @@ governance:
 
   # Collusion detection
   collusion_detection_enabled: true
-  collusion_frequency_threshold: 2.0
-  collusion_correlation_threshold: 0.7
-  collusion_min_interactions: 3
-  collusion_score_threshold: 0.5
-  collusion_penalty_multiplier: 1.0
+  collusion_frequency_threshold: 1.5
+  collusion_correlation_threshold: 0.6
+  collusion_min_interactions: 2
+  collusion_score_threshold: 0.4
+  collusion_penalty_multiplier: 2.0
 
   # Random audits to catch reputation farming
   audit_enabled: true
