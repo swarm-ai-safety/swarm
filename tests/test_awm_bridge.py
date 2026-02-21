@@ -2155,8 +2155,9 @@ class TestAdapterServerSSRF:
 
     def test_sanitize_accepts_static_prefix_from_template(self):
         """_sanitize_dispatch_path must accept the extracted static prefix."""
-        import re
         import posixpath
+        import re
+
         from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
 
         for template, expected_base in [
@@ -2174,8 +2175,9 @@ class TestAdapterServerSSRF:
 
     def test_dispatch_within_parameterized_base_accepted(self):
         """/users/123 is within the /users/ prefix derived from /users/{user_id}."""
-        import re
         import posixpath
+        import re
+
         from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
 
         path_template = "/users/{user_id}"
@@ -2195,8 +2197,9 @@ class TestAdapterServerSSRF:
 
     def test_dispatch_outside_base_rejected(self):
         """/evil/path is NOT within the /users/ prefix and must be rejected."""
-        import re
         import posixpath
+        import re
+
         from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
 
         path_template = "/users/{user_id}"
