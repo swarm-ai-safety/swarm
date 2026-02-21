@@ -17,6 +17,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## February 2026
 
+<div class="blog-post" data-tags="governance theory" markdown>
+
+**Feb 20** — [Costly Contracts Separate Honest Agents from Adversaries. Here's the Data.](contract-screening-separating-equilibrium.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Theory</span>
+
+Vickrey auction bonds and entry fees create a separating equilibrium in 20 epochs: honest agents choose governed pools, adversaries self-select into the default market. Perfect separation, zero infiltration, 74% welfare premium.
+
+</div>
+
 <div class="blog-post" data-tags="llm-agents evaluation" markdown>
 
 **Feb 20** — [Does Model Size Matter for Safety? Llama 3B vs 8B in the SWARM Economy](local-llama-model-size-safety.md)
