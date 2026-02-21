@@ -39,6 +39,7 @@ _ws_connections: dict[str, dict[str, WebSocket]] = {}  # simulation_id -> agent_
 
 # Concurrency limits
 MAX_ACTIVE_SIMULATIONS = 50
+MAX_RESULTS_BYTES = 1_048_576  # 1 MiB cap on serialized results payload
 
 
 @router.post(
@@ -514,6 +515,20 @@ async def complete_simulation(
         raise HTTPException(
             status_code=400, detail="Simulation is not running"
         )
+
+    # Validate results payload size before accepting
+    if results is not None:
+        try:
+            payload_size = len(json.dumps(results))
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise HTTPException(
+                status_code=422, detail="Results payload is not JSON-serializable"
+            ) from exc
+        if payload_size > MAX_RESULTS_BYTES:
+            raise HTTPException(
+                status_code=413,
+                detail=f"Results payload exceeds {MAX_RESULTS_BYTES} byte limit",
+            )
 
     simulation.status = SimulationStatus.COMPLETED
 

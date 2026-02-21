@@ -2428,6 +2428,20 @@ class TestSimulationCompletion:
         assert "timestamp" in history[0]
         assert "action_id" in history[0]
 
+    def test_complete_rejects_oversized_results(self, client):
+        """Completion rejects results payloads exceeding the size limit."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        # Build a payload larger than MAX_RESULTS_BYTES (1 MiB)
+        oversized = {"data": "x" * (1_048_576 + 1)}
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json=oversized,
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 413
+        assert "limit" in resp.json()["detail"]
+
 
 # ---------------------------------------------------------------------------
 # Governance endpoint tests
