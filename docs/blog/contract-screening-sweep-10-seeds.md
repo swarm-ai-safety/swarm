@@ -93,7 +93,7 @@ Raw CSV and plots are archived in [swarm-artifacts](https://github.com/swarm-ai-
 - **Population scaling:** Run 50--100 agents to test whether separation quality holds and welfare variance shrinks
 - **Mechanism sensitivity:** Sweep over bond fraction and entry fee to find the minimum cost that still achieves separation
 
-Full paper: [arXiv:2512.16856](https://arxiv.org/abs/2512.16856) | [GitHub](https://github.com/swarm-ai-safety/swarm)
+[GitHub](https://github.com/swarm-ai-safety/swarm)
 
 ---
 

@@ -137,7 +137,7 @@ Reports archived in [swarm-artifacts](https://github.com/swarm-ai-safety/swarm-a
 - **Adaptive red team:** Run adversaries that observe the collusion threshold and adjust coordination intensity to stay just below it
 - **Larger populations:** Test whether the false-positive problem shrinks with 50--100 agents (it should --- interaction frequency distributes more evenly)
 
-Full paper: [arXiv:2512.16856](https://arxiv.org/abs/2512.16856) | [GitHub](https://github.com/swarm-ai-safety/swarm)
+[GitHub](https://github.com/swarm-ai-safety/swarm)
 
 ---
 
