@@ -4,7 +4,7 @@ Scan the codebase for code health issues that arise from parallel commits, merge
 
 ## Usage
 
-`/healthcheck` or `/healthcheck --fix`
+`/healthcheck` or `/healthcheck --fix` or `/healthcheck --hf-space`
 
 ## Behavior
 
@@ -101,6 +101,33 @@ Healthcheck Results
   Stale re-exports: 0
 ══════════════════════════════════════════
 ```
+
+### `--hf-space` mode
+
+Check the status of the HF Spaces deployment (rsavitt/swarm-sandbox).
+
+1. **Health endpoint**:
+   ```bash
+   HTTP=$(curl -s -o /dev/null -w "%{http_code}" https://rsavitt-swarm-sandbox.hf.space/_stcore/health)
+   ```
+
+2. **Runtime status** (requires HF token at `~/.cache/huggingface/token`):
+   ```bash
+   curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" \
+     "https://huggingface.co/api/spaces/rsavitt/swarm-sandbox/runtime"
+   ```
+   Extract `stage` and `sha` fields.
+
+3. **Report**:
+   ```
+   HF Space: rsavitt/swarm-sandbox
+     URL:    https://rsavitt-swarm-sandbox.hf.space
+     Stage:  RUNNING
+     SHA:    8f894e2...
+     Health: 200 OK
+   ```
+
+   If stage is `BUILDING`, report that and suggest waiting. If `ERROR` or health != 200, suggest running `/deploy_demo`.
 
 ### `--fix` mode
 
