@@ -156,3 +156,140 @@ Financial regulation is continuous, structural, and designed for adversarial env
 
 Paper: arxiv.org/abs/2512.16856
 Framework: github.com/swarm-ai-safety/swarm
+
+---
+
+## Thread 4: LLM Provider Comparison (Claude vs GPT vs Ollama)
+
+**Target audience:** AI engineers, LLM practitioners, model comparison enthusiasts
+**Tag:** @AnthropicAI @OpenAI @ollaboratory
+
+**1/**
+We ran 54 simulations pitting Claude Haiku vs Claude Sonnet in adversarial multi-agent swarms.
+
+The result? Zero statistically significant differences in safety metrics.
+
+Model capability doesn't determine safety. The governance layer does.
+
+github.com/swarm-ai-safety/swarm
+
+**2/**
+Setup: 8 agents, 10 turns per episode. Three population mixes (mostly honest, balanced, adversarial-heavy). Three personas (default, safety-trained, adversarial). 261K tokens consumed, 19 statistical tests.
+
+Every single comparison: p > 0.05, effect size d < 0.04.
+
+**3/**
+The deeper finding: behavior specification via the bridge prompt dominates base model capability.
+
+cooperative prompt → toxicity ~0.24, welfare ~1.27
+adversarial prompt → toxicity ~0.60, welfare ~0.21
+
+The swing from prompt framing is 10x larger than any model difference.
+
+**4/**
+This has implications for deployment:
+
+If you're building multi-agent systems, your governance layer and prompt architecture matter far more than which foundation model you pick.
+
+Safety is a systems property, not a model property.
+
+**5/**
+SWARM supports 9 LLM providers out of the box: Anthropic, OpenAI, Ollama, OpenRouter, Groq, Together, DeepSeek, Google, llama.cpp.
+
+Run this yourself in 5 minutes:
+pip install swarm-safety
+python examples/llm_demo.py --dry-run
+
+Blog: [link to gpt-41-mini post]
+Code: github.com/swarm-ai-safety/swarm
+
+---
+
+## Thread 5: Concordia Bridge (DeepMind Generative Agents)
+
+**Target audience:** AI safety researchers, DeepMind/Concordia community, generative agent researchers
+**Tag:** @GoogleDeepMind @jjasonbae (Concordia lead)
+
+**1/**
+We connected Google DeepMind's Concordia (generative agents with memory and narrative) to SWARM's distributional safety framework.
+
+The result: governance mechanisms designed for scripted agents transfer seamlessly to LLM-backed agents.
+
+Here's what happened when we gave an LLM a goal and a memory.
+
+**2/**
+Setup: 5 agents — 3 Concordia entities (Llama 3.1 8B with memory) + 2 scripted honest agents. Moderate governance: 5% tax, circuit breaker, 10% audits.
+
+37 interactions across 3 seeds. Mean toxicity: 0.249. Zero circuit breaker triggers.
+
+**3/**
+The most interesting dynamic: Concordia entities generated 8x more interaction proposals than scripted agents (305 vs ~38).
+
+A "strategist" entity proposed 130 interactions but never exploited — RLHF safety training acted as an implicit governance layer on top of SWARM's explicit governance.
+
+**4/**
+What this means for generative agent safety:
+
+1. You can retrofit governance onto LLM agents without modifying the agents
+2. Volume (more proposals) doesn't break governance when metrics are continuous
+3. Memory-backed agents create richer dynamics but the safety envelope holds
+
+**5/**
+The Concordia bridge converts narrative text outputs → SWARM SoftInteractions via an LLM judge scoring progress, quality, cooperation, and harm (0-1 scale).
+
+This means any narrative-based agent framework can plug into distributional safety metrics.
+
+Blog: [link to concordia-entities-governance post]
+Bridge docs: github.com/swarm-ai-safety/swarm/blob/main/docs/bridges/concordia.md
+
+---
+
+## Thread 6: Claude Code Bridge (Governing Coding Agents)
+
+**Target audience:** Claude Code users, developer tools community, AI coding agent builders
+**Tag:** @AnthropicAI @alexalbert__ @cursor_ai
+
+**1/**
+What happens when you let 10 Claude Code subagents run simultaneously under governance?
+
+4.2x speedup. Zero safety incidents. And the governance layer caught things humans would miss.
+
+We built a bridge from SWARM → Claude Code's Task tool.
+
+**2/**
+The architecture: SWARM orchestrates Claude Code sessions via claude-code-controller. Each agent action (tool use, file edit, plan approval) becomes an observable that feeds into distributional safety metrics.
+
+Tool misuse → rework flags
+Plan rejection → quality gap signal
+Token usage → engagement metric
+
+**3/**
+10 concurrent roles in a research study:
+- Scenario Architect
+- Mechanism Designer
+- Metrics Auditor
+- Adversary Designer
+- Reproducibility Sheriff
+- 2 Explorers
+- 2 Bash runners
+- 1 Writer
+
+Serial: 25 min → Parallel: 6 min.
+
+**4/**
+The safety insight: when coding agents run in parallel, you need governance at the *interaction* level, not the agent level.
+
+One agent's output becomes another's input. A "safe" code change can create an unsafe composition. SWARM measures this gap — the illusion delta between what looks safe locally and what is safe systemically.
+
+**5/**
+Used in the Rain vs River experiment: two Claude Code agents with opposing philosophies (conservative vs experimental) collaborating on the same codebase.
+
+Governance prevented destructive conflicts while preserving the creative tension.
+
+Blog: [link to claude-code-10-subagents post]
+Bridge: github.com/swarm-ai-safety/swarm/blob/main/docs/bridges/claude_code.md
+Try it: github.com/swarm-ai-safety/swarm
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*
