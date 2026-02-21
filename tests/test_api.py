@@ -2398,8 +2398,20 @@ class TestSimulationCompletion:
         assert "not completed" in resp.json()["detail"]
 
     def test_execution_state(self, client):
-        """Get execution state tracks per-agent actions."""
+        """Get execution state tracks per-agent actions and step/epoch."""
         sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        # After start, execution state should be initialized
+        resp0 = client.get(
+            f"/api/v1/simulations/{sim_id}/execution",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp0.status_code == 200
+        data0 = resp0.json()
+        assert data0["current_step"] == 0
+        assert data0["current_epoch"] == 0
+        assert "started_at" in data0
+        assert "last_activity" in data0
 
         # Submit actions
         for i in range(3):
@@ -2433,6 +2445,10 @@ class TestSimulationCompletion:
         assert data["total_actions"] == 4
         assert data["per_agent_actions"][agent_ids[0]] == 3
         assert data["per_agent_actions"][agent_ids[1]] == 1
+        # current_step should reflect the highest step submitted (step=2)
+        assert data["current_step"] == 2
+        # last_activity should have been updated
+        assert data["last_activity"] >= data["started_at"]
 
     def test_action_history_recorded(self, client):
         """Actions are recorded in history with timestamps."""
