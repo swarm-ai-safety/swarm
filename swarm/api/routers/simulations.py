@@ -209,6 +209,14 @@ async def start_simulation(simulation_id: str) -> dict:
     simulation.status = SimulationStatus.RUNNING
     _store.save(simulation)
 
+    now = datetime.now(timezone.utc).isoformat()
+    _store.save_execution_state(simulation_id, {
+        "current_step": 0,
+        "current_epoch": 0,
+        "started_at": now,
+        "last_activity": now,
+    })
+
     return {
         "simulation_id": simulation_id,
         "status": "running",
@@ -258,7 +266,8 @@ async def list_simulations(
     Returns:
         List of simulations.
     """
-    return _store.list_simulations(status=status, limit=limit, offset=offset)
+    result: list[SimulationResponse] = list(_store.list_simulations(status=status, limit=limit, offset=offset))
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -325,15 +334,25 @@ async def submit_action(
 
     action_id = str(uuid.uuid4())
 
+    action_ts = datetime.now(timezone.utc).isoformat()
+
     # Record action in persistent store
     _store.add_action(simulation_id, {
         "action_id": action_id,
         "agent_id": action.agent_id,
         "action_type": action.action_type.value,
         "step": action.step,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": action_ts,
         "accepted": accepted,
     })
+
+    # Update execution state with latest step and activity timestamp
+    exec_state = _store.get_execution_state(simulation_id)
+    exec_state["current_step"] = max(
+        exec_state.get("current_step", 0), action.step,
+    )
+    exec_state["last_activity"] = action_ts
+    _store.save_execution_state(simulation_id, exec_state)
 
     return {
         "action_id": action_id,
@@ -781,16 +800,27 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
 
                 action_id = str(uuid.uuid4())
 
+                ws_action_ts = datetime.now(timezone.utc).isoformat()
+                ws_step = msg.get("step", 0)
+
                 # Record in persistent store
                 _store.add_action(simulation_id, {
                     "action_id": action_id,
                     "agent_id": agent_id,
                     "action_type": msg.get("action_type", "noop"),
-                    "step": msg.get("step", 0),
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "step": ws_step,
+                    "timestamp": ws_action_ts,
                     "accepted": accepted,
                     "source": "websocket",
                 })
+
+                # Update execution state
+                ws_exec = _store.get_execution_state(simulation_id)
+                ws_exec["current_step"] = max(
+                    ws_exec.get("current_step", 0), ws_step,
+                )
+                ws_exec["last_activity"] = ws_action_ts
+                _store.save_execution_state(simulation_id, ws_exec)
 
                 await websocket.send_json({
                     "type": "action_result",
