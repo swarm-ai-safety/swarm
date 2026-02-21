@@ -82,7 +82,7 @@ The repo includes 20+ scenario configs, 2200+ tests, and a SQLite database of al
 - Kyle, A.S. (1985). "Continuous Auctions and Insider Trading." *Econometrica*.
 - Glosten, L. & Milgrom, P. (1985). "Bid, Ask and Transaction Prices in a Specialist Market with Heterogeneously Informed Traders." *Journal of Financial Economics*.
 - Kenton, Z. et al. (2023). "Alignment of Language Agents."
-- Zheng et al. "Agent-based Simulation for AI Safety." [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).
+- Zheng et al. "Agent-based Simulation for AI Safety." [DOI](https://rosap.ntl.bts.gov/view/dot/36178).
 
 ---
 
