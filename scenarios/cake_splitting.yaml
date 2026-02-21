@@ -1,0 +1,104 @@
+# Cake Splitting Scenario
+# Fair division experiment: agents negotiate how to split surplus ("cake")
+# under different governance regimes. Tests whether:
+# - Fair division contracts produce more equitable outcomes than the default market
+# - Adversarial agents can manipulate the split in their favor
+# - Redistribution rates affect adverse selection and toxicity
+#
+# The "cake" is the expected surplus S_soft = p * s_plus - (1-p) * s_minus.
+# theta controls the default split; the fair division contract pushes tau → 0
+# (equal split) while the default market allows unequal extraction.
+
+scenario_id: cake_splitting
+description: "Cake-splitting fair division experiment: do governance mechanisms produce equitable surplus allocation?"
+motif: fair_division_test
+
+agents:
+  - type: honest
+    count: 4
+  - type: opportunistic
+    count: 3
+  - type: deceptive
+    count: 2
+  - type: adversarial
+    count: 1
+
+governance:
+  # Light transaction tax
+  transaction_tax_rate: 0.02
+  transaction_tax_split: 0.5
+
+  # Reputation decay
+  reputation_decay_rate: 0.95
+
+  # Bandwidth
+  bandwidth_cap: 10
+
+  # Staking enabled (barrier to governed pool)
+  staking_enabled: true
+  min_stake_to_participate: 3.0
+  stake_slash_rate: 0.1
+
+  # Circuit breaker for extreme exploitation
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+  # No audits — fairness is enforced structurally
+  audit_enabled: false
+
+contracts:
+  fair_division:
+    entry_fee: 2.0
+    fairness_bonus: 0.08
+    redistribution_rate: 0.3  # Aggressive redistribution toward equal split
+
+  default_market:
+    friction_premium: 0.05
+
+  market:
+    allow_switching: true
+    switching_cost_multiplier: 0.5
+    belief_update_rate: 0.3
+    # Strong honest preference for fair division pool
+    honest_truthful_preference: 0.3
+    honest_fair_preference: 0.9
+    # Opportunists may try to exploit the fair pool
+    opportunistic_truthful_preference: 0.2
+    opportunistic_fair_preference: 0.5
+    # Adversarials avoid costly signaling
+    adversarial_truthful_preference: 0.05
+    adversarial_fair_preference: 0.1
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 3.0    # Bigger cake — more surplus to divide
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5     # Default 50/50 split (contract can adjust)
+  rho_a: 0.1     # Mild externality internalization
+  rho_b: 0.1
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 20
+  min_agents: 10
+  toxicity_threshold: 0.4
+  min_separation_quality: 0.2
+  max_infiltration_rate: 0.3
+  min_welfare_delta: 0.0
+
+outputs:
+  event_log: "logs/cake_splitting_events.jsonl"
+  metrics_csv: "logs/cake_splitting_metrics.csv"
