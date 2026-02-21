@@ -165,6 +165,22 @@ async def _execute_simulation(simulation_id: str) -> None:
             if ext_obs:
                 _observations[simulation_id] = dict(ext_obs)
 
+            # Update step counter in execution state
+            step = orchestrator.state.current_step
+            exec_state = _get_store().get_execution_state(simulation_id)
+            exec_state["current_step"] = step
+            exec_state["last_activity"] = datetime.now(timezone.utc).isoformat()
+            _get_store().save_execution_state(simulation_id, exec_state)
+
+            # Publish step event for SSE/WebSocket clients
+            await event_bus.publish(
+                SimEvent(
+                    event_type=SimEventType.STEP_COMPLETE,
+                    simulation_id=simulation_id,
+                    data={"step": step, "observations": len(ext_obs) if ext_obs else 0},
+                )
+            )
+
         orchestrator._run_step_async = _wrapped_run_step  # type: ignore[method-assign]
 
         # Run the simulation
@@ -209,6 +225,13 @@ async def _execute_simulation(simulation_id: str) -> None:
         queue = _action_queues.pop(simulation_id, None)
         if queue is not None:
             await queue.cancel_all()
+        # Close any lingering WebSocket connections
+        ws_conns = _ws_connections.pop(simulation_id, {})
+        for ws in ws_conns.values():
+            try:
+                await ws.close(code=1000, reason="Simulation ended")
+            except Exception:
+                pass
 
 
 # ---------------------------------------------------------------------------
