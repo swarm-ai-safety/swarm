@@ -1,17 +1,169 @@
-"""Governance router stubs — proposal submission and listing."""
+"""Governance router — proposal submission, listing, and voting."""
 
-from fastapi import APIRouter
+import uuid
+from datetime import datetime, timezone
+from enum import Enum
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from pydantic import BaseModel, Field
+
+from swarm.api.middleware.auth import Scope, require_scope
 
 router = APIRouter()
 
 
-@router.post("/propose")
-async def propose() -> dict:
-    """Submit a governance proposal (stub)."""
-    return {"status": "not_implemented"}
+class ProposalStatus(str, Enum):
+    """Status of a governance proposal."""
+
+    DRAFT = "draft"
+    OPEN = "open"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
 
 
-@router.get("/proposals")
-async def list_proposals() -> dict:
-    """List governance proposals (stub)."""
-    return {"status": "not_implemented"}
+class ProposalCreate(BaseModel):
+    """Request model for creating a governance proposal."""
+
+    title: str = Field(..., min_length=1, max_length=200)
+    description: str = Field(..., min_length=1, max_length=5000)
+    policy_declaration: dict = Field(
+        default_factory=dict,
+        description="Freeform JSON describing the policy to be tested",
+    )
+    target_scenarios: list[str] = Field(
+        default_factory=list,
+        description="Scenario IDs this proposal should be tested against",
+    )
+
+
+class ProposalResponse(BaseModel):
+    """Response model for a governance proposal."""
+
+    proposal_id: str
+    title: str
+    description: str
+    policy_declaration: dict
+    target_scenarios: list[str]
+    status: ProposalStatus
+    proposer_id: str
+    created_at: datetime
+    votes_for: int = 0
+    votes_against: int = 0
+
+
+# In-memory storage
+_proposals: dict[str, ProposalResponse] = {}
+
+
+@router.post(
+    "/propose",
+    response_model=ProposalResponse,
+    dependencies=[Depends(require_scope(Scope.WRITE))],
+)
+async def create_proposal(
+    request: ProposalCreate,
+    agent_id: str = Depends(require_scope(Scope.WRITE)),
+) -> ProposalResponse:
+    """Submit a new governance proposal.
+
+    Args:
+        request: Proposal details.
+        agent_id: Authenticated agent's ID (from auth).
+
+    Returns:
+        Created proposal.
+    """
+    proposal_id = str(uuid.uuid4())
+    proposal = ProposalResponse(
+        proposal_id=proposal_id,
+        title=request.title,
+        description=request.description,
+        policy_declaration=request.policy_declaration,
+        target_scenarios=request.target_scenarios,
+        status=ProposalStatus.OPEN,
+        proposer_id=agent_id,
+        created_at=datetime.now(timezone.utc),
+    )
+    _proposals[proposal_id] = proposal
+    return proposal
+
+
+@router.get("/proposals", response_model=list[ProposalResponse])
+async def list_proposals(
+    status: ProposalStatus | None = None,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+) -> list[ProposalResponse]:
+    """List governance proposals with optional filtering.
+
+    Args:
+        status: Filter by proposal status.
+        limit: Maximum results.
+        offset: Skip count.
+
+    Returns:
+        List of proposals.
+    """
+    proposals = list(_proposals.values())
+    if status is not None:
+        proposals = [p for p in proposals if p.status == status]
+    return proposals[offset : offset + limit]
+
+
+@router.get("/proposals/{proposal_id}", response_model=ProposalResponse)
+async def get_proposal(proposal_id: str) -> ProposalResponse:
+    """Get a proposal by ID.
+
+    Args:
+        proposal_id: The proposal's unique identifier.
+
+    Returns:
+        Proposal details.
+
+    Raises:
+        HTTPException: If proposal not found.
+    """
+    if proposal_id not in _proposals:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+    return _proposals[proposal_id]
+
+
+@router.post(
+    "/proposals/{proposal_id}/vote",
+    dependencies=[Depends(require_scope(Scope.PARTICIPATE))],
+)
+async def vote_on_proposal(
+    proposal_id: str,
+    direction: int = Query(..., ge=-1, le=1),
+) -> dict:
+    """Vote on a governance proposal.
+
+    Args:
+        proposal_id: The proposal to vote on.
+        direction: +1 for, -1 against.
+
+    Returns:
+        Updated vote counts.
+
+    Raises:
+        HTTPException: If proposal not found or not open.
+    """
+    if proposal_id not in _proposals:
+        raise HTTPException(status_code=404, detail="Proposal not found")
+
+    proposal = _proposals[proposal_id]
+    if proposal.status != ProposalStatus.OPEN:
+        raise HTTPException(
+            status_code=400, detail="Proposal is not open for voting"
+        )
+
+    if direction == 1:
+        proposal.votes_for += 1
+    elif direction == -1:
+        proposal.votes_against += 1
+
+    return {
+        "proposal_id": proposal_id,
+        "votes_for": proposal.votes_for,
+        "votes_against": proposal.votes_against,
+    }

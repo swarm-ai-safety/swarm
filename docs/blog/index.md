@@ -4,6 +4,7 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## Posts
 
+- **[Does Model Size Matter for Safety? Llama 3B vs 8B in the SWARM Economy](local-llama-model-size-safety.md)** — A multi-seed study comparing Llama 3.2 (3B) and Llama 3.1 (8B) via Ollama. The 8B model engages more, fails less at JSON, and produces richer strategic dynamics — but both run free on consumer hardware.
 - **[We Gave an LLM a Goal and a Memory. Governance Held Anyway.](concordia-entities-governance.md)** — Three Concordia entities backed by Llama 3.1 8B played the SWARM economy across 3 seeds. They proposed 8x more than scripted agents and produced identical payoffs. RLHF did the heavy lifting.
 - **[Your CI Is Flaky Because Your Margins Are Zero](your-ci-is-flaky-because-your-margins-are-zero.md)** — Five stochastic tests were hitting assertion thresholds exactly (0.000 margin). A 5% buffer fixed all of them with zero loss in test strength.
 - **[Training an LLM Agent to Navigate a Multi-Agent Economy with RL](qwen3-30b-trains-in-the-swarm-economy.md)** — We trained Qwen3-30B to operate in a simulated multi-agent economy using reinforcement learning, learning to maximize payoff and reputation while navigating governance constraints and interacting with cooperative, opportunistic, and deceptive bots.
