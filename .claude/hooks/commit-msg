@@ -44,14 +44,10 @@ if [ "$FILE_COUNT" -gt 0 ]; then
 fi
 
 # Docs co-staged flag
-HAS_CHANGELOG=$(echo "$STAGED_FILES" | grep -c 'CHANGELOG.md' 2>/dev/null || echo "0")
-HAS_README=$(echo "$STAGED_FILES" | grep -c 'README.md' 2>/dev/null || echo "0")
-HAS_AGENTS_MD=$(echo "$STAGED_FILES" | grep -c 'AGENTS.md' 2>/dev/null || echo "0")
-
 DOCS_UPDATED=""
-[ "$HAS_CHANGELOG" -gt 0 ] && DOCS_UPDATED="${DOCS_UPDATED}CHANGELOG "
-[ "$HAS_README" -gt 0 ] && DOCS_UPDATED="${DOCS_UPDATED}README "
-[ "$HAS_AGENTS_MD" -gt 0 ] && DOCS_UPDATED="${DOCS_UPDATED}AGENTS "
+echo "$STAGED_FILES" | grep -qF 'CHANGELOG.md' && DOCS_UPDATED="${DOCS_UPDATED}CHANGELOG "
+echo "$STAGED_FILES" | grep -qF 'README.md' && DOCS_UPDATED="${DOCS_UPDATED}README "
+echo "$STAGED_FILES" | grep -qF 'AGENTS.md' && DOCS_UPDATED="${DOCS_UPDATED}AGENTS "
 
 if [ -n "$DOCS_UPDATED" ]; then
     TRAILERS="${TRAILERS}Docs-Updated: ${DOCS_UPDATED}\n"
