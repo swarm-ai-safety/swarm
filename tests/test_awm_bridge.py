@@ -2331,3 +2331,106 @@ class TestAdapterServerSSRF:
             prefix = base_dispatch_path if base_dispatch_path.endswith("/") else base_dispatch_path + "/"
             in_base = dispatch_relative_path.startswith(prefix)
         assert not in_base, "Path outside base should be rejected"
+
+
+# =========================================================================
+# Exec safety — subprocess verifier + AWM code validation
+# =========================================================================
+
+
+class TestExecSafety:
+    """Tests for exec() vulnerability mitigations in adapter_server."""
+
+    def test_verifier_subprocess_valid(self):
+        """Good verifier code returns a correct result dict."""
+        from swarm.bridges.awm.adapter_server import _run_verifier_subprocess
+
+        code = (
+            "def verify_task_completion(initial_db, working_db):\n"
+            "    return {'result': 'complete', 'initial': initial_db, 'working': working_db}\n"
+        )
+        result = _run_verifier_subprocess(code, "/tmp/a.db", "/tmp/b.db")
+        assert "result" in result
+        assert result["result"]["result"] == "complete"
+        assert result["result"]["initial"] == "/tmp/a.db"
+        assert result["result"]["working"] == "/tmp/b.db"
+
+    def test_verifier_subprocess_timeout(self):
+        """Hanging verifier code is killed after timeout."""
+        from swarm.bridges.awm.adapter_server import _run_verifier_subprocess
+
+        code = (
+            "import time\n"
+            "def verify_task_completion(initial_db, working_db):\n"
+            "    time.sleep(60)\n"
+            "    return {'result': 'complete'}\n"
+        )
+        result = _run_verifier_subprocess(code, "/tmp/a.db", "/tmp/b.db", timeout=1)
+        assert "error" in result
+        assert "timed out" in result["error"]
+
+    def test_verifier_subprocess_syntax_error(self):
+        """Verifier code with a syntax error returns an error dict."""
+        from swarm.bridges.awm.adapter_server import _run_verifier_subprocess
+
+        code = "def verify_task_completion(:\n"
+        result = _run_verifier_subprocess(code, "/tmp/a.db", "/tmp/b.db")
+        assert "error" in result
+        assert "result" not in result
+
+    def test_validate_awm_code_blocks_dangerous(self):
+        """_validate_awm_code rejects code with dangerous patterns."""
+        from swarm.bridges.awm.adapter_server import _validate_awm_code
+
+        dangerous_snippets = [
+            "import subprocess",
+            "os.system('rm -rf /')",
+            "os.popen('cat /etc/passwd')",
+            "import ctypes",
+            "import socket",
+            "shutil.rmtree('/tmp')",
+            "os.remove('/etc/passwd')",
+            "os.unlink('/etc/passwd')",
+            "eval('1+1')",
+            "compile('code', 'f', 'exec')",
+        ]
+        for snippet in dangerous_snippets:
+            with pytest.raises(ValueError, match="blocked pattern"):
+                _validate_awm_code(snippet)
+
+    def test_validate_awm_code_allows_clean(self):
+        """_validate_awm_code passes normal FastAPI app code."""
+        from swarm.bridges.awm.adapter_server import _validate_awm_code
+
+        clean_code = (
+            "from fastapi import FastAPI\n"
+            "app = FastAPI()\n"
+            "\n"
+            "@app.get('/items')\n"
+            "def list_items():\n"
+            "    return []\n"
+        )
+        # Should not raise
+        _validate_awm_code(clean_code)
+
+    def test_restricted_builtins_no_eval(self):
+        """exec'd code under restricted builtins cannot call eval()."""
+        from swarm.bridges.awm.adapter_server import _RESTRICTED_BUILTINS
+
+        # Verify eval/exec/compile are not in the restricted set
+        assert "eval" not in _RESTRICTED_BUILTINS
+        assert "exec" not in _RESTRICTED_BUILTINS
+        assert "compile" not in _RESTRICTED_BUILTINS
+        assert "globals" not in _RESTRICTED_BUILTINS
+        assert "locals" not in _RESTRICTED_BUILTINS
+        assert "breakpoint" not in _RESTRICTED_BUILTINS
+        assert "exit" not in _RESTRICTED_BUILTINS
+        assert "quit" not in _RESTRICTED_BUILTINS
+
+        # Actually exec code with restricted builtins and confirm eval is unavailable
+        ns: dict = {"__builtins__": dict(_RESTRICTED_BUILTINS)}
+        try:
+            exec("result = eval('1+1')", ns)  # noqa: S102
+            raise AssertionError("eval() should have raised NameError")
+        except NameError:
+            pass  # Expected: eval is not available

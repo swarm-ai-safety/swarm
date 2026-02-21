@@ -15,3 +15,8 @@
 {"timestamp": "2026-02-21T19:41:31Z", "branch": "main", "files_changed": ["tests/test_api.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-21T19:49:32Z", "branch": "main", "files_changed": [".claude/provenance.jsonl"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-21T19:53:28Z", "branch": "main", "files_changed": [".claude/provenance.jsonl", "swarm/api/routers/governance.py", "tests/test_api.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T19:55:21Z", "branch": "main", "files_changed": [".claude/provenance.jsonl", "swarm/bridges/awm/adapter_server.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T20:01:47Z", "branch": "main", "files_changed": ["docs/blog/cake-splitting-entry-fee-sweep.md", "docs/blog/contract-screening-separating-equilibrium.md", "docs/blog/contract-screening-sweep-10-seeds.md", "docs/blog/red-team-cake-splitting-hardening.md", "docs/blog/red-team-contract-screening.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T20:07:49Z", "branch": "main", "files_changed": ["docs/blog/ecosystem-collapse.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T20:08:16Z", "branch": "main", "files_changed": ["docs/blog/ecosystem-collapse.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-21T20:10:23Z", "branch": "main", "files_changed": ["docs/blog/markets-and-safety.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
