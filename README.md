@@ -113,7 +113,7 @@ python -m pip install -e ".[dev]"
 # Install with analysis tools (pandas, matplotlib)
 python -m pip install -e ".[analysis]"
 
-# Install with LLM support (Anthropic, OpenAI, Ollama)
+# Install with LLM support (Anthropic, OpenAI, Ollama, OpenRouter, Groq, Together, DeepSeek, Google, llama.cpp)
 python -m pip install -e ".[llm]"
 
 # Install everything
@@ -281,7 +281,7 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 | **RLM** | Reinforcement Learning from Memory — learns from interaction history |
 | **Council** | Deliberative governance via multi-agent council protocol |
 | **SkillRL** | Reinforcement learning over evolving skill repertoire |
-| **LLM** | Behavior determined by LLM with configurable persona ([details](docs/llm-agents.md)) |
+| **LLM** | Behavior determined by LLM with configurable persona; 9 providers supported ([details](docs/llm-agents.md)) |
 
 ## How SWARM Compares
 
@@ -293,7 +293,7 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 | Configurable governance levers | 27+ built-in | None | None | None | Compliance rules |
 | Collusion detection | Yes (pair-wise, structural) | No | No | No | No |
 | Replay-based incoherence | Yes | No | No | No | No |
-| LLM agent support | Yes (Anthropic, OpenAI, Ollama) | Yes | Yes | Yes | Yes |
+| LLM agent support | Yes (9 providers: Anthropic, OpenAI, Ollama, OpenRouter, Groq, Together, DeepSeek, Google, llama.cpp) | Yes | Yes | Yes | Yes |
 | Scenario configs (YAML) | 78 built-in | Custom | Benchmark suites | Task suites | Eval suites |
 | Framework bridges | 8 (Concordia, OpenClaw, GasTown, LiveSWE, Prime Intellect, Ralph, Claude Code, Worktree) | — | — | — | — |
 | License | MIT | Apache 2.0 | MIT | Varies | MIT |
