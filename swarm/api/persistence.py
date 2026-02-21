@@ -865,6 +865,27 @@ class ProposalStore:
             ).fetchone()
         return row["direction"] if row else None
 
+    def close_proposal(self, proposal_id: str, status: str) -> bool:
+        """Update a proposal's status. Returns True if a row was updated."""
+        with self._connect() as conn:
+            cur = conn.execute(
+                "UPDATE proposals SET status = ? WHERE proposal_id = ?",
+                (status, proposal_id),
+            )
+            return cur.rowcount > 0
+
+    def list_votes(self, proposal_id: str) -> list[dict]:
+        """Return all votes for a proposal."""
+        with self._connect() as conn:
+            rows = conn.execute(
+                "SELECT agent_id, direction, voted_at FROM proposal_votes WHERE proposal_id = ? ORDER BY id",
+                (proposal_id,),
+            ).fetchall()
+        return [
+            {"agent_id": r["agent_id"], "direction": r["direction"], "voted_at": r["voted_at"]}
+            for r in rows
+        ]
+
     def _row_to_dict(self, row: sqlite3.Row) -> dict:
         try:
             policy_declaration = json.loads(row["policy_declaration"])
