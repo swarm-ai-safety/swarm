@@ -1,0 +1,262 @@
+% SWARM Paper Template
+% Usage: copy this file, replace placeholders (marked with %PLACEHOLDER%), compile with tectonic.
+%
+% Placeholders:
+%   %TITLE%           — Paper title (can use \\ for line breaks)
+%   %AUTHOR%          — Author name (from $SWARM_AUTHOR or git config user.name)
+%   %ABSTRACT%        — Abstract text
+%   %BODY%            — All sections after abstract
+%
+% Standard preamble shared across all SWARM papers.
+% Do not modify the preamble unless adding a package needed by a specific paper.
+
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{verbatim}
+
+\title{Governance Effects on LLM Agents with Semantic Memory:\\A Distributional Safety Study}
+\author{Raeli Savitt}
+\date{February 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We study how governance mechanisms (transaction taxes, circuit breakers) affect distributional safety outcomes when LLM-backed agents are equipped with persistent semantic memory via Memori. Using a parameter sweep across 6 configurations with 5 seeds each (30 total runs), we find that circuit breakers produce a medium-sized positive effect on welfare (Cohen's $d = 0.42$) and that tax rate has negligible impact on either welfare or toxicity in this setting. No results survive Bonferroni correction at $\alpha = 0.05$, suggesting that either the effects are small relative to the high variance inherent in LLM-driven simulations or that 5 seeds per configuration provides insufficient power. This study establishes a baseline for future work on memory-augmented agent governance.
+\end{abstract}
+
+\section{Introduction}
+
+Multi-agent systems with LLM-backed agents present unique challenges for distributional safety: their behavior is non-deterministic, context-dependent, and influenced by accumulated experience. The Memori middleware (MemoriLabs/Memori) adds a semantic memory layer that persists facts across simulation steps, enabling agents to recall past interactions and adapt their strategies.
+
+This study asks: \textbf{Do standard governance mechanisms (transaction taxes, circuit breakers) remain effective when agents can build persistent memory?}
+
+\section{Methods}
+
+\subsection{Scenario Configuration}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Value} \\
+\midrule
+Agents & 2 LLM (Memori-enabled) + 3 scripted honest \\
+LLM Provider & OpenRouter (Claude Sonnet 4) \\
+Epochs per run & 2 \\
+Steps per epoch & 5 \\
+Memori db\_path & \texttt{:memory:} (ephemeral) \\
+Memori auto\_wait & \texttt{true} (reproducibility) \\
+Memori decay\_on\_epoch & \texttt{true} \\
+\bottomrule
+\end{tabular}
+\caption{Scenario configuration.}
+\end{table}
+
+\subsection{Swept Parameters}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{ll}
+\toprule
+\textbf{Parameter} & \textbf{Values} \\
+\midrule
+\texttt{governance.transaction\_tax\_rate} & 0\%, 5\%, 10\% \\
+\texttt{governance.circuit\_breaker\_enabled} & False, True \\
+\bottomrule
+\end{tabular}
+\caption{Swept parameters.}
+\end{table}
+
+\textbf{Total configurations:} $3 \times 2 = 6$
+
+\textbf{Seeds per configuration:} 5 (seeds 42--72)
+
+\textbf{Total runs:} 30
+
+\subsection{Statistical Methods}
+
+\begin{itemize}
+\item Welch's $t$-test (unequal variances) for pairwise comparisons
+\item Mann-Whitney $U$ as non-parametric robustness check
+\item Shapiro-Wilk normality validation per group
+\item Cohen's $d$ for effect sizes
+\item Bonferroni and Holm-Bonferroni correction for multiple comparisons (12 total tests)
+\end{itemize}
+
+\subsection{Reproducibility}
+
+\begin{verbatim}
+pip install -e ".[llm,memori]"
+export OPENROUTER_API_KEY=<your-key>
+python runs/20260217_memori_study/run_sweep.py
+python runs/20260217_memori_study/analyze.py
+python runs/20260217_memori_study/generate_plots.py
+\end{verbatim}
+
+\textbf{Note:} Semantic search (embedding similarity) is inherently non-deterministic across runs. \texttt{auto\_wait: true} ensures facts from call $N$ are available for call $N+1$, but embedding distances may vary slightly.
+
+\section{Results}
+
+\subsection{Descriptive Statistics}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llccc}
+\toprule
+\textbf{Tax Rate} & \textbf{Circuit Breaker} & \textbf{Welfare (mean $\pm$ SD)} & \textbf{Toxicity (mean $\pm$ SD)} & \textbf{Quality Gap} \\
+\midrule
+0\% & Off & $9.85 \pm 5.17$ & $0.242 \pm 0.064$ & 0.008 \\
+0\% & On & $11.58 \pm 3.50$ & $0.265 \pm 0.031$ & $-0.007$ \\
+5\% & Off & $11.10 \pm 3.55$ & $0.264 \pm 0.011$ & $-0.003$ \\
+5\% & On & $12.07 \pm 4.81$ & $0.269 \pm 0.014$ & 0.000 \\
+10\% & Off & $10.56 \pm 2.84$ & $0.263 \pm 0.022$ & $-0.001$ \\
+10\% & On & $12.46 \pm 2.25$ & $0.270 \pm 0.008$ & $-0.008$ \\
+\bottomrule
+\end{tabular}
+\caption{Descriptive statistics across all 6 configurations ($n = 5$ per cell).}
+\end{table}
+
+\subsection{Hypothesis Tests}
+
+\subsubsection{Transaction Tax Rate}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Comparison} & \textbf{Metric} & $t$ & $p$ & \textbf{Cohen's} $d$ & \textbf{Bonf.\ $p$} \\
+\midrule
+0\% vs 5\% & Welfare & $-0.460$ & 0.651 & $-0.206$ & 1.000 \\
+0\% vs 10\% & Welfare & $-0.499$ & 0.625 & $-0.223$ & 1.000 \\
+5\% vs 10\% & Welfare & 0.048 & 0.962 & 0.022 & 1.000 \\
+0\% vs 5\% & Toxicity & $-0.811$ & 0.436 & $-0.363$ & 1.000 \\
+0\% vs 10\% & Toxicity & $-0.769$ & 0.458 & $-0.344$ & 1.000 \\
+5\% vs 10\% & Toxicity & 0.043 & 0.966 & 0.019 & 1.000 \\
+\bottomrule
+\end{tabular}
+\caption{Pairwise comparisons for transaction tax rate.}
+\end{table}
+
+\textbf{Finding:} Transaction tax rate has no statistically significant effect on welfare or toxicity. All effect sizes are small ($|d| < 0.4$).
+
+\subsubsection{Circuit Breaker}
+
+\begin{table}[H]
+\centering
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Comparison} & \textbf{Metric} & $t$ & $p$ & \textbf{Cohen's} $d$ & \textbf{Bonf.\ $p$} \\
+\midrule
+Off vs On & Welfare & $-1.155$ & 0.258 & $-0.422$ & 1.000 \\
+Off vs On & Toxicity & $-1.029$ & 0.316 & $-0.376$ & 1.000 \\
+Off vs On & Quality Gap & 1.502 & 0.145 & 0.548 & 1.000 \\
+\bottomrule
+\end{tabular}
+\caption{Pairwise comparisons for circuit breaker.}
+\end{table}
+
+\textbf{Finding:} Circuit breakers show a medium effect on welfare ($d = -0.42$, welfare increases with CB on) and quality gap ($d = 0.55$), but neither survives multiple comparisons correction.
+
+\subsection{Figures}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/memori_governance_sweep/welfare_vs_tax.png}
+\caption{Welfare vs transaction tax rate (mean $\pm$ 95\% CI).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/memori_governance_sweep/toxicity_vs_tax.png}
+\caption{Toxicity vs transaction tax rate (mean $\pm$ 95\% CI).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/memori_governance_sweep/welfare_vs_circuit_breaker.png}
+\caption{Welfare vs circuit breaker (mean $\pm$ 95\% CI).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/memori_governance_sweep/toxicity_vs_circuit_breaker.png}
+\caption{Toxicity vs circuit breaker (mean $\pm$ 95\% CI).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/memori_governance_sweep/welfare_toxicity_scatter.png}
+\caption{Welfare-toxicity tradeoff scatter. Circles = CB on, squares = CB off. Color encodes tax rate.}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.8\textwidth]{figures/memori_governance_sweep/quality_gap_vs_tax.png}
+\caption{Quality gap vs transaction tax rate. Negative values indicate adverse selection.}
+\end{figure}
+
+\section{Discussion}
+
+\subsection{Key Observations}
+
+\begin{enumerate}
+\item \textbf{Circuit breakers appear beneficial but underpowered.} The consistent welfare improvement with circuit breakers enabled ($d = 0.42$) across all tax rates suggests a real effect, but 5 seeds per configuration is insufficient to reach significance after correction. A power analysis suggests $\sim$25 seeds per config would be needed to detect this effect at $\alpha = 0.05$ with 80\% power.
+
+\item \textbf{Tax rates have negligible impact.} Unlike scripted-agent scenarios where taxes create clear welfare-toxicity tradeoffs, LLM agents with memory appear largely insensitive to the 0--10\% tax range tested. This may reflect the agents' tendency toward NOOP actions when LLM calls fail (graceful degradation masking the tax effect).
+
+\item \textbf{Quality gap is near zero everywhere.} The absence of adverse selection (quality\_gap $\approx 0$) suggests that Memori-enabled LLM agents do not systematically exploit information asymmetry in this configuration. The slight negative quality gap with circuit breakers on ($d = 0.55$) warrants further investigation.
+
+\item \textbf{High variance is inherent.} Welfare standard deviations are 2--5$\times$ the inter-group differences. This is expected: LLM response variability, combined with Memori's non-deterministic embedding similarity, creates irreducible noise.
+\end{enumerate}
+
+\subsection{Memory-Governance Interaction}
+
+The Memori middleware's \texttt{decay\_on\_epoch} setting rotates sessions at epoch boundaries for non-river agents. With only 2 epochs per run, memory effects are limited. Future studies should use more epochs (10+) to observe whether memory accumulation amplifies or dampens governance effects over time.
+
+\subsection{Limitations}
+
+\begin{itemize}
+\item \textbf{Sample size:} 5 seeds per configuration provides limited statistical power.
+\item \textbf{Short horizon:} 2 epochs $\times$ 5 steps limits memory accumulation effects.
+\item \textbf{Ephemeral storage:} \texttt{:memory:} DB means no cross-run memory persistence.
+\item \textbf{Graceful degradation:} LLM call failures default to NOOP, reducing effective interaction count and potentially masking governance effects.
+\end{itemize}
+
+\section{Conclusion}
+
+This study establishes a baseline for governance effects on memory-augmented LLM agents. While no results survive multiple comparisons correction, the consistent medium-effect improvement from circuit breakers ($d = 0.42$) merits follow-up with larger sample sizes. Transaction taxes in the 0--10\% range appear ineffective in this setting. Future work should extend to longer horizons, persistent memory databases, and varied epistemic persistence settings to fully characterize the memory-governance interaction.
+
+\appendix
+
+\section{Reproduction Commands}
+
+\begin{verbatim}
+# Install
+pip install -e ".[llm,memori]"
+
+# Run sweep (requires OPENROUTER_API_KEY)
+python runs/20260217_memori_study/run_sweep.py
+
+# Analyze
+python runs/20260217_memori_study/analyze.py
+
+# Plot
+python runs/20260217_memori_study/generate_plots.py
+\end{verbatim}
+
+\section{P-Hacking Audit}
+
+All 12 hypotheses were pre-registered (3 tax-rate pairs $\times$ 3 metrics + 1 circuit-breaker pair $\times$ 3 metrics). No post-hoc tests were performed. Bonferroni correction was applied across all 12 tests. No results were significant at the corrected threshold.
+
+\end{document}

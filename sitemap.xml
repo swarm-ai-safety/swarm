@@ -2,414 +2,546 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://swarm-ai.org/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
-         <loc>https://swarm-ai.org/ARXIV_SIMILARITY_ANALYSIS/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <loc>https://swarm-ai.org/ai_economist_full_domain_contract/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/boundaries/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/comparison/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/dashboard/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/emergent-capabilities/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/game/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/governance/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/incoherence_github_issues/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/incoherence_metric_contract/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/llm-agents/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/network-topology/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/provenance_trace_schema/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/red-teaming/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/scenarios/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/swarm_scholar_bench_spec/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/virtual-agent-economies/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/whitepaper/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/analysis/incoherence_scaling/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/api/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/api/agents/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/api/core/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/api/governance/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/api/metrics/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/blog/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/ai-economist-gtb-simulation/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/arc-agi-3-agent-development-lessons/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/claude-code-10-subagents/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/concordia-entities-governance/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/blog/cross-scenario-analysis/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/blog/ecosystem-collapse/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/blog/governance-mechanisms-taxonomy/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/blog/gpt-41-mini-plays-the-swarm-economy/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/llm-council-three-models-one-study/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/llm-councils-for-multi-agent-evaluation/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/local-llama-model-size-safety/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/blog/markets-and-safety/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/blog/purity-paradox/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/qwen3-30b-trains-in-the-swarm-economy/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/blog/rl-training-lessons-multi-agent-governance/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/self-optimizer-distributional-safety/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/skillrl-dynamics/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/three-agents-three-philosophies/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/blog/two-eval-runs-one-model-41-percent-apart/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/blog/your-ci-is-flaky-because-your-margins-are-zero/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/bridges/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/bridges/agentxiv/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/bridges/claude_code/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/bridges/clawxiv/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/bridges/concordia/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/bridges/gastown/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/bridges/openclaw-swarm-llmrouter/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/bridges/openclaw/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/bridges/prime_intellect/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/bridges/ralph/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/concepts/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/concepts/emergence/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/concepts/governance/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/concepts/metrics/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/concepts/recursive-research/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/concepts/soft-labels/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/concepts/time-horizons/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/design/api-design/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/design/moltbook-captcha-plan/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/design/moltipedia-heartbeat-plan/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/design/web-api-plan/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/epics/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/epics/sciagentagym-integration/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/getting-started/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/getting-started/first-scenario/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/getting-started/installation/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/getting-started/quickstart/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/getting-started/reproducibility/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/guides/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/guides/claude-code/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/guides/custom-agents/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/guides/eval-metrics/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/guides/llm-agents/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/guides/parameter-sweeps/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/guides/red-teaming/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/guides/research-workflow/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/guides/scenarios/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/guides/task-synthesis/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/papers/ai_economist_gtb/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/papers/baseline_governance/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/collusion_dynamics_network_resilience/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/collusion_governance/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/papers/collusion_tax_effect/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/papers/concordia_entity_sweep/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/concordia_governance_sweep/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/papers/deeper_acausality/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/papers/delegation_games/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/distributional_agi_safety/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/gastown_composition_study/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/gastown_governance_cost/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/governance_mechanisms_multi_agent_safety/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/governance_sweep_kernel_collusion/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/kernel_governance/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/kernel_market_audit_rate/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/kernel_market_governance_comparison/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/kernel_market_v2/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/kernel_v4_governance_sweep/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/ldt_acausality_depth/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/ldt_cooperation/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/ldt_decision_theory_comparison/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/ldt_large_pop_dt_comparison/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/papers/memori_governance_sweep/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/papers/moltbook_captcha_study/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/papers/obfuscation_atlas_integration/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/pi_bridge_claude_study/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/rlm_inside_swarm/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/papers/skillrl_study/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/swarm_all_runs/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/papers/research/arc-agi-3-lessons/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/plans/llama-cpp-integration/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/posts/awesome_list_submissions/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/posts/markets_and_safety/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/posts/purity_paradox/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/posts/show_hn/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/posts/swarm_blog_post/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/posts/twitter_threads/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/research/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/research/agent-internet-taxonomy/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/research/agent-publishing/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/research/ai-index-2025/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/research/alignment_waltz_vs_macpo/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/research/arc-agi-3-lessons/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/research/llm-council-mechanics/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/research/papers/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/research/purity-paradox-findings/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/research/reflexivity/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/research/self-mod-governance-implementation-checklist/</loc>
+         <lastmod>2026-02-21</lastmod>
+    </url>
+    <url>
+         <loc>https://swarm-ai.org/research/self-modification-governance-byline/</loc>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/research/theory/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/security/wt-integration-review/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
     <url>
          <loc>https://swarm-ai.org/transferability/incoherence_governance/</loc>
-         <lastmod>2026-02-13</lastmod>
+         <lastmod>2026-02-21</lastmod>
     </url>
 </urlset>

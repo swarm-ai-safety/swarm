@@ -115,7 +115,137 @@ mjx-container[jax="CHTML"][display="true"] {
   padding: 0.25rem 0;
 }
 
-/* Hero section on homepage */
-.md-content__inner > h1:first-child {
+/* Interactive figure iframes */
+.plotly-embed {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--swarm-deep-blue);
+  border-radius: 0.5rem;
+  margin: 1rem 0;
+}
+
+.plotly-embed iframe {
+  width: 100%;
+  border: none;
+  display: block;
+}
+
+/* Static fallback shown below iframe */
+.plotly-embed .static-fallback {
   display: none;
+}
+
+@media (max-width: 480px) {
+  .plotly-embed iframe {
+    display: none;
+  }
+  .plotly-embed .static-fallback {
+    display: block;
+  }
+}
+
+/* Game embed — full-viewport iframe */
+.game-embed {
+  position: relative;
+  width: 100%;
+  height: 90vh;
+  overflow: hidden;
+  border: none;
+  border-radius: 0.5rem;
+  margin: 0;
+}
+
+.game-embed iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* Hide auto-generated H1 on homepage only (homepage uses .hero for its own title) */
+.md-content__inner:has(.hero) > h1:first-child {
+  display: none;
+}
+
+/* Blog filter and search */
+#blog-filter {
+  margin: 1.5rem 0;
+}
+
+#blog-search {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 0.5rem;
+  background: var(--md-code-bg-color);
+  color: var(--md-default-fg-color);
+  font-size: 0.9rem;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+#blog-search:focus {
+  border-color: var(--swarm-cyan);
+}
+
+#blog-search::placeholder {
+  color: var(--md-default-fg-color--light);
+}
+
+#blog-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.tag-btn {
+  padding: 0.3rem 0.75rem;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  border-radius: 1rem;
+  background: transparent;
+  color: var(--md-default-fg-color--light);
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.tag-btn:hover {
+  border-color: var(--swarm-cyan);
+  color: var(--swarm-cyan);
+}
+
+.tag-btn.active {
+  background: var(--swarm-cyan);
+  border-color: var(--swarm-cyan);
+  color: var(--swarm-deep-blue);
+  font-weight: 600;
+}
+
+/* Blog post cards */
+.blog-post {
+  padding: 1rem 1.25rem;
+  margin: 0.75rem 0;
+  border-left: 3px solid var(--md-default-fg-color--lightest);
+  border-radius: 0 0.25rem 0.25rem 0;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.blog-post:hover {
+  border-left-color: var(--swarm-cyan);
+  background: var(--md-code-bg-color);
+}
+
+.blog-tag {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 0.75rem;
+  background: var(--md-code-bg-color);
+  color: var(--md-default-fg-color--light);
+  font-size: 0.7rem;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
 }
