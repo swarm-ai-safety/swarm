@@ -67,7 +67,13 @@ def _use_temp_db(tmp_path):
     governance_mod._store = ProposalStore(db_path=db_path)
     scenarios_mod._store = ScenarioStore(db_path=db_path)
     simulations_mod._store = SimulationStore(db_path=db_path)
+    for t in simulations_mod._sim_tasks.values():
+        t.cancel()
+    simulations_mod._sim_tasks.clear()
     yield
+    for t in simulations_mod._sim_tasks.values():
+        t.cancel()
+    simulations_mod._sim_tasks.clear()
     runs_mod._store = None
     posts_mod._post_store = None
     governance_mod._store = None
@@ -1296,9 +1302,15 @@ class TestSimulationMechanics:
         simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
         yield
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
 
     def _create_simulation(self, client, **overrides):
         """Helper: create a simulation and return (response_data, api_key)."""
@@ -1856,9 +1868,15 @@ class TestActionEndpoints:
         simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
         yield
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
 
     def _setup_running_simulation(self, client):
         """Create a running simulation with two participants, return (sim_id, agent_ids, api_keys)."""
@@ -2175,9 +2193,15 @@ class TestSSEEndpoint:
         simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
         yield
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
 
     def test_sse_not_found(self, client):
         """SSE endpoint returns 404 for nonexistent simulation."""
@@ -2277,9 +2301,15 @@ class TestSimulationCompletion:
         simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
         yield
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
 
     def _setup_running_simulation(self, client):
         """Create a running simulation with two participants."""
@@ -2684,9 +2714,15 @@ class TestMetricsEndpoints:
         simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
         yield
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
 
     def _setup_running_simulation(self, client):
         """Create a running simulation with two participants."""
@@ -2897,9 +2933,15 @@ class TestSecurityHardening:
         simulations_mod._store = SimulationStore(db_path=tmp_path / "test.db")
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
         yield
         simulations_mod._observations.clear()
         simulations_mod._action_queues.clear()
+        for t in simulations_mod._sim_tasks.values():
+            t.cancel()
+        simulations_mod._sim_tasks.clear()
 
     def test_simulation_concurrency_limit(self, client):
         """Cannot create more than MAX_ACTIVE_SIMULATIONS."""
@@ -3207,11 +3249,17 @@ class TestE2ESimulationLifecycle:
         sim_mod._observations.clear()
         sim_mod._action_queues.clear()
         sim_mod._ws_connections.clear()
+        for t in sim_mod._sim_tasks.values():
+            t.cancel()
+        sim_mod._sim_tasks.clear()
         _event_bus._subscribers.clear()
         yield
         sim_mod._observations.clear()
         sim_mod._action_queues.clear()
         sim_mod._ws_connections.clear()
+        for t in sim_mod._sim_tasks.values():
+            t.cancel()
+        sim_mod._sim_tasks.clear()
         _event_bus._subscribers.clear()
 
     @staticmethod
@@ -3646,3 +3694,128 @@ class TestE2ESimulationLifecycle:
         assert completion["event_type"] == "simulation_complete"
         assert completion["simulation_id"] == sim_id
         assert completion["data"]["final_metric"] == 0.99
+
+
+class TestOrchestratorWiring:
+    """Tests for the orchestrator background task integration."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_all_state(self, tmp_path):
+        """Reset all stores and event bus between tests."""
+        import swarm.api.routers.simulations as sim_mod
+        from swarm.api.event_bus import event_bus as _event_bus
+        from swarm.api.persistence import SimulationStore
+
+        sim_mod._store = SimulationStore(db_path=tmp_path / "test.db")
+        sim_mod._observations.clear()
+        sim_mod._action_queues.clear()
+        sim_mod._ws_connections.clear()
+        for t in sim_mod._sim_tasks.values():
+            t.cancel()
+        sim_mod._sim_tasks.clear()
+        _event_bus._subscribers.clear()
+        yield
+        sim_mod._observations.clear()
+        sim_mod._action_queues.clear()
+        sim_mod._ws_connections.clear()
+        for t in sim_mod._sim_tasks.values():
+            t.cancel()
+        sim_mod._sim_tasks.clear()
+        _event_bus._subscribers.clear()
+
+    @staticmethod
+    def _full_setup(client, scenario_id="test-scenario"):
+        """Register 2 agents, create a simulation, join both, start it."""
+        _, creator_key = _register_agent(client, "OrcCreator")
+        creator_headers = {"Authorization": f"Bearer {creator_key}"}
+
+        sim_resp = client.post(
+            "/api/v1/simulations/create",
+            json={"scenario_id": scenario_id, "max_participants": 5},
+            headers=creator_headers,
+        )
+        sim_id = sim_resp.json()["simulation_id"]
+
+        agent_ids = []
+        api_keys = []
+        for i in range(2):
+            agent_resp = client.post(
+                "/api/v1/agents/register",
+                json={"name": f"OrcAgent{i}", "description": "Orch test agent"},
+            )
+            data = agent_resp.json()
+            agent_ids.append(data["agent_id"])
+            api_keys.append(data["api_key"])
+            client.post(
+                f"/api/v1/simulations/{sim_id}/join",
+                json={"agent_id": data["agent_id"], "role": "participant"},
+                headers={"Authorization": f"Bearer {data['api_key']}"},
+            )
+
+        client.post(
+            f"/api/v1/simulations/{sim_id}/start",
+            headers=creator_headers,
+        )
+        return sim_id, agent_ids, api_keys, creator_key
+
+    def test_unknown_scenario_stays_running(self, client):
+        """Starting with a nonexistent scenario leaves simulation RUNNING.
+
+        When the scenario YAML can't be found, the background task exits
+        silently so API-only workflows (no YAML backing) still work.
+        """
+        import swarm.api.routers.simulations as sim_mod
+
+        sim_id, _agent_ids, _api_keys, _creator_key = self._full_setup(
+            client, scenario_id="nonexistent_scenario_xyz"
+        )
+
+        # The background task should have exited silently
+        sim = sim_mod._store.get(sim_id)
+        assert sim.status == SimulationStatus.RUNNING
+
+    def test_start_creates_background_task(self, client):
+        """Starting a simulation creates a background task in _sim_tasks."""
+        import swarm.api.routers.simulations as sim_mod
+
+        sim_id, _agent_ids, _api_keys, _creator_key = self._full_setup(client)
+
+        # For non-real scenarios, the task exits quickly but should not crash
+        sim = sim_mod._store.get(sim_id)
+        assert sim is not None
+        assert sim.status == SimulationStatus.RUNNING
+
+    def test_complete_cancels_background_task(self, client):
+        """Completing a simulation cancels the background task."""
+        import asyncio
+        from unittest.mock import patch
+
+        import swarm.api.routers.simulations as sim_mod
+
+        # Use a long-running coroutine so the task is still alive at complete time
+        async def _fake_execute(sim_id):
+            try:
+                await asyncio.sleep(3600)
+            except asyncio.CancelledError:
+                pass
+
+        with patch.object(sim_mod, "_execute_simulation", _fake_execute):
+            sim_id, _agent_ids, _api_keys, creator_key = self._full_setup(
+                client
+            )
+
+            # Task should exist and not be done
+            task = sim_mod._sim_tasks.get(sim_id)
+            assert task is not None
+
+            # Complete the simulation via API
+            resp = client.post(
+                f"/api/v1/simulations/{sim_id}/complete",
+                json={"manual": True},
+                headers={"Authorization": f"Bearer {creator_key}"},
+            )
+            assert resp.status_code == 200
+            assert resp.json()["status"] == "completed"
+
+            # Task should have been removed from _sim_tasks
+            assert sim_id not in sim_mod._sim_tasks

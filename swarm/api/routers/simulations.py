@@ -2,8 +2,11 @@
 
 import asyncio
 import json
+import logging
+import traceback
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 from fastapi import (
     APIRouter,
@@ -26,6 +29,8 @@ from swarm.api.models.simulation import (
 )
 from swarm.api.persistence import SimulationStore
 
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 # Persistent storage
@@ -35,11 +40,172 @@ _store = SimulationStore()
 _observations: dict[str, dict[str, dict]] = {}  # simulation_id -> agent_id -> observation
 _action_queues: dict[str, AsyncActionQueue] = {}  # simulation_id -> queue
 _ws_connections: dict[str, dict[str, WebSocket]] = {}  # simulation_id -> agent_id -> WebSocket
+_sim_tasks: dict[str, asyncio.Task] = {}  # simulation_id -> background task
 
 # Concurrency limits
 MAX_ACTIVE_SIMULATIONS = 50
 MAX_RESULTS_BYTES = 1_048_576  # 1 MiB cap on serialized results payload
 MAX_WS_MESSAGE_BYTES = 65_536  # 64 KiB cap on incoming WebSocket messages
+
+
+# ---------------------------------------------------------------------------
+# Orchestrator execution helpers
+# ---------------------------------------------------------------------------
+
+
+def _resolve_sim_scenario(scenario_id: str) -> Path:
+    """Resolve a scenario_id to a YAML file path.
+
+    Args:
+        scenario_id: The scenario identifier (without extension).
+
+    Returns:
+        Path to the scenario YAML file.
+
+    Raises:
+        FileNotFoundError: If no matching scenario file exists.
+    """
+    scenarios_dir = Path(__file__).resolve().parents[3] / "scenarios"
+    for ext in (".yaml", ".yml"):
+        candidate = scenarios_dir / f"{scenario_id}{ext}"
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(f"Scenario '{scenario_id}' not found")
+
+
+async def _execute_simulation(simulation_id: str) -> None:
+    """Run the orchestrator as a background task for a simulation.
+
+    Loads the scenario, builds the orchestrator, registers API participants
+    as external agents, and runs the simulation to completion.
+
+    If the scenario file cannot be found, the task exits silently so that
+    API-only workflows (no YAML backing) continue to work.
+
+    Args:
+        simulation_id: The simulation to execute.
+    """
+    # Resolve scenario early — if missing, bail without touching state.
+    simulation = _store.get(simulation_id)
+    if simulation is None:
+        _sim_tasks.pop(simulation_id, None)
+        return
+
+    try:
+        scenario_path = _resolve_sim_scenario(simulation.scenario_id)
+    except FileNotFoundError:
+        logger.warning(
+            "Simulation %s: scenario '%s' not found, orchestrator not started",
+            simulation_id,
+            simulation.scenario_id,
+        )
+        _sim_tasks.pop(simulation_id, None)
+        return
+
+    try:
+        from swarm.agents.honest import HonestAgent
+        from swarm.scenarios.loader import build_orchestrator, load_scenario
+
+        scenario = load_scenario(scenario_path)
+        orchestrator = build_orchestrator(scenario)
+
+        # Register API participants as external agents
+        participants = _store.get_participants(simulation_id)
+        for participant in participants:
+            agent = HonestAgent(
+                agent_id=participant["agent_id"],
+                name=participant.get("agent_id"),
+            )
+            agent.is_external = True
+            orchestrator.register_agent(agent)
+
+        # Wire the action queue
+        queue = _action_queues.get(simulation_id)
+        if queue is None:
+            queue = AsyncActionQueue()
+            _action_queues[simulation_id] = queue
+        orchestrator.set_external_action_queue(queue)
+
+        # Epoch callback: update execution state + publish events
+        def _on_epoch_complete(epoch_metrics):
+            now = datetime.now(timezone.utc).isoformat()
+            exec_state = _store.get_execution_state(simulation_id)
+            exec_state["current_epoch"] = epoch_metrics.epoch
+            exec_state["last_activity"] = now
+            _store.save_execution_state(simulation_id, exec_state)
+
+            asyncio.ensure_future(event_bus.publish(
+                SimEvent(
+                    event_type=SimEventType.EPOCH_COMPLETE,
+                    simulation_id=simulation_id,
+                    data={
+                        "epoch": epoch_metrics.epoch,
+                        "toxicity_rate": epoch_metrics.toxicity_rate,
+                        "avg_payoff": epoch_metrics.avg_payoff,
+                    },
+                )
+            ))
+
+        orchestrator.on_epoch_end(_on_epoch_complete)
+
+        # Wrap _run_step_async to sync observations after each step
+        original_run_step = orchestrator._run_step_async
+
+        async def _wrapped_run_step():
+            await original_run_step()
+            ext_obs = orchestrator.get_external_observations()
+            if ext_obs:
+                _observations[simulation_id] = dict(ext_obs)
+
+        orchestrator._run_step_async = _wrapped_run_step
+
+        # Run the simulation
+        metrics_list = await orchestrator.run_async()
+
+        # Build results
+        results = {
+            "metrics_history": [m.model_dump() for m in metrics_list],
+            "interactions": len(orchestrator.state.completed_interactions),
+        }
+
+        # Mark completed
+        simulation = _store.get(simulation_id)
+        if simulation is not None:
+            simulation.status = SimulationStatus.COMPLETED
+            _store.save(simulation)
+            _store.save_results(simulation_id, results)
+
+        await event_bus.publish(
+            SimEvent(
+                event_type=SimEventType.SIMULATION_COMPLETE,
+                simulation_id=simulation_id,
+                data={"results": results},
+            )
+        )
+
+    except asyncio.CancelledError:
+        logger.info("Simulation %s cancelled", simulation_id)
+        raise
+    except Exception:
+        logger.exception("Simulation %s failed", simulation_id)
+        simulation = _store.get(simulation_id)
+        if simulation is not None:
+            simulation.status = SimulationStatus.CANCELLED
+            _store.save(simulation)
+            _store.save_results(simulation_id, {
+                "error": traceback.format_exc(),
+            })
+    finally:
+        _sim_tasks.pop(simulation_id, None)
+        _observations.pop(simulation_id, None)
+        queue = _action_queues.pop(simulation_id, None)
+        if queue is not None:
+            await queue.cancel_all()
+
+
+# ---------------------------------------------------------------------------
+# Endpoints
+# ---------------------------------------------------------------------------
 
 
 @router.post(
@@ -216,6 +382,10 @@ async def start_simulation(simulation_id: str) -> dict:
         "started_at": now,
         "last_activity": now,
     })
+
+    # Launch orchestrator as background task
+    task = asyncio.create_task(_execute_simulation(simulation_id))
+    _sim_tasks[simulation_id] = task
 
     return {
         "simulation_id": simulation_id,
@@ -538,6 +708,11 @@ async def complete_simulation(
                 status_code=413,
                 detail=f"Results payload exceeds {MAX_RESULTS_BYTES} byte limit",
             )
+
+    # Cancel any running background task
+    task = _sim_tasks.pop(simulation_id, None)
+    if task is not None and not task.done():
+        task.cancel()
 
     simulation.status = SimulationStatus.COMPLETED
     _store.save(simulation)
