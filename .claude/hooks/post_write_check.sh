@@ -8,6 +8,7 @@ set -euo pipefail
 #   2. Gitignore coverage (advisory)
 #   3. Ruff lint (Python files only)
 #   4. Blog nav check (docs/blog/*.md only)
+#   5. Documentation reminder (new files in key directories)
 #
 # Called automatically by Claude Code after Write/Edit tool calls.
 # Consolidates: post_write_secrets_check.sh, post_write_gitignore_check.sh,
@@ -85,5 +86,44 @@ case "$FILE_PATH" in
         fi
         ;;
 esac
+
+# ── 5. Documentation reminder (major changes) ──
+# Advisory: remind about CHANGELOG/README/docs when creating or modifying
+# files in key directories. Never blocks.
+IS_NEW=false
+if ! git ls-files --error-unmatch "$FILE_PATH" >/dev/null 2>&1; then
+    IS_NEW=true
+fi
+
+DOCS_HINT=""
+case "$FILE_PATH" in
+    */swarm/agents/*.py|*/swarm/governance/*.py|*/swarm/core/*.py|*/swarm/bridges/*/*.py)
+        if [ "$IS_NEW" = true ]; then
+            DOCS_HINT="New module in swarm/. Update CHANGELOG.md [Unreleased] and README.md if it adds a user-facing feature."
+        fi
+        ;;
+    */scenarios/*.yaml|*/scenarios/*.yml)
+        if [ "$IS_NEW" = true ]; then
+            DOCS_HINT="New scenario. Update CHANGELOG.md [Unreleased] and README.md scenario count."
+        fi
+        ;;
+    */.claude/commands/*.md)
+        if [ "$IS_NEW" = true ]; then
+            DOCS_HINT="New slash command. Update CHANGELOG.md [Unreleased]. Remember: prefer extending existing commands over creating new ones (see CLAUDE.md)."
+        fi
+        ;;
+    */.claude/agents/*.md)
+        if [ "$IS_NEW" = true ]; then
+            DOCS_HINT="New agent. Update AGENTS.md and CHANGELOG.md [Unreleased]."
+        fi
+        ;;
+    */swarm/api/*.py|*/swarm/api/**/*.py)
+        DOCS_HINT="API change. Update CHANGELOG.md [Unreleased]. If adding/removing endpoints, update API docs."
+        ;;
+esac
+
+if [ -n "$DOCS_HINT" ]; then
+    echo "[swarm docs-reminder] $DOCS_HINT"
+fi
 
 exit 0
