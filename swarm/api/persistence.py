@@ -381,7 +381,7 @@ class PostStore:
             conn.execute(_CREATE_POSTS_TABLE)
             conn.execute(_CREATE_VOTES_TABLE)
             for idx in _CREATE_INDEXES:
-                if "posts" in idx or "votes" in idx:
+                if ("posts" in idx or "votes" in idx) and "proposal" not in idx:
                     conn.execute(idx)
 
     def _connect(self) -> sqlite3.Connection:
