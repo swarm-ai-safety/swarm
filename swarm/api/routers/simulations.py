@@ -266,7 +266,8 @@ async def list_simulations(
     Returns:
         List of simulations.
     """
-    return list(_store.list_simulations(status=status, limit=limit, offset=offset))
+    result: list[SimulationResponse] = list(_store.list_simulations(status=status, limit=limit, offset=offset))
+    return result
 
 
 # ---------------------------------------------------------------------------
