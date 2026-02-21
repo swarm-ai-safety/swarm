@@ -2574,3 +2574,117 @@ class TestMetricsEndpoints:
             headers={"Authorization": f"Bearer {agent_resp.json()['api_key']}"},
         )
         assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Security hardening tests
+# ---------------------------------------------------------------------------
+
+
+class TestSecurityHardening:
+    """Tests for security hardening measures."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_state(self):
+        """Reset all state between tests."""
+        import swarm.api.routers.simulations as simulations_mod
+
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
+        simulations_mod._action_history.clear()
+        simulations_mod._execution_state.clear()
+        simulations_mod._simulation_results.clear()
+        yield
+        simulations_mod._simulations.clear()
+        simulations_mod._participants.clear()
+        simulations_mod._observations.clear()
+        simulations_mod._action_queues.clear()
+        simulations_mod._action_history.clear()
+        simulations_mod._execution_state.clear()
+        simulations_mod._simulation_results.clear()
+
+    def test_simulation_concurrency_limit(self, client):
+        """Cannot create more than MAX_ACTIVE_SIMULATIONS."""
+        import swarm.api.routers.simulations as simulations_mod
+
+        old_max = simulations_mod.MAX_ACTIVE_SIMULATIONS
+        simulations_mod.MAX_ACTIVE_SIMULATIONS = 2
+        try:
+            # Create 2 simulations (should succeed)
+            for i in range(2):
+                resp = client.post(
+                    "/api/v1/simulations/create",
+                    json={"scenario_id": f"test-{i}"},
+                )
+                assert resp.status_code == 200
+
+            # Third should fail
+            resp = client.post(
+                "/api/v1/simulations/create",
+                json={"scenario_id": "test-3"},
+            )
+            assert resp.status_code == 429
+            assert "Maximum active simulations" in resp.json()["detail"]
+        finally:
+            simulations_mod.MAX_ACTIVE_SIMULATIONS = old_max
+
+    def test_resource_estimation_within_limits(self, client):
+        """Scenario with excessive resources shows within_limits=False."""
+        resp = client.post(
+            "/api/v1/scenarios/submit",
+            json={
+                "name": "Huge",
+                "description": "Very large scenario",
+                "yaml_content": "agents: 1000\nepochs: 1000\nsteps_per_epoch: 1000",
+            },
+        )
+        assert resp.status_code == 200
+        data = resp.json()
+        # 1000 * 1000 * 1000 = 1B > 1M limit
+        assert data["resource_estimate"]["within_limits"] is False
+
+    def test_auth_required_for_actions(self, client):
+        """Action submission requires authentication."""
+        resp = client.post(
+            "/api/v1/simulations/nonexistent/actions",
+            json={
+                "agent_id": "test",
+                "action_type": "noop",
+                "payload": {},
+                "step": 0,
+            },
+        )
+        assert resp.status_code == 401
+
+    def test_auth_required_for_observation(self, client):
+        """Observation polling requires authentication."""
+        resp = client.get(
+            "/api/v1/simulations/nonexistent/observation",
+            params={"agent_id": "test"},
+        )
+        assert resp.status_code == 401
+
+    def test_auth_required_for_completion(self, client):
+        """Simulation completion requires authentication."""
+        resp = client.post("/api/v1/simulations/nonexistent/complete")
+        assert resp.status_code == 401
+
+    def test_auth_required_for_results(self, client):
+        """Results retrieval requires authentication."""
+        resp = client.get("/api/v1/simulations/nonexistent/results")
+        assert resp.status_code == 401
+
+    def test_governance_proposal_validation(self, client):
+        """Proposal with empty title is rejected."""
+        agent_resp = client.post(
+            "/api/v1/agents/register",
+            json={"name": "ValAgent", "description": "Test"},
+        )
+        resp = client.post(
+            "/api/v1/governance/propose",
+            json={"title": "", "description": "Test"},
+            headers={"Authorization": f"Bearer {agent_resp.json()['api_key']}"},
+        )
+        assert resp.status_code == 422

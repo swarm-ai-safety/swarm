@@ -27,6 +27,9 @@ _action_history: dict[str, list[dict]] = {}  # simulation_id -> list of action r
 _execution_state: dict[str, dict] = {}  # simulation_id -> {current_step, current_epoch, ...}
 _simulation_results: dict[str, dict] = {}  # simulation_id -> final results/metrics
 
+# Concurrency limits
+MAX_ACTIVE_SIMULATIONS = 50
+
 
 @router.post("/create", response_model=SimulationResponse)
 async def create_simulation(request: SimulationCreate) -> SimulationResponse:
@@ -37,7 +40,22 @@ async def create_simulation(request: SimulationCreate) -> SimulationResponse:
 
     Returns:
         Created simulation details.
+
+    Raises:
+        HTTPException: If concurrency limit exceeded.
     """
+    # Enforce global concurrency limit
+    active = sum(
+        1
+        for s in _simulations.values()
+        if s.status in (SimulationStatus.WAITING, SimulationStatus.RUNNING)
+    )
+    if active >= MAX_ACTIVE_SIMULATIONS:
+        raise HTTPException(
+            status_code=429,
+            detail=f"Maximum active simulations ({MAX_ACTIVE_SIMULATIONS}) reached",
+        )
+
     simulation_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
 
