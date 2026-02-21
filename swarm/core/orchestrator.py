@@ -1575,9 +1575,19 @@ class Orchestrator:
         """
         return self._external_observations
 
+    # Map simplified API action types to orchestrator enum values.
+    _API_ACTION_MAP: Dict[str, str] = {
+        "accept": "accept_interaction",
+        "reject": "reject_interaction",
+        "propose": "propose_interaction",
+        "counter": "propose_interaction",
+    }
+
     def _parse_external_action(self, agent_id: str, raw: Dict) -> Action:
         """Convert a raw dict from the action queue into an ``Action``."""
         action_type_str = raw.get("action_type", "noop")
+        # Translate simplified API names to orchestrator enum values
+        action_type_str = self._API_ACTION_MAP.get(action_type_str, action_type_str)
         try:
             action_type = ActionType(action_type_str)
         except ValueError:

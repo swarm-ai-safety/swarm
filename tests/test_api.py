@@ -52,6 +52,16 @@ def client():
     return TestClient(app)
 
 
+def _register_agent(client, name="TestAgent"):
+    """Register an agent and return (agent_id, api_key)."""
+    resp = client.post(
+        "/api/v1/agents/register",
+        json={"name": name, "description": "Test agent"},
+    )
+    data = resp.json()
+    return data["agent_id"], data["api_key"]
+
+
 class TestHealthEndpoints:
     """Tests for health check endpoints."""
 
@@ -293,6 +303,9 @@ class TestSimulationEndpoints:
 
     def test_create_simulation(self, client):
         """Test creating a simulation."""
+        _, api_key = _register_agent(client, "SimCreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
         # First create a scenario
         scenario_response = client.post(
             "/api/v1/scenarios/submit",
@@ -312,6 +325,7 @@ class TestSimulationEndpoints:
                 "max_participants": 5,
                 "mode": "async",
             },
+            headers=headers,
         )
         assert response.status_code == 200
         data = response.json()
@@ -325,12 +339,16 @@ class TestSimulationEndpoints:
 
     def test_create_simulation_realtime(self, client):
         """Test creating a realtime simulation."""
+        _, api_key = _register_agent(client, "RealtimeCreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
         response = client.post(
             "/api/v1/simulations/create",
             json={
                 "scenario_id": "test-scenario",
                 "mode": "realtime",
             },
+            headers=headers,
         )
         assert response.status_code == 200
         data = response.json()
@@ -338,21 +356,29 @@ class TestSimulationEndpoints:
 
     def test_create_simulation_with_config_overrides(self, client):
         """Test creating a simulation with config overrides."""
+        _, api_key = _register_agent(client, "ConfigCreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
         response = client.post(
             "/api/v1/simulations/create",
             json={
                 "scenario_id": "test-scenario",
                 "config_overrides": {"epochs": 50, "tax_rate": 0.1},
             },
+            headers=headers,
         )
         assert response.status_code == 200
 
     def test_join_simulation(self, client):
         """Test joining a simulation."""
+        _, creator_key = _register_agent(client, "JoinCreator")
+        creator_headers = {"Authorization": f"Bearer {creator_key}"}
+
         # Create simulation
         sim_response = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test", "max_participants": 3},
+            headers=creator_headers,
         )
         simulation_id = sim_response.json()["simulation_id"]
 
@@ -362,11 +388,13 @@ class TestSimulationEndpoints:
             json={"name": "JoinAgent", "description": "Joins simulations"},
         )
         agent_id = agent_response.json()["agent_id"]
+        agent_key = agent_response.json()["api_key"]
 
         # Join simulation
         response = client.post(
             f"/api/v1/simulations/{simulation_id}/join",
             json={"agent_id": agent_id, "role": "initiator"},
+            headers={"Authorization": f"Bearer {agent_key}"},
         )
         assert response.status_code == 200
         data = response.json()
@@ -378,10 +406,14 @@ class TestSimulationEndpoints:
 
     def test_join_simulation_updates_count(self, client):
         """Test that joining a simulation updates participant count."""
+        _, creator_key = _register_agent(client, "CountCreator")
+        creator_headers = {"Authorization": f"Bearer {creator_key}"}
+
         # Create simulation
         sim_response = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test", "max_participants": 5},
+            headers=creator_headers,
         )
         simulation_id = sim_response.json()["simulation_id"]
 
@@ -394,27 +426,37 @@ class TestSimulationEndpoints:
             client.post(
                 f"/api/v1/simulations/{simulation_id}/join",
                 json={"agent_id": agent_response.json()["agent_id"]},
+                headers={"Authorization": f"Bearer {agent_response.json()['api_key']}"},
             )
 
         # Check participant count
-        response = client.get(f"/api/v1/simulations/{simulation_id}")
+        response = client.get(
+            f"/api/v1/simulations/{simulation_id}",
+            headers=creator_headers,
+        )
         assert response.json()["current_participants"] == 2
 
     def test_join_simulation_not_found(self, client):
         """Test joining a non-existent simulation."""
+        _, api_key = _register_agent(client, "NotFoundJoiner")
         response = client.post(
             "/api/v1/simulations/nonexistent/join",
             json={"agent_id": "test"},
+            headers={"Authorization": f"Bearer {api_key}"},
         )
         assert response.status_code == 404
         assert response.json()["detail"] == "Simulation not found"
 
     def test_join_simulation_full(self, client):
         """Test joining a full simulation."""
+        _, creator_key = _register_agent(client, "FullCreator")
+        creator_headers = {"Authorization": f"Bearer {creator_key}"}
+
         # Create simulation with max 2 participants
         sim_response = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test", "max_participants": 2},
+            headers=creator_headers,
         )
         simulation_id = sim_response.json()["simulation_id"]
 
@@ -427,6 +469,7 @@ class TestSimulationEndpoints:
             client.post(
                 f"/api/v1/simulations/{simulation_id}/join",
                 json={"agent_id": agent_response.json()["agent_id"]},
+                headers={"Authorization": f"Bearer {agent_response.json()['api_key']}"},
             )
 
         # Try to join with another agent
@@ -437,44 +480,61 @@ class TestSimulationEndpoints:
         response = client.post(
             f"/api/v1/simulations/{simulation_id}/join",
             json={"agent_id": extra_agent.json()["agent_id"]},
+            headers={"Authorization": f"Bearer {extra_agent.json()['api_key']}"},
         )
         assert response.status_code == 400
         assert response.json()["detail"] == "Simulation is full"
 
     def test_get_simulation(self, client):
         """Test getting a simulation by ID."""
+        _, api_key = _register_agent(client, "GetSimCreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
         # Create simulation
         sim_response = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test"},
+            headers=headers,
         )
         simulation_id = sim_response.json()["simulation_id"]
 
         # Get simulation
-        response = client.get(f"/api/v1/simulations/{simulation_id}")
+        response = client.get(
+            f"/api/v1/simulations/{simulation_id}",
+            headers=headers,
+        )
         assert response.status_code == 200
         data = response.json()
         assert data["simulation_id"] == simulation_id
 
     def test_get_simulation_not_found(self, client):
         """Test getting a non-existent simulation."""
-        response = client.get("/api/v1/simulations/nonexistent")
+        _, api_key = _register_agent(client, "NotFoundGetter")
+        response = client.get(
+            "/api/v1/simulations/nonexistent",
+            headers={"Authorization": f"Bearer {api_key}"},
+        )
         assert response.status_code == 404
         assert response.json()["detail"] == "Simulation not found"
 
     def test_list_simulations(self, client):
         """Test listing all simulations."""
+        _, api_key = _register_agent(client, "ListCreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
         # Create some simulations
         client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "list-test-1"},
+            headers=headers,
         )
         client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "list-test-2"},
+            headers=headers,
         )
 
-        response = client.get("/api/v1/simulations/")
+        response = client.get("/api/v1/simulations/", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
@@ -775,9 +835,11 @@ class TestListFilteringAndPagination:
 
     def _create_simulation(self, client, scenario_id="test-scenario"):
         """Helper to create a simulation and return the response data."""
+        _, api_key = _register_agent(client, f"SimCreator-{scenario_id}")
         resp = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": scenario_id},
+            headers={"Authorization": f"Bearer {api_key}"},
         )
         assert resp.status_code == 200
         return resp.json()
@@ -893,9 +955,13 @@ class TestListFilteringAndPagination:
         self._create_simulation(client, "scenario-a")
         self._create_simulation(client, "scenario-b")
 
+        _, api_key = _register_agent(client, "SimFilterReader")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
         resp = client.get(
             "/api/v1/simulations/",
             params={"status": "waiting_for_participants"},
+            headers=headers,
         )
         assert resp.status_code == 200
         data = resp.json()
@@ -906,7 +972,8 @@ class TestListFilteringAndPagination:
 
         # No matches for COMPLETED
         resp = client.get(
-            "/api/v1/simulations/", params={"status": "completed"}
+            "/api/v1/simulations/", params={"status": "completed"},
+            headers=headers,
         )
         assert resp.status_code == 200
         assert resp.json() == []
@@ -916,8 +983,12 @@ class TestListFilteringAndPagination:
         for i in range(4):
             self._create_simulation(client, f"scenario-{i}")
 
+        _, api_key = _register_agent(client, "SimPagReader")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
         resp = client.get(
-            "/api/v1/simulations/", params={"limit": 2, "offset": 1}
+            "/api/v1/simulations/", params={"limit": 2, "offset": 1},
+            headers=headers,
         )
         assert resp.status_code == 200
         assert len(resp.json()) == 2
@@ -927,7 +998,10 @@ class TestListFilteringAndPagination:
         for i in range(3):
             self._create_simulation(client, f"scenario-{i}")
 
-        resp = client.get("/api/v1/simulations/")
+        _, api_key = _register_agent(client, "SimDefaultReader")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        resp = client.get("/api/v1/simulations/", headers=headers)
         assert resp.status_code == 200
         assert len(resp.json()) == 3
 
@@ -1186,12 +1260,14 @@ class TestSimulationMechanics:
         simulations_mod._participants.clear()
 
     def _create_simulation(self, client, **overrides):
-        """Helper: create a simulation and return the response data."""
+        """Helper: create a simulation and return (response_data, api_key)."""
+        _, api_key = _register_agent(client, "MechCreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
         payload = {"scenario_id": "test-scenario", "max_participants": 10}
         payload.update(overrides)
-        resp = client.post("/api/v1/simulations/create", json=payload)
+        resp = client.post("/api/v1/simulations/create", json=payload, headers=headers)
         assert resp.status_code == 200
-        return resp.json()
+        return resp.json(), api_key
 
     def test_join_after_deadline_rejected(self, client):
         """Joining after the join deadline returns 400."""
@@ -1199,41 +1275,46 @@ class TestSimulationMechanics:
 
         import swarm.api.routers.simulations as simulations_mod
 
-        sim = self._create_simulation(client)
+        sim, _ = self._create_simulation(client)
         sim_id = sim["simulation_id"]
 
         # Set the deadline to the past
         past = datetime.now(timezone.utc) - timedelta(hours=1)
         simulations_mod._simulations[sim_id].join_deadline = past
 
+        _, joiner_key = _register_agent(client, "LateJoiner")
         resp = client.post(
             f"/api/v1/simulations/{sim_id}/join",
             json={"agent_id": "agent-late", "role": "participant"},
+            headers={"Authorization": f"Bearer {joiner_key}"},
         )
         assert resp.status_code == 400
         assert resp.json()["detail"] == "Join deadline has passed"
 
     def test_state_endpoint(self, client):
         """GET /state returns participants and simulation details."""
-        sim = self._create_simulation(
+        sim, creator_key = self._create_simulation(
             client, config_overrides={"epochs": 50}
         )
         sim_id = sim["simulation_id"]
+        headers = {"Authorization": f"Bearer {creator_key}"}
 
         # Join with an agent
+        agent_id, agent_key = _register_agent(client, "StateAgent")
         client.post(
             f"/api/v1/simulations/{sim_id}/join",
-            json={"agent_id": "agent-1", "role": "initiator"},
+            json={"agent_id": agent_id, "role": "initiator"},
+            headers={"Authorization": f"Bearer {agent_key}"},
         )
 
-        resp = client.get(f"/api/v1/simulations/{sim_id}/state")
+        resp = client.get(f"/api/v1/simulations/{sim_id}/state", headers=headers)
         assert resp.status_code == 200
         data = resp.json()
 
         assert data["simulation_id"] == sim_id
         assert data["status"] == SimulationStatus.WAITING.value
         assert len(data["participants"]) == 1
-        assert data["participants"][0]["agent_id"] == "agent-1"
+        assert data["participants"][0]["agent_id"] == agent_id
         assert data["participants"][0]["role"] == "initiator"
         assert "joined_at" in data["participants"][0]
         assert data["config_overrides"] == {"epochs": 50}
@@ -1242,56 +1323,65 @@ class TestSimulationMechanics:
 
     def test_start_simulation(self, client):
         """POST /start transitions WAITING -> RUNNING with enough participants."""
-        sim = self._create_simulation(client)
+        sim, creator_key = self._create_simulation(client)
         sim_id = sim["simulation_id"]
+        headers = {"Authorization": f"Bearer {creator_key}"}
 
         # Join with 2 agents
         for i in range(2):
+            aid, akey = _register_agent(client, f"StartAgent{i}")
             client.post(
                 f"/api/v1/simulations/{sim_id}/join",
-                json={"agent_id": f"agent-{i}", "role": "participant"},
+                json={"agent_id": aid, "role": "participant"},
+                headers={"Authorization": f"Bearer {akey}"},
             )
 
-        resp = client.post(f"/api/v1/simulations/{sim_id}/start")
+        resp = client.post(f"/api/v1/simulations/{sim_id}/start", headers=headers)
         assert resp.status_code == 200
         data = resp.json()
         assert data["simulation_id"] == sim_id
         assert data["status"] == "running"
 
         # Verify the simulation is now running via GET
-        get_resp = client.get(f"/api/v1/simulations/{sim_id}")
+        get_resp = client.get(f"/api/v1/simulations/{sim_id}", headers=headers)
         assert get_resp.json()["status"] == SimulationStatus.RUNNING.value
 
     def test_start_without_enough_participants(self, client):
         """POST /start with < 2 participants returns 400."""
-        sim = self._create_simulation(client)
+        sim, creator_key = self._create_simulation(client)
         sim_id = sim["simulation_id"]
+        headers = {"Authorization": f"Bearer {creator_key}"}
 
         # Join with only 1 agent
+        aid, akey = _register_agent(client, "SoloAgent")
         client.post(
             f"/api/v1/simulations/{sim_id}/join",
-            json={"agent_id": "solo-agent", "role": "participant"},
+            json={"agent_id": aid, "role": "participant"},
+            headers={"Authorization": f"Bearer {akey}"},
         )
 
-        resp = client.post(f"/api/v1/simulations/{sim_id}/start")
+        resp = client.post(f"/api/v1/simulations/{sim_id}/start", headers=headers)
         assert resp.status_code == 400
         assert "Not enough participants" in resp.json()["detail"]
 
     def test_start_non_waiting_simulation(self, client):
         """POST /start on an already-running simulation returns 400."""
-        sim = self._create_simulation(client)
+        sim, creator_key = self._create_simulation(client)
         sim_id = sim["simulation_id"]
+        headers = {"Authorization": f"Bearer {creator_key}"}
 
         # Join with 2 agents and start
         for i in range(2):
+            aid, akey = _register_agent(client, f"NonWaitAgent{i}")
             client.post(
                 f"/api/v1/simulations/{sim_id}/join",
-                json={"agent_id": f"agent-{i}", "role": "participant"},
+                json={"agent_id": aid, "role": "participant"},
+                headers={"Authorization": f"Bearer {akey}"},
             )
-        client.post(f"/api/v1/simulations/{sim_id}/start")
+        client.post(f"/api/v1/simulations/{sim_id}/start", headers=headers)
 
         # Try to start again
-        resp = client.post(f"/api/v1/simulations/{sim_id}/start")
+        resp = client.post(f"/api/v1/simulations/{sim_id}/start", headers=headers)
         assert resp.status_code == 400
         assert "not in waiting state" in resp.json()["detail"]
 
@@ -1532,7 +1622,7 @@ class TestAsyncActionQueue:
                     assert result is True
                 else:
                     assert result is False
-                await task
+                await task  # Ensure waiter completes and propagates errors
 
         asyncio.run(_run())
 
@@ -1548,21 +1638,21 @@ class TestAsyncActionQueue:
             task = asyncio.create_task(queue.wait_for_action("agent-rs"))
             await asyncio.sleep(0.01)
             await queue.submit_action("agent-rs", {"action_type": "accept"})
-            await task
+            await task  # Ensure waiter completes
 
             # Should be blocked now
             task2 = asyncio.create_task(queue.wait_for_action("agent-rs"))
             await asyncio.sleep(0.01)
             assert await queue.submit_action("agent-rs", {"x": 1}) is False
             await queue.cancel_all()
-            await task2
+            await task2  # Ensure cancelled task completes
 
             # Reset and try again
             queue.reset_step()
             task3 = asyncio.create_task(queue.wait_for_action("agent-rs"))
             await asyncio.sleep(0.01)
             assert await queue.submit_action("agent-rs", {"x": 2}) is True
-            await task3
+            await task3  # Ensure waiter completes
 
         asyncio.run(_run())
 
@@ -1731,10 +1821,15 @@ class TestActionEndpoints:
 
     def _setup_running_simulation(self, client):
         """Create a running simulation with two participants, return (sim_id, agent_ids, api_keys)."""
+        # Register a creator agent for simulation management
+        _, creator_key = _register_agent(client, "ActionCreator")
+        creator_headers = {"Authorization": f"Bearer {creator_key}"}
+
         # Create simulation
         sim_resp = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test", "max_participants": 5},
+            headers=creator_headers,
         )
         sim_id = sim_resp.json()["simulation_id"]
 
@@ -1751,10 +1846,11 @@ class TestActionEndpoints:
             client.post(
                 f"/api/v1/simulations/{sim_id}/join",
                 json={"agent_id": data["agent_id"], "role": "participant"},
+                headers={"Authorization": f"Bearer {data['api_key']}"},
             )
 
         # Start the simulation
-        client.post(f"/api/v1/simulations/{sim_id}/start")
+        client.post(f"/api/v1/simulations/{sim_id}/start", headers=creator_headers)
 
         return sim_id, agent_ids, api_keys
 
@@ -1782,9 +1878,11 @@ class TestActionEndpoints:
     def test_submit_action_not_running(self, client):
         """Cannot submit actions to a non-running simulation."""
         # Create but don't start
+        _, creator_key = _register_agent(client, "NotRunCreator")
         sim_resp = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test"},
+            headers={"Authorization": f"Bearer {creator_key}"},
         )
         sim_id = sim_resp.json()["simulation_id"]
 
@@ -1949,7 +2047,7 @@ class TestExternalAgentOrchestrator:
 
             submitter = asyncio.create_task(submit_external_action())
             metrics = await orch.run_async()
-            await submitter
+            await submitter  # Ensure submitter completes and propagates errors
 
             assert len(metrics) == 1
 
@@ -2017,7 +2115,7 @@ class TestExternalAgentOrchestrator:
 
             submitter = asyncio.create_task(auto_submit())
             metrics = await orch.run_async()
-            await submitter
+            await submitter  # Ensure submitter completes and propagates errors
 
             assert len(metrics) == 1
 
@@ -2044,9 +2142,11 @@ class TestSSEEndpoint:
 
     def test_sse_not_found(self, client):
         """SSE endpoint returns 404 for nonexistent simulation."""
+        _, api_key = _register_agent(client, "SSENotFound")
         resp = client.get(
             "/api/v1/simulations/nonexistent/events",
             params={"agent_id": "agent-1"},
+            headers={"Authorization": f"Bearer {api_key}"},
         )
         assert resp.status_code == 404
 
@@ -2057,10 +2157,15 @@ class TestSSEEndpoint:
 
         from swarm.api.event_bus import SimEvent, SimEventType, event_bus
 
+        # Register an agent for auth
+        _, api_key = _register_agent(client, "SSECreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
         # Create a simulation
         sim_resp = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test"},
+            headers=headers,
         )
         sim_id = sim_resp.json()["simulation_id"]
 
@@ -2099,6 +2204,7 @@ class TestSSEEndpoint:
             "GET",
             f"/api/v1/simulations/{sim_id}/events",
             params={"agent_id": "agent-1"},
+            headers=headers,
         ) as resp:
             assert resp.status_code == 200
             assert resp.headers["content-type"].startswith("text/event-stream")
@@ -2146,9 +2252,13 @@ class TestSimulationCompletion:
 
     def _setup_running_simulation(self, client):
         """Create a running simulation with two participants."""
+        _, creator_key = _register_agent(client, "CompCreator")
+        creator_headers = {"Authorization": f"Bearer {creator_key}"}
+
         sim_resp = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test", "max_participants": 5},
+            headers=creator_headers,
         )
         sim_id = sim_resp.json()["simulation_id"]
 
@@ -2165,9 +2275,10 @@ class TestSimulationCompletion:
             client.post(
                 f"/api/v1/simulations/{sim_id}/join",
                 json={"agent_id": data["agent_id"], "role": "participant"},
+                headers={"Authorization": f"Bearer {data['api_key']}"},
             )
 
-        client.post(f"/api/v1/simulations/{sim_id}/start")
+        client.post(f"/api/v1/simulations/{sim_id}/start", headers=creator_headers)
         return sim_id, agent_ids, api_keys
 
     def test_complete_simulation(self, client):
@@ -2183,14 +2294,19 @@ class TestSimulationCompletion:
         assert resp.json()["status"] == "completed"
 
         # Verify simulation is now COMPLETED
-        get_resp = client.get(f"/api/v1/simulations/{sim_id}")
+        get_resp = client.get(
+            f"/api/v1/simulations/{sim_id}",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
         assert get_resp.json()["status"] == "completed"
 
     def test_complete_non_running_fails(self, client):
         """Cannot complete a simulation that isn't running."""
+        _, creator_key = _register_agent(client, "NonRunComplCreator")
         sim_resp = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test"},
+            headers={"Authorization": f"Bearer {creator_key}"},
         )
         sim_id = sim_resp.json()["simulation_id"]
 
@@ -2277,7 +2393,10 @@ class TestSimulationCompletion:
             headers={"Authorization": f"Bearer {api_keys[1]}"},
         )
 
-        resp = client.get(f"/api/v1/simulations/{sim_id}/execution")
+        resp = client.get(
+            f"/api/v1/simulations/{sim_id}/execution",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
         assert resp.status_code == 200
         data = resp.json()
         assert data["total_actions"] == 4
@@ -2490,9 +2609,13 @@ class TestMetricsEndpoints:
 
     def _setup_running_simulation(self, client):
         """Create a running simulation with two participants."""
+        _, creator_key = _register_agent(client, "MetricCreator")
+        creator_headers = {"Authorization": f"Bearer {creator_key}"}
+
         sim_resp = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test", "max_participants": 5},
+            headers=creator_headers,
         )
         sim_id = sim_resp.json()["simulation_id"]
 
@@ -2509,9 +2632,10 @@ class TestMetricsEndpoints:
             client.post(
                 f"/api/v1/simulations/{sim_id}/join",
                 json={"agent_id": data["agent_id"], "role": "participant"},
+                headers={"Authorization": f"Bearer {data['api_key']}"},
             )
 
-        client.post(f"/api/v1/simulations/{sim_id}/start")
+        client.post(f"/api/v1/simulations/{sim_id}/start", headers=creator_headers)
         return sim_id, agent_ids, api_keys
 
     def test_get_metrics_running(self, client):
@@ -2610,6 +2734,9 @@ class TestSecurityHardening:
         """Cannot create more than MAX_ACTIVE_SIMULATIONS."""
         import swarm.api.routers.simulations as simulations_mod
 
+        _, api_key = _register_agent(client, "ConcurrencyAgent")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
         old_max = simulations_mod.MAX_ACTIVE_SIMULATIONS
         simulations_mod.MAX_ACTIVE_SIMULATIONS = 2
         try:
@@ -2618,6 +2745,7 @@ class TestSecurityHardening:
                 resp = client.post(
                     "/api/v1/simulations/create",
                     json={"scenario_id": f"test-{i}"},
+                    headers=headers,
                 )
                 assert resp.status_code == 200
 
@@ -2625,6 +2753,7 @@ class TestSecurityHardening:
             resp = client.post(
                 "/api/v1/simulations/create",
                 json={"scenario_id": "test-3"},
+                headers=headers,
             )
             assert resp.status_code == 429
             assert "Maximum active simulations" in resp.json()["detail"]
@@ -2696,9 +2825,13 @@ class TestWebSocketParticipation:
 
     def _setup_running_simulation(self, client):
         """Create a running simulation with two participants, return (sim_id, agent_ids, api_keys)."""
+        _, creator_key = _register_agent(client, "WsCreator")
+        creator_headers = {"Authorization": f"Bearer {creator_key}"}
+
         sim_resp = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test", "max_participants": 5},
+            headers=creator_headers,
         )
         sim_id = sim_resp.json()["simulation_id"]
 
@@ -2715,9 +2848,10 @@ class TestWebSocketParticipation:
             client.post(
                 f"/api/v1/simulations/{sim_id}/join",
                 json={"agent_id": data["agent_id"], "role": "participant"},
+                headers={"Authorization": f"Bearer {data['api_key']}"},
             )
 
-        client.post(f"/api/v1/simulations/{sim_id}/start")
+        client.post(f"/api/v1/simulations/{sim_id}/start", headers=creator_headers)
         return sim_id, agent_ids, api_keys
 
     def test_ws_connect_and_receive_welcome(self, client):
@@ -2734,9 +2868,11 @@ class TestWebSocketParticipation:
 
     def test_ws_auth_failure(self, client):
         """WebSocket rejects invalid token."""
+        _, creator_key = _register_agent(client, "WsAuthCreator")
         sim_resp = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test"},
+            headers={"Authorization": f"Bearer {creator_key}"},
         )
         sim_id = sim_resp.json()["simulation_id"]
 
@@ -2762,9 +2898,11 @@ class TestWebSocketParticipation:
 
     def test_ws_not_a_participant(self, client):
         """WebSocket rejects agents that haven't joined the simulation."""
+        _, creator_key = _register_agent(client, "WsNotPartCreator")
         sim_resp = client.post(
             "/api/v1/simulations/create",
             json={"scenario_id": "test"},
+            headers={"Authorization": f"Bearer {creator_key}"},
         )
         sim_id = sim_resp.json()["simulation_id"]
 

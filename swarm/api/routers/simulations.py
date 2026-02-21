@@ -41,7 +41,11 @@ _ws_connections: dict[str, dict[str, WebSocket]] = {}  # simulation_id -> agent_
 MAX_ACTIVE_SIMULATIONS = 50
 
 
-@router.post("/create", response_model=SimulationResponse)
+@router.post(
+    "/create",
+    response_model=SimulationResponse,
+    dependencies=[Depends(require_scope(Scope.WRITE))],
+)
 async def create_simulation(request: SimulationCreate) -> SimulationResponse:
     """Create a new simulation session.
 
@@ -86,7 +90,10 @@ async def create_simulation(request: SimulationCreate) -> SimulationResponse:
     return simulation
 
 
-@router.post("/{simulation_id}/join")
+@router.post(
+    "/{simulation_id}/join",
+    dependencies=[Depends(require_scope(Scope.PARTICIPATE))],
+)
 async def join_simulation(simulation_id: str, request: SimulationJoin) -> dict:
     """Join an existing simulation as a participant.
 
@@ -137,7 +144,10 @@ async def join_simulation(simulation_id: str, request: SimulationJoin) -> dict:
     }
 
 
-@router.get("/{simulation_id}/state")
+@router.get(
+    "/{simulation_id}/state",
+    dependencies=[Depends(require_scope(Scope.READ))],
+)
 async def get_simulation_state(simulation_id: str) -> dict:
     """Get detailed simulation state.
 
@@ -173,7 +183,10 @@ async def get_simulation_state(simulation_id: str) -> dict:
     }
 
 
-@router.post("/{simulation_id}/start")
+@router.post(
+    "/{simulation_id}/start",
+    dependencies=[Depends(require_scope(Scope.PARTICIPATE))],
+)
 async def start_simulation(simulation_id: str) -> dict:
     """Start a simulation, transitioning from WAITING to RUNNING.
 
@@ -210,7 +223,11 @@ async def start_simulation(simulation_id: str) -> dict:
     }
 
 
-@router.get("/{simulation_id}", response_model=SimulationResponse)
+@router.get(
+    "/{simulation_id}",
+    response_model=SimulationResponse,
+    dependencies=[Depends(require_scope(Scope.READ))],
+)
 async def get_simulation(simulation_id: str) -> SimulationResponse:
     """Get simulation details by ID.
 
@@ -228,7 +245,11 @@ async def get_simulation(simulation_id: str) -> SimulationResponse:
     return _simulations[simulation_id]
 
 
-@router.get("/", response_model=list[SimulationResponse])
+@router.get(
+    "/",
+    response_model=list[SimulationResponse],
+    dependencies=[Depends(require_scope(Scope.READ))],
+)
 async def list_simulations(
     status: SimulationStatus | None = None,
     limit: int = Query(20, ge=1, le=100),
@@ -257,16 +278,18 @@ async def list_simulations(
 # ---------------------------------------------------------------------------
 
 
-@router.post(
-    "/{simulation_id}/actions",
-    dependencies=[Depends(require_scope(Scope.PARTICIPATE))],
-)
-async def submit_action(simulation_id: str, action: ActionSubmission) -> dict:
+@router.post("/{simulation_id}/actions")
+async def submit_action(
+    simulation_id: str,
+    action: ActionSubmission,
+    auth_agent_id: str = Depends(require_scope(Scope.PARTICIPATE)),
+) -> dict:
     """Submit an action for a running simulation step.
 
     Args:
         simulation_id: The simulation to act in.
         action: The action to submit.
+        auth_agent_id: Authenticated agent identity (from API key).
 
     Returns:
         Acceptance confirmation with action_id.
@@ -275,6 +298,13 @@ async def submit_action(simulation_id: str, action: ActionSubmission) -> dict:
         HTTPException: If simulation not found, not running, or agent not a
             participant.
     """
+    # Bind authenticated identity to the action — prevent impersonation
+    if action.agent_id != auth_agent_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Cannot submit actions for another agent",
+        )
+
     if simulation_id not in _simulations:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
@@ -332,16 +362,18 @@ async def submit_action(simulation_id: str, action: ActionSubmission) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.get(
-    "/{simulation_id}/observation",
-    dependencies=[Depends(require_scope(Scope.READ))],
-)
-async def get_observation(simulation_id: str, agent_id: str = Query(...)) -> dict:
+@router.get("/{simulation_id}/observation")
+async def get_observation(
+    simulation_id: str,
+    agent_id: str = Query(...),
+    auth_agent_id: str = Depends(require_scope(Scope.READ)),
+) -> dict:
     """Get the current observation for an agent in a simulation.
 
     Args:
         simulation_id: The simulation to query.
         agent_id: The agent whose observation to retrieve.
+        auth_agent_id: Authenticated agent identity (from API key).
 
     Returns:
         The agent's current observation data.
@@ -349,6 +381,13 @@ async def get_observation(simulation_id: str, agent_id: str = Query(...)) -> dic
     Raises:
         HTTPException: If simulation not found or agent not a participant.
     """
+    # Bind authenticated identity — prevent reading other agents' observations
+    if agent_id != auth_agent_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Cannot read observations for another agent",
+        )
+
     if simulation_id not in _simulations:
         raise HTTPException(status_code=404, detail="Simulation not found")
 
@@ -383,7 +422,10 @@ async def get_observation(simulation_id: str, agent_id: str = Query(...)) -> dic
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{simulation_id}/events")
+@router.get(
+    "/{simulation_id}/events",
+    dependencies=[Depends(require_scope(Scope.READ))],
+)
 async def simulation_events(
     simulation_id: str,
     agent_id: str = Query(..., description="Agent ID for filtering events"),
@@ -400,8 +442,6 @@ async def simulation_events(
     Raises:
         HTTPException: If simulation not found.
     """
-    import asyncio
-
     from starlette.responses import StreamingResponse
 
     if simulation_id not in _simulations:
@@ -421,8 +461,6 @@ async def simulation_events(
                         "simulation_id": event.simulation_id,
                         "data": event.data,
                     }
-                    import json
-
                     yield f"event: {event.event_type.value}\ndata: {json.dumps(data)}\n\n"
 
                     if event.event_type == SimEventType.SIMULATION_COMPLETE:
@@ -547,7 +585,10 @@ async def get_simulation_results(simulation_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/{simulation_id}/execution")
+@router.get(
+    "/{simulation_id}/execution",
+    dependencies=[Depends(require_scope(Scope.READ))],
+)
 async def get_execution_state(simulation_id: str) -> dict:
     """Get execution state for a running simulation.
 
@@ -665,7 +706,11 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
                 })
                 if event.event_type == SimEventType.SIMULATION_COMPLETE:
                     break
-        except (WebSocketDisconnect, RuntimeError):
+        except WebSocketDisconnect:
+            # Client disconnected; stop forwarding events.
+            pass
+        except RuntimeError:
+            # WebSocket closed while sending; stop forwarding events.
             pass
 
     forward_task = asyncio.create_task(_forward_events())
@@ -745,6 +790,7 @@ async def websocket_participate(websocket: WebSocket, simulation_id: str):
         try:
             await forward_task
         except asyncio.CancelledError:
+            # Expected: ignore cancellation of the forwarder task during cleanup.
             pass
         event_bus.unsubscribe(simulation_id, agent_id, event_queue)
         conns = _ws_connections.get(simulation_id, {})
