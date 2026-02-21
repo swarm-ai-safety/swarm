@@ -6,38 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.7.0] - 2026-02-21
+
 ### Added
 - **Contract screening system** for separating equilibrium analysis with lock-in semantics, welfare metric, multi-seed sweep (10 seeds), collusion detection, and plot script (#234)
 - **LangGraph governed handoff study** with 4-agent Claude swarm, 32-config sweep (seed 42), and sweep overview plot
 - **Hodoscope trajectory analysis bridge** for agent trace inspection
-- **SQLite persistence** for simulations, governance state, and scenarios
+- **SQLite persistence** for simulations, governance state, and scenarios with lazy-init singletons
 - **SoftMetrics wired into Web API** `/api/v1/metrics` endpoint
 - **Sybil detection** enabled for contract screening governance
 - **E2E integration tests** for Web API simulation lifecycle
-- **Blog posts**: contract screening separating equilibrium, multi-seed results, red-team findings for contract screening governance
-- **Execution state** populated during simulation runs
-
-### Changed
-- **README audit**: Updated all module/file counts to match current codebase (4556 tests, 78 scenarios, 29 agent modules, 27 governance modules, 95 bridge files)
-- **README**: LLM provider list expanded from 3 to all 9 supported providers (added OpenRouter, Groq, Together, DeepSeek, Google, llama.cpp)
-- **AGENTS.md**: Added missing Research Integrity Auditor to role-selection guide
-- Extended `/fix_pr` to resolve PR conflicts and handle merge ceremony
-- Blog: sort posts newest-first, add dates and tag filtering
-- Pinned langgraph and langchain-core to exact versions
-
-### Fixed
-- **SSRF hardening**: Full server-side request forgery fix (#238), path template sanitization before base dispatch (#242)
-- **Information exposure** through exception in AWM adapter (#239)
-- SSRF hardening + Web API async participation layer with input validation and abuse prevention (#236)
-- 7 security vulnerabilities in contract screening system
-- Size limit (1 MiB) on simulation results payload
-- `test_agent_api` errors from missing `proposal_votes` table
-- Blog markdown attr on div blocks for proper rendering
-- Lint and mypy errors in contract screening wiring
-
-## [1.7.0] - 2026-02-20
-
-### Added
 - **llama.cpp local inference** provider with server setup script, health checks, seed validation, and SSRF/path-traversal hardening (#232)
 - **Interactive isometric visualization game** (`viz/`): Next.js browser-based SWARM simulation with client-side engine, Gemini Imagen 4 sprite assets, compare mode, parameter sweep, leaderboard, governance intervention controls, preset scenarios, narrative annotations, and data export (#182, #212)
 - **Memori semantic memory middleware** for LLM agents with persistent fact recall, SQLite-backed storage, and OpenRouter scenario variant (#217)
@@ -53,11 +31,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **EPIC tracking infrastructure** for bridge integrations (#194)
 - **Collaborative chemistry under budget and audits** scenario (#202)
 - **CI quality gate**, `/review_external_pr` command, and blog index hook
-- **Blog post**: "Qwen3-30B trains in the SWARM Economy" with v0.2 eval results
-- **Slash commands**: `/build_game`, `/obsidian`, `/sync_artifacts`, `/review_external_pr`, `/security-review`
+- **Execution state** populated during simulation runs
+- **Blog posts**: Qwen3-30B SWARM Economy v0.2 training results, contract screening separating equilibrium, multi-seed results, red-team findings
+- **Slash commands**: `/build_game`, `/obsidian`, `/sync_artifacts`, `/review_external_pr`, `/security-review`, `/audit_docs`, `/check_nav`, `/bump_version`
 - **Populate-releases workflow** for creating GitHub releases from CHANGELOG
+- **Social preview image** (1280x640) and HF Spaces sandbox link
+- **Streamlit Cloud deployment** configuration
 
 ### Changed
+- **README audit**: Updated all module/file counts to match current codebase (4556 tests, 78 scenarios, 29 agent modules, 27 governance modules, 95 bridge files)
+- **README**: LLM provider list expanded from 3 to all 9 supported providers (added OpenRouter, Groq, Together, DeepSeek, Google, llama.cpp)
+- **AGENTS.md**: Added missing Research Integrity Auditor to role-selection guide
+- Consolidated slash commands: merged related commands into `/ship`, `/merge_session`, `/sync`, `/fix_pr`, `/analyze_experiment`; removed `/parse_eval`, `/run_and_plot`, `/review_external_pr`, `/stats`
+- Extended `/fix_pr` to resolve PR conflicts and handle merge ceremony
+- Blog: sort posts newest-first, add dates and tag filtering
+- Pinned langgraph and langchain-core to exact versions
 - Moved pytest from pre-commit to pre-push hook, added branch guard (#177)
 - Removed `abs()` from `ProxyWeights.normalize()` to prevent silent negative weight handling (#178)
 - Updated crewai requirement from `<1.0,>=0.80.0` to `>=0.80.0,<2.0` (#221)
@@ -65,17 +53,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Regenerated demo datasets with correct epoch tagging in events
 
 ### Fixed
-- **SSRF hardening**: consolidated path validation, dispatch, and taint-breaking sanitizer (#230)
-- Code scanning alert #20: full server-side request forgery (#223)
-- Code scanning alert #25: information exposure through an exception (#225)
+- **SQLite lock contention in CI**: Lazy-init store singletons in governance, simulations, and scenarios routers to prevent `database is locked` errors under pytest-xdist
+- **SSRF hardening**: Full server-side request forgery fix (#238), path template sanitization before base dispatch (#242), consolidated path validation and taint-breaking sanitizer (#230)
+- **Information exposure** through exception in AWM adapter (#239)
+- SSRF hardening + Web API async participation layer with input validation and abuse prevention (#236)
+- 7 security vulnerabilities in contract screening system
+- Code scanning alerts #20 and #25 (#223, #225)
+- Size limit (1 MiB) on simulation results payload
+- mypy `method-assign` error for intentional monkey-patch in simulations router
 - SkillRL refinement governance bypass (#214)
 - 77 Ruff linting errors in test files (#218)
-- mypy type errors in eval_metrics and negotiation modules (#213)
-- mypy errors in `self_modification.py`, `llm_health.py`, and main entry point
+- mypy type errors in eval_metrics, negotiation modules, `self_modification.py`, `llm_health.py`
 - Flaky test: deterministic RNG seeds for agents in `TestWelfareComparison`
 - Static asset paths for basePath-aware deployment in viz game
 - 8 missing blog posts added to mkdocs.yml navigation and blog index page
-- Personal repo reference removed
+- `test_agent_api` errors from missing `proposal_votes` table
+- Blog markdown attr on div blocks for proper rendering
 
 ### Removed
 - SciAgentGym bridge (replaced with `/security-review` command) (#209)
