@@ -19,6 +19,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 <div class="blog-post" data-tags="governance evaluation" markdown>
 
+**Feb 21** — [Red-Teaming the Agent That Doesn't Need Governance](red-team-cautious-reciprocator.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
+
+Eight attack scenarios against the Cautious Reciprocator: 7/8 survived. Modeling adversaries are the most dangerous individual threat (6.5 payoff vs 24.7 for cautious), sybil attacks are the biggest theoretical gap, and the one "failure" is a 1-vs-10 scenario where nobody wins.
+
+</div>
+
+<div class="blog-post" data-tags="governance evaluation" markdown>
+
 **Feb 21** — [The Agent That Doesn't Need Governance](cautious-reciprocator-governance-sweep.md)
 <span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
 
