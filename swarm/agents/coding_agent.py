@@ -55,7 +55,7 @@ class CodingAgent(BaseAgent):
         self.subtlety: float = config.get("subtlety", 0.5)
 
     def act(self, observation: Observation) -> Action:
-        """Decide action: pending reviews > active tasks > claim new task > noop."""
+        """Decide action: pending proposals > active tasks > claim task > interact > noop."""
         # Handle pending proposals first
         if observation.pending_proposals:
             proposal = observation.pending_proposals[0]
@@ -78,6 +78,10 @@ class CodingAgent(BaseAgent):
             for task in observation.active_tasks:
                 if task.get("status") == "submitted" and task.get("claimed_by") != self.agent_id:
                     return self._review_code(task)
+
+        # Propose code-review collaborations with visible agents
+        if observation.can_interact and observation.visible_agents:
+            return self._propose_code_review(observation)
 
         return self.create_noop_action()
 
@@ -110,6 +114,28 @@ class CodingAgent(BaseAgent):
         )
 
     # ---- internal helpers ----
+
+    def _propose_code_review(self, observation: Observation) -> Action:
+        """Propose a code review collaboration with a visible agent."""
+        candidates = [
+            a for a in observation.visible_agents
+            if a.get("agent_id") != self.agent_id
+        ]
+        if not candidates:
+            return self.create_noop_action()
+
+        target = self._rng.choice(candidates)
+        counterparty_id: str = target.get("agent_id", "")
+
+        # Quality of the proposed interaction depends on agent behavior
+        quality = self._compute_submission_quality()
+        content = f"code_review_proposal:quality={quality:.2f}"
+
+        return self.create_propose_action(
+            counterparty_id=counterparty_id,
+            interaction_type=InteractionType.COLLABORATION,
+            content=content,
+        )
 
     def _pick_task(self, tasks: List[Dict]) -> Optional[Dict]:
         """Pick the best task for this agent."""
