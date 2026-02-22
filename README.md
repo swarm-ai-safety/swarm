@@ -238,18 +238,18 @@ All examples run standalone with no API keys unless noted. Start with the quicks
 |---------|-------------|-------|------------|
 | **[quickstart.ipynb](examples/quickstart.ipynb)** | Two scenarios end-to-end with plots | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb) | Beginner |
 | **[reproducible_run_demo.py](examples/reproducible_run_demo.py)** | Complete reproducible workflow with artifacts | — | Beginner |
-| **[illusion_delta_minimal.py](examples/illusion_delta_minimal.py)** | Replay-based incoherence detection (3 agents) | — | Beginner |
-| **[mvp_demo.py](examples/mvp_demo.py)** | Full 5-agent simulation with metric printout | — | Beginner |
+| **[illusion_delta_minimal.py](examples/illusion_delta_minimal.py)** | Replay-based incoherence detection (3 agents) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/illusion_delta_minimal.ipynb) | Beginner |
+| **[mvp_demo.py](examples/mvp_demo.py)** | Full 5-agent simulation with metric printout | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/mvp_demo.ipynb) | Beginner |
 | **[run_scenario.py](examples/run_scenario.py)** | Run any YAML scenario from CLI | — | Beginner |
-| **[parameter_sweep.py](examples/parameter_sweep.py)** | Sweep governance parameters and compare | — | Intermediate |
-| **[run_redteam.py](examples/run_redteam.py)** | Red-team evaluation across 8 attack vectors | — | Intermediate |
-| **[governance_mvp_sweep.py](examples/governance_mvp_sweep.py)** | Governance lever comparison sweep | — | Intermediate |
+| **[parameter_sweep.py](examples/parameter_sweep.py)** | Sweep governance parameters and compare | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/parameter_sweep.ipynb) | Intermediate |
+| **[run_redteam.py](examples/run_redteam.py)** | Red-team evaluation across 8 attack vectors | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/run_redteam.ipynb) | Intermediate |
+| **[governance_mvp_sweep.py](examples/governance_mvp_sweep.py)** | Governance lever comparison sweep | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/governance_mvp_sweep.ipynb) | Intermediate |
 | **[llm_demo.py](examples/llm_demo.py)** | LLM-backed agents (requires API key) | — | Intermediate |
-| **[ldt_composition_study.py](examples/ldt_composition_study.py)** | LDT agent composition research | — | Advanced |
-| **[reproduce_2602_00035.py](examples/reproduce_2602_00035.py)** | Reproduce paper results | — | Advanced |
+| **[ldt_composition_study.py](examples/ldt_composition_study.py)** | LDT agent composition research | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/ldt_composition_study.ipynb) | Advanced |
+| **[reproduce_2602_00035.py](examples/reproduce_2602_00035.py)** | Reproduce paper results | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/reproduce_2602_00035.ipynb) | Advanced |
 | **[demo/app.py](examples/demo/app.py)** | Streamlit interactive dashboard | — | Intermediate |
 
-> **Tip for Colab users:** The quickstart notebook auto-detects Colab and installs SWARM from GitHub. For other scripts, add `!pip install swarm-safety` in the first cell.
+> **Tip for Colab users:** All notebooks with a Colab badge auto-detect Colab and install SWARM from GitHub. For scripts without a notebook, add `!pip install swarm-safety` in the first cell.
 
 ## Core Concepts
 
