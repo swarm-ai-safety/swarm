@@ -3160,8 +3160,8 @@ class TestMetricsEndpoints:
 
         # No computed metrics (all entries were malformed)
         assert "soft_metrics" not in data
-        # Raw results still present
-        assert "interactions" in data["results"]
+        # Raw results still present (interactions stored under extra)
+        assert "interactions" in data["results"]["extra"]
 
 
 # ---------------------------------------------------------------------------
@@ -3632,7 +3632,7 @@ class TestE2ESimulationLifecycle:
         assert results["status"] == "completed"
         assert results["action_count"] == 2
         assert results["participant_count"] == 2
-        assert results["results"]["mean_payoff"] == 0.5
+        assert results["results"]["avg_payoff"] == 0.5
 
     # ------------------------------------------------------------------
     # 2. Observation caching and retrieval
