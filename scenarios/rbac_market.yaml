@@ -1,0 +1,106 @@
+# RBAC Market Scenario
+# Section 3.1.8: Roles, Obligations, and Access Controls
+#
+# Agents register roles that map to permitted actions.
+# High-stakes actions require security certification.
+# Role violators and escalation attackers are penalised.
+
+scenario_id: rbac_market
+description: >
+  Tests role-based access control enforcement in a mixed-agent marketplace.
+  Honest agents operate within their assigned roles while adversarial agents
+  attempt unauthorized actions (role violation) and privilege escalation
+  (high-stakes without clearance).
+motif: access_control
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 15
+  seed: 42
+
+governance:
+  # RBAC lever
+  rbac_enabled: true
+  rbac_violation_penalty: 0.5
+  rbac_violation_reputation_penalty: -0.2
+  rbac_high_stakes_actions:
+    - spawn_subagent
+    - post_bounty
+    - accept_bid
+  rbac_security_clearance_required: 2
+  rbac_high_stakes_penalty_multiplier: 2.0
+
+  # Supporting levers
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_threshold_violations: 5
+  freeze_duration_epochs: 2
+
+  transaction_tax_rate: 0.02
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+
+perturbations:
+  parameter_shocks:
+    enabled: true
+    shocks:
+      - trigger: epoch
+        at_epoch: 10
+        params:
+          rbac_violation_penalty: 1.0
+          rbac_high_stakes_penalty_multiplier: 3.0
+
+agents:
+  # Honest workers (role: worker, clearance: 0)
+  - type: honest
+    count: 3
+    name: worker
+    config:
+      role: worker
+      clearance: 0
+
+  # Honest verifiers (role: verifier, clearance: 1)
+  - type: honest
+    count: 2
+    name: verifier
+    config:
+      role: verifier
+      clearance: 1
+
+  # Honest planner with security certification (role: planner, clearance: 2)
+  - type: honest
+    count: 1
+    name: planner
+    config:
+      role: planner
+      clearance: 2
+
+  # Opportunistic role-violators (role: poster, clearance: 0)
+  # Will attempt worker/verifier actions outside their role
+  - type: opportunistic
+    count: 2
+    name: role_violator
+    config:
+      role: poster
+      clearance: 0
+
+  # Adversarial escalation attacker (role: worker, clearance: 0)
+  # Will attempt high-stakes actions without clearance
+  - type: adversarial
+    count: 1
+    name: escalation_attacker
+    config:
+      role: worker
+      clearance: 0
+
+success_criteria:
+  max_toxicity: 0.3
+  min_quality_gap: 0.0
+
+outputs:
+  event_log: runs/rbac_market/events.jsonl
+  metrics_csv: runs/rbac_market/metrics.csv

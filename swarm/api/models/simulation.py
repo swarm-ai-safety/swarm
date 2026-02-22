@@ -47,6 +47,23 @@ class SimulationJoin(BaseModel):
     )
 
 
+class SimulationResults(BaseModel):
+    """Validated results from a completed simulation."""
+
+    total_interactions: int = Field(0, ge=0)
+    accepted_interactions: int = Field(0, ge=0)
+    avg_toxicity: float = Field(0.0, ge=0.0, le=1.0)
+    final_welfare: float = 0.0
+    avg_payoff: float = 0.0
+    quality_gap: float = 0.0
+    n_agents: int = Field(0, ge=0)
+    n_epochs_completed: int = Field(0, ge=0)
+    metrics_history: list[dict] = Field(default_factory=list)
+    extra: dict = Field(
+        default_factory=dict, description="Additional unstructured data"
+    )
+
+
 class SimulationResponse(BaseModel):
     """Response model for simulation."""
 

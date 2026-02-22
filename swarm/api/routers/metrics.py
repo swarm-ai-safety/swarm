@@ -23,6 +23,9 @@ def _build_soft_metrics(results: dict[str, Any]) -> dict[str, Any]:
     Returns an empty dict when interaction data is missing or unusable.
     """
     interactions_data = results.get("interactions")
+    # Also check inside "extra" for SimulationResults-shaped payloads
+    if not interactions_data and isinstance(results.get("extra"), dict):
+        interactions_data = results["extra"].get("interactions")
     if not interactions_data or not isinstance(interactions_data, list):
         return {}
 

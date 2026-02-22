@@ -25,6 +25,7 @@ from swarm.api.models.simulation import (
     SimulationCreate,
     SimulationJoin,
     SimulationResponse,
+    SimulationResults,
     SimulationStatus,
 )
 from swarm.api.persistence import SimulationStore
@@ -187,10 +188,21 @@ async def _execute_simulation(simulation_id: str) -> None:
         metrics_list = await orchestrator.run_async()
 
         # Build results
-        results = {
-            "metrics_history": [m.model_dump() for m in metrics_list],
-            "interactions": len(orchestrator.state.completed_interactions),
-        }
+        metrics_dicts = [m.model_dump() for m in metrics_list]
+        n_interactions = len(orchestrator.state.completed_interactions)
+
+        # Extract summary values from last epoch metrics if available
+        last_metrics = metrics_dicts[-1] if metrics_dicts else {}
+        sim_results = SimulationResults(
+            total_interactions=n_interactions,
+            metrics_history=metrics_dicts,
+            avg_toxicity=last_metrics.get("toxicity_rate", 0.0),
+            avg_payoff=last_metrics.get("avg_payoff", 0.0),
+            quality_gap=last_metrics.get("quality_gap", 0.0),
+            n_epochs_completed=len(metrics_dicts),
+            n_agents=len(participants),
+        )
+        results = sim_results.model_dump()
 
         # Mark completed
         simulation = _get_store().get(simulation_id)
@@ -441,7 +453,7 @@ async def get_simulation(simulation_id: str) -> SimulationResponse:
     Raises:
         HTTPException: If simulation not found.
     """
-    simulation = _get_store().get(simulation_id)
+    simulation: SimulationResponse | None = _get_store().get(simulation_id)
     if simulation is None:
         raise HTTPException(status_code=404, detail="Simulation not found")
     return simulation
@@ -703,13 +715,13 @@ async def simulation_events(
     dependencies=[Depends(require_scope(Scope.PARTICIPATE))],
 )
 async def complete_simulation(
-    simulation_id: str, results: dict | None = None
+    simulation_id: str, results: SimulationResults | None = None
 ) -> dict:
     """Mark a simulation as completed and store its results.
 
     Args:
         simulation_id: The simulation to complete.
-        results: Optional results/metrics dict to store.
+        results: Optional validated results to store.
 
     Returns:
         Updated simulation status.
@@ -726,10 +738,12 @@ async def complete_simulation(
             status_code=400, detail="Simulation is not running"
         )
 
-    # Validate results payload size before accepting
+    # Serialize and validate payload size before accepting
+    results_dict: dict | None = None
     if results is not None:
+        results_dict = results.model_dump()
         try:
-            payload_size = len(json.dumps(results))
+            payload_size = len(json.dumps(results_dict))
         except (TypeError, ValueError, OverflowError) as exc:
             raise HTTPException(
                 status_code=422, detail="Results payload is not JSON-serializable"
@@ -749,8 +763,8 @@ async def complete_simulation(
     _get_store().save(simulation)
 
     # Store results
-    if results is not None:
-        _get_store().save_results(simulation_id, results)
+    if results_dict is not None:
+        _get_store().save_results(simulation_id, results_dict)
 
     # Clean up action queue
     queue = _action_queues.pop(simulation_id, None)
@@ -762,7 +776,7 @@ async def complete_simulation(
         SimEvent(
             event_type=SimEventType.SIMULATION_COMPLETE,
             simulation_id=simulation_id,
-            data={"results": results or {}},
+            data={"results": results_dict or {}},
         )
     )
 

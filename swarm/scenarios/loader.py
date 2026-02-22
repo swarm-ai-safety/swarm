@@ -394,6 +394,20 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         memory_provenance_revert_penalty=data.get(
             "memory_provenance_revert_penalty", 0.1
         ),
+        # RBAC governance
+        rbac_enabled=data.get("rbac_enabled", False),
+        rbac_violation_penalty=data.get("rbac_violation_penalty", 0.5),
+        rbac_violation_reputation_penalty=data.get(
+            "rbac_violation_reputation_penalty", -0.2
+        ),
+        rbac_high_stakes_actions=data.get("rbac_high_stakes_actions", []),
+        rbac_security_clearance_required=data.get(
+            "rbac_security_clearance_required", 2
+        ),
+        rbac_high_stakes_penalty_multiplier=data.get(
+            "rbac_high_stakes_penalty_multiplier", 2.0
+        ),
+        rbac_role_action_map=data.get("rbac_role_action_map", {}),
     )
     # Pydantic auto-validates
     return config

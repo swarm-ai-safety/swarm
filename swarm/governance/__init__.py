@@ -17,6 +17,7 @@ from swarm.governance.moltbook import (
     ChallengeVerificationLever,
     MoltbookRateLimitLever,
 )
+from swarm.governance.rbac import RBACLever
 from swarm.governance.refinery import RefineryLever
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever
 from swarm.governance.security import SecurityLever
@@ -51,6 +52,7 @@ __all__ = [
     "DiversityDefenseLever",
     "DiversityMetrics",
     "CouncilGovernanceLever",
+    "RBACLever",
     "RefineryLever",
     "SelfModificationLever",
     "ModificationProposal",

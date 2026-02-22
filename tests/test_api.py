@@ -12,7 +12,10 @@ from swarm.api.app import create_app  # noqa: E402
 from swarm.api.config import APIConfig  # noqa: E402
 from swarm.api.models.agent import AgentStatus  # noqa: E402
 from swarm.api.models.scenario import ScenarioStatus  # noqa: E402
-from swarm.api.models.simulation import SimulationMode, SimulationStatus  # noqa: E402
+from swarm.api.models.simulation import (  # noqa: E402
+    SimulationMode,
+    SimulationStatus,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -2348,7 +2351,7 @@ class TestSimulationCompletion:
 
         resp = client.post(
             f"/api/v1/simulations/{sim_id}/complete",
-            json={"toxicity_rate": 0.05, "quality_gap": 0.2},
+            json={"avg_toxicity": 0.05, "quality_gap": 0.2},
             headers={"Authorization": f"Bearer {api_keys[0]}"},
         )
         assert resp.status_code == 200
@@ -2400,7 +2403,7 @@ class TestSimulationCompletion:
         # Complete
         client.post(
             f"/api/v1/simulations/{sim_id}/complete",
-            json={"final_score": 42},
+            json={"total_interactions": 42, "avg_toxicity": 0.1},
             headers={"Authorization": f"Bearer {api_keys[0]}"},
         )
 
@@ -2412,7 +2415,8 @@ class TestSimulationCompletion:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "completed"
-        assert data["results"]["final_score"] == 42
+        assert data["results"]["total_interactions"] == 42
+        assert data["results"]["avg_toxicity"] == 0.1
         assert data["action_count"] == 1
         assert data["participant_count"] == 2
 
@@ -2510,7 +2514,7 @@ class TestSimulationCompletion:
         sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
 
         # Build a payload larger than MAX_RESULTS_BYTES (1 MiB)
-        oversized = {"data": "x" * (1_048_576 + 1)}
+        oversized = {"extra": {"data": "x" * (1_048_576 + 1)}}
         resp = client.post(
             f"/api/v1/simulations/{sim_id}/complete",
             json=oversized,
@@ -2518,6 +2522,106 @@ class TestSimulationCompletion:
         )
         assert resp.status_code == 413
         assert "limit" in resp.json()["detail"]
+
+    def test_complete_with_valid_simulation_results(self, client):
+        """Complete with a full SimulationResults payload succeeds."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        payload = {
+            "total_interactions": 100,
+            "accepted_interactions": 80,
+            "avg_toxicity": 0.05,
+            "final_welfare": 1.5,
+            "avg_payoff": 0.3,
+            "quality_gap": 0.1,
+            "n_agents": 5,
+            "n_epochs_completed": 10,
+            "metrics_history": [{"epoch": 1, "toxicity_rate": 0.04}],
+            "extra": {"custom_key": "custom_value"},
+        }
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json=payload,
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+
+        # Verify stored results match
+        results_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/results",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert results_resp.status_code == 200
+        stored = results_resp.json()["results"]
+        assert stored["total_interactions"] == 100
+        assert stored["accepted_interactions"] == 80
+        assert stored["avg_toxicity"] == 0.05
+        assert stored["extra"]["custom_key"] == "custom_value"
+
+    def test_complete_with_invalid_field_types(self, client):
+        """Complete with wrong field types returns 422."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"avg_toxicity": "not_a_number"},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 422
+
+    def test_complete_with_out_of_range_values(self, client):
+        """Complete with out-of-range values returns 422."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        # avg_toxicity must be in [0.0, 1.0]
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"avg_toxicity": 1.5},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 422
+
+        # Negative total_interactions
+        sim_id2, _, api_keys2 = self._setup_running_simulation(client)
+        resp2 = client.post(
+            f"/api/v1/simulations/{sim_id2}/complete",
+            json={"total_interactions": -1},
+            headers={"Authorization": f"Bearer {api_keys2[0]}"},
+        )
+        assert resp2.status_code == 422
+
+    def test_complete_with_partial_results(self, client):
+        """Complete with only some fields uses defaults for the rest."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"total_interactions": 5},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+
+        results_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/results",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        stored = results_resp.json()["results"]
+        assert stored["total_interactions"] == 5
+        # Defaults filled in
+        assert stored["accepted_interactions"] == 0
+        assert stored["avg_toxicity"] == 0.0
+        assert stored["metrics_history"] == []
+
+    def test_complete_with_no_results(self, client):
+        """Complete with no results body succeeds."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "completed"
 
 
 # ---------------------------------------------------------------------------
@@ -2936,7 +3040,7 @@ class TestMetricsEndpoints:
         # Complete with results
         client.post(
             f"/api/v1/simulations/{sim_id}/complete",
-            json={"toxicity": 0.03},
+            json={"avg_toxicity": 0.03},
             headers={"Authorization": f"Bearer {api_keys[0]}"},
         )
 
@@ -2947,7 +3051,7 @@ class TestMetricsEndpoints:
         assert resp.status_code == 200
         data = resp.json()
         assert data["status"] == "completed"
-        assert data["results"]["toxicity"] == 0.03
+        assert data["results"]["avg_toxicity"] == 0.03
 
     def test_get_metrics_not_found(self, client):
         """Metrics for nonexistent simulation returns 404."""
@@ -2973,7 +3077,7 @@ class TestMetricsEndpoints:
         ]
         client.post(
             f"/api/v1/simulations/{sim_id}/complete",
-            json={"interactions": interactions},
+            json={"extra": {"interactions": interactions}},
             headers={"Authorization": f"Bearer {api_keys[0]}"},
         )
 
@@ -3019,7 +3123,7 @@ class TestMetricsEndpoints:
 
         client.post(
             f"/api/v1/simulations/{sim_id}/complete",
-            json={"toxicity_rate": 0.1, "quality_gap": -0.05},
+            json={"avg_toxicity": 0.1, "quality_gap": -0.05},
             headers={"Authorization": f"Bearer {api_keys[0]}"},
         )
 
@@ -3031,7 +3135,7 @@ class TestMetricsEndpoints:
         data = resp.json()
 
         # Raw results still accessible
-        assert data["results"]["toxicity_rate"] == 0.1
+        assert data["results"]["avg_toxicity"] == 0.1
         assert data["results"]["quality_gap"] == -0.05
 
         # No computed metrics sections (no interaction data)
@@ -3043,7 +3147,7 @@ class TestMetricsEndpoints:
 
         client.post(
             f"/api/v1/simulations/{sim_id}/complete",
-            json={"interactions": [{"p": 5.0}, {"p": -1.0}]},
+            json={"extra": {"interactions": [{"p": 5.0}, {"p": -1.0}]}},
             headers={"Authorization": f"Bearer {api_keys[0]}"},
         )
 
@@ -3512,7 +3616,7 @@ class TestE2ESimulationLifecycle:
         # Complete
         complete_resp = client.post(
             f"/api/v1/simulations/{sim_id}/complete",
-            json={"mean_payoff": 0.5},
+            json={"avg_payoff": 0.5},
             headers=creator_headers,
         )
         assert complete_resp.status_code == 200
@@ -3955,7 +4059,7 @@ class TestOrchestratorWiring:
             # Complete the simulation via API
             resp = client.post(
                 f"/api/v1/simulations/{sim_id}/complete",
-                json={"manual": True},
+                json={"extra": {"manual": True}},
                 headers={"Authorization": f"Bearer {creator_key}"},
             )
             assert resp.status_code == 200

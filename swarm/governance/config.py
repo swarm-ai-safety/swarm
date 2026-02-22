@@ -176,6 +176,15 @@ class GovernanceConfig(BaseModel):
     loop_detector_freeze_threshold: int = 4  # violations before circuit breaker
     loop_detector_freeze_duration: int = 1  # epochs to freeze
 
+    # RBAC (Role-Based Access Control)
+    rbac_enabled: bool = False
+    rbac_violation_penalty: float = 0.5
+    rbac_violation_reputation_penalty: float = -0.2
+    rbac_high_stakes_actions: list[str] = []
+    rbac_security_clearance_required: int = 2
+    rbac_high_stakes_penalty_multiplier: float = 2.0
+    rbac_role_action_map: dict[str, list[str]] = {}
+
     # Diversity as Defense (DaD)
     diversity_enabled: bool = False
     diversity_rho_max: float = 0.5  # Correlation cap (Rule 1)
@@ -385,6 +394,14 @@ class GovernanceConfig(BaseModel):
             raise ValueError("loop_detector_freeze_threshold must be >= 1")
         if self.loop_detector_freeze_duration < 1:
             raise ValueError("loop_detector_freeze_duration must be >= 1")
+
+        # RBAC validation
+        if self.rbac_violation_penalty < 0:
+            raise ValueError("rbac_violation_penalty must be non-negative")
+        if self.rbac_security_clearance_required < 0:
+            raise ValueError("rbac_security_clearance_required must be non-negative")
+        if self.rbac_high_stakes_penalty_multiplier < 0:
+            raise ValueError("rbac_high_stakes_penalty_multiplier must be non-negative")
 
         # Diversity as Defense validation
         if not 0.0 <= self.diversity_rho_max <= 1.0:

@@ -35,6 +35,7 @@ from swarm.governance.moltipedia import (
     PageCooldownLever,
     PairCapLever,
 )
+from swarm.governance.rbac import RBACLever
 from swarm.governance.refinery import RefineryLever
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever
 from swarm.governance.security import SecurityLever
@@ -167,6 +168,10 @@ class GovernanceEngine:
         if self.config.self_modification_enabled:
             levers.append(SelfModificationLever(self.config))
 
+        # RBAC lever
+        if self.config.rbac_enabled:
+            levers.append(RBACLever(self.config))
+
         # Stored as a tuple so that external code cannot mutate in place.
         self._levers: tuple[GovernanceLever, ...] = tuple(levers)
 
@@ -181,6 +186,7 @@ class GovernanceEngine:
         self._diversity_lever: Optional[DiversityDefenseLever] = None
         self._loop_detector_lever: Optional[LoopDetectorLever] = None
         self._self_modification_lever: Optional[SelfModificationLever] = None
+        self._rbac_lever: Optional[RBACLever] = None
 
         for lever in self._levers:
             if isinstance(lever, StakingLever):
@@ -201,6 +207,8 @@ class GovernanceEngine:
                 self._loop_detector_lever = lever
             elif isinstance(lever, SelfModificationLever):
                 self._self_modification_lever = lever
+            elif isinstance(lever, RBACLever):
+                self._rbac_lever = lever
 
         # Adaptive governance state
         self._incoherence_forecaster: Optional[Any] = None
@@ -488,3 +496,17 @@ class GovernanceEngine:
     def get_self_modification_lever(self) -> Optional[SelfModificationLever]:
         """Return the self-modification lever if registered."""
         return self._self_modification_lever
+
+    def get_rbac_lever(self) -> Optional[RBACLever]:
+        """Return the RBAC lever if registered."""
+        return self._rbac_lever
+
+    def set_rbac_agent_roles(self, agent_roles: Dict[str, List[str]]) -> None:
+        """Set agent roles for RBAC enforcement."""
+        if self._rbac_lever is not None:
+            self._rbac_lever.set_agent_roles(agent_roles)
+
+    def set_rbac_security_clearances(self, clearances: Dict[str, int]) -> None:
+        """Set security clearances for RBAC enforcement."""
+        if self._rbac_lever is not None:
+            self._rbac_lever.set_security_clearances(clearances)
