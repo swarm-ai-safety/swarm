@@ -162,7 +162,7 @@ nav:
     - "What Financial Markets Teach Us About AI Safety": blog/markets-and-safety.md
     - "The Purity Paradox": blog/purity-paradox.md
     - "When Agent Ecosystems Collapse": blog/ecosystem-collapse.md
-    - "Five Sweeps, One Lever That Matters": blog/research-swarm-sweep-findings.md
+    - "Five Sweeps, One Red Team, and the Limits of Parametric Governance": blog/research-swarm-sweep-findings.md
 
 extra:
   social:
