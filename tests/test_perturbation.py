@@ -440,13 +440,14 @@ class TestNetworkPartition:
         edges = [("h1", "a1", 1.0), ("h2", "a1", 1.0), ("h1", "h2", 1.0)]
         net = _make_network(["h1", "h2", "a1"], edges)
         cfg = PerturbationConfig(
+            seed=42,
             network_partition=NetworkPartitionConfig(
                 enabled=True,
                 trigger=ShockTrigger.EPOCH,
                 at_epoch=0,
                 mode=PartitionMode.ISOLATE_TYPE,
                 isolate_type="adversarial",
-            )
+            ),
         )
         engine = PerturbationEngine(cfg, state=state, network=net)
         engine.on_epoch_start(0)
