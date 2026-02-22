@@ -61,3 +61,5 @@
 {"timestamp": "2026-02-22T03:24:30Z", "branch": "main", "files_changed": [".claude/provenance.jsonl"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-22T03:25:52Z", "branch": "main", "files_changed": [".claude/provenance.jsonl", "swarm/api/models/simulation.py", "swarm/api/persistence.py", "swarm/api/routers/simulations.py", "swarm/scenarios/loader.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-22T03:31:45Z", "branch": "main", "files_changed": ["CHANGELOG.md", "docs/blog/index.md", "docs/blog/threshold-dancer-results.md", "mkdocs.yml"], "new_files": ["docs/blog/threshold-dancer-results.md"], "docs_co_staged": ["changelog"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-22T03:32:15Z", "branch": "main", "files_changed": [".claude/provenance.jsonl", "swarm/api/models/simulation.py", "tests/test_api.py"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-22T03:32:20Z", "branch": "main", "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
