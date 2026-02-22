@@ -19,6 +19,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 <div class="blog-post" data-tags="governance evaluation" markdown>
 
+**Feb 21** — [The Agent That Doesn't Need Governance](cautious-reciprocator-governance-sweep.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
+
+A custom trust-but-verify agent (Cautious Reciprocator) neutralizes adversaries through per-counterparty payoff tracking and auto-blacklisting. 48-run governance sweep shows external levers cost 6.5% welfare while reducing toxicity by only 0.005.
+
+</div>
+
+<div class="blog-post" data-tags="governance evaluation" markdown>
+
 **Feb 21** — [Eight Red-Team Rounds Took a Cake-Splitting Scenario from F to B](red-team-cake-splitting-hardening.md)
 <span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
 
