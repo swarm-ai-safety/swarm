@@ -32,6 +32,7 @@ from swarm.agents.rain_river import (
 )
 from swarm.agents.ralph_agent import AdversarialRalphAgent, RalphLoopAgent
 from swarm.agents.self_optimizer import SelfOptimizerAgent
+from swarm.agents.threshold_dancer import ThresholdDancer
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,
@@ -78,4 +79,6 @@ __all__ = [
     "ObfuscationStrategy",
     # Attack strategies
     "AttackStrategy",
+    # Threshold dancer adversary
+    "ThresholdDancer",
 ]

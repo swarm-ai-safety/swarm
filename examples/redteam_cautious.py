@@ -27,6 +27,7 @@ from swarm.agents.cautious_reciprocator import CautiousReciprocator
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
 from swarm.agents.modeling_adversary import ModelingAdversary
+from swarm.agents.threshold_dancer import ThresholdDancer
 from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
 from swarm.core.payoff import PayoffConfig
 from swarm.governance.config import GovernanceConfig
@@ -93,7 +94,20 @@ ATTACK_SCENARIOS = [
         "name": "No governance + adversary majority",
         "cautious": 3, "honest": 2,
         "deceptive": 3, "adversarial": 3, "adaptive": 2, "modeling": 0,
+        "threshold_dancer": 0,
         "no_governance": True,
+    },
+    {
+        "name": "Threshold dancers only",
+        "cautious": 3, "honest": 2,
+        "deceptive": 0, "adversarial": 0, "adaptive": 0, "modeling": 0,
+        "threshold_dancer": 3,
+    },
+    {
+        "name": "Mixed adversaries + threshold dancers",
+        "cautious": 3, "honest": 2,
+        "deceptive": 1, "adversarial": 1, "adaptive": 1, "modeling": 1,
+        "threshold_dancer": 2,
     },
 ]
 
@@ -137,6 +151,10 @@ def run_real_scenario(spec, seed=42):
         idx += 1
         orch.register_agent(ModelingAdversary(
             f"modeling_{idx}", rng=random.Random(rng.randint(0, 99999))))
+    for _ in range(spec.get("threshold_dancer", 0)):
+        idx += 1
+        orch.register_agent(ThresholdDancer(
+            f"threshold_dancer_{idx}", rng=random.Random(rng.randint(0, 99999))))
 
     metrics = orch.run()
 
@@ -218,7 +236,7 @@ def main():
     for i, spec in enumerate(ATTACK_SCENARIOS, 1):
         name = spec["name"]
         n_good = spec["cautious"] + spec["honest"]
-        n_bad = spec["deceptive"] + spec["adversarial"] + spec["adaptive"] + spec.get("modeling", 0)
+        n_bad = spec["deceptive"] + spec["adversarial"] + spec["adaptive"] + spec.get("modeling", 0) + spec.get("threshold_dancer", 0)
         print(f"  [{i}/{len(ATTACK_SCENARIOS)}] {name} ({n_good} good, {n_bad} bad)...", end=" ", flush=True)
 
         res = run_real_scenario(spec)
@@ -233,6 +251,7 @@ def main():
             res["payoffs"].get("deceptive", 0),
             res["payoffs"].get("adaptive", 0),
             res["payoffs"].get("modeling", 0),
+            res["payoffs"].get("threshold", 0),
         )
         print(f"tox={res['toxicity']:.3f}  welfare={res['welfare']:.1f}  "
               f"cautious$={cautious_pay:.1f}  worst_adv$={adv_pay:.1f}  "
@@ -250,7 +269,7 @@ def main():
     for r in results:
         cautious_pay = r["payoffs"].get("cautious", 0)
         # Worst adversary payoff (highest = most successful attack)
-        adv_types = ["adversarial", "deceptive", "adaptive", "modeling"]
+        adv_types = ["adversarial", "deceptive", "adaptive", "modeling", "threshold"]
         adv_payoffs = [r["payoffs"].get(t, -999) for t in adv_types if t in r["payoffs"]]
         worst_adv = max(adv_payoffs) if adv_payoffs else 0
 
@@ -263,7 +282,7 @@ def main():
 
     # ── Failure analysis ─────────────────────────────────────────────
     failures = [r for r in results
-                if max([r["payoffs"].get(t, -999) for t in ["adversarial", "deceptive", "adaptive", "modeling"]
+                if max([r["payoffs"].get(t, -999) for t in ["adversarial", "deceptive", "adaptive", "modeling", "threshold"]
                         if t in r["payoffs"]], default=-999) > r["payoffs"].get("cautious", 0)
                 or r["toxicity"] > 0.5]
 
@@ -304,7 +323,7 @@ def main():
     ]
     for r in results:
         cautious_pay = r["payoffs"].get("cautious", 0)
-        adv_payoffs = [r["payoffs"].get(t, -999) for t in ["adversarial", "deceptive", "adaptive", "modeling"]
+        adv_payoffs = [r["payoffs"].get(t, -999) for t in ["adversarial", "deceptive", "adaptive", "modeling", "threshold"]
                        if t in r["payoffs"]]
         worst_adv = max(adv_payoffs) if adv_payoffs else 0
         broke = worst_adv > cautious_pay or r["toxicity"] > 0.5
