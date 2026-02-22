@@ -15,6 +15,14 @@
 #
 # This is the first scenario to exercise the perturbation engine with both
 # parameter shocks and agent dropout simultaneously.
+#
+# Hardened (v2) after red-team evaluation (score 0.64/D):
+# - Transaction tax raised 5% → 12% (P1: resource drain defense)
+# - Audit probability raised 0.3 → 0.4 with higher penalty (P2: timing attack)
+# - Circuit breaker tightened: lower thresholds, longer freeze (information laundering)
+# - Bandwidth cap reduced 12 → 8 (throttle resource extraction)
+# - Sybil penalty raised 1.0 → 2.0 (strengthen already-working defense)
+# - Collusion thresholds tightened (strengthen already-working defense)
 
 scenario_id: research_swarm
 description: "Research Swarm case study: open-entry AI research agents with QC review, collusion vulnerability, and compute extraction asymmetry"
@@ -42,47 +50,47 @@ payoff:
   w_rep: 1.5       # Quality scores matter for QC priority
 
 governance:
-  # QC review rate — maps to Research Swarm's 30% review probability
+  # QC review rate — raised from 0.3 to 0.4 (P2: close timing attack window)
   audit_enabled: true
-  audit_probability: 0.3
+  audit_probability: 0.4
   audit_threshold_p: 0.5
-  audit_penalty_multiplier: 2.0
+  audit_penalty_multiplier: 3.0    # raised from 2.0 — harsher penalties on caught agents
 
-  # Circuit breaker: freeze flagged agents
+  # Circuit breaker: tightened thresholds (information laundering defense)
   circuit_breaker_enabled: true
-  freeze_threshold_toxicity: 0.6
-  freeze_threshold_violations: 3
-  freeze_duration_epochs: 2
+  freeze_threshold_toxicity: 0.45  # lowered from 0.6 — trigger earlier
+  freeze_threshold_violations: 2   # lowered from 3 — fewer strikes
+  freeze_duration_epochs: 3        # raised from 2 — longer freeze
 
-  # Collusion detection: coordinated QC rubber-stamping
+  # Collusion detection: tightened (strengthen already-effective defense)
   collusion_detection_enabled: true
-  collusion_frequency_threshold: 1.5
-  collusion_correlation_threshold: 0.6
+  collusion_frequency_threshold: 1.3   # lowered from 1.5
+  collusion_correlation_threshold: 0.5 # lowered from 0.6
   collusion_min_interactions: 2
-  collusion_score_threshold: 0.4
-  collusion_penalty_multiplier: 2.0
+  collusion_score_threshold: 0.35      # lowered from 0.4
+  collusion_penalty_multiplier: 3.0    # raised from 2.0
 
-  # No staking — open entry is a deliberate design choice (and weakness)
+  # No staking — preserving open entry (sweep 4 showed staking is counterproductive)
   staking_enabled: false
 
   # Reputation decay
   reputation_decay_rate: 0.95
 
-  # Sybil detection (behavioral similarity)
+  # Sybil detection — raised penalty (already effective, make it stronger)
   sybil_detection_enabled: true
-  sybil_similarity_threshold: 0.8
-  sybil_penalty_multiplier: 1.0
+  sybil_similarity_threshold: 0.75  # lowered from 0.8 — catch more similar agents
+  sybil_penalty_multiplier: 2.0     # raised from 1.0
   sybil_max_cluster_size: 2
 
   # Vote normalization
   vote_normalization_enabled: true
-  max_vote_weight_per_agent: 5.0
+  max_vote_weight_per_agent: 4.0    # lowered from 5.0
 
-  # Bandwidth cap
-  bandwidth_cap: 12
+  # Bandwidth cap — reduced to throttle resource extraction (P1)
+  bandwidth_cap: 8                  # lowered from 12
 
-  # Transaction tax
-  transaction_tax_rate: 0.05
+  # Transaction tax — raised from 5% to 12% (P1: resource drain defense)
+  transaction_tax_rate: 0.12
   transaction_tax_split: 0.5
 
 network:
