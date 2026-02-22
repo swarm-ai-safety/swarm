@@ -205,16 +205,21 @@ async def _execute_simulation(simulation_id: str) -> None:
         # Build results
         metrics_dicts = [m.model_dump() for m in metrics_list]
         n_interactions = len(orchestrator.state.completed_interactions)
+        n_accepted = sum(
+            1 for i in orchestrator.state.completed_interactions if i.accepted
+        )
 
         # Extract summary values from last epoch metrics if available
         last_metrics = metrics_dicts[-1] if metrics_dicts else {}
         sim_results = SimulationResults(
             total_interactions=n_interactions,
+            accepted_interactions=n_accepted,
             metrics_history=metrics_dicts,
             avg_toxicity=last_metrics.get("toxicity_rate", 0.0),
             avg_payoff=last_metrics.get("avg_payoff", 0.0),
             quality_gap=last_metrics.get("quality_gap", 0.0),
             n_epochs_completed=len(metrics_dicts),
+            n_steps_completed=0,
             n_agents=len(participants),
         )
         results = sim_results.model_dump()
