@@ -34,6 +34,7 @@ from swarm.bridges.langgraph_swarm.governed_swarm import (
 from swarm.bridges.langgraph_swarm.study_agents import (
     AGENT_DEFS,
     TRUST_GROUPS,
+    build_chat_model,
     build_governance_policy,
 )
 
@@ -76,6 +77,10 @@ class TestScenarioYAML:
         llm = scenario["llm"]
         assert "model" in llm
         assert "max_tokens" in llm
+
+    def test_scenario_has_provider(self, scenario: dict) -> None:
+        llm = scenario["llm"]
+        assert llm.get("provider") in ("anthropic", "ollama", "openai")
 
     def test_scenario_has_outputs(self, scenario: dict) -> None:
         outputs = scenario["outputs"]
@@ -435,3 +440,52 @@ class TestProvenanceExport:
         for entry in logger.to_audit_log():
             line = json.dumps(entry)
             assert json.loads(line) == entry
+
+
+# =============================================================================
+# build_chat_model factory tests
+# =============================================================================
+
+
+class TestBuildChatModel:
+    """Test the multi-provider chat model factory."""
+
+    def test_unsupported_provider_raises(self) -> None:
+        with pytest.raises(ValueError, match="Unsupported LLM provider"):
+            build_chat_model(provider="nonexistent")
+
+    def test_anthropic_returns_chat_anthropic(self) -> None:
+        try:
+            from langchain_anthropic import ChatAnthropic
+        except ImportError:
+            pytest.skip("langchain-anthropic not installed")
+        llm = build_chat_model(provider="anthropic", model="claude-sonnet-4-20250514")
+        assert isinstance(llm, ChatAnthropic)
+
+    def test_ollama_returns_chat_ollama(self) -> None:
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError:
+            pytest.skip("langchain-ollama not installed")
+        llm = build_chat_model(provider="ollama", model="llama3.2")
+        assert isinstance(llm, ChatOllama)
+
+    def test_ollama_custom_base_url(self) -> None:
+        try:
+            from langchain_ollama import ChatOllama
+        except ImportError:
+            pytest.skip("langchain-ollama not installed")
+        llm = build_chat_model(
+            provider="ollama",
+            model="llama3.2",
+            base_url="http://myhost:11434",
+        )
+        assert isinstance(llm, ChatOllama)
+
+    def test_openai_returns_chat_openai(self) -> None:
+        try:
+            from langchain_openai import ChatOpenAI
+        except ImportError:
+            pytest.skip("langchain-openai not installed")
+        llm = build_chat_model(provider="openai", model="gpt-4o-mini")
+        assert isinstance(llm, ChatOpenAI)

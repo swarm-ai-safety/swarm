@@ -1,8 +1,11 @@
 """study_agents.py — Agent factory for the LangGraph governed handoff study.
 
-Creates 4 Claude-backed agents with governed handoff tools for studying
+Creates 4 LLM-backed agents with governed handoff tools for studying
 how governance parameters (cycle detection, rate limits, trust boundaries)
 affect multi-agent handoff patterns and task completion.
+
+Supports multiple LLM providers (Anthropic, Ollama, OpenAI) via
+``build_chat_model()`` factory.
 
 Agent architecture:
     coordinator (management) → researcher, writer
@@ -29,12 +32,44 @@ from swarm.bridges.langgraph_swarm.governed_swarm import (
 )
 
 try:
-    from langchain_anthropic import ChatAnthropic
     from langgraph.prebuilt import create_react_agent
 
     _HAS_DEPS = True
 except ImportError:
     _HAS_DEPS = False
+
+
+def build_chat_model(
+    provider: str = "anthropic",
+    model: str = "claude-sonnet-4-20250514",
+    max_tokens: int = 300,
+    base_url: str | None = None,
+) -> Any:
+    """Build a LangChain chat model for the given provider.
+
+    Lazy-imports so only the needed provider package is required at runtime.
+    """
+    if provider == "anthropic":
+        from langchain_anthropic import ChatAnthropic
+
+        return ChatAnthropic(model=model, max_tokens=max_tokens)
+    elif provider == "ollama":
+        from langchain_ollama import ChatOllama
+
+        return ChatOllama(
+            model=model,
+            base_url=base_url or "http://localhost:11434",
+            num_predict=max_tokens,
+        )
+    elif provider == "openai":
+        from langchain_openai import ChatOpenAI
+
+        kwargs: dict[str, Any] = {"model": model, "max_tokens": max_tokens}
+        if base_url:
+            kwargs["base_url"] = base_url
+        return ChatOpenAI(**kwargs)
+    else:
+        raise ValueError(f"Unsupported LLM provider: {provider!r}")
 
 
 # -- Agent definitions --------------------------------------------------------
@@ -111,8 +146,10 @@ def build_governance_policy(
 
 def build_study_agents(
     *,
+    provider: str = "anthropic",
     model: str = "claude-sonnet-4-20250514",
     max_tokens: int = 300,
+    base_url: str | None = None,
     max_cycles: int = 3,
     max_handoffs: int = 20,
     trust_boundaries: bool = True,
@@ -121,13 +158,24 @@ def build_study_agents(
 ) -> tuple[list[Any], ProvenanceLogger, CompositePolicy]:
     """Build the 4 study agents with governed handoff tools.
 
+    Args:
+        provider: LLM provider — "anthropic", "ollama", or "openai".
+        model: Model name (provider-specific).
+        max_tokens: Max tokens per response.
+        base_url: Override base URL for the provider (e.g. custom Ollama host).
+        max_cycles: Max allowed handoff cycles before governance intervenes.
+        max_handoffs: Max total handoffs per run.
+        trust_boundaries: Whether to enforce trust-group boundaries.
+        provenance_logger: Optional pre-built logger.
+        governance_policy: Optional pre-built policy.
+
     Returns:
         Tuple of (agents, provenance_logger, governance_policy).
         Agents are compiled Pregel instances ready for create_governed_swarm.
     """
     if not _HAS_DEPS:
         raise ImportError(
-            "build_study_agents requires langchain-anthropic and langgraph. "
+            "build_study_agents requires langgraph. "
             "Install with: pip install swarm-safety[langgraph]"
         )
 
@@ -140,9 +188,11 @@ def build_study_agents(
             trust_boundaries=trust_boundaries,
         )
 
-    llm = ChatAnthropic(
+    llm = build_chat_model(
+        provider=provider,
         model=model,
         max_tokens=max_tokens,
+        base_url=base_url,
     )
 
     # Build a name -> definition lookup
@@ -176,8 +226,10 @@ def build_study_agents(
 
 def build_study_swarm(
     *,
+    provider: str = "anthropic",
     model: str = "claude-sonnet-4-20250514",
     max_tokens: int = 300,
+    base_url: str | None = None,
     max_cycles: int = 3,
     max_handoffs: int = 20,
     trust_boundaries: bool = True,
@@ -189,8 +241,10 @@ def build_study_swarm(
         Compile with: ``app = state_graph.compile(checkpointer=InMemorySaver())``
     """
     agents, logger, policy = build_study_agents(
+        provider=provider,
         model=model,
         max_tokens=max_tokens,
+        base_url=base_url,
         max_cycles=max_cycles,
         max_handoffs=max_handoffs,
         trust_boundaries=trust_boundaries,

@@ -26,7 +26,10 @@ agents:
     role: "QA check, sends back or approves"
 
 # LLM configuration
+# provider: "anthropic" (default), "ollama", or "openai"
+# base_url: override for custom endpoints (e.g. "http://myhost:11434" for Ollama)
 llm:
+  provider: "anthropic"
   model: "claude-sonnet-4-20250514"
   max_tokens: 300
   max_turns: 25

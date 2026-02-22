@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """LangGraph Governed Handoff Study — Runner Script.
 
-Sweeps governance parameters across a 4-agent Claude-backed swarm and
+Sweeps governance parameters across a 4-agent LLM-backed swarm and
 exports metrics CSV + provenance JSONL.
 
 Usage:
@@ -17,7 +17,16 @@ Usage:
     python examples/langgraph_governed_study.py \\
         --scenario scenarios/langgraph_governed_handoff.yaml
 
-Requires ANTHROPIC_API_KEY in environment.
+    # Run with Ollama (free, local)
+    python examples/langgraph_governed_study.py \\
+        --provider ollama --model llama3.2 --seeds 1
+
+    # Run with OpenAI
+    python examples/langgraph_governed_study.py \\
+        --provider openai --model gpt-4o-mini --seeds 1
+
+Requires ANTHROPIC_API_KEY (for anthropic provider) or OPENAI_API_KEY
+(for openai provider) in environment. Ollama requires a running local server.
 """
 
 from __future__ import annotations
@@ -98,10 +107,15 @@ def run_single(
     max_turns = llm_config.get("max_turns", 25)
     task_prompt = scenario.get("task_prompt", "Summarize AI safety handoff risks.")
 
+    provider = scenario.get("llm", {}).get("provider", "anthropic")
+    base_url = scenario.get("llm", {}).get("base_url")
+
     # Build agents and policy
     agents, logger, policy = build_study_agents(
+        provider=provider,
         model=model,
         max_tokens=max_tokens,
+        base_url=base_url,
         max_cycles=config["max_cycles"],
         max_handoffs=config["max_handoffs"],
         trust_boundaries=config["trust_boundaries"],
@@ -235,6 +249,24 @@ def main() -> int:
         help="Validate setup without making LLM calls",
     )
     parser.add_argument(
+        "--provider",
+        type=str,
+        default=None,
+        help="LLM provider: anthropic, ollama, openai (overrides YAML)",
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Model name (overrides YAML)",
+    )
+    parser.add_argument(
+        "--base-url",
+        type=str,
+        default=None,
+        help="Base URL for the LLM provider (overrides YAML)",
+    )
+    parser.add_argument(
         "--output-dir",
         type=Path,
         default=None,
@@ -248,14 +280,30 @@ def main() -> int:
         return 1
 
     scenario = load_scenario(args.scenario)
+
+    # CLI overrides YAML values
+    if args.provider is not None:
+        scenario.setdefault("llm", {})["provider"] = args.provider
+    if args.model is not None:
+        scenario.setdefault("llm", {})["model"] = args.model
+    if args.base_url is not None:
+        scenario.setdefault("llm", {})["base_url"] = args.base_url
+
+    provider = scenario.get("llm", {}).get("provider", "anthropic")
+
     print("=" * 60)
     print("LangGraph Governed Handoff Study")
     print(f"Scenario: {scenario['scenario_id']}")
+    print(f"Provider: {provider}")
+    print(f"Model:    {scenario.get('llm', {}).get('model', 'default')}")
     print("=" * 60)
 
-    # Check API key (unless dry run)
-    if not args.dry_run and not os.environ.get("ANTHROPIC_API_KEY"):
+    # Check API key (unless dry run or local provider)
+    if not args.dry_run and provider == "anthropic" and not os.environ.get("ANTHROPIC_API_KEY"):
         print("Error: ANTHROPIC_API_KEY not set in environment")
+        return 1
+    if not args.dry_run and provider == "openai" and not os.environ.get("OPENAI_API_KEY"):
+        print("Error: OPENAI_API_KEY not set in environment")
         return 1
 
     # Build parameter grid
