@@ -340,10 +340,80 @@ class TestGovernancePolicies:
         composite = CompositePolicy([cycle_policy, info_policy])
 
         logger = ProvenanceLogger()
-        logger.log(ProvenanceRecord(source_agent="a", target_agent="b"))
+        logger.log(ProvenanceRecord(source_agent="coordinator", target_agent="researcher"))
 
-        result = composite.evaluate("a", "b", "task", {}, logger)
+        result = composite.evaluate("coordinator", "researcher", "task", {}, logger)
         assert result.decision == GovernanceDecision.DENY
+
+    # -- Red-team fix verification tests --
+
+    def test_unknown_agent_denied(self) -> None:
+        """Unknown agents should be denied (fail-closed)."""
+        policy = InformationBoundaryPolicy(trust_groups=TRUST_GROUPS)
+        logger = ProvenanceLogger()
+
+        # Unknown target
+        result = policy.evaluate("researcher", "evil_agent", "task", {}, logger)
+        assert result.decision == GovernanceDecision.DENY
+
+        # Unknown source
+        result = policy.evaluate("evil_agent", "coordinator", "task", {}, logger)
+        assert result.decision == GovernanceDecision.DENY
+
+        # Both unknown
+        result = policy.evaluate("evil_1", "evil_2", "task", {}, logger)
+        assert result.decision == GovernanceDecision.DENY
+
+    def test_transitive_info_flow_detected(self) -> None:
+        """Same-group handoff should be MODIFY if source carries cross-group context."""
+        policy = InformationBoundaryPolicy(trust_groups=TRUST_GROUPS)
+        logger = ProvenanceLogger()
+
+        # writer(content) → reviewer: cross-group, approved wouldn't happen but
+        # simulate: coordinator(management) hands off to researcher(research) — approved
+        logger.log(ProvenanceRecord(
+            source_agent="coordinator",
+            target_agent="researcher",
+            governance_decision="approved",
+        ))
+
+        # Now researcher → reviewer (same group), but researcher carries
+        # management-group context from coordinator
+        result = policy.evaluate("researcher", "reviewer", "task", {}, logger)
+        assert result.decision == GovernanceDecision.MODIFY
+        assert "transitive" in result.reason.lower()
+
+    def test_rate_limit_cumulative(self) -> None:
+        """Cumulative limit prevents pacing attacks."""
+        policy = RateLimitPolicy(max_handoffs=5, window_seconds=10.0, max_cumulative=8)
+        logger = ProvenanceLogger()
+
+        # Add 8 records with old timestamps (outside time window)
+        import time as _time
+        for _ in range(8):
+            record = ProvenanceRecord(source_agent="a", target_agent="b")
+            record.timestamp = _time.time() - 20.0  # Outside 10s window
+            logger.log(record)
+
+        # 9th handoff should be escalated by cumulative limit
+        result = policy.evaluate("a", "b", "task", {}, logger)
+        assert result.decision == GovernanceDecision.ESCALATE
+        assert "cumulative" in result.reason.lower()
+
+    def test_cycle_global_budget(self) -> None:
+        """Global handoff budget prevents pair-rotation attacks."""
+        policy = CycleDetectionPolicy(max_cycles=3, window=10, max_total=5)
+        logger = ProvenanceLogger()
+
+        # 5 handoffs across different pairs (no per-pair cycle)
+        pairs = [("a", "b"), ("b", "c"), ("c", "d"), ("d", "a"), ("a", "c")]
+        for src, tgt in pairs:
+            logger.log(ProvenanceRecord(source_agent=src, target_agent=tgt))
+
+        # 6th handoff should be denied by global budget
+        result = policy.evaluate("c", "a", "task", {}, logger)
+        assert result.decision == GovernanceDecision.DENY
+        assert "global" in result.reason.lower()
 
 
 # =============================================================================
