@@ -15,6 +15,7 @@ class AgentType(Enum):
     ADVERSARIAL = "adversarial"
     RLM = "rlm"
     CREWAI = "crewai"
+    CODING = "coding"
 
 
 class AgentStatus(Enum):

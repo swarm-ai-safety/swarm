@@ -14,6 +14,7 @@ from swarm.boundaries.information_flow import FlowTracker
 from swarm.boundaries.leakage import LeakageDetector, LeakageReport
 from swarm.boundaries.policies import PolicyEngine
 from swarm.core.boundary_handler import BoundaryHandler
+from swarm.core.coding_handler import CodingHandler
 from swarm.core.core_interaction_handler import CoreInteractionHandler
 from swarm.core.feed_handler import FeedHandler
 from swarm.core.handler_registry import HandlerRegistry
@@ -546,6 +547,12 @@ class Orchestrator:
             event_bus=self._event_bus,
         )
         self._handler_registry.register(self._task_handler)
+
+        self._coding_handler = CodingHandler(
+            event_bus=self._event_bus,
+            rng=self._rng,
+        )
+        self._handler_registry.register(self._coding_handler)
 
         # Spawn tree (must be initialized before observation builder)
         if self.config.spawn_config is not None and self.config.spawn_config.enabled:

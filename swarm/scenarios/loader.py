@@ -12,6 +12,7 @@ from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.awm_agent import AWMAgent
 from swarm.agents.base import BaseAgent
 from swarm.agents.cautious_reciprocator import CautiousReciprocator
+from swarm.agents.coding_agent import CodingAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
 from swarm.agents.ldt_agent import LDTAgent
@@ -139,6 +140,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "cautious_reciprocator": CautiousReciprocator,
     # Threshold dancer (exploits blacklist floor)
     "threshold_dancer": ThresholdDancer,
+    # Coding agent (models coding agent behavior)
+    "coding_agent": CodingAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
