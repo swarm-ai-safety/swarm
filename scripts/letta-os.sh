@@ -39,6 +39,11 @@ OUTPUT_FLAGS=()
 EXTRA_FLAGS=("--yolo")
 DRY_RUN=false
 
+# Auto-detect local Letta server and set model accordingly
+if [ "${LETTA_BASE_URL:-}" = "http://localhost:8283" ]; then
+    EXTRA_FLAGS+=("--model" "local-ollama/glm-4.7-flash:q8_0")
+fi
+
 args=()
 for arg in "$@"; do
     case "$arg" in
@@ -46,6 +51,7 @@ for arg in "$@"; do
         --stream) OUTPUT_FLAGS=(--output-format stream-json) ;;
         --new)    EXTRA_FLAGS+=("--new") ;;
         --dry-run) DRY_RUN=true ;;
+        --model=*) EXTRA_FLAGS+=("--model" "${arg#--model=}") ;;
         *)        args+=("$arg") ;;
     esac
 done
