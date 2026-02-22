@@ -1,0 +1,19 @@
+{
+  "name": "research-os-verify",
+  "description": "Run all vault integrity checks: schema validation, evidence provenance, wiki-link resolution, index consistency, claim health dashboard.",
+  "version": "0.1.0",
+  "author": "arscontexta",
+  "tags": [
+    "research-os",
+    "verification",
+    "vault-health",
+    "swarm"
+  ],
+  "entry": "SKILL.md",
+  "platform_hints": {
+    "claude-code": {
+      "context": "fork",
+      "model": "opus"
+    }
+  }
+}

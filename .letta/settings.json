@@ -1,0 +1,23 @@
+{
+  "tokenStreaming": true,
+  "enableSleeptime": true,
+  "lastAgent": "swarm-research-os",
+  "permissions": {
+    "allow": [
+      "python -m swarm *",
+      "python -m pytest *",
+      "python scripts/*",
+      "bd *",
+      "git status",
+      "git diff *",
+      "git log *",
+      "git add *",
+      "ruff check *"
+    ],
+    "deny": [
+      "rm -rf *",
+      "git push --force *",
+      "git reset --hard *"
+    ]
+  }
+}

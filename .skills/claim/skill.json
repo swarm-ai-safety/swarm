@@ -1,0 +1,19 @@
+{
+  "name": "research-os-claim",
+  "description": "Create or update a claim card in the SWARM Research OS vault. Guides through evidence collection, confidence assessment, and boundary condition documentation.",
+  "version": "0.1.0",
+  "author": "arscontexta",
+  "tags": [
+    "research-os",
+    "claims",
+    "knowledge-management",
+    "swarm"
+  ],
+  "entry": "SKILL.md",
+  "platform_hints": {
+    "claude-code": {
+      "context": "fork",
+      "model": "opus"
+    }
+  }
+}

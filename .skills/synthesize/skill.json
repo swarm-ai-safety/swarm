@@ -1,0 +1,19 @@
+{
+  "name": "research-os-synthesize",
+  "description": "Synthesize a SWARM run into vault notes. Reads run.yaml and summary.json, generates experiment note, checks for claim updates, rebuilds index. The automated version of what the Inngest pipeline does.",
+  "version": "0.1.0",
+  "author": "arscontexta",
+  "tags": [
+    "research-os",
+    "synthesis",
+    "pipeline",
+    "swarm"
+  ],
+  "entry": "SKILL.md",
+  "platform_hints": {
+    "claude-code": {
+      "context": "fork",
+      "model": "opus"
+    }
+  }
+}
