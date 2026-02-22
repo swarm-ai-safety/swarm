@@ -22,7 +22,7 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 **Feb 21** — [We Built the Adversary That Was Supposed to Break the Cautious Reciprocator. It Didn't.](threshold-dancer-results.md)
 <span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
 
-A threshold-dancing adversary that tracks its own payoff ledger to avoid blacklisting works perfectly — zero agents frozen. But the exploit budget is too thin to profit: dancers earned -1.6 while cautious agents earned 28.0. Toxicity spiked to 0.43, revealing a commons-degradation threat model.
+A threshold-dancing adversary that tracks its own payoff ledger to avoid blacklisting works perfectly — zero agents frozen across 100 epochs. But the exploit budget is too thin to profit: dancers averaged -7.85 payoff while cautious agents earned 200.90. Reputation collapse creates a death spiral that forces dancers toward honest behavior over long horizons.
 
 </div>
 
