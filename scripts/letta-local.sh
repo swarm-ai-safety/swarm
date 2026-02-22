@@ -33,7 +33,7 @@ check_deps() {
 }
 
 check_model() {
-    if ! ollama list 2>/dev/null | grep -q "$MODEL"; then
+    if ! (ollama list 2>/dev/null || true) | grep -q "$MODEL"; then
         echo "Model $MODEL not found. Pull it with:" >&2
         echo "  ollama pull $MODEL" >&2
         exit 1
@@ -50,7 +50,7 @@ start_stack() {
         ollama serve &>/dev/null &
         sleep 2
     fi
-    echo "Ollama: running ($(ollama list | grep "$MODEL" | awk '{print $1}'))"
+    echo "Ollama: running ($((ollama list 2>/dev/null || true) | grep "$MODEL" | awk '{print $1}'))"
 
     # 2. Start Letta server via Docker Compose
     if docker ps --format '{{.Names}}' 2>/dev/null | grep -q "$CONTAINER_NAME"; then
@@ -95,7 +95,7 @@ show_status() {
     echo "=== Ollama ==="
     if curl -s http://localhost:11434/api/tags >/dev/null 2>&1; then
         echo "Status: running"
-        ollama list 2>/dev/null | grep -E "glm|llama" || echo "(no relevant models)"
+        (ollama list 2>/dev/null || true) | grep -E "glm|llama" || echo "(no relevant models)"
     else
         echo "Status: not running"
     fi
