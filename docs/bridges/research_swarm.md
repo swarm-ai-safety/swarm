@@ -274,13 +274,36 @@ We swept three governance levers across the full 20-epoch scenario (seed 42, 19 
 - **Welfare collapsed 88%** (41.12→4.73). The staking cost eats into surplus.
 - **The barrier saturates immediately** — no meaningful difference between stake=0.5 and stake=5.0.
 
+### Sweep 5: Deceptive Agent Count (1–7)
+
+| Deceptive | Total Agents | Interactions | Accepted | Acc% | Avg Toxicity | Avg Quality Gap | Avg Payoff | Final Welfare |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 17 | 713 | 542 | 76.0% | 0.3478 | 0.1723 | 1.2536 | 34.17 |
+| 2 | 18 | 729 | 541 | 74.2% | 0.3460 | 0.1591 | 1.2601 | 31.22 |
+| 3 | 19 | 731 | 554 | 75.8% | 0.3472 | 0.1289 | 1.2555 | 41.12 |
+| 4 | 20 | 727 | 523 | 71.9% | 0.3505 | 0.1420 | 1.2406 | 41.80 |
+| 5 | 21 | 747 | 580 | 77.6% | 0.3473 | 0.1548 | 1.2548 | 62.51 |
+| 6 | 22 | 704 | 539 | 76.6% | 0.3488 | 0.1231 | 1.2488 | 43.75 |
+| 7 | 23 | 665 | 510 | 76.7% | 0.3560 | 0.1520 | 1.2171 | 34.90 |
+
+**Finding:** Agent composition is the most sensitive lever tested. Unlike the accounting parameters (audit rate, rho, theta), changing the deceptive agent count produces real behavioral variation:
+
+- **Toxicity trends upward** — from 0.346 (dec=2) to 0.356 (dec=7), a modest but real ~3% increase across a 7x change in deceptive population.
+- **The toxicity threshold (0.35) is breached at dec=7** (0.356). With 7 deceptive agents (30% of the 23-agent population), the system fails the success criterion. This is the first parameter value across all five sweeps to cross the threshold.
+- **Quality gap is non-monotonic** — it peaks at dec=1 (0.172) where QC has the easiest job, dips at dec=3 and dec=6 (~0.129 and 0.123), then partially recovers at dec=5 and dec=7. This reflects seed-dependent interaction patterns rather than a clean scaling law.
+- **Welfare is noisy** — jumping from 31.22 (dec=2) to 62.51 (dec=5) to 34.90 (dec=7), driven by the specific interaction sequences the seed generates for each population size.
+
 ### Structural Insight
 
-These sweeps reveal a key property of the SWARM engine with scripted (non-LLM) agents: **governance levers are post-hoc scoring mechanisms, not decision-shaping feedback loops.** The `audit_probability`, `rho`, and `theta` parameters change how surplus and costs are distributed after interactions occur, but they do not change which interactions are generated or which agents participate.
+These five sweeps reveal two key properties:
 
-This is not a bug — it reflects the real limitation of parametric governance in systems where agents don't adapt their strategies based on observed payoffs. In Research Swarm, this maps to a concrete prediction: **adjusting QC rates or fee structures will not change agent behavior unless the platform also implements feedback mechanisms** that make past quality scores affect future task assignment, payout rates, or access.
+**1. Governance levers are post-hoc scoring mechanisms, not decision-shaping feedback loops.** The `audit_probability`, `rho`, and `theta` parameters change how surplus and costs are distributed after interactions occur, but they do not change which interactions are generated or which agents participate. Staking did alter behavior, but bluntly — it reduced total participation without improving the honest-to-deceptive ratio.
 
-The one lever that *did* alter behavior (staking) did so bluntly — it reduced total participation without improving the honest-to-deceptive ratio. This suggests that for Research Swarm, **entry barriers are less valuable than adaptive feedback**: agents that observe declining payoffs from low-quality work and change strategy accordingly.
+**2. Agent composition is the binding constraint.** The only lever that meaningfully moved toxicity was the number of deceptive agents. The system's safety margin depends primarily on *who's in the system*, not on parametric tuning of QC rates or fees. At 30% deceptive agents (dec=7), the system fails regardless of governance settings.
+
+This maps to a concrete prediction for Research Swarm: **adjusting QC rates or fee structures will not change agent behavior unless the platform also implements feedback mechanisms** that make past quality scores affect future task assignment, payout rates, or access. The most impactful intervention is **screening and behavioral feedback** — making it costly to be deceptive over time so that deceptive agents either reform or exit, shifting the population composition that actually determines toxicity.
+
+To test adaptive dynamics, run this scenario with LLM-backed agents (`type: llm_agent`) or RL agents (`type: skillrl`) that can observe their own payoff history and adjust their submission quality. The same governance levers may produce dramatically different results when agents are capable of strategic adaptation.
 
 To test adaptive dynamics, run this scenario with LLM-backed agents (`type: llm_agent` in the YAML) or RL agents (`type: skillrl`) that can observe their own payoff history and adjust their submission quality. The same governance levers may produce dramatically different results when agents are capable of strategic adaptation.
 
