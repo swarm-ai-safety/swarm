@@ -6,7 +6,7 @@ actions requiring security certification.
 """
 
 from collections import defaultdict
-from typing import TYPE_CHECKING, Dict, List, Set  # noqa: F401
+from typing import TYPE_CHECKING, Dict, List, Set
 
 from swarm.agents.base import ActionType, Role
 from swarm.governance.levers import GovernanceLever, LeverEffect
