@@ -163,6 +163,7 @@ nav:
     - "The Purity Paradox": blog/purity-paradox.md
     - "When Agent Ecosystems Collapse": blog/ecosystem-collapse.md
     - "Five Sweeps, One Red Team, and the Limits of Parametric Governance": blog/research-swarm-sweep-findings.md
+    - "We Modeled a Live AI Research Platform": blog/we-modeled-a-live-ai-research-platform.md
 
 extra:
   social:
