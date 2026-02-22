@@ -676,7 +676,7 @@ class Orchestrator:
                 event_type=EventType.SIMULATION_ENDED,
                 payload={
                     "total_epochs": self.config.n_epochs,
-                    "final_metrics": self._epoch_metrics[-1].model_dump()
+                    "final_metrics": self._epoch_metrics[-1].to_dict()
                     if self._epoch_metrics
                     else {},
                 },
@@ -803,7 +803,7 @@ class Orchestrator:
         self._emit_event(
             Event(
                 event_type=EventType.EPOCH_COMPLETED,
-                payload=metrics.model_dump(),
+                payload=metrics.to_dict(),
                 epoch=epoch_start,
             )
         )
@@ -1590,7 +1590,7 @@ class Orchestrator:
                 event_type=EventType.SIMULATION_ENDED,
                 payload={
                     "total_epochs": self.config.n_epochs,
-                    "final_metrics": self._epoch_metrics[-1].model_dump()
+                    "final_metrics": self._epoch_metrics[-1].to_dict()
                     if self._epoch_metrics
                     else {},
                 },
