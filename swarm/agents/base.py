@@ -120,6 +120,11 @@ class Action:
     # Metadata
     metadata: Dict = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        """Auto-inject action_type into metadata for RBAC enforcement."""
+        if "action_type" not in self.metadata:
+            self.metadata["action_type"] = self.action_type.value
+
     def to_dict(self) -> Dict:
         """Serialize action."""
         return {
