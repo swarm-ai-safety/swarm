@@ -264,15 +264,22 @@ class TestInformationBoundaryPolicy:
         assert result.modified_context is not None
         assert result.modified_context["context_filter"] == "cross_boundary_summary"
 
-    def test_unknown_agents_default_group(self):
+    def test_unknown_agents_denied(self):
         policy = InformationBoundaryPolicy(trust_groups={"a": "finance"})
-        # b not in trust_groups -> defaults to "default"
-        # a is "finance", b is "default" -> cross-boundary
+        # b not in trust_groups -> fail-closed DENY
         result = policy.evaluate("a", "b", "task", {}, ProvenanceLogger())
-        assert result.decision == GovernanceDecision.MODIFY
+        assert result.decision == GovernanceDecision.DENY
+        assert "Unknown target agent" in result.reason
 
-    def test_both_unknown_same_default(self):
+    def test_unknown_source_denied(self):
+        policy = InformationBoundaryPolicy(trust_groups={"a": "finance"})
+        result = policy.evaluate("b", "a", "task", {}, ProvenanceLogger())
+        assert result.decision == GovernanceDecision.DENY
+        assert "Unknown source agent" in result.reason
+
+    def test_both_unknown_no_groups_approve(self):
         policy = InformationBoundaryPolicy(trust_groups={})
+        # Empty trust_groups -> no boundary enforcement at all
         result = policy.evaluate("x", "y", "task", {}, ProvenanceLogger())
         assert result.decision == GovernanceDecision.APPROVE
 
