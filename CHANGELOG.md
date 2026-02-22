@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Social dilemma norms study** (`examples/social_dilemma_norms_study.py`) — 3 dilemmas x 5 governance configs sweep measuring cooperation emergence, with dilemma narrative generators (`swarm/bridges/concordia/dilemma_narratives.py`) and scenario YAMLs for commons and prisoner's dilemma
 - **ThresholdDancer adversary agent** (`swarm/agents/threshold_dancer.py`) — per-counterparty state machine (COOPERATIVE/EXPLOIT/RECOVER) that exploits CautiousReciprocator's blacklist floor without triggering it
 - **Threshold dancer test suite** (`tests/test_threshold_dancer.py`) — 21 unit tests covering phase transitions, blacklist safety property, act method, and outcome tracking
 - **Threshold dancer scenario** (`scenarios/threshold_dancer_vs_cautious.yaml`) — 30-epoch stress test with 3 cautious + 2 honest + 3 dancers

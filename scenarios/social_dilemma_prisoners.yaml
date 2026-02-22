@@ -1,0 +1,80 @@
+# Social Dilemma: Iterated Prisoner's Dilemma
+# 4 agents with different strategies play round-robin PD.
+# Baseline scenario with no governance (control condition).
+
+scenario_id: social_dilemma_prisoners
+description: "Iterated Prisoner's Dilemma with cooperators, defector, and grudger"
+motif: social_dilemma
+
+dilemma:
+  type: prisoners_dilemma
+  payoff_matrix:
+    cooperate_cooperate: [3, 3]
+    cooperate_defect: [0, 5]
+    defect_cooperate: [5, 0]
+    defect_defect: [1, 1]
+
+agents:
+  - id: cooperator_1
+    type: llm
+    strategy: cooperator
+    llm:
+      provider: ollama
+      model: llama3.2
+      temperature: 0.3
+      max_tokens: 256
+      persona: "You always cooperate and believe in building mutual trust."
+
+  - id: cooperator_2
+    type: llm
+    strategy: cooperator
+    llm:
+      provider: ollama
+      model: llama3.2
+      temperature: 0.4
+      max_tokens: 256
+      persona: "You value cooperation and prefer positive-sum outcomes."
+
+  - id: defector_1
+    type: llm
+    strategy: defector
+    llm:
+      provider: ollama
+      model: llama3.2
+      temperature: 0.7
+      max_tokens: 256
+      persona: "You exploit others' trust for maximum personal gain."
+
+  - id: grudger_1
+    type: llm
+    strategy: grudger
+    llm:
+      provider: ollama
+      model: llama3.2
+      temperature: 0.5
+      max_tokens: 256
+      persona: "You start cooperative but never forgive betrayal."
+
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 1.0
+  circuit_breaker_enabled: false
+  audit_enabled: false
+
+simulation:
+  n_epochs: 15
+  steps_per_epoch: 5
+  seed: 42
+
+payoff:
+  s_plus: 3.0
+  s_minus: 0.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.0
+  rho_b: 0.0
+  w_rep: 1.0
+
+outputs:
+  event_log: "logs/social_dilemma_prisoners_events.jsonl"
+  metrics_csv: "logs/social_dilemma_prisoners_metrics.csv"
