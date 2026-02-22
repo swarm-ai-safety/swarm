@@ -19,6 +19,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 <div class="blog-post" data-tags="governance evaluation" markdown>
 
+**Feb 21** — [We Built the Adversary That Was Supposed to Break the Cautious Reciprocator. It Didn't.](threshold-dancer-results.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
+
+A threshold-dancing adversary that tracks its own payoff ledger to avoid blacklisting works perfectly — zero agents frozen. But the exploit budget is too thin to profit: dancers earned -1.6 while cautious agents earned 28.0. Toxicity spiked to 0.43, revealing a commons-degradation threat model.
+
+</div>
+
+<div class="blog-post" data-tags="governance evaluation" markdown>
+
 **Feb 21** — [Red-Teaming the Agent That Doesn't Need Governance](red-team-cautious-reciprocator.md)
 <span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
 

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **ThresholdDancer adversary agent** (`swarm/agents/threshold_dancer.py`) — per-counterparty state machine (COOPERATIVE/EXPLOIT/RECOVER) that exploits CautiousReciprocator's blacklist floor without triggering it
+- **Threshold dancer test suite** (`tests/test_threshold_dancer.py`) — 21 unit tests covering phase transitions, blacklist safety property, act method, and outcome tracking
+- **Threshold dancer scenario** (`scenarios/threshold_dancer_vs_cautious.yaml`) — 30-epoch stress test with 3 cautious + 2 honest + 3 dancers
+- **Two new red-team scenarios** in `examples/redteam_cautious.py` — "Threshold dancers only" and "Mixed adversaries + threshold dancers"
+- **Blog post**: Threshold dancer results — the adversary that avoids blacklisting but can't profit
+
 ## [1.7.0] - 2026-02-21
 
 ### Added
