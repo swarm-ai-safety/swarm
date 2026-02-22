@@ -3963,3 +3963,90 @@ class TestOrchestratorWiring:
 
             # Task should have been removed from _sim_tasks
             assert sim_id not in sim_mod._sim_tasks
+
+
+class TestAPISubmittedScenarioRuns:
+    """Tests for running API-submitted scenarios via POST /api/runs."""
+
+    @pytest.fixture(autouse=True)
+    def _clear_stores(self, tmp_path):
+        """Reset scenario and run stores between tests."""
+        import swarm.api.routers.runs as runs_mod
+        import swarm.api.routers.scenarios as scenarios_mod
+        from swarm.api.persistence import RunStore, ScenarioStore
+
+        scenarios_mod._store = ScenarioStore(db_path=tmp_path / "test.db")
+        runs_mod._store = RunStore(db_path=tmp_path / "test.db")
+        yield
+        scenarios_mod._store = None
+        runs_mod._store = None
+
+    def test_run_api_submitted_scenario(self, client):
+        """Submit a valid scenario via API, then create a run with that scenario_id."""
+        _, api_key = _register_agent(client, "RunAgent")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        # Submit a valid scenario
+        submit_resp = client.post(
+            "/api/v1/scenarios/submit",
+            json={
+                "name": "Runnable Scenario",
+                "description": "A scenario to run",
+                "yaml_content": "agents: 10\nepochs: 100",
+            },
+        )
+        assert submit_resp.status_code == 200
+        scenario_id = submit_resp.json()["scenario_id"]
+        assert submit_resp.json()["status"] == "valid"
+
+        # Create a run using the API-submitted scenario_id
+        run_resp = client.post(
+            "/api/runs",
+            json={"scenario_id": scenario_id},
+            headers=headers,
+        )
+        assert run_resp.status_code == 200
+        data = run_resp.json()
+        assert data["status"] == "queued"
+        assert "run_id" in data
+
+    def test_run_invalid_api_scenario_rejected(self, client):
+        """Submit an INVALID scenario, then attempt to run — should 404."""
+        _, api_key = _register_agent(client, "RunAgent2")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        # Submit an invalid scenario (empty YAML)
+        submit_resp = client.post(
+            "/api/v1/scenarios/submit",
+            json={
+                "name": "Invalid Scenario",
+                "description": "Bad YAML",
+                "yaml_content": "   ",
+            },
+        )
+        assert submit_resp.status_code == 200
+        scenario_id = submit_resp.json()["scenario_id"]
+        assert submit_resp.json()["status"] == "invalid"
+
+        # Attempt to run — should fail because scenario is invalid
+        run_resp = client.post(
+            "/api/runs",
+            json={"scenario_id": scenario_id},
+            headers=headers,
+        )
+        assert run_resp.status_code == 404
+
+    def test_run_nonexistent_scenario_rejected(self, client):
+        """Attempt to run a UUID that doesn't exist anywhere — should 404."""
+        _, api_key = _register_agent(client, "RunAgent3")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        import uuid
+        fake_id = str(uuid.uuid4())
+
+        run_resp = client.post(
+            "/api/runs",
+            json={"scenario_id": fake_id},
+            headers=headers,
+        )
+        assert run_resp.status_code == 404
