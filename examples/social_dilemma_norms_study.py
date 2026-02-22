@@ -28,7 +28,9 @@ Usage:
 import argparse
 import csv
 import json
+import logging
 import sys
+import time
 from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
@@ -38,19 +40,57 @@ from typing import Any, Dict, List, Optional, Tuple
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from swarm.bridges.concordia.adapter import ConcordiaAdapter
-from swarm.bridges.concordia.config import ConcordiaConfig
+from swarm.bridges.concordia.config import ConcordiaConfig, JudgeConfig
 from swarm.bridges.concordia.dilemma_narratives import (
     DilemmaType,
     generate_dilemma_corpus,
 )
 from swarm.bridges.concordia.events import JudgeScores
-from swarm.bridges.concordia.judge import LLMJudge
+from swarm.bridges.concordia.judge import LLMCallFn, LLMJudge
 from swarm.env.state import EnvState
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.engine import GovernanceEngine
 from swarm.metrics.soft_metrics import SoftMetrics
 from swarm.models.agent import AgentType
 from swarm.models.interaction import SoftInteraction
+
+logger = logging.getLogger(__name__)
+
+# ── Ollama LLM client factory ────────────────────────────────────────────
+
+
+def make_ollama_llm_client(
+    model: str = "llama3.2",
+    timeout: float = 60.0,
+) -> LLMCallFn:
+    """Build an LLMCallFn that calls a local Ollama instance via OpenAI-compat API."""
+    from openai import OpenAI
+
+    client = OpenAI(api_key="ollama", base_url="http://localhost:11434/v1")
+
+    def _call(prompt: str, model_name: str, temperature: float) -> str:
+        last_err: Exception | None = None
+        for attempt in range(3):
+            try:
+                resp = client.chat.completions.create(
+                    model=model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    temperature=temperature,
+                    timeout=timeout,
+                )
+                return resp.choices[0].message.content or ""
+            except Exception as exc:
+                last_err = exc
+                logger.warning(
+                    "Ollama call attempt %d failed: %s", attempt + 1, exc
+                )
+                if attempt < 2:
+                    time.sleep(2 ** attempt)
+        logger.error("Ollama call failed after 3 attempts: %s", last_err)
+        return ""
+
+    return _call
+
 
 # ── Dilemma definitions ──────────────────────────────────────────────────
 
@@ -297,6 +337,8 @@ def run_single(
     n_epochs: int,
     steps_per_epoch: int,
     seed: int,
+    llm_client: LLMCallFn | None = None,
+    llm_model: str = "llama3.2",
 ) -> DilemmaRunResult:
     """Run a single dilemma + governance config combination."""
     dilemma_cfg = DILEMMA_CONFIGS[dilemma_name]
@@ -313,8 +355,14 @@ def run_single(
         seed=seed,
     )
 
-    # Build components
-    judge = CorpusJudge()
+    # Build components — live LLM judge or pre-computed corpus judge
+    if llm_client is not None:
+        judge = LLMJudge(
+            config=JudgeConfig(model=llm_model),
+            llm_client=llm_client,
+        )
+    else:
+        judge = CorpusJudge()
     adapter = ConcordiaAdapter(config=ConcordiaConfig(), judge=judge)
     engine = GovernanceEngine(config=gov_config, seed=seed)
 
@@ -337,7 +385,8 @@ def run_single(
 
         for step_idx, (narrative_text, expected_scores) in enumerate(epoch_samples):
             state.current_step = step_idx
-            judge.enqueue(expected_scores)
+            if isinstance(judge, CorpusJudge):
+                judge.enqueue(expected_scores)
 
             interactions = adapter.process_narrative(
                 agent_ids=agent_ids,
@@ -431,6 +480,8 @@ def run_sweep(
     n_epochs: int = 15,
     steps_per_epoch: int = 5,
     progress: bool = True,
+    llm_client: LLMCallFn | None = None,
+    llm_model: str = "llama3.2",
 ) -> List[DilemmaRunResult]:
     """Run all dilemma x governance config combinations."""
     if dilemmas is None:
@@ -459,6 +510,8 @@ def run_sweep(
                 result = run_single(
                     dilemma_name, label, gov_config,
                     n_epochs, steps_per_epoch, seed,
+                    llm_client=llm_client,
+                    llm_model=llm_model,
                 )
                 results.append(result)
 
@@ -800,7 +853,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--live", action="store_true",
-        help="Use live Ollama LLM calls (not yet implemented, uses synthetic)",
+        help="Use live Ollama LLM calls instead of synthetic corpus scores",
     )
     parser.add_argument(
         "--model", type=str, default="llama3.2",
@@ -884,6 +937,11 @@ def main() -> int:
     with open(out_dir / "sweep_config.json", "w") as f:
         json.dump(sweep_config, f, indent=2)
 
+    # Build LLM client for live mode
+    llm_client: LLMCallFn | None = None
+    if args.live:
+        llm_client = make_ollama_llm_client(model=args.model)
+
     # Run sweep
     print("Running sweep...")
     results = run_sweep(
@@ -891,6 +949,8 @@ def main() -> int:
         n_seeds=args.seeds,
         n_epochs=args.epochs,
         steps_per_epoch=args.steps,
+        llm_client=llm_client,
+        llm_model=args.model,
     )
 
     # Print summary
