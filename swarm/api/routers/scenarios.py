@@ -61,7 +61,7 @@ async def submit_scenario(submission: ScenarioSubmission) -> ScenarioResponse:
         resource_estimate=resource_estimate,
     )
 
-    _get_store().save(scenario)
+    _get_store().save(scenario, yaml_content=submission.yaml_content)
     return scenario
 
 

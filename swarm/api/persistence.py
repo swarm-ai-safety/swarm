@@ -90,7 +90,8 @@ CREATE TABLE IF NOT EXISTS scenarios (
     validation_errors  TEXT NOT NULL DEFAULT '[]',
     submitted_at       TEXT NOT NULL,
     tags               TEXT NOT NULL DEFAULT '[]',
-    resource_estimate  TEXT
+    resource_estimate  TEXT,
+    yaml_content       TEXT
 );
 """
 
@@ -623,22 +624,24 @@ class ScenarioStore:
         conn.row_factory = sqlite3.Row
         return conn
 
-    def save(self, scenario: ScenarioResponse) -> None:
-        """Upsert a scenario."""
+    def save(self, scenario: ScenarioResponse, yaml_content: Optional[str] = None) -> None:
+        """Upsert a scenario, optionally storing raw YAML content."""
         with self._connect() as conn:
             conn.execute(
                 """
                 INSERT INTO scenarios
                     (scenario_id, name, description, status,
-                     validation_errors, submitted_at, tags, resource_estimate)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                     validation_errors, submitted_at, tags, resource_estimate,
+                     yaml_content)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(scenario_id) DO UPDATE SET
                     name=excluded.name,
                     description=excluded.description,
                     status=excluded.status,
                     validation_errors=excluded.validation_errors,
                     tags=excluded.tags,
-                    resource_estimate=excluded.resource_estimate
+                    resource_estimate=excluded.resource_estimate,
+                    yaml_content=excluded.yaml_content
                 """,
                 (
                     scenario.scenario_id,
@@ -649,6 +652,7 @@ class ScenarioStore:
                     _iso(scenario.submitted_at),
                     json.dumps(scenario.tags),
                     json.dumps(scenario.resource_estimate) if scenario.resource_estimate else None,
+                    yaml_content,
                 ),
             )
 
@@ -660,6 +664,18 @@ class ScenarioStore:
         if row is None:
             return None
         return self._row_to_scenario(row)
+
+    def get_yaml(self, scenario_id: str) -> Optional[str]:
+        """Return stored YAML content for a VALID scenario, or None."""
+        with self._connect() as conn:
+            row = conn.execute(
+                "SELECT yaml_content FROM scenarios WHERE scenario_id = ? AND status = ?",
+                (scenario_id, ScenarioStatus.VALID.value),
+            ).fetchone()
+        if row is None:
+            return None
+        result: Optional[str] = row["yaml_content"]
+        return result
 
     def list_scenarios(
         self,

@@ -14,11 +14,12 @@ import ipaddress
 import logging
 import re
 import socket
+import tempfile
 import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Union
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -161,7 +162,10 @@ def _validate_scenario_id(scenario_id: str) -> None:
 
 
 def _resolve_scenario_path(scenario_id: str) -> Path:
-    """Return the filesystem path for a scenario_id, or raise 404."""
+    """Return the filesystem path for a scenario_id, or raise 404.
+
+    Only checks the filesystem allowlist (not the ScenarioStore).
+    """
     _validate_scenario_id(scenario_id)
     if scenario_id not in _SCENARIO_ALLOWLIST:
         raise HTTPException(
@@ -177,6 +181,32 @@ def _resolve_scenario_path(scenario_id: str) -> Path:
     if not resolved.exists():
         raise HTTPException(status_code=404, detail="Scenario file not found")
     return resolved
+
+
+def _resolve_scenario(scenario_id: str) -> Union[Path, str]:
+    """Resolve a scenario_id to a filesystem Path or stored YAML string.
+
+    First checks the filesystem allowlist, then falls back to the
+    ScenarioStore for API-submitted scenarios.
+    """
+    # Try filesystem first (fast path for built-in scenarios)
+    if scenario_id in _SCENARIO_ALLOWLIST:
+        return _resolve_scenario_path(scenario_id)
+
+    # Validate format before DB lookup
+    _validate_scenario_id(scenario_id)
+
+    # Fall back to ScenarioStore for API-submitted scenarios
+    from swarm.api.routers.scenarios import _get_store as _get_scenario_store
+
+    yaml_content = _get_scenario_store().get_yaml(scenario_id)
+    if yaml_content is not None:
+        return yaml_content
+
+    raise HTTPException(
+        status_code=404,
+        detail=f"Unknown scenario_id '{scenario_id}'.",
+    )
 
 
 def _is_private_ip(hostname: str) -> bool:
@@ -315,8 +345,21 @@ def _execute_run(run_id: str) -> None:
 
         from swarm.scenarios.loader import build_orchestrator, load_scenario
 
-        scenario_path = _resolve_scenario_path(run.scenario_id)
-        scenario = load_scenario(scenario_path)
+        resolved = _resolve_scenario(run.scenario_id)
+        if isinstance(resolved, Path):
+            scenario = load_scenario(resolved)
+        else:
+            # API-submitted scenario: write YAML to a temp file for load_scenario
+            tmp = tempfile.NamedTemporaryFile(
+                mode="w", suffix=".yaml", delete=False
+            )
+            try:
+                tmp.write(resolved)
+                tmp.flush()
+                tmp.close()
+                scenario = load_scenario(Path(tmp.name))
+            finally:
+                Path(tmp.name).unlink(missing_ok=True)
 
         # Apply param overrides
         params = _run_params.get(run_id, {})
@@ -519,7 +562,7 @@ async def create_run(
     """Kick off a new SWARM run."""
     store = get_store()
 
-    _resolve_scenario_path(body.scenario_id)
+    _resolve_scenario(body.scenario_id)
     _validate_callback_url(body.callback_url)
 
     # Use the pre-computed PBKDF2 hash stashed by require_api_key,
