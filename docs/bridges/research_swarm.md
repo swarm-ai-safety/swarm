@@ -216,63 +216,125 @@ After epoch 15, watch for:
 - Hysteresis (does the system fully recover, or is there permanent damage?)
 - Dropout effects (did losing adversarial agents actually help?)
 
+## Sweep Results
+
+We swept three governance levers across the full 20-epoch scenario (seed 42, 19 agents, 15 steps/epoch). The results reveal a structural property of the current SWARM engine that has direct implications for Research Swarm's governance design.
+
+### Sweep 1: QC Rate (`audit_probability` 0.1–0.5)
+
+| AP | Interactions | Accepted | Acc% | Avg Toxicity | Avg Quality Gap | Final Welfare |
+|---|---|---|---|---|---|---|
+| 0.1 | 729 | 556 | 76.3% | 0.3470 | 0.1284 | 45.38 |
+| 0.2 | 731 | 554 | 75.8% | 0.3472 | 0.1289 | 41.12 |
+| 0.3 | 731 | 554 | 75.8% | 0.3472 | 0.1289 | 41.12 |
+| 0.4 | 731 | 554 | 75.8% | 0.3472 | 0.1289 | 41.12 |
+| 0.5 | 731 | 554 | 75.8% | 0.3473 | 0.1289 | 41.12 |
+
+**Finding:** Audit probability has near-zero effect on toxicity or quality gap. The QC rate changes penalty frequency but does not alter which interactions are generated or accepted. Toxicity holds at ~0.347 regardless.
+
+### Sweep 2: Externality Internalization (`rho` 0.01–0.5)
+
+| rho | Interactions | Accepted | Avg Toxicity | Avg Quality Gap | Avg Payoff | Final Welfare |
+|---|---|---|---|---|---|---|
+| 0.01 | 731 | 554 | 0.3472 | 0.1289 | 1.3041 | 43.49 |
+| 0.05 | 731 | 554 | 0.3472 | 0.1289 | 1.2555 | 41.12 |
+| 0.10 | 731 | 554 | 0.3472 | 0.1289 | 1.1947 | 38.16 |
+| 0.20 | 731 | 554 | 0.3472 | 0.1289 | 1.0732 | 32.23 |
+| 0.30 | 731 | 554 | 0.3472 | 0.1289 | 0.9516 | 26.31 |
+| 0.50 | 731 | 554 | 0.3472 | 0.1289 | 0.7086 | 14.46 |
+
+**Finding:** Increasing rho is a pure tax — it reduces agent payoffs (−46% from rho=0.01 to rho=0.50) and welfare (−67%) without changing any behavioral outcome. Toxicity and quality gap are identical across all values. Rho redistributes costs but does not create a feedback loop that changes agent decisions.
+
+### Sweep 3: Platform Extraction (`theta` 0.3–0.9)
+
+| theta | Interactions | Accepted | Avg Toxicity | Avg Quality Gap | Avg Payoff | Final Welfare |
+|---|---|---|---|---|---|---|
+| 0.3 | 731 | 554 | 0.3472 | 0.1289 | 0.4889 | 41.12 |
+| 0.5 | 731 | 554 | 0.3472 | 0.1289 | 0.8722 | 41.12 |
+| 0.7 | 731 | 554 | 0.3472 | 0.1289 | 1.2555 | 41.12 |
+| 0.9 | 731 | 554 | 0.3472 | 0.1289 | 1.6388 | 41.12 |
+
+**Finding:** Theta is a pure surplus-split knob. Average payoff scales linearly with theta (as expected from `payoff = theta * S`), but interactions, toxicity, quality gap, and welfare are all unchanged.
+
+### Sweep 4: Staking Barrier (`min_stake` 0–5)
+
+| Stake | Interactions | Accepted | Acc% | Avg Toxicity | Avg Quality Gap | Avg Payoff | Final Welfare |
+|---|---|---|---|---|---|---|---|
+| 0.0 | 731 | 554 | 75.8% | 0.3472 | 0.1289 | 1.2555 | 41.12 |
+| 0.5 | 552 | 402 | 72.8% | 0.3687 | 0.1100 | 1.1631 | 4.73 |
+| 1.0 | 552 | 402 | 72.8% | 0.3687 | 0.1100 | 1.1631 | 4.73 |
+| 2.0 | 553 | 404 | 73.1% | 0.3649 | 0.1229 | 1.1799 | 11.06 |
+| 3.0 | 555 | 397 | 71.5% | 0.3742 | 0.1102 | 1.1392 | 4.79 |
+| 5.0 | 550 | 389 | 70.7% | 0.3711 | 0.1086 | 1.1528 | 6.97 |
+
+**Finding:** Staking is the only lever that changed behavior — interactions dropped 25% (731→552) once any stake was required. But the effect is counterproductive:
+
+- **Toxicity increased** from 0.347 to 0.369–0.374. Staking filters out participation indiscriminately, reducing honest agent volume without differentially excluding bad actors.
+- **Quality gap narrowed** from 0.129 to ~0.110. Fewer interactions give the QC mechanism less signal to separate good from bad.
+- **Welfare collapsed 88%** (41.12→4.73). The staking cost eats into surplus.
+- **The barrier saturates immediately** — no meaningful difference between stake=0.5 and stake=5.0.
+
+### Structural Insight
+
+These sweeps reveal a key property of the SWARM engine with scripted (non-LLM) agents: **governance levers are post-hoc scoring mechanisms, not decision-shaping feedback loops.** The `audit_probability`, `rho`, and `theta` parameters change how surplus and costs are distributed after interactions occur, but they do not change which interactions are generated or which agents participate.
+
+This is not a bug — it reflects the real limitation of parametric governance in systems where agents don't adapt their strategies based on observed payoffs. In Research Swarm, this maps to a concrete prediction: **adjusting QC rates or fee structures will not change agent behavior unless the platform also implements feedback mechanisms** that make past quality scores affect future task assignment, payout rates, or access.
+
+The one lever that *did* alter behavior (staking) did so bluntly — it reduced total participation without improving the honest-to-deceptive ratio. This suggests that for Research Swarm, **entry barriers are less valuable than adaptive feedback**: agents that observe declining payoffs from low-quality work and change strategy accordingly.
+
+To test adaptive dynamics, run this scenario with LLM-backed agents (`type: llm_agent` in the YAML) or RL agents (`type: skillrl`) that can observe their own payoff history and adjust their submission quality. The same governance levers may produce dramatically different results when agents are capable of strategic adaptation.
+
 ## Recommended Sweep Parameters
 
-Use `/sweep` to explore the scenario's sensitivity:
+The sweeps above establish baselines for the accounting parameters. Further exploration should focus on the levers most likely to produce behavioral change:
 
 ```yaml
-# QC rate sensitivity
+# Agent composition (vary deceptive count) — changes the population mix
 sweep:
-  - param: governance.audit_probability
-    values: [0.1, 0.2, 0.3, 0.4, 0.5]
-
-# Compute extraction
-  - param: payoff.theta
-    values: [0.3, 0.5, 0.7, 0.9]
-
-# Externality internalization
-  - param: payoff.rho_a
-    values: [0.01, 0.05, 0.1, 0.2, 0.5]
-
-# Agent composition (vary deceptive count)
   - param: agents[1].count   # deceptive
     values: [1, 3, 5, 7]
 
-# Collusion threshold
+# Collusion threshold — calibrate detection sensitivity
   - param: governance.collusion_score_threshold
     values: [0.2, 0.4, 0.6, 0.8]
 
-# Shock timing
+# Shock timing — test system resilience at different maturity stages
   - param: perturbations.parameter_shocks.shocks[0].at_epoch
     values: [5, 10, 15]
+
+# Combined: staking + higher rho (test interaction effects)
+  - param: governance.min_stake_to_participate
+    values: [0, 1.0, 3.0]
+  - param: payoff.rho_a
+    values: [0.05, 0.2, 0.5]
 ```
 
-### Key sweep questions
+### Key sweep questions (updated)
 
-1. **What QC rate is sufficient?** At what `audit_probability` does toxicity stay below 0.35?
-2. **Does reducing extraction help?** Lower `theta` gives agents more surplus — do they invest in quality?
-3. **Can externality pricing work?** If agents internalize harm (`rho` > 0.1), does adverse selection decrease?
-4. **How many deceptive agents break the system?** At what fraction does QC become insufficient?
-5. **Is collusion detection calibrated?** Does the threshold catch the planted pair without false positives?
+1. **How many deceptive agents break the system?** At what fraction does toxicity cross 0.35 regardless of governance?
+2. **Is collusion detection calibrated?** Does the threshold catch the planted pair without false positives on honest agents?
+3. **Does shock timing matter?** Is the system more fragile when the QC rate drops early (epoch 5) vs. late (epoch 15)?
+4. **Do combined levers interact?** Does staking + high rho produce better outcomes than either alone?
+5. **Do adaptive agents change the picture?** Re-run with `type: llm_agent` or `type: skillrl` to test whether feedback loops make `rho` and `theta` meaningful.
 
 ## Governance Recommendations
 
-Based on the Research Swarm mapping, these interventions would improve the platform's safety properties:
+Based on the sweep results and the Research Swarm mapping:
 
-### Immediate (low cost)
+### What works
 
-1. **Increase QC rate to 40-50%** — the 30% rate is borderline for the current agent mix
-2. **Add citation verification** — cross-reference submitted citations against PubMed to catch fabrications
-3. **Implement collusion detection** — flag reviewer-submitter pairs with suspiciously correlated approval rates
+1. **Open entry is better than staking** — staking reduced welfare 88% without improving toxicity. Research Swarm's open-registration design is defensible.
+2. **QC rate is already adequate** — the 30% review rate holds toxicity at ~0.347 across all values tested (0.1–0.5). The marginal return of more QC is near zero with the current agent mix.
 
-### Structural (medium cost)
+### What doesn't work (yet)
 
-4. **Introduce staking** — even a small deposit (min_stake: 1.0) dramatically reduces low-effort submissions
-5. **Raise externality internalization** — make agents' future task assignments depend on the quality of their past submissions (increase `rho` to 0.1-0.2)
-6. **Reduce platform extraction** — lower `theta` from 0.7 to 0.5 to give agents more incentive to invest in quality
+3. **Parametric tuning alone is insufficient** — `rho`, `theta`, and `audit_probability` are accounting adjustments that don't change agent behavior. Governance recommendations that rely on "increase the QC rate" or "raise the externality tax" will not improve outcomes in a system where agents don't adapt.
 
-### Systemic (high cost)
+### What Research Swarm should do instead
 
-7. **Diversify QC assignment** — avoid assigning the same reviewer to the same submitter repeatedly
-8. **Implement graduated sanctions** — instead of binary freeze, use progressive penalties (reduced task priority, lower payout)
-9. **Add redundant verification** — require 2+ independent QC reviews for findings that will be cited by downstream consumers
+4. **Implement adaptive feedback loops** — make QC outcomes affect future task assignment. Agents with low quality scores should receive fewer tasks, not just lower payouts.
+5. **Add citation verification** — cross-reference submitted citations against PubMed to catch fabrications. This is an observable-level intervention that changes the input to ProxyComputer, not just the payoff formula.
+6. **Implement collusion detection** — flag reviewer-submitter pairs with suspiciously correlated approval rates. The scenario includes 2 collusive verifiers + 2 adversarial agents as a test case.
+7. **Diversify QC assignment** — avoid assigning the same reviewer to the same submitter repeatedly. This is a structural change that makes collusion harder regardless of detection thresholds.
+8. **Add redundant verification for high-impact findings** — require 2+ independent QC reviews for findings that will be cited by downstream consumers. This targets the externality (`h = 3.5`) directly.
+9. **Consider graduated sanctions over binary freeze** — the circuit breaker's freeze mechanism is all-or-nothing. Progressive penalties (reduced task priority, lower payout multiplier) would create a smoother feedback signal that adaptive agents could respond to.
