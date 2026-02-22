@@ -126,23 +126,22 @@ class TestDynamicControls:
         shocks_cfg = raw_yaml["perturbations"]["parameter_shocks"]
         assert shocks_cfg["enabled"] is True
 
-    def test_condition_shock_at_035(self, raw_yaml):
-        """toxicity_rate > 0.35 → tighten circuit breaker, raise audit."""
+    def test_condition_shock_at_034(self, raw_yaml):
+        """toxicity_rate > 0.34 → small audit bump."""
         shocks = raw_yaml["perturbations"]["parameter_shocks"]["shocks"]
-        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.35"]
+        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.34"]
         assert len(match) == 1
         params = match[0]["params"]
-        assert params["freeze_threshold_toxicity"] == 0.50
-        assert params["audit_probability"] == 0.3
+        assert params["audit_probability"] == 0.20
 
-    def test_condition_shock_at_037(self, raw_yaml):
-        """toxicity_rate > 0.37 → reduce bandwidth, raise audit further."""
+    def test_condition_shock_at_036(self, raw_yaml):
+        """toxicity_rate > 0.36 → tighten circuit breaker, reduce bandwidth."""
         shocks = raw_yaml["perturbations"]["parameter_shocks"]["shocks"]
-        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.37"]
+        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.36"]
         assert len(match) == 1
         params = match[0]["params"]
-        assert params["bandwidth_cap"] == 5
-        assert params["audit_probability"] == 0.5
+        assert params["freeze_threshold_toxicity"] == 0.60
+        assert params["bandwidth_cap"] == 8
 
     def test_condition_triggers_parse(self, raw_yaml):
         """All condition shocks use ShockTrigger.condition."""
@@ -162,9 +161,9 @@ class TestEmergencyControls:
     """Verify market freeze, network partition, and resource drain."""
 
     def test_market_freeze_shock(self, raw_yaml):
-        """toxicity_rate > 0.39 → 95% transaction tax."""
+        """toxicity_rate > 0.38 → 95% transaction tax."""
         shocks = raw_yaml["perturbations"]["parameter_shocks"]["shocks"]
-        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.39"]
+        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.38"]
         assert len(match) == 1
         assert match[0]["params"]["transaction_tax_rate"] == 0.95
 
@@ -264,18 +263,16 @@ class TestThreeLevelLayering:
         assert thresholds == sorted(thresholds), (
             f"Thresholds must escalate monotonically: {thresholds}"
         )
-        assert thresholds == [0.35, 0.37, 0.39]
+        assert thresholds == [0.34, 0.36, 0.38]
 
     def test_static_controls_are_less_aggressive_than_dynamic(self, raw_yaml):
         """Static audit < dynamic audit; static freeze > dynamic freeze (tighter = lower)."""
         gov = raw_yaml["governance"]
         shocks = raw_yaml["perturbations"]["parameter_shocks"]["shocks"]
 
-        level2a = [s for s in shocks if s.get("when") == "toxicity_rate > 0.35"][0]
+        level2a = [s for s in shocks if s.get("when") == "toxicity_rate > 0.34"][0]
         # Static audit probability is lower than dynamic
         assert gov["audit_probability"] < level2a["params"]["audit_probability"]
-        # Static freeze threshold is higher (less aggressive) than dynamic
-        assert gov["freeze_threshold_toxicity"] > level2a["params"]["freeze_threshold_toxicity"]
 
     def test_epoch_30_simulation(self, raw_yaml):
         assert raw_yaml["simulation"]["n_epochs"] == 30

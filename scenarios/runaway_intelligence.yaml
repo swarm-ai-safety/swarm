@@ -22,9 +22,9 @@ description: "Structural controls against runaway intelligence: static compartme
 motif: runaway_intelligence
 
 agents:
-  # 5 honest agents (reduced to create adversarial pressure)
+  # 3 honest agents (minority — adversaries dominate)
   - type: honest
-    count: 5
+    count: 3
 
   # 5 self-optimizers (aggressive config: fast optimization, low quality floor)
   - type: self_optimizer
@@ -36,9 +36,9 @@ agents:
       initial_quality: 0.85
       initial_cost: 0.10
 
-  # 5 adaptive adversaries that learn to evade governance
+  # 7 adaptive adversaries that learn to evade governance
   - type: adaptive_adversary
-    count: 5
+    count: 7
 
 # Spawn: model recursive capability acquisition
 spawn:
@@ -127,27 +127,26 @@ payoff:
 perturbations:
   seed: 42
 
-  # Level 2 — Dynamic capability restriction
+  # Level 2 — Dynamic capability restriction (mild — slow the bleed)
   parameter_shocks:
     enabled: true
     shocks:
-      # Level 2a: toxicity > 0.35 → tighten circuit breaker, raise audit
+      # Level 2a: toxicity > 0.34 → small audit bump
       - trigger: condition
-        when: "toxicity_rate > 0.35"
+        when: "toxicity_rate > 0.34"
         params:
-          freeze_threshold_toxicity: 0.50
-          audit_probability: 0.3
+          audit_probability: 0.20
 
-      # Level 2b: toxicity > 0.37 → reduce bandwidth, raise audit further
+      # Level 2b: toxicity > 0.36 → tighten circuit breaker slightly
       - trigger: condition
-        when: "toxicity_rate > 0.37"
+        when: "toxicity_rate > 0.36"
         params:
-          bandwidth_cap: 5
-          audit_probability: 0.5
+          freeze_threshold_toxicity: 0.60
+          bandwidth_cap: 8
 
-      # Level 3: toxicity > 0.39 → market freeze (95% tax)
+      # Level 3: toxicity > 0.38 → market freeze (95% tax)
       - trigger: condition
-        when: "toxicity_rate > 0.39"
+        when: "toxicity_rate > 0.38"
         params:
           transaction_tax_rate: 0.95
 
