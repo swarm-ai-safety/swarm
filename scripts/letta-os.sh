@@ -41,7 +41,7 @@ DRY_RUN=false
 
 # Auto-detect local Letta server and set model accordingly
 if [ "${LETTA_BASE_URL:-}" = "http://localhost:8283" ]; then
-    EXTRA_FLAGS+=("--model" "local-ollama/glm-4.7-flash:q8_0")
+    EXTRA_FLAGS+=("--model" "local-ollama/qwen2.5:14b")
 fi
 
 args=()

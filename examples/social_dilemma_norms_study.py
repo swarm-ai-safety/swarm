@@ -23,12 +23,14 @@ Usage:
     python examples/social_dilemma_norms_study.py --seeds 3 --epochs 15
     python examples/social_dilemma_norms_study.py --dilemma commons --seeds 1
     python examples/social_dilemma_norms_study.py --live --model llama3.2
+    python examples/social_dilemma_norms_study.py --live --provider openrouter
 """
 
 import argparse
 import csv
 import json
 import logging
+import os
 import sys
 import time
 from collections import defaultdict
@@ -56,27 +58,58 @@ from swarm.models.interaction import SoftInteraction
 
 logger = logging.getLogger(__name__)
 
-# ── Ollama LLM client factory ────────────────────────────────────────────
+# ── LLM client factories ─────────────────────────────────────────────────
+
+PROVIDER_DEFAULTS: Dict[str, Dict[str, str]] = {
+    "ollama": {
+        "base_url": "http://localhost:11434/v1",
+        "api_key_env": "",
+        "default_model": "llama3.2",
+    },
+    "openrouter": {
+        "base_url": "https://openrouter.ai/api/v1",
+        "api_key_env": "OPENROUTER_API_KEY",
+        "default_model": "meta-llama/llama-3.1-8b-instruct",
+    },
+    "openai": {
+        "base_url": "https://api.openai.com/v1",
+        "api_key_env": "OPENAI_API_KEY",
+        "default_model": "gpt-4o-mini",
+    },
+}
 
 
-def make_ollama_llm_client(
-    model: str = "llama3.2",
-    timeout: float = 300.0,
+def make_llm_client(
+    provider: str = "ollama",
+    model: str | None = None,
+    timeout: float = 120.0,
 ) -> LLMCallFn:
-    """Build an LLMCallFn that calls a local Ollama instance via OpenAI-compat API.
+    """Build an LLMCallFn for the given provider via OpenAI-compat API.
 
     Args:
-        model: Ollama model name (used as default, overridden by JudgeConfig.model).
-        timeout: HTTP timeout in seconds. High default accounts for Ollama
-                 model-swap latency on first call.
+        provider: One of "ollama", "openrouter", "openai".
+        model: Model name (uses provider default if None).
+        timeout: HTTP timeout in seconds.
     """
     from openai import OpenAI
 
-    client = OpenAI(
-        api_key="ollama",
-        base_url="http://localhost:11434/v1",
-        timeout=timeout,
+    defaults = PROVIDER_DEFAULTS[provider]
+    api_key = (
+        "ollama"
+        if provider == "ollama"
+        else os.environ.get(defaults["api_key_env"], "")
     )
+    if not api_key and provider != "ollama":
+        raise RuntimeError(
+            f"Missing {defaults['api_key_env']} environment variable for {provider}"
+        )
+
+    client = OpenAI(
+        api_key=api_key,
+        base_url=defaults["base_url"],
+        timeout=timeout if provider != "ollama" else 300.0,
+    )
+    tag = provider.capitalize()
 
     def _call(prompt: str, model_name: str, temperature: float) -> str:
         last_err: Exception | None = None
@@ -91,11 +124,11 @@ def make_ollama_llm_client(
             except Exception as exc:
                 last_err = exc
                 logger.warning(
-                    "Ollama call attempt %d failed: %s", attempt + 1, exc
+                    "%s call attempt %d failed: %s", tag, attempt + 1, exc
                 )
                 if attempt < 2:
                     time.sleep(2 ** attempt)
-        logger.error("Ollama call failed after 3 attempts: %s", last_err)
+        logger.error("%s call failed after 3 attempts: %s", tag, last_err)
         return ""
 
     return _call
@@ -862,11 +895,16 @@ def main() -> int:
     )
     parser.add_argument(
         "--live", action="store_true",
-        help="Use live Ollama LLM calls instead of synthetic corpus scores",
+        help="Use live LLM calls instead of synthetic corpus scores",
     )
     parser.add_argument(
-        "--model", type=str, default="llama3.2",
-        help="Ollama model for --live mode (default: llama3.2)",
+        "--provider", type=str, default="ollama",
+        choices=list(PROVIDER_DEFAULTS.keys()),
+        help="LLM provider for --live mode (default: ollama)",
+    )
+    parser.add_argument(
+        "--model", type=str, default=None,
+        help="Model name for --live mode (default: provider-specific)",
     )
     args = parser.parse_args()
 
@@ -884,8 +922,9 @@ def main() -> int:
     print(f"  Epochs/run:       {args.epochs}")
     print(f"  Steps/epoch:      {args.steps}")
     print(f"  Total runs:       {total_runs}")
+    live_model = args.model or PROVIDER_DEFAULTS[args.provider]["default_model"]
     if args.live:
-        print(f"  Mode:             LIVE (Ollama {args.model})")
+        print(f"  Mode:             LIVE ({args.provider} / {live_model})")
     else:
         print("  Mode:             Synthetic (corpus-driven)")
     print()
@@ -941,7 +980,8 @@ def main() -> int:
         "total_runs": total_runs,
         "config_labels": [c["label"] for c in governance_configs()],
         "mode": "live" if args.live else "synthetic",
-        "model": args.model if args.live else None,
+        "provider": args.provider if args.live else None,
+        "model": live_model if args.live else None,
     }
     with open(out_dir / "sweep_config.json", "w") as f:
         json.dump(sweep_config, f, indent=2)
@@ -949,7 +989,7 @@ def main() -> int:
     # Build LLM client for live mode
     llm_client: LLMCallFn | None = None
     if args.live:
-        llm_client = make_ollama_llm_client(model=args.model)
+        llm_client = make_llm_client(provider=args.provider, model=live_model)
 
     # Run sweep
     print("Running sweep...")
@@ -959,7 +999,7 @@ def main() -> int:
         n_epochs=args.epochs,
         steps_per_epoch=args.steps,
         llm_client=llm_client,
-        llm_model=args.model,
+        llm_model=live_model,
     )
 
     # Print summary
