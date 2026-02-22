@@ -1404,6 +1404,31 @@ def build_orchestrator(scenario: ScenarioConfig) -> Orchestrator:
     return orchestrator
 
 
+def apply_config_overrides(
+    scenario: ScenarioConfig,
+    overrides: Any,
+) -> None:
+    """Merge validated API overrides into a loaded scenario config.
+
+    Args:
+        scenario: The loaded scenario to mutate in place.
+        overrides: Validated ``SimulationOverrides`` instance.
+    """
+    oc = scenario.orchestrator_config
+    if overrides.n_epochs is not None:
+        oc.n_epochs = overrides.n_epochs
+    if overrides.steps_per_epoch is not None:
+        oc.steps_per_epoch = overrides.steps_per_epoch
+    if overrides.seed is not None:
+        oc.seed = overrides.seed
+    if overrides.payoff is not None:
+        oc.payoff_config = PayoffConfig(**overrides.payoff)
+    if overrides.governance is not None:
+        oc.governance_config = GovernanceConfig(**overrides.governance)
+    if overrides.rate_limits is not None:
+        scenario.rate_limits = RateLimits(**overrides.rate_limits)
+
+
 def load_and_build(path: Path) -> Orchestrator:
     """
     Convenience function to load a scenario and build an orchestrator.

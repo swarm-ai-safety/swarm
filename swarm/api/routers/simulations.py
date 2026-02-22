@@ -113,9 +113,24 @@ async def _execute_simulation(simulation_id: str) -> None:
 
     try:
         from swarm.agents.honest import HonestAgent
-        from swarm.scenarios.loader import build_orchestrator, load_scenario
+        from swarm.api.models.simulation import SimulationOverrides
+        from swarm.scenarios.loader import (
+            apply_config_overrides,
+            build_orchestrator,
+            load_scenario,
+        )
 
         scenario = load_scenario(scenario_path)
+
+        # Apply validated config overrides if present
+        raw_overrides = simulation.config_overrides
+        if raw_overrides:
+            if isinstance(raw_overrides, dict):
+                parsed = SimulationOverrides.model_validate(raw_overrides)
+            else:
+                parsed = raw_overrides
+            apply_config_overrides(scenario, parsed)
+
         orchestrator = build_orchestrator(scenario)
 
         # Register API participants as external agents
@@ -288,7 +303,7 @@ async def create_simulation(request: SimulationCreate) -> SimulationResponse:
         current_participants=0,
         created_at=now,
         join_deadline=now + timedelta(minutes=30),
-        config_overrides=request.config_overrides,
+        config_overrides=request.config_overrides.model_dump(exclude_none=True),
     )
 
     _get_store().save(simulation)

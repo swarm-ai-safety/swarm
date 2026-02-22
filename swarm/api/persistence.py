@@ -990,7 +990,11 @@ class SimulationStore:
                         sim.current_participants,
                         _iso(sim.created_at),
                         _iso(sim.join_deadline),
-                        json.dumps(sim.config_overrides),
+                        json.dumps(
+                            sim.config_overrides.model_dump()
+                            if hasattr(sim.config_overrides, "model_dump")
+                            else sim.config_overrides
+                        ),
                     ),
                 )
 
