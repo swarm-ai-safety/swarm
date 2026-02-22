@@ -51,8 +51,20 @@ class SimulationOverrides(BaseModel):
         from swarm.governance.config import GovernanceConfig
 
         if self.payoff is not None:
+            valid_keys = set(PayoffConfig.model_fields)
+            unknown = set(self.payoff) - valid_keys
+            if unknown:
+                raise ValueError(
+                    f"Unknown payoff fields: {', '.join(sorted(unknown))}"
+                )
             PayoffConfig(**self.payoff)
         if self.governance is not None:
+            valid_keys = set(GovernanceConfig.model_fields)
+            unknown = set(self.governance) - valid_keys
+            if unknown:
+                raise ValueError(
+                    f"Unknown governance fields: {', '.join(sorted(unknown))}"
+                )
             GovernanceConfig(**self.governance)
         if self.rate_limits is not None:
             # RateLimits is a dataclass — reject unknown keys manually

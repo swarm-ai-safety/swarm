@@ -403,7 +403,7 @@ class TestSimulationEndpoints:
         assert data["mode"] == SimulationMode.REALTIME.value
 
     def test_create_simulation_with_config_overrides(self, client):
-        """Test creating a simulation with config overrides."""
+        """Test creating a simulation with valid config overrides."""
         _, api_key = _register_agent(client, "ConfigCreator")
         headers = {"Authorization": f"Bearer {api_key}"}
 
@@ -411,11 +411,74 @@ class TestSimulationEndpoints:
             "/api/v1/simulations/create",
             json={
                 "scenario_id": "test-scenario",
-                "config_overrides": {"epochs": 50, "tax_rate": 0.1},
+                "config_overrides": {"n_epochs": 50, "steps_per_epoch": 5},
             },
             headers=headers,
         )
         assert response.status_code == 200
+        data = response.json()
+        assert data["config_overrides"]["n_epochs"] == 50
+        assert data["config_overrides"]["steps_per_epoch"] == 5
+
+    def test_create_simulation_rejects_invalid_override_key(self, client):
+        """Test that unknown override keys are rejected with 422."""
+        _, api_key = _register_agent(client, "BadKeyCreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        response = client.post(
+            "/api/v1/simulations/create",
+            json={
+                "scenario_id": "test-scenario",
+                "config_overrides": {"epcohs": 50},
+            },
+            headers=headers,
+        )
+        assert response.status_code == 422
+
+    def test_create_simulation_rejects_invalid_override_type(self, client):
+        """Test that invalid value types are rejected with 422."""
+        _, api_key = _register_agent(client, "BadTypeCreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        response = client.post(
+            "/api/v1/simulations/create",
+            json={
+                "scenario_id": "test-scenario",
+                "config_overrides": {"n_epochs": "fifty"},
+            },
+            headers=headers,
+        )
+        assert response.status_code == 422
+
+    def test_create_simulation_with_valid_payoff_override(self, client):
+        """Test creating a simulation with valid payoff section override."""
+        _, api_key = _register_agent(client, "PayoffCreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        response = client.post(
+            "/api/v1/simulations/create",
+            json={
+                "scenario_id": "test-scenario",
+                "config_overrides": {"payoff": {"s_plus": 3.0}},
+            },
+            headers=headers,
+        )
+        assert response.status_code == 200
+
+    def test_create_simulation_rejects_invalid_payoff_field(self, client):
+        """Test that unknown payoff fields are rejected with 422."""
+        _, api_key = _register_agent(client, "BadPayoffCreator")
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        response = client.post(
+            "/api/v1/simulations/create",
+            json={
+                "scenario_id": "test-scenario",
+                "config_overrides": {"payoff": {"bad_key": 1}},
+            },
+            headers=headers,
+        )
+        assert response.status_code == 422
 
     def test_join_simulation(self, client):
         """Test joining a simulation."""
@@ -685,7 +748,7 @@ class TestAPIModels:
         sim = SimulationCreate(scenario_id="test")
         assert sim.max_participants == 10
         assert sim.mode == SimulationMode.ASYNC
-        assert sim.config_overrides == {}
+        assert sim.config_overrides.model_dump(exclude_none=True) == {}
 
     def test_simulation_create_validation(self):
         """Test SimulationCreate validation."""
@@ -1352,7 +1415,7 @@ class TestSimulationMechanics:
     def test_state_endpoint(self, client):
         """GET /state returns participants and simulation details."""
         sim, creator_key = self._create_simulation(
-            client, config_overrides={"epochs": 50}
+            client, config_overrides={"n_epochs": 50}
         )
         sim_id = sim["simulation_id"]
         headers = {"Authorization": f"Bearer {creator_key}"}
@@ -1375,7 +1438,7 @@ class TestSimulationMechanics:
         assert data["participants"][0]["agent_id"] == agent_id
         assert data["participants"][0]["role"] == "initiator"
         assert "joined_at" in data["participants"][0]
-        assert data["config_overrides"] == {"epochs": 50}
+        assert data["config_overrides"] == {"n_epochs": 50}
         assert "join_deadline" in data
         assert data["time_remaining_seconds"] >= 0
 
