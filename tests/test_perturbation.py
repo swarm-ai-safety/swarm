@@ -43,7 +43,7 @@ def _make_state(agent_specs=None):
 
 
 def _make_network(agent_ids, edges=None):
-    """Build a mock network with get_neighbors, add_edge, remove_edge."""
+    """Build a mock network with neighbors, edge_weight, add_edge, remove_edge."""
     adjacency = {a: {} for a in agent_ids}
     for a, b, w in (edges or []):
         adjacency[a][b] = w
@@ -51,8 +51,14 @@ def _make_network(agent_ids, edges=None):
 
     net = MagicMock()
 
+    def neighbors(a):
+        return list(adjacency.get(a, {}).keys())
+
     def get_neighbors(a):
         return dict(adjacency.get(a, {}))
+
+    def edge_weight(a, b):
+        return adjacency.get(a, {}).get(b, 0.0)
 
     def remove_edge(a, b):
         adjacency.get(a, {}).pop(b, None)
@@ -66,7 +72,9 @@ def _make_network(agent_ids, edges=None):
         adjacency[a][b] = weight
         adjacency[b][a] = weight
 
+    net.neighbors = neighbors
     net.get_neighbors = get_neighbors
+    net.edge_weight = edge_weight
     net.remove_edge = remove_edge
     net.add_edge = add_edge
     net._adjacency = adjacency  # for assertions
