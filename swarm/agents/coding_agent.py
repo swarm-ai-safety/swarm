@@ -69,9 +69,9 @@ class CodingAgent(BaseAgent):
 
         # Claim a new task
         if observation.can_claim_task and observation.available_tasks:
-            task = self._pick_task(observation.available_tasks)
-            if task:
-                return self.create_claim_task_action(task["task_id"])
+            new_task = self._pick_task(observation.available_tasks)
+            if new_task:
+                return self.create_claim_task_action(new_task["task_id"])
 
         # Review another agent's submission (via VERIFY_OUTPUT)
         if observation.active_tasks:

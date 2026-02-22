@@ -83,7 +83,7 @@ class SimulationCreate(BaseModel):
 
     scenario_id: str = Field(..., description="ID of the scenario to run")
     config_overrides: SimulationOverrides = Field(
-        default_factory=SimulationOverrides,
+        default_factory=SimulationOverrides,  # type: ignore[arg-type]
         description="Optional configuration overrides (validated against scenario schema)",
     )
     max_participants: int = Field(
