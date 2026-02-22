@@ -11,6 +11,7 @@ from swarm.agents.adaptive_adversary import AdaptiveAdversary
 from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.awm_agent import AWMAgent
 from swarm.agents.base import BaseAgent
+from swarm.agents.cautious_reciprocator import CautiousReciprocator
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
 from swarm.agents.ldt_agent import LDTAgent
@@ -133,6 +134,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     # Ralph loop agents (artifact-mediated memory)
     "ralph_loop": RalphLoopAgent,
     "adversarial_ralph": AdversarialRalphAgent,
+    # Custom: cautious reciprocator (trust-but-verify)
+    "cautious_reciprocator": CautiousReciprocator,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
