@@ -87,6 +87,9 @@ class ActionType(Enum):
     AWM_TOOL_CALL = "awm_tool_call"        # Single tool call, episode continues
     AWM_FINISH_TASK = "awm_finish_task"    # Finalize episode, run verification
 
+    # Evolutionary game actions
+    EVO_GAME_MOVE = "evo_game_move"
+
     # Special actions
     NOOP = "noop"  # Do nothing this turn
 

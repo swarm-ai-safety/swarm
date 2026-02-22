@@ -971,6 +971,36 @@ def build_contract_market(
     )
 
 
+def parse_evo_game_config(data: Dict[str, Any]) -> Optional[Any]:
+    """Parse evo_game section from YAML into EvoGameConfig.
+
+    Args:
+        data: The evo_game section from YAML
+
+    Returns:
+        EvoGameConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    from swarm.core.evo_game_handler import EvoGameConfig
+
+    return EvoGameConfig(**data)
+
+
+def _expand_agent_specs(agent_specs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Expand agent specs honoring ``count``, yielding one dict per agent."""
+    expanded: List[Dict[str, Any]] = []
+    for spec in agent_specs:
+        count = spec.get("count", 1)
+        for _ in range(count):
+            expanded.append(spec)
+    return expanded
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -1008,6 +1038,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         data.get("perturbations", {})
     )
     contracts_config = parse_contracts_config(data.get("contracts", {}))
+    evo_game_config = parse_evo_game_config(data.get("evo_game", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -1040,6 +1071,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         letta_config=letta_config,
         perturbation_config=perturbation_config,
         contracts_config=contracts_config,
+        evo_game_config=evo_game_config,
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")
         else None,
@@ -1403,6 +1435,16 @@ def build_orchestrator(scenario: ScenarioConfig) -> Orchestrator:
                 orchestrator._rivals_handler.register_agent_role(
                     agent.agent_id, agent.role
                 )
+
+    # Register evolutionary game strategies if handler is present
+    if orchestrator._evo_game_handler is not None:
+        for agent, spec in zip(agents, _expand_agent_specs(scenario.agent_specs), strict=False):
+            strategy_override = spec.get("strategy")
+            orchestrator._evo_game_handler.register_agent_strategy(
+                agent.agent_id,
+                spec.get("type", "honest"),
+                strategy_override=strategy_override,
+            )
 
     return orchestrator
 

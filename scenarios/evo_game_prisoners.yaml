@@ -1,0 +1,45 @@
+scenario_id: evo_game_prisoners
+description: >
+  Iterated Prisoner's Dilemma via gamescape evolutionary dynamics.
+  10 agents (cooperators, defectors, tit-for-tat) play through the
+  orchestrator with payoffs feeding into the soft-payoff pipeline.
+motif: evolutionary_game
+
+agents:
+  - type: honest
+    strategy: cooperator
+    count: 4
+
+  - type: opportunistic
+    strategy: defector
+    count: 3
+
+  - type: cautious_reciprocator
+    strategy: tit_for_tat
+    count: 3
+
+evo_game:
+  enabled: true
+  # Classic Prisoner's Dilemma: T > R > P > S
+  a: 3.0   # R: reward (mutual cooperation)
+  b: 0.0   # S: sucker (cooperate vs defect)
+  c: 5.0   # T: temptation (defect vs cooperate)
+  d: 1.0   # P: punishment (mutual defection)
+  render_epoch_dynamics: true
+  flow_width: 50
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 5
+  seed: 42
+
+payoff:
+  s_plus: 3.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 1.0
+  circuit_breaker_enabled: false

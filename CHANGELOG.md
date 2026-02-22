@@ -13,6 +13,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **Threshold dancer scenario** (`scenarios/threshold_dancer_vs_cautious.yaml`) — 30-epoch stress test with 3 cautious + 2 honest + 3 dancers
 - **Two new red-team scenarios** in `examples/redteam_cautious.py` — "Threshold dancers only" and "Mixed adversaries + threshold dancers"
 - **Blog post**: Threshold dancer results — the adversary that avoids blacklisting but can't profit
+- **Evolutionary game handler** (`swarm/core/evo_game_handler.py`) — integrates gamescape's PayoffMatrix into the orchestrator pipeline, mapping 2x2 game payoffs to ProxyObservables with cooperate/defect/tit-for-tat/grudger strategies and epoch-level population dynamics rendering
+- **Evo game scenario** (`scenarios/evo_game_prisoners.yaml`) — iterated Prisoner's Dilemma with 10 agents (cooperators, defectors, TFT)
+- **Evo game study runner** (`examples/evo_game_study.py`) — standalone runner comparing empirical population trajectory with replicator dynamics prediction
 
 ## [1.7.0] - 2026-02-21
 

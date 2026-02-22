@@ -152,6 +152,9 @@ class OrchestratorConfig(BaseModel):
     # Contract screening configuration
     contracts_config: Optional[Any] = None
 
+    # Evolutionary game (gamescape) configuration
+    evo_game_config: Optional[Any] = None
+
 
 class EpochMetrics(BaseModel):
     """Metrics collected at the end of each epoch."""
@@ -441,6 +444,27 @@ class Orchestrator:
             self._handler_registry.register(self._awm_handler)
         else:
             self._awm_handler = None
+
+        # Evolutionary game (gamescape) handler
+        if self.config.evo_game_config is not None:
+            from swarm.core.evo_game_handler import (
+                EvoGameConfig,
+                EvolutionaryGameHandler,
+            )
+
+            evo_cfg = self.config.evo_game_config
+            if not isinstance(evo_cfg, EvoGameConfig):
+                evo_cfg = EvoGameConfig(**evo_cfg) if isinstance(evo_cfg, dict) else evo_cfg
+            self._evo_game_handler: Optional[EvolutionaryGameHandler] = (
+                EvolutionaryGameHandler(
+                    config=evo_cfg,
+                    event_bus=self._event_bus,
+                    rng=self._rng,
+                )
+            )
+            self._handler_registry.register(self._evo_game_handler)
+        else:
+            self._evo_game_handler = None
 
         # Letta (MemGPT) lifecycle manager
         if self.config.letta_config is not None:
