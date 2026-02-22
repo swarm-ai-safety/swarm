@@ -61,12 +61,22 @@ logger = logging.getLogger(__name__)
 
 def make_ollama_llm_client(
     model: str = "llama3.2",
-    timeout: float = 60.0,
+    timeout: float = 300.0,
 ) -> LLMCallFn:
-    """Build an LLMCallFn that calls a local Ollama instance via OpenAI-compat API."""
+    """Build an LLMCallFn that calls a local Ollama instance via OpenAI-compat API.
+
+    Args:
+        model: Ollama model name (used as default, overridden by JudgeConfig.model).
+        timeout: HTTP timeout in seconds. High default accounts for Ollama
+                 model-swap latency on first call.
+    """
     from openai import OpenAI
 
-    client = OpenAI(api_key="ollama", base_url="http://localhost:11434/v1")
+    client = OpenAI(
+        api_key="ollama",
+        base_url="http://localhost:11434/v1",
+        timeout=timeout,
+    )
 
     def _call(prompt: str, model_name: str, temperature: float) -> str:
         last_err: Exception | None = None
@@ -76,7 +86,6 @@ def make_ollama_llm_client(
                     model=model_name,
                     messages=[{"role": "user", "content": prompt}],
                     temperature=temperature,
-                    timeout=timeout,
                 )
                 return resp.choices[0].message.content or ""
             except Exception as exc:
