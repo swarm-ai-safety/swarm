@@ -214,8 +214,9 @@ else
     fi
 fi
 
-# ── 4. Documentation freshness (advisory, never blocks) ──
-# Warn if significant code changes are staged without CHANGELOG or README updates.
+# ── 4. Documentation freshness (blocks on new files without CHANGELOG) ──
+# New code/scenario files require a CHANGELOG entry. Modifications are advisory only.
+# Bypass with: SKIP_DOCS_CHECK=1 git commit (for metadata-only commits)
 STAGED_CODE=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(swarm|scenarios)/' || true)
 STAGED_CHANGELOG=$(git diff --cached --name-only | grep -F 'CHANGELOG.md' || true)
 STAGED_README=$(git diff --cached --name-only | grep -F 'README.md' || true)
@@ -229,9 +230,21 @@ if [ -n "$STAGED_CODE" ]; then
     fi
 
     if [ "$NEW_COUNT" -gt 0 ] && [ -z "$STAGED_CHANGELOG" ]; then
-        echo "[swarm pre-commit] NOTE: $NEW_COUNT new file(s) staged but CHANGELOG.md not updated."
-        echo "  Consider adding an entry to the [Unreleased] section."
-        echo "$NEW_CODE_FILES" | head -5 | while read -r f; do echo "    + $f"; done
+        if [ "${SKIP_DOCS_CHECK:-0}" = "1" ]; then
+            echo "[swarm pre-commit] SKIP_DOCS_CHECK=1: bypassing CHANGELOG requirement for $NEW_COUNT new file(s)."
+        else
+            echo "=========================================="
+            echo "COMMIT BLOCKED: New files without CHANGELOG"
+            echo "=========================================="
+            echo ""
+            echo "$NEW_COUNT new file(s) staged but CHANGELOG.md not updated:"
+            echo "$NEW_CODE_FILES" | head -10 | while read -r f; do echo "    + $f"; done
+            echo ""
+            echo "Add an entry to the [Unreleased] section of CHANGELOG.md, then re-stage."
+            echo "To bypass (metadata-only commits): SKIP_DOCS_CHECK=1 git commit ..."
+            echo ""
+            exit 1
+        fi
     fi
 
     # Check for new agent/command files specifically
@@ -243,7 +256,21 @@ if [ -n "$STAGED_CODE" ]; then
             echo "[swarm pre-commit] NOTE: New agent file(s) but AGENTS.md not updated."
         fi
         if [ -z "$STAGED_CHANGELOG" ]; then
-            echo "[swarm pre-commit] NOTE: New command/agent file(s) but CHANGELOG.md not updated."
+            if [ "${SKIP_DOCS_CHECK:-0}" = "1" ]; then
+                echo "[swarm pre-commit] SKIP_DOCS_CHECK=1: bypassing CHANGELOG requirement for new command/agent file(s)."
+            else
+                echo "=========================================="
+                echo "COMMIT BLOCKED: New commands/agents without CHANGELOG"
+                echo "=========================================="
+                echo ""
+                echo "New command/agent file(s) staged but CHANGELOG.md not updated:"
+                echo "$NEW_COMMANDS" | while read -r f; do echo "    + $f"; done
+                echo ""
+                echo "Add an entry to the [Unreleased] section of CHANGELOG.md, then re-stage."
+                echo "To bypass: SKIP_DOCS_CHECK=1 git commit ..."
+                echo ""
+                exit 1
+            fi
         fi
     fi
 fi
@@ -290,8 +317,34 @@ if [ -f "$REMINDER_LOG" ] && [ -s "$REMINDER_LOG" ]; then
         echo "[swarm pre-commit] DOCS COMPLIANCE: all $TOTAL_REMINDERS reminder(s) addressed"
     fi
 
-    # Clear the log after reporting (reminders are per-session, not persistent)
-    : > "$REMINDER_LOG"
+    # Only clear resolved entries; keep unresolved reminders for next commit
+    if [ "$UNRESOLVED" -gt 0 ] && [ "$RESOLVED" -gt 0 ]; then
+        # Rewrite log with only unresolved entries
+        TEMP_LOG=$(mktemp)
+        while IFS='|' read -r timestamp filepath hint; do
+            KEEP=true
+            if echo "$hint" | grep -q "CHANGELOG" && [ -n "$STAGED_CHANGELOG" ]; then
+                KEEP=false
+            fi
+            if echo "$hint" | grep -q "AGENTS.md"; then
+                STAGED_AGENTS_RECHECK=$(git diff --cached --name-only | grep -F 'AGENTS.md' || true)
+                if [ -n "$STAGED_AGENTS_RECHECK" ]; then
+                    KEEP=false
+                fi
+            fi
+            if echo "$hint" | grep -q "README" && [ -n "$STAGED_README" ]; then
+                KEEP=false
+            fi
+            if [ "$KEEP" = true ]; then
+                echo "${timestamp}|${filepath}|${hint}" >> "$TEMP_LOG"
+            fi
+        done < "$REMINDER_LOG"
+        mv "$TEMP_LOG" "$REMINDER_LOG"
+    elif [ "$UNRESOLVED" -eq 0 ]; then
+        # All resolved — clear the log
+        : > "$REMINDER_LOG"
+    fi
+    # If all unresolved (RESOLVED=0), leave the log as-is
 fi
 
 # ── 6. Provenance log ──

@@ -33,12 +33,37 @@ If no flags are given, behavior matches the original `/ship`: commit staged chan
 2. If nothing to commit, say so and stop.
 3. **Already-committed detection**: Before staging, run `git diff HEAD -- <files>` for tracked files. If ALL target files already match HEAD (parallel session committed them), report "already committed" and skip to Phase 5 (push).
 
+### Phase 1.5: Docs compliance check
+
+Before staging, check whether new files will need documentation updates:
+
+1. Identify new (untracked or newly added) files in `swarm/`, `scenarios/`, `.claude/commands/`, `.claude/agents/`.
+2. If any new files are found, check whether `CHANGELOG.md` has been modified (staged or unstaged via `git diff` and `git diff --cached`).
+3. If CHANGELOG.md has NOT been modified:
+   - Show the list of new files.
+   - Ask the user: **"N new file(s) detected but CHANGELOG.md not updated. Stage CHANGELOG too, skip docs check, or abort?"**
+     - **Stage CHANGELOG**: Open/update CHANGELOG.md with draft entries (see Phase 2 auto-draft), stage it, and continue.
+     - **Skip docs**: Set `SKIP_DOCS_CHECK=1` in the environment so the pre-commit hook won't block, and continue.
+     - **Abort**: Stop the `/ship` command.
+4. If CHANGELOG.md IS already modified, continue silently.
+
+This catches missing docs before the pre-commit hook, with a friendlier interactive UX.
+
 ### Phase 2: Stage
 
 **If `--all` flag is set:**
 - Stage all modified + untracked files, listing them explicitly (never `git add -A` or `git add .`).
 - Exclude files matching: `.DS_Store`, `*.db`, `.env*`, `credentials*`, `*_token*`, `*_secret*`, `*.pem`, `*.key`.
 - If ALL files are excluded, report "Nothing safe to ship" and exit.
+- **Auto-draft CHANGELOG entries**: If new files are detected (untracked files being staged) and CHANGELOG.md has no pending changes:
+  1. Read the current CHANGELOG.md. Find the `## [Unreleased]` section.
+  2. Auto-append draft entries based on file paths. Categorize:
+     - `swarm/agents/*` or `.claude/agents/*` → "### Added" with "New agent: `<filename>`"
+     - `swarm/scenarios/*` or `scenarios/*` → "### Added" with "New scenario: `<filename>`"
+     - `.claude/commands/*` → "### Added" with "New command: `<filename>`"
+     - `swarm/**/*.py` → "### Added" or "### Changed" with "New/updated module: `<path>`"
+  3. Stage the updated CHANGELOG.md.
+  4. Show the user what was auto-drafted so they can review in the commit diff.
 
 **Otherwise (default):**
 - If there are already staged changes, use those.
