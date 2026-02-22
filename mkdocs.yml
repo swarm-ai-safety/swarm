@@ -139,6 +139,7 @@ nav:
   - Game: game.md
   - Blog:
     - blog/index.md
+    - "The Cure Was Worse Than the Disease": blog/runaway-intelligence-three-level-containment.md
     - "Threshold Dancer Results": blog/threshold-dancer-results.md
     - "Red-Teaming the Contract Screening Mechanism": blog/red-team-contract-screening.md
     - "Perfect Separation Holds Across 10 Seeds": blog/contract-screening-sweep-10-seeds.md

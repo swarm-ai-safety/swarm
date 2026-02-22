@@ -19,6 +19,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 <div class="blog-post" data-tags="governance evaluation" markdown>
 
+**Feb 21** — [The Cure Was Worse Than the Disease](runaway-intelligence-three-level-containment.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
+
+Three levels of escalating controls (static compartmentalization, dynamic capability restriction, emergency market reconfiguration) successfully contained runaway intelligence — but crashed welfare 80%. Post-freeze toxicity *increased* because adversaries were more resilient to blunt controls than honest agents. The over-control trap is real: tight static controls killed the market by epoch 14, while no controls at all produced higher welfare than the full escalation stack.
+
+</div>
+
+<div class="blog-post" data-tags="governance evaluation" markdown>
+
 **Feb 21** — [We Built the Adversary That Was Supposed to Break the Cautious Reciprocator. It Didn't.](threshold-dancer-results.md)
 <span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
 
