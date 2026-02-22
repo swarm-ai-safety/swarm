@@ -82,40 +82,38 @@ class TestStaticControls:
 
     def test_bandwidth_cap(self, scenario):
         gov = scenario.orchestrator_config.governance_config
-        assert gov.bandwidth_cap == 5
+        assert gov.bandwidth_cap == 10
 
-    def test_staking_enabled(self, scenario):
+    def test_staking_disabled(self, scenario):
         gov = scenario.orchestrator_config.governance_config
-        assert gov.staking_enabled is True
-        assert gov.min_stake_to_participate == 10.0
-        assert gov.stake_slash_rate == 0.15
+        assert gov.staking_enabled is False
 
     def test_vote_normalization(self, scenario):
         gov = scenario.orchestrator_config.governance_config
         assert gov.vote_normalization_enabled is True
         assert gov.max_vote_weight_per_agent == 3.0
 
-    def test_sybil_detection(self, scenario):
+    def test_sybil_detection_disabled(self, scenario):
         gov = scenario.orchestrator_config.governance_config
-        assert gov.sybil_detection_enabled is True
+        assert gov.sybil_detection_enabled is False
 
-    def test_collusion_detection(self, scenario):
+    def test_collusion_detection_disabled(self, scenario):
         gov = scenario.orchestrator_config.governance_config
-        assert gov.collusion_detection_enabled is True
+        assert gov.collusion_detection_enabled is False
 
     def test_circuit_breaker(self, scenario):
         gov = scenario.orchestrator_config.governance_config
         assert gov.circuit_breaker_enabled is True
-        assert gov.freeze_threshold_toxicity == 0.55
+        assert gov.freeze_threshold_toxicity == 0.80
 
     def test_audit(self, scenario):
         gov = scenario.orchestrator_config.governance_config
         assert gov.audit_enabled is True
-        assert gov.audit_probability == 0.2
+        assert gov.audit_probability == 0.10
 
     def test_transaction_tax_low_baseline(self, scenario):
         gov = scenario.orchestrator_config.governance_config
-        assert gov.transaction_tax_rate == 0.05
+        assert gov.transaction_tax_rate == 0.03
 
 
 # ── Level 2: Dynamic Controls ─────────────────────────────────
@@ -128,23 +126,23 @@ class TestDynamicControls:
         shocks_cfg = raw_yaml["perturbations"]["parameter_shocks"]
         assert shocks_cfg["enabled"] is True
 
-    def test_condition_shock_at_04(self, raw_yaml):
-        """toxicity_rate > 0.4 → tighten circuit breaker, raise audit."""
+    def test_condition_shock_at_035(self, raw_yaml):
+        """toxicity_rate > 0.35 → tighten circuit breaker, raise audit."""
         shocks = raw_yaml["perturbations"]["parameter_shocks"]["shocks"]
-        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.4"]
+        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.35"]
         assert len(match) == 1
         params = match[0]["params"]
-        assert params["freeze_threshold_toxicity"] == 0.35
-        assert params["audit_probability"] == 0.4
+        assert params["freeze_threshold_toxicity"] == 0.50
+        assert params["audit_probability"] == 0.3
 
-    def test_condition_shock_at_05(self, raw_yaml):
-        """toxicity_rate > 0.5 → reduce bandwidth, raise audit further."""
+    def test_condition_shock_at_037(self, raw_yaml):
+        """toxicity_rate > 0.37 → reduce bandwidth, raise audit further."""
         shocks = raw_yaml["perturbations"]["parameter_shocks"]["shocks"]
-        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.5"]
+        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.37"]
         assert len(match) == 1
         params = match[0]["params"]
-        assert params["bandwidth_cap"] == 3
-        assert params["audit_probability"] == 0.6
+        assert params["bandwidth_cap"] == 5
+        assert params["audit_probability"] == 0.5
 
     def test_condition_triggers_parse(self, raw_yaml):
         """All condition shocks use ShockTrigger.condition."""
@@ -164,9 +162,9 @@ class TestEmergencyControls:
     """Verify market freeze, network partition, and resource drain."""
 
     def test_market_freeze_shock(self, raw_yaml):
-        """toxicity_rate > 0.65 → 95% transaction tax."""
+        """toxicity_rate > 0.39 → 95% transaction tax."""
         shocks = raw_yaml["perturbations"]["parameter_shocks"]["shocks"]
-        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.65"]
+        match = [s for s in shocks if s.get("when") == "toxicity_rate > 0.39"]
         assert len(match) == 1
         assert match[0]["params"]["transaction_tax_rate"] == 0.95
 
@@ -243,10 +241,9 @@ class TestThreeLevelLayering:
         gov = raw_yaml["governance"]
         perturb = raw_yaml["perturbations"]
 
-        # Level 1: static governance levers
+        # Level 1: static governance levers (minimal — lets adversaries build pressure)
         assert gov["circuit_breaker_enabled"] is True
         assert gov["audit_enabled"] is True
-        assert gov["staking_enabled"] is True
 
         # Level 2: condition-triggered shocks
         assert perturb["parameter_shocks"]["enabled"] is True
@@ -267,14 +264,14 @@ class TestThreeLevelLayering:
         assert thresholds == sorted(thresholds), (
             f"Thresholds must escalate monotonically: {thresholds}"
         )
-        assert thresholds == [0.4, 0.5, 0.65]
+        assert thresholds == [0.35, 0.37, 0.39]
 
     def test_static_controls_are_less_aggressive_than_dynamic(self, raw_yaml):
         """Static audit < dynamic audit; static freeze > dynamic freeze (tighter = lower)."""
         gov = raw_yaml["governance"]
         shocks = raw_yaml["perturbations"]["parameter_shocks"]["shocks"]
 
-        level2a = [s for s in shocks if s.get("when") == "toxicity_rate > 0.4"][0]
+        level2a = [s for s in shocks if s.get("when") == "toxicity_rate > 0.35"][0]
         # Static audit probability is lower than dynamic
         assert gov["audit_probability"] < level2a["params"]["audit_probability"]
         # Static freeze threshold is higher (less aggressive) than dynamic

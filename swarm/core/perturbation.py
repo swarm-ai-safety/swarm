@@ -414,12 +414,15 @@ class PerturbationEngine:
         cfg = self.config.network_partition
         agent_ids = list(self._state.agents.keys())
 
-        # Save current edges
+        # Save current edges (with weights for restore)
         self._saved_edges = {}
         for a_id in agent_ids:
-            neighbors = self._network.get_neighbors(a_id)
-            if neighbors:
-                self._saved_edges[a_id] = dict(neighbors)
+            nbrs = self._network.neighbors(a_id)
+            if nbrs:
+                self._saved_edges[a_id] = {
+                    b_id: self._network.edge_weight(a_id, b_id)
+                    for b_id in nbrs
+                }
 
         if cfg.mode == PartitionMode.BISECT:
             self._rng.shuffle(agent_ids)
@@ -428,7 +431,7 @@ class PerturbationEngine:
             group_b = set(agent_ids[mid:])
             # Remove cross-group edges
             for a_id in group_a:
-                for b_id in list(self._network.get_neighbors(a_id).keys()):
+                for b_id in list(self._network.neighbors(a_id)):
                     if b_id in group_b:
                         self._network.remove_edge(a_id, b_id)
 
@@ -441,7 +444,7 @@ class PerturbationEngine:
                 if s.agent_type.value == cfg.isolate_type
             }
             for a_id in isolated:
-                for b_id in list(self._network.get_neighbors(a_id).keys()):
+                for b_id in list(self._network.neighbors(a_id)):
                     if b_id not in isolated:
                         self._network.remove_edge(a_id, b_id)
 
@@ -450,7 +453,7 @@ class PerturbationEngine:
             edges_to_remove = []
             seen = set()
             for a_id in agent_ids:
-                for b_id in self._network.get_neighbors(a_id):
+                for b_id in self._network.neighbors(a_id):
                     edge = tuple(sorted([a_id, b_id]))
                     if edge not in seen:
                         seen.add(edge)
