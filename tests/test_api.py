@@ -4217,3 +4217,190 @@ class TestAPISubmittedScenarioRuns:
             headers=headers,
         )
         assert run_resp.status_code == 404
+
+
+class TestRunArtifacts:
+    """Tests for run artifact listing and download endpoints."""
+
+    def _create_run(self, client, agent_id, visibility="private"):
+        """Create a run record directly via the store and return the run_id."""
+        import uuid
+        from datetime import datetime, timezone
+
+        import swarm.api.routers.runs as runs_mod
+        from swarm.api.models.run import RunResponse, RunStatus, RunVisibility
+
+        run_id = str(uuid.uuid4())
+        run = RunResponse(
+            run_id=run_id,
+            scenario_id="test-scenario",
+            status=RunStatus.COMPLETED,
+            visibility=RunVisibility(visibility),
+            agent_id=agent_id,
+            created_at=datetime.now(timezone.utc),
+            status_url=f"/api/runs/{run_id}",
+        )
+        runs_mod._store.save(run)
+        return run_id
+
+    def test_list_artifacts_empty(self, client, tmp_path):
+        """Run exists but no artifacts dir → returns empty list."""
+        agent_id, api_key = _register_agent(client)
+        run_id = self._create_run(client, agent_id)
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        from unittest.mock import patch
+
+        import swarm.api.routers.runs as runs_mod
+
+        with patch.object(runs_mod, "_get_run_artifacts_dir", return_value=None):
+            resp = client.get(f"/api/runs/{run_id}/artifacts", headers=headers)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["artifacts"] == []
+        assert data["run_id"] == run_id
+
+    def test_list_artifacts_with_files(self, client, tmp_path):
+        """Artifacts dir with files → returns correct paths and sizes."""
+        agent_id, api_key = _register_agent(client)
+        run_id = self._create_run(client, agent_id)
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        # Create fake artifacts
+        artifacts_dir = tmp_path / "artifacts"
+        artifacts_dir.mkdir()
+        (artifacts_dir / "history.json").write_text('{"events": []}')
+        csv_dir = artifacts_dir / "csv"
+        csv_dir.mkdir()
+        (csv_dir / "metrics.csv").write_text("epoch,toxicity\n1,0.05\n")
+
+        from unittest.mock import patch
+
+        import swarm.api.routers.runs as runs_mod
+
+        with patch.object(
+            runs_mod, "_get_run_artifacts_dir", return_value=artifacts_dir
+        ):
+            resp = client.get(f"/api/runs/{run_id}/artifacts", headers=headers)
+
+        assert resp.status_code == 200
+        data = resp.json()
+        artifacts = data["artifacts"]
+        assert len(artifacts) == 2
+        paths = {a["path"] for a in artifacts}
+        assert "history.json" in paths
+        assert "csv/metrics.csv" in paths
+        for a in artifacts:
+            assert "size_bytes" in a
+            assert a["size_bytes"] > 0
+
+    def test_list_artifacts_run_not_found(self, client):
+        """Nonexistent run_id → 404."""
+        _, api_key = _register_agent(client)
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        resp = client.get("/api/runs/nonexistent-run/artifacts", headers=headers)
+        assert resp.status_code == 404
+
+    def test_list_artifacts_private_access_denied(self, client):
+        """PRIVATE run, different agent → 403."""
+        agent_id_owner, _ = _register_agent(client, "Owner")
+        _, api_key_other = _register_agent(client, "Other")
+        run_id = self._create_run(client, agent_id_owner, visibility="private")
+
+        headers = {"Authorization": f"Bearer {api_key_other}"}
+        resp = client.get(f"/api/runs/{run_id}/artifacts", headers=headers)
+        assert resp.status_code == 403
+
+    def test_download_artifact(self, client, tmp_path):
+        """Download a specific file → 200 with correct content."""
+        agent_id, api_key = _register_agent(client)
+        run_id = self._create_run(client, agent_id)
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        artifacts_dir = tmp_path / "artifacts"
+        artifacts_dir.mkdir()
+        content = '{"events": [1, 2, 3]}'
+        (artifacts_dir / "history.json").write_text(content)
+
+        from unittest.mock import patch
+
+        import swarm.api.routers.runs as runs_mod
+
+        with patch.object(
+            runs_mod, "_get_run_artifacts_dir", return_value=artifacts_dir
+        ):
+            resp = client.get(
+                f"/api/runs/{run_id}/artifacts/history.json", headers=headers
+            )
+
+        assert resp.status_code == 200
+        assert resp.text == content
+
+    def test_download_artifact_not_found(self, client, tmp_path):
+        """Valid run, nonexistent file path → 404."""
+        agent_id, api_key = _register_agent(client)
+        run_id = self._create_run(client, agent_id)
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        artifacts_dir = tmp_path / "artifacts"
+        artifacts_dir.mkdir()
+
+        from unittest.mock import patch
+
+        import swarm.api.routers.runs as runs_mod
+
+        with patch.object(
+            runs_mod, "_get_run_artifacts_dir", return_value=artifacts_dir
+        ):
+            resp = client.get(
+                f"/api/runs/{run_id}/artifacts/nonexistent.csv", headers=headers
+            )
+
+        assert resp.status_code == 404
+
+    def test_download_artifact_no_artifacts_dir(self, client):
+        """Valid run, no artifacts dir → 404."""
+        agent_id, api_key = _register_agent(client)
+        run_id = self._create_run(client, agent_id)
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        from unittest.mock import patch
+
+        import swarm.api.routers.runs as runs_mod
+
+        with patch.object(runs_mod, "_get_run_artifacts_dir", return_value=None):
+            resp = client.get(
+                f"/api/runs/{run_id}/artifacts/history.json", headers=headers
+            )
+
+        assert resp.status_code == 404
+
+    def test_download_artifact_path_traversal(self, client, tmp_path):
+        """Path traversal via symlink escaping artifacts dir → 400."""
+        agent_id, api_key = _register_agent(client)
+        run_id = self._create_run(client, agent_id)
+        headers = {"Authorization": f"Bearer {api_key}"}
+
+        artifacts_dir = tmp_path / "artifacts"
+        artifacts_dir.mkdir()
+
+        # Create a file outside artifacts_dir and symlink into it
+        outside = tmp_path / "secret.txt"
+        outside.write_text("secret data")
+        (artifacts_dir / "evil_link").symlink_to(outside)
+
+        from unittest.mock import patch
+
+        import swarm.api.routers.runs as runs_mod
+
+        with patch.object(
+            runs_mod, "_get_run_artifacts_dir", return_value=artifacts_dir
+        ):
+            resp = client.get(
+                f"/api/runs/{run_id}/artifacts/evil_link", headers=headers
+            )
+
+        # Symlink resolves outside artifacts_dir → path traversal defense triggers
+        assert resp.status_code == 400
