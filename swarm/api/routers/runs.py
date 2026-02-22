@@ -40,6 +40,7 @@ from swarm.api.models.run import (
     RunSummaryMetrics,
     RunVisibility,
 )
+from swarm.api.models.scenario import ScenarioStatus
 from swarm.api.persistence import RunStore
 
 logger = logging.getLogger(__name__)
@@ -199,9 +200,24 @@ def _resolve_scenario(scenario_id: str) -> Union[Path, str]:
     # Fall back to ScenarioStore for API-submitted scenarios
     from swarm.api.routers.scenarios import _get_store as _get_scenario_store
 
-    yaml_content = _get_scenario_store().get_yaml(scenario_id)
-    if yaml_content is not None:
-        return yaml_content
+    scenario_store = _get_scenario_store()
+    scenario = scenario_store.get(scenario_id)
+    if scenario is not None:
+        # Scenario exists in the store — check status
+        if scenario.status != ScenarioStatus.VALID:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Scenario '{scenario_id}' has status '{scenario.status.value}' "
+                "and cannot be run. Only 'valid' scenarios are runnable.",
+            )
+        yaml_content: Optional[str] = scenario_store.get_yaml(scenario_id)
+        if yaml_content is not None:
+            return yaml_content
+        # Valid but missing YAML content (shouldn't happen, but handle gracefully)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Scenario '{scenario_id}' is valid but has no YAML content.",
+        )
 
     raise HTTPException(
         status_code=404,

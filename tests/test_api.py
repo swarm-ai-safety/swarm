@@ -2686,6 +2686,145 @@ class TestSimulationCompletion:
         assert resp.status_code == 200
         assert resp.json()["status"] == "completed"
 
+    def test_complete_with_metrics_dict(self, client):
+        """Complete with named metrics dict stores them correctly."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        payload = {
+            "metrics": {"toxicity_rate": 0.05, "avg_payoff": 1.2, "quality_gap": -0.3},
+            "n_epochs_completed": 5,
+            "n_steps_completed": 50,
+        }
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json=payload,
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+
+        results_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/results",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        stored = results_resp.json()["results"]
+        assert stored["metrics"]["toxicity_rate"] == 0.05
+        assert stored["metrics"]["avg_payoff"] == 1.2
+        assert stored["n_steps_completed"] == 50
+
+    def test_complete_with_interactions_list(self, client):
+        """Complete with interaction summaries stores them."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        payload = {
+            "interactions": [
+                {"interaction_id": "i1", "p": 0.9, "accepted": True, "payoff": 1.0},
+                {"interaction_id": "i2", "p": 0.2, "accepted": False},
+            ],
+            "total_interactions": 2,
+        }
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json=payload,
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+
+        results_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/results",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        stored = results_resp.json()["results"]
+        assert len(stored["interactions"]) == 2
+        assert stored["interactions"][0]["p"] == 0.9
+        assert stored["interactions"][1]["accepted"] is False
+
+    def test_complete_with_final_state(self, client):
+        """Complete with final_state dict stores it."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        payload = {
+            "final_state": {"agent_balances": {"a1": 10.0, "a2": 5.0}, "epoch": 10},
+        }
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json=payload,
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+
+        results_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/results",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        stored = results_resp.json()["results"]
+        assert stored["final_state"]["agent_balances"]["a1"] == 10.0
+
+    def test_complete_negative_steps_rejected(self, client):
+        """Negative n_steps_completed returns 422."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"n_steps_completed": -1},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 422
+
+    def test_complete_negative_epochs_rejected(self, client):
+        """Negative n_epochs_completed returns 422."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"n_epochs_completed": -5},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 422
+
+    def test_complete_interaction_invalid_p_rejected(self, client):
+        """Interaction with p outside [0, 1] returns 422."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"interactions": [{"p": 1.5}]},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 422
+
+    def test_complete_metrics_non_numeric_rejected(self, client):
+        """Metrics with non-numeric values return 422."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={"metrics": {"bad": "not_a_number"}},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 422
+
+    def test_complete_minimal_results_defaults(self, client):
+        """Completing with empty body fills all defaults correctly."""
+        sim_id, agent_ids, api_keys = self._setup_running_simulation(client)
+
+        resp = client.post(
+            f"/api/v1/simulations/{sim_id}/complete",
+            json={},
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        assert resp.status_code == 200
+
+        results_resp = client.get(
+            f"/api/v1/simulations/{sim_id}/results",
+            headers={"Authorization": f"Bearer {api_keys[0]}"},
+        )
+        stored = results_resp.json()["results"]
+        assert stored["n_steps_completed"] == 0
+        assert stored["n_epochs_completed"] == 0
+        assert stored["metrics"] == {}
+        assert stored["interactions"] == []
+        assert stored["final_state"] == {}
+
 
 # ---------------------------------------------------------------------------
 # Governance endpoint tests
@@ -4178,7 +4317,7 @@ class TestAPISubmittedScenarioRuns:
         assert "run_id" in data
 
     def test_run_invalid_api_scenario_rejected(self, client):
-        """Submit an INVALID scenario, then attempt to run — should 404."""
+        """Submit an INVALID scenario, then attempt to run — should 422."""
         _, api_key = _register_agent(client, "RunAgent2")
         headers = {"Authorization": f"Bearer {api_key}"}
 
@@ -4195,13 +4334,14 @@ class TestAPISubmittedScenarioRuns:
         scenario_id = submit_resp.json()["scenario_id"]
         assert submit_resp.json()["status"] == "invalid"
 
-        # Attempt to run — should fail because scenario is invalid
+        # Attempt to run — should fail with 422 because scenario is invalid
         run_resp = client.post(
             "/api/runs",
             json={"scenario_id": scenario_id},
             headers=headers,
         )
-        assert run_resp.status_code == 404
+        assert run_resp.status_code == 422
+        assert "invalid" in run_resp.json()["detail"].lower()
 
     def test_run_nonexistent_scenario_rejected(self, client):
         """Attempt to run a UUID that doesn't exist anywhere — should 404."""

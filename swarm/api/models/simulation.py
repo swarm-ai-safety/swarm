@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 
 class SimulationStatus(str, Enum):
@@ -104,6 +104,19 @@ class SimulationJoin(BaseModel):
     )
 
 
+class InteractionSummary(BaseModel):
+    """Summary of a single interaction in the simulation."""
+
+    interaction_id: str | None = None
+    initiator_id: str | None = None
+    counterparty_id: str | None = None
+    p: float | None = Field(None, ge=0.0, le=1.0, description="P(v=+1) for this interaction")
+    accepted: bool | None = None
+    payoff: float | None = None
+    epoch: int | None = Field(None, ge=0)
+    step: int | None = Field(None, ge=0)
+
+
 class SimulationResults(BaseModel):
     """Validated results from a completed simulation."""
 
@@ -115,10 +128,36 @@ class SimulationResults(BaseModel):
     quality_gap: float = 0.0
     n_agents: int = Field(0, ge=0)
     n_epochs_completed: int = Field(0, ge=0)
+    n_steps_completed: int = Field(0, ge=0)
+    metrics: dict[str, float] = Field(
+        default_factory=dict,
+        description="Named metrics (metric_name -> value)",
+    )
+    interactions: list[InteractionSummary] = Field(
+        default_factory=list,
+        description="Per-interaction summaries",
+    )
+    final_state: dict = Field(
+        default_factory=dict,
+        description="Final simulation state snapshot",
+    )
     metrics_history: list[dict] = Field(default_factory=list)
     extra: dict = Field(
         default_factory=dict, description="Additional unstructured data"
     )
+
+    @field_validator("metrics")
+    @classmethod
+    def _validate_metrics_values(cls, v: dict[str, float]) -> dict[str, float]:
+        """Ensure all metric values are finite numbers."""
+        import math
+
+        for key, val in v.items():
+            if not isinstance(val, (int, float)):
+                raise ValueError(f"Metric '{key}' must be numeric, got {type(val).__name__}")
+            if math.isnan(val) or math.isinf(val):
+                raise ValueError(f"Metric '{key}' must be finite, got {val}")
+        return v
 
 
 class SimulationResponse(BaseModel):
