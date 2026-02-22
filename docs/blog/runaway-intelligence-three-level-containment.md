@@ -4,7 +4,7 @@
 
 ---
 
-What happens when self-optimizing agents and adaptive adversaries outnumber honest agents 4-to-1 in a multi-agent ecosystem? We built a scenario to find out, implementing the three-level control escalation from Section 3.1.10 of our paper: static compartmentalization, dynamic capability restriction, and emergency market reconfiguration.
+What happens when self-optimizing agents and adaptive adversaries outnumber honest agents 4-to-1 in a multi-agent ecosystem? We built a scenario to find out, implementing a three-level control escalation inspired by the layered containment approach to runaway intelligence: static compartmentalization, dynamic capability restriction, and emergency market reconfiguration.
 
 The controls worked. Every level fired. Toxicity never spiraled out of control. But the cost was devastating: welfare crashed 80% when emergency controls activated, and adversaries were *more* resilient to the controls than honest agents. The market freeze punished everyone — but honest agents had more to lose.
 
@@ -110,13 +110,13 @@ Our first three runs revealed an equally important failure mode. With the origin
 
 The irony: the *no controls* run had higher welfare than the *three-level escalation* run. The controls contained toxicity (0.39 vs 0.36 — barely) but destroyed value (13.29 vs 75.31 — dramatically).
 
-## What this means for Section 3.1.10
+## What this means for runaway intelligence containment
 
-The paper's thesis is that structural controls against runaway intelligence require layered, escalating mechanisms. The simulation confirms this architecturally — the three-level design works as specified. But it also reveals the fundamental tension:
+The core thesis of layered containment is that structural controls against runaway intelligence require escalating mechanisms — static constraints alone aren't enough, so systems need dynamic responses that activate as threats intensify, with emergency measures as a last resort. The simulation confirms this architecturally — the three-level design works as specified. But it also reveals the fundamental tension:
 
 **Controls that can stop a runaway process are powerful enough to cause their own damage.** The emergency lever that prevents catastrophic failure also prevents healthy operation. This parallels real-world circuit breakers in financial markets: they stop crashes but also stop price discovery.
 
-The path forward is probably **targeted controls** — interventions that affect adversarial agents more than honest ones. Collusion detection, reputation-weighted taxation, and role-based access controls (Section 3.1.8) could provide this selectivity. The current blunt instruments (flat tax, random partition, uniform drain) are necessary as backstops but insufficient as primary defenses.
+The path forward is probably **targeted controls** — interventions that affect adversarial agents more than honest ones. Collusion detection, reputation-weighted taxation, and role-based access controls could provide this selectivity. The current blunt instruments (flat tax, random partition, uniform drain) are necessary as backstops but insufficient as primary defenses.
 
 ## Reproduce it
 
@@ -133,7 +133,7 @@ python -m pytest tests/test_runaway_intelligence.py -v
 - **Targeted controls**: Test reputation-weighted transaction tax (adversaries pay more) instead of flat 95%
 - **Multi-seed sweep**: Run across 10 seeds to check if the escalation pattern is robust
 - **Recovery dynamics**: Can the ecosystem recover after emergency controls are lifted?
-- **RBAC integration**: Test whether role-based access controls (Section 3.1.8) can surgically restrict adversaries without harming honest agents
+- **RBAC integration**: Test whether role-based access controls can surgically restrict adversaries without harming honest agents
 
 ---
 
