@@ -1,0 +1,13 @@
+services:
+  letta-server:
+    image: letta/letta:latest
+    ports:
+      - "8283:8283"
+    environment:
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+    volumes:
+      - letta-data:/root/.letta
+    restart: unless-stopped
+
+volumes:
+  letta-data:
