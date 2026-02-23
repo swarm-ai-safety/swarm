@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# letta-os.sh — Headless wrapper for Letta Code as SWARM Research OS operator
+# letta-os.sh — Headless wrapper for Claude Code as SWARM Research OS operator
 #
 # Usage:
 #   ./scripts/letta-os.sh <command> [args...]
@@ -17,9 +17,8 @@
 #
 # Options:
 #   --json          Output as JSON
-#   --stream        Stream output (for long tasks)
 #   --new           Start a new conversation
-#   --dry-run       Show the letta command without executing
+#   --dry-run       Show the claude command without executing
 #
 # Examples:
 #   ./scripts/letta-os.sh query tag governance
@@ -36,23 +35,16 @@ REPO_ROOT="$(dirname "$SCRIPT_DIR")"
 
 # --- Parse global flags ---
 OUTPUT_FLAGS=()
-EXTRA_FLAGS=("--yolo")
+EXTRA_FLAGS=()
 DRY_RUN=false
-
-# Auto-detect local Letta server and set model accordingly
-if [ "${LETTA_BASE_URL:-}" = "http://localhost:8283" ]; then
-    EXTRA_FLAGS+=("--model" "local-ollama/qwen2.5:14b")
-fi
 
 args=()
 for arg in "$@"; do
     case "$arg" in
-        --json)   OUTPUT_FLAGS=(--output-format json) ;;
-        --stream) OUTPUT_FLAGS=(--output-format stream-json) ;;
-        --new)    EXTRA_FLAGS+=("--new") ;;
+        --json)    OUTPUT_FLAGS=(--output-format json) ;;
+        --new)     EXTRA_FLAGS+=("--new") ;;
         --dry-run) DRY_RUN=true ;;
-        --model=*) EXTRA_FLAGS+=("--model" "${arg#--model=}") ;;
-        *)        args+=("$arg") ;;
+        *)         args+=("$arg") ;;
     esac
 done
 
@@ -61,9 +53,9 @@ set -- "${args[@]:-}"
 command="${1:-help}"
 shift || true
 
-run_letta() {
+run_operator() {
     local prompt="$1"
-    local cmd=(letta -p "$prompt" "${EXTRA_FLAGS[@]}" ${OUTPUT_FLAGS[@]+"${OUTPUT_FLAGS[@]}"})
+    local cmd=(claude -p "$prompt" ${EXTRA_FLAGS[@]+"${EXTRA_FLAGS[@]}"} ${OUTPUT_FLAGS[@]+"${OUTPUT_FLAGS[@]}"})
 
     if $DRY_RUN; then
         echo "[dry-run] ${cmd[*]}"
@@ -83,7 +75,7 @@ case "$command" in
         query_type="$1"
         shift
         value="${*:-}"
-        run_letta "Use the run-query skill: $query_type $value"
+        run_operator "Read .skills/run-query/SKILL.md and follow its instructions to query: $query_type $value"
         ;;
 
     synthesize|synth)
@@ -91,7 +83,7 @@ case "$command" in
             echo "Usage: letta-os.sh synthesize <run_id>" >&2
             exit 1
         fi
-        run_letta "Use the synthesize skill on run: $*"
+        run_operator "Read .skills/synthesize/SKILL.md and follow its instructions to synthesize run: $*"
         ;;
 
     sanity)
@@ -99,29 +91,29 @@ case "$command" in
             echo "Usage: letta-os.sh sanity <scenario.yaml>" >&2
             exit 1
         fi
-        run_letta "Use the sanity-check skill on scenario: $*"
+        run_operator "Read .skills/sanity-check/SKILL.md and follow its instructions on scenario: $*"
         ;;
 
     regression|reg)
         mode="${1:-full}"
-        run_letta "Use the regression-check skill in mode: $mode"
+        run_operator "Read .skills/regression-check/SKILL.md and follow its instructions in mode: $mode"
         ;;
 
     thread|t)
-        run_letta "What's the active research thread? Read .letta/memory/threads/current.md and summarize."
+        run_operator "Run /status --research. Read .letta/memory/threads/current.md and .letta/memory/runs/latest.md and display the active research context."
         ;;
 
     log|l)
-        run_letta "Show the last 5 entries from the research log at .letta/memory/threads/research-log.md"
+        run_operator "Read .letta/memory/threads/research-log.md and show the last 5 entries."
         ;;
 
     claims|c)
         subcommand="${1:-list}"
-        run_letta "Use the claim skill: $subcommand"
+        run_operator "Read .skills/claim/SKILL.md and follow its instructions: $subcommand"
         ;;
 
     close)
-        run_letta "Use the session-close skill. Summarize what changed, update memory, commit and push."
+        run_operator "Run /ship --research-close. Summarize what changed this session, update memory files, commit and push."
         ;;
 
     ask|a)
@@ -129,12 +121,12 @@ case "$command" in
             echo "Usage: letta-os.sh ask <question>" >&2
             exit 1
         fi
-        run_letta "$*"
+        run_operator "$*"
         ;;
 
     help|--help|-h)
         # Print the header comment block as usage
-        sed -n '2,/^[^#]/{ /^#/s/^# \?//p; }' "$0"
+        awk '/^#!/{next} /^#/{sub(/^# ?/,""); print; next} {exit}' "$0"
         ;;
 
     *)

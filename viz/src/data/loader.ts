@@ -1,4 +1,4 @@
-import type { SimulationData, InteractionEvent, AgentSnapshot, AgentType, EpochSnapshot } from "./types";
+import type { SimulationData, InteractionEvent, SwarmEvent, AgentSnapshot, AgentType, EpochSnapshot, InteractionType } from "./types";
 import { mulberry32 } from "@/engine/sim/rng";
 import { AGENT_PROFILES, AGENT_TYPES } from "@/engine/sim/agents";
 

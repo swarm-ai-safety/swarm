@@ -225,3 +225,4 @@ When running inside a session worktree (branch `session/pane-*`), `/ship` commit
 | `/sweep_and_ship "msg"` | `/ship --all "msg"` |
 | `/close_and_ship b6t b7x` | `/ship --close b6t b7x` |
 | `/close_and_ship b6t "msg"` | `/ship --close b6t "msg"` |
+| `letta-os.sh close` | `/ship --research-close` |
