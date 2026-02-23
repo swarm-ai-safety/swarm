@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **RAG bridge** (`swarm/bridges/rag/`) — semantic search over run history via ChromaDB vector store, with configurable embeddings (OpenAI/Ollama), LLM synthesis (Anthropic/OpenAI), CLI (`python -m swarm.bridges.rag`), and `rag` optional dependency group
 - **Adaptive governance controller** (`swarm/governance/adaptive.py`, `swarm/governance/adaptive_controller.py`) — three-phase loop with evidence accumulation, 3-pass contemplation (signal/trend/propose), and 3-gate crystallization (time/alignment/human review) for automatic threshold tuning of governance levers
 - **Adaptive governance scenario** (`scenarios/adaptive_governance.yaml`) — 30-epoch mixed-agent scenario with circuit breaker, audit, and collusion detection levers enabled for adaptive tuning
 - **Social dilemma norms study** (`examples/social_dilemma_norms_study.py`) — 3 dilemmas x 5 governance configs sweep measuring cooperation emergence, with dilemma narrative generators (`swarm/bridges/concordia/dilemma_narratives.py`) and scenario YAMLs for commons and prisoner's dilemma
