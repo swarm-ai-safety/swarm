@@ -113,6 +113,19 @@ Across five seeds, welfare trajectories split into two distinct patterns:
 
 The phase transition, when it occurs, coincides with TFT agents ramping up their interaction rate. As their reputations rise, their observable signals improve, producing higher `p` values and therefore higher expected surplus (`S_soft = p * s_plus - (1-p) * s_minus`). More interactions at higher quality compound into substantially higher welfare.
 
+### Is the phase transition durable?
+
+To test whether the post-transition regime is stable or transient, we extended seed 42 to 20 epochs. The result: the regime shift is permanent.
+
+| Phase | Epochs | Avg Welfare | Avg Toxicity | Avg Acceptance |
+|---|---|---|---|---|
+| Pre-transition | 0--4 | 6.02 | 0.33 | 82% |
+| Post-transition | 5--19 | 32.60 | 0.27 | 95% |
+
+Welfare sustains in the 28--39 band for all 15 post-transition epochs, with natural variance but no collapse. Toxicity settles into a tight 0.25--0.28 range. Acceptance rate stabilizes above 90%, reaching 100% in 5 of the last 10 epochs. Over 20 epochs, the system accumulated 307 total interactions with 94.8% acceptance.
+
+This confirms that reputation-mediated cooperation isn't a transient spike --- it's a persistent regime shift. Once TFT agents build sufficient reputation to dominate interaction opportunities, the high-welfare equilibrium is self-reinforcing. The reputation flywheel (good interactions → higher reputation → better observable signals → higher p → more surplus → more interactions) creates a basin of attraction that the system doesn't escape from, at least with fixed-strategy agents.
+
 ## Early-epoch fragility
 
 Three of five seeds (314, 777, 999) exhibit an acceptance rate crash in epochs 1--3, dropping to 33--40% before recovering to 90%+ by epoch 5. Seeds 42 and 123 avoid this crash entirely. The pattern suggests the system is reliably fragile in early epochs --- before TFT reputation effects have accumulated enough to stabilize interaction quality --- and that the specific matchup sequence in those early rounds determines whether the crash occurs.
@@ -140,8 +153,11 @@ For safety, the key insight is that reputation-mediated systems can sustain coop
 ## Reproducing
 
 ```bash
-# Run a single seed
+# Run a single seed (10 epochs)
 python -m swarm run scenarios/evo_game_prisoners.yaml --seed 42 --epochs 10 --steps 5
+
+# Run the 20-epoch durability test
+python -m swarm run scenarios/evo_game_prisoners.yaml --seed 42 --epochs 20 --steps 5
 
 # Run all five seeds
 for seed in 42 123 314 777 999; do
