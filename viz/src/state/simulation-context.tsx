@@ -100,6 +100,11 @@ function reducer(state: SimState, action: Action): SimState {
       const agentIds = getUniqueAgentIds(action.data.agent_snapshots);
       const cols = Math.ceil(Math.sqrt(agentIds.length));
       const gridSize = Math.max((cols + 1) * AGENT_GRID_SPACING + 2, 10);
+      // Build event index if raw events are present
+      const hasRawEvents = action.data.rawEvents && action.data.rawEvents.length > 0;
+      const eventIndex = hasRawEvents ? buildEventIndex(action.data.rawEvents!) : null;
+      const stepPlayback = !!eventIndex;
+      const maxStepInEpoch = eventIndex ? eventIndex.maxStep(0) : 0;
       return {
         ...state,
         data: action.data,
@@ -108,10 +113,16 @@ function reducer(state: SimState, action: Action): SimState {
         playing: false,
         gridSize,
         currentEpochSnap: action.data.epoch_snapshots[0] ?? null,
+        eventIndex,
+        stepPlayback,
+        currentStep: 0,
+        maxStepInEpoch,
       };
     }
-    case "SET_EPOCH":
-      return { ...state, currentEpoch: action.epoch, epochFraction: 0 };
+    case "SET_EPOCH": {
+      const maxStep = state.eventIndex ? state.eventIndex.maxStep(action.epoch) : 0;
+      return { ...state, currentEpoch: action.epoch, epochFraction: 0, currentStep: 0, maxStepInEpoch: maxStep };
+    }
     case "SET_PLAYING":
       return { ...state, playing: action.playing };
     case "SET_SPEED":
@@ -127,6 +138,10 @@ function reducer(state: SimState, action: Action): SimState {
       return { ...state, selectedAgent: action.agentId };
     case "TOGGLE_OVERLAY":
       return { ...state, overlays: { ...state.overlays, [action.key]: !state.overlays[action.key] } };
+    case "SET_STEP":
+      return { ...state, currentStep: action.step };
+    case "SET_STEP_PLAYBACK":
+      return { ...state, stepPlayback: action.enabled, currentStep: 0 };
     case "TICK":
       return {
         ...state,
@@ -137,6 +152,8 @@ function reducer(state: SimState, action: Action): SimState {
         currentEpoch: action.epoch,
         epochFraction: action.fraction,
         currentEpochSnap: action.epochSnap,
+        ...(action.step !== undefined ? { currentStep: action.step } : {}),
+        ...(action.maxStepInEpoch !== undefined ? { maxStepInEpoch: action.maxStepInEpoch } : {}),
       };
     default:
       return state;
