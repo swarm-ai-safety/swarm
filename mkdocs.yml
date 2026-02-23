@@ -139,6 +139,7 @@ nav:
   - Game: game.md
   - Blog:
     - blog/index.md
+    - "Skill Activation Is the Bottleneck": blog/skill-activation-is-the-bottleneck.md
     - "The Cure Was Worse Than the Disease": blog/runaway-intelligence-three-level-containment.md
     - "Threshold Dancer Results": blog/threshold-dancer-results.md
     - "Red-Teaming the Contract Screening Mechanism": blog/red-team-contract-screening.md

@@ -17,6 +17,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## February 2026
 
+<div class="blog-post" data-tags="engineering" markdown>
+
+**Feb 23** — [Skill Activation Is the Bottleneck](skill-activation-is-the-bottleneck.md)
+<span class="blog-tag">Engineering</span>
+
+Your agent skills work 96% of the time — when they fire. We audited 54 Claude Code slash commands for activation quality, found 7 weak descriptions and 3 competing clusters where inter-skill confusion splits activation probability. Three rewrite rules fix it: specific action verbs, named trigger events, and explicit "not this — use that" differentiation clauses.
+
+</div>
+
 <div class="blog-post" data-tags="llm-agents evaluation governance" markdown>
 
 **Feb 22** — [We Let a Coding Agent Improve Itself 5 Times. Every Fix Made It Harder to Govern.](recursive-self-improvement-swarm-safety.md)
