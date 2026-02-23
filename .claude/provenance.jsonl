@@ -119,3 +119,6 @@
 {"timestamp": "2026-02-23T01:56:03Z", "branch": "main", "files_changed": ["scripts/agentarxiv_submit.sh"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-23T02:26:35Z", "branch": "main", "files_changed": [".claude/commands/ship.md", ".claude/provenance.jsonl"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-23T02:28:22Z", "branch": "main", "files_changed": ["docs/blog/evo-game-gamescape-prisoners-dilemma.md"], "new_files": ["docs/blog/evo-game-gamescape-prisoners-dilemma.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-23T03:02:49Z", "branch": "main", "files_changed": [".claude/commands/ship.md", ".claude/provenance.jsonl", "scripts/letta-os.sh", "viz/src/data/loader.ts", "viz/src/data/types.ts"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-23T03:03:05Z", "branch": "main", "files_changed": ["docs/blog/qwen3-30b-v2-training-results.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-23T03:11:08Z", "branch": "main", "files_changed": ["docs/blog/evo-game-gamescape-prisoners-dilemma.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}

@@ -33,8 +33,8 @@ export async function loadSimulationData(source: string | File): Promise<Simulat
   return data;
 }
 
-/** Parse JSONL events file */
-export async function loadEvents(source: string | File): Promise<InteractionEvent[]> {
+/** Parse JSONL events file — returns full SwarmEvent stream */
+export async function loadRawEvents(source: string | File): Promise<SwarmEvent[]> {
   let raw: string;
   if (typeof source === "string") {
     const resp = await fetch(source);
@@ -48,8 +48,70 @@ export async function loadEvents(source: string | File): Promise<InteractionEven
     .trim()
     .split("\n")
     .filter((line) => line.length > 0)
-    .map((line) => JSON.parse(line) as InteractionEvent)
-    .filter((evt) => evt.event_type === "interaction");
+    .map((line) => JSON.parse(line) as SwarmEvent);
+}
+
+/** Parse JSONL events file — backward-compatible, returns only InteractionEvents */
+export async function loadEvents(source: string | File): Promise<InteractionEvent[]> {
+  const rawEvents = await loadRawEvents(source);
+  return deriveInteractionEvents(rawEvents);
+}
+
+/**
+ * Derive flat InteractionEvent[] from raw SwarmEvent stream.
+ * Matches interaction_proposed + interaction_completed by interaction_id.
+ */
+export function deriveInteractionEvents(raw: SwarmEvent[]): InteractionEvent[] {
+  // Index proposed events by interaction_id
+  const proposed = new Map<string, SwarmEvent>();
+  for (const evt of raw) {
+    if (evt.event_type === "interaction_proposed" && evt.interaction_id) {
+      proposed.set(evt.interaction_id, evt);
+    }
+  }
+
+  const results: InteractionEvent[] = [];
+
+  for (const evt of raw) {
+    if (evt.event_type === "interaction_completed" && evt.interaction_id) {
+      const prop = proposed.get(evt.interaction_id);
+      if (!prop) continue;
+
+      const epoch = prop.epoch ?? 0;
+      const step = prop.step ?? 0;
+      const payload = prop.payload;
+      const completedPayload = evt.payload;
+
+      results.push({
+        event_type: "interaction",
+        timestamp: prop.timestamp,
+        epoch,
+        step,
+        interaction_id: evt.interaction_id,
+        initiator: prop.initiator_id ?? "",
+        counterparty: prop.counterparty_id ?? "",
+        interaction_type: (payload.interaction_type as InteractionType) ?? "trade",
+        accepted: (completedPayload.accepted as boolean) ?? true,
+        p: (payload.p as number) ?? 0.5,
+        v_hat: (payload.v_hat as number) ?? 0,
+      });
+    }
+  }
+
+  return results;
+}
+
+/** Load history.json + optional events.jsonl as a bundle */
+export async function loadSimulationBundle(
+  historySource: string | File,
+  eventsSource?: string | File,
+): Promise<SimulationData> {
+  const data = await loadSimulationData(historySource);
+  if (eventsSource) {
+    data.rawEvents = await loadRawEvents(eventsSource);
+    data.events = deriveInteractionEvents(data.rawEvents);
+  }
+  return data;
 }
 
 function validateData(data: SimulationData) {
