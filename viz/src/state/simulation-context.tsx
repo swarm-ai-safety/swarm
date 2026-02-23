@@ -1,7 +1,9 @@
 "use client";
 
 import React, { createContext, useReducer, useCallback, useRef, useEffect } from "react";
-import type { SimulationData, EpochSnapshot, AgentSnapshot } from "@/data/types";
+import type { SimulationData, EpochSnapshot, AgentSnapshot, SwarmEvent } from "@/data/types";
+import type { EventIndex } from "@/data/event-index";
+import { buildEventIndex } from "@/data/event-index";
 import type { AgentVisual, InteractionArc, Viewport, OverlayState, Particle, DigitalRainState, CodeTrailParticle, RecompileState } from "@/engine/types";
 import type { EnvironmentState } from "@/engine/systems/environment-system";
 import { interpolateEnvironment } from "@/engine/systems/environment-system";
@@ -28,6 +30,11 @@ export interface SimState {
   hoveredAgent: string | null;
   selectedAgent: string | null;
   overlays: OverlayState;
+  // Step-level playback
+  currentStep: number;
+  maxStepInEpoch: number;
+  stepPlayback: boolean; // true = step-level, false = epoch-level (legacy)
+  eventIndex: EventIndex | null;
   // Derived / computed per frame
   agents: AgentVisual[];
   arcs: InteractionArc[];
@@ -59,6 +66,10 @@ const initialState: SimState = {
   hoveredAgent: null,
   selectedAgent: null,
   overlays: defaultOverlays,
+  currentStep: 0,
+  maxStepInEpoch: 0,
+  stepPlayback: false,
+  eventIndex: null,
   agents: [],
   arcs: [],
   environment: { threatLevel: 0, toxicity: 0, giniCoefficient: 0, collusionRisk: 0, incoherence: 0, contagionDepth: 0, activeThreats: 0, reputationStd: 0, payoffStd: 0, avgSynergyScore: 0, avgCoordinationScore: 0, avgDegree: 0, avgClustering: 0 },
@@ -79,7 +90,9 @@ type Action =
   | { type: "SET_HOVERED"; agentId: string | null }
   | { type: "SET_SELECTED"; agentId: string | null }
   | { type: "TOGGLE_OVERLAY"; key: keyof OverlayState }
-  | { type: "TICK"; agents: AgentVisual[]; arcs: InteractionArc[]; environment: EnvironmentState; particles: Particle[]; epoch: number; fraction: number; epochSnap: EpochSnapshot | null };
+  | { type: "SET_STEP"; step: number }
+  | { type: "SET_STEP_PLAYBACK"; enabled: boolean }
+  | { type: "TICK"; agents: AgentVisual[]; arcs: InteractionArc[]; environment: EnvironmentState; particles: Particle[]; epoch: number; fraction: number; epochSnap: EpochSnapshot | null; step?: number; maxStepInEpoch?: number };
 
 function reducer(state: SimState, action: Action): SimState {
   switch (action.type) {

@@ -122,3 +122,5 @@
 {"timestamp": "2026-02-23T03:02:49Z", "branch": "main", "files_changed": [".claude/commands/ship.md", ".claude/provenance.jsonl", "scripts/letta-os.sh", "viz/src/data/loader.ts", "viz/src/data/types.ts"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-23T03:03:05Z", "branch": "main", "files_changed": ["docs/blog/qwen3-30b-v2-training-results.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
 {"timestamp": "2026-02-23T03:11:08Z", "branch": "main", "files_changed": ["docs/blog/evo-game-gamescape-prisoners-dilemma.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-23T03:17:18Z", "branch": "main", "files_changed": [".claude/provenance.jsonl", "viz/src/data/loader.ts"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
+{"timestamp": "2026-02-23T03:32:11Z", "branch": "main", "files_changed": ["outputs/recursive-self-improvement/writeup.md"], "new_files": ["outputs/recursive-self-improvement/writeup.md"], "docs_reminders_resolved": 0, "docs_reminders_unresolved": 0}
