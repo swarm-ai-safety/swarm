@@ -12,6 +12,7 @@ import { OverlayToggles } from "./OverlayToggles";
 import { SplashScreen } from "./SplashScreen";
 import { NarrativeOverlay } from "./NarrativeOverlay";
 import { Leaderboard } from "./Leaderboard";
+import { EventFeed } from "./EventFeed";
 
 export function SimulationViewer() {
   return (
@@ -30,6 +31,7 @@ export function SimulationViewer() {
         <Minimap />
         <Leaderboard />
         <OverlayToggles />
+        <EventFeed />
         <TimelineControls />
         <SplashScreen />
       </div>

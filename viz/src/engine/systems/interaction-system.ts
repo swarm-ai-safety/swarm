@@ -23,6 +23,23 @@ export class InteractionSystem {
     }
   }
 
+  /** Add arcs only for events at a specific (epoch, step) */
+  addFromEventsAtStep(events: InteractionEvent[], epoch: number, step: number) {
+    for (const evt of events) {
+      if (evt.epoch !== epoch || evt.step !== step) continue;
+      this.arcs.push({
+        id: `arc-${this.arcCounter++}`,
+        fromId: evt.initiator,
+        toId: evt.counterparty,
+        p: evt.p,
+        accepted: evt.accepted,
+        progress: 0,
+        epoch,
+        interactionType: mapInteractionType(evt.interaction_type),
+      });
+    }
+  }
+
   /** Add synthetic arcs when no event data (from agent snapshots) */
   addSyntheticArcs(
     agentIds: string[],

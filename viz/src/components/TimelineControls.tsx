@@ -19,8 +19,11 @@ function exportSimData(data: import("@/data/types").SimulationData) {
 }
 
 export function TimelineControls() {
-  const { play, pause, setEpoch, setSpeed, playing, speed, currentEpoch, maxEpoch } =
-    usePlayback();
+  const {
+    play, pause, setEpoch, setStep, setSpeed,
+    stepForward, stepBack, toggleStepPlayback,
+    playing, speed, currentEpoch, currentStep, maxStepInEpoch, stepPlayback, maxEpoch,
+  } = usePlayback();
   const { data } = useSimulation();
 
   const handleExport = useCallback(() => {
@@ -28,76 +31,141 @@ export function TimelineControls() {
   }, [data]);
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 h-14 bg-panel border-t border-border flex items-center gap-3 px-4 z-[10000]">
-      {/* Play/Pause */}
-      <button
-        onClick={() => (playing ? pause() : play())}
-        className="w-9 h-9 flex items-center justify-center rounded bg-btn hover:bg-btn-hover transition-colors"
-        title={playing ? "Pause" : "Play"}
-      >
-        {playing ? (
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-            <rect x="2" y="1" width="4" height="12" rx="1" />
-            <rect x="8" y="1" width="4" height="12" rx="1" />
-          </svg>
-        ) : (
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
-            <path d="M3 1.5v11l9-5.5z" />
-          </svg>
-        )}
-      </button>
-
-      {/* Epoch label */}
-      <span className="text-xs text-muted w-20 text-center font-mono">
-        Epoch {currentEpoch}/{maxEpoch}
-      </span>
-
-      {/* Scrubber */}
-      <input
-        type="range"
-        min={0}
-        max={maxEpoch}
-        value={currentEpoch}
-        onChange={(e) => setEpoch(Number(e.target.value))}
-        className="flex-1 h-1.5 appearance-none bg-border rounded-full cursor-pointer
-          [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5
-          [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full
-          [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:cursor-pointer"
-      />
-
-      {/* Speed selector */}
-      <div className="flex items-center gap-1">
-        <span className="text-xs text-muted mr-1">Speed</span>
-        {SPEEDS.map((s) => (
+    <div className="absolute bottom-0 left-0 right-0 bg-panel border-t border-border flex flex-col z-[10000]">
+      {/* Step scrubber row — only visible in step playback mode */}
+      {stepPlayback && (
+        <div className="flex items-center gap-2 px-4 pt-2 pb-1">
+          {/* Step back */}
           <button
-            key={s}
-            onClick={() => setSpeed(s)}
+            onClick={stepBack}
+            className="w-7 h-7 flex items-center justify-center rounded bg-btn hover:bg-btn-hover transition-colors text-xs"
+            title="Step back"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+              <rect x="0" y="1" width="2" height="8" />
+              <path d="M9 1v8L3 5z" />
+            </svg>
+          </button>
+
+          {/* Step label */}
+          <span className="text-xs text-muted w-28 text-center font-mono whitespace-nowrap">
+            Step {currentStep}/{maxStepInEpoch}
+          </span>
+
+          {/* Step scrubber */}
+          <input
+            type="range"
+            min={0}
+            max={maxStepInEpoch}
+            value={currentStep}
+            onChange={(e) => setStep(Number(e.target.value))}
+            className="flex-1 h-1 appearance-none bg-border/60 rounded-full cursor-pointer
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-2.5
+              [&::-webkit-slider-thumb]:h-2.5 [&::-webkit-slider-thumb]:rounded-full
+              [&::-webkit-slider-thumb]:bg-secondary [&::-webkit-slider-thumb]:cursor-pointer"
+          />
+
+          {/* Step forward */}
+          <button
+            onClick={stepForward}
+            className="w-7 h-7 flex items-center justify-center rounded bg-btn hover:bg-btn-hover transition-colors text-xs"
+            title="Step forward"
+          >
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor">
+              <path d="M1 1v8l6-4z" />
+              <rect x="8" y="1" width="2" height="8" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {/* Main controls row */}
+      <div className="h-14 flex items-center gap-3 px-4">
+        {/* Play/Pause */}
+        <button
+          onClick={() => (playing ? pause() : play())}
+          className="w-9 h-9 flex items-center justify-center rounded bg-btn hover:bg-btn-hover transition-colors"
+          title={playing ? "Pause" : "Play"}
+        >
+          {playing ? (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+              <rect x="2" y="1" width="4" height="12" rx="1" />
+              <rect x="8" y="1" width="4" height="12" rx="1" />
+            </svg>
+          ) : (
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+              <path d="M3 1.5v11l9-5.5z" />
+            </svg>
+          )}
+        </button>
+
+        {/* Epoch label */}
+        <span className="text-xs text-muted w-20 text-center font-mono">
+          Epoch {currentEpoch}/{maxEpoch}
+        </span>
+
+        {/* Epoch scrubber */}
+        <input
+          type="range"
+          min={0}
+          max={maxEpoch}
+          value={currentEpoch}
+          onChange={(e) => setEpoch(Number(e.target.value))}
+          className="flex-1 h-1.5 appearance-none bg-border rounded-full cursor-pointer
+            [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3.5
+            [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:rounded-full
+            [&::-webkit-slider-thumb]:bg-accent [&::-webkit-slider-thumb]:cursor-pointer"
+        />
+
+        {/* Speed selector */}
+        <div className="flex items-center gap-1">
+          <span className="text-xs text-muted mr-1">Speed</span>
+          {SPEEDS.map((s) => (
+            <button
+              key={s}
+              onClick={() => setSpeed(s)}
+              className={`px-2 py-1 text-xs rounded transition-colors ${
+                speed === s
+                  ? "bg-accent text-bg font-bold"
+                  : "bg-btn hover:bg-btn-hover text-muted"
+              }`}
+            >
+              {s}x
+            </button>
+          ))}
+        </div>
+
+        {/* Step playback toggle — only show when event index is available */}
+        {data?.rawEvents && data.rawEvents.length > 0 && (
+          <button
+            onClick={toggleStepPlayback}
             className={`px-2 py-1 text-xs rounded transition-colors ${
-              speed === s
-                ? "bg-accent text-bg font-bold"
+              stepPlayback
+                ? "bg-secondary text-bg font-bold"
                 : "bg-btn hover:bg-btn-hover text-muted"
             }`}
+            title={stepPlayback ? "Switch to epoch-level playback" : "Switch to step-level playback"}
           >
-            {s}x
+            {stepPlayback ? "Step" : "Epoch"}
           </button>
-        ))}
+        )}
+
+        {/* Governance intervention */}
+        {data && <GovernanceIntervention />}
+
+        {/* Export button */}
+        {data && (
+          <button
+            onClick={handleExport}
+            className="w-9 h-9 flex items-center justify-center rounded bg-btn hover:bg-btn-hover transition-colors"
+            title="Export as history.json"
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 1v8M4 6l3 3 3-3M2 11v1.5h10V11" />
+            </svg>
+          </button>
+        )}
       </div>
-
-      {/* Governance intervention */}
-      {data && <GovernanceIntervention />}
-
-      {/* Export button */}
-      {data && (
-        <button
-          onClick={handleExport}
-          className="w-9 h-9 flex items-center justify-center rounded bg-btn hover:bg-btn-hover transition-colors"
-          title="Export as history.json"
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M7 1v8M4 6l3 3 3-3M2 11v1.5h10V11" />
-          </svg>
-        </button>
-      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useCallback, useRef, useState } from "react";
 import { useSimulation } from "@/state/use-simulation";
-import { loadSimulationData } from "@/data/loader";
+import { loadSimulationData, loadSimulationBundle } from "@/data/loader";
 import { SimConfigPanel } from "./SimConfigPanel";
 import { ComparePanel } from "./ComparePanel";
 import { SweepPanel } from "./SweepPanel";
@@ -30,7 +30,10 @@ const TABS: { key: Tab; label: string }[] = [
 export function DataLoader() {
   const { data, loadData } = useSimulation();
   const fileRef = useRef<HTMLInputElement>(null);
+  const eventsFileRef = useRef<HTMLInputElement>(null);
   const [tab, setTab] = useState<Tab>("load");
+  const [historyFile, setHistoryFile] = useState<File | null>(null);
+  const [eventsFile, setEventsFile] = useState<File | null>(null);
 
   const handleLoadData = useCallback(
     (sim: import("@/data/types").SimulationData) => {
@@ -40,10 +43,12 @@ export function DataLoader() {
     [loadData],
   );
 
-  const handleFile = useCallback(
-    async (file: File) => {
+  const handleLoadBundle = useCallback(
+    async (history: File, events?: File | null) => {
       try {
-        const sim = await loadSimulationData(file);
+        const sim = events
+          ? await loadSimulationBundle(history, events)
+          : await loadSimulationData(history);
         handleLoadData(sim);
       } catch (e) {
         alert(`Error loading file: ${e instanceof Error ? e.message : e}`);
@@ -51,6 +56,29 @@ export function DataLoader() {
     },
     [handleLoadData],
   );
+
+  const handleFile = useCallback(
+    async (file: File) => {
+      setHistoryFile(file);
+      // If there's already an events file queued, load the bundle immediately
+      if (eventsFile) {
+        await handleLoadBundle(file, eventsFile);
+      }
+    },
+    [eventsFile, handleLoadBundle],
+  );
+
+  const handleEventsFile = useCallback(
+    (file: File) => {
+      setEventsFile(file);
+    },
+    [],
+  );
+
+  const handleLoadClick = useCallback(async () => {
+    if (!historyFile) return;
+    await handleLoadBundle(historyFile, eventsFile);
+  }, [historyFile, eventsFile, handleLoadBundle]);
 
   const handleSample = useCallback(
     async (path: string) => {
@@ -91,9 +119,9 @@ export function DataLoader() {
 
         {tab === "load" && (
           <>
-            {/* File upload */}
+            {/* History.json upload */}
             <div
-              className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-accent transition-colors mb-4"
+              className="border-2 border-dashed border-border rounded-lg p-6 text-center cursor-pointer hover:border-accent transition-colors mb-3"
               onClick={() => fileRef.current?.click()}
               onDragOver={(e) => {
                 e.preventDefault();
@@ -114,6 +142,9 @@ export function DataLoader() {
                 Drop a <span className="text-text font-mono">history.json</span> here
               </p>
               <p className="text-xs text-muted mt-1">or click to browse</p>
+              {historyFile && (
+                <p className="text-xs text-accent mt-2 font-mono">{historyFile.name}</p>
+              )}
             </div>
             <input
               ref={fileRef}
@@ -125,6 +156,53 @@ export function DataLoader() {
                 if (file) handleFile(file);
               }}
             />
+
+            {/* Events.jsonl upload (optional) */}
+            <div
+              className="border border-dashed border-border rounded-lg p-3 text-center cursor-pointer hover:border-secondary transition-colors mb-3"
+              onClick={() => eventsFileRef.current?.click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.add("border-secondary");
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.classList.remove("border-secondary");
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.classList.remove("border-secondary");
+                const file = e.dataTransfer.files[0];
+                if (file) handleEventsFile(file);
+              }}
+            >
+              <p className="text-xs text-muted">
+                + Attach <span className="text-text font-mono">events.jsonl</span>
+                <span className="text-muted/60 ml-1">(optional, enables step playback)</span>
+              </p>
+              {eventsFile && (
+                <p className="text-xs text-secondary mt-1 font-mono">{eventsFile.name}</p>
+              )}
+            </div>
+            <input
+              ref={eventsFileRef}
+              type="file"
+              accept=".jsonl"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleEventsFile(file);
+              }}
+            />
+
+            {/* Load button — shown when history file is staged */}
+            {historyFile && (
+              <button
+                onClick={handleLoadClick}
+                className="w-full py-2 rounded bg-accent text-bg font-bold text-sm hover:opacity-90 transition-opacity mb-4"
+              >
+                Load{eventsFile ? " with Events" : ""}
+              </button>
+            )}
 
             {/* Sample data */}
             <div className="border-t border-border pt-4">

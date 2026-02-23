@@ -17,9 +17,11 @@ export function usePlayback() {
   const rafRef = useRef<number>(0);
   const lastTimeRef = useRef<number>(0);
   const epochTimeRef = useRef<number>(0);
+  const stepTimeRef = useRef<number>(0);
   const lastParticleSpawn = useRef<number>(0);
   const lastTrailSpawn = useRef<number>(0);
   const prevEpochRef = useRef<number>(-1);
+  const prevStepRef = useRef<number>(-1);
   const walkPhaseMap = useRef<Map<string, number>>(new Map());
   const facingMap = useRef<Map<string, number>>(new Map());
   const tickRef = useRef<(timestamp: number) => void>(() => {});
@@ -33,40 +35,79 @@ export function usePlayback() {
 
       let epoch = state.currentEpoch;
       let fraction = state.epochFraction;
+      let step = state.currentStep;
+      let maxStepInEpoch = state.maxStepInEpoch;
+      const isStepMode = state.stepPlayback && state.eventIndex;
 
       if (state.playing) {
-        epochTimeRef.current += dt * state.speed;
-        fraction = epochTimeRef.current / ANIM.epochTransition;
+        if (isStepMode) {
+          // ── Step-level playback ──
+          const stepsInEpoch = maxStepInEpoch + 1;
+          const stepDuration = ANIM.epochTransition / Math.max(stepsInEpoch, 1);
+          stepTimeRef.current += dt * state.speed;
 
-        if (fraction >= 1) {
-          fraction = 0;
-          epochTimeRef.current = 0;
-          epoch = Math.min(epoch + 1, state.data.epoch_snapshots.length - 1);
+          if (stepTimeRef.current >= stepDuration) {
+            stepTimeRef.current = 0;
 
-          // Spawn arcs for new epoch — use real events when available
-          const epochSnap = state.data.epoch_snapshots[epoch];
-          if (epochSnap) {
-            const events = state.data.events;
-            if (events && events.length > 0) {
-              interactionSystem.current.addFromEvents(events, epoch);
+            if (step < maxStepInEpoch) {
+              // Advance to next step within epoch
+              step = step + 1;
             } else {
-              const agentIds = [...agentPositions.current.keys()];
-              const acceptRate =
-                epochSnap.total_interactions > 0
-                  ? epochSnap.accepted_interactions / epochSnap.total_interactions
-                  : 0.5;
-              interactionSystem.current.addSyntheticArcs(
-                agentIds,
-                epoch,
-                epochSnap.total_interactions,
-                epochSnap.avg_p,
-                acceptRate,
-              );
+              // End of epoch — advance to next epoch, reset step
+              epoch = Math.min(epoch + 1, state.data.epoch_snapshots.length - 1);
+              step = 0;
+              maxStepInEpoch = state.eventIndex!.maxStep(epoch);
+            }
+
+            // Spawn arcs for this specific step
+            const stepInteractions = state.eventIndex!.interactionsAt(epoch, step);
+            if (stepInteractions.length > 0) {
+              interactionSystem.current.addFromEventsAtStep(stepInteractions, epoch, step);
+            }
+
+            if (epoch >= state.data.epoch_snapshots.length - 1 && step >= maxStepInEpoch) {
+              dispatch({ type: "SET_PLAYING", playing: false });
             }
           }
 
-          if (epoch >= state.data.epoch_snapshots.length - 1) {
-            dispatch({ type: "SET_PLAYING", playing: false });
+          // Fraction within epoch derived from step progress
+          fraction = stepsInEpoch > 0 ? (step + stepTimeRef.current / stepDuration) / stepsInEpoch : 0;
+          fraction = Math.min(fraction, 0.999);
+        } else {
+          // ── Epoch-level playback (legacy) ──
+          epochTimeRef.current += dt * state.speed;
+          fraction = epochTimeRef.current / ANIM.epochTransition;
+
+          if (fraction >= 1) {
+            fraction = 0;
+            epochTimeRef.current = 0;
+            epoch = Math.min(epoch + 1, state.data.epoch_snapshots.length - 1);
+
+            // Spawn arcs for new epoch — use real events when available
+            const epochSnap = state.data.epoch_snapshots[epoch];
+            if (epochSnap) {
+              const events = state.data.events;
+              if (events && events.length > 0) {
+                interactionSystem.current.addFromEvents(events, epoch);
+              } else {
+                const agentIds = [...agentPositions.current.keys()];
+                const acceptRate =
+                  epochSnap.total_interactions > 0
+                    ? epochSnap.accepted_interactions / epochSnap.total_interactions
+                    : 0.5;
+                interactionSystem.current.addSyntheticArcs(
+                  agentIds,
+                  epoch,
+                  epochSnap.total_interactions,
+                  epochSnap.avg_p,
+                  acceptRate,
+                );
+              }
+            }
+
+            if (epoch >= state.data.epoch_snapshots.length - 1) {
+              dispatch({ type: "SET_PLAYING", playing: false });
+            }
           }
         }
       }
@@ -81,6 +122,7 @@ export function usePlayback() {
         };
       }
       prevEpochRef.current = epoch;
+      prevStepRef.current = step;
 
       // Expire recompile flash
       const recompile = recompileStateRef.current;
@@ -229,11 +271,13 @@ export function usePlayback() {
         epoch,
         fraction,
         epochSnap: epochSnap,
+        step,
+        maxStepInEpoch,
       });
 
       rafRef.current = requestAnimationFrame((ts) => tickRef.current(ts));
     },
-    [state.data, state.playing, state.speed, state.currentEpoch, state.epochFraction, dispatch, interactionSystem, particleSystem, codeTrailSystem, digitalRainRef, recompileStateRef, state.environment.threatLevel, state.viewport.height, state.viewport.width, agentPositions, agentsByEpoch],
+    [state.data, state.playing, state.speed, state.currentEpoch, state.epochFraction, state.currentStep, state.maxStepInEpoch, state.stepPlayback, state.eventIndex, dispatch, interactionSystem, particleSystem, codeTrailSystem, digitalRainRef, recompileStateRef, state.environment.threatLevel, state.viewport.height, state.viewport.width, agentPositions, agentsByEpoch],
   );
 
   // Keep tickRef in sync so RAF callback always calls latest tick
@@ -252,40 +296,103 @@ export function usePlayback() {
   const setEpoch = useCallback(
     (epoch: number) => {
       epochTimeRef.current = 0;
+      stepTimeRef.current = 0;
       dispatch({ type: "SET_EPOCH", epoch });
 
       // Generate arcs for this epoch — use real events when available
       if (state.data) {
         interactionSystem.current.clear();
-        const epochSnap = state.data.epoch_snapshots[epoch];
-        if (epochSnap) {
-          const events = state.data.events;
-          if (events && events.length > 0) {
-            interactionSystem.current.addFromEvents(events, epoch);
-          } else {
-            const agentIds = [...agentPositions.current.keys()];
-            const acceptRate =
-              epochSnap.total_interactions > 0
-                ? epochSnap.accepted_interactions / epochSnap.total_interactions
-                : 0.5;
-            interactionSystem.current.addSyntheticArcs(
-              agentIds,
-              epoch,
-              epochSnap.total_interactions,
-              epochSnap.avg_p,
-              acceptRate,
-            );
+
+        if (state.stepPlayback && state.eventIndex) {
+          // In step mode, spawn arcs for step 0 of the new epoch
+          const stepInteractions = state.eventIndex.interactionsAt(epoch, 0);
+          if (stepInteractions.length > 0) {
+            interactionSystem.current.addFromEventsAtStep(stepInteractions, epoch, 0);
+          }
+        } else {
+          const epochSnap = state.data.epoch_snapshots[epoch];
+          if (epochSnap) {
+            const events = state.data.events;
+            if (events && events.length > 0) {
+              interactionSystem.current.addFromEvents(events, epoch);
+            } else {
+              const agentIds = [...agentPositions.current.keys()];
+              const acceptRate =
+                epochSnap.total_interactions > 0
+                  ? epochSnap.accepted_interactions / epochSnap.total_interactions
+                  : 0.5;
+              interactionSystem.current.addSyntheticArcs(
+                agentIds,
+                epoch,
+                epochSnap.total_interactions,
+                epochSnap.avg_p,
+                acceptRate,
+              );
+            }
           }
         }
       }
     },
-    [dispatch, state.data, interactionSystem, agentPositions],
+    [dispatch, state.data, state.stepPlayback, state.eventIndex, interactionSystem, agentPositions],
+  );
+
+  const setStep = useCallback(
+    (step: number) => {
+      stepTimeRef.current = 0;
+      dispatch({ type: "SET_STEP", step });
+
+      // Rebuild arcs for the target step: clear and replay all steps up to this one
+      if (state.data && state.eventIndex) {
+        interactionSystem.current.clear();
+        // Spawn arcs for all steps up to and including the target step
+        // so that in-progress arcs from earlier steps are visible
+        const epoch = state.currentEpoch;
+        for (let s = Math.max(0, step - 2); s <= step; s++) {
+          const stepInteractions = state.eventIndex.interactionsAt(epoch, s);
+          if (stepInteractions.length > 0) {
+            interactionSystem.current.addFromEventsAtStep(stepInteractions, epoch, s);
+          }
+        }
+      }
+    },
+    [dispatch, state.data, state.eventIndex, state.currentEpoch, interactionSystem],
   );
 
   const setSpeed = useCallback(
     (speed: number) => dispatch({ type: "SET_SPEED", speed }),
     [dispatch],
   );
+
+  const toggleStepPlayback = useCallback(
+    () => dispatch({ type: "SET_STEP_PLAYBACK", enabled: !state.stepPlayback }),
+    [dispatch, state.stepPlayback],
+  );
+
+  const stepForward = useCallback(() => {
+    if (!state.data || !state.eventIndex) return;
+    const maxStep = state.eventIndex.maxStep(state.currentEpoch);
+    if (state.currentStep < maxStep) {
+      setStep(state.currentStep + 1);
+    } else if (state.currentEpoch < state.data.epoch_snapshots.length - 1) {
+      // Advance to next epoch, step 0
+      setEpoch(state.currentEpoch + 1);
+    }
+  }, [state.data, state.eventIndex, state.currentEpoch, state.currentStep, setStep, setEpoch]);
+
+  const stepBack = useCallback(() => {
+    if (!state.eventIndex) return;
+    if (state.currentStep > 0) {
+      setStep(state.currentStep - 1);
+    } else if (state.currentEpoch > 0) {
+      // Go to last step of previous epoch
+      const prevEpoch = state.currentEpoch - 1;
+      epochTimeRef.current = 0;
+      stepTimeRef.current = 0;
+      dispatch({ type: "SET_EPOCH", epoch: prevEpoch });
+      const prevMax = state.eventIndex.maxStep(prevEpoch);
+      setStep(prevMax);
+    }
+  }, [state.eventIndex, state.currentEpoch, state.currentStep, setStep, dispatch]);
 
   // Start/stop RAF loop
   useEffect(() => {
@@ -301,10 +408,17 @@ export function usePlayback() {
     play,
     pause,
     setEpoch,
+    setStep,
     setSpeed,
+    stepForward,
+    stepBack,
+    toggleStepPlayback,
     playing: state.playing,
     speed: state.speed,
     currentEpoch: state.currentEpoch,
+    currentStep: state.currentStep,
+    maxStepInEpoch: state.maxStepInEpoch,
+    stepPlayback: state.stepPlayback,
     maxEpoch: state.data ? state.data.epoch_snapshots.length - 1 : 0,
   };
 }
