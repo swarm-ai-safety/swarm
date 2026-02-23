@@ -17,6 +17,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## February 2026
 
+<div class="blog-post" data-tags="llm-agents evaluation governance" markdown>
+
+**Feb 22** — [We Let a Coding Agent Improve Itself 5 Times. Every Fix Made It Harder to Govern.](recursive-self-improvement-swarm-safety.md)
+<span class="blog-tag">LLM Agents</span> <span class="blog-tag">Evaluation</span> <span class="blog-tag">Governance</span>
+
+A coding agent pointed at its own source code found and fixed 5 real bugs across 5 autonomous rounds. Every fix made it more resilient --- and every fix passed all 175 tests. But the agent never touched its own safety mechanisms. The capability-governance gap widened silently with each merge. Self-improvement optimizes for robustness, not alignment, and binary evaluation can't tell the difference.
+
+</div>
+
 <div class="blog-post" data-tags="governance evaluation" markdown>
 
 **Feb 21** — [The Cure Was Worse Than the Disease](runaway-intelligence-three-level-containment.md)
