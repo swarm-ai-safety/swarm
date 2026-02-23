@@ -164,6 +164,34 @@ The off-policy level climbed from 2 to 10 over the last 15 steps, and the schedu
 
 The v0.2 environment broke through the v0.1 ceiling decisively. The highest single-sample reward (1.403) exceeds anything from v0.1 by 23%. Every metric either matched or exceeded v0.1, and the two biggest v0.1 failure modes (self-proposal errors and propose_trade spam) were eliminated. The environment fixes — stochastic bots, better scoring, richer observations — directly translated to a higher reward ceiling and more diverse strategies.
 
+## Base Model Eval: How Much Did RL Help?
+
+Training metrics show improvement over the course of training, but step 0 metrics can be misleading — the early batches include rollouts that fail to engage at all, dragging the average down. To get a fair comparison, we ran the **base Qwen3-30B-A3B-Thinking model** (no RL, no adapter) through the same environment: 20 examples, 4 rollouts each, 76 completed rollouts on medium difficulty.
+
+### Base Model vs RL-Trained (Final)
+
+| Metric | Base Model (76 rollouts) | RL Final (step 199) | Change |
+|--------|--------------------------|---------------------|--------|
+| **Reward** | 1.211 | **1.377** | +13.7% |
+| **Payoff** | 0.899 | **0.998** | +11.0% |
+| **Reputation** | 0.545 | — | — |
+| **Interaction Quality** | 0.389 | **0.717** | +84.3% |
+| **Action Diversity** | **0.704** | 0.596 | -15.3% |
+| **Survival** | 1.000 | 1.000 | Same |
+| **Avg Turns** | 25.0 | 25.0 | Same |
+
+### What This Tells Us
+
+**The base Thinking model is already strong.** Unlike the Instruct variant (which had 58% early termination in v0.1), the Thinking model uses all 25 turns, achieves 100% survival, and gets a 1.21 average reward without any RL. The extended reasoning chain helps it plan multi-step strategies out of the box.
+
+**RL's biggest contribution is interaction quality**, which nearly doubled from 0.39 to 0.72. The model learned to produce genuinely better task submissions and more favorable trades — not just more of them.
+
+**RL trades diversity for payoff.** Action diversity *dropped* from 0.70 to 0.60 after training. The base model explores more broadly; the RL model specializes on high-payoff actions. This is the classic exploration-exploitation tradeoff. The diversity metric (weight 0.1) wasn't strong enough to counteract the payoff gradient (weight 1.0).
+
+**Payoff went from 90% to 100%.** The base model leaves ~10% of potential payoff on the table. RL squeezed it to near-maximum, likely through better task selection and more persistent trading.
+
+**The honest comparison is +13.7%, not +55%.** The step 0 training metrics (0.89 reward) include failed rollouts from early batches where the model hadn't warmed up yet. Against a proper baseline eval, RL adds 13.7% — still significant, but the base model does most of the heavy lifting.
+
 ## Reproducing This
 
 ```bash
@@ -180,9 +208,10 @@ prime rl run configs/rl/swarm-economy-v2.toml
 ## What's Next
 
 1. **Reputation intervention.** The flat reputation curve is the clearest remaining bottleneck. Either increase the weight or add an auxiliary reward for maintaining reputation above starting level.
-2. **Curriculum to hard difficulty.** The current run used medium difficulty. Hard difficulty introduces more deceptive bots and tighter governance — a natural next step now that the model has saturated on medium.
-3. **Cross-model comparison.** Run the same environment with different base models (GPT-4.1-mini, Llama-4-Scout) to test whether the learned strategies are model-specific or universal.
-4. **Eval the checkpoint.** Run the trained model through a full evaluation sweep to compare against the pre-training baseline and validate that the improvements generalize to held-out scenarios.
+2. **Eval with adapter deployed.** The adapter deployment is currently failing on Prime Intellect's infrastructure. Once resolved, we can run a proper head-to-head eval: base model vs trained checkpoint on the same scenarios.
+3. **Curriculum to hard difficulty.** The current run used medium difficulty. Hard difficulty introduces more deceptive bots and tighter governance — a natural next step now that the model has saturated on medium.
+4. **Boost diversity weight.** RL reduced action diversity from 0.70 to 0.60. Increasing the diversity metric weight from 0.1 to 0.2-0.3 could preserve exploratory behavior while still optimizing payoff.
+5. **Cross-model comparison.** Run the same environment with different base models (GPT-4.1-mini, Llama-4-Scout) to test whether the learned strategies are model-specific or universal.
 
 ---
 
