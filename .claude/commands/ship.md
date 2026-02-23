@@ -30,6 +30,42 @@ If no flags are given, behavior matches the original `/ship`: commit staged chan
 
 ## Behavior
 
+### Phase 0: Research Close (only if `--research-close` flag is set)
+
+Runs the research session close ritual before any git operations.
+
+**Step 0a: Inventory changes**
+- Run `git status` and `git diff --stat` to see what changed this session.
+
+**Step 0b: Summarize session**
+- Generate a concise session summary: what files changed, what was learned, what's next.
+- Format as an append-only entry with ISO timestamp header.
+
+**Step 0c: Append to research log**
+- Append the session summary to `.letta/memory/threads/research-log.md`.
+- Each entry format:
+  ```
+  ## <ISO-8601 timestamp>
+
+  **Changed:** <brief list of key changes>
+  **Learned:** <key insight or finding>
+  **Next:** <next planned action>
+  ```
+- This file is append-only — never overwrite existing entries.
+
+**Step 0d: Update active thread**
+- Read `.letta/memory/threads/current.md`.
+- Update it to reflect the current state: active hypothesis, blockers, next experiment.
+- If the hypothesis was resolved, note the outcome and set the next one (or mark as "No active hypothesis").
+
+**Step 0e: Update run pointers**
+- If new runs were completed during this session (check `runs/` directory for recent timestamps), add them to `.letta/memory/runs/latest.md`.
+- Keep only the 10 most recent entries.
+
+**Step 0f: Stage memory files**
+- Stage all modified files under `.letta/memory/` (never stage secrets or credentials).
+- Proceed to Phase 1 with these files included in the commit.
+
 ### Phase 1: Pre-flight
 
 1. Run `git status` to identify staged, unstaged, and untracked files.
