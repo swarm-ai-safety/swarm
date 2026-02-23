@@ -371,7 +371,7 @@ swarm/
 │   └── logging/         # Append-only JSONL logger
 ├── tests/               # 4556 tests across 133 files
 ├── examples/            # 39 runnable scripts + Streamlit demo
-├── scenarios/           # 78 YAML scenario definitions
+├── scenarios/           # 79 YAML scenario definitions
 ├── docs/                # Documentation, papers, blog posts
 └── pyproject.toml
 ```
