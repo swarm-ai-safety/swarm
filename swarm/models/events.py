@@ -149,6 +149,13 @@ class EventType(Enum):
     CONTRACT_SIGNING = "contract_signing"
     CONTRACT_METRICS = "contract_metrics"
 
+    # Adaptive governance events
+    GOVERNANCE_THRESHOLD_PROPOSED = "governance_threshold_proposed"
+    GOVERNANCE_THRESHOLD_APPLIED = "governance_threshold_applied"
+    GOVERNANCE_THRESHOLD_CRYSTALLIZED = "governance_threshold_crystallized"
+    GOVERNANCE_THRESHOLD_REVERTED = "governance_threshold_reverted"
+    GOVERNANCE_CONTEMPLATION_COMPLETED = "governance_contemplation_completed"
+
     # System events
     SIMULATION_STARTED = "simulation_started"
     SIMULATION_ENDED = "simulation_ended"

@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Adaptive governance controller** (`swarm/governance/adaptive.py`, `swarm/governance/adaptive_controller.py`) — three-phase loop with evidence accumulation, 3-pass contemplation (signal/trend/propose), and 3-gate crystallization (time/alignment/human review) for automatic threshold tuning of governance levers
+- **Adaptive governance scenario** (`scenarios/adaptive_governance.yaml`) — 30-epoch mixed-agent scenario with circuit breaker, audit, and collusion detection levers enabled for adaptive tuning
 - **Social dilemma norms study** (`examples/social_dilemma_norms_study.py`) — 3 dilemmas x 5 governance configs sweep measuring cooperation emergence, with dilemma narrative generators (`swarm/bridges/concordia/dilemma_narratives.py`) and scenario YAMLs for commons and prisoner's dilemma
 - **ThresholdDancer adversary agent** (`swarm/agents/threshold_dancer.py`) — per-counterparty state machine (COOPERATIVE/EXPLOIT/RECOVER) that exploits CautiousReciprocator's blacklist floor without triggering it
 - **Threshold dancer test suite** (`tests/test_threshold_dancer.py`) — 21 unit tests covering phase transitions, blacklist safety property, act method, and outcome tracking

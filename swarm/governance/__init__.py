@@ -1,5 +1,15 @@
 """Governance module for configurable levers."""
 
+from swarm.governance.adaptive import (
+    AdaptableParameter,
+    ContemplationEvaluator,
+    CrystallizationGate,
+    EpochEvidence,
+    EvidenceAccumulator,
+    ProposalStatus,
+    ThresholdProposal,
+)
+from swarm.governance.adaptive_controller import AdaptiveGovernanceController
 from swarm.governance.admission import StakingLever
 from swarm.governance.audits import RandomAuditLever
 from swarm.governance.circuit_breaker import CircuitBreakerLever
@@ -58,4 +68,12 @@ __all__ = [
     "ModificationProposal",
     "ModificationState",
     "RiskTier",
+    "AdaptableParameter",
+    "ContemplationEvaluator",
+    "CrystallizationGate",
+    "EpochEvidence",
+    "EvidenceAccumulator",
+    "ProposalStatus",
+    "ThresholdProposal",
+    "AdaptiveGovernanceController",
 ]

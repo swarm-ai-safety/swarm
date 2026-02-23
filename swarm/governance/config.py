@@ -86,6 +86,17 @@ class GovernanceConfig(BaseModel):
     adaptive_incoherence_threshold: float = 0.5
     adaptive_use_behavioral_features: bool = False
 
+    # Adaptive governance controller (contemplation + crystallization)
+    adaptive_controller_enabled: bool = False
+    adaptive_controller_evidence_window: int = 20
+    adaptive_controller_contemplation_interval: int = 5
+    adaptive_controller_min_evidence_epochs: int = 10
+    adaptive_controller_confidence_threshold: float = 0.8
+    adaptive_controller_crystallization_min_epochs: int = 5
+    adaptive_controller_require_human_review: bool = True
+    adaptive_controller_max_degradation_tolerance: float = 0.05
+    adaptive_controller_max_active_proposals: int = 3
+
     # Sybil detection (VAE paper)
     sybil_detection_enabled: bool = False
     sybil_similarity_threshold: float = 0.8  # Behavioral similarity threshold
@@ -285,6 +296,34 @@ class GovernanceConfig(BaseModel):
         # Adaptive governance validation
         if not 0.0 <= self.adaptive_incoherence_threshold <= 1.0:
             raise ValueError("adaptive_incoherence_threshold must be in [0, 1]")
+
+        # Adaptive controller validation
+        if self.adaptive_controller_evidence_window < 1:
+            raise ValueError("adaptive_controller_evidence_window must be >= 1")
+        if self.adaptive_controller_contemplation_interval < 1:
+            raise ValueError(
+                "adaptive_controller_contemplation_interval must be >= 1"
+            )
+        if self.adaptive_controller_min_evidence_epochs < 1:
+            raise ValueError(
+                "adaptive_controller_min_evidence_epochs must be >= 1"
+            )
+        if not 0.0 <= self.adaptive_controller_confidence_threshold <= 1.0:
+            raise ValueError(
+                "adaptive_controller_confidence_threshold must be in [0, 1]"
+            )
+        if self.adaptive_controller_crystallization_min_epochs < 1:
+            raise ValueError(
+                "adaptive_controller_crystallization_min_epochs must be >= 1"
+            )
+        if self.adaptive_controller_max_degradation_tolerance < 0:
+            raise ValueError(
+                "adaptive_controller_max_degradation_tolerance must be non-negative"
+            )
+        if self.adaptive_controller_max_active_proposals < 1:
+            raise ValueError(
+                "adaptive_controller_max_active_proposals must be >= 1"
+            )
 
         # Memory tier governance validation
         if not 0.0 <= self.memory_promotion_min_quality <= 1.0:

@@ -532,8 +532,28 @@ class Orchestrator:
         # Epoch metrics history
         self._epoch_metrics: List[EpochMetrics] = []
 
+        # Adaptive governance controller
+        self._adaptive_controller = None
+        if (
+            self.governance_engine
+            and self.config.governance_config
+            and self.config.governance_config.adaptive_controller_enabled
+        ):
+            from swarm.governance.adaptive_controller import (
+                AdaptiveGovernanceController,
+            )
+
+            self._adaptive_controller = AdaptiveGovernanceController(
+                governance_engine=self.governance_engine,
+                event_bus=self._event_bus,
+                config=self.config.governance_config,
+                seed=self.config.seed,
+            )
+
         # Callbacks
         self._on_epoch_end: List[Callable[[EpochMetrics], None]] = []
+        if self._adaptive_controller is not None:
+            self._on_epoch_end.append(self._adaptive_controller.on_epoch_end)
         self._on_interaction_complete: List[
             Callable[[SoftInteraction, float, float], None]
         ] = []
@@ -1859,6 +1879,11 @@ class Orchestrator:
     def get_spawn_tree(self) -> Optional[SpawnTree]:
         """Get the spawn tree for inspection."""
         return self._spawn_tree
+
+    @property
+    def adaptive_controller(self):
+        """Get the adaptive governance controller."""
+        return self._adaptive_controller
 
     # =========================================================================
     # Red-Team Support
