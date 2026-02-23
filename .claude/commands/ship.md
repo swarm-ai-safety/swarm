@@ -13,6 +13,8 @@ Examples:
 - `/ship --all "Batch commit session output"` (stage everything safe)
 - `/ship --close b6t b7x "Finish live integration tests"` (close beads + commit + push)
 - `/ship --fix --close b6t` (auto-fix, close beads, commit, push)
+- `/ship --research-close` (update research memory, then commit + push)
+- `/ship --research-close "Finished governance knob sweep"` (with explicit message)
 
 ## Argument parsing
 
@@ -20,6 +22,7 @@ Parse `$ARGUMENTS` to extract:
 - `--fix`: Enable ruff/mypy auto-fix with retry loop (up to 3 attempts)
 - `--all`: Stage all modified + untracked files (excluding secrets/junk), not just already-staged ones
 - `--close <bead-ids...>`: Close specified beads before committing. Bead IDs are tokens matching `distributional-agi-safety-*` or similar short IDs. Collect all bead IDs that follow `--close` until the next flag or quoted string.
+- `--research-close`: Run the research session close ritual (Phase 0) before committing. Updates memory files with session summary, active thread, and run pointers.
 - `--no-push`: Commit only, skip push step
 - Everything else in quotes (or the remaining non-flag text) is the commit message.
 

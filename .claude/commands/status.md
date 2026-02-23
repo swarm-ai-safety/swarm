@@ -7,18 +7,20 @@ Use `--full` for a complete session warmup (status + healthcheck + tests). Conso
 ## Usage
 
 ```
-/status [--full] [--skip-tests]
+/status [--full] [--skip-tests] [--research]
 ```
 
 Examples:
 - `/status` (quick orientation)
 - `/status --full` (status + healthcheck + tests)
 - `/status --full --skip-tests` (status + healthcheck, no tests)
+- `/status --research` (standard status + research context)
 
 ## Argument parsing
 
 - `--full`: Run the complete warmup sequence (see Full Mode below)
 - `--skip-tests`: Skip the test suite in `--full` mode
+- `--research`: Append research context from the memory system (see Research Mode below)
 
 ---
 
@@ -190,6 +192,53 @@ Session Warmup
   Ready to work.
 ```
 
+## `--research` mode (research context)
+
+Appends research context to the standard status output. Can be combined with `--full`.
+
+After running the default status (or full warmup), read the following memory files and display a compact "Research Context" block:
+
+### Step R1: Active Thread
+
+Read `.letta/memory/threads/current.md`. Display:
+- Active hypothesis (first heading or bold line)
+- Current blockers (if any)
+- Next planned experiment
+
+If the file doesn't exist or is empty, show "No active research thread."
+
+### Step R2: Recent Runs
+
+Read `.letta/memory/runs/latest.md`. Display the last 5 run pointers (one line each: run ID, scenario, key result).
+
+If the file doesn't exist or is empty, show "No recent runs."
+
+### Step R3: Governance Knobs
+
+Read `.letta/memory/project/governance-knobs.md`. Display a 3-5 line summary of high-leverage knobs and their current settings.
+
+If the file doesn't exist or is empty, skip this section silently.
+
+### Output Format (appended to standard status)
+
+```
+  Research Context
+  ────────────────────────────────────
+  Active thread:
+    Hypothesis: <hypothesis text>
+    Blockers:   <blockers or "none">
+    Next:       <next experiment>
+
+  Recent runs:
+    1. <run_id> — <scenario> — <key result>
+    2. ...
+
+  Governance knobs:
+    <knob>: <setting> — <note>
+    ...
+  ────────────────────────────────────
+```
+
 ## Why This Exists
 
 Session continuations from compacted context lose track of git state. Without `/status`, orientation requires 10-15 manual git commands and risks wasted work (e.g. trying to push commits that are already merged, creating branches that already exist).
@@ -209,3 +258,4 @@ Run `/status` at the start of any resumed session or when unsure of current stat
 |---|---|
 | `/warmup` | `/status --full` |
 | `/warmup --skip-tests` | `/status --full --skip-tests` |
+| `letta-os.sh thread` | `/status --research` |

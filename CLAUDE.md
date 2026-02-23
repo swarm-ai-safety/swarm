@@ -121,6 +121,41 @@ Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine �
 - **Adverse selection**: When low-quality interactions are preferentially accepted (quality_gap < 0)
 - **Externality internalization**: ρ parameters control how much agents bear cost of ecosystem harm
 
+## Research Operator Context
+
+Claude Code serves as the local research operator for this project. The research memory system, skills, and workflow definitions live on disk — Claude Code reads them directly.
+
+### 4-Tier Memory System (`.letta/memory/`)
+
+| Tier | Path | Purpose |
+|---|---|---|
+| System | `.letta/memory/system/` | Identity, workflow rules, preferences |
+| Project | `.letta/memory/project/` | Repo map, scenario families, governance knobs |
+| Threads | `.letta/memory/threads/` | Active hypothesis (`current.md`), session log (`research-log.md`) |
+| Runs | `.letta/memory/runs/` | Run pointers and summaries (`latest.md`) |
+
+These files are append-only where noted (especially `research-log.md`). Read them for context; update them via `/ship --research-close`.
+
+### Available Skills (`.skills/`)
+
+Skills are self-documenting directories with a `SKILL.md` file. To use a skill, read its `SKILL.md` and follow the instructions. Available skills:
+
+- `run-query` — Search run history by tag, date, type, or claim
+- `synthesize` — Generate vault notes from a completed run
+- `sanity-check` — Quick validation run on a scenario
+- `regression-check` — Regression check (tests, baseline, or full)
+- `experiment-loop` — Run an experiment cycle
+- `claim` — Manage research claims inventory
+- `session-close` — End-of-session memory update (now handled by `/ship --research-close`)
+- `verify` — Verify a claim against evidence
+- `vault-init` — Initialize the memory vault structure
+
+### Research Session Protocol
+
+- **Open**: Run `/status --research` to load active hypothesis, recent runs, and research context.
+- **Close**: Run `/ship --research-close` to summarize the session, update memory files, and commit/push.
+- **CLI wrapper**: `./scripts/letta-os.sh` provides shell access to research operations via `claude -p`.
+
 ## Multi-Session Worktree Workflow
 
 When running 15+ concurrent Claude Code sessions, each session runs in its own git worktree to avoid index races and branch conflicts.

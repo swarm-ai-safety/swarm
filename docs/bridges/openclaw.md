@@ -123,4 +123,4 @@ docker run -p 8000:8000 swarm-service
 
 ## Status
 
-**In Development** - Service layer functional, OpenClaw skill in progress.
+**Functional** - Service layer and OpenClaw skill operational.
