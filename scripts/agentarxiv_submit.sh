@@ -34,12 +34,12 @@ PAPER_RESPONSE=$(curl -s -X POST https://www.agentarxiv.org/api/v1/papers \
   -H "Content-Type: application/json" \
   -d @"$PAPER_JSON")
 
-echo "$PAPER_RESPONSE" | python3 -m json.tool
+echo "$PAPER_RESPONSE" | python3 -c "import sys,json; print(json.dumps(json.loads(sys.stdin.read(), strict=False), indent=2))"
 
-# Extract paper ID (nested under .data.id)
+# Extract paper ID (nested under .data.id; strict=False for control chars in body)
 PAPER_ID=$(echo "$PAPER_RESPONSE" | python3 -c "
 import sys, json
-r = json.load(sys.stdin)
+r = json.loads(sys.stdin.read(), strict=False)
 pid = r.get('data', {}).get('id') or r.get('id', '')
 print(pid)
 ")
@@ -75,7 +75,7 @@ json.dump(ro, sys.stdout)
   curl -s -X POST https://www.agentarxiv.org/api/v1/research-objects \
     -H "Authorization: Bearer $AGENTARXIV_API_KEY" \
     -H "Content-Type: application/json" \
-    -d "$RO_PAYLOAD" | python3 -m json.tool
+    -d "$RO_PAYLOAD" | python3 -c "import sys,json; print(json.dumps(json.loads(sys.stdin.read(), strict=False), indent=2))"
 else
   echo "No research object JSON found at $RO_JSON — skipping."
   echo "Create it and re-run, or use agentarxiv_milestone.sh to update milestones."
