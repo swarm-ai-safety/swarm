@@ -1,6 +1,6 @@
 # /add_scenario
 
-Scaffold a new YAML scenario with SWARM conventions.
+Scaffold a new YAML scenario config with SWARM conventions — use when testing a new governance configuration or agent motif that uses existing domain infrastructure. Distinct from `/add_domain` (new task category requiring new data models and handlers) and `/add_metric` (new measurement on existing data).
 
 ## Usage
 

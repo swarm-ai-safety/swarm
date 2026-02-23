@@ -1,6 +1,6 @@
 # /tmux
 
-Show tmux hotkey reference and session management commands. Quick cheat sheet for working with multiple Claude Code panes.
+Print the tmux keyboard shortcut reference card for splitting panes, switching windows, and managing the multi-session Claude Code layout — invoke when you need a keybinding, when setting up the `./scripts/claude-tmux.sh` environment, or when tmux pane navigation is unclear.
 
 ## Behavior
 

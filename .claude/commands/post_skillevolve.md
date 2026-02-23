@@ -1,6 +1,6 @@
 # /post_skillevolve
 
-Post or update a demo on the Skill Evolve forum with an optional artifact (video/image).
+Publish or update a SWARM project demo (video, GIF, or image) on the Skill Evolve community forum — use after `/render_promo` produces a shareable artifact, or after completing a benchmark you want to showcase externally. Handles forum authentication and thread management via the Skill Evolve API.
 
 ## Usage
 

@@ -1,6 +1,6 @@
 # /build_game
 
-Type-check, build, and deploy-build the viz game in one step.
+Type-check and build the SWARM visualization game (`viz/` TypeScript frontend) in one step — use after editing `viz/src/` files, when TypeScript errors need triaging, or before deploying the interactive simulation frontend. Stops on type errors before attempting a build.
 
 ## Usage
 

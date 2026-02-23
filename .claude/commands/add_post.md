@@ -1,6 +1,6 @@
 # /add_post
 
-Add a blog post to the mkdocs website (swarm-ai.org/blog/).
+Scaffold and publish an original blog post to swarm-ai.org/blog/ — handles MkDocs slug generation, metadata headers, nav wiring, and financial-disclaimer enforcement. Use for manually-written essays and research notes; use `/eval_writeup` instead to auto-generate a post from a Prime Intellect eval run.
 
 ## Usage
 

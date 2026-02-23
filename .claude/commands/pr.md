@@ -1,6 +1,6 @@
 # /pr
 
-Create a feature branch, commit staged/unstaged changes, push, and open a GitHub PR against main.
+Create a feature branch, commit staged/unstaged changes, push, and open a GitHub PR against main — use when you have local changes not yet on any branch and want a reviewable PR. Distinct from `/ship` (commit + push to current branch, no PR) and `/fix_pr` (resolve conflicts or run quality gates on an existing PR).
 
 ## Usage
 

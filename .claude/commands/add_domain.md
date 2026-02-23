@@ -1,6 +1,6 @@
 # Add Domain
 
-Add a new simulation domain to SWARM following the established handler pattern.
+Scaffold a new SWARM simulation domain — data models, action types, task handler, agents, metrics, tests, and registry wiring — when adding a fundamentally new task category (e.g. medical triage, code review) whose observables or agent actions don't yet exist in `swarm/models/` or `swarm/agents/`. Use `/add_scenario` instead for a new parameter config using existing domain infrastructure; use `/add_metric` instead for a new measurement on existing data.
 
 ## Pattern Overview
 

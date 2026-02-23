@@ -1,6 +1,6 @@
 # /guard
 
-Pre-work safety checks: verify you're on the right branch and/or check that files haven't been modified by concurrent sessions. Consolidates the former `/branch_guard` and `/session_guard` commands.
+Verify branch identity and detect file conflicts from concurrent Claude Code worktree sessions before starting destructive work — use when opening a worktree pane, before modifying shared files, or when you suspect another session may have touched the same paths. Use `--files` mode to check specific files; omit for branch-only verification. Consolidates the former `/branch_guard` and `/session_guard` commands. Distinct from `/preflight` (pre-commit lint/test checks) and `/healthcheck` (code health after external changes).
 
 ## Usage
 

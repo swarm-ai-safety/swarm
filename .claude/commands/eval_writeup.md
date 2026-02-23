@@ -1,6 +1,6 @@
 # /eval_writeup
 
-End-to-end pipeline: parse a Prime Intellect eval run, read the environment source, and generate a blog post. Use `--parse-only` to just extract structured metrics without writing a post.
+End-to-end pipeline: parse a Prime Intellect eval run, read the environment source, and auto-generate a blog post from eval metrics. Use `--parse-only` to just extract structured metrics without writing a post. Distinct from `/add_post` (manually-written original blog post) — use `/eval_writeup` when starting from eval output, `/add_post` when writing from scratch.
 
 Consolidates the former `/parse_eval` command (now `/eval_writeup --parse-only`).
 

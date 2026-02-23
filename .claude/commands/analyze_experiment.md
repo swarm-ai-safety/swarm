@@ -1,6 +1,6 @@
 # /analyze_experiment
 
-Run statistical analysis on SWARM experiment data. Two modes: run a scenario across multiple seeds, or analyze an existing sweep CSV. Consolidates the former `/stats` command (now `/analyze_experiment --csv`).
+Run statistical analysis on SWARM experiment data. Two modes: run a scenario across multiple seeds, or analyze an existing sweep CSV — use when you have run data and need statistical rigor (p-values, confidence intervals, effect sizes). Distinct from `/sweep` (generates data without analysis), `/run_scenario` (single run without statistics), and `/full_study` (chains sweep + analysis + plots + paper end-to-end). Consolidates the former `/stats` command (now `/analyze_experiment --csv`).
 
 ## Usage
 

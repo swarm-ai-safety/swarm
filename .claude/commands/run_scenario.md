@@ -1,6 +1,6 @@
 # /run_scenario
 
-Run a SWARM scenario with a standardized, reproducible run folder. Optionally generate plots immediately after.
+Run a single SWARM scenario with a single seed and standardized, reproducible run folder. Optionally generate plots immediately after. Distinct from `/sweep` (parameter grid across multiple configs), `/benchmark` (standardized multi-condition evaluation suite), and `/full_study` (end-to-end pipeline including analysis and paper).
 
 Consolidates the former `/run_and_plot` command (now `/run_scenario --plot`).
 
