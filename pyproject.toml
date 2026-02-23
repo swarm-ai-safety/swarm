@@ -92,6 +92,9 @@ memori = [
 hodoscope = [
     "hodoscope",
 ]
+gamescape = [
+    "gamescape",
+]
 langgraph = [
     "langgraph==1.0.9",
     "langchain-core==1.2.14",
