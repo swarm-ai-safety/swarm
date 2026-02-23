@@ -155,6 +155,9 @@ class OrchestratorConfig(BaseModel):
     # Evolutionary game (gamescape) configuration
     evo_game_config: Optional[Any] = None
 
+    # Tierra (artificial life) configuration
+    tierra_config: Optional[Any] = None
+
 
 class EpochMetrics(BaseModel):
     """Metrics collected at the end of each epoch."""
@@ -465,6 +468,22 @@ class Orchestrator:
             self._handler_registry.register(self._evo_game_handler)
         else:
             self._evo_game_handler = None
+
+        # Tierra (artificial life) handler
+        if self.config.tierra_config is not None:
+            from swarm.core.tierra_handler import TierraConfig, TierraHandler
+
+            tierra_cfg = self.config.tierra_config
+            if not isinstance(tierra_cfg, TierraConfig):
+                tierra_cfg = TierraConfig(**tierra_cfg) if isinstance(tierra_cfg, dict) else tierra_cfg
+            self._tierra_handler: Optional[TierraHandler] = TierraHandler(
+                config=tierra_cfg,
+                event_bus=self._event_bus,
+                rng=self._rng,
+            )
+            self._handler_registry.register(self._tierra_handler)
+        else:
+            self._tierra_handler = None
 
         # Letta (MemGPT) lifecycle manager
         if self.config.letta_config is not None:
@@ -1231,12 +1250,47 @@ class Orchestrator:
 
         # Instantiate child agent (concrete subclasses set their own agent_type)
         child_rng = random.Random((self.config.seed or 0) + self._spawn_counter)
-        child_agent = agent_class(  # type: ignore[call-arg]
-            agent_id=child_id,
-            name=child_id,
-            config=child_config if child_config else None,
-            rng=child_rng,
-        )
+
+        # Tierra-specific: mutate genome and split resources
+        is_tierra = child_type_key == "tierra"
+        child_initial_resources = spawn_cfg.initial_child_resources
+        tierra_genome = None
+
+        if is_tierra and action.metadata.get("genome"):
+            from swarm.agents.tierra_agent import TierraGenome
+
+            parent_genome = TierraGenome.from_dict(action.metadata["genome"])
+            mutation_std = 0.05
+            if self._tierra_handler is not None:
+                mutation_std = self._tierra_handler.config.mutation_std
+            tierra_genome = parent_genome.mutate(child_rng, mutation_std)
+
+            # Split resources: parent keeps (1 - share_fraction), child gets share_fraction
+            share_frac = parent_genome.resource_share_fraction
+            child_initial_resources = parent_state.resources * share_frac
+            parent_state.update_resources(-child_initial_resources)
+
+            child_agent = agent_class(  # type: ignore[call-arg]
+                agent_id=child_id,
+                name=child_id,
+                config=child_config if child_config else None,
+                rng=child_rng,
+                genome=tierra_genome,
+            )
+            child_agent.generation = action.metadata.get("generation", 0)  # type: ignore[attr-defined]
+
+            # Register genome with handler
+            if self._tierra_handler is not None:
+                self._tierra_handler.register_genome(child_id, tierra_genome.to_dict())
+                self._tierra_handler._births += 1
+        else:
+            child_agent = agent_class(  # type: ignore[call-arg]
+                agent_id=child_id,
+                name=child_id,
+                config=child_config if child_config else None,
+                rng=child_rng,
+            )
+
         self._agents[child_id] = child_agent
 
         # Register child in env state with inherited reputation
@@ -1246,7 +1300,7 @@ class Orchestrator:
             name=child_id,
             agent_type=child_agent.agent_type,
             initial_reputation=inherited_rep,
-            initial_resources=spawn_cfg.initial_child_resources,
+            initial_resources=child_initial_resources,
         )
         child_state.parent_id = parent_id
 

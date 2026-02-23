@@ -16,6 +16,7 @@ class AgentType(Enum):
     RLM = "rlm"
     CREWAI = "crewai"
     CODING = "coding"
+    TIERRA = "tierra"
 
 
 class AgentStatus(Enum):

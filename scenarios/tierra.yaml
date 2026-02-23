@@ -1,0 +1,48 @@
+scenario_id: tierra
+description: >
+  Tierra-inspired artificial life scenario where agents grow organically
+  through self-replication with mutation, competing for finite shared
+  resources.  Complex ecological dynamics (parasitism, hyperparasitism,
+  mutualism) emerge from simple replication + mutation + selection.
+motif: artificial_life
+
+agents:
+  - type: tierra
+    count: 20
+
+tierra:
+  enabled: true
+  total_resource_pool: 10000.0
+  resource_replenishment_rate: 50.0
+  base_metabolism_cost: 2.0
+  population_cap: 100
+  reaper_mode: lowest_fitness
+  mutation_std: 0.05
+  death_threshold: 0.0
+
+spawn:
+  enabled: true
+  spawn_cost: 0.0          # Tierra uses genome-based resource splitting
+  max_depth: 20
+  max_children: 50
+  max_total_spawned: 500
+  attribution_mode: leaf_only
+  initial_child_resources: 50.0  # Overridden by Tierra resource splitting
+  min_resources_to_spawn: 0.0
+  spawn_cooldown_steps: 0
+
+simulation:
+  n_epochs: 50
+  steps_per_epoch: 20
+  seed: 42
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 1.0
+  circuit_breaker_enabled: false

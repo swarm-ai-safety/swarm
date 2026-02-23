@@ -49,6 +49,7 @@ from swarm.agents.skill_evolving import (
 )
 from swarm.agents.skillrl_agent import SkillRLAgent
 from swarm.agents.threshold_dancer import ThresholdDancer
+from swarm.agents.tierra_agent import TierraAgent
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,
@@ -142,6 +143,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "threshold_dancer": ThresholdDancer,
     # Coding agent (models coding agent behavior)
     "coding_agent": CodingAgent,
+    # Tierra (artificial life with heritable genomes)
+    "tierra": TierraAgent,
 }
 
 # LLM agent support (lazy import to avoid requiring LLM dependencies)
@@ -971,6 +974,26 @@ def build_contract_market(
     )
 
 
+def parse_tierra_config(data: Dict[str, Any]) -> Optional[Any]:
+    """Parse tierra section from YAML into TierraConfig.
+
+    Args:
+        data: The tierra section from YAML
+
+    Returns:
+        TierraConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    from swarm.core.tierra_handler import TierraConfig
+
+    return TierraConfig(**data)
+
+
 def parse_evo_game_config(data: Dict[str, Any]) -> Optional[Any]:
     """Parse evo_game section from YAML into EvoGameConfig.
 
@@ -1039,6 +1062,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
     )
     contracts_config = parse_contracts_config(data.get("contracts", {}))
     evo_game_config = parse_evo_game_config(data.get("evo_game", {}))
+    tierra_config = parse_tierra_config(data.get("tierra", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -1072,6 +1096,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         perturbation_config=perturbation_config,
         contracts_config=contracts_config,
         evo_game_config=evo_game_config,
+        tierra_config=tierra_config,
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")
         else None,
@@ -1434,6 +1459,14 @@ def build_orchestrator(scenario: ScenarioConfig) -> Orchestrator:
             if hasattr(agent, "role"):
                 orchestrator._rivals_handler.register_agent_role(
                     agent.agent_id, agent.role
+                )
+
+    # Register Tierra agent genomes if handler is present
+    if orchestrator._tierra_handler is not None:
+        for agent in agents:
+            if hasattr(agent, "genome"):
+                orchestrator._tierra_handler.register_genome(
+                    agent.agent_id, agent.genome.to_dict()
                 )
 
     # Register evolutionary game strategies if handler is present
