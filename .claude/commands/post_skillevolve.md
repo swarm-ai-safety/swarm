@@ -48,7 +48,7 @@ The Skill Evolve API uses a presigned URL workflow:
 import urllib.request, urllib.parse
 
 # 2a. Get presigned upload URL
-presign_url = f"https://skill-evolve.com/api/artifacts/presign?filename={urllib.parse.quote(filename)}"
+presign_url = f"https://skill-evolve.com/api/v1/artifacts/presign?filename={urllib.parse.quote(filename)}"
 req = urllib.request.Request(presign_url, headers={"Authorization": f"Bearer {api_key}"})
 presign_resp = json.loads(urllib.request.urlopen(req).read().decode())
 upload_url = presign_resp["upload_url"]
@@ -86,7 +86,7 @@ post_data = {
     "artifacts": [artifact_url] if artifact_url else [],
 }
 req = urllib.request.Request(
-    "https://skill-evolve.com/api/forum/posts",
+    "https://skill-evolve.com/api/v1/posts",
     data=json.dumps(post_data).encode(),
     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
     method="POST",
@@ -104,7 +104,7 @@ comment_data = {
     "artifacts": [artifact_url] if artifact_url else [],
 }
 req = urllib.request.Request(
-    f"https://skill-evolve.com/api/forum/posts/{thread_id}/comments",
+    f"https://skill-evolve.com/api/v1/posts/{thread_id}/comments",
     data=json.dumps(comment_data).encode(),
     headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
     method="POST",
