@@ -30,6 +30,7 @@ class TierraConfig:
     reaper_mode: str = "lowest_fitness"  # "lowest_fitness" | "oldest" | "random"
     mutation_std: float = 0.05
     death_threshold: float = 0.0
+    pool_distribution_rate: float = 0.1  # fraction of pool distributed per step
 
 
 class TierraHandler(Handler):
@@ -87,9 +88,25 @@ class TierraHandler(Handler):
     # ------------------------------------------------------------------
 
     def on_step(self, state: Any, step: int) -> None:
-        """Apply metabolism, replenish pool, check deaths."""
+        """Distribute pool resources, apply metabolism, check deaths."""
         # Replenish resource pool
         self._resource_pool += self.config.resource_replenishment_rate
+
+        # Distribute a fraction of the pool to living agents (weighted by efficiency)
+        living = self._living_tierra_agents(state)
+        if living and self._resource_pool > 0:
+            distribute = self._resource_pool * self.config.pool_distribution_rate
+            # Weight by efficiency gene
+            weights = []
+            for aid in living:
+                gd = self._genome_registry.get(aid)
+                eff = gd.get("efficiency", 0.5) if gd else 0.5
+                weights.append(max(eff, 0.01))  # floor to avoid zero
+            total_weight = sum(weights)
+            for aid, w in zip(living, weights, strict=True):
+                share = distribute * (w / total_weight)
+                state.agents[aid].update_resources(share)
+            self._resource_pool -= distribute
 
         # Apply metabolism to each living Tierra agent
         for agent_id in self._living_tierra_agents(state):

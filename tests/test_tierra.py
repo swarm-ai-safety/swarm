@@ -123,7 +123,7 @@ class TestTierraHandler:
         """Agent resources decrease after step."""
         from swarm.env.state import EnvState
 
-        handler = self._make_handler(base_metabolism_cost=2.0)
+        handler = self._make_handler(base_metabolism_cost=2.0, pool_distribution_rate=0.0)
         state = EnvState()
         state.add_agent("t1", agent_type=AgentType.TIERRA, initial_resources=100.0)
         handler.register_genome("t1", TierraGenome().to_dict())
@@ -135,7 +135,7 @@ class TestTierraHandler:
         """Agent should be frozen when resources hit 0."""
         from swarm.env.state import EnvState
 
-        handler = self._make_handler(base_metabolism_cost=100.0)
+        handler = self._make_handler(base_metabolism_cost=100.0, pool_distribution_rate=0.0)
         state = EnvState()
         state.add_agent("t1", agent_type=AgentType.TIERRA, initial_resources=1.0)
         handler.register_genome("t1", TierraGenome(metabolism_rate=2.0).to_dict())
@@ -169,6 +169,7 @@ class TestTierraHandler:
             total_resource_pool=1000.0,
             resource_replenishment_rate=0.0,
             base_metabolism_cost=2.0,
+            pool_distribution_rate=0.0,
         )
         state = EnvState()
         total_agent_resources = 0.0

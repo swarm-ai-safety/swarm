@@ -19,6 +19,7 @@ tierra:
   reaper_mode: lowest_fitness
   mutation_std: 0.05
   death_threshold: 0.0
+  pool_distribution_rate: 0.1
 
 spawn:
   enabled: true
