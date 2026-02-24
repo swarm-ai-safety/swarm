@@ -64,7 +64,9 @@ class LangChainBridge:
         self.chain = chain
         self.config = config or LangChainBridgeConfig()
         self._proxy = ProxyComputer(sigmoid_k=self.config.proxy_sigmoid_k)
-        self._payoff_engine = SoftPayoffEngine(payoff_config or PayoffConfig())
+        self._payoff_engine = SoftPayoffEngine(
+            payoff_config or PayoffConfig(w_rep=self.config.reputation_weight)
+        )
         self._metrics = SoftMetrics(self._payoff_engine)
         self._event_log: Optional[Any] = None
         self.last_payoff: Optional[float] = None

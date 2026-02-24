@@ -194,3 +194,16 @@ class TestLangChainBridge:
         bridge = LangChainBridge(chain=chain, config=cfg)
         interaction = bridge.run("task")
         assert interaction.accepted is False
+
+    def test_reputation_weight_wired_into_payoff_engine(self):
+        cfg = LangChainBridgeConfig(reputation_weight=0.5, enable_event_log=False)
+        bridge = LangChainBridge(chain=make_chain("x"), config=cfg)
+        assert bridge._payoff_engine.config.w_rep == 0.5
+
+    def test_explicit_payoff_config_overrides_reputation_weight(self):
+        from swarm.core.payoff import PayoffConfig
+
+        cfg = LangChainBridgeConfig(reputation_weight=0.5, enable_event_log=False)
+        custom_payoff = PayoffConfig(w_rep=2.0)
+        bridge = LangChainBridge(chain=make_chain("x"), config=cfg, payoff_config=custom_payoff)
+        assert bridge._payoff_engine.config.w_rep == 2.0

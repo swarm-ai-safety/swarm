@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class LangChainBridgeConfig(BaseModel):
@@ -14,7 +14,7 @@ class LangChainBridgeConfig(BaseModel):
         timeout_seconds: Seconds before chain execution times out.
         proxy_sigmoid_k: Steepness of sigmoid for v_hat → p conversion.
         engagement_max_chars: Character count treated as maximum engagement.
-        reputation_weight: Starting reputation (0..1) for the agent.
+        reputation_weight: Weight for reputation in payoff calculations (0..1).
         enable_event_log: Whether to log interactions to an EventLog.
         event_log_path: Path for the event log JSONL file (optional).
     """
