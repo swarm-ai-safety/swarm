@@ -99,6 +99,11 @@ nav:
     - Emergence: concepts/emergence.md
     - Time Horizons: concepts/time-horizons.md
     - Recursive Research: concepts/recursive-research.md
+  - Tutorials:
+    - Overview: tutorials/index.md
+    - Your First Governance Experiment: tutorials/first-governance-experiment.md
+    - Understanding Soft Labels: tutorials/understanding-soft-labels.md
+    - Analyzing Results: tutorials/analyzing-results.md
   - Guides:
     - Overview: guides/index.md
     - Claude Code: guides/claude-code.md
@@ -108,6 +113,8 @@ nav:
     - LLM Agents: guides/llm-agents.md
     - Red Teaming: guides/red-teaming.md
     - Research Workflow: guides/research-workflow.md
+    - Custom Governance Levers: guides/governance-levers.md
+    - Transferability Considerations: guides/transferability.md
   - API Reference:
     - Overview: api/index.md
     - Core: api/core.md
