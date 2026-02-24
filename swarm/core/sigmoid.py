@@ -7,6 +7,24 @@ from typing import Tuple
 logger = logging.getLogger(__name__)
 
 
+def _sigmoid_fast(v_hat: float, k: float) -> float:
+    """
+    Internal fast-path sigmoid: skips validation, clamping, and logging.
+
+    Use only when the caller has already validated k at initialisation time
+    and v_hat is guaranteed to be in [-1, +1] (e.g. from ProxyComputer after
+    compute_v_hat). This avoids per-call overhead in tight simulation loops.
+
+    Args:
+        v_hat: Proxy score (assumed in [-1, +1])
+        k: Calibration sharpness (assumed > 0 and <= 100)
+
+    Returns:
+        p: Probability in [0, 1]
+    """
+    return 1.0 / (1.0 + math.exp(-k * v_hat))
+
+
 def calibrated_sigmoid(v_hat: float, k: float = 2.0) -> float:
     """
     Compute calibrated sigmoid: P(v = +1) = 1 / (1 + exp(-k * v_hat))

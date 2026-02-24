@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, field_validator
 
-from swarm.core.sigmoid import calibrated_sigmoid
+from swarm.core.sigmoid import _sigmoid_fast
 
 logger = logging.getLogger(__name__)
 
@@ -272,13 +272,16 @@ class ProxyComputer:
         """
         Convert v_hat to probability p via calibrated sigmoid.
 
+        Uses the fast-path sigmoid since sigmoid_k is validated at __init__
+        time and v_hat arrives here already clamped by compute_v_hat().
+
         Args:
             v_hat: Proxy score in [-1, +1]
 
         Returns:
             p: P(v = +1) in [0, 1]
         """
-        result: float = calibrated_sigmoid(v_hat, self.sigmoid_k)
+        result: float = _sigmoid_fast(v_hat, self.sigmoid_k)
         return result
 
     def compute_labels(self, observables: ProxyObservables) -> tuple[float, float]:
