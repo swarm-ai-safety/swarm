@@ -11,7 +11,8 @@ import { DataLoader } from "./DataLoader";
 import { OverlayToggles } from "./OverlayToggles";
 import { SplashScreen } from "./SplashScreen";
 import { NarrativeOverlay } from "./NarrativeOverlay";
-import { Leaderboard } from "./Leaderboard";
+import dynamic from "next/dynamic";
+const Leaderboard = dynamic(() => import("./Leaderboard").then((m) => m.Leaderboard), { ssr: false });
 import { EventFeed } from "./EventFeed";
 
 export function SimulationViewer() {

@@ -22,6 +22,7 @@ export function usePlayback() {
   const lastTrailSpawn = useRef<number>(0);
   const prevEpochRef = useRef<number>(-1);
   const prevStepRef = useRef<number>(-1);
+  const initialArcSpawned = useRef<boolean>(false);
   const walkPhaseMap = useRef<Map<string, number>>(new Map());
   const facingMap = useRef<Map<string, number>>(new Map());
   const tickRef = useRef<(timestamp: number) => void>(() => {});
@@ -38,6 +39,29 @@ export function usePlayback() {
       let step = state.currentStep;
       let maxStepInEpoch = state.maxStepInEpoch;
       const isStepMode = state.stepPlayback && state.eventIndex;
+
+      // Seed initial arcs on first frame (so agents aren't static before play is pressed)
+      if (isStepMode && !initialArcSpawned.current && interactionSystem.current.arcs.length === 0) {
+        initialArcSpawned.current = true;
+        const stepInteractions = state.eventIndex!.interactionsAt(epoch, step);
+        if (stepInteractions.length > 0) {
+          interactionSystem.current.addFromEventsAtStep(stepInteractions, epoch, step);
+        }
+      } else if (!isStepMode && !initialArcSpawned.current && interactionSystem.current.arcs.length === 0) {
+        initialArcSpawned.current = true;
+        const epochSnap = state.data.epoch_snapshots[epoch];
+        if (epochSnap) {
+          const events = state.data.events;
+          if (events && events.length > 0) {
+            interactionSystem.current.addFromEvents(events, epoch);
+          } else {
+            const agentIds = [...agentPositions.current.keys()];
+            const acceptRate = epochSnap.total_interactions > 0
+              ? epochSnap.accepted_interactions / epochSnap.total_interactions : 0.5;
+            interactionSystem.current.addSyntheticArcs(agentIds, epoch, epochSnap.total_interactions, epochSnap.avg_p, acceptRate);
+          }
+        }
+      }
 
       if (state.playing) {
         if (isStepMode) {
@@ -393,6 +417,11 @@ export function usePlayback() {
       setStep(prevMax);
     }
   }, [state.eventIndex, state.currentEpoch, state.currentStep, setStep, dispatch]);
+
+  // Reset initial arc flag when data changes
+  useEffect(() => {
+    initialArcSpawned.current = false;
+  }, [state.data]);
 
   // Start/stop RAF loop
   useEffect(() => {

@@ -11,6 +11,7 @@ import { recordToLeaderboard } from "./Leaderboard";
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
 const SAMPLE_FILES = [
+  { name: "Strict Governance + Events (15 ep, step playback)", path: `${BASE_PATH}/sample-data/strict-governance-history.json`, eventsPath: `${BASE_PATH}/sample-data/strict-governance-events.jsonl` },
   { name: "Adversarial Red Team (75 epochs)", path: `${BASE_PATH}/sample-data/adversarial-redteam-75.json` },
   { name: "RLM Governance Lag (50 epochs)", path: `${BASE_PATH}/sample-data/rlm-governance-lag-50.json` },
   { name: "Collusion Detection (60 epochs)", path: `${BASE_PATH}/sample-data/collusion-detection-60.json` },
@@ -81,9 +82,11 @@ export function DataLoader() {
   }, [historyFile, eventsFile, handleLoadBundle]);
 
   const handleSample = useCallback(
-    async (path: string) => {
+    async (path: string, eventsPath?: string) => {
       try {
-        const sim = await loadSimulationData(path);
+        const sim = eventsPath
+          ? await loadSimulationBundle(path, eventsPath)
+          : await loadSimulationData(path);
         handleLoadData(sim);
       } catch (e) {
         alert(`Error loading sample: ${e instanceof Error ? e.message : e}`);
@@ -211,7 +214,7 @@ export function DataLoader() {
                 {SAMPLE_FILES.map((s) => (
                   <button
                     key={s.path}
-                    onClick={() => handleSample(s.path)}
+                    onClick={() => handleSample(s.path, (s as { eventsPath?: string }).eventsPath)}
                     className="w-full text-left px-3 py-2 rounded bg-btn hover:bg-btn-hover transition-colors text-sm"
                   >
                     {s.name}

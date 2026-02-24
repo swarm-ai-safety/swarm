@@ -110,8 +110,94 @@ export async function loadSimulationBundle(
   if (eventsSource) {
     data.rawEvents = await loadRawEvents(eventsSource);
     data.events = deriveInteractionEvents(data.rawEvents);
+
+    // Extract real agent IDs from agent_created events and re-synthesize snapshots
+    // so agent IDs match those referenced in interaction events
+    const agentCreatedEvents = data.rawEvents.filter((e) => e.event_type === "agent_created");
+    if (agentCreatedEvents.length > 0) {
+      data.agent_snapshots = synthesizeAgentSnapshotsFromEvents(data, agentCreatedEvents);
+    }
   }
   return data;
+}
+
+/**
+ * Synthesize agent snapshots using real agent IDs from agent_created events.
+ * This ensures arc fromId/toId match the agent IDs in the visual layer.
+ */
+function synthesizeAgentSnapshotsFromEvents(
+  data: SimulationData,
+  agentCreatedEvents: SwarmEvent[],
+): AgentSnapshot[] {
+  const rng = mulberry32(data.seed ?? 42);
+  const snapshots: AgentSnapshot[] = [];
+
+  const agents = agentCreatedEvents.map((evt) => {
+    const agentType = (evt.payload.agent_type as AgentType) ?? "honest";
+    const names = AGENT_PROFILES[agentType]?.names ?? ["Agent"];
+    const disposition = (AGENT_PROFILES[agentType]?.disposition ?? 0.5) + (rng() - 0.5) * 0.3;
+    return {
+      id: evt.agent_id!,
+      name: names[0],
+      type: agentType,
+      disposition,
+    };
+  });
+
+  // Track running state per agent
+  const state = agents.map(() => ({
+    reputation: 0.5 + (rng() - 0.5) * 0.2,
+    resources: 10 + rng() * 5,
+    totalPayoff: 0,
+    initiated: 0,
+    received: 0,
+  }));
+
+  for (const epoch of data.epoch_snapshots) {
+    for (let i = 0; i < agents.length; i++) {
+      const agent = agents[i];
+      const s = state[i];
+      const noise = rng() - 0.5;
+
+      const ecosystemStress = (epoch.toxicity_rate ?? 0) * 0.5;
+      const repDelta = agent.disposition * 0.05 + noise * 0.03 - ecosystemStress * 0.02;
+      s.reputation = Math.max(0, Math.min(1, s.reputation + repDelta));
+
+      const payoffThisEpoch = (epoch.avg_payoff ?? 0) * (0.8 + agent.disposition * 0.4) + noise * 2;
+      s.totalPayoff += payoffThisEpoch;
+      s.resources = Math.max(0, s.resources + payoffThisEpoch * 0.1);
+
+      const shareOfInteractions = epoch.total_interactions / agents.length;
+      s.initiated += Math.max(0, Math.round(shareOfInteractions * (0.4 + rng() * 0.3)));
+      s.received += Math.max(0, Math.round(shareOfInteractions * (0.3 + rng() * 0.3)));
+
+      const avgP = Math.max(0, Math.min(1,
+        0.5 + agent.disposition * 0.3 + noise * 0.1 - (epoch.toxicity_rate ?? 0) * 0.15,
+      ));
+
+      const threatLevel = epoch.ecosystem_threat_level ?? 0;
+      const isFrozen = agent.type === "adversarial" && threatLevel > 0.5 && s.reputation < 0.3 && rng() > 0.4;
+      const isQuarantined = agent.type === "deceptive" && threatLevel > 0.4 && s.reputation < 0.35 && rng() > 0.5;
+
+      snapshots.push({
+        agent_id: agent.id,
+        epoch: epoch.epoch,
+        name: agent.name,
+        agent_type: agent.type,
+        reputation: s.reputation,
+        resources: s.resources,
+        interactions_initiated: s.initiated,
+        interactions_received: s.received,
+        avg_p_initiated: avgP,
+        avg_p_received: Math.max(0, Math.min(1, avgP + (rng() - 0.5) * 0.1)),
+        total_payoff: s.totalPayoff,
+        is_frozen: isFrozen,
+        is_quarantined: isQuarantined,
+      });
+    }
+  }
+
+  return snapshots;
 }
 
 function validateData(data: SimulationData) {
