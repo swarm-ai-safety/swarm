@@ -6,6 +6,7 @@ Full-model tests are gated behind a skipif marker.
 
 from __future__ import annotations
 
+import importlib.util
 import pytest
 from pydantic import ValidationError
 
@@ -142,12 +143,7 @@ class TestMesaBridgeProtocolMode:
 # ---------------------------------------------------------------------------
 
 
-try:
-    import mesa  # noqa: F401
-
-    HAS_MESA = True
-except ImportError:
-    HAS_MESA = False
+HAS_MESA = importlib.util.find_spec("mesa") is not None
 
 
 @pytest.mark.skipif(not HAS_MESA, reason="mesa not installed")
