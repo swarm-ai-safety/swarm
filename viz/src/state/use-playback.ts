@@ -181,14 +181,19 @@ export function usePlayback() {
       const activeArcs = interactionSystem.current.arcs;
 
       for (const arc of activeArcs) {
-        if (arc.progress >= 1) continue;
+        if (arc.progress >= 1 || arc.progress < 0) continue; // skip completed or queued arcs
         const fromAgent = agentMap.get(arc.fromId);
         const toAgent = agentMap.get(arc.toId);
         if (!fromAgent || !toAgent) continue;
         if (walkingAgents.has(arc.fromId)) continue;
 
         const homePos = gridToScreen(fromAgent.gridX, fromAgent.gridY);
-        const targetPos = gridToScreen(toAgent.gridX, toAgent.gridY);
+        const targetHome = gridToScreen(toAgent.gridX, toAgent.gridY);
+        // Use target's current walk offset so we walk toward their actual position
+        const targetPos = {
+          x: targetHome.x + toAgent.walkOffsetX,
+          y: targetHome.y + toAgent.walkOffsetY,
+        };
         const motion = AGENT_MOTION[fromAgent.agentType];
 
         // Smootherstep for gradual acceleration/deceleration

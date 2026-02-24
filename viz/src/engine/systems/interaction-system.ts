@@ -8,9 +8,10 @@ export class InteractionSystem {
 
   /** Add arcs from interaction events for an epoch */
   addFromEvents(events: InteractionEvent[], epoch: number) {
+    const newArcs: InteractionArc[] = [];
     for (const evt of events) {
       if (evt.epoch !== epoch) continue;
-      this.arcs.push({
+      newArcs.push({
         id: `arc-${this.arcCounter++}`,
         fromId: evt.initiator,
         toId: evt.counterparty,
@@ -21,13 +22,15 @@ export class InteractionSystem {
         interactionType: mapInteractionType(evt.interaction_type),
       });
     }
+    this.staggerAndPush(newArcs);
   }
 
   /** Add arcs only for events at a specific (epoch, step) */
   addFromEventsAtStep(events: InteractionEvent[], epoch: number, step: number) {
+    const newArcs: InteractionArc[] = [];
     for (const evt of events) {
       if (evt.epoch !== epoch || evt.step !== step) continue;
-      this.arcs.push({
+      newArcs.push({
         id: `arc-${this.arcCounter++}`,
         fromId: evt.initiator,
         toId: evt.counterparty,
@@ -38,6 +41,7 @@ export class InteractionSystem {
         interactionType: mapInteractionType(evt.interaction_type),
       });
     }
+    this.staggerAndPush(newArcs);
   }
 
   /** Add synthetic arcs when no event data (from agent snapshots) */
@@ -50,22 +54,49 @@ export class InteractionSystem {
   ) {
     const count = Math.min(epochInteractions, agentIds.length * 2);
     const rng = mulberry32(epoch * 1000 + 7);
+    const newArcs: InteractionArc[] = [];
 
     for (let i = 0; i < count; i++) {
       const fromIdx = Math.floor(rng() * agentIds.length);
       let toIdx = Math.floor(rng() * agentIds.length);
       if (toIdx === fromIdx) toIdx = (toIdx + 1) % agentIds.length;
 
-      this.arcs.push({
+      newArcs.push({
         id: `arc-${this.arcCounter++}`,
         fromId: agentIds[fromIdx],
         toId: agentIds[toIdx],
         p: avgP + (rng() - 0.5) * 0.3,
         accepted: rng() < acceptRate,
-        progress: rng() * 0.3, // stagger start
+        progress: 0,
         epoch,
         interactionType: "unknown",
       });
+    }
+    this.staggerAndPush(newArcs);
+  }
+
+  /**
+   * Stagger arcs so an agent finishes one interaction before starting the next.
+   * Each subsequent arc for the same agent gets a negative progress offset
+   * (it will count up through negative values before becoming visible at 0).
+   */
+  private staggerAndPush(newArcs: InteractionArc[]) {
+    // Count how many arcs each agent already has queued (including existing)
+    const agentArcCount = new Map<string, number>();
+
+    // Count existing active/pending arcs per agent
+    for (const arc of this.arcs) {
+      if (arc.progress < 1) {
+        agentArcCount.set(arc.fromId, (agentArcCount.get(arc.fromId) ?? 0) + 1);
+      }
+    }
+
+    for (const arc of newArcs) {
+      const count = agentArcCount.get(arc.fromId) ?? 0;
+      // Each stagger delays by one full arc lifetime worth of progress
+      arc.progress = -count * 1.05;
+      agentArcCount.set(arc.fromId, count + 1);
+      this.arcs.push(arc);
     }
   }
 
