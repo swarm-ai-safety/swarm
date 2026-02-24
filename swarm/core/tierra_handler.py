@@ -27,10 +27,12 @@ class TierraConfig:
     resource_replenishment_rate: float = 50.0
     base_metabolism_cost: float = 2.0
     population_cap: int = 100
-    reaper_mode: str = "lowest_fitness"  # "lowest_fitness" | "oldest" | "random"
+    reaper_mode: str = "lowest_fitness"  # "lowest_fitness" | "oldest" | "random" | "diversity_preserving"
+    reaper_diversity_min: int = 1  # min agents per species to protect (diversity_preserving mode)
     mutation_std: float = 0.05
     death_threshold: float = 0.0
     pool_distribution_rate: float = 0.1  # fraction of pool distributed per step
+    max_efficiency_weight: float = 0.0  # cap on relative efficiency weight (0 = uncapped)
 
 
 class TierraHandler(Handler):
@@ -102,6 +104,11 @@ class TierraHandler(Handler):
                 gd = self._genome_registry.get(aid)
                 eff = gd.get("efficiency", 0.5) if gd else 0.5
                 weights.append(max(eff, 0.01))  # floor to avoid zero
+            # Cap relative efficiency weight to prevent runaway dominance
+            if self.config.max_efficiency_weight > 0 and len(weights) > 1:
+                mean_w = sum(weights) / len(weights)
+                cap = mean_w * self.config.max_efficiency_weight
+                weights = [min(w, cap) for w in weights]
             total_weight = sum(weights)
             for aid, w in zip(living, weights, strict=True):
                 share = distribute * (w / total_weight)
@@ -165,6 +172,10 @@ class TierraHandler(Handler):
         if excess <= 0:
             return
 
+        if self.config.reaper_mode == "diversity_preserving":
+            self._run_diversity_preserving_reaper(living, state, excess)
+            return
+
         if self.config.reaper_mode == "oldest":
             living.sort(key=lambda aid: state.agents[aid].resources)
         elif self.config.reaper_mode == "random" and self._rng is not None:
@@ -175,6 +186,50 @@ class TierraHandler(Handler):
 
         for i in range(excess):
             self._kill_agent(living[i], state, reason="reaped")
+
+    def _run_diversity_preserving_reaper(
+        self, living: list, state: Any, excess: int
+    ) -> None:
+        """Reap excess agents while protecting species diversity.
+
+        Guarantees at least ``reaper_diversity_min`` agents per species cluster.
+        Within each cluster, the poorest agents are culled first.
+        """
+        from swarm.metrics.tierra_metrics import species_clusters
+
+        genomes = [self._genome_registry.get(aid, {}) for aid in living]
+        clusters = species_clusters(genomes, distance_threshold=0.5)
+
+        # Build per-cluster lists sorted by resources ascending (poorest first)
+        min_per_species = self.config.reaper_diversity_min
+        killable: list[str] = []
+        for _cid, indices in clusters.items():
+            members = [(living[i], state.agents[living[i]].resources) for i in indices]
+            members.sort(key=lambda x: x[1])
+            # Protect at least min_per_species from this cluster
+            protected = min(min_per_species, len(members))
+            for aid, _res in members[:-protected] if len(members) > protected else []:
+                killable.append(aid)
+
+        # Sort killable by resources ascending so poorest die first globally
+        killable.sort(key=lambda aid: state.agents[aid].resources)
+
+        killed = 0
+        for aid in killable:
+            if killed >= excess:
+                break
+            self._kill_agent(aid, state, reason="reaped")
+            killed += 1
+
+        # If still over cap (all species are at minimum), fall back to lowest_fitness
+        if killed < excess:
+            remaining_living = self._living_tierra_agents(state)
+            remaining_living.sort(key=lambda aid: state.agents[aid].resources)
+            for aid in remaining_living:
+                if killed >= excess:
+                    break
+                self._kill_agent(aid, state, reason="reaped")
+                killed += 1
 
     # ------------------------------------------------------------------
     # Epoch hooks: metrics
