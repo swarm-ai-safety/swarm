@@ -162,7 +162,7 @@ import matplotlib.pyplot as plt
 from swarm.analysis.export import export_to_json
 
 # After running, the orchestrator logs epoch-level metrics
-epoch_toxicity = [e["toxicity_rate"] for e in history["epochs"]]
+epoch_toxicity = [e.toxicity_rate for e in history]
 
 plt.figure(figsize=(10, 4))
 plt.plot(epoch_toxicity, label="Toxicity Rate")
