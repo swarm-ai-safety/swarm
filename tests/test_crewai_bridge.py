@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import importlib
 import pytest
 from pydantic import ValidationError
 
@@ -128,8 +129,7 @@ class TestCrewAIBridgeProtocolMode:
 
 
 try:
-    import crewai  # noqa: F401
-
+    importlib.import_module("crewai")
     HAS_CREWAI = True
 except ImportError:
     HAS_CREWAI = False
