@@ -128,12 +128,12 @@ from swarm.scenarios import load_scenario, build_orchestrator
 for name in ["tutorial_baseline", "tutorial_taxed"]:
     scenario = load_scenario(f"scenarios/{name}.yaml")
     orchestrator = build_orchestrator(scenario)
-    metrics = orchestrator.run()
+    epoch_metrics = orchestrator.run()[-1]
 
     print(f"\n=== {name} ===")
-    print(f"Toxicity rate:  {metrics['toxicity_rate']:.3f}")
-    print(f"Quality gap:    {metrics['quality_gap']:.3f}")
-    print(f"Mean payoff:    {metrics['mean_payoff']:.3f}")
+    print(f"Toxicity rate:  {epoch_metrics.toxicity_rate:.3f}")
+    print(f"Quality gap:    {epoch_metrics.quality_gap:.3f}")
+    print(f"Mean payoff:    {epoch_metrics.avg_payoff:.3f}")
 ```
 
 ---
