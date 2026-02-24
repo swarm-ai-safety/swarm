@@ -13,7 +13,6 @@ from typing import Optional
 
 from swarm.bridges.langchain.config import LangChainBridgeConfig
 from swarm.core.payoff import PayoffConfig
-from swarm.core.proxy import ProxyComputer
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +34,6 @@ class LangChainBridge:
 
     def __init__(self, config: Optional[LangChainBridgeConfig] = None) -> None:
         self._config = config or LangChainBridgeConfig()
-        self._proxy = ProxyComputer(sigmoid_k=self._config.proxy_sigmoid_k)
 
     def get_payoff_config(self) -> PayoffConfig:
         """Return a PayoffConfig with w_rep wired from reputation_weight."""

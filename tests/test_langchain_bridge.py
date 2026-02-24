@@ -12,7 +12,6 @@ class TestLangChainBridgeConfig:
 
     def test_defaults(self) -> None:
         config = LangChainBridgeConfig()
-        assert config.proxy_sigmoid_k == 2.0
         assert config.reputation_weight == 1.0
 
     def test_custom_reputation_weight(self) -> None:
