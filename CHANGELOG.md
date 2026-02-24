@@ -7,6 +7,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Tierra governance hardening** — diversity-preserving reaper mode (`reaper_mode: "diversity_preserving"`) that protects at least 1 representative per species cluster during population culling, efficiency weight cap (`max_efficiency_weight`) to prevent runaway resource concentration, and `species_clusters()` helper in `tierra_metrics.py`
+- **Governed Tierra scenario** (`scenarios/tierra_governed.yaml`) — Tierra variant with circuit breaker, collusion detection, 5% transaction tax, reputation decay (0.95), diversity-preserving reaper, and efficiency cap (3x mean)
+- **Blog post**: Tierra governance vs evolution comparative study — 5-seed comparison showing +6.5% genome diversity, -2.2% Gini, at -12% population cost
 - **Behavioral agent types** (`swarm/agents/behavioral.py`) — `CautiousAgent` (risk-averse, high acceptance threshold), `CollaborativeAgent` (coalition-building, EMA trust tracking), and `AdaptiveAgent` (rolling payoff window, threshold self-adaptation with exploration) with corresponding `AgentType` enum values and 20 unit tests (#66)
 - **LangChain bridge** (`swarm/bridges/langchain/`) — wraps any LangChain Runnable (chain, AgentExecutor) as a SWARM interaction source; maps chain success/failure, intermediate steps, and output length to soft labels via `ProxyComputer`; lazy-imports langchain so module is importable without it installed (#69)
 - **AutoGPT bridge** (`swarm/bridges/autogpt/`) — protocol-level bridge mapping AutoGPT thought/command/result cycles to `SoftInteraction` objects; blocks configurable dangerous commands (delete_file, shutdown, etc.) and uses self-criticism as rework signal; no AutoGPT installation required (#69)

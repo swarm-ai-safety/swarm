@@ -149,13 +149,14 @@ class SoftPayoffEngine:
         S_soft = self.expected_surplus(interaction.p)
         E_soft = self.expected_harm(interaction.p)
 
-        return (
+        result: float = (
             self.config.theta * S_soft
             - interaction.tau
             - interaction.c_a
             - self.config.rho_a * E_soft
             + self.config.w_rep * interaction.r_a
         )
+        return result
 
     def payoff_counterparty(self, interaction: SoftInteraction) -> float:
         """
@@ -172,13 +173,14 @@ class SoftPayoffEngine:
         S_soft = self.expected_surplus(interaction.p)
         E_soft = self.expected_harm(interaction.p)
 
-        return (
+        result: float = (
             (1 - self.config.theta) * S_soft
             + interaction.tau
             - interaction.c_b
             - self.config.rho_b * E_soft
             + self.config.w_rep * interaction.r_b
         )
+        return result
 
     def payoff_breakdown_initiator(
         self, interaction: SoftInteraction
@@ -255,6 +257,39 @@ class SoftPayoffEngine:
             reputation_bonus=reputation_bonus,
             total=total,
         )
+
+    def payoffs_both(self, interaction: SoftInteraction) -> tuple[float, float]:
+        """
+        Compute both initiator and counterparty payoffs in a single call.
+
+        Avoids redundant expected_surplus / expected_harm computation
+        compared to calling payoff_initiator + payoff_counterparty separately.
+
+        Args:
+            interaction: The soft interaction
+
+        Returns:
+            (pi_a, pi_b): Initiator and counterparty payoffs
+        """
+        p = interaction.p
+        S_soft = p * self.config.s_plus - (1 - p) * self.config.s_minus
+        E_soft = (1 - p) * self.config.h
+
+        pi_a = (
+            self.config.theta * S_soft
+            - interaction.tau
+            - interaction.c_a
+            - self.config.rho_a * E_soft
+            + self.config.w_rep * interaction.r_a
+        )
+        pi_b = (
+            (1 - self.config.theta) * S_soft
+            + interaction.tau
+            - interaction.c_b
+            - self.config.rho_b * E_soft
+            + self.config.w_rep * interaction.r_b
+        )
+        return pi_a, pi_b
 
     def total_welfare(self, interaction: SoftInteraction) -> float:
         """

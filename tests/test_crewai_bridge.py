@@ -6,6 +6,7 @@ skipif marker.
 
 from __future__ import annotations
 
+import importlib
 from unittest.mock import MagicMock
 
 import pytest
@@ -128,8 +129,7 @@ class TestCrewAIBridgeProtocolMode:
 
 
 try:
-    import crewai  # noqa: F401
-
+    importlib.import_module("crewai")
     HAS_CREWAI = True
 except ImportError:
     HAS_CREWAI = False

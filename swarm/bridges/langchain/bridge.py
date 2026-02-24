@@ -14,7 +14,7 @@ Usage::
 
     interaction = bridge.run(
         prompt="Summarise the findings.",
-        counterparty_id="user-001",
+        counterparty="user-001",
     )
     print(f"p={interaction.p:.3f}")
 """
@@ -74,10 +74,12 @@ class LangChainBridge:
 
         if self.config.enable_event_log:
             try:
+                from pathlib import Path as _Path
+
                 from swarm.logging.event_log import EventLog
 
                 path = self.config.event_log_path or f"{self.config.agent_id}_events.jsonl"
-                self._event_log = EventLog(path=path)
+                self._event_log = EventLog(path=_Path(path))
             except Exception as exc:  # pragma: no cover
                 logger.warning("Could not initialise EventLog: %s", exc)
 
@@ -152,11 +154,7 @@ class LangChainBridge:
         self.last_payoff = self._payoff_engine.payoff_initiator(interaction)
         self._interactions.append(interaction)
 
-        if self._event_log is not None:
-            try:
-                self._event_log.log(interaction)
-            except Exception as exc:  # pragma: no cover
-                logger.warning("EventLog write failed: %s", exc)
+        self._log_interaction(interaction)
 
         return interaction
 
@@ -175,6 +173,30 @@ class LangChainBridge:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _log_interaction(self, interaction: SoftInteraction) -> None:
+        """Append an interaction to the EventLog as an Event."""
+        if self._event_log is None:
+            return
+        try:
+            from swarm.models.events import Event, EventType
+
+            event = Event(
+                event_type=EventType.INTERACTION_COMPLETED,
+                interaction_id=interaction.interaction_id,
+                initiator_id=interaction.initiator,
+                counterparty_id=interaction.counterparty,
+                payload={
+                    "p": interaction.p,
+                    "v_hat": interaction.v_hat,
+                    "accepted": interaction.accepted,
+                    "metadata": interaction.metadata,
+                },
+            )
+            self._event_log.append(event)
+        except Exception as exc:  # pragma: no cover
+            logger.warning("EventLog write failed: %s", exc)
+
 
     def _invoke_chain(self, prompt: str) -> tuple[Any, int]:
         """Invoke the chain with a timeout.
