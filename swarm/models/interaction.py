@@ -3,9 +3,10 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, cast
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -76,6 +77,28 @@ class SoftInteraction(BaseModel):
         if not (-1.0 <= v <= 1.0):
             raise ValueError(f'v_hat must be in [-1, 1], got {v}')
         return v
+
+    def model_copy(
+        self,
+        *,
+        update: Mapping[str, Any] | None = None,
+        deep: bool = False,
+    ) -> "SoftInteraction":
+        """Override to enforce p and v_hat invariants after copy.
+
+        Pydantic v2's model_copy(update=...) skips field_validators,
+        so we manually enforce safety-critical invariants here to ensure
+        ALL callers — not just _validated_copy — get bounds checking.
+        """
+        result = cast(
+            "SoftInteraction",
+            super().model_copy(update=update, deep=deep),
+        )
+        if not (0.0 <= result.p <= 1.0):
+            raise ValueError(f"p invariant violated after copy: {result.p}")
+        if not (-1.0 <= result.v_hat <= 1.0):
+            raise ValueError(f"v_hat invariant violated after copy: {result.v_hat}")
+        return result
 
     def is_high_quality(self, threshold: float = 0.5) -> bool:
         """Check if interaction is above quality threshold."""

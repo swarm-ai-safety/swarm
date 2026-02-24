@@ -931,6 +931,37 @@ class TestSecurityRegressions:
         with pytest.raises(ValueError, match="p invariant"):
             _validated_copy(interaction, {"p": -0.1})
 
+    def test_model_copy_direct_catches_p_out_of_range(self):
+        """model_copy called directly must also reject p outside [0, 1].
+
+        Regression for issue #262: Pydantic v2 model_copy(update=) bypasses
+        field_validators. SoftInteraction.model_copy now enforces the invariant
+        so callers that skip _validated_copy cannot set p out of bounds.
+        """
+        interaction = _make_interaction(p=0.5)
+        with pytest.raises(ValueError, match="p invariant"):
+            interaction.model_copy(update={"p": 1.5})
+        with pytest.raises(ValueError, match="p invariant"):
+            interaction.model_copy(update={"p": -0.1})
+
+    def test_model_copy_direct_catches_v_hat_out_of_range(self):
+        """model_copy called directly must also reject v_hat outside [-1, 1].
+
+        Regression for issue #262.
+        """
+        interaction = _make_interaction(p=0.5)
+        with pytest.raises(ValueError, match="v_hat invariant"):
+            interaction.model_copy(update={"v_hat": 2.0})
+        with pytest.raises(ValueError, match="v_hat invariant"):
+            interaction.model_copy(update={"v_hat": -1.5})
+
+    def test_model_copy_valid_values_accepted(self):
+        """model_copy must still work for valid p and v_hat values."""
+        interaction = _make_interaction(p=0.5)
+        copied = interaction.model_copy(update={"p": 0.9, "v_hat": 0.8})
+        assert copied.p == pytest.approx(0.9)
+        assert copied.v_hat == pytest.approx(0.8)
+
     def test_validated_copy_catches_v_hat_out_of_range(self):
         """Vuln 7: _validated_copy must reject v_hat outside [-1, 1]."""
         from swarm.contracts.contract import _validated_copy
