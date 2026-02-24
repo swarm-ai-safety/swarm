@@ -38,8 +38,8 @@ def make_interaction(
     """Create a synthetic interaction with the given soft label p."""
     return SoftInteraction(
         interaction_id=f"i-{p:.2f}-{accepted}",
-        initiator_id="agent_a",
-        counterparty_id="agent_b",
+        initiator="agent_a",
+        counterparty="agent_b",
         p=p,
         v_hat=p * 2 - 1,  # approximate v_hat from p
         accepted=accepted,
