@@ -3,9 +3,13 @@
 Available bridge subpackages (lazy import to avoid pulling in optional deps):
 
     swarm.bridges.agent_lab         — AgentLaboratory autonomous research bridge
+    swarm.bridges.autogpt           — AutoGPT autonomous agent bridge
     swarm.bridges.claude_code       — Claude Code controller bridge
     swarm.bridges.concordia         — Concordia LLM agent simulation bridge
+    swarm.bridges.crewai            — CrewAI collaborative AI team bridge
+    swarm.bridges.langchain         — LangChain chain / agent executor bridge
     swarm.bridges.langgraph_swarm   — LangGraph Swarm governance extension bridge
+    swarm.bridges.mesa              — Mesa ABM framework bridge
     swarm.bridges.openclaw          — REST service layer bridge
     swarm.bridges.live_swe          — Live self-evolving SWE agent bridge
     swarm.bridges.worktree          — Native git worktree sandbox bridge
