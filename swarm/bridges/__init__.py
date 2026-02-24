@@ -16,6 +16,7 @@ Available bridge subpackages (lazy import to avoid pulling in optional deps):
     swarm.bridges.sciagentgym      — SciAgentGym tool substrate integration bridge
     swarm.bridges.hodoscope        — Hodoscope trajectory analysis & visualization bridge
     swarm.bridges.rag              — RAG over run history (semantic search)
+    swarm.bridges.langchain        — LangChain agent bridge
 """
 
 __all__: list[str] = []
