@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-python3 -c "
+python3 << 'PYEOF'
 import json, os, csv
 import numpy as np
 import pandas as pd
@@ -21,22 +21,23 @@ results = []
 
 for tax in tax_rates:
     for seed in seeds:
-        config = load_scenario('/root/scenarios/baseline.yaml')
-        config['governance']['transaction_tax_rate'] = tax
-        config['simulation']['seed'] = seed
-        config['simulation']['n_epochs'] = 5
-        config['simulation']['steps_per_epoch'] = 10
+        sc = load_scenario('/root/scenarios/baseline.yaml')
+        oc = sc.orchestrator_config
+        oc.governance_config.transaction_tax_rate = tax
+        oc.seed = seed
+        oc.n_epochs = 5
+        oc.steps_per_epoch = 10
 
-        orch = Orchestrator(config)
-        result = orch.run()
-        final = result.to_dict()['epoch_snapshots'][-1]
+        orch = Orchestrator(oc)
+        epochs = orch.run()  # list[EpochMetrics]
+        final = epochs[-1]
 
         results.append({
             'transaction_tax_rate': tax,
             'seed': seed,
-            'welfare': round(final['welfare'], 3),
-            'toxicity_rate': round(final['toxicity_rate'], 4),
-            'quality_gap': round(final.get('quality_gap', 0.0), 4),
+            'welfare': round(final.total_welfare, 3),
+            'toxicity_rate': round(final.toxicity_rate, 4),
+            'quality_gap': round(final.quality_gap, 4),
         })
 
 os.makedirs('/root/output/sweep', exist_ok=True)
@@ -106,7 +107,7 @@ ax.set_title('Welfare Distribution')
 plt.tight_layout()
 plt.savefig('/root/output/plots/welfare_boxplot.png', dpi=150)
 plt.close()
-print(f'Step 3: Plots complete')
+print('Step 3: Plots complete')
 
 # === Step 4: Paper ===
 os.makedirs('/root/output/paper', exist_ok=True)
@@ -118,6 +119,8 @@ for val, grp in df.groupby(param_col):
     t_m, t_s = grp['toxicity_rate'].mean(), grp['toxicity_rate'].std()
     results_lines.append(f'| {val:.2f} | {w_m:.1f} +/- {w_s:.1f} | {t_m:.3f} +/- {t_s:.3f} |')
 results_table = chr(10).join(results_lines)
+
+n_sig = sum(1 for r in analysis_results if r["bonferroni_significant"])
 
 paper = f'''# Tax Rate Impact on Distributional Safety
 
@@ -135,7 +138,7 @@ We use the baseline scenario with 5 agents (3 honest, 1 opportunistic, 1 decepti
 
 {results_table}
 
-Statistical analysis reveals {sum(1 for r in analysis_results if r["bonferroni_significant"])} significant pairwise differences after Bonferroni correction.
+Statistical analysis reveals {n_sig} significant pairwise differences after Bonferroni correction.
 
 ## Conclusion
 
@@ -146,4 +149,4 @@ with open('/root/output/paper/paper.md', 'w') as f:
     f.write(paper)
 print('Step 4: Paper complete')
 print('All steps done!')
-"
+PYEOF

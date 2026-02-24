@@ -15,18 +15,19 @@ all_results = {}
 for tax in tax_rates:
     all_results[tax] = {'welfare': [], 'toxicity': []}
     for seed in seeds:
-        config = load_scenario('/root/scenarios/baseline.yaml')
-        config['governance']['transaction_tax_rate'] = tax
-        config['simulation']['seed'] = seed
-        config['simulation']['n_epochs'] = 8
-        config['simulation']['steps_per_epoch'] = 10
+        sc = load_scenario('/root/scenarios/baseline.yaml')
+        oc = sc.orchestrator_config
+        oc.governance_config.transaction_tax_rate = tax
+        oc.seed = seed
+        oc.n_epochs = 8
+        oc.steps_per_epoch = 10
 
-        orch = Orchestrator(config)
-        result = orch.run()
-        final = result.to_dict()['epoch_snapshots'][-1]
+        orch = Orchestrator(oc)
+        epochs = orch.run()  # list[EpochMetrics]
+        final = epochs[-1]
 
-        all_results[tax]['welfare'].append(final['welfare'])
-        all_results[tax]['toxicity'].append(final['toxicity_rate'])
+        all_results[tax]['welfare'].append(final.total_welfare)
+        all_results[tax]['toxicity'].append(final.toxicity_rate)
 
 # Find optimal: max welfare with toxicity < 0.15
 candidates = []

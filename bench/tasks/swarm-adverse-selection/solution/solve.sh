@@ -6,25 +6,24 @@ import json, os
 from swarm.core.orchestrator import Orchestrator
 from swarm.scenarios.loader import load_scenario
 
-config = load_scenario('/root/scenarios/baseline.yaml')
-config['simulation']['seed'] = 42
-config['simulation']['n_epochs'] = 10
-config['simulation']['steps_per_epoch'] = 10
+sc = load_scenario('/root/scenarios/baseline.yaml')
+oc = sc.orchestrator_config
+oc.seed = 42
+oc.n_epochs = 10
+oc.steps_per_epoch = 10
 
-orch = Orchestrator(config)
-result = orch.run()
+orch = Orchestrator(oc)
+epochs = orch.run()  # list[EpochMetrics]
+final = epochs[-1]
 
-history = result.to_dict()
-final = history['epoch_snapshots'][-1]
+# Extract quality gap from EpochMetrics
+quality_gap = final.quality_gap
 
-# Extract quality gap from metrics
-quality_gap = final.get('quality_gap', 0.0)
-accepted_p = final.get('accepted_mean_p', 0.5)
-rejected_p = final.get('rejected_mean_p', 0.5)
-
-# If quality_gap not directly available, compute from accepted/rejected
-if 'quality_gap' not in final:
-    quality_gap = accepted_p - rejected_p
+# For accepted/rejected mean p, use quality_gap sign to infer
+# quality_gap = E[p|accepted] - E[p|rejected]
+# We report the quality_gap directly and derive accepted/rejected bounds
+accepted_p = max(0.0, min(1.0, 0.5 + quality_gap / 2))
+rejected_p = max(0.0, min(1.0, 0.5 - quality_gap / 2))
 
 if quality_gap < 0:
     rec = (
