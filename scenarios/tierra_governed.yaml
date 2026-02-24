@@ -58,3 +58,8 @@ governance:
   collusion_correlation_threshold: 0.7
   collusion_min_interactions: 3
   collusion_score_threshold: 0.5
+  sybil_detection_enabled: true
+  audit_enabled: true
+  random_audit_rate: 0.1
+  staking_enabled: true
+  staking_amount: 10.0
