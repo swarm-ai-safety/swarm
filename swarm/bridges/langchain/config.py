@@ -2,7 +2,7 @@
 
 from typing import Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, Field
 
 
 class LangChainBridgeConfig(BaseModel):
@@ -14,7 +14,6 @@ class LangChainBridgeConfig(BaseModel):
         timeout_seconds: Seconds before chain execution times out.
         proxy_sigmoid_k: Steepness of sigmoid for v_hat → p conversion.
         engagement_max_chars: Character count treated as maximum engagement.
-        reputation_weight: Starting reputation (0..1) for the agent.
         enable_event_log: Whether to log interactions to an EventLog.
         event_log_path: Path for the event log JSONL file (optional).
     """
@@ -24,14 +23,7 @@ class LangChainBridgeConfig(BaseModel):
     timeout_seconds: float = Field(default=60.0, gt=0)
     proxy_sigmoid_k: float = Field(default=2.0, gt=0)
     engagement_max_chars: int = Field(default=2000, ge=1)
-    reputation_weight: float = Field(default=1.0, ge=0.0, le=1.0)
     enable_event_log: bool = True
     event_log_path: Optional[str] = None
 
     model_config = {"frozen": False}
-
-    @model_validator(mode="after")
-    def _validate(self) -> "LangChainBridgeConfig":
-        if self.timeout_seconds <= 0:
-            raise ValueError("timeout_seconds must be > 0")
-        return self

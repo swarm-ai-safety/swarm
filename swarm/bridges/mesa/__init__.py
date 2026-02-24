@@ -9,10 +9,10 @@ Architecture::
 
     Mesa Model (step loop)
         └── MesaBridge  (this module)
-                ├── SwarmMesaObserver   (Mesa reporter → ProxyObservables)
-                ├── ProxyComputer       (observables → v_hat → p)
-                ├── SoftPayoffEngine    (p → payoffs)
-                └── EventLog            (append-only audit trail)
+                ├── _extract_observables  (agent state → ProxyObservables)
+                ├── ProxyComputer         (observables → v_hat → p)
+                ├── SoftPayoffEngine      (p → payoffs)
+                └── EventLog              (append-only audit trail)
 
 Integration approach::
 
@@ -23,9 +23,8 @@ Integration approach::
 Mesa agent attribute mapping::
 
     task_progress   ← agent.task_progress (or 1.0 if absent)
-    rework_count    ← agent.rework_count  (or 0.0 if absent)
+    rework_count    ← agent.rework_count  (or 0 if absent)
     engagement      ← agent.engagement    (or 0.5 if absent)
-    verifier_score  ← agent.verifier_score (or 0.5 if absent)
 
 If a Mesa agent does not have these attributes, sensible defaults are used
 so existing Mesa models work without modification.

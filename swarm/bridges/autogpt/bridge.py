@@ -140,11 +140,7 @@ class AutoGPTBridge:
         self.last_payoff = self._payoff_engine.payoff_initiator(interaction)
         self._interactions.append(interaction)
 
-        if self._event_log is not None:
-            try:
-                self._event_log.log(interaction)
-            except Exception as exc:  # pragma: no cover
-                logger.warning("EventLog write failed: %s", exc)
+        self._log_interaction(interaction)
 
         return interaction
 
@@ -163,6 +159,29 @@ class AutoGPTBridge:
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
+
+    def _log_interaction(self, interaction: SoftInteraction) -> None:
+        """Append an interaction to the EventLog as an Event."""
+        if self._event_log is None:
+            return
+        try:
+            from swarm.models.events import Event, EventType
+
+            event = Event(
+                event_type=EventType.INTERACTION_COMPLETED,
+                interaction_id=interaction.interaction_id,
+                initiator_id=interaction.initiator,
+                counterparty_id=interaction.counterparty,
+                payload={
+                    "p": interaction.p,
+                    "v_hat": interaction.v_hat,
+                    "accepted": interaction.accepted,
+                    "metadata": interaction.metadata,
+                },
+            )
+            self._event_log.append(event)
+        except Exception as exc:  # pragma: no cover
+            logger.warning("EventLog write failed: %s", exc)
 
     def _extract_observables(self, action: AutoGPTAction) -> ProxyObservables:
         """Map an AutoGPT action cycle to SWARM proxy observables.
