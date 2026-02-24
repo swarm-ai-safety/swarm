@@ -3,8 +3,10 @@
 from datetime import datetime, timedelta
 from typing import Optional
 
+import pytest
+
 from swarm.logging.event_log import EventLog
-from swarm.models.events import Event, EventType
+from swarm.models.events import Event, EventType, interaction_proposed_event
 from swarm.models.interaction import InteractionType
 
 # =============================================================================
@@ -549,3 +551,99 @@ class TestProtocols:
         assert len(events) == 3
         for e in events:
             assert isinstance(e, Event)
+
+
+# =============================================================================
+# interaction_proposed_event bounds validation
+# =============================================================================
+
+
+class TestInteractionProposedEventBounds:
+    """Tests for p and v_hat bounds validation in interaction_proposed_event."""
+
+    def test_valid_p_and_v_hat(self):
+        """interaction_proposed_event() accepts valid p in [0,1] and v_hat in [-1,1]."""
+        event = interaction_proposed_event(
+            interaction_id="i1",
+            initiator_id="a",
+            counterparty_id="b",
+            interaction_type="reply",
+            v_hat=0.5,
+            p=0.8,
+        )
+        assert event.payload["p"] == 0.8
+        assert event.payload["v_hat"] == 0.5
+
+    def test_p_boundary_values(self):
+        """interaction_proposed_event() accepts p=0.0 and p=1.0."""
+        for p_val in (0.0, 1.0):
+            event = interaction_proposed_event(
+                interaction_id="i1",
+                initiator_id="a",
+                counterparty_id="b",
+                interaction_type="reply",
+                v_hat=0.0,
+                p=p_val,
+            )
+            assert event.payload["p"] == p_val
+
+    def test_v_hat_boundary_values(self):
+        """interaction_proposed_event() accepts v_hat=-1.0 and v_hat=1.0."""
+        for v in (-1.0, 1.0):
+            event = interaction_proposed_event(
+                interaction_id="i1",
+                initiator_id="a",
+                counterparty_id="b",
+                interaction_type="reply",
+                v_hat=v,
+                p=0.5,
+            )
+            assert event.payload["v_hat"] == v
+
+    def test_p_below_zero_raises(self):
+        """interaction_proposed_event() raises ValueError if p < 0."""
+        with pytest.raises(ValueError, match="p must be in"):
+            interaction_proposed_event(
+                interaction_id="i1",
+                initiator_id="a",
+                counterparty_id="b",
+                interaction_type="reply",
+                v_hat=0.0,
+                p=-0.1,
+            )
+
+    def test_p_above_one_raises(self):
+        """interaction_proposed_event() raises ValueError if p > 1."""
+        with pytest.raises(ValueError, match="p must be in"):
+            interaction_proposed_event(
+                interaction_id="i1",
+                initiator_id="a",
+                counterparty_id="b",
+                interaction_type="reply",
+                v_hat=0.0,
+                p=1.5,
+            )
+
+    def test_v_hat_below_minus_one_raises(self):
+        """interaction_proposed_event() raises ValueError if v_hat < -1."""
+        with pytest.raises(ValueError, match="v_hat must be in"):
+            interaction_proposed_event(
+                interaction_id="i1",
+                initiator_id="a",
+                counterparty_id="b",
+                interaction_type="reply",
+                v_hat=-1.1,
+                p=0.5,
+            )
+
+    def test_v_hat_above_one_raises(self):
+        """interaction_proposed_event() raises ValueError if v_hat > 1."""
+        with pytest.raises(ValueError, match="v_hat must be in"):
+            interaction_proposed_event(
+                interaction_id="i1",
+                initiator_id="a",
+                counterparty_id="b",
+                interaction_type="reply",
+                v_hat=2.0,
+                p=0.5,
+            )
