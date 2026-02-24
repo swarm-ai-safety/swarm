@@ -17,6 +17,7 @@ class MesaBridgeConfig(BaseModel):
         agent_rework_count_attr: Mesa agent attribute name for rework_count.
         agent_engagement_attr: Mesa agent attribute name for engagement.
         agent_verifier_score_attr: Mesa agent attribute name for verifier_score.
+        reputation_weight: Weight for reputation in payoff calculations (≥ 0).
         enable_event_log: Whether to write interactions to EventLog.
         event_log_path: Path for the JSONL event log (optional).
     """
@@ -30,6 +31,7 @@ class MesaBridgeConfig(BaseModel):
     agent_rework_count_attr: str = "rework_count"
     agent_engagement_attr: str = "engagement"
     agent_verifier_score_attr: str = "verifier_score"
+    reputation_weight: float = Field(default=1.0, ge=0.0)
 
     enable_event_log: bool = True
     event_log_path: Optional[str] = None

@@ -14,7 +14,7 @@ class LangChainBridgeConfig(BaseModel):
         timeout_seconds: Seconds before chain execution times out.
         proxy_sigmoid_k: Steepness of sigmoid for v_hat → p conversion.
         engagement_max_chars: Character count treated as maximum engagement.
-        reputation_weight: Weight for reputation in payoff calculations (0..1).
+        reputation_weight: Weight for reputation in payoff calculations (≥ 0).
         enable_event_log: Whether to log interactions to an EventLog.
         event_log_path: Path for the event log JSONL file (optional).
     """
@@ -24,7 +24,7 @@ class LangChainBridgeConfig(BaseModel):
     timeout_seconds: float = Field(default=60.0, gt=0)
     proxy_sigmoid_k: float = Field(default=2.0, gt=0)
     engagement_max_chars: int = Field(default=2000, ge=1)
-    reputation_weight: float = Field(default=1.0, ge=0.0, le=1.0)
+    reputation_weight: float = Field(default=1.0, ge=0.0)
     enable_event_log: bool = True
     event_log_path: Optional[str] = None
 
