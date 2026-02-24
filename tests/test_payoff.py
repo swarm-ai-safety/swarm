@@ -290,6 +290,18 @@ class TestBreakEven:
         social_surplus = engine.social_surplus(interaction)
         assert social_surplus == pytest.approx(0.0, abs=1e-10)
 
+    def test_break_even_p_zero_denominator(self):
+        """break_even_p returns 0.5 when s_plus + s_minus == 0."""
+        config = PayoffConfig(s_plus=0.0, s_minus=0.0, h=1.0)
+        engine = SoftPayoffEngine(config=config)
+        assert engine.break_even_p() == pytest.approx(0.5)
+
+    def test_social_break_even_p_zero_denominator(self):
+        """social_break_even_p returns 0.5 when all params are 0."""
+        config = PayoffConfig(s_plus=0.0, s_minus=0.0, h=0.0)
+        engine = SoftPayoffEngine(config=config)
+        assert engine.social_break_even_p() == pytest.approx(0.5)
+
 
 class TestSocialSurplus:
     """Tests for social surplus calculations."""

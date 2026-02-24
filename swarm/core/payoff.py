@@ -337,7 +337,10 @@ class SoftPayoffEngine:
         Returns:
             Break-even probability
         """
-        return self.config.s_minus / (self.config.s_plus + self.config.s_minus)
+        denominator = self.config.s_plus + self.config.s_minus
+        if denominator == 0:
+            return 0.5
+        return self.config.s_minus / denominator
 
     def social_break_even_p(self) -> float:
         """
@@ -351,4 +354,6 @@ class SoftPayoffEngine:
         """
         numerator = self.config.s_minus + self.config.h
         denominator = self.config.s_plus + self.config.s_minus + self.config.h
+        if denominator == 0:
+            return 0.5
         return numerator / denominator
