@@ -29,9 +29,3 @@ class LangChainBridgeConfig(BaseModel):
     event_log_path: Optional[str] = None
 
     model_config = {"frozen": False}
-
-    @model_validator(mode="after")
-    def _validate(self) -> "LangChainBridgeConfig":
-        if self.timeout_seconds <= 0:
-            raise ValueError("timeout_seconds must be > 0")
-        return self
