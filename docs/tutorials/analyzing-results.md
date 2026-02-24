@@ -235,7 +235,7 @@ for seed in seeds:
     scenario.simulation.seed = seed
     orch = build_orchestrator(scenario)
     result = orch.run()
-    toxicity_values.append(result["toxicity_rate"])
+    toxicity_values.append(result[-1].toxicity_rate)
 
 print(f"Toxicity: mean={statistics.mean(toxicity_values):.3f}, "
       f"std={statistics.stdev(toxicity_values):.3f}")
