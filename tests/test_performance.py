@@ -265,8 +265,11 @@ class TestPerformance:
             f"exceeds budget of {PAYOFFS_BOTH_BUDGET_MS} ms"
         )
 
-    def test_sigmoid_fast_within_budget(self, interactions_10k):
-        vhats = [i.v_hat for i in interactions_10k]
+    def test_sigmoid_fast_within_budget(self):
+        # Generate realistic v_hat values spanning [-1, 1] rather than
+        # relying on the default 0.0 from _make_interactions().
+        rng = random.Random(77)
+        vhats = [rng.uniform(-1.0, 1.0) for _ in range(N)]
         k = 2.0
 
         def _run() -> None:

@@ -326,6 +326,9 @@ class MetricsReporter:
         # ------------------------------------------------------------------
         avg_p = sum_p / n
 
+        avg_pi_a_all = sum_pi_a / n
+        avg_pi_b_all = sum_pi_b / n
+
         if n_acc > 0:
             avg_p_acc = sum_p_acc / n_acc
             avg_pi_a_acc = sum_pi_a_acc / n_acc
@@ -334,28 +337,26 @@ class MetricsReporter:
             toxicity_hard = hard_toxic_count / n_acc
             total_welfare = sum_pi_a_acc + sum_pi_b_acc
             total_social = sum_social_acc
+            cl_init = avg_pi_a_acc - avg_pi_a_all
+            cl_counter = avg_pi_b_acc - avg_pi_b_all
+            spread = s_scale * (avg_p - avg_p_acc)
         else:
-            avg_p_acc = 0.0
             avg_pi_a_acc = 0.0
             avg_pi_b_acc = 0.0
             toxicity_soft = 0.0
             toxicity_hard = 0.0
             total_welfare = 0.0
             total_social = 0.0
+            cl_init = 0.0
+            cl_counter = 0.0
+            spread = 0.0
 
         avg_p_rej = (sum_p_rej / n_rej) if n_rej > 0 else 0.0
-        avg_pi_a_all = sum_pi_a / n
-        avg_pi_b_all = sum_pi_b / n
-
-        # Conditional loss: E[π | accepted] - E[π]
-        cl_init = (avg_pi_a_acc - avg_pi_a_all) if n_acc > 0 else 0.0
-        cl_counter = (avg_pi_b_acc - avg_pi_b_all) if n_acc > 0 else 0.0
-
-        # Spread: (s_plus + s_minus) * (E[p] - E[p | accepted])
-        spread = s_scale * (avg_p - avg_p_acc) if n_acc > 0 else 0.0
 
         # Quality gap: E[p | accepted] - E[p | rejected]
-        quality_gap = (avg_p_acc - avg_p_rej) if (n_acc > 0 and n_rej > 0) else 0.0
+        quality_gap = (
+            (sum_p_acc / n_acc - avg_p_rej) if (n_acc > 0 and n_rej > 0) else 0.0
+        )
 
         uncertain_frac = uncertain_count / n
         acceptance_rate = n_acc / n
