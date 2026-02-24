@@ -61,10 +61,39 @@ This experiment reveals a nuanced picture of the governance-evolution relationsh
 
 4. **Population cost is real and constant.** The 12% population reduction is a steady-state cost, not a transient one. This matches our findings from the [GasTown governance cost study](gastoken-cost-of-safety.md) — safety levers impose ongoing overhead.
 
+## Red-team hardening: F to C in three iterations
+
+The ecological results tell one story; adversarial stress testing tells another. We ran all 8 attacks from the SWARM attack library against the governed Tierra config and iteratively hardened it.
+
+### v1: Circuit breaker + collusion detection + tax + reputation decay
+
+The initial governed config scored **0.54 (F)**. Only 3 of 8 attacks were prevented, with 311.5 total damage. Two vulnerabilities flagged:
+
+- **CRITICAL**: Sybil Attack succeeded with 80 damage — no identity verification meant fake agents operated freely
+- **HIGH**: Reputation Farming succeeded with 37 damage — no audits meant trust-then-exploit went undetected
+
+### v2: + sybil detection + random audits
+
+Enabling sybil detection (behavioral clustering) and random audits (10% rate) jumped the score to **0.69 (D)**. The Sybil Attack — previously the most damaging vector — was suppressed. Reputation Farming became the *least* effective attack. Both vulnerabilities cleared.
+
+### v3: + staking
+
+Adding staking (10.0 stake requirement) pushed the score to **0.70 (C)**. Staking creates a skin-in-the-game barrier that directly counters resource extraction attacks.
+
+| Version | Levers added | Score | Grade | Prevented | Damage |
+|---|---|---|---|---|---|
+| v1 | CB, collusion, tax, rep decay | 0.54 | F | 3/8 | 311.5 |
+| v2 | + sybil detection, audits | 0.69 | D | 5/8 | 228.9 |
+| v3 | + staking | 0.70 | C | 5/8 | 206.0 |
+
+The pattern is clear: **defense-in-depth works**. Each lever covers a different attack family. No single lever is sufficient, but layering 6 complementary mechanisms reduced total damage by 34% and eliminated all flagged vulnerabilities.
+
+The remaining 3 successful attacks (Resource Drain, Timing Attack, Governance Gaming) succeed at reduced damage levels. Pushing beyond C grade likely requires adaptive governance — automatically tuning thresholds based on observed attack patterns rather than static configuration.
+
 ## What's next
 
+- **Adaptive governance**: Wire the governed variant into the [adaptive governance controller](../../swarm/governance/adaptive_controller.py) so levers auto-tune based on observed attack patterns, diversity, and toxicity.
 - **Environmental perturbation**: Add resource shocks or niche specialization to create conditions where speciation can emerge, then measure whether the diversity-preserving reaper actually prevents species extinction.
-- **Adaptive governance**: Wire the governed variant into the [adaptive governance controller](../../swarm/governance/adaptive_controller.py) so levers auto-tune based on observed diversity and toxicity.
 - **Longer horizons**: Run 200+ epochs to test whether the diversity advantage compounds or plateaus.
 
 ---
