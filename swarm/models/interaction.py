@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import uuid
+from collections.abc import Mapping
 from datetime import datetime
 from enum import Enum
 from typing import Any, Dict, Optional, cast
@@ -80,9 +81,8 @@ class SoftInteraction(BaseModel):
     def model_copy(
         self,
         *,
-        update: Dict[str, Any] | None = None,
+        update: Mapping[str, Any] | None = None,
         deep: bool = False,
-        **kwargs: Any,
     ) -> "SoftInteraction":
         """Override to enforce p and v_hat invariants after copy.
 
@@ -92,7 +92,7 @@ class SoftInteraction(BaseModel):
         """
         result = cast(
             "SoftInteraction",
-            super().model_copy(update=update, deep=deep, **kwargs),
+            super().model_copy(update=update, deep=deep),
         )
         if not (0.0 <= result.p <= 1.0):
             raise ValueError(f"p invariant violated after copy: {result.p}")
