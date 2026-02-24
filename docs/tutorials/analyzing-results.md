@@ -188,13 +188,28 @@ Look for:
 Aggregate metrics can mask individual agent behavior. Check per-agent stats:
 
 ```python
-# After a run, agent-level metrics are available
-for agent_id, stats in history["agent_stats"].items():
-    if stats["toxicity"] > 0.4:
+# After a run, `history` is a list of EpochMetrics objects.
+# Each epoch contains per-agent stats that you can aggregate.
+agent_stats = {}
+
+for epoch in history:
+    for agent_id, stats in epoch.agent_stats.items():
+        agg = agent_stats.setdefault(
+            agent_id,
+            {"toxicity": [], "mean_p": [], "reputation": [], "n_interactions": 0},
+        )
+        agg["toxicity"].append(stats["toxicity"])
+        agg["mean_p"].append(stats["mean_p"])
+        agg["reputation"].append(stats["reputation"])
+        agg["n_interactions"] += stats["n_interactions"]
+
+for agent_id, agg in agent_stats.items():
+    mean_toxicity = sum(agg["toxicity"]) / len(agg["toxicity"])
+    if mean_toxicity > 0.4:
         print(f"High-toxicity agent: {agent_id}")
-        print(f"  Interactions: {stats['n_interactions']}")
-        print(f"  Mean p: {stats['mean_p']:.3f}")
-        print(f"  Reputation: {stats['final_reputation']:.3f}")
+        print(f"  Interactions: {agg['n_interactions']}")
+        print(f"  Mean p: {sum(agg['mean_p']) / len(agg['mean_p']):.3f}")
+        print(f"  Final reputation: {agg['reputation'][-1]:.3f}")
 ```
 
 Deceptive agents typically show:
