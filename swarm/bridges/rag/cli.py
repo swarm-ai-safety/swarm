@@ -25,6 +25,12 @@ def main(argv: list[str] | None = None) -> None:
         choices=["openai", "ollama"],
     )
     idx.add_argument("--embedding-model", default=None)
+    idx.add_argument(
+        "--vector-backend",
+        default="chromadb",
+        choices=["chromadb", "leann"],
+        help="Vector store backend",
+    )
 
     # --- query ---
     q = sub.add_parser("query", help="Query indexed runs")
@@ -40,9 +46,22 @@ def main(argv: list[str] | None = None) -> None:
         choices=["openai", "ollama"],
     )
     q.add_argument("--embedding-model", default=None)
+    q.add_argument(
+        "--vector-backend",
+        default="chromadb",
+        choices=["chromadb", "leann"],
+        help="Vector store backend",
+    )
 
     # --- status ---
-    sub.add_parser("status", help="Show index status")
+    st = sub.add_parser("status", help="Show index status")
+    st.add_argument("--persist-dir", default=".rag_store", help="Store path")
+    st.add_argument(
+        "--vector-backend",
+        default="chromadb",
+        choices=["chromadb", "leann"],
+        help="Vector store backend",
+    )
 
     args = parser.parse_args(argv)
 
@@ -56,6 +75,7 @@ def main(argv: list[str] | None = None) -> None:
         config = RAGConfig(
             persist_dir=args.persist_dir,
             embedding_provider=args.embedding_provider,
+            vector_backend=args.vector_backend,
         )
         if args.embedding_model:
             config.embedding_model = args.embedding_model
@@ -78,6 +98,7 @@ def main(argv: list[str] | None = None) -> None:
             top_k=args.top_k,
             llm_provider=args.llm_provider,
             embedding_provider=args.embedding_provider,
+            vector_backend=args.vector_backend,
         )
         if args.llm_model:
             config.llm_model = args.llm_model
@@ -109,30 +130,25 @@ def main(argv: list[str] | None = None) -> None:
 def _show_status(args: argparse.Namespace) -> None:
     """Show index status."""
     persist_dir = getattr(args, "persist_dir", ".rag_store")
+    vector_backend = getattr(args, "vector_backend", "chromadb")
     store_path = Path(persist_dir)
 
     if not store_path.exists():
         print(f"No RAG store found at {store_path}")
         return
 
+    from swarm.bridges.rag.backend import build_backend
     from swarm.bridges.rag.config import RAGConfig
 
-    config = RAGConfig(persist_dir=persist_dir)
-
-    import chromadb
-
-    client = chromadb.PersistentClient(path=config.persist_dir)
-    try:
-        collection = client.get_collection(config.collection_name)
-        count = collection.count()
-    except Exception:
-        count = 0
+    config = RAGConfig(persist_dir=persist_dir, vector_backend=vector_backend)
+    backend = build_backend(config)
+    count = backend.count
 
     # Approximate store size
     total_bytes = sum(f.stat().st_size for f in store_path.rglob("*") if f.is_file())
     size_mb = total_bytes / (1024 * 1024)
 
     print(f"RAG store: {store_path.resolve()}")
-    print(f"  Collection: {config.collection_name}")
+    print(f"  Backend: {vector_backend}")
     print(f"  Chunks indexed: {count}")
     print(f"  Store size: {size_mb:.1f} MB")

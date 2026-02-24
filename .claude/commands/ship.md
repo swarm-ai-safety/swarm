@@ -10,6 +10,8 @@ Examples:
 - `/ship` (auto-generates commit message from diff)
 - `/ship "Fix typo in governance config"`
 - `/ship --fix "Add PettingZoo bridge"` (auto-fix lint/mypy before committing)
+- `/ship --test "Fix governance vulnerabilities"` (run tests before committing)
+- `/ship --fix --test "Add PettingZoo bridge"` (auto-fix lint/mypy, then run tests)
 - `/ship --all "Batch commit session output"` (stage everything safe)
 - `/ship --close b6t b7x "Finish live integration tests"` (close beads + commit + push)
 - `/ship --fix --close b6t` (auto-fix, close beads, commit, push)
@@ -20,11 +22,14 @@ Examples:
 
 Parse `$ARGUMENTS` to extract:
 - `--fix`: Enable ruff/mypy auto-fix with retry loop (up to 3 attempts)
+- `--test [path]`: Run pytest before committing. If tests fail, stop and report (never auto-fix tests). Optional path restricts to specific test file/directory (e.g. `--test tests/test_governed_swarm.py`). Without a path, runs full suite with `pytest -x -q`.
 - `--all`: Stage all modified + untracked files (excluding secrets/junk), not just already-staged ones
 - `--close <bead-ids...>`: Close specified beads before committing. Bead IDs are tokens matching `distributional-agi-safety-*` or similar short IDs. Collect all bead IDs that follow `--close` until the next flag or quoted string.
 - `--research-close`: Run the research session close ritual (Phase 0) before committing. Updates memory files with session summary, active thread, and run pointers.
 - `--no-push`: Commit only, skip push step
 - Everything else in quotes (or the remaining non-flag text) is the commit message.
+
+Flag combinations: `--fix --test` runs lint/mypy auto-fix first (Phase 3), then tests (Phase 3.5). If `--fix` succeeds but tests fail, stop and report — never auto-fix test failures.
 
 If no flags are given, behavior matches the original `/ship`: commit staged changes and push.
 
@@ -135,6 +140,27 @@ This catches missing docs before the pre-commit hook, with a friendlier interact
 - Run `python -m py_compile` on each staged `.py` file.
 - If any fail, report the file and error. Do NOT auto-fix syntax errors. Suggest `git checkout -- <file>` or `git reset HEAD <file>`.
 
+### Phase 3.5: Test (only if `--test` flag is set)
+
+Run pytest to catch regressions before committing. This prevents the "fix code → commit → discover test failure → fix test → commit again" pattern that produces unnecessary fix-up commits.
+
+**Step 3.5a: Determine test scope**
+- If `--test` was given a path (e.g. `--test tests/test_governed_swarm.py`), use that path.
+- If `--test` was given without a path, run the full suite.
+
+**Step 3.5b: Run pytest**
+```bash
+python -m pytest <scope> -x -q --tb=short
+```
+- `-x`: Stop on first failure (fast feedback).
+- `-q`: Quiet output (summary only unless there's a failure).
+- `--tb=short`: Concise tracebacks on failure.
+
+**Step 3.5c: Handle results**
+- **All tests pass**: Report pass count and duration, continue to Phase 4.
+- **Tests fail**: Report the failure summary (file, test name, assertion). **Stop and do NOT commit.** Never auto-fix test failures — these need human review.
+  - If `--fix` was also set and lint/mypy fixes were applied in Phase 3, note that those fixes are still staged and the user can commit manually after fixing the test.
+
 ### Phase 4: Commit
 
 **4a: Pre-stage lint check** (always, even without `--fix`):
@@ -226,3 +252,5 @@ When running inside a session worktree (branch `session/pane-*`), `/ship` commit
 | `/close_and_ship b6t b7x` | `/ship --close b6t b7x` |
 | `/close_and_ship b6t "msg"` | `/ship --close b6t "msg"` |
 | `letta-os.sh close` | `/ship --research-close` |
+| manual pytest + commit | `/ship --test` |
+| `/ship --fix` + manual test rerun | `/ship --fix --test` |

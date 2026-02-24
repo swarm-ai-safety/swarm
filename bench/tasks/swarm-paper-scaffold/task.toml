@@ -1,0 +1,7 @@
+[task]
+name = "swarm-paper-scaffold"
+description = "Generate paper from pre-loaded run database"
+difficulty = "hard"
+timeout = 600
+skills = ["paper-writing"]
+domain = "swarm-safety"

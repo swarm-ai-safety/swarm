@@ -1,0 +1,7 @@
+[task]
+name = "swarm-statistical-rigor"
+description = "Full statistical analysis with multiple-comparison corrections"
+difficulty = "hard"
+timeout = 600
+skills = ["statistical-analysis"]
+domain = "swarm-safety"

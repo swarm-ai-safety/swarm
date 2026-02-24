@@ -1,0 +1,7 @@
+[task]
+name = "swarm-run-scenario"
+description = "Run a baseline SWARM simulation and export artifacts"
+difficulty = "easy"
+timeout = 300
+skills = ["run-scenario"]
+domain = "swarm-safety"

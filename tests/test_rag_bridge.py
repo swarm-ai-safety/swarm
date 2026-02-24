@@ -3,11 +3,16 @@
 from __future__ import annotations
 
 import json
+import sys
+from dataclasses import dataclass
 from pathlib import Path
+from types import ModuleType
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from swarm.bridges.rag.backend import BackendResult, LeannBackend, _apply_where_filter
 from swarm.bridges.rag.config import RAGConfig
 
 
@@ -23,6 +28,9 @@ class TestRAGConfig:
         assert config.chunk_overlap == 200
         assert config.top_k == 8
         assert config.llm_provider == "anthropic"
+        assert config.vector_backend == "chromadb"
+        assert config.leann_backend == "hnsw"
+        assert config.leann_index_dir == ".rag_store/leann"
 
     def test_custom_values(self) -> None:
         config = RAGConfig(
@@ -273,8 +281,8 @@ class TestRunIndexer:
         indexer._embedding_fn = mock_fn
         indexer.index_run(run_dir)
 
-        # Verify metadata via direct chromadb query
-        results = indexer._collection.get(include=["metadatas"])
+        # Verify metadata via direct chromadb query on the backend's collection
+        results = indexer._backend._collection.get(include=["metadatas"])
         metadatas = results["metadatas"]
         assert metadatas is not None
         assert len(metadatas) > 0
@@ -380,3 +388,191 @@ class TestRunRetriever:
         # All returned chunks should be agent_state type
         for chunk in chunks:
             assert chunk.doc_type == "agent_state"
+
+
+# ------------------------------------------------------------------
+# LEANN backend tests (mock LEANN builder/searcher — no real dep)
+# ------------------------------------------------------------------
+
+
+@dataclass
+class _MockHit:
+    """Mimics a LEANN search hit."""
+
+    id: str
+    score: float
+
+
+class MockLeannBuilder:
+    """In-memory fake for leann.LeannBuilder."""
+
+    def __init__(self, backend: str = "hnsw") -> None:
+        self.texts: list[str] = []
+        self.ids: list[str] = []
+        self.backend = backend
+        self._built_dir: str | None = None
+
+    def add_texts(self, texts: list[str], ids: list[str] | None = None) -> None:
+        self.texts.extend(texts)
+        if ids:
+            self.ids.extend(ids)
+        else:
+            self.ids.extend(str(i) for i in range(len(texts)))
+
+    def build_index(self, path: str) -> None:
+        self._built_dir = path
+
+
+class MockLeannSearcher:
+    """In-memory fake for leann.LeannSearcher.
+
+    Returns results in insertion order with decreasing scores.
+    Uses the sidecar's ids to simulate realistic search results.
+    """
+
+    def __init__(self, index_dir: str, sidecar_ids: list[str] | None = None) -> None:
+        self.index_dir = index_dir
+        self._ids = sidecar_ids or []
+
+    def search(self, query_text: str, k: int = 8) -> list[_MockHit]:
+        results = []
+        for i, doc_id in enumerate(self._ids[:k]):
+            results.append(_MockHit(id=doc_id, score=1.0 - i * 0.1))
+        return results
+
+
+class TestLeannBackend:
+    """Test LeannBackend with mocked LEANN builder/searcher."""
+
+    @pytest.fixture(autouse=True)
+    def _mock_leann_module(self) -> Any:
+        """Inject a fake ``leann`` module into sys.modules."""
+        mod = ModuleType("leann")
+        mod.LeannBuilder = MockLeannBuilder  # type: ignore[attr-defined]
+        mod.LeannSearcher = MockLeannSearcher  # type: ignore[attr-defined]
+        old = sys.modules.get("leann")
+        sys.modules["leann"] = mod
+        yield
+        if old is None:
+            sys.modules.pop("leann", None)
+        else:
+            sys.modules["leann"] = old
+
+    @pytest.fixture()
+    def config(self, tmp_path: Path) -> RAGConfig:
+        return RAGConfig(
+            vector_backend="leann",
+            leann_index_dir=str(tmp_path / "leann_idx"),
+        )
+
+    def _make_backend_with_data(
+        self, config: RAGConfig
+    ) -> LeannBackend:
+        """Create a LeannBackend and upsert test data."""
+        backend = LeannBackend(config)
+        ids = ["chunk_0", "chunk_1", "chunk_2"]
+        texts = ["hello world", "toxicity rate", "agent state"]
+        metadatas = [
+            {"doc_type": "epoch_summary", "run_id": "run1"},
+            {"doc_type": "epoch_summary", "run_id": "run1"},
+            {"doc_type": "agent_state", "run_id": "run1"},
+        ]
+        backend.upsert(ids=ids, texts=texts, metadatas=metadatas)
+        return backend
+
+    def test_upsert_and_finalize(self, config: RAGConfig) -> None:
+        backend = self._make_backend_with_data(config)
+        backend.finalize()
+        assert backend.count == 3
+
+    def test_sidecar_persistence(self, config: RAGConfig) -> None:
+        backend = self._make_backend_with_data(config)
+        backend.finalize()
+
+        sidecar_path = Path(config.leann_index_dir) / "metadata.json"
+        assert sidecar_path.exists()
+
+        sidecar = json.loads(sidecar_path.read_text())
+        assert "chunk_0" in sidecar
+        assert sidecar["chunk_0"]["text"] == "hello world"
+        assert sidecar["chunk_0"]["metadata"]["doc_type"] == "epoch_summary"
+
+    def test_query_returns_results(self, config: RAGConfig) -> None:
+        backend = self._make_backend_with_data(config)
+        backend.finalize()
+
+        # Inject mock searcher
+        mock_searcher = MockLeannSearcher(
+            config.leann_index_dir,
+            sidecar_ids=list(backend._sidecar.keys()),
+        )
+        backend._searcher = mock_searcher
+
+        results = backend.query(query_text="toxicity", top_k=2)
+        assert len(results) == 2
+        assert all(isinstance(r, BackendResult) for r in results)
+        assert results[0].score > results[1].score
+
+    def test_post_retrieval_filtering(self, config: RAGConfig) -> None:
+        backend = self._make_backend_with_data(config)
+        backend.finalize()
+
+        # Mock searcher returns all 3 items
+        mock_searcher = MockLeannSearcher(
+            config.leann_index_dir,
+            sidecar_ids=list(backend._sidecar.keys()),
+        )
+        backend._searcher = mock_searcher
+
+        # Filter to agent_state only
+        results = backend.query(
+            query_text="agent",
+            top_k=10,
+            where={"doc_type": "agent_state"},
+        )
+        assert len(results) == 1
+        assert results[0].metadata["doc_type"] == "agent_state"
+
+    def test_overfetch_for_filtered_queries(self, config: RAGConfig) -> None:
+        """When a where filter is given, LEANN fetches 3x top_k."""
+        backend = self._make_backend_with_data(config)
+        backend.finalize()
+
+        call_log: list[int] = []
+
+        class TrackingSearcher:
+            def __init__(self, ids: list[str]) -> None:
+                self._ids = ids
+
+            def search(self, query_text: str, k: int = 8) -> list[_MockHit]:
+                call_log.append(k)
+                return [_MockHit(id=i, score=0.9) for i in self._ids[:k]]
+
+        backend._searcher = TrackingSearcher(list(backend._sidecar.keys()))
+
+        backend.query(query_text="test", top_k=2, where={"doc_type": "epoch_summary"})
+        assert call_log[0] == 6  # 2 * 3 = 6
+
+    def test_finalize_no_op_when_empty(self, config: RAGConfig) -> None:
+        backend = LeannBackend(config)
+        backend.finalize()  # Should not raise
+        assert backend.count == 0
+
+
+class TestApplyWhereFilter:
+    """Test the post-retrieval filter helper."""
+
+    def test_equality(self) -> None:
+        assert _apply_where_filter({"a": 1}, {"a": 1}) is True
+        assert _apply_where_filter({"a": 1}, {"a": 2}) is False
+
+    def test_in_operator(self) -> None:
+        assert _apply_where_filter({"t": "x"}, {"t": {"$in": ["x", "y"]}}) is True
+        assert _apply_where_filter({"t": "z"}, {"t": {"$in": ["x", "y"]}}) is False
+
+    def test_ne_operator(self) -> None:
+        assert _apply_where_filter({"a": 1}, {"a": {"$ne": 2}}) is True
+        assert _apply_where_filter({"a": 1}, {"a": {"$ne": 1}}) is False
+
+    def test_missing_key(self) -> None:
+        assert _apply_where_filter({}, {"a": 1}) is False

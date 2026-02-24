@@ -96,6 +96,7 @@ models/
 .DS_Store
 sandboxes/
 .worktrees/
+agent-orchestrator.yaml
 *.db
 # runs/ is fully ignored above (migrated to swarm-artifacts)
 node_modules/

@@ -8,22 +8,7 @@ from typing import Any
 
 from swarm.bridges.rag.config import RAGConfig
 
-try:
-    import chromadb
-
-    _HAS_RAG = True
-except ImportError:
-    _HAS_RAG = False
-
 logger = logging.getLogger(__name__)
-
-
-def _require_rag() -> None:
-    if not _HAS_RAG:
-        raise ImportError(
-            "RAG dependencies not installed. "
-            "Install with: python -m pip install 'swarm-safety[rag]'"
-        )
 
 
 @dataclass
@@ -50,19 +35,21 @@ class RAGResponse:
 class RunRetriever:
     """Queries run history via vector search and LLM synthesis.
 
-    Uses ChromaDB for retrieval and the Anthropic/OpenAI SDK for
-    answer synthesis (following the existing LLMAgent dispatch pattern).
+    Uses the configured vector backend for retrieval and the
+    Anthropic/OpenAI SDK for answer synthesis.
     """
 
     def __init__(self, config: RAGConfig | None = None) -> None:
-        _require_rag()
         self.config = config or RAGConfig()
-        self._client = chromadb.PersistentClient(path=self.config.persist_dir)
-        self._collection = self._client.get_or_create_collection(
-            name=self.config.collection_name,
-            metadata={"hnsw:space": "cosine"},
-        )
-        self._embedding_fn = self._build_embedding_fn()
+
+        from swarm.bridges.rag.backend import build_backend
+
+        self._backend = build_backend(self.config)
+
+        # Embedding fn only needed for chromadb (LEANN handles its own)
+        self._embedding_fn: Any = None
+        if self.config.vector_backend == "chromadb":
+            self._embedding_fn = self._build_embedding_fn()
 
     def _build_embedding_fn(self) -> Any:
         """Build the embedding function based on config."""
@@ -102,32 +89,31 @@ class RunRetriever:
             List of retrieved chunks sorted by relevance.
         """
         k = top_k or self.config.top_k
-        query_embedding = self._embedding_fn.embed_query(question)
+
+        query_embedding: list[float] | None = None
+        if self._embedding_fn is not None:
+            query_embedding = self._embedding_fn.embed_query(question)
 
         where_filter = None
         if doc_types:
             where_filter = {"doc_type": {"$in": doc_types}}
 
-        results = self._collection.query(
-            query_embeddings=[query_embedding],
-            n_results=k,
+        results = self._backend.query(
+            query_embedding=query_embedding,
+            query_text=question,
+            top_k=k,
             where=where_filter,
-            include=["documents", "metadatas", "distances"],
         )
 
         chunks: list[RetrievedChunk] = []
-        documents = results.get("documents", [[]])[0]
-        metadatas = results.get("metadatas", [[]])[0]
-        distances = results.get("distances", [[]])[0]
-
-        for doc, meta, dist in zip(documents, metadatas, distances, strict=False):
+        for r in results:
             chunks.append(
                 RetrievedChunk(
-                    text=doc or "",
-                    run_id=meta.get("run_id", "") if meta else "",
-                    doc_type=meta.get("doc_type", "") if meta else "",
-                    score=1.0 - dist,  # cosine distance → similarity
-                    metadata=dict(meta) if meta else {},
+                    text=r.text,
+                    run_id=r.metadata.get("run_id", ""),
+                    doc_type=r.metadata.get("doc_type", ""),
+                    score=r.score,
+                    metadata=r.metadata,
                 )
             )
 

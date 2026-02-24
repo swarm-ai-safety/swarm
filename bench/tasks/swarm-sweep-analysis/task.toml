@@ -1,0 +1,7 @@
+[task]
+name = "swarm-sweep-analysis"
+description = "Run a parameter sweep and produce summary statistics"
+difficulty = "medium"
+timeout = 600
+skills = ["parameter-sweep"]
+domain = "swarm-safety"

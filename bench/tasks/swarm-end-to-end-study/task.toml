@@ -1,0 +1,7 @@
+[task]
+name = "swarm-end-to-end-study"
+description = "Full pipeline: sweep, analyze, plot, paper"
+difficulty = "hard"
+timeout = 900
+skills = ["run-scenario", "parameter-sweep", "statistical-analysis", "plotting", "paper-writing"]
+domain = "swarm-safety"
