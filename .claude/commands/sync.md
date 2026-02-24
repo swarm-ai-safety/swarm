@@ -1,8 +1,6 @@
 # /sync
 
-Atomic fetch-rebase-push. Resolves the common "push rejected because remote advanced" problem in one step. Also handles post-merge branch cleanup.
-
-Consolidates the former `/cleanup_branch` command (now `/sync --cleanup`).
+Atomic fetch-rebase-push with auto-stash. Resolves the common "push rejected because remote advanced" problem in one step, even when you have unstaged changes — automatically stashes dirty working tree before rebase and restores after push. Also handles post-merge branch cleanup via `--cleanup`. Use instead of manual `git pull --rebase && git push` sequences. Consolidates the former `/cleanup_branch` command (now `/sync --cleanup`).
 
 ## Usage
 
