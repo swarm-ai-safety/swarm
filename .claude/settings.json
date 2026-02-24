@@ -32,6 +32,16 @@
             "statusMessage": "Running post-write checks"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/Users/raelisavitt/distributional-agi-safety/.claude/metadata-updater.sh",
+            "timeout": 5000
+          }
+        ]
       }
     ]
   }

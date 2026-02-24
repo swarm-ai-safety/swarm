@@ -1,4 +1,4 @@
-"""Run indexer — loads run artifacts and indexes them into ChromaDB."""
+"""Run indexer — loads run artifacts and indexes them into a vector backend."""
 
 from __future__ import annotations
 
@@ -10,7 +10,6 @@ from typing import Any
 from swarm.bridges.rag.config import RAGConfig
 
 try:
-    import chromadb
     from langchain_text_splitters import RecursiveCharacterTextSplitter
 
     _HAS_RAG = True
@@ -29,7 +28,7 @@ def _require_rag() -> None:
 
 
 class RunIndexer:
-    """Indexes run artifacts into a ChromaDB collection.
+    """Indexes run artifacts into a vector backend.
 
     Each chunk is stored with rich metadata (run_id, scenario_id, seed,
     epoch, doc_type) so retrieval can be filtered.
@@ -38,16 +37,18 @@ class RunIndexer:
     def __init__(self, config: RAGConfig | None = None) -> None:
         _require_rag()
         self.config = config or RAGConfig()
-        self._client = chromadb.PersistentClient(path=self.config.persist_dir)
-        self._collection = self._client.get_or_create_collection(
-            name=self.config.collection_name,
-            metadata={"hnsw:space": "cosine"},
-        )
+
+        from swarm.bridges.rag.backend import build_backend
+
+        self._backend = build_backend(self.config)
         self._splitter = RecursiveCharacterTextSplitter(
             chunk_size=self.config.chunk_size,
             chunk_overlap=self.config.chunk_overlap,
         )
-        self._embedding_fn = self._build_embedding_fn()
+        # Embedding fn only needed for chromadb (LEANN handles its own)
+        self._embedding_fn: Any = None
+        if self.config.vector_backend == "chromadb":
+            self._embedding_fn = self._build_embedding_fn()
 
     # ------------------------------------------------------------------
     # Embedding setup
@@ -89,6 +90,12 @@ class RunIndexer:
         Returns:
             Number of chunks indexed.
         """
+        count = self._index_run_no_finalize(run_dir)
+        self._backend.finalize()
+        return count
+
+    def _index_run_no_finalize(self, run_dir: Path) -> int:
+        """Index a run without calling finalize (for batch use)."""
         run_dir = Path(run_dir)
         run_id = run_dir.name
         chunks: list[dict[str, Any]] = []
@@ -123,11 +130,14 @@ class RunIndexer:
         ids = [c["id"] for c in chunks]
         metadatas = [c["metadata"] for c in chunks]
 
-        embeddings = self._embed(texts)
-        self._collection.upsert(
+        embeddings: list[list[float]] | None = None
+        if self._embedding_fn is not None:
+            embeddings = self._embed(texts)
+
+        self._backend.upsert(
             ids=ids,
+            texts=texts,
             embeddings=embeddings,
-            documents=texts,
             metadatas=metadatas,
         )
 
@@ -136,6 +146,10 @@ class RunIndexer:
 
     def index_all(self, runs_dir: Path) -> int:
         """Discover and index all runs in a directory.
+
+        Accumulates all chunks across runs, then calls ``finalize()``
+        once at the end.  This is more efficient for backends like LEANN
+        that rebuild the entire index on finalize.
 
         Args:
             runs_dir: Parent directory containing run subdirectories.
@@ -147,14 +161,14 @@ class RunIndexer:
         total = 0
         for child in sorted(runs_dir.iterdir()):
             if child.is_dir() and not child.name.startswith("."):
-                total += self.index_run(child)
+                total += self._index_run_no_finalize(child)
+        self._backend.finalize()
         return total
 
     @property
     def count(self) -> int:
         """Number of chunks in the collection."""
-        result: int = self._collection.count()
-        return result
+        return self._backend.count
 
     # ------------------------------------------------------------------
     # Internal indexing helpers

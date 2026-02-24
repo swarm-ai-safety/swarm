@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **RAG LEANN backend** (`swarm/bridges/rag/backend.py`) — `VectorBackend` protocol with ChromaDB and LEANN implementations; LEANN provides ~97% storage savings via graph-based selective recomputation with JSON sidecar metadata and post-retrieval filtering; selected via `RAGConfig.vector_backend`
 - **RAG bridge** (`swarm/bridges/rag/`) — semantic search over run history via ChromaDB vector store, with configurable embeddings (OpenAI/Ollama), LLM synthesis (Anthropic/OpenAI), CLI (`python -m swarm.bridges.rag`), and `rag` optional dependency group
 - **Adaptive governance controller** (`swarm/governance/adaptive.py`, `swarm/governance/adaptive_controller.py`) — three-phase loop with evidence accumulation, 3-pass contemplation (signal/trend/propose), and 3-gate crystallization (time/alignment/human review) for automatic threshold tuning of governance levers
 - **Adaptive governance scenario** (`scenarios/adaptive_governance.yaml`) — 30-epoch mixed-agent scenario with circuit breaker, audit, and collusion detection levers enabled for adaptive tuning

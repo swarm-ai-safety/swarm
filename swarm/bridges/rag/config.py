@@ -19,6 +19,9 @@ class RAGConfig:
         llm_provider: LLM backend for synthesis ("anthropic" or "openai").
         llm_model: Model name for synthesis.
         max_tokens: Max tokens for synthesis response.
+        vector_backend: Vector store backend ("chromadb" or "leann").
+        leann_backend: LEANN index type ("hnsw" or "diskann").
+        leann_index_dir: Directory for LEANN index files.
     """
 
     # Vector store
@@ -41,6 +44,11 @@ class RAGConfig:
     llm_provider: str = "anthropic"
     llm_model: str = "claude-sonnet-4-20250514"
     max_tokens: int = 1024
+
+    # Vector backend
+    vector_backend: str = "chromadb"  # "chromadb" or "leann"
+    leann_backend: str = "hnsw"  # "hnsw" or "diskann"
+    leann_index_dir: str = ".rag_store/leann"
 
     # Metadata filter defaults
     default_doc_types: list[str] = field(

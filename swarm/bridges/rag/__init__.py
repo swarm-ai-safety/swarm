@@ -1,15 +1,21 @@
 """SWARM RAG Bridge — semantic search over run history.
 
 Indexes run artifacts (JSONL event logs, JSON history snapshots, CSV
-metrics, scenario YAMLs) into a local ChromaDB vector store and
-enables natural language queries grounded in actual run data.
+metrics, scenario YAMLs) into a vector store and enables natural
+language queries grounded in actual run data.
+
+Supports two vector backends (selected via ``RAGConfig.vector_backend``):
+
+- **chromadb** (default) — ChromaDB with LangChain embeddings.
+- **leann** — LEANN graph-based index with ~97% storage savings,
+  local embedding models, and JSON sidecar metadata.
 
 Architecture::
 
     Run artifacts (JSONL, JSON, CSV, YAML)
       -> Document chunking & metadata extraction
-      -> Embeddings (OpenAI or Ollama, configurable)
-      -> ChromaDB vector store (local, persistent)
+      -> Embeddings (OpenAI/Ollama for ChromaDB; internal for LEANN)
+      -> Vector backend (ChromaDB or LEANN, local, persistent)
       -> Natural language query -> retrieve relevant chunks
       -> LLM synthesizes answer
 
