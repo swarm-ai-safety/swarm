@@ -143,7 +143,7 @@ class TestMesaBridgeProtocolMode:
 
 
 try:
-    import mesa  # noqa: F401
+    __import__("mesa")
 
     HAS_MESA = True
 except ImportError:
