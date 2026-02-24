@@ -83,7 +83,10 @@ class MesaBridge:
         self.model = model
         self.config = config or MesaBridgeConfig()
         self._proxy = ProxyComputer(sigmoid_k=self.config.proxy_sigmoid_k)
-        self._payoff_engine = SoftPayoffEngine(payoff_config or PayoffConfig())
+        effective_payoff_config = payoff_config or PayoffConfig(
+            w_rep=self.config.reputation_weight
+        )
+        self._payoff_engine = SoftPayoffEngine(effective_payoff_config)
         self._metrics = SoftMetrics(self._payoff_engine)
         self._interactions: List[SoftInteraction] = []
         self._step_count: int = 0
