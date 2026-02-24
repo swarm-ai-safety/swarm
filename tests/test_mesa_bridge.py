@@ -7,6 +7,7 @@ Full-model tests are gated behind a skipif marker.
 from __future__ import annotations
 
 import importlib.util
+
 import pytest
 from pydantic import ValidationError
 

@@ -6,9 +6,9 @@ skipif marker.
 
 from __future__ import annotations
 
+import importlib
 from unittest.mock import MagicMock
 
-import importlib
 import pytest
 from pydantic import ValidationError
 
