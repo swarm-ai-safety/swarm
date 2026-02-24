@@ -169,6 +169,10 @@ class MetricsReporter:
         """
         Compute comprehensive summary of all metrics.
 
+        Optimised via a single pass through the interaction list: payoffs,
+        quality accumulators, and counts are gathered together so we avoid
+        O(N) re-filtering for each individual metric.
+
         Args:
             interactions: List of interactions
 
@@ -206,43 +210,174 @@ class MetricsReporter:
                 payoff_variance_counterparty=0.0,
             )
 
-        # Compute soft metrics
-        toxicity_soft = self.soft_metrics.toxicity_rate(interactions)
-        cl_init = self.soft_metrics.conditional_loss_initiator(interactions)
-        cl_counter = self.soft_metrics.conditional_loss_counterparty(interactions)
-        spread = self.soft_metrics.spread(interactions)
-        quality_gap = self.soft_metrics.quality_gap(interactions)
-        avg_quality = self.soft_metrics.average_quality(interactions)
-        uncertain_frac = self.soft_metrics.uncertain_fraction(
-            interactions, self.uncertainty_band
+        # ------------------------------------------------------------------
+        # Single-pass accumulation
+        # Hoist config lookups out of the loop to avoid repeated attribute access.
+        # ------------------------------------------------------------------
+        cfg = self.payoff_engine.config
+        s_plus = cfg.s_plus
+        s_minus = cfg.s_minus
+        h = cfg.h
+        theta = cfg.theta
+        one_m_theta = 1.0 - theta
+        rho_a = cfg.rho_a
+        rho_b = cfg.rho_b
+        w_rep = cfg.w_rep
+        s_scale = s_plus + s_minus
+        s_minus_plus_h = s_minus + h
+
+        threshold = self.quality_threshold
+        band = self.uncertainty_band
+        band_lo = 0.5 - band
+        band_hi = 0.5 + band
+
+        n = len(interactions)
+
+        # Running sums for all interactions
+        sum_p = 0.0
+        sum_p_sq = 0.0
+        sum_pi_a = 0.0
+        sum_pi_a_sq = 0.0
+        sum_pi_b = 0.0
+        sum_pi_b_sq = 0.0
+
+        # Running sums for accepted subset
+        n_acc = 0
+        sum_p_acc = 0.0
+        sum_pi_a_acc = 0.0
+        sum_pi_b_acc = 0.0
+        sum_social_acc = 0.0
+
+        # Running sums for rejected subset
+        sum_p_rej = 0.0
+        n_rej = 0
+
+        # Counters
+        uncertain_count = 0
+        hard_toxic_count = 0
+        hq_count = 0
+        lq_count = 0
+        hq_accepted = 0
+        lq_accepted = 0
+
+        for interaction in interactions:
+            p = interaction.p
+
+            # Compute S_soft, E_soft, and both payoffs inline — avoids
+            # calling expected_surplus / expected_harm / payoffs_both as
+            # separate functions, eliminating per-call overhead.
+            one_m_p = 1.0 - p
+            S_soft = p * s_plus - one_m_p * s_minus
+            E_soft = one_m_p * h
+
+            pi_a = (
+                theta * S_soft
+                - interaction.tau
+                - interaction.c_a
+                - rho_a * E_soft
+                + w_rep * interaction.r_a
+            )
+            pi_b = (
+                one_m_theta * S_soft
+                + interaction.tau
+                - interaction.c_b
+                - rho_b * E_soft
+                + w_rep * interaction.r_b
+            )
+
+            # All-interaction accumulators
+            sum_p += p
+            sum_p_sq += p * p
+            sum_pi_a += pi_a
+            sum_pi_a_sq += pi_a * pi_a
+            sum_pi_b += pi_b
+            sum_pi_b_sq += pi_b * pi_b
+
+            # Uncertainty band
+            if band_lo < p < band_hi:
+                uncertain_count += 1
+
+            # Quality tier (high/low)
+            if p >= threshold:
+                hq_count += 1
+                if interaction.accepted:
+                    hq_accepted += 1
+            else:
+                lq_count += 1
+                if interaction.accepted:
+                    lq_accepted += 1
+
+            # Accepted vs rejected
+            if interaction.accepted:
+                n_acc += 1
+                sum_p_acc += p
+                sum_pi_a_acc += pi_a
+                sum_pi_b_acc += pi_b
+                # Social surplus = S_soft - E_soft = p*s_plus - (1-p)*(s_minus+h)
+                sum_social_acc += p * s_plus - one_m_p * s_minus_plus_h
+                if p < threshold:
+                    hard_toxic_count += 1
+            else:
+                n_rej += 1
+                sum_p_rej += p
+
+        # ------------------------------------------------------------------
+        # Derive all metrics from accumulators (no further list traversals)
+        # ------------------------------------------------------------------
+        avg_p = sum_p / n
+
+        if n_acc > 0:
+            avg_p_acc = sum_p_acc / n_acc
+            avg_pi_a_acc = sum_pi_a_acc / n_acc
+            avg_pi_b_acc = sum_pi_b_acc / n_acc
+            toxicity_soft = 1.0 - avg_p_acc
+            toxicity_hard = hard_toxic_count / n_acc
+            total_welfare = sum_pi_a_acc + sum_pi_b_acc
+            total_social = sum_social_acc
+        else:
+            avg_p_acc = 0.0
+            avg_pi_a_acc = 0.0
+            avg_pi_b_acc = 0.0
+            toxicity_soft = 0.0
+            toxicity_hard = 0.0
+            total_welfare = 0.0
+            total_social = 0.0
+
+        avg_p_rej = (sum_p_rej / n_rej) if n_rej > 0 else 0.0
+        avg_pi_a_all = sum_pi_a / n
+        avg_pi_b_all = sum_pi_b / n
+
+        # Conditional loss: E[π | accepted] - E[π]
+        cl_init = (avg_pi_a_acc - avg_pi_a_all) if n_acc > 0 else 0.0
+        cl_counter = (avg_pi_b_acc - avg_pi_b_all) if n_acc > 0 else 0.0
+
+        # Spread: (s_plus + s_minus) * (E[p] - E[p | accepted])
+        spread = s_scale * (avg_p - avg_p_acc) if n_acc > 0 else 0.0
+
+        # Quality gap: E[p | accepted] - E[p | rejected]
+        quality_gap = (avg_p_acc - avg_p_rej) if (n_acc > 0 and n_rej > 0) else 0.0
+
+        uncertain_frac = uncertain_count / n
+        acceptance_rate = n_acc / n
+
+        hq_acc_rate = (hq_accepted / hq_count) if hq_count > 0 else 0.0
+        lq_acc_rate = (lq_accepted / lq_count) if lq_count > 0 else 0.0
+
+        # Variance via E[x²] - E[x]²  (numerically acceptable for these ranges)
+        quality_var = max(0.0, sum_p_sq / n - avg_p * avg_p) if n >= 2 else 0.0
+        payoff_var_a = (
+            max(0.0, sum_pi_a_sq / n - avg_pi_a_all * avg_pi_a_all) if n >= 2 else 0.0
+        )
+        payoff_var_b = (
+            max(0.0, sum_pi_b_sq / n - avg_pi_b_all * avg_pi_b_all) if n >= 2 else 0.0
         )
 
-        # Compute hard metrics
-        toxicity_hard = self._compute_hard_toxicity(interactions)
-        participation = self.soft_metrics.participation_by_quality(
-            interactions, self.quality_threshold
-        )
-
-        # Counts
-        accepted = [i for i in interactions if i.accepted]
-        rejected = [i for i in interactions if not i.accepted]
-        acceptance_rate = len(accepted) / len(interactions) if interactions else 0.0
-
-        # Welfare
-        welfare = self.soft_metrics.welfare_metrics(interactions)
-
-        # Calibration metrics (may be None if no ground truth)
+        # Calibration metrics require ground_truth (uncommon path); delegate to
+        # SoftMetrics which handles the None-return case gracefully.
         brier = self.soft_metrics.brier_score(interactions)
         logloss = self.soft_metrics.log_loss(interactions)
         cal_error = self.soft_metrics.calibration_error(interactions)
         ece = self.soft_metrics.expected_calibration_error(interactions)
-
-        # Variance metrics
-        quality_var = self.soft_metrics.quality_variance(interactions)
-        payoff_var_init = self.soft_metrics.payoff_variance_initiator(interactions)
-        payoff_var_counter = self.soft_metrics.payoff_variance_counterparty(
-            interactions
-        )
 
         return MetricsSummary(
             toxicity_soft=toxicity_soft,
@@ -250,28 +385,28 @@ class MetricsReporter:
             conditional_loss_counterparty=cl_counter,
             spread=spread,
             quality_gap=quality_gap,
-            average_quality=avg_quality,
+            average_quality=avg_p,
             uncertain_fraction=uncertain_frac,
             toxicity_hard=toxicity_hard,
             acceptance_rate=acceptance_rate,
-            high_quality_acceptance=participation["high_quality_acceptance"],
-            low_quality_acceptance=participation["low_quality_acceptance"],
-            total_interactions=len(interactions),
-            accepted_count=len(accepted),
-            rejected_count=len(rejected),
-            high_quality_count=participation["high_quality_count"],
-            low_quality_count=participation["low_quality_count"],
-            total_welfare=welfare["total_welfare"],
-            total_social_surplus=welfare["total_social_surplus"],
-            avg_initiator_payoff=welfare["avg_initiator_payoff"],
-            avg_counterparty_payoff=welfare["avg_counterparty_payoff"],
+            high_quality_acceptance=hq_acc_rate,
+            low_quality_acceptance=lq_acc_rate,
+            total_interactions=n,
+            accepted_count=n_acc,
+            rejected_count=n_rej,
+            high_quality_count=hq_count,
+            low_quality_count=lq_count,
+            total_welfare=total_welfare,
+            total_social_surplus=total_social,
+            avg_initiator_payoff=avg_pi_a_acc,
+            avg_counterparty_payoff=avg_pi_b_acc,
             brier_score=brier,
             log_loss=logloss,
             calibration_error=cal_error,
             expected_calibration_error=ece,
             quality_variance=quality_var,
-            payoff_variance_initiator=payoff_var_init,
-            payoff_variance_counterparty=payoff_var_counter,
+            payoff_variance_initiator=payoff_var_a,
+            payoff_variance_counterparty=payoff_var_b,
         )
 
     def compare_soft_hard(self, interactions: List[SoftInteraction]) -> dict:
