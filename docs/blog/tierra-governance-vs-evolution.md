@@ -1,0 +1,72 @@
+# Tierra: Can Governance Improve on Natural Selection?
+
+**Date:** 2026-02-24
+
+A red-team evaluation of our [Tierra artificial life scenario](../../scenarios/tierra.yaml) gave it a split grade: **A-** for evolutionary resilience (adversarial genomes go extinct naturally) but **F** for institutional governance (all levers disabled by design). Every run also produced exactly 1 species — a monoculture vulnerable to environmental shocks.
+
+The natural question: what happens when you layer governance on top of evolution?
+
+## The experiment
+
+We created a [governed Tierra variant](../../scenarios/tierra_governed.yaml) that enables four institutional mechanisms on top of the same evolutionary substrate:
+
+| Lever | Setting | Purpose |
+|---|---|---|
+| Circuit breaker | toxicity > 0.6, 2 violations, 2-epoch freeze | Halt toxic agents before damage spreads |
+| Collusion detection | enabled, default thresholds | Detect coordinated exploitation |
+| Transaction tax | 5% | Friction against hyperactive extractors |
+| Reputation decay | 0.95/epoch | Create institutional memory |
+
+We also introduced two evolutionary governance enhancements:
+
+- **Diversity-preserving reaper**: When culling agents to enforce the population cap, protect at least 1 representative per species cluster. Within each cluster, the poorest die first.
+- **Efficiency weight cap**: Cap the relative efficiency advantage in pool distribution at 3x the mean, preventing runaway resource concentration.
+
+Both scenarios were run with 5 seeds each (42, 123, 256, 777, 999), 50 epochs x 20 steps.
+
+## Results
+
+| Metric | Ungoverned | Governed | Delta |
+|---|---|---|---|
+| Final population | 98.8 | 87.2 | -11.8% |
+| Speciation count | 1.0 | 1.0 | 0% |
+| Genome diversity | 0.378 | 0.403 | +6.5% |
+| Resource Gini | 0.229 | 0.224 | -2.2% |
+| Parasitism fraction | 0.0% | 0.0% | 0% |
+| Cooperation fraction | 90.1% | 87.1% | -3.3% |
+
+### What governance bought us
+
+**Higher diversity.** The governed variant consistently produces more genome diversity (+6.5%). The efficiency weight cap prevents a single high-efficiency lineage from monopolizing resources, giving mutant genomes more room to survive. This is the diversity-as-defense thesis in action: governance creates niches.
+
+**Slightly more equal resource distribution.** The Gini coefficient drops modestly. Transaction tax and efficiency capping redistribute resources from the most efficient agents to the pool.
+
+**Population cost.** Governance reduces the stable population by ~12%. Circuit breaker freezes and transaction tax overhead reduce the total carrying capacity. This is a familiar governance cost pattern — safety mechanisms consume resources that would otherwise support agents.
+
+### What governance didn't change
+
+**Speciation remains at 1.** Both variants produce a single species under single-linkage clustering at distance 0.5. The mutation rate (std=0.05) is too low to push genomes far enough apart within 50 epochs to form distinct species. The diversity-preserving reaper can't protect species that don't exist yet — it prevents extinction, not speciation.
+
+**Parasitism stays at zero.** Neither variant produces parasitic genomes (exploitation_tendency > 0.5). The cooperative basin of attraction is deep enough that mutation + selection reliably converge toward cooperation regardless of governance.
+
+## The deeper lesson
+
+This experiment reveals a nuanced picture of the governance-evolution relationship:
+
+1. **Evolution handles convergence well.** When the fitness landscape has a clear attractor (cooperation), natural selection reliably finds it. Governance adds friction without changing the destination.
+
+2. **Governance handles fragility.** The governed variant's higher diversity is insurance against environmental shocks that could collapse a monoculture. You don't need governance in good times — you need it for the tail risks.
+
+3. **The monoculture problem requires environmental pressure, not just governance.** To get real speciation, you'd need either higher mutation rates, niche differentiation (different resource types), or environmental perturbation. Governance protects existing diversity but can't conjure it from nothing.
+
+4. **Population cost is real and constant.** The 12% population reduction is a steady-state cost, not a transient one. This matches our findings from the [GasTown governance cost study](gastoken-cost-of-safety.md) — safety levers impose ongoing overhead.
+
+## What's next
+
+- **Environmental perturbation**: Add resource shocks or niche specialization to create conditions where speciation can emerge, then measure whether the diversity-preserving reaper actually prevents species extinction.
+- **Adaptive governance**: Wire the governed variant into the [adaptive governance controller](../../swarm/governance/adaptive_controller.py) so levers auto-tune based on observed diversity and toxicity.
+- **Longer horizons**: Run 200+ epochs to test whether the diversity advantage compounds or plateaus.
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*
