@@ -142,13 +142,14 @@ for name in ["baseline", "taxed", "strict"]:
     scenario = load_scenario(f"scenarios/{name}.yaml")
     orch = build_orchestrator(scenario)
     history = orch.run()
-    results[name] = history
+    final_metrics = history[-1]
+    results[name] = final_metrics
 
 # Print comparison
 print(f"{'Scenario':12s} {'Toxicity':10s} {'Q.Gap':8s} {'Payoff':8s}")
 print("-" * 42)
-for name, r in results.items():
-    print(f"{name:12s} {r['toxicity_rate']:.3f}      {r['quality_gap']:+.3f}    {r['mean_payoff']:.3f}")
+for name, m in results.items():
+    print(f"{name:12s} {m.toxicity_rate:.3f}      {m.quality_gap:+.3f}    {m.avg_payoff:.3f}")
 ```
 
 ---
