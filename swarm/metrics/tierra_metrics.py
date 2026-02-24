@@ -104,3 +104,47 @@ def speciation_count(
                 union(i, j)
 
     return len({find(i) for i in range(n)})
+
+
+def species_clusters(
+    genomes: List[Dict[str, float]],
+    distance_threshold: float = 0.5,
+) -> Dict[int, List[int]]:
+    """Return species clusters as {cluster_id: [genome_indices]}.
+
+    Uses the same single-linkage clustering as :func:`speciation_count`.
+    Cluster IDs are the canonical root index from union-find.
+    """
+    n = len(genomes)
+    if n == 0:
+        return {}
+
+    keys = sorted(genomes[0].keys())
+
+    def dist(i: int, j: int) -> float:
+        return math.sqrt(sum((genomes[i][k] - genomes[j][k]) ** 2 for k in keys))
+
+    # Union-Find
+    parent = list(range(n))
+
+    def find(x: int) -> int:
+        while parent[x] != x:
+            parent[x] = parent[parent[x]]
+            x = parent[x]
+        return x
+
+    def union(a: int, b: int) -> None:
+        ra, rb = find(a), find(b)
+        if ra != rb:
+            parent[ra] = rb
+
+    for i in range(n):
+        for j in range(i + 1, n):
+            if dist(i, j) < distance_threshold:
+                union(i, j)
+
+    clusters: Dict[int, List[int]] = {}
+    for i in range(n):
+        root = find(i)
+        clusters.setdefault(root, []).append(i)
+    return clusters
