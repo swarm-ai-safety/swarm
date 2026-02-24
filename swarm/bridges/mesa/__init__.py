@@ -8,12 +8,10 @@ enabling governance testing on complex emergent ABM dynamics.
 Architecture::
 
     Mesa Model (step loop)
-        └── MesaBridge  (this module)
-                ├── SwarmMesaObserver   (Mesa reporter → ProxyObservables)
+        └── MesaBridge  (this module; extracts agent state → ProxyObservables)
                 ├── ProxyComputer       (observables → v_hat → p)
                 ├── SoftPayoffEngine    (p → payoffs)
                 └── EventLog            (append-only audit trail)
-
 Integration approach::
 
     bridge = MesaBridge(model=my_mesa_model)
