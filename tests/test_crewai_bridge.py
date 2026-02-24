@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from unittest.mock import MagicMock
 
+import importlib.util
 import pytest
 from pydantic import ValidationError
 
@@ -127,12 +128,7 @@ class TestCrewAIBridgeProtocolMode:
 # ---------------------------------------------------------------------------
 
 
-try:
-    import crewai  # noqa: F401
-
-    HAS_CREWAI = True
-except ImportError:
-    HAS_CREWAI = False
+HAS_CREWAI = importlib.util.find_spec("crewai") is not None
 
 
 @pytest.mark.skipif(not HAS_CREWAI, reason="crewai not installed")
