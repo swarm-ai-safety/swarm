@@ -11,6 +11,11 @@ from swarm.agents.base import (
     BaseAgent,
     Observation,
 )
+from swarm.agents.behavioral import (
+    AdaptiveAgent,
+    CautiousAgent,
+    CollaborativeAgent,
+)
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
 from swarm.agents.ldt_agent import LDTAgent
@@ -81,4 +86,8 @@ __all__ = [
     "AttackStrategy",
     # Threshold dancer adversary
     "ThresholdDancer",
+    # Behavioral archetypes (issue #66)
+    "CautiousAgent",
+    "CollaborativeAgent",
+    "AdaptiveAgent",
 ]
