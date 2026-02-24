@@ -40,6 +40,18 @@ Practical guides for using SWARM effectively.
 
     Multi-agent workflow for rigorous SWARM research
 
+-   :material-tune: **[Custom Governance Levers](governance-levers.md)**
+
+    ---
+
+    Configure and combine governance mechanisms to control ecosystem health
+
+-   :material-transfer: **[Transferability Considerations](transferability.md)**
+
+    ---
+
+    Understand when and how simulation results generalize to real systems
+
 </div>
 
 ## Guide Overview
@@ -52,3 +64,5 @@ Practical guides for using SWARM effectively.
 | [LLM Agents](llm-agents.md) | GPT/Claude integration | Advanced |
 | [Red Teaming](red-teaming.md) | Adversarial evaluation | Advanced |
 | [Research Workflow](research-workflow.md) | Multi-agent research with depth/breadth control | Advanced |
+| [Custom Governance Levers](governance-levers.md) | Configure governance mechanisms | Advanced |
+| [Transferability Considerations](transferability.md) | When results generalize | Advanced |
