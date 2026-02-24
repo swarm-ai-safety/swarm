@@ -17,6 +17,9 @@ class AgentType(Enum):
     CREWAI = "crewai"
     CODING = "coding"
     TIERRA = "tierra"
+    CAUTIOUS = "cautious"
+    COLLABORATIVE = "collaborative"
+    ADAPTIVE = "adaptive"
 
 
 class AgentStatus(Enum):
