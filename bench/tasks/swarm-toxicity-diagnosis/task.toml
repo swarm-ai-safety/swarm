@@ -1,0 +1,7 @@
+[task]
+name = "swarm-toxicity-diagnosis"
+description = "Identify toxic and safe governance configurations from sweep data"
+difficulty = "medium"
+timeout = 300
+skills = ["statistical-analysis"]
+domain = "swarm-safety"

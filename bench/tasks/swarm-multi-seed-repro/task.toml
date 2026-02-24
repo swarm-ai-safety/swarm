@@ -1,0 +1,7 @@
+[task]
+name = "swarm-multi-seed-repro"
+description = "Run 3 seeds and verify reproducibility"
+difficulty = "easy"
+timeout = 300
+skills = ["run-scenario"]
+domain = "swarm-safety"

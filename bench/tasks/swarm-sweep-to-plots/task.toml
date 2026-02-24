@@ -1,0 +1,7 @@
+[task]
+name = "swarm-sweep-to-plots"
+description = "Generate plots from pre-existing sweep data"
+difficulty = "medium"
+timeout = 300
+skills = ["plotting"]
+domain = "swarm-safety"
