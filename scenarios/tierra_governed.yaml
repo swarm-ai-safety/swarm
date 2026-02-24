@@ -1,0 +1,65 @@
+scenario_id: tierra_governed
+description: >
+  Governance-hardened variant of the Tierra artificial life scenario.
+  Same evolutionary dynamics (self-replication, mutation, metabolism) but
+  with institutional governance levers enabled: circuit breaker, collusion
+  detection, transaction tax, reputation decay, and a diversity-preserving
+  reaper that prevents monoculture collapse.
+motif: artificial_life
+
+agents:
+  - type: tierra
+    count: 20
+
+tierra:
+  enabled: true
+  total_resource_pool: 10000.0
+  resource_replenishment_rate: 50.0
+  base_metabolism_cost: 2.0
+  population_cap: 100
+  reaper_mode: diversity_preserving
+  reaper_diversity_min: 1
+  mutation_std: 0.05
+  death_threshold: 0.0
+  pool_distribution_rate: 0.1
+  max_efficiency_weight: 3.0
+
+spawn:
+  enabled: true
+  spawn_cost: 0.0
+  max_depth: 20
+  max_children: 50
+  max_total_spawned: 500
+  attribution_mode: leaf_only
+  initial_child_resources: 50.0
+  min_resources_to_spawn: 0.0
+  spawn_cooldown_steps: 0
+
+simulation:
+  n_epochs: 50
+  steps_per_epoch: 20
+  seed: 42
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+
+governance:
+  transaction_tax_rate: 0.05
+  reputation_decay_rate: 0.95
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_threshold_violations: 2
+  freeze_duration_epochs: 2
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.7
+  collusion_min_interactions: 3
+  collusion_score_threshold: 0.5
+  sybil_detection_enabled: true
+  audit_enabled: true
+  random_audit_rate: 0.1
+  staking_enabled: true
+  staking_amount: 10.0
