@@ -43,8 +43,6 @@ def make_interaction(
         p=p,
         v_hat=p * 2 - 1,  # approximate v_hat from p
         accepted=accepted,
-        epoch=0,
-        step=0,
     )
 
 
