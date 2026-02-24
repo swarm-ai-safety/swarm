@@ -90,10 +90,12 @@ class AutoGPTBridge:
 
         if self.config.enable_event_log:
             try:
+                from pathlib import Path as _Path
+
                 from swarm.logging.event_log import EventLog
 
                 path = self.config.event_log_path or f"{self.config.agent_id}_events.jsonl"
-                self._event_log = EventLog(path=path)
+                self._event_log = EventLog(path=_Path(path))
             except Exception as exc:  # pragma: no cover
                 logger.warning("Could not initialise EventLog: %s", exc)
 
