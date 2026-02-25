@@ -30,17 +30,38 @@ def _build_soft_metrics(results: dict[str, Any]) -> dict[str, Any]:
         return {}
 
     # Lazy imports to keep startup fast and avoid circular deps
+    from pydantic import ValidationError
+
     from swarm.metrics.reporters import MetricsReporter
     from swarm.models.interaction import SoftInteraction
 
     interactions: list[SoftInteraction] = []
+    skipped_reasons: list[str] = []
     for entry in interactions_data:
         if not isinstance(entry, dict):
+            skipped_reasons.append(f"not a dict (got {type(entry).__name__})")
             continue
         try:
             interactions.append(SoftInteraction(**entry))
-        except Exception:
-            continue  # skip malformed entries
+        except (TypeError, ValidationError) as exc:
+            # Use type name + truncated message to avoid leaking field values.
+            truncated = str(exc)[:120]
+            skipped_reasons.append(f"{type(exc).__name__}: {truncated}")
+
+    if skipped_reasons:
+        # Aggregate reasons by count and log only the top 5 distinct reasons to
+        # bound log size and avoid leaking sensitive data from many entries.
+        from collections import Counter
+
+        reason_counts = Counter(skipped_reasons)
+        top_reasons = reason_counts.most_common(5)
+        logger.warning(
+            "Skipped %d malformed interaction entries out of %d total. "
+            "Top reasons (reason: count): %s",
+            len(skipped_reasons),
+            len(interactions_data),
+            top_reasons,
+        )
 
     if not interactions:
         return {}
