@@ -50,7 +50,8 @@ CREATE TABLE IF NOT EXISTS runs (
     summary_json  TEXT,
     status_url    TEXT NOT NULL,
     public_url    TEXT,
-    error         TEXT
+    error         TEXT,
+    warnings_json TEXT
 );
 """
 
@@ -223,6 +224,11 @@ class RunStore:
             for idx in _CREATE_INDEXES:
                 if "runs" in idx:
                     conn.execute(idx)
+            # Migrate: add warnings_json column for existing DBs that predate it
+            try:
+                conn.execute("ALTER TABLE runs ADD COLUMN warnings_json TEXT")
+            except sqlite3.OperationalError:
+                pass  # column already exists
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(self._db_path), timeout=10)
@@ -245,6 +251,7 @@ class RunStore:
         summary_json = (
             run.summary_metrics.model_dump_json() if run.summary_metrics else None
         )
+        warnings_json = json.dumps(run.warnings) if run.warnings else None
 
         with self._lock:
             # Update cache for active runs
@@ -260,15 +267,16 @@ class RunStore:
                     INSERT INTO runs
                         (run_id, scenario_id, status, visibility, agent_id,
                          created_at, started_at, completed_at, progress,
-                         summary_json, status_url, public_url, error)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         summary_json, status_url, public_url, error, warnings_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     ON CONFLICT(run_id) DO UPDATE SET
                         status=excluded.status,
                         started_at=excluded.started_at,
                         completed_at=excluded.completed_at,
                         progress=excluded.progress,
                         summary_json=excluded.summary_json,
-                        error=excluded.error
+                        error=excluded.error,
+                        warnings_json=excluded.warnings_json
                     """,
                     (
                         run.run_id,
@@ -284,6 +292,7 @@ class RunStore:
                         run.status_url,
                         run.public_url,
                         run.error,
+                        warnings_json,
                     ),
                 )
 
@@ -352,6 +361,13 @@ class RunStore:
                 summary = RunSummaryMetrics.model_validate_json(row["summary_json"])
             except Exception:
                 logger.warning("Corrupt summary_json for run %s", row["run_id"])
+        warnings: Optional[list[str]] = None
+        warnings_json = row["warnings_json"] if "warnings_json" in row.keys() else None
+        if warnings_json:
+            try:
+                warnings = json.loads(warnings_json)
+            except Exception:
+                logger.warning("Corrupt warnings_json for run %s", row["run_id"])
         return RunResponse(
             run_id=row["run_id"],
             scenario_id=row["scenario_id"],
@@ -366,6 +382,7 @@ class RunStore:
             status_url=row["status_url"],
             public_url=row["public_url"],
             error=row["error"],
+            warnings=warnings,
         )
 
 
