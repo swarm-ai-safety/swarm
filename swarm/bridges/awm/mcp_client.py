@@ -6,9 +6,12 @@ Does NOT require the mcp-agent library (Python 3.12+).
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -146,6 +149,12 @@ class AWMMCPClient:
                     record.success = False
 
         except Exception as exc:
+            logger.debug(
+                "Tool call %r failed with exception: %s",
+                tool_name,
+                exc,
+                exc_info=True,
+            )
             record.is_error_response = True
             record.error = str(exc)
 
@@ -157,7 +166,8 @@ class AWMMCPClient:
             client = await self._ensure_client()
             response = await client.post("/reset")
             return bool(response.status_code == 200)
-        except Exception:
+        except Exception as exc:
+            logger.warning("reset_environment failed: %s", exc, exc_info=True)
             return False
 
     async def get_task(self) -> Optional[Dict[str, Any]]:
@@ -168,8 +178,8 @@ class AWMMCPClient:
             if response.status_code == 200:
                 result: Dict[str, Any] = response.json()
                 return result
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("get_task failed: %s", exc, exc_info=True)
         return None
 
     async def verify(self) -> Dict[str, Any]:
@@ -183,8 +193,8 @@ class AWMMCPClient:
             if response.status_code == 200:
                 result: Dict[str, Any] = response.json()
                 return result
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("verify failed: %s", exc, exc_info=True)
         return {"passed": False, "error": "verification_failed"}
 
     async def close(self) -> None:
@@ -267,6 +277,12 @@ class AWMMCPSyncClient:
                     record.success = False
 
         except Exception as exc:
+            logger.debug(
+                "Tool call %r failed with exception: %s",
+                tool_name,
+                exc,
+                exc_info=True,
+            )
             record.is_error_response = True
             record.error = str(exc)
 
@@ -278,7 +294,8 @@ class AWMMCPSyncClient:
             client = self._ensure_client()
             response = client.post("/reset")
             return bool(response.status_code == 200)
-        except Exception:
+        except Exception as exc:
+            logger.warning("reset_environment failed: %s", exc, exc_info=True)
             return False
 
     def get_task(self) -> Optional[Dict[str, Any]]:
@@ -289,8 +306,8 @@ class AWMMCPSyncClient:
             if response.status_code == 200:
                 result: Dict[str, Any] = response.json()
                 return result
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("get_task failed: %s", exc, exc_info=True)
         return None
 
     def verify(self) -> Dict[str, Any]:
@@ -301,8 +318,8 @@ class AWMMCPSyncClient:
             if response.status_code == 200:
                 result: Dict[str, Any] = response.json()
                 return result
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("verify failed: %s", exc, exc_info=True)
         return {"passed": False, "error": "verification_failed"}
 
     def health_check(self) -> bool:
@@ -311,7 +328,8 @@ class AWMMCPSyncClient:
             client = self._ensure_client()
             response = client.get("/tools")
             return bool(response.status_code == 200)
-        except Exception:
+        except Exception as exc:
+            logger.warning("health_check failed: %s", exc, exc_info=True)
             return False
 
     def begin_transaction(self) -> bool:
@@ -320,7 +338,8 @@ class AWMMCPSyncClient:
             client = self._ensure_client()
             response = client.post("/transaction/begin")
             return bool(response.status_code == 200)
-        except Exception:
+        except Exception as exc:
+            logger.warning("begin_transaction failed: %s", exc, exc_info=True)
             return False
 
     def end_transaction(self, commit: bool = True) -> bool:
@@ -332,7 +351,10 @@ class AWMMCPSyncClient:
                 json={"commit": commit},
             )
             return bool(response.status_code == 200)
-        except Exception:
+        except Exception as exc:
+            logger.warning(
+                "end_transaction(commit=%s) failed: %s", commit, exc, exc_info=True
+            )
             return False
 
     def close(self) -> None:
