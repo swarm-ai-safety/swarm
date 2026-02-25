@@ -32,6 +32,48 @@ class TestPayoffConfig:
         with pytest.raises(ValidationError, match="theta"):
             PayoffConfig(theta=-0.1)
 
+    def test_invalid_rho_a(self):
+        """rho_a outside [0,1] should raise."""
+        with pytest.raises(ValidationError, match="rho_a"):
+            PayoffConfig(rho_a=-0.1)
+
+        with pytest.raises(ValidationError, match="rho_a"):
+            PayoffConfig(rho_a=1.1)
+
+    def test_invalid_rho_b(self):
+        """rho_b outside [0,1] should raise."""
+        with pytest.raises(ValidationError, match="rho_b"):
+            PayoffConfig(rho_b=-0.1)
+
+        with pytest.raises(ValidationError, match="rho_b"):
+            PayoffConfig(rho_b=1.1)
+
+    def test_invalid_w_rep(self):
+        """w_rep outside [0,100] should raise."""
+        with pytest.raises(ValidationError, match="w_rep"):
+            PayoffConfig(w_rep=-1.0)
+
+        with pytest.raises(ValidationError, match="w_rep"):
+            PayoffConfig(w_rep=100.1)
+
+    def test_valid_rho_bounds(self):
+        """rho_a and rho_b at boundary values should be valid."""
+        config = PayoffConfig(rho_a=0.0, rho_b=0.0)
+        assert config.rho_a == 0.0
+        assert config.rho_b == 0.0
+
+        config = PayoffConfig(rho_a=1.0, rho_b=1.0)
+        assert config.rho_a == 1.0
+        assert config.rho_b == 1.0
+
+    def test_valid_w_rep_bounds(self):
+        """w_rep at boundary values should be valid."""
+        config = PayoffConfig(w_rep=0.0)
+        assert config.w_rep == 0.0
+
+        config = PayoffConfig(w_rep=100.0)
+        assert config.w_rep == 100.0
+
 
 class TestExpectedValues:
     """Tests for expected surplus and harm calculations."""

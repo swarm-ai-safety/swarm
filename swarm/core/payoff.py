@@ -47,8 +47,12 @@ class PayoffConfig(BaseModel):
             raise ValueError("h must be non-negative")
         if not 0 <= self.theta <= 1:
             raise ValueError("theta must be in [0, 1]")
-        if self.rho_a < 0 or self.rho_b < 0:
-            raise ValueError("rho values must be non-negative")
+        if not 0 <= self.rho_a <= 1:
+            raise ValueError("rho_a must be in [0, 1]")
+        if not 0 <= self.rho_b <= 1:
+            raise ValueError("rho_b must be in [0, 1]")
+        if not 0 <= self.w_rep <= 100:
+            raise ValueError("w_rep must be in [0, 100]")
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
