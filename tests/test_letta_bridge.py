@@ -300,10 +300,9 @@ class TestLettaClientStreamingCompat:
             kwargs["stream_tokens"] = stream_tokens
         client = self._make_client(**kwargs)
 
-        # Inject a fake Letta SDK client
+        # Stub _ensure_client so tests never touch private state or the SDK import
         sdk = MagicMock()
-        client._client = sdk
-        client._initialized = True
+        client._ensure_client = MagicMock(return_value=sdk)
         return client, sdk
 
     def test_send_message_uses_sync_for_ollama(self):
