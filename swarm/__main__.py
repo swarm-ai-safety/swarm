@@ -14,6 +14,32 @@ import sys
 from pathlib import Path
 
 
+def _safe_export_path(raw: str, kind: str) -> Path:
+    """Resolve *raw* to an absolute path and reject relative path traversal.
+
+    Absolute paths are accepted as-is (the caller chose that location explicitly).
+    Relative paths are resolved against the current working directory; if the
+    result escapes the CWD via ``..`` components the call exits with an error.
+
+    Raises SystemExit with an error message when the path is rejected.
+    """
+    p = Path(raw)
+    if p.is_absolute():
+        return p.resolve()
+    cwd = Path.cwd().resolve()
+    resolved = (cwd / p).resolve()
+    try:
+        resolved.relative_to(cwd)
+    except ValueError:
+        print(
+            f"Error: {kind} relative path '{raw}' resolves outside the working "
+            f"directory ({cwd}). Path traversal is not allowed.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return resolved
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     """Run a simulation from a YAML scenario file."""
     from swarm.scenarios.loader import build_orchestrator, load_scenario
@@ -183,13 +209,15 @@ def cmd_run(args: argparse.Namespace) -> int:
         if args.export_json:
             from swarm.analysis.export import export_to_json
 
-            path = export_to_json(history, args.export_json, include_events=True)
+            safe_json = _safe_export_path(args.export_json, "--export-json")
+            path = export_to_json(history, str(safe_json), include_events=True)
             print(f"Exported JSON: {path}")
 
         if args.export_csv:
             from swarm.analysis.export import export_to_csv
 
-            paths = export_to_csv(history, args.export_csv, prefix=scenario.scenario_id)
+            safe_csv = _safe_export_path(args.export_csv, "--export-csv")
+            paths = export_to_csv(history, str(safe_csv), prefix=scenario.scenario_id)
             for kind, path in paths.items():
                 print(f"Exported CSV ({kind}): {path}")
 
