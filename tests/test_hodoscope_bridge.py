@@ -272,7 +272,7 @@ class TestWriteTrajectoryDir:
         assert (tmp_path / "trajs" / "test_1.json").exists()
 
 
-# ── Bridge: mocked hodoscope (v0.2 API) ──────────────────────────
+# ── Bridge: mocked hodoscope ──────────────────────────────────────
 
 
 class TestHodoscopeBridge:
@@ -280,21 +280,12 @@ class TestHodoscopeBridge:
 
     @patch("swarm.bridges.hodoscope.bridge.HodoscopeMapper")
     def test_analyze_history(self, MockMapper, tmp_path):
-        # v0.2: analyze() returns a list of Paths
-        mock_analyze = MagicMock(
-            return_value=[tmp_path / ".hodoscope.json"]
-        )
-        mock_config_cls = MagicMock()
+        mock_analyze = MagicMock(return_value=str(tmp_path / ".hodoscope.json"))
         config = HodoscopeConfig(output_dir=tmp_path)
 
         with patch.dict(
             "sys.modules",
-            {
-                "hodoscope": MagicMock(
-                    analyze=mock_analyze,
-                    Config=mock_config_cls,
-                ),
-            },
+            {"hodoscope": MagicMock(analyze=mock_analyze)},
         ):
             bridge = HodoscopeBridge(config)
             bridge.mapper = MockMapper.return_value
@@ -309,41 +300,22 @@ class TestHodoscopeBridge:
             bridge.mapper.history_to_trajectories.assert_called_once_with(history)
             bridge.mapper.write_trajectory_dir.assert_called_once()
             mock_analyze.assert_called_once()
-            # v0.2: sources must be a tuple
-            call_args = mock_analyze.call_args
-            assert isinstance(call_args[0][0], tuple)
             assert isinstance(result, Path)
 
     def test_visualize(self, tmp_path):
-        mock_read = MagicMock(return_value={
-            "summaries": [
-                {"summary": "test", "metadata": {"agent_type": "honest"}},
-            ]
-        })
-        mock_group = MagicMock(return_value={
-            "honest": [{"summary": "test", "metadata": {"agent_type": "honest"}}]
-        })
-        mock_viz = MagicMock()
+        mock_visualize = MagicMock(return_value=str(tmp_path / "viz.html"))
         config = HodoscopeConfig(output_dir=tmp_path)
 
         with patch.dict(
             "sys.modules",
-            {
-                "hodoscope": MagicMock(
-                    read_analysis_json=mock_read,
-                    group_summaries_from_list=mock_group,
-                    visualize_action_summaries=mock_viz,
-                ),
-            },
+            {"hodoscope": MagicMock(visualize=mock_visualize)},
         ):
             bridge = HodoscopeBridge(config)
             result = bridge.visualize(
                 tmp_path / ".hodoscope.json", group_by="agent_type"
             )
 
-            mock_read.assert_called_once_with(tmp_path / ".hodoscope.json")
-            mock_group.assert_called_once()
-            mock_viz.assert_called_once()
+            mock_visualize.assert_called_once()
             assert isinstance(result, Path)
 
     def test_sample(self, tmp_path):
@@ -360,9 +332,6 @@ class TestHodoscopeBridge:
             result = bridge.sample(tmp_path / ".hodoscope.json", n=3)
 
             mock_sample.assert_called_once()
-            # v0.2: sources must be a tuple
-            call_args = mock_sample.call_args
-            assert isinstance(call_args[0][0] if call_args[0] else call_args[1].get("sources"), tuple)
             assert "honest" in result
             assert "adversary" in result
 

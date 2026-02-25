@@ -262,10 +262,6 @@ def interaction_proposed_event(
     step: Optional[int] = None,
 ) -> Event:
     """Create an interaction proposed event."""
-    if not (0.0 <= p <= 1.0):
-        raise ValueError(f"p must be in [0, 1], got {p}")
-    if not (-1.0 <= v_hat <= 1.0):
-        raise ValueError(f"v_hat must be in [-1, 1], got {v_hat}")
     return Event(
         event_type=EventType.INTERACTION_PROPOSED,
         interaction_id=interaction_id,

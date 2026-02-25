@@ -13,23 +13,22 @@ results = []
 
 for tax in tax_rates:
     for seed in seeds:
-        sc = load_scenario('/root/scenarios/baseline.yaml')
-        oc = sc.orchestrator_config
-        oc.governance_config.transaction_tax_rate = tax
-        oc.seed = seed
-        oc.n_epochs = 5
-        oc.steps_per_epoch = 10
+        config = load_scenario('/root/scenarios/baseline.yaml')
+        config['governance']['transaction_tax_rate'] = tax
+        config['simulation']['seed'] = seed
+        config['simulation']['n_epochs'] = 5
+        config['simulation']['steps_per_epoch'] = 10
 
-        orch = Orchestrator(oc)
-        epochs = orch.run()  # list[EpochMetrics]
-        final = epochs[-1]
+        orch = Orchestrator(config)
+        result = orch.run()
+        final = result.to_dict()['epoch_snapshots'][-1]
 
         results.append({
             'transaction_tax_rate': tax,
             'seed': seed,
-            'welfare': round(final.total_welfare, 3),
-            'toxicity_rate': round(final.toxicity_rate, 4),
-            'quality_gap': round(final.quality_gap, 4),
+            'welfare': round(final['welfare'], 3),
+            'toxicity_rate': round(final['toxicity_rate'], 4),
+            'quality_gap': round(final.get('quality_gap', 0.0), 4),
         })
 
 with open('/root/output/sweep_results.csv', 'w', newline='') as f:
