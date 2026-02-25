@@ -186,7 +186,7 @@ def compute_gtb_metrics(
     )
 
     # Enforcement
-    audit_events = [e for e in events if e.event_type in ("audit_caught", "audit_miss")]
+    audit_events = [e for e in events if e.event_type in ("audit_caught", "audit_miss", "audit_false_positive")]
     catches = [e for e in events if e.event_type == "audit_caught"]
     misses = [e for e in events if e.event_type == "audit_miss"]
     total_evasion_attempts = len(catches) + len(misses)
