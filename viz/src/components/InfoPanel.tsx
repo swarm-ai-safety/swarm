@@ -146,7 +146,9 @@ export function InfoPanel() {
         </div>
       )}
 
-      {/* Agent actions (live mode only) */}
+      {/* Agent actions (live mode only).
+          The viz agent may be briefly stale vs engine state; action handlers
+          in game-context guard against missing agents with no-op returns. */}
       {gameState.isLive && (
         <div className="px-4 py-2 border-t border-border flex gap-1.5 flex-wrap">
           <button

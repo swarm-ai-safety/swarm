@@ -149,7 +149,7 @@ function reducer(state: GameState, action: GameAction): GameState {
       return {
         ...state,
         toasts: [
-          ...state.toasts.slice(-4), // Keep max 5
+          ...state.toasts.slice(-4), // Keep max 5 (4 old + 1 new)
           { id: state.toastCounter, text: action.text, type: action.toastType, timestamp: Date.now() },
         ],
         toastCounter: state.toastCounter + 1,

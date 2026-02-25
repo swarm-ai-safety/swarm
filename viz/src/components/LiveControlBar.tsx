@@ -6,6 +6,10 @@ import { AGENT_PROFILES, AGENT_TYPES } from "@/engine/sim/agents";
 import { SHOCK_TEMPLATES } from "@/engine/sim/shocks";
 import type { AgentType } from "@/data/types";
 import { describeWinCondition, describeLoseCondition } from "@/engine/sim/campaign";
+import { DEFAULT_CONFIG } from "@/engine/sim/types";
+
+/** Fallback governance when engine is not yet initialized */
+const DEFAULT_GOVERNANCE = DEFAULT_CONFIG.governance;
 
 const TICK_RATES = [
   { label: "0.5x", value: 400 },
@@ -33,9 +37,9 @@ export function LiveControlBar() {
   const [showShockMenu, setShowShockMenu] = useState(false);
   const [showGovPanel, setShowGovPanel] = useState(false);
 
-  // Read current governance from engine
+  // Read current governance from engine (falls back to defaults before engine init)
   const engine = useGame().engineRef.current;
-  const governance = engine?.governance ?? { taxRate: 0.05, reputationDecay: 0.95, circuitBreakerEnabled: false, circuitBreakerThreshold: 0.4 };
+  const governance = engine?.governance ?? DEFAULT_GOVERNANCE;
   const epoch = engine?.epoch ?? 0;
   const step = engine?.step ?? 0;
   const agentCount = engine?.agents.length ?? 0;

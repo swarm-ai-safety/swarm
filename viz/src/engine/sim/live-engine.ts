@@ -19,6 +19,9 @@ import type { AgentType } from "@/data/types";
 import type { ShockEvent } from "./shocks";
 import { applyShock } from "./shocks";
 
+/** Monotonic counter for unique simId generation across simultaneous instances */
+let simIdCounter = 0;
+
 /** Maximum agents allowed (prevents OOM from unbounded spawning) */
 const MAX_AGENTS = 200;
 
@@ -69,7 +72,7 @@ export class LiveEngine {
     this.config = { ...config };
     this.governance = { ...config.governance };
     this.rng = mulberry32(config.seed);
-    this.simId = `live-${Date.now()}`;
+    this.simId = `live-${Date.now()}-${++simIdCounter}`;
     this.proxy = new ProxyComputer(undefined, config.sigmoidK);
     this.payoffEngine = new SoftPayoffEngine(config.payoff);
     this.epoch = 0;
@@ -90,9 +93,8 @@ export class LiveEngine {
 
       for (let i = 0; i < group.count; i++) {
         const nameIdx = idx % profile.names.length;
-        const suffix = idx >= profile.names.length
-          ? `-${Math.floor(idx / profile.names.length)}`
-          : "";
+        const cycle = Math.floor(idx / profile.names.length);
+        const suffix = cycle === 0 ? "" : `-${cycle}`;
         agents.push({
           id: `agent-${idx}`,
           name: `${profile.names[nameIdx]}${suffix}`,
@@ -300,7 +302,7 @@ export class LiveEngine {
     const idx = this.nextAgentIdx++;
     const nameIdx = idx % profile.names.length;
     const cycle = Math.floor(idx / profile.names.length);
-    const suffix = cycle === 0 ? "" : `-${cycle + 1}`;
+    const suffix = cycle === 0 ? "" : `-${cycle}`;
 
     const agent: SimAgentState = {
       id: `agent-${idx}`,
@@ -462,10 +464,13 @@ export class LiveEngine {
         }));
     }
 
-    engine.simId = typeof snapshot.simId === "string" ? snapshot.simId : `live-${Date.now()}`;
+    engine.simId = typeof snapshot.simId === "string" ? snapshot.simId : `live-${Date.now()}-${++simIdCounter}`;
     engine.nextAgentIdx = typeof snapshot.nextAgentIdx === "number" && snapshot.nextAgentIdx >= agents.length
       ? Math.floor(snapshot.nextAgentIdx)
       : agents.length;
+
+    // Reconstruct payoff engine from restored config (may differ from defaults)
+    engine.payoffEngine = new SoftPayoffEngine(engine.config.payoff);
 
     return engine;
   }

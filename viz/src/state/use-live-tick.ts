@@ -129,7 +129,9 @@ export function useLiveTick() {
         updateDigitalRain(digitalRainRef.current, dt, simState.viewport.height, simState.environment.threatLevel);
       }
 
-      // Build agent visuals from current engine state
+      // Build agent visuals from current engine state.
+      // In live mode we pass the same snapshot for prev/current with fraction 0
+      // because there is no replay interpolation — the engine state IS the truth.
       const epochSnap = engine.getCurrentEpochSnapshot();
       const prevAgents = agentsByEpochRef.current.get(engine.epoch) ?? new Map();
       const agents = interpolateAgents(prevAgents, prevAgents, 0, agentPositionsRef.current);
@@ -148,7 +150,7 @@ export function useLiveTick() {
         }
       }
 
-      // Environment
+      // Environment — same snapshot on both sides (no replay interpolation in live mode)
       const environment = interpolateEnvironment(epochSnap, epochSnap, 0);
 
       // Dispatch tick to simulation context
