@@ -91,7 +91,7 @@ export class LiveEngine {
       for (let i = 0; i < group.count; i++) {
         const nameIdx = idx % profile.names.length;
         const suffix = idx >= profile.names.length
-          ? `-${Math.floor(idx / profile.names.length) + 1}`
+          ? `-${Math.floor(idx / profile.names.length)}`
           : "";
         agents.push({
           id: `agent-${idx}`,
