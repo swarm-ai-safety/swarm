@@ -130,23 +130,15 @@ class CouncilProxyAuditor:
         user_prompt: str,
     ) -> CouncilResult:
         """Run council deliberation synchronously."""
+        coro = self._council.deliberate(system_prompt, user_prompt)
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        asyncio.run,
-                        self._council.deliberate(system_prompt, user_prompt),
-                    )
-                    return future.result()
-            else:
-                return loop.run_until_complete(
-                    self._council.deliberate(system_prompt, user_prompt)
-                )
+            asyncio.get_running_loop()
+            # Already inside a running event loop — run in a dedicated thread
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+                return pool.submit(asyncio.run, coro).result()
         except RuntimeError:
-            return asyncio.run(
-                self._council.deliberate(system_prompt, user_prompt)
-            )
+            # No running event loop — asyncio.run() is safe
+            return asyncio.run(coro)
 
     def _apply_adjustment(self, p: float, synthesis: str) -> float:
         """Parse adjustment from synthesis and apply with clamping."""
