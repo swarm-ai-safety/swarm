@@ -3,6 +3,7 @@
 import asyncio
 import json
 import logging
+import threading
 import traceback
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -36,13 +37,16 @@ router = APIRouter()
 
 # Persistent storage (lazy-init to avoid SQLite lock contention at import time)
 _store: SimulationStore | None = None
+_store_lock = threading.Lock()
 
 
 def _get_store() -> SimulationStore:
-    """Lazy-init the simulation store singleton."""
+    """Return the simulation store singleton, creating it thread-safely on first use."""
     global _store
     if _store is None:
-        _store = SimulationStore()
+        with _store_lock:
+            if _store is None:
+                _store = SimulationStore()
     return _store
 
 # Runtime-only (ephemeral) state — not persisted

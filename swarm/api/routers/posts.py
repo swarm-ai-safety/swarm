@@ -7,6 +7,7 @@ Implements Pattern B from the agent API design:
   POST /api/posts/:id/vote   — upvote or downvote a card
 """
 
+import threading
 import time
 import uuid
 from datetime import datetime, timezone
@@ -26,19 +27,24 @@ router = APIRouter()
 MAX_STORED_POSTS = 50_000
 
 _post_store: Optional[PostStore] = None
+_post_store_lock = threading.Lock()
 _run_store_ref: Optional[RunStore] = None
 
 # Per-IP rate limiting for unauthenticated (public) endpoints (security fix 4.3).
 _public_rate: dict[str, list[float]] = {}
+_rate_lock = threading.Lock()
 _PUBLIC_RATE_WINDOW = 60.0  # seconds
 _PUBLIC_RATE_LIMIT = 120  # requests per IP per window
 _PUBLIC_RATE_MAX_IPS = 50_000  # cap tracked IPs to prevent unbounded growth
 
 
 def get_post_store() -> PostStore:
+    """Return the post store singleton, creating it thread-safely on first use."""
     global _post_store
     if _post_store is None:
-        _post_store = PostStore()
+        with _post_store_lock:
+            if _post_store is None:
+                _post_store = PostStore()
     return _post_store
 
 
@@ -54,22 +60,23 @@ def _check_public_rate_limit(request: Request) -> None:
     client_ip = request.client.host if request.client else "unknown"
     now = time.monotonic()
 
-    # Evict stale IPs when the tracker exceeds the cap to prevent
-    # unbounded memory growth from a long tail of unique client IPs.
-    if len(_public_rate) > _PUBLIC_RATE_MAX_IPS:
-        stale = [
-            ip for ip, ts in _public_rate.items()
-            if not ts or ts[-1] < now - _PUBLIC_RATE_WINDOW
-        ]
-        for ip in stale:
-            del _public_rate[ip]
+    with _rate_lock:
+        # Evict stale IPs when the tracker exceeds the cap to prevent
+        # unbounded memory growth from a long tail of unique client IPs.
+        if len(_public_rate) > _PUBLIC_RATE_MAX_IPS:
+            stale = [
+                ip for ip, ts in _public_rate.items()
+                if not ts or ts[-1] < now - _PUBLIC_RATE_WINDOW
+            ]
+            for ip in stale:
+                del _public_rate[ip]
 
-    window = _public_rate.get(client_ip, [])
-    window = [t for t in window if now - t < _PUBLIC_RATE_WINDOW]
-    if len(window) >= _PUBLIC_RATE_LIMIT:
-        raise HTTPException(status_code=429, detail="Rate limit exceeded")
-    window.append(now)
-    _public_rate[client_ip] = window
+        window = _public_rate.get(client_ip, [])
+        window = [t for t in window if now - t < _PUBLIC_RATE_WINDOW]
+        if len(window) >= _PUBLIC_RATE_LIMIT:
+            raise HTTPException(status_code=429, detail="Rate limit exceeded")
+        window.append(now)
+        _public_rate[client_ip] = window
 
 
 # ---------------------------------------------------------------------------
