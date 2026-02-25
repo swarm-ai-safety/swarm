@@ -2,12 +2,14 @@
 
 import React, { useMemo } from "react";
 import { useSimulation } from "@/state/use-simulation";
+import { useGame } from "@/state/game-context";
 import { AGENT_COLORS, AGENT_LABELS } from "@/engine/constants";
 import { formatNumber, formatPercent } from "@/utils/format";
 
 export function InfoPanel() {
   const { selectedAgent, agents, setSelected, agentSnapshots, currentEpoch } =
     useSimulation();
+  const { state: gameState, toggleFreeze, toggleQuarantine, removeAgent, spawnAgent } = useGame();
 
   const agent = agents.find((a) => a.id === selectedAgent);
 
@@ -141,6 +143,44 @@ export function InfoPanel() {
             <span>Initiated {formatPercent(initRatio)}</span>
             <span>Received {formatPercent(1 - initRatio)}</span>
           </div>
+        </div>
+      )}
+
+      {/* Agent actions (live mode only) */}
+      {gameState.isLive && (
+        <div className="px-4 py-2 border-t border-border flex gap-1.5 flex-wrap">
+          <button
+            onClick={() => toggleFreeze(agent.id)}
+            className={`text-[10px] px-2 py-1 rounded transition-colors ${
+              agent.isFrozen
+                ? "bg-blue-900/50 text-blue-300 hover:bg-blue-900/70"
+                : "bg-btn hover:bg-btn-hover text-muted"
+            }`}
+          >
+            {agent.isFrozen ? "Unfreeze" : "Freeze"}
+          </button>
+          <button
+            onClick={() => toggleQuarantine(agent.id)}
+            className={`text-[10px] px-2 py-1 rounded transition-colors ${
+              agent.isQuarantined
+                ? "bg-red-900/50 text-red-300 hover:bg-red-900/70"
+                : "bg-btn hover:bg-btn-hover text-muted"
+            }`}
+          >
+            {agent.isQuarantined ? "Release" : "Quarantine"}
+          </button>
+          <button
+            onClick={() => spawnAgent(agent.agentType)}
+            className="text-[10px] px-2 py-1 rounded bg-btn hover:bg-btn-hover text-muted transition-colors"
+          >
+            Clone
+          </button>
+          <button
+            onClick={() => { removeAgent(agent.id); setSelected(null); }}
+            className="text-[10px] px-2 py-1 rounded bg-red-950/50 hover:bg-red-900/50 text-red-400 transition-colors"
+          >
+            Remove
+          </button>
         </div>
       )}
 
