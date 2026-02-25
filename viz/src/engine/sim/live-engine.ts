@@ -19,6 +19,18 @@ import type { AgentType } from "@/data/types";
 import type { ShockEvent } from "./shocks";
 import { applyShock } from "./shocks";
 
+/** Maximum agents allowed (prevents OOM from unbounded spawning) */
+const MAX_AGENTS = 200;
+
+/** Maximum resource value (prevents Infinity propagation) */
+const MAX_RESOURCES = 1e6;
+
+/** Clamp a value to [min, max], returning fallback if not a finite number */
+function clampFinite(v: unknown, min: number, max: number, fallback: number): number {
+  if (typeof v !== "number" || !Number.isFinite(v)) return fallback;
+  return Math.max(min, Math.min(max, v));
+}
+
 /** Snapshot of engine state for save/load */
 export interface LiveEngineSnapshot {
   config: ScenarioConfig;
@@ -38,7 +50,8 @@ export class LiveEngine {
   config: ScenarioConfig;
   governance: GovernanceConfig;
 
-  private rng: () => number;
+  /** Seeded RNG — exposed for shocks to maintain determinism */
+  rng: () => number;
   private proxy: ProxyComputer;
   private payoffEngine: SoftPayoffEngine;
   private simId: string;
@@ -163,8 +176,8 @@ export class LiveEngine {
 
         initiator.totalPayoff += initiatorPayoff;
         counterparty.totalPayoff += counterpartyPayoff;
-        initiator.resources = Math.max(0, initiator.resources + initiatorPayoff * 0.1);
-        counterparty.resources = Math.max(0, counterparty.resources + counterpartyPayoff * 0.1);
+        initiator.resources = Math.min(MAX_RESOURCES, Math.max(0, initiator.resources + initiatorPayoff * 0.1));
+        counterparty.resources = Math.min(MAX_RESOURCES, Math.max(0, counterparty.resources + counterpartyPayoff * 0.1));
 
         // Reputation update
         const repDelta = (p - 0.5) * 0.05;
@@ -275,9 +288,15 @@ export class LiveEngine {
 
   // ─── Live Interventions ──────────────────────────────────────────
 
-  /** Spawn a new agent of a given type */
+  /** Spawn a new agent of a given type (capped at MAX_AGENTS) */
   spawnAgent(type: AgentType): SimAgentState {
+    if (this.agents.length >= MAX_AGENTS) {
+      throw new Error(`Cannot spawn: agent limit of ${MAX_AGENTS} reached`);
+    }
     const profile = AGENT_PROFILES[type];
+    if (!profile) {
+      throw new Error(`Unknown agent type: ${type}`);
+    }
     const idx = this.nextAgentIdx++;
     const nameIdx = idx % profile.names.length;
     const suffix = `-${Math.floor(idx / profile.names.length) + 1}`;
@@ -359,17 +378,94 @@ export class LiveEngine {
     return JSON.stringify(snapshot);
   }
 
-  /** Restore engine from serialized state */
+  /** Restore engine from serialized state with validation */
   static deserialize(json: string): LiveEngine {
-    const snapshot: LiveEngineSnapshot = JSON.parse(json);
-    const engine = new LiveEngine(snapshot.config);
-    engine.agents = snapshot.agents;
-    engine.epoch = snapshot.epoch;
-    engine.step = snapshot.step;
-    engine.governance = snapshot.governance;
-    engine.epochStepResults = snapshot.epochStepResults;
-    engine.simId = snapshot.simId;
-    engine.nextAgentIdx = snapshot.nextAgentIdx;
+    let raw: unknown;
+    try {
+      raw = JSON.parse(json);
+    } catch {
+      throw new Error("Invalid save file: not valid JSON");
+    }
+
+    if (typeof raw !== "object" || raw === null) {
+      throw new Error("Invalid save file: expected an object");
+    }
+
+    const snapshot = raw as Record<string, unknown>;
+
+    // Validate required top-level fields
+    if (!snapshot.config || typeof snapshot.config !== "object") {
+      throw new Error("Invalid save file: missing or invalid config");
+    }
+    if (!Array.isArray(snapshot.agents)) {
+      throw new Error("Invalid save file: missing or invalid agents array");
+    }
+    if (typeof snapshot.epoch !== "number" || snapshot.epoch < 0 || !Number.isFinite(snapshot.epoch)) {
+      throw new Error("Invalid save file: invalid epoch");
+    }
+    if (typeof snapshot.step !== "number" || snapshot.step < 0 || !Number.isFinite(snapshot.step)) {
+      throw new Error("Invalid save file: invalid step");
+    }
+
+    const config = snapshot.config as ScenarioConfig;
+    const engine = new LiveEngine(config);
+
+    // Validate and clamp each agent's state
+    const agents: SimAgentState[] = [];
+    for (const a of snapshot.agents as Record<string, unknown>[]) {
+      if (!a || typeof a !== "object") continue;
+      if (agents.length >= MAX_AGENTS) break;
+      agents.push({
+        id: typeof a.id === "string" ? a.id : `agent-${agents.length}`,
+        name: typeof a.name === "string" ? a.name : `Agent ${agents.length}`,
+        type: (typeof a.type === "string" && a.type in AGENT_PROFILES) ? a.type as AgentType : "honest",
+        reputation: clampFinite(a.reputation, 0, 1, 0.5),
+        resources: clampFinite(a.resources, 0, MAX_RESOURCES, 10),
+        totalPayoff: clampFinite(a.totalPayoff, -1e9, 1e9, 0),
+        interactionsInitiated: clampFinite(a.interactionsInitiated, 0, 1e9, 0),
+        interactionsReceived: clampFinite(a.interactionsReceived, 0, 1e9, 0),
+        sumPInitiated: clampFinite(a.sumPInitiated, 0, 1e9, 0),
+        sumPReceived: clampFinite(a.sumPReceived, 0, 1e9, 0),
+        isFrozen: typeof a.isFrozen === "boolean" ? a.isFrozen : false,
+        isQuarantined: typeof a.isQuarantined === "boolean" ? a.isQuarantined : false,
+      });
+    }
+
+    if (agents.length < 1) {
+      throw new Error("Invalid save file: no valid agents");
+    }
+
+    engine.agents = agents;
+    engine.epoch = Math.floor(snapshot.epoch as number);
+    engine.step = Math.floor(snapshot.step as number);
+
+    // Validate governance
+    if (snapshot.governance && typeof snapshot.governance === "object") {
+      const gov = snapshot.governance as Record<string, unknown>;
+      engine.governance = {
+        taxRate: clampFinite(gov.taxRate, 0, 1, config.governance.taxRate),
+        reputationDecay: clampFinite(gov.reputationDecay, 0, 1, config.governance.reputationDecay),
+        circuitBreakerEnabled: typeof gov.circuitBreakerEnabled === "boolean" ? gov.circuitBreakerEnabled : false,
+        circuitBreakerThreshold: clampFinite(gov.circuitBreakerThreshold, 0, 1, 0.4),
+      };
+    }
+
+    if (Array.isArray(snapshot.epochStepResults)) {
+      engine.epochStepResults = (snapshot.epochStepResults as Record<string, unknown>[])
+        .filter((r) => r && typeof r === "object")
+        .map((r) => ({
+          p: clampFinite(r.p, 0, 1, 0.5),
+          accepted: typeof r.accepted === "boolean" ? r.accepted : false,
+          initiatorPayoff: clampFinite(r.initiatorPayoff, -1e9, 1e9, 0),
+          counterpartyPayoff: clampFinite(r.counterpartyPayoff, -1e9, 1e9, 0),
+        }));
+    }
+
+    engine.simId = typeof snapshot.simId === "string" ? snapshot.simId : `live-${Date.now()}`;
+    engine.nextAgentIdx = typeof snapshot.nextAgentIdx === "number" && snapshot.nextAgentIdx >= agents.length
+      ? Math.floor(snapshot.nextAgentIdx)
+      : agents.length;
+
     return engine;
   }
 }

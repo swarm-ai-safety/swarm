@@ -8,6 +8,13 @@
 
 import type { LiveEngine } from "./live-engine";
 import type { AgentType } from "@/data/types";
+import { AGENT_PROFILES } from "./agents";
+
+/** Maximum agents spawned per shock (prevents runaway population) */
+const MAX_SHOCK_SPAWN = 20;
+
+/** Maximum resource value (prevents Infinity) */
+const MAX_RESOURCES = 1e6;
 
 export type ShockType =
   | "agent_wave"         // Inject N agents of a given type
@@ -104,12 +111,20 @@ export const SHOCK_TEMPLATES: ShockTemplate[] = [
 
 /** Apply a shock event to a live engine instance */
 export function applyShock(engine: LiveEngine, shock: ShockEvent): void {
+  const rng = engine.rng;
+
   switch (shock.type) {
     case "agent_wave": {
-      const agentType = (shock.params.agentType as AgentType) || "adversarial";
-      const count = (shock.params.count as number) || 1;
+      const rawType = String(shock.params.agentType ?? "adversarial");
+      const agentType: AgentType = (rawType in AGENT_PROFILES) ? rawType as AgentType : "adversarial";
+      const rawCount = Number(shock.params.count) || 1;
+      const count = Math.min(Math.max(1, Math.floor(rawCount)), MAX_SHOCK_SPAWN);
       for (let i = 0; i < count; i++) {
-        engine.spawnAgent(agentType);
+        try {
+          engine.spawnAgent(agentType);
+        } catch {
+          break; // Population cap reached
+        }
       }
       break;
     }
@@ -123,7 +138,7 @@ export function applyShock(engine: LiveEngine, shock: ShockEvent): void {
 
     case "resource_boom": {
       for (const agent of engine.agents) {
-        agent.resources = agent.resources * 2;
+        agent.resources = Math.min(MAX_RESOURCES, agent.resources * 2);
       }
       break;
     }
@@ -136,11 +151,16 @@ export function applyShock(engine: LiveEngine, shock: ShockEvent): void {
     }
 
     case "mass_freeze": {
-      const fraction = (shock.params.fraction as number) || 0.3;
+      const rawFraction = Number(shock.params.fraction) || 0.3;
+      const fraction = Math.max(0, Math.min(1, rawFraction));
       const unfrozen = engine.agents.filter((a) => !a.isFrozen);
       const toFreeze = Math.ceil(unfrozen.length * fraction);
-      // Simple shuffle to pick random subset
-      const shuffled = [...unfrozen].sort(() => Math.random() - 0.5);
+      // Fisher-Yates shuffle using seeded RNG for determinism
+      const shuffled = [...unfrozen];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(rng() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+      }
       for (let i = 0; i < toFreeze && i < shuffled.length; i++) {
         shuffled[i].isFrozen = true;
       }
@@ -155,10 +175,10 @@ export function applyShock(engine: LiveEngine, shock: ShockEvent): void {
     }
 
     case "reputation_shuffle": {
-      // Collect all reputations, shuffle, reassign
+      // Collect all reputations, Fisher-Yates shuffle with seeded RNG
       const reps = engine.agents.map((a) => a.reputation);
       for (let i = reps.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
+        const j = Math.floor(rng() * (i + 1));
         [reps[i], reps[j]] = [reps[j], reps[i]];
       }
       engine.agents.forEach((a, i) => {
@@ -169,11 +189,10 @@ export function applyShock(engine: LiveEngine, shock: ShockEvent): void {
 
     case "info_asymmetry":
     case "toxin_injection":
-      // These affect the observation generation process.
-      // For now, we simulate the immediate effect by degrading reputations
-      // of random agents slightly, creating asymmetric information.
+      // Simulate asymmetric information by perturbing reputations
+      // using seeded RNG for deterministic replay
       for (const agent of engine.agents) {
-        const nudge = (Math.random() - 0.5) * 0.2;
+        const nudge = (rng() - 0.5) * 0.2;
         agent.reputation = Math.max(0, Math.min(1, agent.reputation + nudge));
       }
       break;

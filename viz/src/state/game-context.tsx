@@ -58,7 +58,9 @@ const initialState: GameState = {
 function loadCompletedLevels(): string[] {
   if (typeof window === "undefined") return [];
   try {
-    return JSON.parse(localStorage.getItem("swarm-completed-levels") ?? "[]");
+    const parsed = JSON.parse(localStorage.getItem("swarm-completed-levels") ?? "[]");
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((v: unknown) => typeof v === "string");
   } catch {
     return [];
   }
@@ -72,7 +74,8 @@ function saveCompletedLevels(levels: string[]): void {
 function loadRedTeamBest(): number {
   if (typeof window === "undefined") return 0;
   try {
-    return parseFloat(localStorage.getItem("swarm-redteam-best") ?? "0");
+    const val = parseFloat(localStorage.getItem("swarm-redteam-best") ?? "0");
+    return Number.isFinite(val) ? val : 0;
   } catch {
     return 0;
   }
@@ -90,6 +93,7 @@ type GameAction =
   | { type: "START_LIVE" }
   | { type: "STOP_LIVE" }
   | { type: "SET_PAUSED"; paused: boolean }
+  | { type: "TOGGLE_PAUSE" }
   | { type: "SET_TICK_RATE"; rate: number }
   | { type: "START_LEVEL"; level: ChallengeLevel }
   | { type: "LEVEL_WON" }
@@ -110,6 +114,8 @@ function reducer(state: GameState, action: GameAction): GameState {
       return { ...state, isLive: false, isPaused: true };
     case "SET_PAUSED":
       return { ...state, isPaused: action.paused };
+    case "TOGGLE_PAUSE":
+      return { ...state, isPaused: !state.isPaused };
     case "SET_TICK_RATE":
       return { ...state, tickRate: action.rate };
     case "START_LEVEL":
@@ -219,8 +225,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const togglePause = useCallback(() => {
-    dispatch({ type: "SET_PAUSED", paused: !state.isPaused });
-  }, [state.isPaused]);
+    dispatch({ type: "TOGGLE_PAUSE" });
+  }, []);
 
   const setTickRate = useCallback((rate: number) => {
     dispatch({ type: "SET_TICK_RATE", rate });
@@ -228,8 +234,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const spawnAgent = useCallback((type: AgentType) => {
     if (!engineRef.current) return;
-    const agent = engineRef.current.spawnAgent(type);
-    addToast(`Spawned ${agent.name} (${type})`, "info");
+    try {
+      const agent = engineRef.current.spawnAgent(type);
+      addToast(`Spawned ${agent.name} (${type})`, "info");
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : "Cannot spawn agent", "warning");
+    }
   }, [addToast]);
 
   const removeAgent = useCallback((id: string) => {
@@ -314,7 +324,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loadGame = useCallback((json: string) => {
-    engineRef.current = LiveEngine.deserialize(json);
+    try {
+      engineRef.current = LiveEngine.deserialize(json);
+    } catch (e) {
+      addToast(`Failed to load: ${e instanceof Error ? e.message : "invalid file"}`, "error");
+      return;
+    }
     dispatch({ type: "SET_MODE", mode: "sandbox" });
     dispatch({ type: "START_LIVE" });
     addToast("Game loaded", "info");
