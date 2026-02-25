@@ -1174,3 +1174,94 @@ class TestFeedQueryModel:
 
         fq = FeedQuery(tags=["a", "b"], limit=50, offset=10, agent_id="x")
         assert fq.limit == 50
+
+
+# ---------------------------------------------------------------------------
+# Thread-safety: concurrent store singleton init
+# ---------------------------------------------------------------------------
+
+
+class TestStoreThreadSafety:
+    """Verify that concurrent calls to lazy-init helpers return the same instance."""
+
+    def test_run_store_concurrent_init(self, tmp_path):
+        import threading
+
+        import swarm.api.routers.runs as runs_mod
+        from swarm.api.persistence import RunStore
+
+        # Reset to None so the lazy-init path is exercised
+        runs_mod._store = None
+        db_path = tmp_path / "thread_run.db"
+        results: list = []
+
+        def _init():
+            s = runs_mod.get_store()
+            results.append(id(s))
+
+        threads = [threading.Thread(target=_init) for _ in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # All calls must return the same singleton instance
+        assert len(set(results)) == 1
+
+        # Restore test isolation
+        runs_mod._store = RunStore(db_path=db_path)
+
+    def test_scenario_store_concurrent_init(self, tmp_path):
+        import threading
+
+        import swarm.api.routers.scenarios as scenarios_mod
+        from swarm.api.persistence import ScenarioStore
+
+        scenarios_mod._store = None
+        db_path = tmp_path / "thread_scen.db"
+        results: list = []
+
+        def _init():
+            s = scenarios_mod._get_store()
+            results.append(id(s))
+
+        threads = [threading.Thread(target=_init) for _ in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert len(set(results)) == 1
+        scenarios_mod._store = ScenarioStore(db_path=db_path)
+
+    def test_posts_rate_limit_concurrent(self):
+        """_check_public_rate_limit must not corrupt _public_rate under concurrency."""
+        import threading
+        from unittest.mock import MagicMock
+
+        import swarm.api.routers.posts as posts_mod
+
+        posts_mod._public_rate.clear()
+        errors: list = []
+
+        def _hit():
+            req = MagicMock()
+            req.client.host = "1.2.3.4"
+            try:
+                posts_mod._check_public_rate_limit(req)
+            except Exception as exc:
+                # 429 is expected once the rate limit is hit — not an error
+                from fastapi import HTTPException
+                if not isinstance(exc, HTTPException) or exc.status_code != 429:
+                    errors.append(exc)
+
+        threads = [threading.Thread(target=_hit) for _ in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors, f"Unexpected errors: {errors}"
+        # All 20 hits recorded for the same IP (rate limit not reached at 20 < 120)
+        assert len(posts_mod._public_rate.get("1.2.3.4", [])) == 20
+        posts_mod._public_rate.clear()

@@ -1,0 +1,259 @@
+# Dual-Use Coordination Scenario (Agents of Chaos CS9 + CS11)
+#
+# Models the fundamental dual-use tension observed in Agents of Chaos
+# (Shapira et al. 2026): the same inter-agent coordination mechanisms that
+# enabled safety (CS9: Doug teaching Mira defenses, CS16: agents jointly
+# negotiating safety policies) also enabled harm (CS11: unverified defamatory
+# claims propagated to 52+ agents via trust channels).
+#
+# Research question: In what parameter regimes does prosocial coordination
+# (safety sharing, collective defense) dominate antisocial coordination
+# (disinformation, collusive amplification)? Can governance levers tilt
+# the balance without destroying coordination itself?
+#
+# Design: Two "teams" compete on the same Moltbook platform:
+#   - Prosocial bloc: diligent posters + honest agents share quality content,
+#     upvote good posts, build reputation through genuine contribution
+#   - Antisocial bloc: spam bots + collusive voters amplify low-quality content,
+#     coordinate votes, exploit trust channels for disinformation
+#   - Swing agents: adaptive adversaries that exploit whichever side is winning
+#
+# The interesting question is NOT "who wins" (governance can always crush one
+# side) but rather: what governance parameters maximize prosocial coordination
+# while minimizing antisocial coordination? The optimal regime is not zero
+# coordination — it's selective coordination.
+#
+# Four-phase design:
+#   Phase 1 (epochs 0-7):   Normal operation — both blocs establish patterns
+#   Phase 2 (epochs 8-13):  Network partition — blocs isolated, develop independently
+#   Phase 3 (epochs 14-21): Reconnection + signal noise — coordination cultures collide
+#   Phase 4 (epochs 22-29): Governance crackdown — collusion detection tightened
+#
+# Sweep targets:
+#   - w_rep (reputation weight): [0.5, 1.0, 2.0, 3.0, 5.0]
+#   - audit_probability: [0.0, 0.05, 0.10, 0.20, 0.30]
+#   - collusion_score_threshold: [0.3, 0.5, 0.7, 0.9]
+#   - moltbook_challenge_difficulty: [0.0, 0.3, 0.5, 0.7]
+#
+# Source: https://agentsofchaos.baulab.info/
+
+scenario_id: casestudy_dual_use_coordination
+description: "Agents of Chaos CS9+CS11: prosocial vs antisocial coordination on shared platform"
+motif: coordination_dual_use
+
+# --- Agents ---
+# 14 agents split into prosocial, antisocial, and swing blocs.
+# Larger population than other case studies because coordination dynamics
+# need critical mass on both sides.
+agents:
+  # Prosocial bloc (7 agents) — models Doug/Mira safety coordination
+  - type: diligent_moltbook
+    count: 4
+    name: safety_contributor
+    # High-quality posters: share useful content, vote on merit
+
+  - type: honest
+    count: 3
+    name: cooperator
+    # General cooperators that engage through standard interaction channels
+
+  # Antisocial bloc (5 agents) — models CS11 disinformation amplification
+  - type: spam_bot
+    count: 2
+    name: disinfo_spreader
+    # Flood platform with low-quality content at high volume
+
+  - type: collusive_voter
+    count: 2
+    name: amplifier_a
+    config:
+      partner_id: "amplifier_b_1"
+    # Coordinated upvoting of each other's content
+
+  - type: collusive_voter
+    count: 1
+    name: amplifier_b
+    config:
+      partner_id: "amplifier_a_1"
+
+  # Swing (2 agents) — exploit whatever's working
+  - type: adaptive_adversary
+    count: 2
+    name: opportunist
+    # Learn which coordination strategy is more profitable and join it
+
+# --- Moltbook ---
+# The shared coordination platform. Both blocs compete here.
+# Seeded with catalog posts to establish baseline content.
+moltbook:
+  enabled: true
+  default_submolt: "coordination_arena"
+  seed_mode: catalog
+  initial_posts: 10               # Enough baseline for both sides to engage with
+
+# --- Network ---
+# Erdos-Renyi random graph: no built-in clustering advantage for either side.
+# Both blocs must build their coordination advantage dynamically.
+network:
+  topology: random_erdos_renyi
+  params:
+    edge_probability: 0.35        # ~35% connectivity — sparse enough for clusters
+
+  dynamic: true
+  edge_strengthen_rate: 0.12      # Coordination strengthens connections
+  edge_decay_rate: 0.02           # Slow decay — relationships are sticky
+  min_edge_weight: 0.05
+  max_edge_weight: 1.0
+
+# --- Simulation ---
+simulation:
+  n_epochs: 30                    # Longer run to let coordination dynamics develop
+  steps_per_epoch: 10
+  seed: 42
+  schedule_mode: round_robin
+
+# --- Payoff ---
+# High reputation weight is the key lever: when reputation matters more,
+# prosocial coordination (which builds reputation) should dominate over
+# antisocial coordination (which burns reputation).
+payoff:
+  s_plus: 2.0
+  s_minus: 1.5
+  h: 2.5                         # Moderate externality
+  theta: 0.5
+  rho_a: 0.10                    # Moderate externality internalization
+  rho_b: 0.10
+  w_rep: 2.0                     # SWEEP: [0.5, 1.0, 2.0, 3.0, 5.0]
+
+# --- Governance ---
+# The challenge: governance must distinguish prosocial from antisocial
+# coordination. Collusion detection catches coordinated voting but can't
+# tell if the coordination is helpful or harmful. Audit catches low-quality
+# content but can't distinguish honest mistakes from disinformation.
+governance:
+  # Friction
+  transaction_tax_rate: 0.04
+  reputation_decay_rate: 0.98
+
+  # Circuit breaker — catches runaway toxicity
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.65
+  freeze_threshold_violations: 5
+  freeze_duration_epochs: 2
+
+  # Auditing — SWEEP lever
+  audit_enabled: true
+  audit_probability: 0.10         # SWEEP: [0.0, 0.05, 0.10, 0.20, 0.30]
+  audit_penalty_multiplier: 2.5
+  audit_threshold_p: 0.4
+
+  # Collusion detection — catches coordinated amplification
+  # The dual-use problem: this also catches prosocial coordination
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.65
+  collusion_min_interactions: 5
+  collusion_score_threshold: 0.6  # SWEEP: [0.3, 0.5, 0.7, 0.9]
+  collusion_penalty_multiplier: 1.5
+  collusion_realtime_penalty: true
+  collusion_realtime_rate: 0.08
+
+  # Moltbook governance — platform-level controls
+  moltbook_rate_limit_enabled: true
+  moltbook_post_cooldown_steps: 2
+  moltbook_comment_cooldown_steps: 1
+  moltbook_daily_comment_cap: 50
+  moltbook_request_cap_per_step: 60
+
+  # CAPTCHA challenge — raises the bar for participation
+  # Higher difficulty disadvantages bots more than genuine contributors
+  moltbook_challenge_enabled: true
+  moltbook_challenge_difficulty: 0.4  # SWEEP: [0.0, 0.3, 0.5, 0.7]
+  moltbook_challenge_window_steps: 2
+
+  # Security detection — catches manipulation patterns
+  security_enabled: true
+  security_injection_threshold: 0.5
+  security_manipulation_threshold: 0.5
+  security_laundering_trust_gap: 0.3
+  security_contagion_velocity: 2.0
+  security_min_chain_length: 4
+  security_min_interactions: 8
+  security_quarantine_threshold: 0.9
+  security_penalty_multiplier: 2.0
+  security_realtime_penalty: true
+  security_realtime_rate: 0.08
+
+  # Vote normalization — limits amplification power
+  vote_normalization_enabled: true
+  max_vote_weight_per_agent: 3.0
+
+# --- Perturbations ---
+# Two perturbation phases test how each bloc responds to shocks.
+perturbations:
+  seed: 42
+
+  # Phase 1 (epoch 8): Network bisection — separates the population into
+  # two halves. Each half develops its own coordination patterns independently.
+  # When the network heals, the two coordination cultures collide.
+  network_partition:
+    enabled: true
+    trigger: epoch
+    at_epoch: 8
+    mode: bisect                  # Random 50/50 split
+    heal_after_epochs: 6          # Reconnect at epoch 14
+
+  # Phase 2 (epochs 10-16): Signal noise — engagement signals become
+  # unreliable during and after partition. Tests whether coordination
+  # patterns are robust to information degradation.
+  signal_corruption:
+    enabled: true
+    targets: ["counterparty_engagement_delta"]
+    mode: random
+    schedule:
+      - start_epoch: 10
+        end_epoch: 16
+
+  # Phase 3 (epoch 18): Resource inflation — agents get 50% more resources.
+  # With more resources, the stakes are higher and coordination pays off more.
+  # Tests whether this benefits prosocial or antisocial coordination.
+  resource_shock:
+    enabled: true
+    trigger: epoch
+    at_epoch: 18
+    mode: inflate
+    magnitude: 0.5                # 50% resource boost
+
+  # Phase 4 (epoch 22): Governance tightening — collusion detection
+  # becomes more sensitive. Tests whether this disproportionately
+  # hurts prosocial or antisocial coordination.
+  parameter_shocks:
+    enabled: true
+    shocks:
+      - trigger: epoch
+        at_epoch: 22
+        params:
+          collusion_score_threshold: 0.4    # Lower bar for flagging
+          collusion_penalty_multiplier: 2.5 # Harsher penalties
+          audit_probability: 0.20           # Double audit rate
+        revert_after_epochs: 5
+
+# --- Rate Limits ---
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 4
+  votes_per_epoch: 40
+  tasks_per_epoch: 2
+
+# --- Success Criteria ---
+# The scenario "succeeds" if prosocial coordination dominates:
+# toxicity stays moderate and welfare remains positive.
+success_criteria:
+  max_toxicity: 0.45
+  min_epochs: 30
+  max_ecosystem_threat_level: 0.5
+
+# --- Outputs ---
+outputs:
+  event_log: "logs/casestudy_dual_use_coordination.jsonl"
+  metrics_csv: "logs/casestudy_dual_use_coordination_metrics.csv"

@@ -1,5 +1,6 @@
 """Scenario submission and management endpoints."""
 
+import threading
 import uuid
 from datetime import datetime, timezone
 
@@ -16,13 +17,16 @@ from swarm.api.validation import estimate_resources, validate_scenario_yaml
 router = APIRouter()
 
 _store: ScenarioStore | None = None
+_store_lock = threading.Lock()
 
 
 def _get_store() -> ScenarioStore:
-    """Lazy-init the scenario store singleton."""
+    """Return the scenario store singleton, creating it thread-safely on first use."""
     global _store
     if _store is None:
-        _store = ScenarioStore()
+        with _store_lock:
+            if _store is None:
+                _store = ScenarioStore()
     return _store
 
 

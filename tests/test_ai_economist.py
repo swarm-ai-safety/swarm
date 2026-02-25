@@ -333,6 +333,63 @@ class TestGTBEnvironment:
         assert len(caught) == 1
         assert caught[0].details["fine"] > 0
 
+    def test_audit_false_positive_on_honest_with_collusion_boost(self):
+        """Honest agent with collusion boost should trigger audit_false_positive events."""
+        config = GTBConfig(
+            misreporting=MisreportingConfig(
+                enabled=True,
+                audit_probability=1.0,  # deterministic for test
+            ),
+            seed=42,
+        )
+        env = GTBEnvironment(config)
+        w = env.add_worker("w1")
+        w.gross_income_this_epoch = 20.0
+        w.reported_income_this_epoch = 20.0  # honest — no discrepancy
+        # Inject a collusion boost so the agent is flagged
+        env._collusion_audit_boost["w1"] = 1.0
+
+        result = env.end_epoch()
+        fp_events = [e for e in result.events if e.event_type == "audit_false_positive"]
+        assert len(fp_events) == 1
+        assert fp_events[0].agent_id == "w1"
+        # No audit_caught event — the agent was honest
+        assert not any(e.event_type == "audit_caught" for e in result.events)
+
+    def test_governance_backfire_counted_in_metrics(self):
+        """governance_backfire_events metric counts audit_false_positive events."""
+        from swarm.domains.gather_trade_build.entities import GTBEvent
+
+        workers = {"w1": WorkerState(agent_id="w1")}
+        workers["w1"].gross_income_this_epoch = 10.0
+        fp_event = GTBEvent(
+            event_type="audit_false_positive", epoch=0, agent_id="w1",
+            details={"collusion_boost": 1.0},
+        )
+        from swarm.domains.gather_trade_build.metrics import compute_gtb_metrics
+        metrics = compute_gtb_metrics(
+            workers=workers, events=[fp_event], epoch=0,
+            bracket_thresholds=[0.0, 10.0],
+        )
+        assert metrics.governance_backfire_events == 1
+
+    def test_honest_agent_no_collusion_boost_not_flagged(self):
+        """Honest agent with no collusion boost is never audited."""
+        config = GTBConfig(
+            misreporting=MisreportingConfig(enabled=True, audit_probability=1.0),
+            seed=42,
+        )
+        env = GTBEnvironment(config)
+        w = env.add_worker("w1")
+        w.gross_income_this_epoch = 20.0
+        w.reported_income_this_epoch = 20.0  # honest, no boost
+
+        result = env.end_epoch()
+        assert not any(
+            e.event_type in ("audit_false_positive", "audit_caught")
+            for e in result.events
+        )
+
     def test_frozen_agent_skips_actions(self):
         config = GTBConfig(seed=42)
         env = GTBEnvironment(config)

@@ -186,7 +186,7 @@ def compute_gtb_metrics(
     )
 
     # Enforcement
-    audit_events = [e for e in events if e.event_type in ("audit_caught", "audit_miss")]
+    audit_events = [e for e in events if e.event_type in ("audit_caught", "audit_miss", "audit_false_positive")]
     catches = [e for e in events if e.event_type == "audit_caught"]
     misses = [e for e in events if e.event_type == "audit_miss"]
     total_evasion_attempts = len(catches) + len(misses)
@@ -241,6 +241,8 @@ def compute_gtb_metrics(
         collusion_events_detected=len(collusion_events),
         collusion_suspicion_mean=mean_suspicion,
         exploit_frequency=exploit_freq,
-        governance_backfire_events=0,  # TODO: track false-positive audits
+        governance_backfire_events=sum(
+            1 for e in events if e.event_type == "audit_false_positive"
+        ),
         variance_amplification=variance_amp,
     )

@@ -52,12 +52,14 @@ router = APIRouter()
 # Persistence (replaces in-memory dicts)
 # ---------------------------------------------------------------------------
 _store: Optional[RunStore] = None
+_store_lock = threading.Lock()  # Guards lazy-init of _store
 _run_threads: dict[str, threading.Thread] = {}
 _run_cancel_events: dict[str, threading.Event] = {}
-_lock = threading.Lock()  # Protects _run_threads and store writes during execution
+_lock = threading.Lock()  # Protects _run_threads, _run_cancel_events, and run stash dicts
 _shutting_down = threading.Event()  # Signals global shutdown to all threads
 
-# Stash params and quotas alongside the run (not in the Pydantic model)
+# Stash params and quotas alongside the run (not in the Pydantic model).
+# All reads/writes to these dicts must be done while holding _lock.
 _run_params: dict[str, dict] = {}
 _run_quotas: dict[str, dict] = {}
 _run_callbacks: dict[str, str] = {}
@@ -80,10 +82,12 @@ _ALLOWED_CALLBACK_SCHEMES = {"https"}
 
 
 def get_store() -> RunStore:
-    """Lazy-init the run store singleton."""
+    """Return the run store singleton, creating it thread-safely on first use."""
     global _store
     if _store is None:
-        _store = RunStore()
+        with _store_lock:
+            if _store is None:
+                _store = RunStore()
     return _store
 
 
@@ -91,7 +95,8 @@ def _is_cancelled(run_id: str) -> bool:
     """Check if a run has been cancelled or the process is shutting down."""
     if _shutting_down.is_set():
         return True
-    evt = _run_cancel_events.get(run_id)
+    with _lock:
+        evt = _run_cancel_events.get(run_id)
     return evt is not None and evt.is_set()
 
 
@@ -378,8 +383,12 @@ def _execute_run(run_id: str) -> None:
             finally:
                 Path(tmp.name).unlink(missing_ok=True)
 
+        # Snapshot stashed data under the lock before using it
+        with _lock:
+            params = dict(_run_params.get(run_id, {}))
+            quotas = dict(_run_quotas.get(run_id, {}))
+
         # Apply param overrides
-        params = _run_params.get(run_id, {})
         _ALLOWED_PARAM_KEYS = {"seed", "epochs", "steps_per_epoch"}
         for key in params:
             if key not in _ALLOWED_PARAM_KEYS:
@@ -394,8 +403,7 @@ def _execute_run(run_id: str) -> None:
                 params["steps_per_epoch"]
             )
 
-        # Enforce quotas
-        quotas = _run_quotas.get(run_id, {})
+        # Enforce quotas (already snapshotted above)
         max_epochs = quotas.get("max_epochs", 100)
         max_steps = quotas.get("max_steps", 100)
         scenario.orchestrator_config.n_epochs = min(
@@ -461,8 +469,9 @@ def _execute_run(run_id: str) -> None:
         # Export artifacts to runs/ directory
         artifact_warning = _export_run_artifacts(run, scenario, orchestrator, metrics_history)
 
-        # Pattern C: async callback
-        callback_url = _run_callbacks.get(run_id)
+        # Pattern C: async callback — read callback URL under the lock
+        with _lock:
+            callback_url = _run_callbacks.get(run_id)
         callback_warning = _fire_callback(callback_url, run) if callback_url else None
 
         # Surface non-fatal post-completion failures in the run response
@@ -478,11 +487,13 @@ def _execute_run(run_id: str) -> None:
         run.error = _sanitize_error(exc)
         store.save(run)
     finally:
-        # Clean up all stashed data to prevent memory leaks (fixes 2.4)
-        _run_params.pop(run_id, None)
-        _run_quotas.pop(run_id, None)
-        _run_callbacks.pop(run_id, None)
-        _run_cancel_events.pop(run_id, None)
+        # Clean up all stashed data to prevent memory leaks (fixes 2.4).
+        # All stash dicts are protected by _lock.
+        with _lock:
+            _run_params.pop(run_id, None)
+            _run_quotas.pop(run_id, None)
+            _run_callbacks.pop(run_id, None)
+            _run_cancel_events.pop(run_id, None)
 
 
 def _export_run_artifacts(
@@ -664,18 +675,19 @@ async def create_run(
     )
 
     store.save(run)
-    _run_params[run_id] = body.params
-    _run_quotas[run_id] = quotas
-    if body.callback_url:
-        _run_callbacks[run_id] = body.callback_url
 
     # Launch background execution (non-daemon so shutdown can join cleanly,
-    # security fix 2.7)
+    # security fix 2.7).  All stash dicts are written under _lock so
+    # _execute_run and cancel_run always see a consistent view.
     cancel_evt = threading.Event()
     t = threading.Thread(target=_execute_run, args=(run_id,), daemon=False)
     with _lock:
         _run_threads[run_id] = t
         _run_cancel_events[run_id] = cancel_evt
+        _run_params[run_id] = body.params
+        _run_quotas[run_id] = quotas
+        if body.callback_url:
+            _run_callbacks[run_id] = body.callback_url
     t.start()
 
     return RunKickoffResponse(
@@ -875,8 +887,10 @@ async def cancel_run(
             detail=f"Cannot cancel run in status '{run.status.value}'",
         )
 
-    # Signal the background thread to stop (security fix 2.5)
-    evt = _run_cancel_events.get(run_id)
+    # Signal the background thread to stop (security fix 2.5).
+    # Read from _run_cancel_events under _lock for thread safety.
+    with _lock:
+        evt = _run_cancel_events.get(run_id)
     if evt is not None:
         evt.set()
 
