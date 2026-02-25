@@ -93,10 +93,13 @@ class LettaSwarmClient:
         """Pull plain-text content out of a Letta ``response.messages`` list."""
         texts: List[str] = []
         for msg in messages:
-            if hasattr(msg, "assistant_message") and msg.assistant_message:
-                texts.append(msg.assistant_message)
-            elif hasattr(msg, "content") and msg.content:
-                texts.append(msg.content)
+            assistant_message = getattr(msg, "assistant_message", None)
+            if assistant_message:
+                texts.append(assistant_message)
+                continue
+            content = getattr(msg, "content", None)
+            if content:
+                texts.append(content)
         return texts
 
     def create_agent(
