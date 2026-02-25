@@ -16,10 +16,11 @@ import re
 import socket
 import tempfile
 import threading
+import time
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, Union, cast
 from urllib.parse import urlparse
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -466,13 +467,18 @@ def _execute_run(run_id: str) -> None:
         store.save(run)
 
         # Export artifacts to runs/ directory
-        _export_run_artifacts(run, scenario, orchestrator, metrics_history)
+        artifact_warning = _export_run_artifacts(run, scenario, orchestrator, metrics_history)
 
         # Pattern C: async callback — read callback URL under the lock
         with _lock:
             callback_url = _run_callbacks.get(run_id)
-        if callback_url:
-            _fire_callback(callback_url, run)
+        callback_warning = _fire_callback(callback_url, run) if callback_url else None
+
+        # Surface non-fatal post-completion failures in the run response
+        warnings = [w for w in [artifact_warning, callback_warning] if w]
+        if warnings:
+            run.warnings = warnings
+            store.save(run)
 
     except Exception as exc:
         logger.exception("Run %s failed", run_id)
@@ -492,8 +498,8 @@ def _execute_run(run_id: str) -> None:
 
 def _export_run_artifacts(
     run: RunResponse, scenario, orchestrator, metrics_history
-) -> None:
-    """Write history.json + CSV to runs/<run_id>/."""
+) -> Optional[str]:
+    """Write history.json + CSV to runs/<run_id>/. Returns error message on failure."""
     try:
         from swarm.analysis.aggregation import EpochSnapshot, SimulationHistory
         from swarm.analysis.export import export_to_csv, export_to_json
@@ -526,38 +532,62 @@ def _export_run_artifacts(
 
         export_to_json(history, str(run_dir / "history.json"))
         export_to_csv(history, str(run_dir / "csv"), prefix=scenario.scenario_id)
-    except Exception:
+        return None
+    except Exception as exc:
         logger.exception("Artifact export failed for run %s", run.run_id)
+        return f"Artifact export failed: {exc}"
 
 
-def _fire_callback(callback_url: str, run: RunResponse) -> None:
-    """POST run results to the agent's callback URL.
+_MAX_CALLBACK_ATTEMPTS = 3
+_CALLBACK_RETRY_DELAYS = (1, 2)  # seconds between attempts 1→2, 2→3
+
+
+def _fire_callback(callback_url: str, run: RunResponse) -> Optional[str]:
+    """POST run results to the agent's callback URL. Returns error message on failure.
+
+    Retries up to ``_MAX_CALLBACK_ATTEMPTS`` times with backoff.
 
     NOTE: The callback_url was validated at run creation time by
     ``_validate_callback_url``, but DNS may have changed since then
     (TOCTOU / DNS rebinding).  See the docstring on ``_validate_callback_url``
     for the residual risk discussion.
     """
-    try:
-        import requests  # type: ignore[import-untyped]
+    import requests  # type: ignore[import-untyped]
 
-        payload = {
-            "run_id": run.run_id,
-            "scenario_id": run.scenario_id,
-            "status": run.status.value,
-            "completed_at": run.completed_at.isoformat() if run.completed_at else None,
-            "summary_metrics": run.summary_metrics.model_dump()
-            if run.summary_metrics
-            else None,
-        }
-        requests.post(
-            callback_url,
-            json=payload,
-            timeout=10,
-            allow_redirects=False,
-        )
-    except Exception:
-        logger.warning("Callback to %s failed for run %s", callback_url, run.run_id)
+    payload = {
+        "run_id": run.run_id,
+        "scenario_id": run.scenario_id,
+        "status": run.status.value,
+        "completed_at": run.completed_at.isoformat() if run.completed_at else None,
+        "summary_metrics": run.summary_metrics.model_dump()
+        if run.summary_metrics
+        else None,
+    }
+
+    last_exc: Optional[Exception] = None
+    for attempt in range(_MAX_CALLBACK_ATTEMPTS):
+        try:
+            requests.post(
+                callback_url,
+                json=payload,
+                timeout=10,
+                allow_redirects=False,
+            )
+            return None
+        except Exception as exc:
+            last_exc = exc
+            logger.warning(
+                "Callback attempt %d/%d to %s failed for run %s: %s",
+                attempt + 1,
+                _MAX_CALLBACK_ATTEMPTS,
+                callback_url,
+                run.run_id,
+                exc,
+            )
+            if attempt < _MAX_CALLBACK_ATTEMPTS - 1:
+                time.sleep(_CALLBACK_RETRY_DELAYS[attempt])
+
+    return f"Callback to {callback_url} failed after {_MAX_CALLBACK_ATTEMPTS} attempts: {last_exc}"
 
 
 def _get_run_artifacts_dir(run_id: str) -> Optional[Path]:
@@ -637,6 +667,7 @@ async def create_run(
         progress=0.0,
         summary_metrics=None,
         error=None,
+        warnings=None,
         status_url=f"{base_url}/api/runs/{run_id}",
         public_url=f"{base_url}/api/runs/{run_id}"
         if body.visibility == RunVisibility.PUBLIC
@@ -822,7 +853,7 @@ async def get_run(
 
     # Redact error details for non-owners
     if run.agent_id != agent_id and run.error:
-        run = run.model_copy(update={"error": "Run failed"})
+        return cast(RunResponse, run.model_copy(update={"error": "Run failed"}))
 
     return run
 
