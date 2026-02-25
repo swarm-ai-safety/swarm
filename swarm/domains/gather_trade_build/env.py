@@ -788,8 +788,8 @@ class GTBEnvironment:
             if collusion_boost <= 0:
                 continue  # Not flagged; skip
             fp_audit_prob = min(1.0, collusion_boost * cfg.audit_probability)
-            worker.times_audited += 1
             if self._rng.random() < fp_audit_prob:
+                worker.times_audited += 1
                 events.append(GTBEvent(
                     event_type="audit_false_positive",
                     epoch=self._current_epoch,
