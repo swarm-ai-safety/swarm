@@ -6,7 +6,9 @@ import { loadSimulationData, loadSimulationBundle } from "@/data/loader";
 import { SimConfigPanel } from "./SimConfigPanel";
 import { ComparePanel } from "./ComparePanel";
 import { SweepPanel } from "./SweepPanel";
+import { GameModePanel } from "./GameModePanel";
 import { recordToLeaderboard } from "./Leaderboard";
+import { useGame } from "@/state/game-context";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -19,9 +21,10 @@ const SAMPLE_FILES = [
   { name: "6-Agent Mixed Demo", path: `${BASE_PATH}/sample-data/demo-history.json` },
 ];
 
-type Tab = "load" | "simulate" | "compare" | "sweep";
+type Tab = "load" | "simulate" | "compare" | "sweep" | "game";
 
 const TABS: { key: Tab; label: string }[] = [
+  { key: "game", label: "Game" },
   { key: "load", label: "Load" },
   { key: "simulate", label: "Simulate" },
   { key: "compare", label: "Compare" },
@@ -32,7 +35,8 @@ export function DataLoader() {
   const { data, loadData } = useSimulation();
   const fileRef = useRef<HTMLInputElement>(null);
   const eventsFileRef = useRef<HTMLInputElement>(null);
-  const [tab, setTab] = useState<Tab>("load");
+  const { state: gameState } = useGame();
+  const [tab, setTab] = useState<Tab>("game");
   const [historyFile, setHistoryFile] = useState<File | null>(null);
   const [eventsFile, setEventsFile] = useState<File | null>(null);
 
@@ -95,7 +99,7 @@ export function DataLoader() {
     [handleLoadData],
   );
 
-  if (data) return null; // Hide once data is loaded
+  if (data || gameState.isLive) return null; // Hide once data is loaded or game is live
 
   return (
     <div className="absolute inset-0 flex items-center justify-center z-30 bg-bg">
@@ -223,6 +227,10 @@ export function DataLoader() {
               </div>
             </div>
           </>
+        )}
+
+        {tab === "game" && (
+          <GameModePanel />
         )}
 
         {tab === "simulate" && (
