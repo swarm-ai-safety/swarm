@@ -146,6 +146,7 @@ nav:
   - Game: game.md
   - Blog:
     - blog/index.md
+    - "Hodoscope Trajectory Analysis": blog/hodoscope-trajectory-analysis.md
     - "Skill Activation Is the Bottleneck": blog/skill-activation-is-the-bottleneck.md
     - "The Cure Was Worse Than the Disease": blog/runaway-intelligence-three-level-containment.md
     - "Threshold Dancer Results": blog/threshold-dancer-results.md

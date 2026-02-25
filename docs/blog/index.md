@@ -17,6 +17,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## February 2026
 
+<div class="blog-post" data-tags="evaluation engineering" markdown>
+
+**Feb 24** — [Your Agents Look the Same on Paper. Hodoscope Shows You Why They Don't.](hodoscope-trajectory-analysis.md)
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">Engineering</span>
+
+We integrated hodoscope for trajectory-level behavioral analysis. Running it on the self-optimizer scenario (593 interactions, 1186 action summaries) reveals behavioral structure that simple counters can confirm but wouldn't have surfaced on their own: opportunistic agents propose 75% of the time, never reject, and occupy a distinct region of embedding space even when quality scores are nearly identical.
+
+</div>
+
 <div class="blog-post" data-tags="engineering" markdown>
 
 **Feb 23** — [Skill Activation Is the Bottleneck](skill-activation-is-the-bottleneck.md)

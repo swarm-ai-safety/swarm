@@ -1,0 +1,204 @@
+# Proxy Corruption Scenario (Agents of Chaos CS10)
+#
+# Models the "Corrupted Constitution" incident from Agents of Chaos (Shapira et al. 2026):
+# An adversary injected a GitHub Gist link into agent Ash's memory file, overwriting
+# its operating directives. The agent subsequently began removing server members
+# without authorization — its proxy for "helpful behavior" was fundamentally corrupted.
+#
+# Research question: How quickly does proxy corruption degrade ecosystem-level metrics
+# (toxicity, quality_gap), and what detection/recovery mechanisms contain the damage?
+#
+# Three-phase design:
+#   Phase 1 (epochs 0-5):  Normal operation — establish baseline metrics
+#   Phase 2 (epochs 6-11): Corruption active — proxy signals frozen (sticky mode),
+#                           simulating a compromised agent generating stale/misleading
+#                           observables. Ecosystem degrades.
+#   Phase 3 (epochs 12+):  Detection & recovery — parameter shock tightens security,
+#                           network partition isolates adversarial agents. Can governance
+#                           restore ecosystem health?
+#
+# Sweep targets:
+#   - audit_probability: [0.0, 0.05, 0.10, 0.20, 0.30]
+#   - security_quarantine_threshold: [0.5, 0.6, 0.7, 0.8, 0.9]
+#   - parameter_shock timing (at_epoch): [8, 10, 12, 15] (how fast is detection?)
+#   - network partition heal_after_epochs: [3, 5, 8, null] (recovery speed)
+#
+# Source: https://agentsofchaos.baulab.info/
+
+scenario_id: casestudy_proxy_corruption
+description: "Agents of Chaos CS10: proxy signal corruption via memory injection"
+motif: proxy_integrity
+
+# --- Agents ---
+# 10 agents: mostly honest ecosystem with adversarial attacker and a modeling
+# adversary that adapts its strategy based on observed governance.
+# The deceptive agent represents Ash post-corruption — appears cooperative
+# but generates misleading signals.
+agents:
+  - type: honest
+    count: 6
+    name: citizen
+    # Normal ecosystem participants
+
+  - type: deceptive
+    count: 2
+    name: corrupted
+    # Represents agents whose proxy has been compromised (like Ash post-injection).
+    # They appear to cooperate but generate signals that don't reflect true quality.
+
+  - type: adversarial
+    count: 1
+    name: attacker
+    # The Negev role: actively corrupts other agents' operating parameters
+
+  - type: opportunistic
+    count: 1
+    name: exploiter
+    # Exploits the confusion caused by corrupted signals
+
+# --- Network ---
+# Small-world topology: realistic clustering with short path lengths.
+# The corruption spreads through trust relationships.
+network:
+  topology: small_world
+  params:
+    k: 4                          # Connected to 4 nearest neighbors
+    p: 0.15                       # 15% rewiring (moderate randomness)
+
+  dynamic: true
+  edge_strengthen_rate: 0.12
+  edge_decay_rate: 0.01
+  min_edge_weight: 0.05
+  max_edge_weight: 1.0
+
+# --- Simulation ---
+simulation:
+  n_epochs: 25
+  steps_per_epoch: 10
+  seed: 42
+  schedule_mode: round_robin
+
+# --- Payoff ---
+# Moderate externality with standard internalization.
+# The key variable is w_rep (reputation weight): corrupted agents damage
+# their reputation slowly because their proxy signals look normal.
+payoff:
+  s_plus: 2.5
+  s_minus: 1.5
+  h: 2.5                         # Moderate externality
+  theta: 0.5
+  rho_a: 0.10                    # Some externality internalization
+  rho_b: 0.10
+  w_rep: 1.5                     # Reputation matters but isn't dominant
+
+# --- Governance ---
+# Phase 1 baseline: moderate governance that works well under normal conditions
+# but is tested when proxy signals become unreliable.
+governance:
+  # Friction
+  transaction_tax_rate: 0.05
+  reputation_decay_rate: 0.98
+
+  # Circuit breaker
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.65
+  freeze_threshold_violations: 5
+  freeze_duration_epochs: 2
+
+  # Auditing — primary detection mechanism for corrupted signals
+  audit_enabled: true
+  audit_probability: 0.10         # SWEEP: [0.0, 0.05, 0.10, 0.20, 0.30]
+  audit_penalty_multiplier: 2.5
+  audit_threshold_p: 0.4
+
+  # Security detection
+  security_enabled: true
+  security_injection_threshold: 0.4
+  security_manipulation_threshold: 0.5
+  security_laundering_trust_gap: 0.25
+  security_contagion_velocity: 2.0
+  security_min_chain_length: 3
+  security_min_interactions: 6
+  security_quarantine_threshold: 0.85  # SWEEP: [0.5, 0.6, 0.7, 0.8, 0.9]
+  security_penalty_multiplier: 2.0
+  security_realtime_penalty: true
+  security_realtime_rate: 0.10
+
+  # Collusion detection — catches corrupted agents colluding with attacker
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.65
+  collusion_min_interactions: 5
+  collusion_score_threshold: 0.6
+  collusion_penalty_multiplier: 1.5
+
+# --- Perturbations ---
+# Multi-phase: corruption → detection → recovery
+perturbations:
+  seed: 42
+
+  # Phase 2: Proxy corruption via sticky signal
+  # At epoch 6, task_progress_delta gets frozen to its current value.
+  # This models the corrupted constitution: the agent's observable signals
+  # no longer reflect actual interaction quality — they're locked to stale
+  # values from before the corruption.
+  signal_corruption:
+    enabled: true
+    targets: ["task_progress_delta"]
+    mode: sticky                    # Freeze signal to value at corruption time
+    schedule:
+      - start_epoch: 6
+        end_epoch: 17               # Corruption persists for 12 epochs
+
+  # Phase 3: Detection response — tighten security parameters
+  # Models the moment operators discover the corruption and respond.
+  parameter_shocks:
+    enabled: true
+    shocks:
+      # Detection shock: tighten audit and security at epoch 12
+      - trigger: epoch
+        at_epoch: 12                # SWEEP: [8, 10, 12, 15]
+        params:
+          audit_probability: 0.25   # Quadruple audit rate
+          security_quarantine_threshold: 0.6  # Lower quarantine bar
+          security_min_interactions: 3  # Faster quarantine decisions
+        revert_after_epochs: 8      # Elevated security for 8 epochs
+
+  # Phase 3: Network isolation of adversarial agents
+  # Models quarantining the corrupted agent from the network.
+  network_partition:
+    enabled: true
+    trigger: epoch
+    at_epoch: 14                    # Isolation happens 2 epochs after detection
+    mode: isolate_type
+    isolate_type: adversarial       # Quarantine the attacker
+    heal_after_epochs: 6            # SWEEP: [3, 5, 8, null]
+
+  # Agent dropout: corrupted agents intermittently fail
+  # Models the unreliable behavior of a compromised agent.
+  agent_dropout:
+    enabled: true
+    probability_per_step: 0.08      # 8% chance per step
+    min_duration_steps: 1
+    max_duration_steps: 2
+    exempt_types: ["honest"]        # Only non-honest agents drop out
+
+# --- Rate Limits ---
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 40
+  tasks_per_epoch: 3
+
+# --- Success Criteria ---
+# Governance "succeeds" if ecosystem recovers after detection.
+# Key metric: toxicity in Phase 3 (epochs 12+) should be lower than Phase 2 peak.
+success_criteria:
+  max_toxicity: 0.50              # Toxicity stays below 50% even during corruption
+  min_epochs: 25                  # Simulation completes
+  max_ecosystem_threat_level: 0.5
+
+# --- Outputs ---
+outputs:
+  event_log: "logs/casestudy_proxy_corruption.jsonl"
+  metrics_csv: "logs/casestudy_proxy_corruption_metrics.csv"

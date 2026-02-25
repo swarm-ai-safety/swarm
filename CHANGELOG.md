@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **Agents of Chaos case study scenarios** — 4 scenario YAMLs modelling empirically observed failure modes from the Agents of Chaos red-teaming study (Shapira et al. 2026): `casestudy_libel_cascade` (CS11 network adverse selection), `casestudy_proxy_corruption` (CS10 signal corruption/detection/recovery), `casestudy_disproportionate_response` (CS1 payoff misspecification with staking), `casestudy_dual_use_coordination` (CS9+CS11 prosocial vs antisocial coordination)
 - **Tierra governance hardening** — diversity-preserving reaper mode (`reaper_mode: "diversity_preserving"`) that protects at least 1 representative per species cluster during population culling, efficiency weight cap (`max_efficiency_weight`) to prevent runaway resource concentration, and `species_clusters()` helper in `tierra_metrics.py`
 - **Governed Tierra scenario** (`scenarios/tierra_governed.yaml`) — Tierra variant with circuit breaker, collusion detection, 5% transaction tax, reputation decay (0.95), diversity-preserving reaper, and efficiency cap (3x mean)
 - **Blog post**: Tierra governance vs evolution comparative study — 5-seed comparison showing +6.5% genome diversity, -2.2% Gini, at -12% population cost
