@@ -93,8 +93,8 @@ class LettaSwarmClient:
             agent_id: str = agent.id
             logger.info("Created Letta agent name=%s id=%s", name, agent_id)
             return agent_id
-        except Exception:
-            logger.exception("Failed to create Letta agent name=%s", name)
+        except Exception as exc:
+            logger.exception("Failed to create Letta agent name=%s: %s", name, exc)
             raise
 
     def send_message(
@@ -125,9 +125,9 @@ class LettaSwarmClient:
                 elif hasattr(msg, "assistant_message") and msg.assistant_message:
                     texts.append(msg.assistant_message)
             return "\n".join(texts) if texts else ""
-        except Exception:
+        except Exception as exc:
             logger.exception(
-                "Failed to send message to Letta agent %s", letta_agent_id
+                "Failed to send message to Letta agent %s: %s", letta_agent_id, exc
             )
             raise
 
@@ -161,9 +161,9 @@ class LettaSwarmClient:
                 label,
                 letta_agent_id,
             )
-        except Exception:
+        except Exception as exc:
             logger.exception(
-                "Failed to update core memory for agent %s", letta_agent_id
+                "Failed to update core memory for agent %s: %s", letta_agent_id, exc
             )
 
     def get_core_memory(
@@ -187,9 +187,9 @@ class LettaSwarmClient:
                 if block.label == label:
                     result: Optional[str] = block.value
                     return result
-        except Exception:
+        except Exception as exc:
             logger.exception(
-                "Failed to get core memory for agent %s", letta_agent_id
+                "Failed to get core memory for agent %s: %s", letta_agent_id, exc
             )
         return None
 
@@ -230,11 +230,12 @@ class LettaSwarmClient:
                 agent_id=letta_agent_id,
                 block_id=block_id,
             )
-        except Exception:
+        except Exception as exc:
             logger.exception(
-                "Failed to attach shared block %s to agent %s",
+                "Failed to attach shared block %s to agent %s: %s",
                 block_id,
                 letta_agent_id,
+                exc,
             )
 
     def insert_archival(
@@ -254,9 +255,11 @@ class LettaSwarmClient:
                 agent_id=letta_agent_id,
                 content=content,
             )
-        except Exception:
+        except Exception as exc:
             logger.exception(
-                "Failed to insert archival memory for agent %s", letta_agent_id
+                "Failed to insert archival memory for agent %s: %s",
+                letta_agent_id,
+                exc,
             )
 
     def search_archival(
@@ -283,9 +286,11 @@ class LettaSwarmClient:
                 limit=limit,
             )
             return [r.content for r in results if hasattr(r, "content")]
-        except Exception:
+        except Exception as exc:
             logger.exception(
-                "Failed to search archival memory for agent %s", letta_agent_id
+                "Failed to search archival memory for agent %s: %s",
+                letta_agent_id,
+                exc,
             )
             return []
 
@@ -299,7 +304,7 @@ class LettaSwarmClient:
         try:
             client.agents.delete(agent_id=letta_agent_id)
             logger.info("Deleted Letta agent %s", letta_agent_id)
-        except Exception:
+        except Exception as exc:
             logger.exception(
-                "Failed to delete Letta agent %s", letta_agent_id
+                "Failed to delete Letta agent %s: %s", letta_agent_id, exc
             )
