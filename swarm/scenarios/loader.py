@@ -168,13 +168,13 @@ _CONCORDIA_LOCK = threading.Lock()
 def _get_crewai_classes():
     """Lazy import CrewAI adapter classes."""
     global _CREWAI_AGENT_CLASS, _CREWAI_CONFIG_CLASS
-    if _CREWAI_AGENT_CLASS is None:
+    if _CREWAI_AGENT_CLASS is None or _CREWAI_CONFIG_CLASS is None:
         with _CREWAI_LOCK:
-            if _CREWAI_AGENT_CLASS is None:
+            if _CREWAI_AGENT_CLASS is None or _CREWAI_CONFIG_CLASS is None:
                 from swarm.agents.crewai_adapter import CrewBackedAgent, CrewConfig
 
-                _CREWAI_AGENT_CLASS = CrewBackedAgent
                 _CREWAI_CONFIG_CLASS = CrewConfig
+                _CREWAI_AGENT_CLASS = CrewBackedAgent
     return _CREWAI_AGENT_CLASS, _CREWAI_CONFIG_CLASS
 
 
@@ -193,18 +193,18 @@ def _get_letta_agent_class():
 def _get_llm_classes():
     """Lazy import LLM agent classes."""
     global _LLM_AGENT_CLASS, _LLM_CONFIG_CLASSES
-    if _LLM_AGENT_CLASS is None:
+    if _LLM_AGENT_CLASS is None or _LLM_CONFIG_CLASSES is None:
         with _LLM_LOCK:
-            if _LLM_AGENT_CLASS is None:
+            if _LLM_AGENT_CLASS is None or _LLM_CONFIG_CLASSES is None:
                 from swarm.agents.llm_agent import LLMAgent
                 from swarm.agents.llm_config import LLMConfig, LLMProvider, PersonaType
 
-                _LLM_AGENT_CLASS = LLMAgent
                 _LLM_CONFIG_CLASSES = {
                     "LLMConfig": LLMConfig,
                     "LLMProvider": LLMProvider,
                     "PersonaType": PersonaType,
                 }
+                _LLM_AGENT_CLASS = LLMAgent
     return _LLM_AGENT_CLASS, _LLM_CONFIG_CLASSES
 
 
