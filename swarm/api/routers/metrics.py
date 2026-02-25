@@ -30,6 +30,8 @@ def _build_soft_metrics(results: dict[str, Any]) -> dict[str, Any]:
         return {}
 
     # Lazy imports to keep startup fast and avoid circular deps
+    from pydantic import ValidationError
+
     from swarm.metrics.reporters import MetricsReporter
     from swarm.models.interaction import SoftInteraction
 
@@ -41,7 +43,7 @@ def _build_soft_metrics(results: dict[str, Any]) -> dict[str, Any]:
             continue
         try:
             interactions.append(SoftInteraction(**entry))
-        except Exception as exc:
+        except (TypeError, ValidationError) as exc:
             skipped_reasons.append(str(exc))
 
     if skipped_reasons:
