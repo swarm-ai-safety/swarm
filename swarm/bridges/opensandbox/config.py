@@ -4,9 +4,14 @@ Defines governance contracts, capability manifests, sandbox tier
 configurations, and the top-level bridge config.
 """
 
+import posixpath
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any, Dict, List, Optional
+
+# Characters that must not appear in capability names.
+_UNSAFE_CAP_RE = re.compile(r"[,\s/\\]")
 
 
 class NetworkPolicy(Enum):
@@ -105,9 +110,36 @@ class GovernanceContract:
     )
     metadata: Dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        """Validate contract fields on construction."""
+        # Validate capabilities contain no unsafe characters
+        for cap in self.capabilities:
+            if _UNSAFE_CAP_RE.search(cap):
+                raise ValueError(
+                    f"Capability {cap!r} contains unsafe characters "
+                    "(commas, whitespace, slashes)"
+                )
+        # Validate allowed_mounts: no traversal, must be absolute
+        for mount in self.allowed_mounts:
+            normalized = posixpath.normpath(mount)
+            if ".." in normalized.split("/"):
+                raise ValueError(
+                    f"Mount path {mount!r} contains path traversal"
+                )
+            if not posixpath.isabs(normalized):
+                raise ValueError(
+                    f"Mount path {mount!r} must be absolute"
+                )
+
     def allows_capability(self, cap: str) -> bool:
-        """Check whether *cap* is permitted under this contract."""
-        return cap in self.capabilities
+        """Check whether *cap* is permitted under this contract.
+
+        The check normalizes the input by stripping directory prefixes
+        so that ``/usr/bin/python`` and ``./python`` both resolve to
+        ``python``.
+        """
+        normalized = posixpath.basename(cap)
+        return normalized in self.capabilities
 
     def to_sandbox_env(self) -> Dict[str, str]:
         """Compile contract parameters to sandbox environment variables."""
@@ -178,6 +210,11 @@ class OpenSandboxConfig:
     max_interactions: int = 50_000
     max_events: int = 50_000
     message_bus_max_pending: int = 10_000
+    max_message_bytes: int = 1_048_576  # 1 MB per message payload
+    max_message_history: int = 100_000
+    max_provenance_records: int = 100_000
+    max_screening_records: int = 50_000
+    provenance_hmac_key: str = ""  # Set to enable HMAC signing
     provenance_enabled: bool = True
     snapshot_enabled: bool = False
     observer_interval_seconds: float = 5.0

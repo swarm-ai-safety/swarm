@@ -15,9 +15,17 @@ All inter-agent communication routes through the message bus —
 agents never communicate directly.
 """
 
+import copy
 import logging
-from typing import Any, Dict, List, Optional
+import posixpath
+import re
+import threading
+import uuid
+from typing import Any, Dict, List, Optional, Set
 
+from swarm.boundaries.information_flow import FlowTracker
+from swarm.boundaries.leakage import LeakageDetector
+from swarm.boundaries.policies import PolicyEngine
 from swarm.bridges.opensandbox.config import (
     CapabilityManifest,
     ContractAssignment,
@@ -36,6 +44,11 @@ from swarm.models.events import Event, EventType
 from swarm.models.interaction import SoftInteraction
 
 logger = logging.getLogger(__name__)
+
+# Env-var keys that must be redacted when exposing sandbox info.
+_REDACT_KEYS = re.compile(
+    r"(SECRET|TOKEN|KEY|PASSWORD|CREDENTIAL)", re.IGNORECASE
+)
 
 
 class OpenSandboxBridge:
@@ -82,15 +95,28 @@ class OpenSandboxBridge:
     ) -> None:
         self._config = config or OpenSandboxConfig()
         self._event_log = event_log
+        self._lock = threading.Lock()
+
+        # Boundary infrastructure (H1)
+        self._flow_tracker = FlowTracker()
+        self._leakage_detector = LeakageDetector()
+        self._policy_engine = PolicyEngine().create_default_policies()
 
         # Subsystems
-        self._screener = ScreeningProtocol(self._config)
+        self._screener = ScreeningProtocol(
+            self._config,
+            max_records=self._config.max_screening_records,
+        )
         self._message_bus = MessageBus(
             max_pending=self._config.message_bus_max_pending,
             require_provenance=self._config.provenance_enabled,
+            max_message_bytes=self._config.max_message_bytes,
+            max_history=self._config.max_message_history,
         )
         self._provenance = ProvenanceTracker(
             enabled=self._config.provenance_enabled,
+            hmac_key=self._config.provenance_hmac_key or None,
+            max_records=self._config.max_provenance_records,
         )
         self._mapper = OpenSandboxMapper(
             proxy=ProxyComputer(sigmoid_k=self._config.proxy_sigmoid_k),
@@ -106,6 +132,9 @@ class OpenSandboxBridge:
         self._agent_sandboxes: Dict[str, str] = {}  # agent_id -> sandbox_id
         self._assignments: Dict[str, ContractAssignment] = {}  # agent_id -> assignment
 
+        # Re-entrancy guard for auto-intervention (C2)
+        self._intervening: Set[str] = set()
+
     # ------------------------------------------------------------------
     # Contract management
     # ------------------------------------------------------------------
@@ -116,7 +145,8 @@ class OpenSandboxBridge:
         Args:
             contract: The governance contract to publish.
         """
-        self._config.contracts[contract.contract_id] = contract
+        with self._lock:
+            self._config.contracts[contract.contract_id] = contract
         self._record_event(
             OpenSandboxEventType.CONTRACT_PUBLISHED,
             agent_id="",
@@ -134,7 +164,8 @@ class OpenSandboxBridge:
 
     def get_contracts(self) -> Dict[str, GovernanceContract]:
         """Return all published contracts."""
-        return dict(self._config.contracts)
+        with self._lock:
+            return dict(self._config.contracts)
 
     # ------------------------------------------------------------------
     # Agent screening
@@ -151,7 +182,8 @@ class OpenSandboxBridge:
         """
         assignment = self._screener.evaluate(manifest)
         if not assignment.rejected:
-            self._assignments[manifest.agent_id] = assignment
+            with self._lock:
+                self._assignments[manifest.agent_id] = assignment
         return assignment
 
     # ------------------------------------------------------------------
@@ -179,39 +211,45 @@ class OpenSandboxBridge:
             raise ValueError(
                 f"Cannot create sandbox for rejected agent {assignment.agent_id}"
             )
-        if assignment.agent_id in self._agent_sandboxes:
-            raise ValueError(
-                f"Agent {assignment.agent_id} already has a sandbox"
-            )
-        if len(self._sandboxes) >= self._config.max_sandboxes:
-            raise RuntimeError(
-                f"Max sandboxes ({self._config.max_sandboxes}) reached"
-            )
 
-        sandbox_id = f"sandbox-{assignment.agent_id}"
-        contract = self._config.get_contract(assignment.contract_id)
+        with self._lock:
+            if assignment.agent_id in self._agent_sandboxes:
+                raise ValueError(
+                    f"Agent {assignment.agent_id} already has a sandbox"
+                )
+            if len(self._sandboxes) >= self._config.max_sandboxes:
+                raise RuntimeError(
+                    f"Max sandboxes ({self._config.max_sandboxes}) reached"
+                )
 
-        sandbox_info = {
-            "sandbox_id": sandbox_id,
-            "agent_id": assignment.agent_id,
-            "contract_id": assignment.contract_id,
-            "tier": assignment.tier,
-            "image": self._config.sandbox_image,
-            "env": {
-                **contract.to_sandbox_env(),
-                "SWARM_AGENT_TYPE": assignment.metadata.get("agent_type", "cooperative"),
-            },
-            "timeout_seconds": contract.timeout_seconds,
-            "max_memory_mb": contract.max_memory_mb,
-            "max_cpu_shares": contract.max_cpu_shares,
-            "max_disk_mb": contract.max_disk_mb,
-            "network": contract.network.value,
-            "active": True,
-            "isolated": False,
-        }
+            # L1: Use a random suffix so sandbox IDs are not predictable
+            suffix = uuid.uuid4().hex[:8]
+            sandbox_id = f"sandbox-{assignment.agent_id}-{suffix}"
+            contract = self._config.get_contract(assignment.contract_id)
 
-        self._sandboxes[sandbox_id] = sandbox_info
-        self._agent_sandboxes[assignment.agent_id] = sandbox_id
+            sandbox_info = {
+                "sandbox_id": sandbox_id,
+                "agent_id": assignment.agent_id,
+                "contract_id": assignment.contract_id,
+                "tier": assignment.tier,
+                "image": self._config.sandbox_image,
+                "env": {
+                    **contract.to_sandbox_env(),
+                    "SWARM_AGENT_TYPE": assignment.metadata.get(
+                        "agent_type", "cooperative"
+                    ),
+                },
+                "timeout_seconds": contract.timeout_seconds,
+                "max_memory_mb": contract.max_memory_mb,
+                "max_cpu_shares": contract.max_cpu_shares,
+                "max_disk_mb": contract.max_disk_mb,
+                "network": contract.network.value,
+                "active": True,
+                "isolated": False,
+            }
+
+            self._sandboxes[sandbox_id] = sandbox_info
+            self._agent_sandboxes[assignment.agent_id] = sandbox_id
 
         # Register with subsystems
         self._message_bus.register_sandbox(sandbox_id, assignment.agent_id)
@@ -252,12 +290,16 @@ class OpenSandboxBridge:
         Args:
             agent_id: The agent whose sandbox to destroy.
         """
-        sandbox_id = self._agent_sandboxes.pop(agent_id, None)
-        if sandbox_id is None:
-            logger.warning("No sandbox found for agent %s", agent_id)
-            return
+        with self._lock:
+            sandbox_id = self._agent_sandboxes.pop(agent_id, None)
+            if sandbox_id is None:
+                logger.warning("No sandbox found for agent %s", agent_id)
+                return
+            self._sandboxes.pop(sandbox_id, None)
+            assignment = self._assignments.get(
+                agent_id, ContractAssignment(agent_id=agent_id)
+            )
 
-        self._sandboxes.pop(sandbox_id, None)
         self._message_bus.unregister_sandbox(sandbox_id)
         self._observer.unregister_agent(agent_id)
 
@@ -266,7 +308,7 @@ class OpenSandboxBridge:
             agent_id=agent_id,
             action_type="sandbox_destroy",
             action_summary=f"Destroyed sandbox {sandbox_id}",
-            contract_id=self._assignments.get(agent_id, ContractAssignment(agent_id=agent_id)).contract_id,
+            contract_id=assignment.contract_id,
         )
 
         self._record_event(
@@ -294,37 +336,47 @@ class OpenSandboxBridge:
 
         Args:
             agent_id: The executing agent.
-            command: Command string.
+            command: Command string (must be non-empty).
             exit_code: Result exit code (simulated or real).
 
         Returns:
             A SoftInteraction representing the execution.
 
         Raises:
-            ValueError: If agent has no sandbox or sandbox is isolated.
+            ValueError: If agent has no sandbox, sandbox is isolated,
+                or command is empty.
         """
-        sandbox_id = self._agent_sandboxes.get(agent_id)
-        if sandbox_id is None:
-            raise ValueError(f"Agent {agent_id} has no sandbox")
+        # C1: Reject empty commands
+        if not command or not command.strip():
+            raise ValueError("Command must not be empty")
 
-        sandbox_info = self._sandboxes.get(sandbox_id, {})
-        if sandbox_info.get("isolated"):
-            raise ValueError(f"Sandbox {sandbox_id} is isolated — commands blocked")
+        with self._lock:
+            sandbox_id = self._agent_sandboxes.get(agent_id)
+            if sandbox_id is None:
+                raise ValueError(f"Agent {agent_id} has no sandbox")
+            sandbox_info = self._sandboxes.get(sandbox_id, {})
+            if sandbox_info.get("isolated"):
+                raise ValueError(
+                    f"Sandbox {sandbox_id} is isolated — commands blocked"
+                )
+            contract_id = sandbox_info.get("contract_id", "default")
 
-        # Check capability
-        contract_id = sandbox_info.get("contract_id", "default")
         contract = self._config.get_contract(contract_id)
-        cmd_base = command.split()[0] if command else ""
-        if cmd_base and not contract.allows_capability(cmd_base):
-            self._observer.record_violation(agent_id)
-            self._record_event(
-                OpenSandboxEventType.CONTRACT_VIOLATION,
+
+        # C1: Normalize command — strip path prefixes, resolve basename
+        cmd_tokens = command.split()
+        cmd_base = posixpath.basename(cmd_tokens[0])
+
+        # M4: Contract violations produce a dedicated violation interaction
+        # and return early — they do NOT proceed as completed executions.
+        if not contract.allows_capability(cmd_base):
+            return self._handle_violation(
                 agent_id=agent_id,
                 sandbox_id=sandbox_id,
                 contract_id=contract_id,
-                payload={"command": command, "reason": f"Capability {cmd_base} not permitted"},
+                command=command,
+                cmd_base=cmd_base,
             )
-            exit_code = 1
 
         success = exit_code == 0
         self._observer.record_command(agent_id, success)
@@ -360,13 +412,15 @@ class OpenSandboxBridge:
             agent_id=agent_id,
             sandbox_id=sandbox_id,
             contract_id=contract_id,
-            payload={"command": command, "exit_code": exit_code, "p": interaction.p},
+            payload={
+                "command": command,
+                "exit_code": exit_code,
+                "p": interaction.p,
+            },
         )
 
-        # Auto-check risk
-        alert = self._observer.check_risk(agent_id)
-        if alert:
-            self._auto_intervene(agent_id, alert)
+        # C2: Auto-check risk with re-entrancy guard
+        self._maybe_auto_intervene(agent_id)
 
         return interaction
 
@@ -392,11 +446,20 @@ class OpenSandboxBridge:
 
         Returns:
             A SoftInteraction representing the exchange.
+
+        Raises:
+            ValueError: If the sending sandbox is isolated.
         """
-        from_agent = ""
-        to_agent = ""
-        from_info = self._sandboxes.get(from_sandbox, {})
-        to_info = self._sandboxes.get(to_sandbox, {})
+        with self._lock:
+            from_info = self._sandboxes.get(from_sandbox, {})
+            to_info = self._sandboxes.get(to_sandbox, {})
+
+        # M5: Block messages from isolated sandboxes
+        if from_info.get("isolated"):
+            raise ValueError(
+                f"Sandbox {from_sandbox} is isolated — messages blocked"
+            )
+
         from_agent = from_info.get("agent_id", "")
         to_agent = to_info.get("agent_id", "")
 
@@ -473,17 +536,18 @@ class OpenSandboxBridge:
         Returns:
             A SoftInteraction representing the intervention.
         """
-        sandbox_id = self._agent_sandboxes.get(agent_id)
-        if sandbox_id is None:
-            raise ValueError(f"Agent {agent_id} has no sandbox")
-
-        sandbox_info = self._sandboxes.get(sandbox_id, {})
-        contract_id = sandbox_info.get("contract_id")
+        with self._lock:
+            sandbox_id = self._agent_sandboxes.get(agent_id)
+            if sandbox_id is None:
+                raise ValueError(f"Agent {agent_id} has no sandbox")
+            sandbox_info = self._sandboxes.get(sandbox_id, {})
+            contract_id = sandbox_info.get("contract_id")
 
         if action == "terminate":
             self.destroy_sandbox(agent_id)
         else:
-            sandbox_info["isolated"] = True
+            with self._lock:
+                sandbox_info["isolated"] = True
 
         self._observer.record_intervention(agent_id)
 
@@ -535,10 +599,13 @@ class OpenSandboxBridge:
 
     def poll(self) -> List[SoftInteraction]:
         """Poll all active sandboxes and return new SoftInteractions."""
-        new_interactions: List[SoftInteraction] = []
+        with self._lock:
+            snapshot = list(self._agent_sandboxes.items())
 
-        for agent_id, sandbox_id in self._agent_sandboxes.items():
-            sandbox_info = self._sandboxes.get(sandbox_id)
+        new_interactions: List[SoftInteraction] = []
+        for agent_id, sandbox_id in snapshot:
+            with self._lock:
+                sandbox_info = self._sandboxes.get(sandbox_id)
             if not sandbox_info or sandbox_info.get("isolated"):
                 continue
 
@@ -580,11 +647,13 @@ class OpenSandboxBridge:
 
     def get_interactions(self) -> List[SoftInteraction]:
         """Return all interactions recorded by this bridge."""
-        return list(self._interactions)
+        with self._lock:
+            return list(self._interactions)
 
     def get_events(self) -> List[OpenSandboxEvent]:
         """Return all events from all subsystems."""
-        events = list(self._events)
+        with self._lock:
+            events = list(self._events)
         events.extend(self._screener.get_events())
         events.extend(self._message_bus.get_events())
         events.extend(self._provenance.get_events())
@@ -612,9 +681,48 @@ class OpenSandboxBridge:
         """Return provenance tracker statistics."""
         return self._provenance.get_stats()
 
+    def get_boundary_metrics(self) -> Dict[str, Any]:
+        """Return boundary enforcement metrics (H1)."""
+        flow_summary = self._flow_tracker.get_summary()
+        leakage_report = self._leakage_detector.generate_report()
+        policy_stats = self._policy_engine.get_statistics()
+        anomalies = self._flow_tracker.detect_anomalies()
+        return {
+            "flows": {
+                "total": flow_summary.total_flows,
+                "inbound": flow_summary.inbound_flows,
+                "outbound": flow_summary.outbound_flows,
+                "blocked": flow_summary.blocked_flows,
+                "bytes_in": flow_summary.total_bytes_in,
+                "bytes_out": flow_summary.total_bytes_out,
+            },
+            "leakage": {
+                "total_events": leakage_report.total_events,
+                "blocked": leakage_report.blocked_count,
+                "by_type": leakage_report.events_by_type,
+                "max_severity": leakage_report.max_severity,
+            },
+            "policy": policy_stats,
+            "anomalies": anomalies,
+        }
+
     def get_sandbox_info(self, sandbox_id: str) -> Optional[Dict[str, Any]]:
-        """Return sandbox configuration info."""
-        return self._sandboxes.get(sandbox_id)
+        """Return sandbox configuration info.
+
+        Returns a deep copy with sensitive env vars redacted (H4).
+        """
+        with self._lock:
+            info = self._sandboxes.get(sandbox_id)
+            if info is None:
+                return None
+            info = copy.deepcopy(info)
+
+        # Redact sensitive env vars
+        env = info.get("env", {})
+        for key in list(env.keys()):
+            if _REDACT_KEYS.search(key):
+                env[key] = "***REDACTED***"
+        return info
 
     # ------------------------------------------------------------------
     # Lifecycle
@@ -622,7 +730,9 @@ class OpenSandboxBridge:
 
     def shutdown(self) -> None:
         """Destroy all sandboxes and clean up."""
-        for agent_id in list(self._agent_sandboxes.keys()):
+        with self._lock:
+            agent_ids = list(self._agent_sandboxes.keys())
+        for agent_id in agent_ids:
             try:
                 self.destroy_sandbox(agent_id)
             except (ValueError, RuntimeError) as exc:
@@ -636,17 +746,97 @@ class OpenSandboxBridge:
     # Internal helpers
     # ------------------------------------------------------------------
 
-    def _auto_intervene(
+    def _handle_violation(
         self,
         agent_id: str,
-        alert: Dict[str, Any],
-    ) -> None:
-        """Automatically intervene when a risk alert fires."""
-        risk = alert.get("risk_score", 0.0)
-        if risk >= 0.9:
-            self.isolate(agent_id, reason="high_risk_auto", action="terminate")
-        else:
-            self.isolate(agent_id, reason="risk_threshold_auto", action="restrict_network")
+        sandbox_id: str,
+        contract_id: str,
+        command: str,
+        cmd_base: str,
+    ) -> SoftInteraction:
+        """Handle a capability violation (M4).
+
+        Records the violation, creates a rejection interaction, and
+        returns early — the command is NOT treated as an execution.
+        """
+        self._observer.record_violation(agent_id)
+        self._observer.record_command(agent_id, success=False)
+
+        self._record_event(
+            OpenSandboxEventType.CONTRACT_VIOLATION,
+            agent_id=agent_id,
+            sandbox_id=sandbox_id,
+            contract_id=contract_id,
+            payload={
+                "command": command,
+                "reason": f"Capability {cmd_base!r} not permitted",
+            },
+        )
+
+        prov_id = self._provenance.sign(
+            sandbox_id=sandbox_id,
+            agent_id=agent_id,
+            action_type="violation",
+            action_summary=f"DENIED: {command}",
+            content={"command": command, "violation": cmd_base},
+            contract_id=contract_id,
+        )
+
+        metrics = self._observer.get_agent_metrics(agent_id)
+        stats = metrics.to_stats_dict() if metrics else {}
+        interaction = self._mapper.map_governance_intervention(
+            agent_id=agent_id,
+            sandbox_id=sandbox_id,
+            reason=f"capability_denied:{cmd_base}",
+            action="command_rejected",
+            contract_id=contract_id,
+            agent_stats=stats,
+        )
+
+        self._observer.record_p(agent_id, interaction.p)
+        self._record_interaction(interaction)
+
+        # C2: Check risk with re-entrancy guard
+        self._maybe_auto_intervene(agent_id)
+
+        return interaction
+
+    def _maybe_auto_intervene(self, agent_id: str) -> None:
+        """Check risk and auto-intervene with re-entrancy guard (C2).
+
+        If the agent is already being intervened upon (or already
+        isolated/terminated), skip to prevent recursion.
+        """
+        if agent_id in self._intervening:
+            return
+
+        with self._lock:
+            sandbox_id = self._agent_sandboxes.get(agent_id)
+            if sandbox_id is None:
+                return  # Already terminated
+            sandbox_info = self._sandboxes.get(sandbox_id, {})
+            if sandbox_info.get("isolated"):
+                return  # Already isolated
+
+        alert = self._observer.check_risk(agent_id)
+        if alert is None:
+            return
+
+        self._intervening.add(agent_id)
+        try:
+            risk = alert.get("risk_score", 0.0)
+            if risk >= 0.9:
+                self.isolate(
+                    agent_id, reason="high_risk_auto", action="terminate"
+                )
+            else:
+                self.isolate(
+                    agent_id,
+                    reason="risk_threshold_auto",
+                    action="restrict_network",
+                )
+        finally:
+            self._intervening.discard(agent_id)
 
     def _record_event(
         self,
@@ -656,24 +846,26 @@ class OpenSandboxBridge:
         contract_id: Optional[str] = None,
         payload: Optional[Dict] = None,
     ) -> None:
-        if len(self._events) >= self._config.max_events:
-            self._events = self._events[-self._config.max_events // 2 :]
-        self._events.append(
-            OpenSandboxEvent(
-                event_type=event_type,
-                agent_id=agent_id,
-                sandbox_id=sandbox_id,
-                contract_id=contract_id,
-                payload=payload or {},
+        with self._lock:
+            if len(self._events) >= self._config.max_events:
+                self._events = self._events[-self._config.max_events // 2 :]
+            self._events.append(
+                OpenSandboxEvent(
+                    event_type=event_type,
+                    agent_id=agent_id,
+                    sandbox_id=sandbox_id,
+                    contract_id=contract_id,
+                    payload=payload or {},
+                )
             )
-        )
 
     def _record_interaction(self, interaction: SoftInteraction) -> None:
-        if len(self._interactions) >= self._config.max_interactions:
-            self._interactions = self._interactions[
-                -self._config.max_interactions // 2 :
-            ]
-        self._interactions.append(interaction)
+        with self._lock:
+            if len(self._interactions) >= self._config.max_interactions:
+                self._interactions = self._interactions[
+                    -self._config.max_interactions // 2 :
+                ]
+            self._interactions.append(interaction)
         self._log_interaction(interaction)
 
     def _log_interaction(self, interaction: SoftInteraction) -> None:

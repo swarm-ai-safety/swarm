@@ -45,9 +45,12 @@ class ScreeningProtocol:
         self,
         config: OpenSandboxConfig,
         min_score: float = 0.3,
+        max_records: int = 50_000,
     ) -> None:
         self._config = config
         self._min_score = min_score
+        self._max_records = max_records
+        self._total_records = 0
         # Sorting ledger: tier -> list of (agent_id, agent_type, score)
         self._sorting_ledger: Dict[str, List[Dict]] = {}
         self._events: List[OpenSandboxEvent] = []
@@ -118,13 +121,23 @@ class ScreeningProtocol:
             },
         )
 
-        # Record sorting
+        # Record sorting (M3: bounded growth)
         tier_key = best_contract.tier
-        self._sorting_ledger.setdefault(tier_key, []).append({
+        ledger = self._sorting_ledger.setdefault(tier_key, [])
+        ledger.append({
             "agent_id": manifest.agent_id,
             "agent_type": manifest.agent_type.value,
             "score": best_score,
         })
+        self._total_records += 1
+        if self._total_records > self._max_records:
+            # Trim oldest half from each tier
+            for k in list(self._sorting_ledger.keys()):
+                lst = self._sorting_ledger[k]
+                drop = len(lst) // 2
+                if drop > 0:
+                    self._sorting_ledger[k] = lst[drop:]
+                    self._total_records -= drop
 
         self._record_event(
             OpenSandboxEventType.AGENT_ADMITTED,
