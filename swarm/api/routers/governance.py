@@ -1,5 +1,6 @@
 """Governance router — proposal submission, listing, and voting."""
 
+import threading
 import uuid
 from datetime import datetime, timezone
 from enum import Enum
@@ -59,13 +60,16 @@ class ProposalResponse(BaseModel):
 
 
 _store: Optional[ProposalStore] = None
+_store_lock = threading.Lock()
 
 
 def _get_store() -> ProposalStore:
-    """Lazy-init the proposal store singleton."""
+    """Return the proposal store singleton, creating it thread-safely on first use."""
     global _store
     if _store is None:
-        _store = ProposalStore()
+        with _store_lock:
+            if _store is None:
+                _store = ProposalStore()
     return _store
 
 
