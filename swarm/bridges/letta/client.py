@@ -216,10 +216,9 @@ class LettaSwarmClient:
             messages=[{"role": "user", "content": message}],
         ) as stream:
             for event in stream:
-                if hasattr(event, "assistant_message") and event.assistant_message:
-                    texts.append(event.assistant_message)
-                elif hasattr(event, "content") and event.content:
-                    texts.append(event.content)
+                # Reuse the central extraction helper so stream/sync paths
+                # stay consistent if extraction rules evolve.
+                texts.extend(self._extract_texts_from_messages([event]))
         return "\n".join(texts) if texts else ""
 
     def update_core_memory(
