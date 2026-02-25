@@ -2,6 +2,19 @@
 
 All SDK calls are lazy-imported so the bridge can be loaded without
 ``letta-client`` installed.
+
+Ollama compatibility
+--------------------
+When Letta is backed by a local Ollama model (model string starts with
+``ollama/``), streaming token delivery is unreliable because Ollama's
+OpenAI-compatible streaming endpoint does not always send tool-call
+deltas in the format Letta expects.  The client therefore disables
+streaming automatically for Ollama models unless ``stream_tokens`` is
+explicitly set to ``True`` in :class:`LettaConfig`.
+
+For all other (cloud) models the default behaviour is to use the
+streaming ``create_stream()`` API and accumulate the full response,
+which avoids long-poll timeouts on slow connections.
 """
 
 from __future__ import annotations
@@ -48,6 +61,43 @@ class LettaSwarmClient:
         self._initialized = True
         logger.info("Letta SDK client initialized at %s", self.config.base_url)
         return self._client
+
+    # ------------------------------------------------------------------
+    # Ollama / streaming helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _is_ollama_model(model: str) -> bool:
+        """Return True if *model* is routed through a local Ollama server.
+
+        Matches the conventional ``ollama/<model_name>`` prefix used by
+        the Letta server's Ollama provider routing.
+        """
+        return model.lower().startswith("ollama/")
+
+    def _should_stream(self, model: Optional[str] = None) -> bool:
+        """Return True if the streaming ``create_stream()`` API should be used.
+
+        Decision order:
+        1. If ``config.stream_tokens`` is explicitly set, honour it.
+        2. Auto-mode: disable streaming for Ollama models (compatibility
+           workaround); enable for all other providers.
+        """
+        if self.config.stream_tokens is not None:
+            return self.config.stream_tokens
+        effective = model or self.config.default_model
+        return not self._is_ollama_model(effective)
+
+    @staticmethod
+    def _extract_texts_from_messages(messages: Any) -> List[str]:
+        """Pull plain-text content out of a Letta ``response.messages`` list."""
+        texts: List[str] = []
+        for msg in messages:
+            if hasattr(msg, "assistant_message") and msg.assistant_message:
+                texts.append(msg.assistant_message)
+            elif hasattr(msg, "content") and msg.content:
+                texts.append(msg.content)
+        return texts
 
     def create_agent(
         self,
@@ -101,35 +151,76 @@ class LettaSwarmClient:
         self,
         letta_agent_id: str,
         message: str,
+        model: Optional[str] = None,
     ) -> str:
         """Send a message to a Letta agent and return the response text.
+
+        For cloud models (non-Ollama) the streaming ``create_stream()`` API
+        is used by default so that long-running completions do not hit HTTP
+        timeout limits.  For Ollama-backed agents streaming is disabled
+        unless ``config.stream_tokens`` is explicitly ``True``, because
+        Ollama's streaming endpoint does not reliably deliver tool-call
+        deltas in the format Letta requires.
 
         Args:
             letta_agent_id: The Letta agent's ID.
             message: The message to send.
+            model: Optional model name override (used for streaming decision).
 
         Returns:
-            The agent's response text.
+            The agent's response text, or an empty string on an empty reply.
         """
         client = self._ensure_client()
         try:
-            response = client.agents.messages.create(
-                agent_id=letta_agent_id,
-                messages=[{"role": "user", "content": message}],
-            )
-            # Extract text from response messages
-            texts = []
-            for msg in response.messages:
-                if hasattr(msg, "content") and msg.content:
-                    texts.append(msg.content)
-                elif hasattr(msg, "assistant_message") and msg.assistant_message:
-                    texts.append(msg.assistant_message)
-            return "\n".join(texts) if texts else ""
+            if self._should_stream(model):
+                return self._send_message_stream(client, letta_agent_id, message)
+            return self._send_message_sync(client, letta_agent_id, message)
         except Exception:
             logger.exception(
                 "Failed to send message to Letta agent %s", letta_agent_id
             )
             raise
+
+    def _send_message_sync(
+        self,
+        client: Any,
+        letta_agent_id: str,
+        message: str,
+    ) -> str:
+        """Non-streaming send: use ``messages.create()`` and parse in one shot.
+
+        This is the safe path for Ollama models where streaming is disabled.
+        """
+        response = client.agents.messages.create(
+            agent_id=letta_agent_id,
+            messages=[{"role": "user", "content": message}],
+        )
+        texts = self._extract_texts_from_messages(response.messages)
+        return "\n".join(texts) if texts else ""
+
+    def _send_message_stream(
+        self,
+        client: Any,
+        letta_agent_id: str,
+        message: str,
+    ) -> str:
+        """Streaming send: accumulate ``AssistantMessage`` events from the SSE stream.
+
+        Uses the ``create_stream()`` context manager.  Each event that
+        carries an ``assistant_message`` field is appended; all other
+        internal-monologue and tool-call events are silently skipped.
+        """
+        texts: List[str] = []
+        with client.agents.messages.create_stream(
+            agent_id=letta_agent_id,
+            messages=[{"role": "user", "content": message}],
+        ) as stream:
+            for event in stream:
+                if hasattr(event, "assistant_message") and event.assistant_message:
+                    texts.append(event.assistant_message)
+                elif hasattr(event, "content") and event.content:
+                    texts.append(event.content)
+        return "\n".join(texts) if texts else ""
 
     def update_core_memory(
         self,
