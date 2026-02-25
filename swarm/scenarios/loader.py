@@ -1,6 +1,7 @@
 """Scenario loader for YAML configuration files."""
 
 import random
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
@@ -156,15 +157,24 @@ _CREWAI_AGENT_CLASS = None
 _CREWAI_CONFIG_CLASS = None
 _LETTA_AGENT_CLASS = None
 
+# Per-loader locks to guard lazy class initialisation in threaded scenarios
+_CREWAI_LOCK = threading.Lock()
+_LETTA_LOCK = threading.Lock()
+_LLM_LOCK = threading.Lock()
+_COUNCIL_LOCK = threading.Lock()
+_CONCORDIA_LOCK = threading.Lock()
+
 
 def _get_crewai_classes():
     """Lazy import CrewAI adapter classes."""
     global _CREWAI_AGENT_CLASS, _CREWAI_CONFIG_CLASS
     if _CREWAI_AGENT_CLASS is None:
-        from swarm.agents.crewai_adapter import CrewBackedAgent, CrewConfig
+        with _CREWAI_LOCK:
+            if _CREWAI_AGENT_CLASS is None:
+                from swarm.agents.crewai_adapter import CrewBackedAgent, CrewConfig
 
-        _CREWAI_AGENT_CLASS = CrewBackedAgent
-        _CREWAI_CONFIG_CLASS = CrewConfig
+                _CREWAI_AGENT_CLASS = CrewBackedAgent
+                _CREWAI_CONFIG_CLASS = CrewConfig
     return _CREWAI_AGENT_CLASS, _CREWAI_CONFIG_CLASS
 
 
@@ -172,9 +182,11 @@ def _get_letta_agent_class():
     """Lazy import LettaAgent class."""
     global _LETTA_AGENT_CLASS
     if _LETTA_AGENT_CLASS is None:
-        from swarm.agents.letta_agent import LettaAgent
+        with _LETTA_LOCK:
+            if _LETTA_AGENT_CLASS is None:
+                from swarm.agents.letta_agent import LettaAgent
 
-        _LETTA_AGENT_CLASS = LettaAgent
+                _LETTA_AGENT_CLASS = LettaAgent
     return _LETTA_AGENT_CLASS
 
 
@@ -182,15 +194,17 @@ def _get_llm_classes():
     """Lazy import LLM agent classes."""
     global _LLM_AGENT_CLASS, _LLM_CONFIG_CLASSES
     if _LLM_AGENT_CLASS is None:
-        from swarm.agents.llm_agent import LLMAgent
-        from swarm.agents.llm_config import LLMConfig, LLMProvider, PersonaType
+        with _LLM_LOCK:
+            if _LLM_AGENT_CLASS is None:
+                from swarm.agents.llm_agent import LLMAgent
+                from swarm.agents.llm_config import LLMConfig, LLMProvider, PersonaType
 
-        _LLM_AGENT_CLASS = LLMAgent
-        _LLM_CONFIG_CLASSES = {
-            "LLMConfig": LLMConfig,
-            "LLMProvider": LLMProvider,
-            "PersonaType": PersonaType,
-        }
+                _LLM_AGENT_CLASS = LLMAgent
+                _LLM_CONFIG_CLASSES = {
+                    "LLMConfig": LLMConfig,
+                    "LLMProvider": LLMProvider,
+                    "PersonaType": PersonaType,
+                }
     return _LLM_AGENT_CLASS, _LLM_CONFIG_CLASSES
 
 
@@ -198,9 +212,11 @@ def _get_council_agent_class():
     """Lazy import CouncilAgent class."""
     global _COUNCIL_AGENT_CLASS
     if _COUNCIL_AGENT_CLASS is None:
-        from swarm.agents.council_agent import CouncilAgent
+        with _COUNCIL_LOCK:
+            if _COUNCIL_AGENT_CLASS is None:
+                from swarm.agents.council_agent import CouncilAgent
 
-        _COUNCIL_AGENT_CLASS = CouncilAgent
+                _COUNCIL_AGENT_CLASS = CouncilAgent
     return _COUNCIL_AGENT_CLASS
 
 
@@ -208,9 +224,11 @@ def _get_concordia_entity_class():
     """Lazy import ConcordiaEntityAgent class."""
     global _CONCORDIA_ENTITY_CLASS
     if _CONCORDIA_ENTITY_CLASS is None:
-        from swarm.bridges.concordia.entity_agent import ConcordiaEntityAgent
+        with _CONCORDIA_LOCK:
+            if _CONCORDIA_ENTITY_CLASS is None:
+                from swarm.bridges.concordia.entity_agent import ConcordiaEntityAgent
 
-        _CONCORDIA_ENTITY_CLASS = ConcordiaEntityAgent
+                _CONCORDIA_ENTITY_CLASS = ConcordiaEntityAgent
     return _CONCORDIA_ENTITY_CLASS
 
 
