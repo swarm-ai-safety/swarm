@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SWARM × OpenSandbox — Multi-Agent Safety Architecture</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0b0f;
+    --surface: #12141a;
+    --surface-raised: #1a1d26;
+    --surface-hover: #222632;
+    --border: #2a2e3a;
+    --border-active: #3d4255;
+    --text: #e2e4ea;
+    --text-dim: #8b90a0;
+    --text-faint: #5a5f72;
+    --accent-cyan: #4ecdc4;
+    --accent-cyan-dim: rgba(78, 205, 196, 0.15);
+    --accent-orange: #ff8a5c;
+    --accent-orange-dim: rgba(255, 138, 92, 0.12);
+    --accent-violet: #a78bfa;
+    --accent-violet-dim: rgba(167, 139, 250, 0.12);
+    --accent-rose: #f472b6;
+    --accent-rose-dim: rgba(244, 114, 182, 0.12);
+    --accent-green: #6ee7b7;
+    --accent-green-dim: rgba(110, 231, 183, 0.12);
+    --accent-yellow: #fbbf24;
+    --accent-yellow-dim: rgba(251, 191, 36, 0.12);
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+    --radius: 10px;
+    --radius-sm: 6px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grain overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  .container {
+    max-width: 1320px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+
+  /* Header */
+  header {
+    margin-bottom: 56px;
+    position: relative;
+  }
+
+  .tag-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .tag {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 5px 12px;
+    border-radius: 100px;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    background: var(--surface);
+  }
+
+  .tag.active {
+    border-color: var(--accent-cyan);
+    color: var(--accent-cyan);
+    background: var(--accent-cyan-dim);
+  }
+
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(28px, 4vw, 44px);
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin-bottom: 16px;
+  }
+
+  h1 .highlight {
+    color: var(--accent-cyan);
+  }
+
+  h1 .dim {
+    color: var(--text-dim);
+    font-weight: 400;
+  }
+
+  .subtitle {
+    font-size: 16px;
+    color: var(--text-dim);
+    max-width: 720px;
+    line-height: 1.65;
+  }
+
+  /* Diagram Section */
+  .diagram-section {
+    margin-bottom: 56px;
+  }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* Architecture Layers */
+  .arch-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .arch-layer {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arch-layer:hover {
+    border-color: var(--border-active);
+    background: var(--surface-raised);
+  }
+
+  .arch-layer::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+  }
+
+  .layer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .layer-name {
+    font-family: var(--mono);
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .layer-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-weight: 500;
+  }
+
+  .layer-desc {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 18px;
+  }
+
+  .layer-components {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .component {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    padding: 8px 14px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text-dim);
+    transition: all 0.15s ease;
+    cursor: default;
+    position: relative;
+  }
+
+  .component:hover {
+    color: var(--text);
+    border-color: var(--border-active);
+  }
+
+  .component .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  /* Layer colors */
+  .layer-governance::before { background: var(--accent-cyan); }
+  .layer-governance .layer-name { color: var(--accent-cyan); }
+  .layer-governance .layer-tag { background: var(--accent-cyan-dim); color: var(--accent-cyan); border: 1px solid rgba(78, 205, 196, 0.25); }
+  .layer-governance .dot { background: var(--accent-cyan); }
+
+  .layer-orchestration::before { background: var(--accent-violet); }
+  .layer-orchestration .layer-name { color: var(--accent-violet); }
+  .layer-orchestration .layer-tag { background: var(--accent-violet-dim); color: var(--accent-violet); border: 1px solid rgba(167, 139, 250, 0.25); }
+  .layer-orchestration .dot { background: var(--accent-violet); }
+
+  .layer-protocol::before { background: var(--accent-orange); }
+  .layer-protocol .layer-name { color: var(--accent-orange); }
+  .layer-protocol .layer-tag { background: var(--accent-orange-dim); color: var(--accent-orange); border: 1px solid rgba(255, 138, 92, 0.25); }
+  .layer-protocol .dot { background: var(--accent-orange); }
+
+  .layer-sandbox::before { background: var(--accent-green); }
+  .layer-sandbox .layer-name { color: var(--accent-green); }
+  .layer-sandbox .layer-tag { background: var(--accent-green-dim); color: var(--accent-green); border: 1px solid rgba(110, 231, 183, 0.25); }
+  .layer-sandbox .dot { background: var(--accent-green); }
+
+  .layer-infra::before { background: var(--accent-yellow); }
+  .layer-infra .layer-name { color: var(--accent-yellow); }
+  .layer-infra .layer-tag { background: var(--accent-yellow-dim); color: var(--accent-yellow); border: 1px solid rgba(251, 191, 36, 0.25); }
+  .layer-infra .dot { background: var(--accent-yellow); }
+
+  .layer-observe::before { background: var(--accent-rose); }
+  .layer-observe .layer-name { color: var(--accent-rose); }
+  .layer-observe .layer-tag { background: var(--accent-rose-dim); color: var(--accent-rose); border: 1px solid rgba(244, 114, 182, 0.25); }
+  .layer-observe .dot { background: var(--accent-rose); }
+
+  /* Flow arrows between layers */
+  .flow-connector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    position: relative;
+  }
+
+  .flow-connector .arrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .flow-connector .line {
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--border), var(--border-active), var(--border));
+    position: absolute;
+    left: 50%;
+  }
+
+  /* Data Flow Section */
+  .flow-section {
+    margin-top: 56px;
+  }
+
+  .flow-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .flow-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: all 0.2s ease;
+  }
+
+  .flow-card:hover {
+    border-color: var(--border-active);
+  }
+
+  .flow-card-number {
+    font-family: var(--mono);
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--surface-hover);
+    line-height: 1;
+    margin-bottom: 12px;
+  }
+
+  .flow-card h3 {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: var(--text);
+  }
+
+  .flow-card p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .flow-card .code-snippet {
+    font-family: var(--mono);
+    font-size: 11px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+    margin-top: 12px;
+    color: var(--text-dim);
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .flow-card .code-snippet .kw { color: var(--accent-violet); }
+  .flow-card .code-snippet .str { color: var(--accent-green); }
+  .flow-card .code-snippet .fn { color: var(--accent-cyan); }
+  .flow-card .code-snippet .cm { color: var(--text-faint); }
+
+  /* Key Insight Section */
+  .insight-section {
+    margin-top: 56px;
+  }
+
+  .insight-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 16px;
+  }
+
+  .insight-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px 28px;
+  }
+
+  .insight-card h3 {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .insight-card p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.65;
+  }
+
+  .insight-icon {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+  }
+
+  /* Interactive detail panels */
+  .detail-panel {
+    display: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px 20px;
+    margin-top: 14px;
+    animation: slideIn 0.2s ease;
+  }
+
+  .detail-panel.open {
+    display: block;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .detail-panel h4 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin-bottom: 10px;
+  }
+
+  .detail-panel ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  .detail-panel li {
+    font-size: 12.5px;
+    color: var(--text-dim);
+    padding: 4px 0;
+    line-height: 1.55;
+  }
+
+  .detail-panel li::before {
+    content: '\2192';
+    margin-right: 8px;
+    color: var(--text-faint);
+  }
+
+  .expand-btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 5px 12px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    margin-top: 14px;
+  }
+
+  .expand-btn:hover {
+    color: var(--text-dim);
+    border-color: var(--border-active);
+  }
+
+  /* Footer */
+  .arch-footer {
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-faint);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .container { padding: 32px 16px 60px; }
+    .arch-layer { padding: 18px 20px; }
+    .flow-grid { grid-template-columns: 1fr; }
+    .insight-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header>
+    <div class="tag-row">
+      <span class="tag active">Architecture</span>
+      <span class="tag">SWARM Framework</span>
+      <span class="tag">OpenSandbox</span>
+      <span class="tag">Multi-Agent Safety</span>
+    </div>
+    <h1>
+      SWARM <span class="dim">&times;</span> <span class="highlight">OpenSandbox</span><br>
+      <span class="dim">Multi-Agent Safety Architecture</span>
+    </h1>
+    <p class="subtitle">
+      A layered architecture for running contract-governed multi-agent systems inside isolated sandbox environments.
+      Each agent operates within a capability-bounded sandbox, with governance contracts enforced at the orchestration layer
+      and provenance tracked via Byline integration.
+    </p>
+  </header>
+
+  <!-- Architecture Layers -->
+
+  <section class="diagram-section">
+    <div class="section-label">System Layers &mdash; Top to Bottom</div>
+
+    <div class="arch-grid">
+
+      <!-- Layer 1: Governance -->
+      <div class="arch-layer layer-governance" id="layer-gov">
+        <div class="layer-header">
+          <span class="layer-name">01 &mdash; Governance &amp; Contract Layer</span>
+          <span class="layer-tag">SWARM Core</span>
+        </div>
+        <p class="layer-desc">
+          Publishes governance contracts that define capability boundaries, interaction rules, and safety invariants.
+          Implements mechanism design for agent screening &mdash; agents self-select into contract tiers based on their capabilities and declared intent.
+        </p>
+        <div class="layer-components">
+          <span class="component"><span class="dot"></span>Contract Registry</span>
+          <span class="component"><span class="dot"></span>Screening Protocol</span>
+          <span class="component"><span class="dot"></span>Safety Invariants</span>
+          <span class="component"><span class="dot"></span>Constitutional Rules</span>
+          <span class="component"><span class="dot"></span>Capability Manifests</span>
+        </div>
+        <button class="expand-btn" onclick="toggleDetail('gov-detail')">Show details &#8595;</button>
+        <div class="detail-panel" id="gov-detail">
+          <h4>Mechanism Design Stages</h4>
+          <ul>
+            <li>Contract publishing &mdash; governance policies expressed as machine-readable specs</li>
+            <li>Agent selection &mdash; agents evaluate contracts and self-sort into compatible tiers</li>
+            <li>Protocol enforcement &mdash; runtime checks validate agent behavior against contract terms</li>
+            <li>Sorting measurement &mdash; track how different agent types distribute across contract tiers</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flow-connector"><span class="arrow">&#9660; contracts propagate down</span></div>
+
+      <!-- Layer 2: Orchestration -->
+      <div class="arch-layer layer-orchestration" id="layer-orch">
+        <div class="layer-header">
+          <span class="layer-name">02 &mdash; SWARM Orchestration Layer</span>
+          <span class="layer-tag">Coordination</span>
+        </div>
+        <p class="layer-desc">
+          Manages multi-agent topology, routes inter-agent messages, and maps governance contracts to sandbox configurations.
+          This is the bridge between SWARM's abstract governance model and OpenSandbox's concrete execution environments.
+        </p>
+        <div class="layer-components">
+          <span class="component"><span class="dot"></span>Agent Router</span>
+          <span class="component"><span class="dot"></span>Topology Manager</span>
+          <span class="component"><span class="dot"></span>Contract &rarr; Sandbox Mapper</span>
+          <span class="component"><span class="dot"></span>Message Bus</span>
+          <span class="component"><span class="dot"></span>Byline Provenance</span>
+        </div>
+        <button class="expand-btn" onclick="toggleDetail('orch-detail')">Show details &#8595;</button>
+        <div class="detail-panel" id="orch-detail">
+          <h4>Key Responsibilities</h4>
+          <ul>
+            <li>Translates contract permissions into sandbox entrypoint configs, env vars, and network rules</li>
+            <li>Maintains message bus for inter-sandbox communication (agents cannot talk directly)</li>
+            <li>Byline integration attaches provenance metadata to every agent action and message</li>
+            <li>Topology manager can reconfigure agent connections mid-experiment</li>
+            <li>Handles agent lifecycle: spawn, monitor, isolate, terminate</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flow-connector"><span class="arrow">&#9660; sandbox configs + message routing</span></div>
+
+      <!-- Layer 3: Protocol Adapter -->
+      <div class="arch-layer layer-protocol" id="layer-proto">
+        <div class="layer-header">
+          <span class="layer-name">03 &mdash; Protocol Adapter Layer</span>
+          <span class="layer-tag">Bridge</span>
+        </div>
+        <p class="layer-desc">
+          Extends OpenSandbox's protocol specs with SWARM-specific metadata &mdash; contract IDs, agent type labels,
+          governance state, and provenance hooks. Implements the OpenSandbox lifecycle API (create / start / stop / kill)
+          enriched with safety context.
+        </p>
+        <div class="layer-components">
+          <span class="component"><span class="dot"></span>Extended execd API</span>
+          <span class="component"><span class="dot"></span>SWARM Metadata Schema</span>
+          <span class="component"><span class="dot"></span>Lifecycle Hooks</span>
+          <span class="component"><span class="dot"></span>Capability Gating</span>
+        </div>
+        <button class="expand-btn" onclick="toggleDetail('proto-detail')">Show details &#8595;</button>
+        <div class="detail-panel" id="proto-detail">
+          <h4>Protocol Extensions</h4>
+          <ul>
+            <li>x-swarm-contract-id &mdash; links each sandbox to its governing contract</li>
+            <li>x-swarm-agent-type &mdash; cooperative | adversarial | self-modifying | static</li>
+            <li>x-swarm-provenance &mdash; Byline attribution chain for all actions</li>
+            <li>Pre-create hook validates agent against contract before sandbox allocation</li>
+            <li>Post-action hook checks safety invariants after each command execution</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flow-connector"><span class="arrow">&#9660; enriched lifecycle calls</span></div>
+
+      <!-- Layer 4: Sandbox Runtime -->
+      <div class="arch-layer layer-sandbox" id="layer-sandbox">
+        <div class="layer-header">
+          <span class="layer-name">04 &mdash; OpenSandbox Runtime Layer</span>
+          <span class="layer-tag">OpenSandbox</span>
+        </div>
+        <p class="layer-desc">
+          Each agent runs inside an isolated OpenSandbox instance. The sandbox server manages container lifecycle via Docker,
+          with execd handling command execution and file operations inside each container. Capability boundaries are
+          enforced through container configuration.
+        </p>
+        <div class="layer-components">
+          <span class="component"><span class="dot"></span>Sandbox Server</span>
+          <span class="component"><span class="dot"></span>execd (Go)</span>
+          <span class="component"><span class="dot"></span>Code Interpreter</span>
+          <span class="component"><span class="dot"></span>File Operations</span>
+          <span class="component"><span class="dot"></span>Network Isolation</span>
+        </div>
+        <button class="expand-btn" onclick="toggleDetail('sandbox-detail')">Show details &#8595;</button>
+        <div class="detail-panel" id="sandbox-detail">
+          <h4>Per-Agent Sandbox Configuration</h4>
+          <ul>
+            <li>Each agent gets a dedicated container &mdash; no shared state between agents</li>
+            <li>Network egress controlled per contract tier (full / allowlist / none)</li>
+            <li>File system mounts restricted to contract-permitted paths</li>
+            <li>Code execution languages limited by capability manifest</li>
+            <li>Resource limits (CPU, memory, disk) set per agent type</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="flow-connector"><span class="arrow">&#9660; container orchestration</span></div>
+
+      <!-- Layer 5: Infrastructure -->
+      <div class="arch-layer layer-infra" id="layer-infra">
+        <div class="layer-header">
+          <span class="layer-name">05 &mdash; Infrastructure Layer</span>
+          <span class="layer-tag">Runtime</span>
+        </div>
+        <p class="layer-desc">
+          Docker containers (local) or Kubernetes pods (production scale) provide the actual isolation boundary.
+          Each sandbox is an ephemeral container that can be snapshotted, replayed, or terminated by the orchestration layer.
+        </p>
+        <div class="layer-components">
+          <span class="component"><span class="dot"></span>Docker Runtime</span>
+          <span class="component"><span class="dot"></span>K8s Runtime (roadmap)</span>
+          <span class="component"><span class="dot"></span>Snapshot / Replay</span>
+          <span class="component"><span class="dot"></span>Resource Quotas</span>
+        </div>
+      </div>
+
+      <div class="flow-connector"><span class="arrow">&#9650; telemetry flows up</span></div>
+
+      <!-- Layer 6: Observability -->
+      <div class="arch-layer layer-observe" id="layer-observe">
+        <div class="layer-header">
+          <span class="layer-name">06 &mdash; Observability &amp; Measurement Layer</span>
+          <span class="layer-tag">Cross-cutting</span>
+        </div>
+        <p class="layer-desc">
+          Spans all layers. Collects execution logs, governance events, message traces, and agent behavioral metrics.
+          Feeds data into safety analysis pipelines for measuring sorting effects, detecting emergent risks,
+          and validating constitutional AI adaptations.
+        </p>
+        <div class="layer-components">
+          <span class="component"><span class="dot"></span>Execution Logs</span>
+          <span class="component"><span class="dot"></span>Governance Events</span>
+          <span class="component"><span class="dot"></span>Byline Audit Trail</span>
+          <span class="component"><span class="dot"></span>Sorting Metrics</span>
+          <span class="component"><span class="dot"></span>Emergent Risk Detector</span>
+        </div>
+      </div>
+
+    </div>
+
+  </section>
+
+  <!-- Data Flow -->
+
+  <section class="flow-section">
+    <div class="section-label">Agent Lifecycle &mdash; Runtime Flow</div>
+
+    <div class="flow-grid">
+      <div class="flow-card">
+        <div class="flow-card-number">01</div>
+        <h3>Contract Publishing</h3>
+        <p>Governance layer publishes a contract specifying what agents in this experiment can do &mdash; permitted languages, network access, interaction patterns, safety boundaries.</p>
+        <div class="code-snippet"><span class="fn">contract</span> = GovernanceContract(
+  <span class="str">tier</span>=<span class="str">"restricted"</span>,
+  <span class="str">capabilities</span>=[<span class="str">"python"</span>, <span class="str">"file_read"</span>],
+  <span class="str">network</span>=<span class="str">"deny_all"</span>,
+  <span class="str">interaction</span>=<span class="str">"message_bus_only"</span>
+)</div>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-card-number">02</div>
+        <h3>Agent Screening</h3>
+        <p>Agents declare capabilities and intent. The screening protocol evaluates each agent against available contracts and assigns them to compatible tiers &mdash; measuring self-sorting behavior.</p>
+        <div class="code-snippet"><span class="fn">assignment</span> = screener.<span class="fn">evaluate</span>(
+  <span class="str">agent</span>=agent_manifest,
+  <span class="str">contracts</span>=available_contracts
+)
+<span class="cm"># &rarr; {tier: "restricted", sandbox_config: {&hellip;}}</span></div>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-card-number">03</div>
+        <h3>Sandbox Allocation</h3>
+        <p>Orchestration layer calls OpenSandbox API to create an isolated container for the agent, configured according to its assigned contract tier.</p>
+        <div class="code-snippet">sandbox = <span class="kw">await</span> Sandbox.<span class="fn">create</span>(
+  <span class="str">image</span>=<span class="str">"opensandbox/code-interpreter"</span>,
+  <span class="str">env</span>={
+    <span class="str">"SWARM_CONTRACT"</span>: assignment.contract_id,
+    <span class="str">"SWARM_AGENT_TYPE"</span>: <span class="str">"cooperative"</span>,
+  },
+  <span class="str">timeout</span>=timedelta(<span class="str">minutes</span>=30)
+)</div>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-card-number">04</div>
+        <h3>Monitored Execution</h3>
+        <p>Agent runs inside its sandbox. Every action is logged, attributed via Byline, and checked against contract invariants. Inter-agent communication passes through the message bus &mdash; never direct.</p>
+        <div class="code-snippet"><span class="cm"># Agent A sends message to Agent B</span>
+<span class="kw">await</span> bus.<span class="fn">send</span>(
+  <span class="str">from_sandbox</span>=sandbox_a.id,
+  <span class="str">to_sandbox</span>=sandbox_b.id,
+  <span class="str">payload</span>=message,
+  <span class="str">provenance</span>=byline.<span class="fn">sign</span>(sandbox_a)
+)
+<span class="cm"># &rarr; validated against interaction protocol</span></div>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-card-number">05</div>
+        <h3>Governance Intervention</h3>
+        <p>If the observability layer detects a contract violation or emergent risk pattern, the orchestration layer can isolate the agent's sandbox, restrict capabilities, or terminate it &mdash; all logged with provenance.</p>
+        <div class="code-snippet"><span class="kw">if</span> risk_detector.<span class="fn">alert</span>(sandbox):
+  <span class="kw">await</span> orchestrator.<span class="fn">isolate</span>(
+    sandbox,
+    <span class="str">reason</span>=<span class="str">"contract_violation"</span>,
+    <span class="str">action</span>=<span class="str">"restrict_network"</span>
+  )</div>
+      </div>
+
+      <div class="flow-card">
+        <div class="flow-card-number">06</div>
+        <h3>Measurement &amp; Analysis</h3>
+        <p>Post-experiment, analyze sorting effects: which agent types gravitated to which contracts, how governance interventions affected behavior, and whether constitutional adaptations held under pressure.</p>
+        <div class="code-snippet">metrics = analyzer.<span class="fn">compute</span>(
+  <span class="str">experiment_id</span>=exp.id,
+  <span class="str">measures</span>=[
+    <span class="str">"sorting_coefficient"</span>,
+    <span class="str">"intervention_rate"</span>,
+    <span class="str">"constitutional_adherence"</span>,
+    <span class="str">"emergent_risk_frequency"</span>
+  ]
+)</div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Design Insights -->
+
+  <section class="insight-section">
+    <div class="section-label">Key Design Decisions</div>
+
+    <div class="insight-grid">
+      <div class="insight-card">
+        <h3>
+          <span class="insight-icon" style="background: var(--accent-cyan-dim); color: var(--accent-cyan);">&#9670;</span>
+          No Direct Agent Communication
+        </h3>
+        <p>
+          All inter-agent messages route through the orchestration layer's message bus. This creates a natural chokepoint for
+          enforcing interaction protocols, logging provenance, and preventing covert channels between agents.
+        </p>
+      </div>
+
+      <div class="insight-card">
+        <h3>
+          <span class="insight-icon" style="background: var(--accent-violet-dim); color: var(--accent-violet);">&#9670;</span>
+          Contracts Map to Container Config
+        </h3>
+        <p>
+          Governance contracts aren't just policy documents &mdash; they compile down to concrete Docker configurations.
+          Network rules, resource limits, mounted volumes, and available executables are all derived from the contract tier.
+        </p>
+      </div>
+
+      <div class="insight-card">
+        <h3>
+          <span class="insight-icon" style="background: var(--accent-orange-dim); color: var(--accent-orange);">&#9670;</span>
+          Byline as Universal Audit Trail
+        </h3>
+        <p>
+          Every action &mdash; code execution, file write, message sent, governance intervention &mdash; carries a Byline provenance signature.
+          This creates a complete, attributable history of multi-agent interactions for post-hoc safety analysis.
+        </p>
+      </div>
+
+      <div class="insight-card">
+        <h3>
+          <span class="insight-icon" style="background: var(--accent-green-dim); color: var(--accent-green);">&#9670;</span>
+          Snapshot &amp; Replay for Reproducibility
+        </h3>
+        <p>
+          OpenSandbox containers can be snapshotted at any point. Combined with message bus logs, this enables deterministic
+          replay of multi-agent scenarios &mdash; critical for studying emergent behaviors and validating safety claims.
+        </p>
+      </div>
+    </div>
+
+  </section>
+
+  <footer class="arch-footer">
+    <span>SWARM &times; OpenSandbox Architecture v0.1</span>
+    <span>Multi-Agent Safety Research</span>
+  </footer>
+
+</div>
+
+<script>
+  function toggleDetail(id) {
+    var panel = document.getElementById(id);
+    var btn = panel.previousElementSibling;
+    if (panel.classList.contains('open')) {
+      panel.classList.remove('open');
+      btn.textContent = 'Show details \u2193';
+    } else {
+      panel.classList.add('open');
+      btn.textContent = 'Hide details \u2191';
+    }
+  }
+</script>
+
+</body>
+</html>
