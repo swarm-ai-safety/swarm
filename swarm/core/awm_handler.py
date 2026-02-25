@@ -101,16 +101,14 @@ class AWMHandler(Handler):
     def _run_async(self, coro: Any) -> Any:
         """Run an async coroutine from synchronous handler methods."""
         try:
-            loop = asyncio.get_running_loop()
-        except RuntimeError:
-            loop = None
-
-        if loop is not None and loop.is_running():
-            # We're inside an existing event loop — create a new one in a thread
+            asyncio.get_running_loop()
+            # Already inside a running event loop — run in a dedicated thread
             import concurrent.futures
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
                 return pool.submit(asyncio.run, coro).result()
-        return asyncio.run(coro)
+        except RuntimeError:
+            # No running event loop — asyncio.run() is safe
+            return asyncio.run(coro)
 
     def _ensure_server(self, agent_id: str) -> Optional[str]:
         """Ensure a live AWM server is running for the agent.
