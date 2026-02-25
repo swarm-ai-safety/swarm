@@ -10,6 +10,19 @@
     ]
   },
   "hooks": {
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash scripts/anchored-prime.sh",
+            "timeout": 10,
+            "statusMessage": "Building anchored context summary"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Write",
