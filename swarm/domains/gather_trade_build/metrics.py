@@ -241,6 +241,8 @@ def compute_gtb_metrics(
         collusion_events_detected=len(collusion_events),
         collusion_suspicion_mean=mean_suspicion,
         exploit_frequency=exploit_freq,
-        governance_backfire_events=0,  # TODO: track false-positive audits
+        governance_backfire_events=len(
+            [e for e in events if e.event_type == "audit_false_positive"]
+        ),
         variance_amplification=variance_amp,
     )

@@ -777,6 +777,26 @@ class GTBEnvironment:
                     details={"discrepancy": discrepancy},
                 ))
 
+        # False-positive pass: audit honest agents flagged by collusion boost.
+        # These agents have no actual discrepancy, so they can never be "caught",
+        # but selecting them for audit is itself a governance backfire.
+        for agent_id, worker in self._workers.items():
+            discrepancy = worker.gross_income_this_epoch - worker.reported_income_this_epoch
+            if discrepancy >= 1e-9:
+                continue  # Already handled in the misreporter pass above
+            collusion_boost = self._collusion_audit_boost.get(agent_id, 0.0)
+            if collusion_boost <= 0:
+                continue  # Not flagged; skip
+            fp_audit_prob = min(1.0, collusion_boost * cfg.audit_probability)
+            worker.times_audited += 1
+            if self._rng.random() < fp_audit_prob:
+                events.append(GTBEvent(
+                    event_type="audit_false_positive",
+                    epoch=self._current_epoch,
+                    agent_id=agent_id,
+                    details={"collusion_boost": collusion_boost},
+                ))
+
         return events
 
     # ------------------------------------------------------------------
