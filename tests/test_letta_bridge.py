@@ -6,10 +6,13 @@ All mocked - no real Letta server needed.
 """
 
 import json
+from contextlib import contextmanager
+from unittest.mock import MagicMock
 
 import pytest
 
 from swarm.agents.base import ActionType, Observation
+from swarm.bridges.letta.client import LettaSwarmClient
 from swarm.bridges.letta.config import LettaConfig
 from swarm.bridges.letta.memory_mapper import LettaMemoryMapper
 from swarm.bridges.letta.response_parser import LettaResponseParser
@@ -215,3 +218,175 @@ class TestLettaResponseParser:
         action = self.parser.parse(response, "agent_1", self.obs)
         assert action.action_type == ActionType.VOTE
         assert action.vote_direction == 1  # Default to upvote
+
+
+# ---- Ollama streaming compatibility tests ----
+
+
+class TestLettaClientStreamingCompat:
+    """Tests for _is_ollama_model, _should_stream, and send_message routing."""
+
+    def _make_client(self, **kwargs) -> LettaSwarmClient:
+        return LettaSwarmClient(LettaConfig(**kwargs))
+
+    # --- _is_ollama_model ---
+
+    def test_is_ollama_model_ollama_prefix(self):
+        assert LettaSwarmClient._is_ollama_model("ollama/llama3") is True
+
+    def test_is_ollama_model_ollama_prefix_uppercase(self):
+        assert LettaSwarmClient._is_ollama_model("Ollama/Mistral") is True
+
+    def test_is_ollama_model_cloud_model(self):
+        assert LettaSwarmClient._is_ollama_model("anthropic/claude-sonnet-4-20250514") is False
+
+    def test_is_ollama_model_openai(self):
+        assert LettaSwarmClient._is_ollama_model("openai/gpt-4o") is False
+
+    # --- _should_stream (auto-detect) ---
+
+    def test_should_stream_auto_cloud_model(self):
+        client = self._make_client()  # default model is Anthropic
+        assert client._should_stream() is True
+
+    def test_should_stream_auto_ollama_model(self):
+        client = self._make_client(default_model="ollama/llama3")
+        assert client._should_stream() is False
+
+    def test_should_stream_auto_explicit_ollama_override(self):
+        client = self._make_client()  # default model is Anthropic
+        # Override via model arg
+        assert client._should_stream(model="ollama/llama3") is False
+
+    def test_should_stream_config_override_true(self):
+        client = self._make_client(
+            default_model="ollama/llama3", stream_tokens=True
+        )
+        assert client._should_stream() is True
+
+    def test_should_stream_config_override_false(self):
+        client = self._make_client(
+            default_model="anthropic/claude-sonnet-4-20250514",
+            stream_tokens=False,
+        )
+        assert client._should_stream() is False
+
+    # --- _extract_texts_from_messages ---
+
+    def test_extract_texts_assistant_message(self):
+        msg = MagicMock()
+        msg.assistant_message = "Hello from Letta"
+        msg.content = None
+        texts = LettaSwarmClient._extract_texts_from_messages([msg])
+        assert texts == ["Hello from Letta"]
+
+    def test_extract_texts_content_field(self):
+        msg = MagicMock(spec=[])
+        msg.content = "Some content"
+        texts = LettaSwarmClient._extract_texts_from_messages([msg])
+        assert texts == ["Some content"]
+
+    def test_extract_texts_skips_empty(self):
+        msg = MagicMock(spec=[])
+        # No assistant_message, no content attributes
+        texts = LettaSwarmClient._extract_texts_from_messages([msg])
+        assert texts == []
+
+    # --- send_message routing (sync path for Ollama) ---
+
+    def _make_client_with_mock_sdk(self, model: str, stream_tokens=None):
+        kwargs: dict = {"default_model": model}
+        if stream_tokens is not None:
+            kwargs["stream_tokens"] = stream_tokens
+        client = self._make_client(**kwargs)
+
+        # Inject a fake Letta SDK client
+        sdk = MagicMock()
+        client._client = sdk
+        client._initialized = True
+        return client, sdk
+
+    def test_send_message_uses_sync_for_ollama(self):
+        client, sdk = self._make_client_with_mock_sdk("ollama/llama3")
+
+        # Set up non-streaming response
+        msg = MagicMock()
+        msg.assistant_message = "Ollama reply"
+        msg.content = None
+        sdk.agents.messages.create.return_value = MagicMock(messages=[msg])
+
+        result = client.send_message("agent-123", "hello")
+
+        sdk.agents.messages.create.assert_called_once()
+        sdk.agents.messages.create_stream.assert_not_called()
+        assert result == "Ollama reply"
+
+    def test_send_message_uses_stream_for_cloud(self):
+        client, sdk = self._make_client_with_mock_sdk(
+            "anthropic/claude-sonnet-4-20250514"
+        )
+
+        # Set up streaming events
+        event = MagicMock()
+        event.assistant_message = "Cloud reply"
+        event.content = None
+
+        @contextmanager
+        def fake_stream(*args, **kwargs):
+            yield [event]
+
+        sdk.agents.messages.create_stream = fake_stream
+
+        result = client.send_message("agent-456", "hello")
+
+        sdk.agents.messages.create.assert_not_called()
+        assert result == "Cloud reply"
+
+    def test_send_message_stream_tokens_false_forces_sync(self):
+        client, sdk = self._make_client_with_mock_sdk(
+            "anthropic/claude-sonnet-4-20250514", stream_tokens=False
+        )
+
+        msg = MagicMock()
+        msg.assistant_message = "Forced sync reply"
+        msg.content = None
+        sdk.agents.messages.create.return_value = MagicMock(messages=[msg])
+
+        result = client.send_message("agent-789", "hello")
+
+        sdk.agents.messages.create.assert_called_once()
+        assert result == "Forced sync reply"
+
+    def test_send_message_stream_tokens_true_forces_stream_for_ollama(self):
+        client, sdk = self._make_client_with_mock_sdk(
+            "ollama/llama3", stream_tokens=True
+        )
+
+        event = MagicMock()
+        event.assistant_message = "Forced stream reply"
+        event.content = None
+
+        @contextmanager
+        def fake_stream(*args, **kwargs):
+            yield [event]
+
+        sdk.agents.messages.create_stream = fake_stream
+
+        result = client.send_message("agent-000", "hello")
+
+        sdk.agents.messages.create.assert_not_called()
+        assert result == "Forced stream reply"
+
+    # --- LettaConfig new fields ---
+
+    def test_config_default_ollama_base_url(self):
+        config = LettaConfig()
+        assert config.ollama_base_url == "http://localhost:11434"
+
+    def test_config_stream_tokens_defaults_to_none(self):
+        config = LettaConfig()
+        assert config.stream_tokens is None
+
+    def test_config_custom_ollama_base_url(self):
+        config = LettaConfig(ollama_base_url="http://myhost:11434")
+        assert config.ollama_base_url == "http://myhost:11434"

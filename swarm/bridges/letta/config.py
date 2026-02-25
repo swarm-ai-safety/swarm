@@ -44,3 +44,11 @@ class LettaConfig(BaseModel):
 
     # Timeout for send_message calls
     message_timeout: float = 30.0
+
+    # Ollama local stack settings
+    ollama_base_url: str = "http://localhost:11434"
+
+    # Streaming token control.
+    # None = auto (streaming enabled for cloud models, disabled for Ollama).
+    # True = always stream.  False = never stream.
+    stream_tokens: Optional[bool] = None
