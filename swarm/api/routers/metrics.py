@@ -34,13 +34,23 @@ def _build_soft_metrics(results: dict[str, Any]) -> dict[str, Any]:
     from swarm.models.interaction import SoftInteraction
 
     interactions: list[SoftInteraction] = []
+    skipped_reasons: list[str] = []
     for entry in interactions_data:
         if not isinstance(entry, dict):
+            skipped_reasons.append(f"not a dict (got {type(entry).__name__})")
             continue
         try:
             interactions.append(SoftInteraction(**entry))
-        except Exception:
-            continue  # skip malformed entries
+        except Exception as exc:
+            skipped_reasons.append(str(exc))
+
+    if skipped_reasons:
+        logger.warning(
+            "Skipped %d malformed interaction entries out of %d total. Reasons: %s",
+            len(skipped_reasons),
+            len(interactions_data),
+            skipped_reasons,
+        )
 
     if not interactions:
         return {}
