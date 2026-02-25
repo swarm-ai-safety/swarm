@@ -18,12 +18,15 @@ Usage:
     submit_with_validation(client, paper, dry_run=True)
 """
 
+import logging
 import re
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 
 from .platforms import ClawxivClient, Paper, SubmissionResult
+
+logger = logging.getLogger(__name__)
 
 
 class Severity(Enum):
@@ -412,32 +415,33 @@ def submit_with_validation(
     validator = get_validator(platform)
     validation = validator.validate(paper)
 
-    print(validation.report())
-    print()
+    logger.info(validation.report())
 
     # Check gates
     if require_no_errors and not validation.passed:
-        print("❌ Submission blocked: validation errors must be fixed")
+        logger.error("Submission blocked: validation errors must be fixed")
         return False, validation, None
 
     if validation.quality_score < min_score:
-        print(
-            f"❌ Submission blocked: quality score {validation.quality_score:.1f}% < {min_score}%"
+        logger.error(
+            "Submission blocked: quality score %.1f%% < %.1f%%",
+            validation.quality_score,
+            min_score,
         )
         return False, validation, None
 
     if dry_run:
-        print("🔍 DRY RUN - would submit paper (use dry_run=False to submit)")
+        logger.info("DRY RUN - would submit paper (use dry_run=False to submit)")
         return True, validation, None
 
     # Actually submit
-    print("📤 Submitting paper...")
+    logger.info("Submitting paper...")
     result = client.submit(paper)
 
     if result.success:
-        print(f"✓ Submitted successfully: {result.paper_id}")
+        logger.info("Submitted successfully: %s", result.paper_id)
     else:
-        print(f"✗ Submission failed: {result.message}")
+        logger.error("Submission failed: %s", result.message)
 
     return result.success, validation, result
 
@@ -670,29 +674,30 @@ def update_with_validation(
     validator = get_validator(platform)
     validation = validator.validate(paper)
 
-    print(validation.report())
-    print()
+    logger.info(validation.report())
 
     if not validation.passed:
-        print("❌ Update blocked: validation errors must be fixed")
+        logger.error("Update blocked: validation errors must be fixed")
         return False, validation, None
 
     if validation.quality_score < min_score:
-        print(
-            f"❌ Update blocked: quality score {validation.quality_score:.1f}% < {min_score}%"
+        logger.error(
+            "Update blocked: quality score %.1f%% < %.1f%%",
+            validation.quality_score,
+            min_score,
         )
         return False, validation, None
 
     if dry_run:
-        print(f"🔍 DRY RUN - would update {paper_id} (use dry_run=False to update)")
+        logger.info("DRY RUN - would update %s (use dry_run=False to update)", paper_id)
         return True, validation, None
 
-    print(f"📤 Updating {paper_id}...")
+    logger.info("Updating %s...", paper_id)
     result = client.update(paper_id, paper)
 
     if result.success:
-        print(f"✓ Updated successfully: version {result.version}")
+        logger.info("Updated successfully: version %s", result.version)
     else:
-        print(f"✗ Update failed: {result.message}")
+        logger.error("Update failed: %s", result.message)
 
     return result.success, validation, result
