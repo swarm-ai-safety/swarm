@@ -299,7 +299,8 @@ export class LiveEngine {
     }
     const idx = this.nextAgentIdx++;
     const nameIdx = idx % profile.names.length;
-    const suffix = `-${Math.floor(idx / profile.names.length) + 1}`;
+    const cycle = Math.floor(idx / profile.names.length);
+    const suffix = cycle === 0 ? "" : `-${cycle + 1}`;
 
     const agent: SimAgentState = {
       id: `agent-${idx}`,
