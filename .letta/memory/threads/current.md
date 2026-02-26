@@ -1,32 +1,33 @@
 ---
 description: "Active research thread — current hypothesis and next steps"
-updated: 2026-02-22
+updated: 2026-02-25
 ---
 
 # Active Thread
 
 ## Current hypothesis
 
-Reputation-mediated systems can sustain cooperation in dominant-defect games without governance — but are fragile to early-epoch matchup sequences and may not resist adaptive adversaries.
+Externality internalization (rho) requires an adaptive behavioral response to improve safety outcomes — without it, rho is a pure welfare tax. The governance sweet spot (rho ∈ [0.3, 0.7]) may shift depending on game structure and agent adaptivity.
 
 ## What we're testing
 
-Integrated gamescape evolutionary game engine into the swarm orchestrator. 10 agents (4 cooperators, 3 defectors, 3 TFT) play iterated Prisoner's Dilemma with payoffs flowing through the soft-label pipeline. Ran 5 seeds (42, 123, 314, 777, 999).
+Used the Mesa bridge (protocol mode) to sweep rho_a from 0.0 to 1.0 across static and adaptive acceptance regimes on a 30-agent heterogeneous population (15 cooperative, 10 selfish, 5 exploitative). 110 runs total (11 rho values × 2 regimes × 5 seeds).
 
 ## Last session summary
 
-- Built `EvolutionaryGameHandler` integrating gamescape's `PayoffMatrix` into the swarm orchestrator
-- Ran 5 seeds of the evo game prisoners scenario
-- Found: toxicity (~0.30) and acceptance rate (~89%) are robust across seeds; welfare trajectory shape is fragile (CV=31%)
-- TFT agents accumulate 3-5x reputation — selection pressure through soft-label pipeline
-- 3/5 seeds show early-epoch acceptance crashes (33-40%) that self-correct by epoch 5
-- Updated blog post with 5-seed comparison table and new sections (welfare regimes, early-epoch fragility)
+- Created `examples/mesa_governance_study.py` — full sweep study using Mesa bridge
+- Found: static regime shows rho as pure tax (toxicity flat, welfare drops linearly); adaptive regime shows 34% toxicity reduction at rho=1.0 with welfare collapse
+- Statistical significance: toxicity effect reaches p<0.01 at rho≥0.3; welfare cost only significant at rho≥0.8
+- Governance efficiency is U-shaped with peaks at low rho and archetype boundary crossing (~0.85)
+- Generated 11 plots (grouped bars, box plots, heatmap, tradeoff frontier, effect sizes with 95% CI)
+- Updated `/ship` Phase 4a to always auto-fix safe ruff issues before commit (retro finding)
+- Pushed run artifacts to swarm-artifacts
 
 ## Next experiment
 
-1. Add governance levers (tax, circuit breaker, audits) to `evo_game_prisoners.yaml` and compare welfare/toxicity against the ungoverned baseline
-2. Introduce adaptive adversaries (threshold dancers) to test whether reputation-mediated cooperation is robust
-3. Try different payoff matrices (Stag Hunt, Hawk-Dove) to see if the welfare trajectory patterns generalize
+1. Add adaptive agents who improve task_progress in response to rejection — test if this overcomes welfare collapse at high rho
+2. Try Stag Hunt and Hawk-Dove payoff matrices via Mesa bridge to test governance sweet spot generalization
+3. Connect Mesa bridge to a real Mesa model (Schelling segregation or Sugarscape) for non-synthetic validation
 
 ## Blockers
 
