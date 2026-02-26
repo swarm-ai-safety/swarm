@@ -97,6 +97,10 @@ class OpenSandboxEvent:
         if raw_ts is not None:
             try:
                 ts = datetime.fromisoformat(str(raw_ts))
+                # Normalize naive timestamps to UTC to avoid mixing with
+                # timezone-aware datetimes from _utcnow().
+                if ts.tzinfo is None:
+                    ts = ts.replace(tzinfo=timezone.utc)
             except (ValueError, TypeError):
                 ts = _utcnow()
         else:

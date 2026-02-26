@@ -8,7 +8,7 @@ import posixpath
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
 # Characters that must not appear in capability names.
 _UNSAFE_CAP_RE = re.compile(r"[,\s/\\]")

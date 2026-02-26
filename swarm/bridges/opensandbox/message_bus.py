@@ -231,6 +231,15 @@ class MessageBus:
                 )
                 self._history.append(msg)
                 self._truncate_history_locked()
+                self._record_event_locked(
+                    OpenSandboxEventType.MESSAGE_BLOCKED,
+                    from_agent,
+                    sandbox_id=from_sandbox,
+                    payload={
+                        "reason": msg.block_reason,
+                        "to_sandbox": to_sandbox,
+                    },
+                )
                 return msg
 
             if len(mailbox) >= self._max_pending:
@@ -238,6 +247,15 @@ class MessageBus:
                 msg.block_reason = "Mailbox full"
                 self._history.append(msg)
                 self._truncate_history_locked()
+                self._record_event_locked(
+                    OpenSandboxEventType.MESSAGE_BLOCKED,
+                    from_agent,
+                    sandbox_id=from_sandbox,
+                    payload={
+                        "reason": msg.block_reason,
+                        "to_sandbox": to_sandbox,
+                    },
+                )
                 return msg
 
             msg.delivered = True
@@ -386,11 +404,21 @@ class MessageBus:
         payload: Optional[Dict] = None,
     ) -> None:
         with self._lock:
-            self._events.append(
-                OpenSandboxEvent(
-                    event_type=event_type,
-                    agent_id=agent_id,
-                    sandbox_id=sandbox_id,
-                    payload=payload or {},
-                )
+            self._record_event_locked(event_type, agent_id, sandbox_id, payload)
+
+    def _record_event_locked(
+        self,
+        event_type: OpenSandboxEventType,
+        agent_id: str,
+        sandbox_id: Optional[str] = None,
+        payload: Optional[Dict] = None,
+    ) -> None:
+        """Append event — caller must already hold ``_lock``."""
+        self._events.append(
+            OpenSandboxEvent(
+                event_type=event_type,
+                agent_id=agent_id,
+                sandbox_id=sandbox_id,
+                payload=payload or {},
             )
+        )

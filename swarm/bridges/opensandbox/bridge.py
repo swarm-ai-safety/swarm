@@ -463,6 +463,16 @@ class OpenSandboxBridge:
         from_agent = from_info.get("agent_id", "")
         to_agent = to_info.get("agent_id", "")
 
+        # Validate both sandboxes map to known agents before proceeding
+        if not from_agent:
+            raise ValueError(
+                f"Source sandbox {from_sandbox} is not registered"
+            )
+        if not to_agent:
+            raise ValueError(
+                f"Destination sandbox {to_sandbox} is not registered"
+            )
+
         # Sign provenance
         prov_id = self._provenance.sign(
             sandbox_id=from_sandbox,
@@ -551,7 +561,7 @@ class OpenSandboxBridge:
 
         self._observer.record_intervention(agent_id)
 
-        prov_id = self._provenance.sign(
+        self._provenance.sign(
             sandbox_id=sandbox_id,
             agent_id=agent_id,
             action_type="governance",

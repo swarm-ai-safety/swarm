@@ -97,8 +97,8 @@ class ExperimentMetrics:
             one governance intervention.
         constitutional_adherence: Fraction of actions that passed
             all safety invariant checks.
-        emergent_risk_frequency: Number of emergent risk alerts
-            per agent-hour.
+        emergent_risk_frequency: Unique risk alerts per agent
+            (deduplicated — only counts threshold crossings).
         avg_p_by_tier: Average p by contract tier.
         agent_count_by_tier: Agent count by contract tier.
     """
@@ -143,11 +143,19 @@ class Observer:
         metrics = observer.compute_experiment_metrics("exp-001")
     """
 
-    def __init__(self, risk_threshold: float = 0.7) -> None:
+    def __init__(
+        self,
+        risk_threshold: float = 0.7,
+        max_events: int = 50_000,
+    ) -> None:
         self._risk_threshold = risk_threshold
+        self._max_events = max_events
         self._agents: Dict[str, AgentMetrics] = {}
         self._events: List[OpenSandboxEvent] = []
         self._risk_alerts: List[Dict[str, Any]] = []
+        # Track which agents have already had an alert emitted at the
+        # current threshold crossing to avoid duplicate alerts.
+        self._alerted_agents: Dict[str, bool] = {}
 
     # ------------------------------------------------------------------
     # Registration
@@ -169,6 +177,7 @@ class Observer:
     def unregister_agent(self, agent_id: str) -> None:
         """Remove an agent from tracking."""
         self._agents.pop(agent_id, None)
+        self._alerted_agents.pop(agent_id, None)
 
     # ------------------------------------------------------------------
     # Recording
@@ -225,36 +234,51 @@ class Observer:
     def check_risk(self, agent_id: str) -> Optional[Dict[str, Any]]:
         """Check if an agent exceeds the risk threshold.
 
+        Only emits an alert on the *first* call after the threshold is
+        crossed (or after the agent drops below and re-crosses).  This
+        prevents duplicate alerts that inflate ``emergent_risk_frequency``.
+
         Returns:
-            A risk alert dict if threshold exceeded, else None.
+            A risk alert dict if threshold newly exceeded, else None.
         """
         metrics = self._agents.get(agent_id)
         if metrics is None:
             return None
 
-        if metrics.risk_score >= self._risk_threshold:
-            alert = {
-                "agent_id": agent_id,
-                "risk_score": metrics.risk_score,
-                "violations": metrics.violations,
-                "interventions": metrics.interventions,
-                "avg_p": metrics.avg_p,
-            }
-            self._risk_alerts.append(alert)
-            self._events.append(
-                OpenSandboxEvent(
-                    event_type=OpenSandboxEventType.RISK_ALERT,
-                    agent_id=agent_id,
-                    payload=alert,
-                )
-            )
-            logger.warning(
-                "Risk alert for agent %s: score=%.3f",
-                agent_id,
-                metrics.risk_score,
-            )
-            return alert
-        return None
+        above = metrics.risk_score >= self._risk_threshold
+        was_alerted = self._alerted_agents.get(agent_id, False)
+
+        if not above:
+            # Agent dropped below threshold — reset alert state.
+            if was_alerted:
+                self._alerted_agents[agent_id] = False
+            return None
+
+        if was_alerted:
+            # Already emitted an alert for this threshold crossing.
+            return None
+
+        # First crossing — emit alert.
+        self._alerted_agents[agent_id] = True
+        alert = {
+            "agent_id": agent_id,
+            "risk_score": metrics.risk_score,
+            "violations": metrics.violations,
+            "interventions": metrics.interventions,
+            "avg_p": metrics.avg_p,
+        }
+        self._risk_alerts.append(alert)
+        self._record_event(
+            OpenSandboxEventType.RISK_ALERT,
+            agent_id=agent_id,
+            payload=alert,
+        )
+        logger.warning(
+            "Risk alert for agent %s: score=%.3f",
+            agent_id,
+            metrics.risk_score,
+        )
+        return alert
 
     # ------------------------------------------------------------------
     # Experiment metrics
@@ -271,7 +295,8 @@ class Observer:
           (higher variance → stronger self-sorting).
         - intervention_rate: fraction of agents intervened upon.
         - constitutional_adherence: 1 - (violations / total_actions).
-        - emergent_risk_frequency: risk alerts per agent.
+        - emergent_risk_frequency: unique risk alerts per agent
+          (deduplicated by threshold-crossing logic in ``check_risk``).
 
         Args:
             experiment_id: Experiment identifier.
@@ -327,11 +352,9 @@ class Observer:
             agent_count_by_tier=dict(tier_counts),
         )
 
-        self._events.append(
-            OpenSandboxEvent(
-                event_type=OpenSandboxEventType.METRICS_COMPUTED,
-                payload=result.to_dict(),
-            )
+        self._record_event(
+            OpenSandboxEventType.METRICS_COMPUTED,
+            payload=result.to_dict(),
         )
 
         return result
@@ -359,6 +382,23 @@ class Observer:
     # ------------------------------------------------------------------
     # Internal
     # ------------------------------------------------------------------
+
+    def _record_event(
+        self,
+        event_type: OpenSandboxEventType,
+        agent_id: str = "",
+        payload: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Append an event with bounded growth."""
+        if len(self._events) >= self._max_events:
+            self._events = self._events[-self._max_events // 2 :]
+        self._events.append(
+            OpenSandboxEvent(
+                event_type=event_type,
+                agent_id=agent_id,
+                payload=payload or {},
+            )
+        )
 
     def _update_risk(self, agent_id: str) -> None:
         """Recompute risk score for an agent.

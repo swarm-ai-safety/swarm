@@ -85,6 +85,8 @@ class ScreeningProtocol:
         if best_contract is None or best_score < self._min_score:
             assignment = ContractAssignment(
                 agent_id=manifest.agent_id,
+                contract_id="",
+                tier="",
                 rejected=True,
                 rejection_reason=(
                     f"No compatible contract (best score={best_score:.3f}, "
