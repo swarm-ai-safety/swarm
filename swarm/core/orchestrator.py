@@ -1,4 +1,14 @@
-"""Orchestrator for running the multi-agent simulation."""
+"""Orchestrator for running the multi-agent simulation.
+
+The orchestrator is a thin loop that delegates to:
+- ``HandlerRegistry`` for action dispatch (plugin architecture)
+- ``MiddlewarePipeline`` for lifecycle hooks (cross-cutting concerns)
+- ``AgentScheduler`` for turn order and eligibility
+- ``InteractionFinalizer`` for payoff/reputation/state updates
+- ``ObservationBuilder`` for per-agent observation assembly
+
+Domain-specific logic lives in handler and middleware classes.
+"""
 
 import asyncio
 import logging
@@ -9,21 +19,22 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, Field
 
 from swarm.agents.base import Action, ActionType, BaseAgent, Observation
-from swarm.boundaries.external_world import ExternalEntity, ExternalWorld
-from swarm.boundaries.information_flow import FlowTracker
-from swarm.boundaries.leakage import LeakageDetector, LeakageReport
-from swarm.boundaries.policies import PolicyEngine
-from swarm.core.boundary_handler import BoundaryHandler
-from swarm.core.coding_handler import CodingHandler
-from swarm.core.core_interaction_handler import CoreInteractionHandler
-from swarm.core.feed_handler import FeedHandler
-from swarm.core.handler_registry import HandlerRegistry
+from swarm.boundaries.external_world import ExternalEntity
+from swarm.boundaries.leakage import LeakageReport
+from swarm.core.agent_scheduler import AgentScheduler
+from swarm.core.handler_factory import HandlerSet, build_handlers
 from swarm.core.interaction_finalizer import InteractionFinalizer
-from swarm.core.kernel_handler import KernelOracleConfig, KernelOracleHandler
-from swarm.core.marketplace_handler import MarketplaceHandler
-from swarm.core.memory_handler import MemoryHandler, MemoryTierConfig
-from swarm.core.moltbook_handler import MoltbookConfig, MoltbookHandler
-from swarm.core.moltipedia_handler import MoltipediaConfig, MoltipediaHandler
+from swarm.core.middleware import (
+    ContractMiddleware,
+    GovernanceMiddleware,
+    HandlerLifecycleMiddleware,
+    LettaMiddleware,
+    MemoryDecayMiddleware,
+    MiddlewareContext,
+    MiddlewarePipeline,
+    NetworkDecayMiddleware,
+    PerturbationMiddleware,
+)
 from swarm.core.observable_generator import (
     DefaultObservableGenerator,
     ObservableGenerator,
@@ -33,35 +44,21 @@ from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.core.perturbation import PerturbationConfig, PerturbationEngine
 from swarm.core.proxy import ProxyComputer, ProxyObservables
 from swarm.core.redteam_inspector import RedTeamInspector
-from swarm.core.rivals_handler import RivalsConfig, RivalsHandler
-from swarm.core.scholar_handler import ScholarConfig, ScholarHandler
 from swarm.core.spawn import SpawnConfig, SpawnTree
-from swarm.core.task_handler import TaskHandler
-from swarm.env.composite_tasks import (
-    CompositeTask,
-    CompositeTaskPool,
-)
+from swarm.env.composite_tasks import CompositeTask, CompositeTaskPool
 from swarm.env.feed import Feed
-from swarm.env.marketplace import Marketplace, MarketplaceConfig
+from swarm.env.marketplace import MarketplaceConfig
 from swarm.env.network import AgentNetwork, NetworkConfig
 from swarm.env.state import EnvState, InteractionProposal
 from swarm.env.tasks import TaskPool
-from swarm.forecaster.features import (
-    combine_feature_dicts,
-    extract_behavioral_features,
-    extract_structural_features,
-)
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.engine import GovernanceEffect, GovernanceEngine
 from swarm.logging.event_bus import EventBus
 from swarm.logging.event_log import EventLog
 from swarm.metrics.capabilities import CapabilityAnalyzer, EmergentCapabilityMetrics
 from swarm.metrics.soft_metrics import SoftMetrics
-from swarm.models.agent import AgentState, AgentType
-from swarm.models.events import (
-    Event,
-    EventType,
-)
+from swarm.models.agent import AgentState
+from swarm.models.events import Event, EventType
 from swarm.models.interaction import InteractionType, SoftInteraction
 
 logger = logging.getLogger(__name__)
@@ -98,25 +95,25 @@ class OrchestratorConfig(BaseModel):
     marketplace_config: Optional[MarketplaceConfig] = None
 
     # Moltipedia configuration
-    moltipedia_config: Optional[MoltipediaConfig] = None
+    moltipedia_config: Optional[Any] = None
 
     # Moltbook configuration
-    moltbook_config: Optional[MoltbookConfig] = None
+    moltbook_config: Optional[Any] = None
 
     # Memory tier configuration
-    memory_tier_config: Optional[MemoryTierConfig] = None
+    memory_tier_config: Optional[Any] = None
 
     # Scholar/literature synthesis configuration
-    scholar_config: Optional[ScholarConfig] = None
+    scholar_config: Optional[Any] = None
 
     # Kernel oracle configuration
-    kernel_oracle_config: Optional[KernelOracleConfig] = None
+    kernel_oracle_config: Optional[Any] = None
 
     # Spawn configuration
     spawn_config: Optional[SpawnConfig] = None
 
     # Rivals (Team-of-Rivals) configuration
-    rivals_config: Optional["RivalsConfig"] = None
+    rivals_config: Optional[Any] = None
 
     # AWM (Agent World Model) configuration
     awm_config: Optional[Any] = None
@@ -218,24 +215,17 @@ class EpochMetrics(BaseModel):
 
 
 class Orchestrator:
-    """
-    Orchestrates the multi-agent simulation.
+    """Orchestrates the multi-agent simulation.
 
-    Responsibilities:
-    - Schedule agent turns
-    - Inject observations
-    - Execute actions
-    - Enforce rate limits
-    - Compute payoffs
-    - Emit events
+    The orchestrator is a thin coordination layer.  It owns the main
+    simulation loop (epoch → step → agent-turn) and delegates all
+    domain logic to composed components:
 
-    Delegates domain-specific work to handler objects:
-    - MarketplaceHandler: bounty/bid/escrow/dispute lifecycle
-    - BoundaryHandler: external-world and leakage enforcement
-    - ObservableGenerator: signal generation from interactions
-
-    Computation engines (payoff, proxy, metrics) can be injected
-    via constructor for testability and extensibility.
+    - **Handlers** (via ``HandlerRegistry``): action dispatch
+    - **Middleware** (via ``MiddlewarePipeline``): lifecycle hooks
+    - **AgentScheduler**: turn order and eligibility
+    - **InteractionFinalizer**: payoff / reputation / state updates
+    - **ObservationBuilder**: per-agent observation assembly
     """
 
     def __init__(
@@ -249,59 +239,28 @@ class Orchestrator:
         observable_generator: Optional[ObservableGenerator] = None,
         governance_engine: Optional[GovernanceEngine] = None,
     ):
-        """
-        Initialize orchestrator.
-
-        Args:
-            config: Orchestrator configuration
-            state: Initial environment state (optional)
-            payoff_engine: Custom payoff engine (default: built from config)
-            proxy_computer: Custom proxy computer (default: ProxyComputer())
-            metrics_calculator: Custom metrics calculator (default: SoftMetrics)
-            observable_generator: Custom observable generator (default:
-                DefaultObservableGenerator)
-            governance_engine: Custom governance engine (default: built from
-                config.governance_config if provided)
-        """
         self.config = OrchestratorConfig() if config is None else config
         if not 0.0 <= self.config.observation_noise_probability <= 1.0:
             raise ValueError("observation_noise_probability must be in [0, 1]")
         if self.config.observation_noise_std < 0.0:
             raise ValueError("observation_noise_std must be >= 0")
 
-        # Set random seed
+        # Random seed
         if self.config.seed is not None:
             random.seed(self.config.seed)
         self._rng = random.Random(self.config.seed)
 
-        # Environment components
+        # ---------------------------------------------------------------
+        # Core state
+        # ---------------------------------------------------------------
         self.state = state or EnvState(steps_per_epoch=self.config.steps_per_epoch)
         self.feed = Feed()
         self.task_pool = TaskPool()
-
-        # Composite task support
-        if self.config.enable_composite_tasks:
-            self.composite_task_pool: Optional[CompositeTaskPool] = CompositeTaskPool()
-            self.capability_analyzer: Optional[CapabilityAnalyzer] = CapabilityAnalyzer(
-                seed=self.config.seed
-            )
-        else:
-            self.composite_task_pool = None
-            self.capability_analyzer = None
-
-        # Network topology (initialized when agents are registered)
-        if self.config.network_config is not None:
-            self.network: Optional[AgentNetwork] = AgentNetwork(
-                config=self.config.network_config,
-                seed=self.config.seed,
-            )
-        else:
-            self.network = None
-
-        # Agents
         self._agents: Dict[str, BaseAgent] = {}
 
+        # ---------------------------------------------------------------
         # Computation engines (injectable)
+        # ---------------------------------------------------------------
         self.payoff_engine = payoff_engine or SoftPayoffEngine(
             self.config.payoff_config
         )
@@ -311,7 +270,9 @@ class Orchestrator:
             observable_generator or DefaultObservableGenerator(rng=self._rng)
         )
 
-        # Governance engine (injectable)
+        # ---------------------------------------------------------------
+        # Governance engine
+        # ---------------------------------------------------------------
         if governance_engine is not None:
             self.governance_engine: Optional[GovernanceEngine] = governance_engine
         elif self.config.governance_config is not None:
@@ -322,7 +283,32 @@ class Orchestrator:
         else:
             self.governance_engine = None
 
+        # ---------------------------------------------------------------
+        # Network
+        # ---------------------------------------------------------------
+        if self.config.network_config is not None:
+            self.network: Optional[AgentNetwork] = AgentNetwork(
+                config=self.config.network_config,
+                seed=self.config.seed,
+            )
+        else:
+            self.network = None
+
+        # ---------------------------------------------------------------
+        # Composite tasks
+        # ---------------------------------------------------------------
+        if self.config.enable_composite_tasks:
+            self.composite_task_pool: Optional[CompositeTaskPool] = CompositeTaskPool()
+            self.capability_analyzer: Optional[CapabilityAnalyzer] = CapabilityAnalyzer(
+                seed=self.config.seed
+            )
+        else:
+            self.composite_task_pool = None
+            self.capability_analyzer = None
+
+        # ---------------------------------------------------------------
         # Perturbation engine
+        # ---------------------------------------------------------------
         if self.config.perturbation_config is not None:
             self._perturbation_engine: Optional[PerturbationEngine] = (
                 PerturbationEngine(
@@ -335,7 +321,9 @@ class Orchestrator:
         else:
             self._perturbation_engine = None
 
-        # Event bus (central publish-subscribe for all events)
+        # ---------------------------------------------------------------
+        # Event bus & logging
+        # ---------------------------------------------------------------
         self._event_bus = EventBus()
         self._event_bus.set_enrichment(
             seed=self.config.seed,
@@ -343,215 +331,25 @@ class Orchestrator:
             replay_k=self.config.replay_k,
         )
 
-        # Handler registry (plugin architecture)
-        self._handler_registry = HandlerRegistry()
-
-        # Marketplace handler
-        if self.config.marketplace_config is not None:
-            marketplace = Marketplace(self.config.marketplace_config)
-            self.marketplace: Optional[Marketplace] = marketplace
-            self._marketplace_handler: Optional[MarketplaceHandler] = (
-                MarketplaceHandler(
-                    marketplace=marketplace,
-                    task_pool=self.task_pool,
-                    event_bus=self._event_bus,
-                    enable_rate_limits=self.config.enable_rate_limits,
-                )
-            )
-            self._handler_registry.register(self._marketplace_handler)
-        else:
-            self.marketplace = None
-            self._marketplace_handler = None
-
-        # Moltipedia handler
-        if self.config.moltipedia_config is not None:
-            self._moltipedia_handler: Optional[MoltipediaHandler] = MoltipediaHandler(
-                config=self.config.moltipedia_config,
-                event_bus=self._event_bus,
-            )
-            self._handler_registry.register(self._moltipedia_handler)
-        else:
-            self._moltipedia_handler = None
-
-        # Moltbook handler
-        if self.config.moltbook_config is not None:
-            rate_limit_lever = None
-            challenge_lever = None
-            if self.governance_engine is not None:
-                rate_limit_lever = (
-                    self.governance_engine.get_moltbook_rate_limit_lever()
-                )
-                challenge_lever = self.governance_engine.get_moltbook_challenge_lever()
-            self._moltbook_handler: Optional[MoltbookHandler] = MoltbookHandler(
-                config=self.config.moltbook_config,
-                governance_config=self.config.governance_config,
-                rate_limit_lever=rate_limit_lever,
-                challenge_lever=challenge_lever,
-                event_bus=self._event_bus,
-            )
-            self._handler_registry.register(self._moltbook_handler)
-        else:
-            self._moltbook_handler = None
-
-        # Memory tier handler
-        if self.config.memory_tier_config is not None:
-            self._memory_handler: Optional[MemoryHandler] = MemoryHandler(
-                config=self.config.memory_tier_config,
-                event_bus=self._event_bus,
-            )
-            self._handler_registry.register(self._memory_handler)
-        else:
-            self._memory_handler = None
-
-        # Scholar handler
-        if self.config.scholar_config is not None:
-            self._scholar_handler: Optional[ScholarHandler] = ScholarHandler(
-                config=self.config.scholar_config,
-                event_bus=self._event_bus,
-            )
-            self._handler_registry.register(self._scholar_handler)
-        else:
-            self._scholar_handler = None
-
-        # Kernel oracle handler
-        if self.config.kernel_oracle_config is not None:
-            self._kernel_handler: Optional[KernelOracleHandler] = (
-                KernelOracleHandler(
-                    config=self.config.kernel_oracle_config,
-                    event_bus=self._event_bus,
-                )
-            )
-            self._handler_registry.register(self._kernel_handler)
-        else:
-            self._kernel_handler = None
-
-        # Rivals handler (Team-of-Rivals pipeline)
-        if self.config.rivals_config is not None:
-            self._rivals_handler: Optional[RivalsHandler] = RivalsHandler(
-                config=self.config.rivals_config,
-                event_bus=self._event_bus,
-            )
-            self._handler_registry.register(self._rivals_handler)
-        else:
-            self._rivals_handler = None
-
-        # AWM (Agent World Model) handler
-        if self.config.awm_config is not None:
-            from swarm.core.awm_handler import AWMHandler
-
-            self._awm_handler: Optional[Any] = AWMHandler(
-                config=self.config.awm_config,
-                event_bus=self._event_bus,
-                seed=self.config.seed,
-            )
-            self._handler_registry.register(self._awm_handler)
-        else:
-            self._awm_handler = None
-
-        # Evolutionary game (gamescape) handler
-        if self.config.evo_game_config is not None:
-            from swarm.core.evo_game_handler import (
-                EvoGameConfig,
-                EvolutionaryGameHandler,
-            )
-
-            evo_cfg = self.config.evo_game_config
-            if not isinstance(evo_cfg, EvoGameConfig):
-                evo_cfg = EvoGameConfig(**evo_cfg) if isinstance(evo_cfg, dict) else evo_cfg
-            self._evo_game_handler: Optional[EvolutionaryGameHandler] = (
-                EvolutionaryGameHandler(
-                    config=evo_cfg,
-                    event_bus=self._event_bus,
-                    rng=self._rng,
-                )
-            )
-            self._handler_registry.register(self._evo_game_handler)
-        else:
-            self._evo_game_handler = None
-
-        # Tierra (artificial life) handler
-        if self.config.tierra_config is not None:
-            from swarm.core.tierra_handler import TierraConfig, TierraHandler
-
-            tierra_cfg = self.config.tierra_config
-            if not isinstance(tierra_cfg, TierraConfig):
-                tierra_cfg = TierraConfig(**tierra_cfg) if isinstance(tierra_cfg, dict) else tierra_cfg
-            self._tierra_handler: Optional[TierraHandler] = TierraHandler(
-                config=tierra_cfg,
-                event_bus=self._event_bus,
-                rng=self._rng,
-            )
-            self._handler_registry.register(self._tierra_handler)
-        else:
-            self._tierra_handler = None
-
-        # Letta (MemGPT) lifecycle manager
-        if self.config.letta_config is not None:
-            from swarm.bridges.letta.lifecycle import LettaLifecycleManager
-
-            self._letta_lifecycle: Optional[Any] = LettaLifecycleManager(
-                self.config.letta_config,
-            )
-        else:
-            self._letta_lifecycle = None
-
-        # Boundary handler
-        if self.config.enable_boundaries:
-            external_world = ExternalWorld().create_default_world()
-            flow_tracker = FlowTracker(
-                sensitivity_threshold=self.config.boundary_sensitivity_threshold
-            )
-            policy_engine = PolicyEngine().create_default_policies()
-            leakage_detector = LeakageDetector()
-
-            self.external_world: Optional[ExternalWorld] = external_world
-            self.flow_tracker: Optional[FlowTracker] = flow_tracker
-            self.policy_engine: Optional[PolicyEngine] = policy_engine
-            self.leakage_detector: Optional[LeakageDetector] = leakage_detector
-
-            self._boundary_handler: Optional[BoundaryHandler] = BoundaryHandler(
-                external_world=external_world,
-                flow_tracker=flow_tracker,
-                policy_engine=policy_engine,
-                leakage_detector=leakage_detector,
-                event_bus=self._event_bus,
-                seed=self.config.seed,
-            )
-        else:
-            self.external_world = None
-            self.flow_tracker = None
-            self.policy_engine = None
-            self.leakage_detector = None
-            self._boundary_handler = None
-
-        # Contract market (contract screening layer)
-        if self.config.contracts_config is not None:
-            from swarm.scenarios.loader import build_contract_market
-
-            self.contract_market: Optional[Any] = (
-                build_contract_market(
-                    self.config.contracts_config,
-                    seed=self.config.seed,
-                )
-            )
-        else:
-            self.contract_market = None
-        self._last_contract_metrics: Optional[Any] = None
-
-        # Event logging
         if self.config.log_path:
             self.event_log: Optional[EventLog] = EventLog(self.config.log_path)
         else:
             self.event_log = None
 
-        # Subscribe EventLog to the bus
         if self.event_log is not None and self.config.log_events:
             self._event_bus.subscribe(self.event_log.append)
 
-        # Epoch metrics history
-        self._epoch_metrics: List[EpochMetrics] = []
+        # ---------------------------------------------------------------
+        # Callbacks
+        # ---------------------------------------------------------------
+        self._on_epoch_end: List[Callable[[EpochMetrics], None]] = []
+        self._on_interaction_complete: List[
+            Callable[[SoftInteraction, float, float], None]
+        ] = []
 
+        # ---------------------------------------------------------------
         # Adaptive governance controller
+        # ---------------------------------------------------------------
         self._adaptive_controller = None
         if (
             self.governance_engine
@@ -568,16 +366,11 @@ class Orchestrator:
                 config=self.config.governance_config,
                 seed=self.config.seed,
             )
-
-        # Callbacks
-        self._on_epoch_end: List[Callable[[EpochMetrics], None]] = []
-        if self._adaptive_controller is not None:
             self._on_epoch_end.append(self._adaptive_controller.on_epoch_end)
-        self._on_interaction_complete: List[
-            Callable[[SoftInteraction, float, float], None]
-        ] = []
 
-        # Interaction finalization (extracted component)
+        # ---------------------------------------------------------------
+        # Interaction finalizer (extracted component)
+        # ---------------------------------------------------------------
         self._finalizer = InteractionFinalizer(
             state=self.state,
             payoff_engine=self.payoff_engine,
@@ -590,34 +383,74 @@ class Orchestrator:
             event_bus=self._event_bus,
         )
 
-        # Core action handlers (extracted from _handle_core_action)
-        self._feed_handler = FeedHandler(
-            feed=self.feed,
-            max_content_length=self.config.max_content_length,
+        # ---------------------------------------------------------------
+        # Handlers (via factory)
+        # ---------------------------------------------------------------
+        self._handlers: HandlerSet = build_handlers(
+            self.config,
             event_bus=self._event_bus,
-        )
-        self._handler_registry.register(self._feed_handler)
-
-        self._core_interaction_handler = CoreInteractionHandler(
+            feed=self.feed,
+            task_pool=self.task_pool,
             finalizer=self._finalizer,
             network=self.network,
-            event_bus=self._event_bus,
-        )
-        self._handler_registry.register(self._core_interaction_handler)
-
-        self._task_handler = TaskHandler(
-            task_pool=self.task_pool,
-            event_bus=self._event_bus,
-        )
-        self._handler_registry.register(self._task_handler)
-
-        self._coding_handler = CodingHandler(
-            event_bus=self._event_bus,
+            governance_engine=self.governance_engine,
             rng=self._rng,
         )
-        self._handler_registry.register(self._coding_handler)
+        self._handler_registry = self._handlers.registry
 
-        # Spawn tree (must be initialized before observation builder)
+        # Expose named handler refs for public API compatibility
+        self.marketplace = self._handlers.marketplace
+        self._marketplace_handler = self._handlers.marketplace_handler
+        self._moltipedia_handler = self._handlers.moltipedia_handler
+        self._moltbook_handler = self._handlers.moltbook_handler
+        self._memory_handler = self._handlers.memory_handler
+        self._scholar_handler = self._handlers.scholar_handler
+        self._kernel_handler = self._handlers.kernel_handler
+        self._rivals_handler = self._handlers.rivals_handler
+        self._awm_handler = self._handlers.awm_handler
+        self._evo_game_handler = self._handlers.evo_game_handler
+        self._tierra_handler = self._handlers.tierra_handler
+        self._boundary_handler = self._handlers.boundary_handler
+        self._feed_handler = self._handlers.feed_handler
+        self._core_interaction_handler = self._handlers.core_interaction_handler
+        self._task_handler = self._handlers.task_handler
+        self._coding_handler = self._handlers.coding_handler
+
+        # Boundary sub-components for public API
+        self.external_world = self._handlers.external_world
+        self.flow_tracker = self._handlers.flow_tracker
+        self.policy_engine = self._handlers.policy_engine
+        self.leakage_detector = self._handlers.leakage_detector
+
+        # ---------------------------------------------------------------
+        # Contract market
+        # ---------------------------------------------------------------
+        if self.config.contracts_config is not None:
+            from swarm.scenarios.loader import build_contract_market
+
+            self.contract_market: Optional[Any] = build_contract_market(
+                self.config.contracts_config,
+                seed=self.config.seed,
+            )
+        else:
+            self.contract_market = None
+        self._last_contract_metrics: Optional[Any] = None
+
+        # ---------------------------------------------------------------
+        # Letta lifecycle
+        # ---------------------------------------------------------------
+        if self.config.letta_config is not None:
+            from swarm.bridges.letta.lifecycle import LettaLifecycleManager
+
+            self._letta_lifecycle: Optional[Any] = LettaLifecycleManager(
+                self.config.letta_config,
+            )
+        else:
+            self._letta_lifecycle = None
+
+        # ---------------------------------------------------------------
+        # Spawn tree
+        # ---------------------------------------------------------------
         if self.config.spawn_config is not None and self.config.spawn_config.enabled:
             self._spawn_tree: Optional[SpawnTree] = SpawnTree(self.config.spawn_config)
             self._spawn_counter: int = 0
@@ -625,7 +458,9 @@ class Orchestrator:
             self._spawn_tree = None
             self._spawn_counter = 0
 
-        # Observation building (extracted component)
+        # ---------------------------------------------------------------
+        # Observation builder
+        # ---------------------------------------------------------------
         self._obs_builder = ObservationBuilder(
             config=self.config,
             state=self.state,
@@ -637,40 +472,130 @@ class Orchestrator:
             spawn_tree=self._spawn_tree,
         )
 
-        # Red-team inspection (extracted component)
+        # ---------------------------------------------------------------
+        # Red-team inspector
+        # ---------------------------------------------------------------
         self._redteam = RedTeamInspector(self._agents, self.state)
 
-        # External agent support: action queue and observation store
-        self._external_action_queue: Optional[Any] = None  # AsyncActionQueue
-        self._external_observations: Dict[str, Dict[str, Any]] = {}  # agent_id -> obs dict
+        # ---------------------------------------------------------------
+        # Agent scheduler
+        # ---------------------------------------------------------------
+        self._scheduler = AgentScheduler(
+            schedule_mode=self.config.schedule_mode,
+            max_actions_per_step=self.config.max_actions_per_step,
+            rng=self._rng,
+        )
+
+        # ---------------------------------------------------------------
+        # Middleware pipeline (lifecycle hooks for cross-cutting concerns)
+        # ---------------------------------------------------------------
+        self._pipeline = MiddlewarePipeline()
+        self._build_pipeline()
+
+        # ---------------------------------------------------------------
+        # Epoch metrics history
+        # ---------------------------------------------------------------
+        self._epoch_metrics: List[EpochMetrics] = []
+
+        # ---------------------------------------------------------------
+        # External agent support
+        # ---------------------------------------------------------------
+        self._external_action_queue: Optional[Any] = None
+        self._external_observations: Dict[str, Dict[str, Any]] = {}
+
+    # ===================================================================
+    # Pipeline construction
+    # ===================================================================
+
+    def _build_pipeline(self) -> None:
+        """Assemble the middleware pipeline in execution order.
+
+        Order matters: governance must run before handler lifecycle hooks
+        (which may read governance state), and contract signing must happen
+        before handler epoch-start hooks.
+        """
+        # 1. Governance (adaptive updates + epoch/step effects)
+        if self.governance_engine is not None:
+            self._gov_mw: Optional[GovernanceMiddleware] = GovernanceMiddleware(
+                self.governance_engine,
+                self._adaptive_controller,
+            )
+            self._pipeline.add(self._gov_mw)
+        else:
+            self._gov_mw = None
+
+        # 2. Letta governance block update
+        if self._letta_lifecycle is not None:
+            self._letta_mw: Optional[LettaMiddleware] = LettaMiddleware(
+                self._letta_lifecycle
+            )
+            self._pipeline.add(self._letta_mw)
+        else:
+            self._letta_mw = None
+
+        # 3. Contract market signing
+        if self.contract_market is not None:
+            self._contract_mw: Optional[ContractMiddleware] = ContractMiddleware(
+                self.contract_market, self._event_bus
+            )
+            self._pipeline.add(self._contract_mw)
+        else:
+            self._contract_mw = None
+
+        # 4. Perturbation engine triggers
+        if self._perturbation_engine is not None:
+            self._perturb_mw: Optional[PerturbationMiddleware] = PerturbationMiddleware(
+                self._perturbation_engine
+            )
+            self._pipeline.add(self._perturb_mw)
+        else:
+            self._perturb_mw = None
+
+        # 5. Handler lifecycle hooks (on_epoch_start/end, on_step)
+        self._pipeline.add(HandlerLifecycleMiddleware(self._handler_registry))
+
+        # 6. Network edge decay at epoch end
+        if self.network is not None:
+            self._pipeline.add(NetworkDecayMiddleware(self.network, self._event_bus))
+
+        # 7. Agent memory decay at epoch end
+        self._pipeline.add(MemoryDecayMiddleware())
+
+    def _make_context(self) -> MiddlewareContext:
+        """Build a ``MiddlewareContext`` from current orchestrator state."""
+        return MiddlewareContext(
+            state=self.state,
+            config=self.config,
+            agents=self._agents,
+            event_bus=self._event_bus,
+            network=self.network,
+            governance_engine=self.governance_engine,
+            metrics_calculator=self.metrics_calculator,
+            payoff_engine=self.payoff_engine,
+            handler_registry=self._handler_registry,
+            finalizer=self._finalizer,
+        )
+
+    # ===================================================================
+    # Agent registration
+    # ===================================================================
 
     def register_agent(self, agent: BaseAgent) -> AgentState:
-        """
-        Register an agent with the simulation.
-
-        Args:
-            agent: Agent to register
-
-        Returns:
-            The agent's state
-        """
+        """Register an agent with the simulation."""
         if agent.agent_id in self._agents:
             raise ValueError(f"Agent {agent.agent_id} already registered")
 
         self._agents[agent.agent_id] = agent
 
-        # Create agent state in environment
         state = self.state.add_agent(
             agent_id=agent.agent_id,
             name=getattr(agent, "name", agent.agent_id),
             agent_type=agent.agent_type,
         )
 
-        # Register as root in spawn tree
         if self._spawn_tree is not None:
             self._spawn_tree.register_root(agent.agent_id)
 
-        # Log event
         self._emit_event(
             Event(
                 event_type=EventType.AGENT_CREATED,
@@ -692,27 +617,22 @@ class Orchestrator:
         agent_ids = list(self._agents.keys())
         if self.network is not None:
             self.network.initialize(agent_ids)
-        # Set agent IDs for collusion detection
         if self.governance_engine is not None:
             self.governance_engine.set_collusion_agent_ids(agent_ids)
-        # Initialize Letta lifecycle and lazy-init Letta agents
         if self._letta_lifecycle is not None:
             self._letta_lifecycle.start()
             for agent in self._agents.values():
                 if hasattr(agent, "_lazy_init") and hasattr(agent, "_letta_config"):
                     agent._lazy_init(self._letta_lifecycle)
 
-    def run(self) -> List[EpochMetrics]:
-        """
-        Run the full simulation.
+    # ===================================================================
+    # Main simulation loop
+    # ===================================================================
 
-        Returns:
-            List of metrics for each epoch
-        """
-        # Initialize network with registered agents
+    def run(self) -> List[EpochMetrics]:
+        """Run the full simulation."""
         self._initialize_network()
 
-        # Log simulation start
         self._emit_event(
             Event(
                 event_type=EventType.SIMULATION_STARTED,
@@ -727,20 +647,15 @@ class Orchestrator:
             )
         )
 
-        # Main loop
         for _epoch in range(self.config.n_epochs):
             epoch_metrics = self._run_epoch()
             self._epoch_metrics.append(epoch_metrics)
-
-            # Callbacks
             for callback in self._on_epoch_end:
                 callback(epoch_metrics)
 
-        # Shutdown Letta lifecycle
         if self._letta_lifecycle is not None:
             self._letta_lifecycle.shutdown()
 
-        # Log simulation end
         self._emit_event(
             Event(
                 event_type=EventType.SIMULATION_ENDED,
@@ -755,118 +670,27 @@ class Orchestrator:
 
         return self._epoch_metrics
 
-    def _epoch_pre_hooks(self) -> None:
-        """Shared epoch-start logic for sync and async paths."""
-        self._update_adaptive_governance()
+    def _run_epoch(self) -> EpochMetrics:
+        """Run a single epoch."""
+        epoch_start = self.state.current_epoch
+        ctx = self._make_context()
 
-        # Update Letta shared governance block
-        if self._letta_lifecycle is not None:
-            interactions = self.state.completed_interactions
-            metrics = {}
-            if interactions:
-                metrics["toxicity_rate"] = self.metrics_calculator.toxicity_rate(
-                    interactions
-                )
-                metrics["quality_gap"] = self.metrics_calculator.quality_gap(
-                    interactions
-                )
-            self._letta_lifecycle.update_governance_block(metrics)
+        # --- Epoch pre-hooks ---
+        self._pipeline.on_epoch_start(ctx)
 
-        # Contract market: run signing stage at epoch start
-        if self.contract_market is not None:
-            agents = list(self.state.agents.values())
-            self.contract_market.reset_epoch()
-            memberships = self.contract_market.run_signing_stage(
-                agents, self.state.current_epoch
-            )
-            # Emit signing event with pool assignments
-            self._emit_event(
-                Event(
-                    event_type=EventType.CONTRACT_SIGNING,
-                    payload={
-                        "memberships": memberships,
-                        "pool_composition": self.contract_market.get_pool_composition(),
-                    },
-                    epoch=self.state.current_epoch,
-                )
-            )
+        # --- Steps ---
+        for _step in range(self.config.steps_per_epoch):
+            if self.state.is_paused:
+                break
+            self._run_step(ctx)
+            self.state.advance_step()
 
-        if self._perturbation_engine is not None:
-            self._perturbation_engine.on_epoch_start(self.state.current_epoch)
+        # --- Epoch post-hooks ---
+        self._pipeline.on_epoch_end(ctx)
 
-        for handler in self._handler_registry.all_handlers():
-            try:
-                handler.on_epoch_start(self.state)
-            except Exception:
-                logger.debug("Handler %s.on_epoch_start failed", type(handler).__name__, exc_info=True)
-
-        if self.governance_engine:
-            gov_effect = self.governance_engine.apply_epoch_start(
-                self.state, self.state.current_epoch
-            )
-            self._apply_governance_effect(gov_effect)
-
-    def _epoch_post_hooks(self, epoch_start: int) -> EpochMetrics:
-        """Shared epoch-end logic for sync and async paths."""
-        for handler in self._handler_registry.all_handlers():
-            try:
-                handler.on_epoch_end(self.state)
-            except Exception:
-                logger.debug("Handler %s.on_epoch_end failed", type(handler).__name__, exc_info=True)
-
-        if self.network is not None:
-            pruned = self.network.decay_edges()
-            if pruned > 0:
-                self._emit_event(
-                    Event(
-                        event_type=EventType.EPOCH_COMPLETED,
-                        payload={"network_edges_pruned": pruned},
-                        epoch=epoch_start,
-                    )
-                )
-
-        self._apply_agent_memory_decay(epoch_start)
-
-        # Update contract market beliefs and compute metrics at epoch end
-        if self.contract_market is not None:
-            self.contract_market.update_beliefs()
-            from swarm.contracts.metrics import compute_contract_metrics
-
-            # Use only current-epoch decisions (not full history)
-            current_epoch_decisions = [
-                d for d in self.contract_market.decision_history
-                if d.epoch == epoch_start
-            ]
-            contract_metrics = compute_contract_metrics(
-                current_epoch_decisions,
-                self.contract_market.get_contract_interactions(),
-                payoff_engine=self.payoff_engine,
-            )
-            self._last_contract_metrics = contract_metrics
-            self._emit_event(
-                Event(
-                    event_type=EventType.CONTRACT_METRICS,
-                    payload=contract_metrics.to_dict(),
-                    epoch=epoch_start,
-                )
-            )
-
-        # Check condition-triggered perturbation shocks against epoch metrics
-        if self._perturbation_engine is not None:
-            epoch_metrics_dict = {
-                "epoch": epoch_start,
-                "toxicity_rate": 0.0,
-                "quality_gap": 0.0,
-            }
-            interactions = self.state.completed_interactions
-            if interactions:
-                epoch_metrics_dict["toxicity_rate"] = (
-                    self.metrics_calculator.toxicity_rate(interactions)
-                )
-                epoch_metrics_dict["quality_gap"] = (
-                    self.metrics_calculator.quality_gap(interactions)
-                )
-            self._perturbation_engine.check_condition(epoch_metrics_dict)
+        # Update contract metrics ref
+        if self._contract_mw is not None:
+            self._last_contract_metrics = self._contract_mw.last_metrics
 
         metrics = self._compute_epoch_metrics()
 
@@ -881,91 +705,36 @@ class Orchestrator:
         self.state.advance_epoch()
         return metrics
 
-    def _step_preamble(self) -> None:
-        """Shared step-start logic for sync and async paths."""
-        if self._perturbation_engine is not None:
-            self._perturbation_engine.on_step_start(
-                self.state.current_epoch, self.state.current_step
-            )
+    def _run_step(self, ctx: Optional[MiddlewareContext] = None) -> None:
+        """Run a single step within an epoch."""
+        if ctx is None:
+            ctx = self._make_context()
+        self._pipeline.on_step_start(ctx)
 
-        if (
-            self.governance_engine
-            and self.governance_engine.config.adaptive_use_behavioral_features
-        ):
-            self._update_adaptive_governance(include_behavioral=True)
-
-        if self.governance_engine:
-            step_effect = self.governance_engine.apply_step(
-                self.state, self.state.current_step
-            )
-            self._apply_governance_effect(step_effect)
-
-        for handler in self._handler_registry.all_handlers():
-            try:
-                handler.on_step(self.state, self.state.current_step)
-            except Exception:
-                logger.debug("Handler %s.on_step failed", type(handler).__name__, exc_info=True)
-
-    def _get_eligible_agents(self) -> List[str]:
-        """Return agents eligible to act this step (respects schedule, limits, governance)."""
-        agent_order = self._get_agent_schedule()
         dropped = (
             self._perturbation_engine.get_dropped_agents()
             if self._perturbation_engine is not None
             else set()
         )
-        eligible: List[str] = []
-        for agent_id in agent_order:
-            if len(eligible) >= self.config.max_actions_per_step:
-                break
-            if agent_id in dropped:
-                continue
-            if not self.state.can_agent_act(agent_id):
-                continue
-            if self.governance_engine and not self.governance_engine.can_agent_act(
-                agent_id, self.state
-            ):
-                continue
-            eligible.append(agent_id)
-        return eligible
 
-    def _run_epoch(self) -> EpochMetrics:
-        """Run a single epoch."""
-        epoch_start = self.state.current_epoch
-        self._epoch_pre_hooks()
+        eligible = self._scheduler.get_eligible(
+            self._agents,
+            self.state,
+            governance_engine=self.governance_engine,
+            dropped_agents=dropped,
+        )
 
-        for _step in range(self.config.steps_per_epoch):
-            if self.state.is_paused:
-                break
-            self._run_step()
-            self.state.advance_step()
-
-        return self._epoch_post_hooks(epoch_start)
-
-    def _apply_agent_memory_decay(self, epoch: int) -> None:
-        """Apply memory decay to all agents that support it.
-
-        This implements the rain/river memory model where agents can
-        have different levels of memory persistence across epochs.
-
-        Args:
-            epoch: Current epoch number
-        """
-        for agent in self._agents.values():
-            if hasattr(agent, "apply_memory_decay"):
-                agent.apply_memory_decay(epoch)
-
-    def _run_step(self) -> None:
-        """Run a single step within an epoch."""
-        self._step_preamble()
-
-        for agent_id in self._get_eligible_agents():
+        for agent_id in eligible:
             agent = self._agents[agent_id]
-            observation = self._build_observation(agent_id)
+            observation = self._obs_builder.build(agent_id)
             action = self._select_action(agent, observation)
             self._execute_action(action)
 
         self._resolve_pending_interactions()
+
+    # ===================================================================
+    # Action selection
+    # ===================================================================
 
     def _select_action(self, agent: BaseAgent, observation: Observation) -> Action:
         """Select an action, optionally using governance ensembling."""
@@ -1041,53 +810,18 @@ class Orchestrator:
             action.content,
         )
 
-    def _get_agent_schedule(self) -> List[str]:
-        """Get the order of agents for this step."""
-        agent_ids = list(self._agents.keys())
-
-        if self.config.schedule_mode == "random":
-            self._rng.shuffle(agent_ids)
-        elif self.config.schedule_mode == "priority":
-            # Sort by reputation (higher reputation goes first)
-            agent_ids.sort(
-                key=lambda aid: (
-                    agent_st.reputation
-                    if (agent_st := self.state.get_agent(aid))
-                    else 0
-                ),
-                reverse=True,
-            )
-        # else: round_robin (default order)
-
-        return agent_ids
-
-    def _build_observation(self, agent_id: str) -> Observation:
-        """Build observation for an agent."""
-        return self._obs_builder.build(agent_id)
-
-    def _apply_observation_noise(self, record: Dict[str, Any]) -> Dict[str, Any]:
-        """Apply configurable gaussian noise to numeric observation fields."""
-        return self._obs_builder.apply_noise(record)
+    # ===================================================================
+    # Action execution pipeline
+    # ===================================================================
 
     def _execute_action(self, action: Action) -> bool:
-        """
-        Execute an agent action.
-
-        Core actions (POST, VOTE, etc.) are handled inline.
-        Domain actions are dispatched via the handler registry.
-
-        Returns:
-            True if action was successful
-        """
-        agent_id = action.agent_id
-        rate_limit = self.state.get_rate_limit_state(agent_id)
-
+        """Execute an agent action via handler registry."""
         # --- Core actions (orchestrator-owned) ---
-        core_result = self._handle_core_action(action, rate_limit)
+        core_result = self._handle_core_action(action)
         if core_result is not None:
             return core_result
 
-        # --- Handler-dispatched actions (via registry) ---
+        # --- Handler-dispatched actions ---
         if not isinstance(action.action_type, ActionType):
             return False
 
@@ -1098,34 +832,34 @@ class Orchestrator:
         try:
             result = handler.handle_action(action, self.state)
         except Exception:
-            logger.debug("Handler %s.handle_action failed", type(handler).__name__, exc_info=True)
+            logger.debug(
+                "Handler %s.handle_action failed",
+                type(handler).__name__,
+                exc_info=True,
+            )
             return False
 
         if not result.success:
             return False
 
-        # If no observables, this was a simple success/failure action
         if result.observables is None:
             return True
 
-        # Standard proxy computation + interaction finalization pipeline
+        # Standard proxy computation + interaction finalization
         v_hat, p = self.proxy_computer.compute_labels(result.observables)
 
-        # Build interaction_type from result
         interaction_type = InteractionType.COLLABORATION
         if hasattr(result, "interaction_type") and isinstance(
             getattr(result, "interaction_type", None), InteractionType
         ):
             interaction_type = result.interaction_type
 
-        # Build tau: prefer explicit tau, fall back to negated points
         tau = 0.0
         if hasattr(result, "tau") and result.tau != 0.0:
             tau = result.tau
         elif hasattr(result, "points") and result.points != 0.0:
             tau = -result.points
 
-        # Build ground_truth: prefer explicit field, fall back to submission
         ground_truth_val = getattr(result, "ground_truth", None)
         if ground_truth_val is None and hasattr(result, "submission"):
             submission = result.submission
@@ -1149,46 +883,36 @@ class Orchestrator:
             **({"ground_truth": ground_truth_val} if ground_truth_val is not None else {}),
         )
 
-        # Route through contract market if configured
         if self.contract_market is not None:
             interaction = self.contract_market.route_interaction(interaction)
 
         gov_effect, _, _ = self._finalize_interaction(interaction)
 
-        # Handler-specific post-processing
         try:
             handler.post_finalize(result, interaction, gov_effect, self.state)
         except Exception:
-            logger.debug("Handler %s.post_finalize failed", type(handler).__name__, exc_info=True)
+            logger.debug(
+                "Handler %s.post_finalize failed",
+                type(handler).__name__,
+                exc_info=True,
+            )
 
         return True
 
-    def _handle_core_action(
-        self, action: Action, rate_limit: Any
-    ) -> Optional[bool]:
-        """Handle NOOP — the only action still owned by the orchestrator.
-
-        All other former "core" actions (POST, REPLY, VOTE,
-        PROPOSE/ACCEPT/REJECT_INTERACTION, CLAIM_TASK, SUBMIT_OUTPUT)
-        are now dispatched via the handler registry through
-        ``FeedHandler``, ``CoreInteractionHandler``, and ``TaskHandler``.
-
-        Returns ``None`` if the action is not a core action.
-        """
+    def _handle_core_action(self, action: Action) -> Optional[bool]:
+        """Handle NOOP and SPAWN_SUBAGENT — the only orchestrator-owned actions."""
         if action.action_type == ActionType.NOOP:
             return True
-
         if action.action_type == ActionType.SPAWN_SUBAGENT:
             return self._handle_spawn_subagent(action)
+        return None
 
-        return None  # Dispatched via handler registry
+    # ===================================================================
+    # Spawn
+    # ===================================================================
 
     def _handle_spawn_subagent(self, action: Action) -> bool:
-        """Handle a SPAWN_SUBAGENT action.
-
-        Validates the spawn request, deducts cost, instantiates child,
-        registers it, and emits events.
-        """
+        """Handle a SPAWN_SUBAGENT action."""
         if self._spawn_tree is None:
             return False
 
@@ -1218,17 +942,13 @@ class Orchestrator:
             return False
 
         spawn_cfg = self._spawn_tree.config
-
-        # Deduct spawn cost
         parent_state.update_resources(-spawn_cfg.spawn_cost)
 
-        # Determine child type
         child_type_key = action.metadata.get("child_type")
         if not child_type_key:
             child_type_key = parent_state.agent_type.value
         child_config = action.metadata.get("child_config", {})
 
-        # Import AGENT_TYPES lazily to avoid circular imports
         from swarm.scenarios.loader import AGENT_TYPES
 
         agent_class = AGENT_TYPES.get(child_type_key)
@@ -1244,11 +964,8 @@ class Orchestrator:
             )
             return False
 
-        # Generate child ID
         self._spawn_counter += 1
         child_id = f"{parent_id}_child{self._spawn_counter}"
-
-        # Instantiate child agent (concrete subclasses set their own agent_type)
         child_rng = random.Random((self.config.seed or 0) + self._spawn_counter)
 
         # Tierra-specific: mutate genome and split resources
@@ -1265,7 +982,6 @@ class Orchestrator:
                 mutation_std = self._tierra_handler.config.mutation_std
             tierra_genome = parent_genome.mutate(child_rng, mutation_std)
 
-            # Split resources: parent keeps (1 - share_fraction), child gets share_fraction
             share_frac = parent_genome.resource_share_fraction
             child_initial_resources = parent_state.resources * share_frac
             parent_state.update_resources(-child_initial_resources)
@@ -1279,7 +995,6 @@ class Orchestrator:
             )
             child_agent.generation = action.metadata.get("generation", 0)  # type: ignore[attr-defined]
 
-            # Register genome with handler
             if self._tierra_handler is not None:
                 self._tierra_handler.register_genome(child_id, tierra_genome.to_dict())
                 self._tierra_handler._births += 1
@@ -1293,7 +1008,6 @@ class Orchestrator:
 
         self._agents[child_id] = child_agent
 
-        # Register child in env state with inherited reputation
         inherited_rep = parent_state.reputation * spawn_cfg.reputation_inheritance_factor
         child_state = self.state.add_agent(
             agent_id=child_id,
@@ -1304,7 +1018,6 @@ class Orchestrator:
         )
         child_state.parent_id = parent_id
 
-        # Register in spawn tree
         self._spawn_tree.register_spawn(
             parent_id=parent_id,
             child_id=child_id,
@@ -1313,13 +1026,10 @@ class Orchestrator:
             global_step=global_step,
         )
 
-        # Add to network if present
         if self.network is not None:
             self.network.add_node(child_id)
-            # Connect child to parent
             self.network.add_edge(parent_id, child_id)
 
-        # Emit event
         self._emit_event(
             Event(
                 event_type=EventType.AGENT_SPAWNED,
@@ -1339,25 +1049,25 @@ class Orchestrator:
 
         return True
 
+    # ===================================================================
+    # Interaction resolution
+    # ===================================================================
+
     def _resolve_pending_interactions(self) -> None:
         """Resolve any remaining pending interactions."""
-        # Get all pending proposals
         proposals = list(self.state.pending_proposals.values())
 
         for proposal in proposals:
             counterparty_id = proposal.counterparty_id
 
-            # Check if counterparty agent exists and can act
             if counterparty_id not in self._agents:
                 continue
-
             if not self.state.can_agent_act(counterparty_id):
                 continue
 
             counterparty = self._agents[counterparty_id]
-            observation = self._build_observation(counterparty_id)
+            observation = self._obs_builder.build(counterparty_id)
 
-            # Ask counterparty agent to decide
             from swarm.agents.base import InteractionProposal as AgentProposal
 
             agent_proposal = AgentProposal(
@@ -1371,7 +1081,6 @@ class Orchestrator:
 
             accept = counterparty.accept_interaction(agent_proposal, observation)
 
-            # Remove and complete
             self.state.remove_proposal(proposal.proposal_id)
             self._complete_interaction(proposal, accepted=accept)
 
@@ -1382,7 +1091,6 @@ class Orchestrator:
     ) -> None:
         """Complete an interaction and compute payoffs."""
         if self.contract_market is not None:
-            # Build interaction manually so we can route through contracts
             observables = self._observable_generator.generate(
                 proposal, accepted, self.state
             )
@@ -1408,18 +1116,6 @@ class Orchestrator:
         else:
             self._finalizer.complete_interaction(proposal, accepted)
 
-    def _generate_observables(
-        self,
-        proposal: InteractionProposal,
-        accepted: bool,
-    ) -> ProxyObservables:
-        """Generate observable signals for an interaction.
-
-        Delegates to the injected ObservableGenerator.  Kept for
-        backwards compatibility with subclasses that override this.
-        """
-        return self._observable_generator.generate(proposal, accepted, self.state)
-
     def _finalize_interaction(
         self,
         interaction: SoftInteraction,
@@ -1427,64 +1123,38 @@ class Orchestrator:
         """Apply governance, compute payoffs, update state, and emit events."""
         return self._finalizer.finalize_interaction(interaction)
 
-    def _update_reputation(self, agent_id: str, delta: float) -> None:
-        """Update agent reputation."""
-        self._finalizer._update_reputation(agent_id, delta)
-
-    # =========================================================================
-    # Marketplace Delegation (preserves public interface)
-    # =========================================================================
-
-    def settle_marketplace_task(
+    def _generate_observables(
         self,
-        task_id: str,
-        success: bool,
-        quality_score: float = 1.0,
-    ) -> Optional[Dict]:
-        """
-        Settle a marketplace bounty/escrow after task completion.
+        proposal: InteractionProposal,
+        accepted: bool,
+    ) -> ProxyObservables:
+        """Generate observable signals for an interaction."""
+        return self._observable_generator.generate(proposal, accepted, self.state)
 
-        Delegates to MarketplaceHandler.
-        """
-        if self._marketplace_handler is None:
-            return None
-        return self._marketplace_handler.settle_task(
-            task_id=task_id,
-            success=success,
-            state=self.state,
-            governance_engine=self.governance_engine,
-            quality_score=quality_score,
-        )
-
-    def _apply_governance_effect(self, effect: GovernanceEffect) -> None:
-        """Apply governance effects to state (freeze/unfreeze, reputation, resources)."""
-        self._finalizer.apply_governance_effect(effect)
+    # ===================================================================
+    # Metrics
+    # ===================================================================
 
     def _compute_epoch_metrics(self) -> EpochMetrics:
         """Compute metrics for the current epoch."""
         interactions = self.state.completed_interactions
 
-        # Get network metrics if available (even with no interactions)
         network_metrics = None
         if self.network is not None:
             network_metrics = self.network.get_metrics()
 
-        # Get capability metrics if available
         capability_metrics = None
         if self.capability_analyzer is not None:
             capability_metrics = self.capability_analyzer.compute_metrics()
 
-        # Get security report if available
         security_report = None
         if self.governance_engine is not None:
             security_report = self.governance_engine.get_security_report()
 
-        # Get collusion report if available
         collusion_report = None
         if self.governance_engine is not None:
             collusion_report = self.governance_engine.get_collusion_report()
 
-        # Collect spawn metrics if spawn tree exists
         spawn_metrics_dict = None
         if self._spawn_tree is not None:
             spawn_metrics_dict = {
@@ -1494,9 +1164,8 @@ class Orchestrator:
                 "tree_sizes": self._spawn_tree.tree_size_distribution(),
             }
 
-        # Get contract metrics if available
         contract_metrics_dict = None
-        if hasattr(self, "_last_contract_metrics") and self._last_contract_metrics is not None:
+        if self._last_contract_metrics is not None:
             contract_metrics_dict = self._last_contract_metrics.to_dict()
 
         if not interactions:
@@ -1511,8 +1180,6 @@ class Orchestrator:
             )
 
         accepted = [i for i in interactions if i.accepted]
-
-        # Use soft metrics calculator
         toxicity = self.metrics_calculator.toxicity_rate(interactions)
         quality_gap = self.metrics_calculator.quality_gap(interactions)
         welfare = self.metrics_calculator.welfare_metrics(interactions)
@@ -1535,6 +1202,10 @@ class Orchestrator:
             contract_metrics=contract_metrics_dict,
         )
 
+    # ===================================================================
+    # Events
+    # ===================================================================
+
     def _emit_event(self, event: Event) -> None:
         """Emit an event via the event bus."""
         self._event_bus.emit(event)
@@ -1542,6 +1213,10 @@ class Orchestrator:
     def subscribe_events(self, callback: Callable[[Event], None]) -> None:
         """Register an external subscriber for all simulation events."""
         self._event_bus.subscribe(callback)
+
+    # ===================================================================
+    # Public API (preserved for backwards compatibility)
+    # ===================================================================
 
     def pause(self) -> None:
         """Pause the simulation."""
@@ -1569,20 +1244,67 @@ class Orchestrator:
             return None
         return self.governance_engine.get_collusion_report()
 
-    # =========================================================================
+    def settle_marketplace_task(
+        self,
+        task_id: str,
+        success: bool,
+        quality_score: float = 1.0,
+    ) -> Optional[Dict]:
+        """Settle a marketplace bounty/escrow after task completion."""
+        if self._marketplace_handler is None:
+            return None
+        return self._marketplace_handler.settle_task(
+            task_id=task_id,
+            success=success,
+            state=self.state,
+            governance_engine=self.governance_engine,
+            quality_score=quality_score,
+        )
+
+    def _apply_governance_effect(self, effect: GovernanceEffect) -> None:
+        """Apply governance effects to state."""
+        self._finalizer.apply_governance_effect(effect)
+
+    def _update_reputation(self, agent_id: str, delta: float) -> None:
+        """Update agent reputation."""
+        self._finalizer._update_reputation(agent_id, delta)
+
+    def on_epoch_end(self, callback: Callable[[EpochMetrics], None]) -> None:
+        """Register a callback for epoch end."""
+        self._on_epoch_end.append(callback)
+
+    def on_interaction_complete(
+        self,
+        callback: Callable[[SoftInteraction, float, float], None],
+    ) -> None:
+        """Register a callback for interaction completion."""
+        self._on_interaction_complete.append(callback)
+
+    def get_network_metrics(self) -> Optional[Dict[str, float]]:
+        """Get current network topology metrics."""
+        if self.network is None:
+            return None
+        return self.network.get_metrics()
+
+    def get_network(self) -> Optional[AgentNetwork]:
+        """Get the network object for direct manipulation."""
+        return self.network
+
+    def get_spawn_tree(self) -> Optional[SpawnTree]:
+        """Get the spawn tree for inspection."""
+        return self._spawn_tree
+
+    @property
+    def adaptive_controller(self):
+        """Get the adaptive governance controller."""
+        return self._adaptive_controller
+
+    # ===================================================================
     # Composite Task Support
-    # =========================================================================
+    # ===================================================================
 
     def add_composite_task(self, task: CompositeTask) -> bool:
-        """
-        Add a composite task to the pool.
-
-        Args:
-            task: The composite task to add
-
-        Returns:
-            True if added successfully
-        """
+        """Add a composite task to the pool."""
         if self.composite_task_pool is None:
             return False
         self.composite_task_pool.add_task(task)
@@ -1605,16 +1327,7 @@ class Orchestrator:
         agent_id: str,
         capabilities: set,
     ) -> bool:
-        """
-        Register an agent's capabilities for composite task matching.
-
-        Args:
-            agent_id: The agent's ID
-            capabilities: Set of CapabilityType values
-
-        Returns:
-            True if registered successfully
-        """
+        """Register an agent's capabilities for composite task matching."""
         if self.capability_analyzer is None:
             return False
         self.capability_analyzer.register_agent(agent_id, capabilities)
@@ -1632,20 +1345,9 @@ class Orchestrator:
             return {}
         return self.composite_task_pool.get_stats()
 
-    def on_epoch_end(self, callback: Callable[[EpochMetrics], None]) -> None:
-        """Register a callback for epoch end."""
-        self._on_epoch_end.append(callback)
-
-    def on_interaction_complete(
-        self,
-        callback: Callable[[SoftInteraction, float, float], None],
-    ) -> None:
-        """Register a callback for interaction completion."""
-        self._on_interaction_complete.append(callback)
-
-    # =========================================================================
+    # ===================================================================
     # Async Support for LLM Agents
-    # =========================================================================
+    # ===================================================================
 
     def _is_llm_agent(self, agent: BaseAgent) -> bool:
         """Check if an agent is an LLM agent with async support."""
@@ -1654,19 +1356,9 @@ class Orchestrator:
         )
 
     async def run_async(self) -> List[EpochMetrics]:
-        """
-        Run the full simulation asynchronously.
-
-        This method enables concurrent LLM API calls for better performance
-        when using LLM-backed agents.
-
-        Returns:
-            List of metrics for each epoch
-        """
-        # Initialize network with registered agents
+        """Run the full simulation asynchronously."""
         self._initialize_network()
 
-        # Log simulation start
         self._emit_event(
             Event(
                 event_type=EventType.SIMULATION_STARTED,
@@ -1680,16 +1372,12 @@ class Orchestrator:
             )
         )
 
-        # Main loop
         for _epoch in range(self.config.n_epochs):
             epoch_metrics = await self._run_epoch_async()
             self._epoch_metrics.append(epoch_metrics)
-
-            # Callbacks
             for callback in self._on_epoch_end:
                 callback(epoch_metrics)
 
-        # Log simulation end
         self._emit_event(
             Event(
                 event_type=EventType.SIMULATION_ENDED,
@@ -1707,45 +1395,66 @@ class Orchestrator:
     async def _run_epoch_async(self) -> EpochMetrics:
         """Run a single epoch asynchronously."""
         epoch_start = self.state.current_epoch
-        self._epoch_pre_hooks()
+        ctx = self._make_context()
+
+        self._pipeline.on_epoch_start(ctx)
 
         for _step in range(self.config.steps_per_epoch):
             if self.state.is_paused:
                 break
-            await self._run_step_async()
+            await self._run_step_async(ctx)
             self.state.advance_step()
 
-        return self._epoch_post_hooks(epoch_start)
+        self._pipeline.on_epoch_end(ctx)
 
-    async def _run_step_async(self) -> None:
-        """Run a single step asynchronously with concurrent LLM calls.
+        if self._contract_mw is not None:
+            self._last_contract_metrics = self._contract_mw.last_metrics
 
-        External agents (``is_external=True``) have their observation stored
-        and their action awaited via the external action queue rather than
-        calling ``agent.act()``.
-        """
-        self._step_preamble()
+        metrics = self._compute_epoch_metrics()
+
+        self._emit_event(
+            Event(
+                event_type=EventType.EPOCH_COMPLETED,
+                payload=metrics.to_dict(),
+                epoch=epoch_start,
+            )
+        )
+
+        self.state.advance_epoch()
+        return metrics
+
+    async def _run_step_async(self, ctx: MiddlewareContext) -> None:
+        """Run a single step asynchronously with concurrent LLM calls."""
+        self._pipeline.on_step_start(ctx)
 
         if self._external_action_queue is not None:
             self._external_action_queue.reset_step()
 
-        agents_to_act = self._get_eligible_agents()
+        dropped = (
+            self._perturbation_engine.get_dropped_agents()
+            if self._perturbation_engine is not None
+            else set()
+        )
+
+        agents_to_act = self._scheduler.get_eligible(
+            self._agents,
+            self.state,
+            governance_engine=self.governance_engine,
+            dropped_agents=dropped,
+        )
 
         async def get_agent_action(agent_id: str) -> Tuple[str, Action]:
             agent = self._agents[agent_id]
-            observation = self._build_observation(agent_id)
+            observation = self._obs_builder.build(agent_id)
 
             if agent.is_external and self._external_action_queue is not None:
-                # Store observation for the API to serve
                 import dataclasses as _dc
                 self._external_observations[agent_id] = _dc.asdict(observation)
 
-                # Wait for action from external API
                 raw_action = await self._external_action_queue.wait_for_action(
                     agent_id
                 )
                 if raw_action is None:
-                    # Timeout — use NOOP
                     return agent_id, Action(
                         agent_id=agent_id, action_type=ActionType.NOOP
                     )
@@ -1765,23 +1474,18 @@ class Orchestrator:
 
         await self._resolve_pending_interactions_async()
 
-    def set_external_action_queue(self, queue: Any) -> None:
-        """Attach an external action queue for API-driven agents.
+    # ===================================================================
+    # External agent support
+    # ===================================================================
 
-        Args:
-            queue: An ``AsyncActionQueue`` instance.
-        """
+    def set_external_action_queue(self, queue: Any) -> None:
+        """Attach an external action queue for API-driven agents."""
         self._external_action_queue = queue
 
     def get_external_observations(self) -> Dict[str, Dict[str, Any]]:
-        """Return the current external observation store.
-
-        This dict is updated each step for external agents so the API
-        layer can serve observations to polling clients.
-        """
+        """Return the current external observation store."""
         return self._external_observations
 
-    # Map simplified API action types to orchestrator enum values.
     _API_ACTION_MAP: Dict[str, str] = {
         "accept": "accept_interaction",
         "reject": "reject_interaction",
@@ -1792,7 +1496,6 @@ class Orchestrator:
     def _parse_external_action(self, agent_id: str, raw: Dict) -> Action:
         """Convert a raw dict from the action queue into an ``Action``."""
         action_type_str = raw.get("action_type", "noop")
-        # Translate simplified API names to orchestrator enum values
         action_type_str = self._API_ACTION_MAP.get(action_type_str, action_type_str)
         try:
             action_type = ActionType(action_type_str)
@@ -1800,7 +1503,6 @@ class Orchestrator:
             action_type = ActionType.NOOP
 
         def _safe_str(val: Any, max_len: int = 256) -> str:
-            """Coerce to str, rejecting non-scalar types and enforcing length."""
             if val is None:
                 return ""
             if not isinstance(val, (str, int, float, bool)):
@@ -1823,23 +1525,19 @@ class Orchestrator:
 
     async def _resolve_pending_interactions_async(self) -> None:
         """Resolve pending interactions with async support for LLM agents."""
-        # Get all pending proposals
         proposals = list(self.state.pending_proposals.values())
 
         async def resolve_proposal(proposal: InteractionProposal) -> Optional[bool]:
             counterparty_id = proposal.counterparty_id
 
-            # Check if counterparty agent exists and can act
             if counterparty_id not in self._agents:
                 return None
-
             if not self.state.can_agent_act(counterparty_id):
                 return None
 
             counterparty = self._agents[counterparty_id]
-            observation = self._build_observation(counterparty_id)
+            observation = self._obs_builder.build(counterparty_id)
 
-            # Create agent proposal object
             from swarm.agents.base import InteractionProposal as AgentProposal
 
             agent_proposal = AgentProposal(
@@ -1851,7 +1549,6 @@ class Orchestrator:
                 offered_transfer=proposal.metadata.get("offered_transfer", 0),
             )
 
-            # Get decision (async for LLM agents)
             if self._is_llm_agent(counterparty):
                 accept = await counterparty.accept_interaction_async(
                     agent_proposal, observation
@@ -1861,87 +1558,19 @@ class Orchestrator:
 
             return bool(accept)
 
-        # Resolve all proposals concurrently
         tasks = [resolve_proposal(p) for p in proposals]
         results = await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Process results
         for proposal, result in zip(proposals, results, strict=False):
             if isinstance(result, Exception) or result is None:
                 continue
-
             accept = bool(result)
-            # Remove and complete
             self.state.remove_proposal(proposal.proposal_id)
             self._complete_interaction(proposal, accepted=accept)
 
-    def _update_adaptive_governance(self, include_behavioral: bool = False) -> None:
-        """Update adaptive governance mode from current episode/epoch features."""
-        if self.governance_engine is None:
-            return
-        if not self.governance_engine.config.adaptive_governance_enabled:
-            return
-
-        agents = self.get_all_agents()
-        adversarial_count = sum(
-            1
-            for agent in agents
-            if agent.agent_type in (AgentType.ADVERSARIAL, AgentType.DECEPTIVE)
-        )
-        structural = extract_structural_features(
-            horizon_length=self.config.steps_per_epoch,
-            agent_count=len(agents),
-            action_space_size=len(ActionType),
-            adversarial_fraction=(adversarial_count / len(agents) if agents else 0.0),
-        )
-        features = structural
-
-        if include_behavioral:
-            behavioral = extract_behavioral_features(self.state.completed_interactions)
-            features = combine_feature_dicts(structural, behavioral)
-
-        self.governance_engine.update_adaptive_mode(features)
-
-    def get_llm_usage_stats(self) -> Dict[str, Dict[str, Any]]:
-        """
-        Get LLM usage statistics for all LLM agents.
-
-        Returns:
-            Dictionary mapping agent_id to usage stats
-        """
-        stats = {}
-        for agent_id, agent in self._agents.items():
-            if hasattr(agent, "get_usage_stats"):
-                stats[agent_id] = agent.get_usage_stats()
-        return stats
-
-    def get_network_metrics(self) -> Optional[Dict[str, float]]:
-        """
-        Get current network topology metrics.
-
-        Returns:
-            Dictionary of network metrics, or None if no network
-        """
-        if self.network is None:
-            return None
-        return self.network.get_metrics()
-
-    def get_network(self) -> Optional[AgentNetwork]:
-        """Get the network object for direct manipulation."""
-        return self.network
-
-    def get_spawn_tree(self) -> Optional[SpawnTree]:
-        """Get the spawn tree for inspection."""
-        return self._spawn_tree
-
-    @property
-    def adaptive_controller(self):
-        """Get the adaptive governance controller."""
-        return self._adaptive_controller
-
-    # =========================================================================
+    # ===================================================================
     # Red-Team Support
-    # =========================================================================
+    # ===================================================================
 
     def get_adaptive_adversary_reports(self) -> Dict[str, Dict]:
         """Get strategy reports from all adaptive adversaries."""
@@ -1960,9 +1589,9 @@ class Orchestrator:
         """Get evasion metrics for adversarial agents."""
         return self._redteam.get_evasion_metrics()
 
-    # =========================================================================
-    # Boundary Delegation (preserves public interface)
-    # =========================================================================
+    # ===================================================================
+    # Boundary Delegation
+    # ===================================================================
 
     def request_external_interaction(
         self,
@@ -1971,11 +1600,7 @@ class Orchestrator:
         action: str,
         payload: Optional[Dict[str, Any]] = None,
     ) -> Dict[str, Any]:
-        """
-        Request an interaction with an external entity.
-
-        Delegates to BoundaryHandler.
-        """
+        """Request an interaction with an external entity."""
         if self._boundary_handler is None:
             return {"success": False, "error": "Boundaries not enabled"}
         return self._boundary_handler.request_external_interaction(
@@ -1990,7 +1615,7 @@ class Orchestrator:
         entity_type: Optional[str] = None,
         min_trust: float = 0.0,
     ) -> List[Dict[str, Any]]:
-        """Get available external entities. Delegates to BoundaryHandler."""
+        """Get available external entities."""
         if self._boundary_handler is None:
             return []
         return self._boundary_handler.get_external_entities(
@@ -1999,25 +1624,109 @@ class Orchestrator:
         )
 
     def add_external_entity(self, entity: ExternalEntity) -> None:
-        """Add an external entity to the world. Delegates to BoundaryHandler."""
+        """Add an external entity to the world."""
         if self._boundary_handler is not None:
             self._boundary_handler.add_external_entity(entity)
 
     def get_boundary_metrics(self) -> Dict[str, Any]:
-        """Get comprehensive boundary metrics. Delegates to BoundaryHandler."""
+        """Get comprehensive boundary metrics."""
         if self._boundary_handler is None:
             return {"boundaries_enabled": False}
         return self._boundary_handler.get_metrics()
 
     def get_agent_boundary_activity(self, agent_id: str) -> Dict[str, Any]:
-        """Get boundary activity for a specific agent. Delegates to BoundaryHandler."""
+        """Get boundary activity for a specific agent."""
         if self._boundary_handler is None:
             return {"agent_id": agent_id}
         return self._boundary_handler.get_agent_activity(agent_id)
 
     def get_leakage_report(self) -> Optional[LeakageReport]:
-        """Get the full leakage detection report. Delegates to BoundaryHandler."""
+        """Get the full leakage detection report."""
         if self._boundary_handler is None:
             return None
         return self._boundary_handler.get_leakage_report()
 
+    # ===================================================================
+    # LLM Usage
+    # ===================================================================
+
+    def get_llm_usage_stats(self) -> Dict[str, Dict[str, Any]]:
+        """Get LLM usage statistics for all LLM agents."""
+        stats = {}
+        for agent_id, agent in self._agents.items():
+            if hasattr(agent, "get_usage_stats"):
+                stats[agent_id] = agent.get_usage_stats()
+        return stats
+
+    # ===================================================================
+    # Legacy compatibility shims
+    # ===================================================================
+
+    def _build_observation(self, agent_id: str) -> Observation:
+        """Build observation for an agent."""
+        return self._obs_builder.build(agent_id)
+
+    def _apply_observation_noise(self, record: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply configurable gaussian noise to numeric observation fields."""
+        return self._obs_builder.apply_noise(record)
+
+    def _get_eligible_agents(self) -> List[str]:
+        """Return agents eligible to act this step."""
+        dropped = (
+            self._perturbation_engine.get_dropped_agents()
+            if self._perturbation_engine is not None
+            else set()
+        )
+        return self._scheduler.get_eligible(
+            self._agents,
+            self.state,
+            governance_engine=self.governance_engine,
+            dropped_agents=dropped,
+        )
+
+    def _get_agent_schedule(self) -> List[str]:
+        """Get the order of agents for this step."""
+        return self._scheduler._get_order(self._agents, self.state)
+
+    def _update_adaptive_governance(self, include_behavioral: bool = False) -> None:
+        """Update adaptive governance mode."""
+        if self._gov_mw is not None:
+            ctx = self._make_context()
+            self._gov_mw._update_adaptive(ctx, include_behavioral=include_behavioral)
+
+    def _apply_agent_memory_decay(self, epoch: int) -> None:
+        """Apply memory decay to all agents."""
+        for agent in self._agents.values():
+            if hasattr(agent, "apply_memory_decay"):
+                agent.apply_memory_decay(epoch)
+
+    def _epoch_pre_hooks(self) -> None:
+        """Shared epoch-start logic."""
+        ctx = self._make_context()
+        self._pipeline.on_epoch_start(ctx)
+
+    def _epoch_post_hooks(self, epoch_start: int) -> EpochMetrics:
+        """Shared epoch-end logic."""
+        ctx = self._make_context()
+        self._pipeline.on_epoch_end(ctx)
+
+        if self._contract_mw is not None:
+            self._last_contract_metrics = self._contract_mw.last_metrics
+
+        metrics = self._compute_epoch_metrics()
+
+        self._emit_event(
+            Event(
+                event_type=EventType.EPOCH_COMPLETED,
+                payload=metrics.to_dict(),
+                epoch=epoch_start,
+            )
+        )
+
+        self.state.advance_epoch()
+        return metrics
+
+    def _step_preamble(self) -> None:
+        """Shared step-start logic."""
+        ctx = self._make_context()
+        self._pipeline.on_step_start(ctx)

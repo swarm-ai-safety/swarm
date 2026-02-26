@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Changed
+- **Orchestrator pipeline/middleware refactoring** — extracted 3 new modules from the 2023-line orchestrator god object: `middleware.py` (7 lifecycle stages via `MiddlewarePipeline`), `handler_factory.py` (handler construction from config), `agent_scheduler.py` (turn order and eligibility); orchestrator is now a thin coordination loop delegating cross-cutting concerns to the middleware pipeline; public API preserved
+
 ### Added
 - **Agent-level → population-level safety bridge** — three-piece system bridging agent-level evals (HAICosystem, OpenAgentSafety) into SWARM population-level simulation: `EvalTraceObservableGenerator` (converts multi-turn eval traces to ProxyObservables), `BehavioralProfiler` (infers archetype mixture weights via MLE), `SafetyCompositionAnalyzer` (structured sweeps producing safety certificates with regime classification and composition boundaries); 99 new tests
 - **Agents of Chaos case study scenarios** — 4 scenario YAMLs modelling empirically observed failure modes from the Agents of Chaos red-teaming study (Shapira et al. 2026): `casestudy_libel_cascade` (CS11 network adverse selection), `casestudy_proxy_corruption` (CS10 signal corruption/detection/recovery), `casestudy_disproportionate_response` (CS1 payoff misspecification with staking), `casestudy_dual_use_coordination` (CS9+CS11 prosocial vs antisocial coordination)
