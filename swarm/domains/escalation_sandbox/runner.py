@@ -74,6 +74,14 @@ class EscalationRunner:
             )
             self._policies[agent_id] = policy
 
+        # Apply initial escalation if configured
+        initial = config.crisis.initial_escalation
+        if initial > 0:
+            from swarm.domains.escalation_sandbox.entities import EscalationLevel
+            clamped = max(0, min(9, initial))
+            for nation in self._env._nations.values():
+                nation.current_level = EscalationLevel(clamped)
+
         # Results
         self._metrics: Optional[EscalationMetrics] = None
         self._all_events: List[dict] = []

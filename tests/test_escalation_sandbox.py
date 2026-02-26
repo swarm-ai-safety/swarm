@@ -1130,3 +1130,190 @@ class TestSecurityEdgeCases:
         result = env.apply_actions(actions)
         for level in result.realised_levels.values():
             assert 0 <= level <= 9
+
+
+class TestAdversaryDesignerFindings:
+    """Tests for critical design issues found by adversary designer red-team."""
+
+    def test_circuit_breaker_fires_once_then_releases(self):
+        """Circuit breaker fires once per episode, then allows escalation past threshold."""
+        config = EscalationConfig()
+        config.fog_of_war.enabled = False
+        config.governance.circuit_breaker_enabled = True
+        config.governance.circuit_breaker_threshold = 7
+        config.governance.circuit_breaker_negotiation_turns = 1
+        config.governance.mad_enabled = False
+        config.max_turns = 10
+
+        env = EscalationEnvironment(config)
+        env.add_nation("a", "A")
+        env.add_nation("b", "B")
+
+        # Turn 0: both try level 8 -> CB fires, caps to 6, then expires
+        # (negotiation_turns=1 means 1 countdown tick in same turn)
+        actions = {
+            "a": EscalationAction(agent_id="a", signal_level=8, action_level=8, reasoning=""),
+            "b": EscalationAction(agent_id="b", signal_level=8, action_level=8, reasoning=""),
+        }
+        r0 = env.apply_actions(actions)
+        assert r0.realised_levels["a"] == 6
+        assert r0.realised_levels["b"] == 6
+        cb_events = [e for e in r0.events if e.event_type == "circuit_breaker_triggered"]
+        assert len(cb_events) == 1
+        expired = [e for e in r0.events if e.event_type == "circuit_breaker_expired"]
+        assert len(expired) == 1
+
+        # Turn 1: CB has fired and released, agents should reach level 8
+        r1 = env.apply_actions(actions)
+        assert r1.realised_levels["a"] == 8
+        assert r1.realised_levels["b"] == 8
+        # CB should NOT re-trigger
+        cb_events2 = [e for e in r1.events if e.event_type == "circuit_breaker_triggered"]
+        assert len(cb_events2) == 0
+
+    def test_circuit_breaker_caps_all_agents(self):
+        """Circuit breaker caps ALL agents, not just the triggering one."""
+        config = EscalationConfig()
+        config.fog_of_war.enabled = False
+        config.governance.circuit_breaker_enabled = True
+        config.governance.circuit_breaker_threshold = 7
+        config.governance.circuit_breaker_negotiation_turns = 2
+        config.governance.mad_enabled = False
+        config.max_turns = 5
+
+        env = EscalationEnvironment(config)
+        env.add_nation("a", "A")
+        env.add_nation("b", "B")
+
+        # Both try to cross threshold - both should be capped
+        actions = {
+            "a": EscalationAction(agent_id="a", signal_level=8, action_level=8, reasoning=""),
+            "b": EscalationAction(agent_id="b", signal_level=9, action_level=9, reasoning=""),
+        }
+        result = env.apply_actions(actions)
+        assert result.realised_levels["a"] == 6
+        assert result.realised_levels["b"] == 6
+
+    def test_mad_retaliation_mutates_state(self):
+        """MAD deterrence must actually raise opponent's level (not just log)."""
+        config = EscalationConfig()
+        config.fog_of_war.enabled = False
+        config.governance.circuit_breaker_enabled = False
+        config.governance.mad_enabled = True
+        config.governance.mad_retaliation_probability = 1.0  # guaranteed
+        config.max_turns = 5
+        config.seed = 42
+
+        env = EscalationEnvironment(config)
+        env.add_nation("a", "A", has_second_strike=True)
+        env.add_nation("b", "B", has_second_strike=True)
+
+        # A goes nuclear, B stays low
+        actions = {
+            "a": EscalationAction(agent_id="a", signal_level=8, action_level=8, reasoning=""),
+            "b": EscalationAction(agent_id="b", signal_level=1, action_level=1, reasoning=""),
+        }
+        result = env.apply_actions(actions)
+
+        # B should have retaliated to at least level 8
+        retaliation_events = [
+            e for e in result.events if e.event_type == "mad_retaliation"
+        ]
+        assert len(retaliation_events) > 0
+        assert result.realised_levels["b"] >= 8
+
+    def test_mad_no_retaliation_without_second_strike(self):
+        """MAD retaliation should not fire without second-strike capability."""
+        config = EscalationConfig()
+        config.fog_of_war.enabled = False
+        config.governance.circuit_breaker_enabled = False
+        config.governance.mad_enabled = True
+        config.governance.mad_retaliation_probability = 1.0
+        config.max_turns = 5
+        config.seed = 42
+
+        env = EscalationEnvironment(config)
+        env.add_nation("a", "A", has_second_strike=True)
+        env.add_nation("b", "B", has_second_strike=False)
+
+        actions = {
+            "a": EscalationAction(agent_id="a", signal_level=8, action_level=8, reasoning=""),
+            "b": EscalationAction(agent_id="b", signal_level=1, action_level=1, reasoning=""),
+        }
+        result = env.apply_actions(actions)
+
+        retaliation_events = [
+            e for e in result.events if e.event_type == "mad_retaliation"
+        ]
+        assert len(retaliation_events) == 0
+        assert result.realised_levels["b"] == 1
+
+    def test_de_escalation_friction_deducts_economic(self):
+        """De-escalation friction must reduce economic_strength, not just bookkeep."""
+        config = EscalationConfig()
+        config.fog_of_war.enabled = False
+        config.governance.circuit_breaker_enabled = False
+        config.governance.mad_enabled = False
+        config.governance.de_escalation_friction_multiplier = 2.0
+        config.max_turns = 5
+
+        env = EscalationEnvironment(config)
+        env.add_nation("a", "A", economic_strength=200.0)
+        env.add_nation("b", "B", economic_strength=200.0)
+
+        # First escalate to level 5
+        actions = {
+            "a": EscalationAction(agent_id="a", signal_level=5, action_level=5, reasoning=""),
+            "b": EscalationAction(agent_id="b", signal_level=5, action_level=5, reasoning=""),
+        }
+        env.apply_actions(actions)
+        econ_before = env.nations["a"].economic_strength
+
+        # Now de-escalate to level 1
+        actions = {
+            "a": EscalationAction(agent_id="a", signal_level=1, action_level=1, reasoning=""),
+            "b": EscalationAction(agent_id="b", signal_level=1, action_level=1, reasoning=""),
+        }
+        env.apply_actions(actions)
+        econ_after = env.nations["a"].economic_strength
+
+        # Economic strength should have decreased from friction (beyond just consequences)
+        assert econ_after < econ_before
+        assert env.nations["a"].governance_costs_paid > 0
+
+    def test_initial_escalation_applied(self):
+        """Runner must apply initial_escalation from crisis config."""
+        config = EscalationConfig()
+        config.crisis.initial_escalation = 4
+        config.fog_of_war.enabled = False
+        config.governance.circuit_breaker_enabled = False
+        config.governance.mad_enabled = False
+        config.max_turns = 3
+
+        runner = EscalationRunner(config, seed=42)
+        # Check that nations start at level 4
+        for nation in runner.env._nations.values():
+            assert int(nation.current_level) == 4
+
+    def test_hawk_vs_hawk_crosses_nuclear_with_cb(self):
+        """Hawk vs hawk should eventually cross nuclear threshold even with CB."""
+        config = EscalationConfig(
+            agents=[
+                AgentConfig(agent_id="a", persona="hawk"),
+                AgentConfig(agent_id="b", persona="hawk"),
+            ],
+            max_turns=20,
+            seed=42,
+        )
+        config.fog_of_war.enabled = False
+        config.governance.circuit_breaker_enabled = True
+        config.governance.circuit_breaker_threshold = 7
+        config.governance.circuit_breaker_negotiation_turns = 1
+        config.governance.mad_enabled = False
+
+        runner = EscalationRunner(config, seed=42)
+        metrics = runner.run()
+
+        # After CB fires once and expires, hawks should reach nuclear
+        assert metrics.nuclear_threshold_turn is not None
+        assert metrics.escalation_max >= 7

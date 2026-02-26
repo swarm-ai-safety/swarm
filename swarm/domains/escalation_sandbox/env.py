@@ -70,6 +70,7 @@ class EscalationEnvironment:
         # Circuit breaker state
         self._circuit_breaker_active = False
         self._circuit_breaker_turns_remaining = 0
+        self._circuit_breaker_fired = False  # once-per-episode flag
 
         # Governance tracking
         self._mediation_proposed_this_turn = False
@@ -258,48 +259,57 @@ class EscalationEnvironment:
                     },
                 ))
 
-        # 3. Evaluate governance constraints
+        # 3a. Circuit breaker: evaluate trigger for ALL agents first
+        cb_cfg = self._config.governance
+        if (
+            cb_cfg.circuit_breaker_enabled
+            and not self._circuit_breaker_fired
+            and not self._circuit_breaker_active
+        ):
+            for agent_id in list(realised_levels.keys()):
+                realised = realised_levels[agent_id]
+                if realised >= cb_cfg.circuit_breaker_threshold:
+                    # Fire once per episode
+                    self._circuit_breaker_fired = True
+                    self._circuit_breaker_active = True
+                    self._circuit_breaker_turns_remaining = max(
+                        1, cb_cfg.circuit_breaker_negotiation_turns,
+                    )
+                    turn_events.append(EscalationEvent(
+                        event_type="circuit_breaker_triggered",
+                        turn=self._current_turn,
+                        agent_id=agent_id,
+                        details={
+                            "original_level": realised,
+                            "capped_level": cb_cfg.circuit_breaker_threshold - 1,
+                        },
+                    ))
+                    break  # trigger once
+
+        # 3b. Cap ALL agents at threshold-1 while circuit breaker is active
+        if self._circuit_breaker_active:
+            cap = cb_cfg.circuit_breaker_threshold - 1
+            for agent_id in list(realised_levels.keys()):
+                if realised_levels[agent_id] > cap:
+                    realised_levels[agent_id] = cap
+
+        # 3c. Expire circuit breaker (countdown per turn, not per agent)
+        if self._circuit_breaker_active and self._circuit_breaker_turns_remaining > 0:
+            self._circuit_breaker_turns_remaining -= 1
+            if self._circuit_breaker_turns_remaining <= 0:
+                self._circuit_breaker_active = False
+                turn_events.append(EscalationEvent(
+                    event_type="circuit_breaker_expired",
+                    turn=self._current_turn,
+                    agent_id="",
+                    details={"message": "Mandatory negotiation period ended"},
+                ))
+
+        # 3d. Evaluate per-agent governance constraints
         for agent_id in list(realised_levels.keys()):
             realised = realised_levels[agent_id]
             nation = self._nations[agent_id]
             action = actions[agent_id]
-
-            # Circuit breaker: pause at nuclear threshold
-            if (
-                self._config.governance.circuit_breaker_enabled
-                and realised >= self._config.governance.circuit_breaker_threshold
-                and not nation.crossed_nuclear_threshold()
-                and not self._circuit_breaker_active
-            ):
-                self._circuit_breaker_active = True
-                self._circuit_breaker_turns_remaining = (
-                    self._config.governance.circuit_breaker_negotiation_turns
-                )
-                # Cap at threshold - 1 during circuit breaker
-                realised_levels[agent_id] = (
-                    self._config.governance.circuit_breaker_threshold - 1
-                )
-                turn_events.append(EscalationEvent(
-                    event_type="circuit_breaker_triggered",
-                    turn=self._current_turn,
-                    agent_id=agent_id,
-                    details={
-                        "original_level": realised,
-                        "capped_level": realised_levels[agent_id],
-                    },
-                ))
-
-            # Handle active circuit breaker
-            if self._circuit_breaker_active and self._circuit_breaker_turns_remaining > 0:
-                self._circuit_breaker_turns_remaining -= 1
-                if self._circuit_breaker_turns_remaining <= 0:
-                    self._circuit_breaker_active = False
-                    turn_events.append(EscalationEvent(
-                        event_type="circuit_breaker_expired",
-                        turn=self._current_turn,
-                        agent_id="",
-                        details={"message": "Mandatory negotiation period ended"},
-                    ))
 
             # Treaty enforcement
             if nation.active_treaties:
@@ -327,12 +337,15 @@ class EscalationEnvironment:
                         },
                     ))
 
-            # De-escalation friction
+            # De-escalation friction — deducts from economic_strength
             current = nation.current_level
             if realised < current:
                 # Agent is de-escalating
                 friction = self._compute_de_escalation_cost(current, realised)
                 nation.governance_costs_paid += friction
+                nation.economic_strength = max(
+                    0.0, nation.economic_strength - friction,
+                )
 
                 # Commitment trap
                 if (
@@ -588,18 +601,39 @@ class EscalationEnvironment:
     def _apply_mad_deterrence(
         self, realised_levels: Dict[str, int],
     ) -> List[EscalationEvent]:
-        """Apply MAD deterrence: if one side uses nukes, check opponent response."""
+        """Apply MAD deterrence: if one side uses nukes, opponents with
+        second-strike capability retaliate with configured probability."""
         events: List[EscalationEvent] = []
+        prob = self._config.governance.mad_retaliation_probability
 
         for agent_id, level in realised_levels.items():
             if level < NUCLEAR_THRESHOLD:
                 continue
 
-            # Check if opponents have second-strike capability
             for opp_id, opp in self._nations.items():
                 if opp_id == agent_id:
                     continue
-                if opp.has_second_strike and opp.has_nuclear:
+                if not (opp.has_second_strike and opp.has_nuclear):
+                    continue
+
+                if self._rng.random() < prob:
+                    # Retaliate: raise opponent's level to match or exceed
+                    old_level = realised_levels.get(opp_id, 0)
+                    retaliation_level = max(old_level, level)
+                    realised_levels[opp_id] = retaliation_level
+                    opp.current_level = EscalationLevel(retaliation_level)
+                    events.append(EscalationEvent(
+                        event_type="mad_retaliation",
+                        turn=self._current_turn,
+                        agent_id=opp_id,
+                        details={
+                            "trigger_agent": agent_id,
+                            "trigger_level": level,
+                            "retaliation_level": retaliation_level,
+                            "second_strike_capable": True,
+                        },
+                    ))
+                else:
                     events.append(EscalationEvent(
                         event_type="mad_deterrence_signal",
                         turn=self._current_turn,
@@ -608,6 +642,7 @@ class EscalationEnvironment:
                             "trigger_agent": agent_id,
                             "trigger_level": level,
                             "second_strike_capable": True,
+                            "retaliation_failed": True,
                         },
                     ))
 
