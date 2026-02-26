@@ -163,10 +163,12 @@ python -m pytest <scope> -x -q --tb=short
 
 ### Phase 4: Commit
 
-**4a: Pre-stage lint check** (always, even without `--fix`):
-- Run `ruff check` on staged `.py` files.
-- If `--fix` is NOT set and errors are found, show them all upfront, fix them, re-check, then proceed.
-- This avoids the iterative fix-one-discover-next loop from the pre-commit hook.
+**4a: Pre-stage auto-lint** (always, even without `--fix`):
+- Get list of staged `.py` files via `git diff --cached --name-only -- '*.py'`.
+- If any exist, run `ruff check --fix <files>` to auto-fix safe issues (I001 import sorting, F401 unused imports, F541 f-string without placeholders, B007 unused loop variables, etc.).
+- Re-stage any files modified by ruff (`git add <modified files>`).
+- Run `ruff check <files>` again to verify no remaining errors. If unfixable errors remain, report them and stop.
+- This prevents the iterative "pre-commit rejects → manually fix → restage → retry" loop. Safe fixes are applied automatically; only genuinely broken code blocks the commit.
 
 **4b: Index race guard** (CRITICAL for multi-session repos):
 - After staging, run `git diff --cached --name-only` to get the ACTUAL staged files.
