@@ -47,8 +47,8 @@ class EscalationRunner:
         self._seed = seed if seed is not None else (config.seed or 42)
         self._rng = random.Random(self._seed)
 
-        # Initialize environment
-        self._env = EscalationEnvironment(config)
+        # Initialize environment with the resolved seed
+        self._env = EscalationEnvironment(config, seed=self._seed)
 
         # Initialize agents and policies
         self._policies: Dict[str, EscalationPolicy] = {}

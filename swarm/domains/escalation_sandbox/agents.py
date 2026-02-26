@@ -317,8 +317,8 @@ class EscalationActionParser:
                     action_level=max(0, min(9, int(data.get("action_level", 0)))),
                     reasoning=str(data.get("reasoning", ""))[:2000],
                 )
-        except (json.JSONDecodeError, ValueError, TypeError):
-            pass
+        except (json.JSONDecodeError, ValueError, TypeError) as exc:
+            logger.debug("JSON parse failed, falling back to regex: %s", exc)
 
         # Fallback: look for numbers
         numbers = re.findall(r'\b(\d)\b', raw_completion)

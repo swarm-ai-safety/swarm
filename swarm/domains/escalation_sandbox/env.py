@@ -47,16 +47,19 @@ class EscalationEnvironment:
       - Termination condition evaluation
     """
 
-    def __init__(self, config: EscalationConfig) -> None:
+    def __init__(self, config: EscalationConfig, seed: Optional[int] = None) -> None:
         self._config = config
-        self._rng = random.Random(config.seed)
+        self._rng = random.Random(seed if seed is not None else config.seed)
 
         # Nation states
         self._nations: Dict[str, NationState] = {}
 
-        # Turn tracking
+        # Turn tracking — prefer crisis.timeline_turns if it differs from default
         self._current_turn = 0
-        self._max_turns = config.max_turns
+        if config.crisis.timeline_turns != 20 and config.max_turns == 20:
+            self._max_turns = config.crisis.timeline_turns
+        else:
+            self._max_turns = config.max_turns
 
         # Episode state
         self._outcome = CrisisOutcome.ONGOING
@@ -193,27 +196,29 @@ class EscalationEnvironment:
         realised_levels: Dict[str, int] = {}
         fog_deltas: Dict[str, int] = {}
 
-        # 1. Record signals and broadcast
-        for agent_id, action in actions.items():
-            signal = max(0, min(9, action.signal_level))
-            turn_events.append(EscalationEvent(
-                event_type="signal_sent",
-                turn=self._current_turn,
-                agent_id=agent_id,
-                details={"signal_level": signal},
-            ))
+        # 1. Record signals (only broadcast if configured)
+        if self._config.signals.broadcast_before_action:
+            for agent_id, action in actions.items():
+                signal = max(0, min(9, action.signal_level))
+                turn_events.append(EscalationEvent(
+                    event_type="signal_sent",
+                    turn=self._current_turn,
+                    agent_id=agent_id,
+                    details={"signal_level": signal},
+                ))
 
         # 2. Apply fog-of-war and compute realised levels
+        intel_boosts: Dict[str, float] = {}  # track temporary boosts to revert
         for agent_id, action in actions.items():
             intended = max(0, min(9, action.action_level))
             nation = self._nations[agent_id]
 
-            # Apply intelligence investment
+            # Apply intelligence investment (temporary boost for this turn only)
             if action.invest_intelligence > 0:
                 cost = min(action.invest_intelligence, nation.economic_strength * 0.1)
                 nation.economic_strength -= cost
-                # Temporarily boost intelligence for this turn
                 intel_boost = cost * 0.01
+                intel_boosts[agent_id] = intel_boost
                 nation.intelligence_quality = min(
                     1.0, nation.intelligence_quality + intel_boost,
                 )
@@ -258,6 +263,11 @@ class EscalationEnvironment:
                         "message": "Fog pushed sub-nuclear action across nuclear threshold",
                     },
                 ))
+
+        # Revert temporary intelligence boosts (investment only lasts one turn)
+        for agent_id, boost in intel_boosts.items():
+            nation = self._nations[agent_id]
+            nation.intelligence_quality = max(0.0, nation.intelligence_quality - boost)
 
         # 3a. Circuit breaker: evaluate trigger for ALL agents first
         cb_cfg = self._config.governance
@@ -458,10 +468,20 @@ class EscalationEnvironment:
         # 8. Check termination
         self._outcome = self._check_termination(realised_levels)
 
-        # Build turn result
+        # Build turn result with normalized actions
+        normalised_actions = {
+            aid: EscalationAction(
+                agent_id=aid,
+                signal_level=max(0, min(9, a.signal_level)),
+                action_level=max(0, min(9, a.action_level)),
+                reasoning=a.reasoning[:2000] if a.reasoning else "",
+                invest_intelligence=a.invest_intelligence,
+            )
+            for aid, a in actions.items()
+        }
         result = TurnResult(
             turn=self._current_turn,
-            actions=dict(actions),
+            actions=normalised_actions,
             realised_levels=realised_levels,
             fog_deltas=fog_deltas,
             events=turn_events,
@@ -505,7 +525,7 @@ class EscalationEnvironment:
 
         # Back-channel reduces fog
         if self._config.governance.back_channel_enabled:
-            sigma *= (1.0 - fog.intelligence_reduction_factor * 0.3)
+            sigma *= (1.0 - self._config.governance.back_channel_fog_reduction)
 
         # Sample noise with positive skew
         mu = fog.noise_mu + fog.positive_skew
