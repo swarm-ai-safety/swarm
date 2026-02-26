@@ -303,6 +303,7 @@ class EscalationActionParser:
         """Extract structured action from an LLM completion.
 
         Supports JSON-mode structured output and free-text fallback.
+        All extracted values are clamped to valid ranges.
         """
         # Try JSON parsing first
         try:
@@ -312,9 +313,9 @@ class EscalationActionParser:
                 data = json.loads(json_match.group())
                 return EscalationAction(
                     agent_id="",  # Set by caller
-                    signal_level=int(data.get("signal_level", 0)),
-                    action_level=int(data.get("action_level", 0)),
-                    reasoning=str(data.get("reasoning", "")),
+                    signal_level=max(0, min(9, int(data.get("signal_level", 0)))),
+                    action_level=max(0, min(9, int(data.get("action_level", 0)))),
+                    reasoning=str(data.get("reasoning", ""))[:2000],
                 )
         except (json.JSONDecodeError, ValueError, TypeError):
             pass
@@ -324,12 +325,12 @@ class EscalationActionParser:
         if len(numbers) >= 2:
             return EscalationAction(
                 agent_id="",
-                signal_level=int(numbers[0]),
-                action_level=int(numbers[1]),
+                signal_level=max(0, min(9, int(numbers[0]))),
+                action_level=max(0, min(9, int(numbers[1]))),
                 reasoning=raw_completion[:200],
             )
         elif len(numbers) == 1:
-            level = int(numbers[0])
+            level = max(0, min(9, int(numbers[0])))
             return EscalationAction(
                 agent_id="",
                 signal_level=level,

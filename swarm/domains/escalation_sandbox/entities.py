@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
 
 
 class EscalationLevel(IntEnum):
@@ -84,7 +84,7 @@ class NationState:
     action_history: List[int] = field(default_factory=list)
 
     # Commitment tracking
-    public_commitments: List[int] = field(default_factory=list)
+    public_commitments: Set[int] = field(default_factory=set)
 
     # Cumulative damage
     cumulative_military_damage: float = 0.0

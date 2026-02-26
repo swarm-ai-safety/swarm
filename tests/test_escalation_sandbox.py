@@ -564,7 +564,7 @@ class TestGovernance:
         )
         # Set up commitment
         env._nations["a"].current_level = EscalationLevel.CONVENTIONAL_MOBILISATION
-        env._nations["a"].public_commitments = [4]  # committed to level 4
+        env._nations["a"].public_commitments = {4}  # committed to level 4
         initial_standing = env._nations["a"].diplomatic_standing
 
         actions = {
@@ -932,7 +932,7 @@ class TestEscalationRunner:
         runner = self._make_runner(personas=("hawk", "dove"), max_turns=5)
         runner.run()
 
-        with tempfile.TemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory(dir=".") as tmpdir:
             run_dir = runner.export(output_dir=tmpdir)
 
             assert (run_dir / "event_log.jsonl").exists()
@@ -988,3 +988,145 @@ class TestYAMLScenarioLoading:
         metrics = runner.run()
         assert metrics is not None
         assert metrics.turns_played > 0
+
+
+# ======================================================================
+# Security-focused tests
+# ======================================================================
+
+
+class TestSecurityEdgeCases:
+    """Tests for security-relevant edge cases identified in audit."""
+
+    def test_parser_clamps_out_of_range_values(self):
+        """Parser must clamp values outside [0,9] from LLM responses."""
+        from swarm.domains.escalation_sandbox.agents import EscalationActionParser
+
+        # Attempt escalation beyond max level
+        action = EscalationActionParser.parse(
+            '{"signal_level": 99, "action_level": -5, "reasoning": "exploit"}'
+        )
+        assert action.signal_level == 9
+        assert action.action_level == 0
+
+    def test_parser_truncates_long_reasoning(self):
+        """Parser must truncate excessively long reasoning strings."""
+        from swarm.domains.escalation_sandbox.agents import EscalationActionParser
+
+        long_text = "A" * 10_000
+        action = EscalationActionParser.parse(
+            f'{{"signal_level": 3, "action_level": 4, "reasoning": "{long_text}"}}'
+        )
+        assert len(action.reasoning) <= 2000
+
+    def test_config_sanitizes_malicious_agent_names(self):
+        """Config validation must strip unsafe characters from agent names."""
+        config = EscalationConfig.from_dict({
+            "agents": [
+                {
+                    "agent_id": "agent<script>alert(1)</script>",
+                    "name": "Nation\"; DROP TABLE--",
+                },
+                {
+                    "agent_id": "nation_b",
+                    "name": "Nation B",
+                },
+            ],
+        })
+        # Sanitized IDs/names should only contain safe characters
+        a = config.agents[0]
+        assert "<" not in a.agent_id
+        assert "script" not in a.agent_id or "_" in a.agent_id
+        assert '"' not in a.name
+        assert "DROP" not in a.name or "_" in a.name
+
+    def test_config_caps_max_turns(self):
+        """Config must cap max_turns at MAX_TURNS_LIMIT."""
+        from swarm.domains.escalation_sandbox.config import MAX_TURNS_LIMIT
+
+        config = EscalationConfig.from_dict({
+            "max_turns": 999_999_999,
+        })
+        assert config.max_turns <= MAX_TURNS_LIMIT
+
+    def test_config_clamps_negative_values(self):
+        """Config validation must clamp negative numeric parameters."""
+        config = EscalationConfig.from_dict({
+            "agents": [
+                {
+                    "agent_id": "a",
+                    "name": "A",
+                    "intelligence_quality": -5.0,
+                    "military_strength": -100.0,
+                    "economic_strength": -50.0,
+                },
+                {"agent_id": "b", "name": "B"},
+            ],
+            "fog_of_war": {"noise_sigma": -1.0},
+            "signals": {"trust_decay_rate": 2.0},
+        })
+        a = config.agents[0]
+        assert a.intelligence_quality >= 0.0
+        assert a.military_strength >= 0.0
+        assert a.economic_strength >= 0.0
+        assert config.fog_of_war.noise_sigma >= 0.0
+        assert config.signals.trust_decay_rate <= 1.0
+
+    def test_export_rejects_path_traversal(self):
+        """Runner export must reject paths outside the project directory."""
+        config = EscalationConfig()
+        runner = EscalationRunner(config, seed=42)
+        runner.run()
+
+        with pytest.raises(ValueError, match="outside"):
+            runner.export(output_dir="/tmp/evil_export")
+
+        with pytest.raises(ValueError, match="outside"):
+            runner.export(output_dir="../../etc/evil")
+
+    def test_config_empty_agents_gets_defaults(self):
+        """Config with empty agents list falls back to defaults."""
+        config = EscalationConfig.from_dict({"agents": []})
+        assert len(config.agents) == 2  # default two agents
+
+    def test_treaty_penalty_cannot_make_economic_negative(self):
+        """Treaty defection penalty must not drive economic_strength below 0."""
+        config = EscalationConfig()
+        config.governance.treaty_max_level = 2
+        config.governance.treaty_defection_penalty = 999.0
+        env = EscalationEnvironment(config)
+        env.add_nation("a", "A", economic_strength=1.0)
+        env.add_nation("b", "B", economic_strength=1.0)
+
+        # Agent A violates treaty by choosing level 5
+        actions = {
+            "a": EscalationAction(
+                agent_id="a", signal_level=5, action_level=5, reasoning="",
+            ),
+            "b": EscalationAction(
+                agent_id="b", signal_level=1, action_level=1, reasoning="",
+            ),
+        }
+        env.apply_actions(actions)
+        assert env.nations["a"].economic_strength >= 0.0
+
+    def test_out_of_range_values_clamped_in_environment(self):
+        """Environment must handle escalation values at boundaries correctly."""
+        config = EscalationConfig()
+        config.fog_of_war.enabled = False
+        env = EscalationEnvironment(config)
+        env.add_nation("a", "A")
+        env.add_nation("b", "B")
+
+        # Test boundary level 9 (max)
+        actions = {
+            "a": EscalationAction(
+                agent_id="a", signal_level=9, action_level=9, reasoning="",
+            ),
+            "b": EscalationAction(
+                agent_id="b", signal_level=9, action_level=9, reasoning="",
+            ),
+        }
+        result = env.apply_actions(actions)
+        for level in result.realised_levels.values():
+            assert 0 <= level <= 9

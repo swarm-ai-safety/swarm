@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
+
+# Maximum allowed turns to prevent memory exhaustion
+MAX_TURNS_LIMIT = 10_000
+
+# Allowed characters for agent names/IDs (prevents prompt injection)
+_SAFE_NAME_RE = re.compile(r"^[a-zA-Z0-9_ .'-]{1,64}$")
 
 
 @dataclass
@@ -171,7 +178,7 @@ class EscalationConfig:
             ) if k in metrics_data
         })
 
-        return cls(
+        config = cls(
             agents=agents if agents else cls().agents,
             crisis=crisis,
             fog_of_war=fog,
@@ -179,5 +186,41 @@ class EscalationConfig:
             governance=governance,
             metrics=metrics_cfg,
             seed=data.get("seed"),
-            max_turns=data.get("max_turns", 20),
+            max_turns=min(data.get("max_turns", 20), MAX_TURNS_LIMIT),
+        )
+        config.validate()
+        return config
+
+    def validate(self) -> None:
+        """Validate configuration values and sanitize agent names.
+
+        Raises ValueError for invalid configurations.
+        """
+        # Sanitize agent names and IDs
+        for agent in self.agents:
+            if agent.agent_id and not _SAFE_NAME_RE.match(agent.agent_id):
+                agent.agent_id = re.sub(r"[^a-zA-Z0-9_]", "_", agent.agent_id)[:64]
+            if agent.name and not _SAFE_NAME_RE.match(agent.name):
+                agent.name = re.sub(r"[^a-zA-Z0-9_ .'-]", "_", agent.name)[:64]
+            agent.intelligence_quality = max(0.0, min(1.0, agent.intelligence_quality))
+            agent.military_strength = max(0.0, agent.military_strength)
+            agent.economic_strength = max(0.0, agent.economic_strength)
+
+        # Validate numeric bounds
+        if self.max_turns < 1:
+            self.max_turns = 1
+        if self.max_turns > MAX_TURNS_LIMIT:
+            self.max_turns = MAX_TURNS_LIMIT
+
+        self.fog_of_war.noise_sigma = max(0.0, self.fog_of_war.noise_sigma)
+        self.fog_of_war.intelligence_reduction_factor = max(
+            0.0, min(1.0, self.fog_of_war.intelligence_reduction_factor),
+        )
+
+        self.signals.trust_decay_rate = max(0.0, min(1.0, self.signals.trust_decay_rate))
+
+        if self.governance.circuit_breaker_threshold < 1:
+            self.governance.circuit_breaker_threshold = 7
+        self.governance.de_escalation_friction_multiplier = max(
+            0.0, self.governance.de_escalation_friction_multiplier,
         )

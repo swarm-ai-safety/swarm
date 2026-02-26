@@ -309,7 +309,9 @@ class EscalationEnvironment:
                     nation.diplomatic_standing = max(
                         0.0, nation.diplomatic_standing - 0.2,
                     )
-                    nation.economic_strength -= penalty
+                    nation.economic_strength = max(
+                        0.0, nation.economic_strength - penalty,
+                    )
                     self._treaties_violated[agent_id] = (
                         self._treaties_violated.get(agent_id, 0) + 1
                     )
@@ -366,7 +368,7 @@ class EscalationEnvironment:
             # Track commitment (signal becomes a public commitment)
             signal = max(0, min(9, action.signal_level))
             if signal > current:
-                nation.public_commitments.append(signal)
+                nation.public_commitments.add(signal)
 
         # 4. Apply consequences
         self._apply_consequences(realised_levels, turn_events)

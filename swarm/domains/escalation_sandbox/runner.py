@@ -151,13 +151,13 @@ class EscalationRunner:
         if output_dir:
             raw = Path(output_dir)
             run_dir = raw.resolve()
-            if not raw.is_absolute():
-                cwd = Path.cwd().resolve()
-                if not (run_dir == cwd or str(run_dir).startswith(str(cwd) + "/")):
-                    raise ValueError(
-                        f"Relative output directory resolves to {run_dir} "
-                        f"which is outside {cwd}. Use an absolute path."
-                    )
+            # Block paths that escape CWD (both relative and absolute)
+            cwd = Path.cwd().resolve()
+            if not (run_dir == cwd or str(run_dir).startswith(str(cwd) + "/")):
+                raise ValueError(
+                    f"Output directory resolves to {run_dir} "
+                    f"which is outside {cwd}. Use a path within the project."
+                )
         else:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             run_dir = Path(f"runs/{timestamp}_escalation_seed{self._seed}")
