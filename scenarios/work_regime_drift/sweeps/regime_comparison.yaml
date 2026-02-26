@@ -1,0 +1,68 @@
+# Work Regime Drift — Sweep: 2x2x2 Factorial Design
+#
+# Systematically varies the three primary stressors:
+#   workload:       low (steps_per_epoch=10) vs high (steps_per_epoch=20)
+#   pay_inequality: equal (theta=0.5) vs unequal (theta=0.8)
+#   eval_noise:     low (audit_probability=0.1) vs high (audit_probability=0.3)
+#
+# 8 treatment cells, each run with 3 seeds for reproducibility.
+#
+# Usage:
+#   python -m swarm sweep scenarios/work_regime_drift/sweeps/regime_comparison.yaml
+#
+# Endpoints:
+#   - mean_drift_index (primary: policy distance from initial)
+#   - mean_grievance
+#   - strike_rate
+#   - coalition_strength
+#   - gini_payoff
+#   - legitimacy_score
+#   - quality_degradation
+
+sweep_id: work_regime_regime_comparison
+description: >
+  2x2x2 factorial sweep over workload, pay inequality, and evaluation
+  noise. Tests the "overwork → collective action" hypothesis by measuring
+  policy drift, coalition formation, and legitimacy degradation.
+base_scenario: scenarios/work_regime_drift/baseline.yaml
+
+parameters:
+  # Workload (via steps_per_epoch)
+  simulation.steps_per_epoch:
+    values: [10, 20]
+    label: workload
+
+  # Pay inequality (via theta)
+  payoff.theta:
+    values: [0.5, 0.8]
+    label: pay_inequality
+
+  # Evaluation noise (proxy: audit harshness with low precision)
+  governance.audit_probability:
+    values: [0.1, 0.3]
+    label: eval_noise
+
+seeds: [42, 123, 7]
+
+metrics:
+  - mean_drift_index
+  - mean_grievance
+  - strike_rate
+  - coalition_strength
+  - gini_payoff
+  - legitimacy_score
+  - quality_degradation
+  - defection_rate
+  - mean_compliance
+  - mean_redistribution_pref
+  - mean_exit_propensity
+
+analysis:
+  # Primary hypothesis test
+  primary_endpoint: mean_drift_index
+  # Expected: high workload + unequal pay + noisy eval → max drift
+  interaction_effects:
+    - [workload, pay_inequality]
+    - [workload, eval_noise]
+    - [pay_inequality, eval_noise]
+    - [workload, pay_inequality, eval_noise]  # 3-way
