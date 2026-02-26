@@ -11,6 +11,7 @@ Maps the "overwork → stance drift" phenomenon into SWARM's native
 proxy/payoff architecture.
 """
 
+from collections import deque
 from typing import Dict, List, Optional
 
 from swarm.agents.base import (
@@ -69,8 +70,9 @@ class WorkRegimeAgent(BaseAgent):
             "exit_propensity", 0.05
         )
 
-        # Grievance accumulator (unbounded upward, decays toward 0)
+        # Grievance accumulator (soft-capped to prevent extreme values)
         self.grievance: float = 0.0
+        self._grievance_cap: float = 10.0
 
         # Snapshot initial state for drift measurement
         self._initial_compliance = self.compliance_propensity
@@ -89,10 +91,10 @@ class WorkRegimeAgent(BaseAgent):
             "interact_probability", 0.4
         )
 
-        # Track recent payoffs for adaptation
-        self._recent_payoffs: List[float] = []
-        self._recent_eval_noise: List[float] = []
+        # Track recent payoffs for adaptation (bounded deque, O(1) append)
         self._max_recent: int = 20
+        self._recent_payoffs: deque = deque(maxlen=self._max_recent)
+        self._recent_eval_noise: deque = deque(maxlen=self._max_recent)
 
     # ------------------------------------------------------------------
     # Core loop
@@ -206,8 +208,9 @@ class WorkRegimeAgent(BaseAgent):
         # Pay gap: negative = underpaid relative to peers
         pay_gap = avg_payoff - peer_avg_payoff
         unfairness_signal = max(0.0, -pay_gap) + eval_noise * 0.5
-        self.grievance = (
-            self.grievance * self._grievance_decay + unfairness_signal
+        self.grievance = min(
+            self._grievance_cap,
+            self.grievance * self._grievance_decay + unfairness_signal,
         )
 
         # --- Compliance: decreases under high workload + grievance ---
@@ -243,13 +246,9 @@ class WorkRegimeAgent(BaseAgent):
                 0.0, self.exit_propensity - rate * 0.05
             )
 
-        # Track for metrics
+        # Track for metrics (deque maxlen enforces bound automatically)
         self._recent_payoffs.append(avg_payoff)
-        if len(self._recent_payoffs) > self._max_recent:
-            self._recent_payoffs.pop(0)
         self._recent_eval_noise.append(eval_noise)
-        if len(self._recent_eval_noise) > self._max_recent:
-            self._recent_eval_noise.pop(0)
 
     # ------------------------------------------------------------------
     # Drift measurement

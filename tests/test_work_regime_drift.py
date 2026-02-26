@@ -150,6 +150,35 @@ class TestWorkRegimeAgent:
         assert 0.0 <= agent.redistribution_preference <= 1.0
         assert 0.0 <= agent.exit_propensity <= 1.0
 
+    def test_grievance_capped(self):
+        """Grievance should never exceed the soft cap."""
+        agent = WorkRegimeAgent(
+            agent_id="w9",
+            config={"adapt_rate": 0.3},
+            rng=random.Random(42),
+        )
+        for _ in range(100):
+            agent.adapt_policy(
+                avg_payoff=-10.0,
+                peer_avg_payoff=10.0,
+                eval_noise=1.0,
+                workload_pressure=1.0,
+            )
+        assert agent.grievance <= agent._grievance_cap
+
+    def test_recent_payoffs_bounded(self):
+        """Recent payoff tracking should not grow beyond max_recent."""
+        agent = WorkRegimeAgent(agent_id="w10", rng=random.Random(42))
+        for i in range(50):
+            agent.adapt_policy(
+                avg_payoff=float(i),
+                peer_avg_payoff=0.0,
+                eval_noise=0.1,
+                workload_pressure=0.5,
+            )
+        assert len(agent._recent_payoffs) == agent._max_recent
+        assert len(agent._recent_eval_noise) == agent._max_recent
+
 
 # ======================================================================
 # Work regime metrics tests
