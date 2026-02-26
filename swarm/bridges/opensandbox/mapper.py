@@ -6,7 +6,7 @@ ProxyComputer to derive v_hat and p.
 """
 
 import logging
-from typing import Any, Dict, Optional
+from typing import Dict, Optional
 
 from swarm.core.proxy import ProxyComputer, ProxyObservables
 from swarm.models.interaction import InteractionType, SoftInteraction
