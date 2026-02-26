@@ -4,25 +4,23 @@ Covers screening, message bus, provenance, observer, and bridge-level
 validation logic requested in PR #297 review.
 """
 
-import pytest
-from datetime import datetime, timezone
+from datetime import timezone
 
+import pytest
+
+from swarm.bridges.opensandbox.bridge import OpenSandboxBridge
 from swarm.bridges.opensandbox.config import (
     AgentType,
     CapabilityManifest,
-    ContractAssignment,
     GovernanceContract,
-    InteractionPolicy,
     NetworkPolicy,
     OpenSandboxConfig,
 )
 from swarm.bridges.opensandbox.events import OpenSandboxEvent, OpenSandboxEventType
-from swarm.bridges.opensandbox.screener import ScreeningProtocol
 from swarm.bridges.opensandbox.message_bus import MessageBus
-from swarm.bridges.opensandbox.provenance import ProvenanceTracker
 from swarm.bridges.opensandbox.observer import Observer
-from swarm.bridges.opensandbox.bridge import OpenSandboxBridge
-
+from swarm.bridges.opensandbox.provenance import ProvenanceTracker
+from swarm.bridges.opensandbox.screener import ScreeningProtocol
 
 # ------------------------------------------------------------------ #
 # Fixtures                                                            #
@@ -306,7 +304,7 @@ class TestProvenanceTracker:
             sandbox_id="s-a", agent_id="a", action_type="exec",
             action_summary="cmd1",
         )
-        id2 = tracker.sign(
+        tracker.sign(
             sandbox_id="s-a", agent_id="a", action_type="exec",
             action_summary="cmd2",
         )
@@ -331,7 +329,6 @@ class TestProvenanceTracker:
             action_summary="cmd", content={"x": 1},
         )
         # Tamper with the record
-        chain = tracker.get_chain("a")
         # Access internal state to tamper
         with tracker._lock:
             tracker._chains["a"][0].chain_hash = "tampered"
@@ -407,7 +404,7 @@ class TestObserver:
         obs.record_violation("a")
         obs.record_intervention("a")
 
-        alert1 = obs.check_risk("a")
+        obs.check_risk("a")
         # Regardless of whether we crossed threshold, simulate recovery
         # by recording many good p values to drop risk below threshold
         for _ in range(50):
@@ -420,7 +417,7 @@ class TestObserver:
             obs.record_p("a", 0.05)
             obs.record_violation("a")
 
-        alert2 = obs.check_risk("a")
+        obs.check_risk("a")
         # If risk crossed again, we should get a new alert
         # (this depends on whether risk_score goes above threshold again)
         # The important thing is: no duplicates within one crossing
@@ -459,7 +456,7 @@ class TestObserver:
     def test_observer_events_bounded(self):
         obs = Observer(max_events=10)
         obs.register_agent("a", "c1", "t")
-        for i in range(20):
+        for _i in range(20):
             obs.record_p("a", 0.1)
             obs.record_violation("a")
             obs.check_risk("a")

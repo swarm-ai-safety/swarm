@@ -783,7 +783,7 @@ class OpenSandboxBridge:
             },
         )
 
-        prov_id = self._provenance.sign(
+        self._provenance.sign(
             sandbox_id=sandbox_id,
             agent_id=agent_id,
             action_type="violation",
