@@ -11,7 +11,7 @@ import json
 import logging
 import random
 import re
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 from swarm.domains.escalation_sandbox.entities import (
     EscalationAction,
@@ -394,7 +394,7 @@ class AnthropicBackend(LLMBackend):
             system=system_prompt,
             messages=[{"role": "user", "content": prompt}],
         )
-        return message.content[0].text
+        return str(message.content[0].text)
 
 
 class OpenAIBackend(LLMBackend):
@@ -477,7 +477,7 @@ class OllamaBackend(LLMBackend):
         try:
             with urllib.request.urlopen(req, timeout=120) as resp:
                 result = json.loads(resp.read().decode("utf-8"))
-                return result.get("response", "")
+                return str(result.get("response", ""))
         except urllib.error.URLError as e:
             logger.error("Ollama backend error: %s", e)
             return ""
@@ -573,7 +573,7 @@ class EscalationAgentBridge(EscalationPolicy):
 # Policy factory
 # ======================================================================
 
-POLICY_REGISTRY = {
+POLICY_REGISTRY: Dict[str, Callable[..., EscalationPolicy]] = {
     "dove": DovePolicy,
     "hawk": HawkPolicy,
     "tit_for_tat": TitForTatPolicy,

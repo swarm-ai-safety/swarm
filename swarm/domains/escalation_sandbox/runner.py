@@ -194,8 +194,8 @@ class EscalationRunner:
         nations = self._env.nations
         if nations:
             with open(nations_path, "w", newline="") as f:
-                writer = csv.writer(f)
-                writer.writerow([
+                nation_writer = csv.writer(f)
+                nation_writer.writerow([
                     "agent_id", "name", "final_level",
                     "military_remaining", "economic_remaining",
                     "population_welfare", "trust_score",
@@ -205,7 +205,7 @@ class EscalationRunner:
                     "cumulative_civilian_casualties",
                 ])
                 for aid, n in nations.items():
-                    writer.writerow([
+                    nation_writer.writerow([
                         aid, n.name, int(n.current_level),
                         f"{n.military_strength:.2f}",
                         f"{n.economic_strength:.2f}",
@@ -223,14 +223,14 @@ class EscalationRunner:
         if turn_results:
             agent_ids = sorted(self._policies.keys())
             with open(history_path, "w", newline="") as f:
-                writer = csv.writer(f)
+                hist_writer = csv.writer(f)
                 header = ["turn", "outcome"]
                 for aid in agent_ids:
                     header.extend([
                         f"{aid}_signal", f"{aid}_intended",
                         f"{aid}_realised", f"{aid}_fog_delta",
                     ])
-                writer.writerow(header)
+                hist_writer.writerow(header)
                 for tr in turn_results:
                     row: list[Any] = [tr.turn, tr.outcome.value]
                     for aid in agent_ids:
@@ -239,7 +239,7 @@ class EscalationRunner:
                         row.append(action.action_level if action else "")
                         row.append(tr.realised_levels.get(aid, ""))
                         row.append(tr.fog_deltas.get(aid, ""))
-                    writer.writerow(row)
+                    hist_writer.writerow(row)
 
         logger.info("Exported escalation results to %s", run_dir)
         return run_dir
