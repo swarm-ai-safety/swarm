@@ -347,8 +347,8 @@ class WorkRegimeAgent(BaseAgent):
                 if t.get("difficulty", "medium") in ("trivial", "easy")
             ]
             if easy:
-                return self._rng.choice(easy)
-        return self._rng.choice(tasks)
+                return dict(self._rng.choice(easy))
+        return dict(self._rng.choice(tasks))
 
     def _work_on_task(self, task: Dict, observation: Observation) -> Action:
         task_id = task.get("task_id", "")
@@ -382,7 +382,7 @@ class WorkRegimeAgent(BaseAgent):
                 "Here are constructive suggestions.",
                 "Collaboration opportunity available.",
             ]
-        return self._rng.choice(pool)
+        return str(self._rng.choice(pool))
 
     def _vote(self, observation: Observation) -> Action:
         posts = observation.visible_posts
