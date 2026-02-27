@@ -201,7 +201,7 @@ async def _execute_simulation(simulation_id: str) -> None:
                 )
             )
 
-        orchestrator._run_step_async = _wrapped_run_step  # type: ignore[method-assign]
+        orchestrator._run_step_async = _wrapped_run_step  # type: ignore[assignment]
 
         # Run the simulation
         metrics_list = await orchestrator.run_async()
