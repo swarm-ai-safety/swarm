@@ -146,6 +146,8 @@ nav:
   - Game: game.md
   - Blog:
     - blog/index.md
+    - "LLMs Are More Deceptive Than Scripted Agents": blog/escalation-sandbox-llm-vs-scripted.md
+    - "Six Frontier Models Played a Bluffing Game": blog/six-frontier-models-played-a-bluffing-game.md
     - "Hodoscope Trajectory Analysis": blog/hodoscope-trajectory-analysis.md
     - "Skill Activation Is the Bottleneck": blog/skill-activation-is-the-bottleneck.md
     - "The Cure Was Worse Than the Disease": blog/runaway-intelligence-three-level-containment.md
