@@ -13,10 +13,13 @@ Metric categories:
 
 from __future__ import annotations
 
+import logging
 from dataclasses import dataclass, field
 from typing import Dict, Optional, Sequence
 
 from swarm.models.interaction import SoftInteraction
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -60,6 +63,11 @@ def compute_drift_index(
         (mean_drift, max_drift)
     """
     if not policy_snapshots:
+        logger.warning(
+            "compute_drift_index called with empty policy_snapshots; "
+            "returning (0, 0). Check that WorkRegimeAgents are present "
+            "and producing snapshots."
+        )
         return 0.0, 0.0
     drifts = [s.get("drift", 0.0) for s in policy_snapshots]
     return sum(drifts) / len(drifts), max(drifts)
@@ -118,10 +126,16 @@ def compute_coalition_strength(
     interaction_pairs: Sequence[tuple[str, str]],
     agent_ids: Sequence[str],
 ) -> float:
-    """Estimate coalition strength via clustering coefficient.
+    """Estimate coalition strength via average local clustering coefficient.
 
     Measures how much agents form tight cooperative subgroups.
     Higher = stronger coalition formation.  Range [0, 1].
+
+    Note: Nodes with degree < 2 (isolated or leaf nodes) are excluded
+    from the average because a clustering coefficient is undefined for
+    them.  In sparse networks this may overestimate coalition formation
+    since only the well-connected core contributes.  Returns 0.0 when
+    no node has degree >= 2 (i.e. no triangles are possible).
     """
     if len(agent_ids) < 3 or not interaction_pairs:
         return 0.0
@@ -205,6 +219,13 @@ def build_epoch_metrics(
         legitimacy_kwargs: keyword args for compute_legitimacy_score
     """
     snapshots_list = list(policy_snapshots.values())
+    if not snapshots_list:
+        logger.warning(
+            "build_epoch_metrics: no policy snapshots for epoch %d; "
+            "aggregate means will be zero. Ensure WorkRegimeAgents "
+            "provide snapshots via policy_snapshot().",
+            epoch,
+        )
     mean_drift, max_drift = compute_drift_index(snapshots_list)
 
     payoff_values = list(agent_payoffs.values()) if agent_payoffs else []

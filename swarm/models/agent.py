@@ -20,6 +20,7 @@ class AgentType(Enum):
     CAUTIOUS = "cautious"
     COLLABORATIVE = "collaborative"
     ADAPTIVE = "adaptive"
+    WORK_REGIME = "work_regime"
 
 
 class AgentStatus(Enum):

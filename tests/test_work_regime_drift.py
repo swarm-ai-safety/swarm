@@ -193,9 +193,9 @@ class TestWorkRegimeMetrics:
         assert compute_gini([10.0, 10.0, 10.0, 10.0]) == 0.0
 
     def test_gini_max_inequality(self):
-        """Gini with one person having all should approach 1."""
+        """Gini with one person having all: exact value is 0.75 for n=4."""
         gini = compute_gini([0.0, 0.0, 0.0, 100.0])
-        assert gini > 0.5  # not exactly 1 due to formula but high
+        assert gini == pytest.approx(0.75)
 
     def test_gini_empty(self):
         """Empty list returns 0."""
@@ -364,12 +364,20 @@ class TestWorkRegimeScenarioLoading:
         path = Path("scenarios/work_regime_drift/baseline.yaml")
         scenario = load_scenario(path)
         agents = create_agents(scenario.agent_specs, seed=42)
-        assert len(agents) == 10  # 1 + 6 + 2 + 1
 
+        # Derive expected totals from the YAML spec itself
+        expected_total = sum(s.get("count", 1) for s in scenario.agent_specs)
+        assert len(agents) == expected_total
+
+        expected_wr = sum(
+            s.get("count", 1)
+            for s in scenario.agent_specs
+            if s["type"] == "work_regime"
+        )
         # Check we got WorkRegimeAgent instances
         from swarm.agents.work_regime_agent import WorkRegimeAgent as WRA
         wr_agents = [a for a in agents if isinstance(a, WRA)]
-        assert len(wr_agents) == 6
+        assert len(wr_agents) == expected_wr
 
     def test_build_and_short_run_baseline(self):
         """Baseline scenario can build an orchestrator and run 2 epochs."""

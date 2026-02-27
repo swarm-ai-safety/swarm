@@ -74,7 +74,7 @@ class ContractMetrics:
 
 
 # Types considered "good" for separation analysis
-_GOOD_TYPES = {AgentType.HONEST.value}
+_GOOD_TYPES = {AgentType.HONEST.value, AgentType.WORK_REGIME.value}
 _ADVERSARIAL_TYPES = {
     AgentType.DECEPTIVE.value,
     AgentType.ADVERSARIAL.value,

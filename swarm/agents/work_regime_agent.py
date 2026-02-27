@@ -22,7 +22,7 @@ from swarm.agents.base import (
     Role,
 )
 from swarm.models.agent import AgentType
-from swarm.models.interaction import InteractionType
+from swarm.models.interaction import InteractionType, SoftInteraction
 
 
 class WorkRegimeAgent(BaseAgent):
@@ -49,7 +49,7 @@ class WorkRegimeAgent(BaseAgent):
     ):
         super().__init__(
             agent_id=agent_id,
-            agent_type=AgentType.HONEST,  # base archetype
+            agent_type=AgentType.WORK_REGIME,
             roles=roles,
             config=config or {},
             name=name,
@@ -96,6 +96,10 @@ class WorkRegimeAgent(BaseAgent):
         self._recent_payoffs: deque = deque(maxlen=self._max_recent)
         self._recent_eval_noise: deque = deque(maxlen=self._max_recent)
 
+        # Per-epoch accumulators (reset each epoch by on_epoch_end)
+        self._epoch_payoffs: List[float] = []
+        self._epoch_strike_count: int = 0
+
     # ------------------------------------------------------------------
     # Core loop
     # ------------------------------------------------------------------
@@ -106,6 +110,7 @@ class WorkRegimeAgent(BaseAgent):
         # Strike / exit check
         if self._rng.random() < self.exit_propensity:
             self.remember({"type": "strike", "grievance": self.grievance})
+            self._epoch_strike_count += 1
             return self.create_noop_action()
 
         # Handle pending proposals
@@ -181,6 +186,50 @@ class WorkRegimeAgent(BaseAgent):
             content="Collaborative work proposal.",
             offered_transfer=0.0,
         )
+
+    # ------------------------------------------------------------------
+    # Outcome tracking — bridges update_from_outcome into adapt_policy
+    # ------------------------------------------------------------------
+
+    def update_from_outcome(
+        self,
+        interaction: SoftInteraction,
+        payoff: float,
+    ) -> None:
+        """Track payoff for epoch-end adaptation, then delegate to base."""
+        super().update_from_outcome(interaction, payoff)
+        self._epoch_payoffs.append(payoff)
+
+    def on_epoch_end(self, *, peer_avg_payoff: float, workload_pressure: float) -> None:
+        """Called by WorkRegimeAdaptMiddleware at each epoch boundary.
+
+        Computes epoch-level signals and feeds them into adapt_policy,
+        then resets per-epoch accumulators.
+        """
+        avg_payoff = (
+            sum(self._epoch_payoffs) / len(self._epoch_payoffs)
+            if self._epoch_payoffs
+            else 0.0
+        )
+
+        # Eval noise proxy: fraction of recent payoffs that were negative
+        # (captures perceived arbitrariness of evaluation)
+        negative_frac = (
+            sum(1 for p in self._epoch_payoffs if p < 0) / len(self._epoch_payoffs)
+            if self._epoch_payoffs
+            else 0.0
+        )
+
+        self.adapt_policy(
+            avg_payoff=avg_payoff,
+            peer_avg_payoff=peer_avg_payoff,
+            eval_noise=negative_frac,
+            workload_pressure=workload_pressure,
+        )
+
+        # Reset epoch accumulators
+        self._epoch_payoffs.clear()
+        self._epoch_strike_count = 0
 
     # ------------------------------------------------------------------
     # Policy adaptation (call at epoch boundary or after interactions)

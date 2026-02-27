@@ -27,10 +27,10 @@ parameters:
     values: [0.3, 0.5, 0.7]
     label: audit_precision
 
-  # Circuit breaker severity
+  # Circuit breaker tolerance (higher = more tolerant, fewer freezes)
   governance.freeze_threshold_violations:
     values: [2, 5, 10]
-    label: breaker_sensitivity
+    label: breaker_tolerance
 
 seeds: [42, 123, 7]
 

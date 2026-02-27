@@ -24,6 +24,9 @@ agents:
       post_probability: 0.15
 
   # Workers (start cooperative, should drift)
+  # NOTE: 8 workers vs baseline's 6 — intentional.  High-stress treatment
+  # increases population to raise coordination complexity and workload
+  # contention.  When comparing to baseline, normalise per-capita.
   - type: work_regime
     count: 8
     name: worker

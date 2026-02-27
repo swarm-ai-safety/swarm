@@ -396,3 +396,50 @@ class MemoryDecayMiddleware(Middleware):
 
     def on_step_start(self, ctx: MiddlewareContext) -> None:
         pass
+
+
+class WorkRegimeAdaptMiddleware(Middleware):
+    """Calls adapt_policy on WorkRegimeAgents at each epoch boundary.
+
+    Computes population-level signals (peer average payoff, workload
+    pressure) and feeds them into each work-regime agent's on_epoch_end
+    so that policy drift materialises during simulation runs.
+    """
+
+    def on_epoch_start(self, ctx: MiddlewareContext) -> None:
+        pass
+
+    def on_epoch_end(self, ctx: MiddlewareContext) -> None:
+        wr_agents = [
+            a for a in ctx.agents.values() if hasattr(a, "on_epoch_end")
+        ]
+        if not wr_agents:
+            return
+
+        # Peer average payoff: mean of all agent total_payoff deltas this epoch
+        # Use per-agent epoch payoffs where available, fall back to state
+        all_epoch_payoffs: List[float] = []
+        for agent in ctx.agents.values():
+            epoch_p = getattr(agent, "_epoch_payoffs", None)
+            if epoch_p is not None and len(epoch_p) > 0:
+                all_epoch_payoffs.append(sum(epoch_p) / len(epoch_p))
+        peer_avg = (
+            sum(all_epoch_payoffs) / len(all_epoch_payoffs)
+            if all_epoch_payoffs
+            else 0.0
+        )
+
+        # Workload pressure: steps_per_epoch / bandwidth_cap (if configured)
+        steps = getattr(ctx.config, "steps_per_epoch", 10)
+        gov = getattr(ctx.config, "governance_config", None)
+        bw_cap = getattr(gov, "bandwidth_cap", None) if gov else None
+        workload_pressure = min(1.0, steps / bw_cap) if bw_cap else 0.5
+
+        for agent in wr_agents:
+            agent.on_epoch_end(
+                peer_avg_payoff=peer_avg,
+                workload_pressure=workload_pressure,
+            )
+
+    def on_step_start(self, ctx: MiddlewareContext) -> None:
+        pass
