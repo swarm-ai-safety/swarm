@@ -307,6 +307,26 @@ class TestWorkRegimeMetrics:
         assert metrics.mean_drift_index == pytest.approx(0.125)
         assert metrics.gini_payoff > 0.0
 
+    def test_build_epoch_metrics_empty_snapshots_warns(self, caplog):
+        """build_epoch_metrics warns and returns zero aggregate means when policy_snapshots is empty."""
+        import logging
+
+        with caplog.at_level(logging.WARNING, logger="swarm.metrics.work_regime_metrics"):
+            metrics = build_epoch_metrics(
+                epoch=3,
+                policy_snapshots={},
+                interactions=[],
+                agent_payoffs={},
+            )
+
+        assert any("no policy snapshots" in m for m in caplog.messages)
+        assert isinstance(metrics, WorkRegimeEpochMetrics)
+        assert metrics.mean_compliance == pytest.approx(0.0)
+        assert metrics.mean_cooperation_threshold == pytest.approx(0.0)
+        assert metrics.mean_redistribution_pref == pytest.approx(0.0)
+        assert metrics.mean_exit_propensity == pytest.approx(0.0)
+        assert metrics.mean_grievance == pytest.approx(0.0)
+
 
 # ======================================================================
 # Scenario loading tests
