@@ -4,8 +4,6 @@ Validates that adapt_policy is invoked during simulation updates via the
 WorkRegimeAdaptMiddleware + on_epoch_end pathway.
 """
 
-import pytest
-
 from swarm.agents.work_regime_agent import WorkRegimeAgent
 from swarm.core.middleware import WorkRegimeAdaptMiddleware, MiddlewareContext
 from swarm.models.interaction import SoftInteraction
