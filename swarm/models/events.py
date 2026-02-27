@@ -7,7 +7,7 @@ import json
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -260,22 +260,26 @@ def interaction_proposed_event(
     p: float,
     epoch: Optional[int] = None,
     step: Optional[int] = None,
+    causal_parents: Optional[List[str]] = None,
 ) -> Event:
     """Create an interaction proposed event."""
     if not (0.0 <= p <= 1.0):
         raise ValueError(f"p must be in [0, 1], got {p}")
     if not (-1.0 <= v_hat <= 1.0):
         raise ValueError(f"v_hat must be in [-1, 1], got {v_hat}")
+    payload: Dict[str, Any] = {
+        "interaction_type": interaction_type,
+        "v_hat": v_hat,
+        "p": p,
+    }
+    if causal_parents:
+        payload["causal_parents"] = causal_parents
     return Event(
         event_type=EventType.INTERACTION_PROPOSED,
         interaction_id=interaction_id,
         initiator_id=initiator_id,
         counterparty_id=counterparty_id,
-        payload={
-            "interaction_type": interaction_type,
-            "v_hat": v_hat,
-            "p": p,
-        },
+        payload=payload,
         epoch=epoch,
         step=step,
     )
