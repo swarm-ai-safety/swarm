@@ -28,6 +28,8 @@ agents:
   # increases population to raise coordination complexity and workload
   # contention.  When comparing to baseline, normalise per-capita.
   - type: work_regime
+    # Note: baseline.yaml uses 6 workers; we intentionally increase to 8 here
+    # to model a denser, higher-pressure work environment under high stress.
     count: 8
     name: worker
     config:
