@@ -11,6 +11,7 @@ Maps the "overwork → stance drift" phenomenon into SWARM's native
 proxy/payoff architecture.
 """
 
+import math
 from collections import deque
 from typing import Dict, List, Optional
 
@@ -262,8 +263,13 @@ class WorkRegimeAgent(BaseAgent):
             self.grievance * self._grievance_decay + unfairness_signal,
         )
 
+        # Apply tanh saturation so that large grievance values don't produce
+        # ever-growing adaptation steps; for non-negative grievance, tanh
+        # maps to approximately [0, 1), saturating smoothly above grievance ≈ 2.
+        g_influence = math.tanh(self.grievance)
+
         # --- Compliance: decreases under high workload + grievance ---
-        compliance_pressure = workload_pressure * 0.3 + self.grievance * 0.2
+        compliance_pressure = workload_pressure * 0.3 + g_influence * 0.2
         self.compliance_propensity = max(
             0.0,
             min(1.0, self.compliance_propensity - rate * compliance_pressure),
@@ -274,12 +280,12 @@ class WorkRegimeAgent(BaseAgent):
             0.0,
             min(
                 1.0,
-                self.cooperation_threshold + rate * self.grievance * 0.3,
+                self.cooperation_threshold + rate * g_influence * 0.3,
             ),
         )
 
         # --- Redistribution preference: rises with pay gap + grievance ---
-        redist_signal = max(0.0, -pay_gap) * 0.5 + self.grievance * 0.2
+        redist_signal = max(0.0, -pay_gap) * 0.5 + g_influence * 0.2
         self.redistribution_preference = max(
             0.0,
             min(1.0, self.redistribution_preference + rate * redist_signal),
