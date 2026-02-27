@@ -396,3 +396,53 @@ class MemoryDecayMiddleware(Middleware):
 
     def on_step_start(self, ctx: MiddlewareContext) -> None:
         pass
+
+
+class WorkRegimeAdaptMiddleware(Middleware):
+    """Drives WorkRegimeAgent policy adaptation at each epoch boundary.
+
+    Collects epoch-level signals (peer average payoff, workload pressure)
+    and invokes ``on_epoch_end`` on every WorkRegimeAgent in the population,
+    which in turn calls ``adapt_policy`` to update each agent's policy state.
+    """
+
+    def on_epoch_start(self, ctx: MiddlewareContext) -> None:
+        pass
+
+    def on_epoch_end(self, ctx: MiddlewareContext) -> None:
+        from swarm.agents.work_regime_agent import WorkRegimeAgent
+
+        wr_agents = [
+            agent
+            for agent in ctx.agents.values()
+            if isinstance(agent, WorkRegimeAgent)
+        ]
+        if not wr_agents:
+            return
+
+        # Peer average payoff: mean over all accumulated epoch payoffs
+        import itertools
+        all_payoffs = list(
+            itertools.chain.from_iterable(agent._epoch_payoffs for agent in wr_agents)
+        )
+        peer_avg_payoff = sum(all_payoffs) / len(all_payoffs) if all_payoffs else 0.0
+
+        # Workload pressure: interactions this epoch relative to bandwidth cap
+        steps = max(1, ctx.config.steps_per_epoch)
+        interactions = len(ctx.state.completed_interactions)
+        bw_cap = getattr(
+            getattr(ctx.governance_engine, "config", None), "bandwidth_cap", None
+        )
+        if bw_cap and bw_cap > 0:
+            workload_pressure = min(1.0, interactions / (steps * bw_cap))
+        else:
+            workload_pressure = min(1.0, interactions / steps)
+
+        for agent in wr_agents:
+            agent.on_epoch_end(
+                peer_avg_payoff=peer_avg_payoff,
+                workload_pressure=workload_pressure,
+            )
+
+    def on_step_start(self, ctx: MiddlewareContext) -> None:
+        pass

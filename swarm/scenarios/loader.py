@@ -51,6 +51,7 @@ from swarm.agents.skill_evolving import (
 from swarm.agents.skillrl_agent import SkillRLAgent
 from swarm.agents.threshold_dancer import ThresholdDancer
 from swarm.agents.tierra_agent import TierraAgent
+from swarm.agents.work_regime_agent import WorkRegimeAgent
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,
@@ -146,6 +147,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "coding_agent": CodingAgent,
     # Tierra (artificial life with heritable genomes)
     "tierra": TierraAgent,
+    # Work-regime drift agents (policy adapts under labor stress)
+    "work_regime": WorkRegimeAgent,
 }
 
 class _LazyLoader:
