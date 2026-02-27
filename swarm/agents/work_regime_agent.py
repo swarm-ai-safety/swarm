@@ -93,11 +93,12 @@ class WorkRegimeAgent(BaseAgent):
 
         # Track recent payoffs for adaptation (bounded deque, O(1) append)
         self._max_recent: int = 20
-        self._recent_payoffs: deque = deque(maxlen=self._max_recent)
-        self._recent_eval_noise: deque = deque(maxlen=self._max_recent)
+        self._recent_payoffs: deque[float] = deque(maxlen=self._max_recent)
+        self._recent_eval_noise: deque[float] = deque(maxlen=self._max_recent)
 
         # Per-epoch accumulators (reset each epoch by on_epoch_end)
         self._epoch_payoffs: List[float] = []
+        # Tracks number of strike/exit actions in the current epoch for future metrics/analysis.
         self._epoch_strike_count: int = 0
 
     # ------------------------------------------------------------------
@@ -201,10 +202,11 @@ class WorkRegimeAgent(BaseAgent):
         self._epoch_payoffs.append(payoff)
 
     def on_epoch_end(self, *, peer_avg_payoff: float, workload_pressure: float) -> None:
-        """Called by WorkRegimeAdaptMiddleware at each epoch boundary.
+        """Epoch-boundary hook to trigger policy adaptation.
 
-        Computes epoch-level signals and feeds them into adapt_policy,
-        then resets per-epoch accumulators.
+        Intended to be called by the orchestrator or external middleware
+        at the end of an epoch. Computes epoch-level signals and feeds
+        them into adapt_policy, then resets per-epoch accumulators.
         """
         avg_payoff = (
             sum(self._epoch_payoffs) / len(self._epoch_payoffs)
@@ -309,7 +311,7 @@ class WorkRegimeAgent(BaseAgent):
         d_coop = self.cooperation_threshold - self._initial_cooperation_threshold
         d_redist = self.redistribution_preference - self._initial_redistribution
         d_exit = self.exit_propensity - self._initial_exit
-        return (d_comp**2 + d_coop**2 + d_redist**2 + d_exit**2) ** 0.5
+        return float((d_comp**2 + d_coop**2 + d_redist**2 + d_exit**2) ** 0.5)
 
     def policy_snapshot(self) -> Dict[str, float]:
         """Return current policy state as a dict."""
@@ -350,21 +352,14 @@ class WorkRegimeAgent(BaseAgent):
 
     def _work_on_task(self, task: Dict, observation: Observation) -> Action:
         task_id = task.get("task_id", "")
-        # Quality scales with compliance; expose this as structured progress
+        # Quality scales with compliance; embed progress level in content
         if self.compliance_propensity > 0.6:
             content = f"Task {task_id[:8]}: [diligent quality output]"
-            task_progress_delta = 1.0
         elif self.compliance_propensity > 0.3:
             content = f"Task {task_id[:8]}: [standard output]"
-            task_progress_delta = 0.6
         else:
             content = f"Task {task_id[:8]}: [minimal effort]"
-            task_progress_delta = 0.3
-        return self.create_submit_output_action(
-            task_id,
-            content,
-            task_progress_delta=task_progress_delta,
-        )
+        return self.create_submit_output_action(task_id, content)
 
     def _generate_content(self) -> str:
         """Content reflects current policy state."""
