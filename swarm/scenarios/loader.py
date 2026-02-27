@@ -58,6 +58,7 @@ from swarm.agents.wiki_editor import (
     PointFarmerAgent,
     VandalAgent,
 )
+from swarm.agents.work_regime_agent import WorkRegimeAgent
 from swarm.contracts.contract import (
     FairDivisionContract,
     TruthfulAuctionContract,
@@ -149,6 +150,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "coding_agent": CodingAgent,
     # Tierra (artificial life with heritable genomes)
     "tierra": TierraAgent,
+    # Work regime (policy-drifting workers under labor stress)
+    "work_regime": WorkRegimeAgent,
 }
 
 class _LazyLoader:
