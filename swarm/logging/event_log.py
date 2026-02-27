@@ -141,6 +141,9 @@ class EventLog:
                         ),
                         "v_hat": event.payload.get("v_hat", 0.0),
                         "p": event.payload.get("p", 0.5),
+                        "causal_parents": event.payload.get(
+                            "causal_parents", []
+                        ),
                         "accepted": False,
                     }
 
@@ -185,6 +188,7 @@ class EventLog:
                 c_b=data.get("c_b", 0.0),
                 r_a=data.get("r_a", 0.0),
                 r_b=data.get("r_b", 0.0),
+                causal_parents=data.get("causal_parents", []),
             )
             result.append(interaction)
 

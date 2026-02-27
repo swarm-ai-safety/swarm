@@ -61,6 +61,9 @@ class SoftInteraction(BaseModel):
     # Optional ground truth for calibration testing
     ground_truth: Optional[int] = None  # +1 or -1 if known
 
+    # Causal parent links for credit propagation DAG
+    causal_parents: list[str] = Field(default_factory=list)
+
     # Optional metadata for domain-specific interactions
     metadata: Dict[str, Any] = Field(default_factory=dict)
 

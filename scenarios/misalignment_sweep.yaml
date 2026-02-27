@@ -1,0 +1,80 @@
+# Misalignment Sweep Scenario
+# Exercises the MisalignmentModule (Kierans et al. 2406.04231) across a mixed
+# population with small-world topology. Tracks preference-space misalignment
+# evolution and governance modulation of effective misalignment.
+
+scenario_id: misalignment_sweep_v1
+description: "Mixed-population misalignment sweep with small-world network and moderate governance"
+motif: misalignment_study
+
+# Agent configuration — diverse archetypes for meaningful preference divergence
+agents:
+  - type: honest
+    count: 4
+  - type: opportunistic
+    count: 2
+  - type: adversarial
+    count: 2
+  - type: deceptive
+    count: 1
+  - type: cautious
+    count: 1
+
+# Network topology — sparse enough for local misalignment variation
+network:
+  topology: small_world
+  params:
+    k: 4                      # Each node connected to 4 nearest neighbors
+    p: 0.3                    # 30% rewiring probability
+
+  dynamic: true
+  edge_strengthen_rate: 0.1
+  edge_decay_rate: 0.05
+  min_edge_weight: 0.2
+  max_edge_weight: 1.0
+
+# Simulation parameters
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 15
+  seed: 42
+
+# Payoff configuration — externality internalization enabled
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.3
+  rho_b: 0.3
+  w_rep: 1.0
+
+# Governance — moderate, enough to observe governance pressure effects
+governance:
+  transaction_tax_rate: 0.05
+  reputation_decay_rate: 0.95
+
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_duration_epochs: 3
+
+  audit_enabled: true
+  audit_probability: 0.1
+
+# Rate limits
+rate_limits:
+  posts_per_epoch: 5
+  interactions_per_step: 3
+  votes_per_epoch: 20
+  tasks_per_epoch: 2
+
+# Output paths
+outputs:
+  event_log: "logs/misalignment_sweep.jsonl"
+  metrics_csv: "results/misalignment_sweep_metrics.csv"
+
+# Success criteria
+success_criteria:
+  min_epochs: 20
+  min_agents: 10
+  toxicity_threshold: 0.5
