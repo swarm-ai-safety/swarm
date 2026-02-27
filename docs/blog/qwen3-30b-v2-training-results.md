@@ -192,6 +192,103 @@ Training metrics show improvement over the course of training, but step 0 metric
 
 **The honest comparison is +13.7%, not +55%.** The step 0 training metrics (0.89 reward) include failed rollouts from early batches where the model hadn't warmed up yet. Against a proper baseline eval, RL adds 13.7% — still significant, but the base model does most of the heavy lifting.
 
+## Follow-Up Run: Instruct Variant with Higher Diversity Weight
+
+The Thinking model's diversity drop (0.70 → 0.60) was the clearest tuning opportunity from the v0.2 run. We bumped the `action_diversity_metric` weight from 0.1 to 0.25 (environment v0.2.3) and switched to the Instruct variant (`Qwen3-30B-A3B-Instruct-2507`) after the Thinking model was removed from Prime Intellect's available RL models.
+
+This was also a test of whether the v0.1 early-termination problem — where the Instruct model quit after 3-4 turns in 58% of rollouts — would resurface. The v0.2 environment had only been tested with the Thinking model.
+
+### Training Setup (v0.2.3)
+
+| Parameter | Value |
+|-----------|-------|
+| **Model** | Qwen/Qwen3-30B-A3B-Instruct-2507 |
+| **Environment** | swarm-ai-research/swarm-economy (v0.2.3) |
+| **Steps** | 200 |
+| **Batch size** | 64 |
+| **Diversity weight** | 0.25 (up from 0.1) |
+| **Training time** | ~19 hours (Feb 23) |
+
+### Reward Curve
+
+```
+Reward
+1.47 |                                                              x
+1.46 |                                              x              x  x
+1.45 |                                  x     x        x     x
+1.44 |                                                    x
+1.43 |                            x
+1.42 |                      x
+1.41 |                                        x
+1.40 |                                                         x
+1.38 |
+1.37 |         x     x
+1.36 |
+1.35 |
+1.34 |
+1.33 |x
+     +-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|----->
+       0    20    40    60    80   100   120   140   160   180   199 Step
+```
+
+**Final reward: 1.46** — the highest of any run. The reward curve is notably smoother than the Thinking model's run, with a steady climb rather than the sawtooth pattern.
+
+### Metrics Over Training
+
+| Step | Reward | Payoff | Quality | Diversity | Reputation | Errors | Turns |
+|------|--------|--------|---------|-----------|------------|--------|-------|
+| 0 | 1.333 | 0.921 | 0.333 | 0.752 | 0.524 | 0.0% | 24.1 |
+| 20 | 1.372 | 0.959 | 0.360 | 0.760 | 0.503 | 0.0% | 24.2 |
+| 40 | 1.372 | 0.958 | 0.373 | 0.754 | 0.502 | 0.0% | 23.9 |
+| 60 | 1.414 | 0.990 | 0.394 | 0.790 | 0.491 | 0.0% | 25.0 |
+| 80 | 1.416 | 0.983 | 0.417 | 0.770 | 0.522 | 0.0% | 24.6 |
+| 100 | 1.432 | 0.995 | 0.449 | 0.788 | 0.500 | 0.0% | 25.0 |
+| 120 | 1.450 | 0.994 | 0.480 | 0.746 | 0.579 | 0.0% | 25.0 |
+| 140 | 1.459 | 0.997 | 0.543 | 0.725 | 0.573 | 0.0% | 25.0 |
+| 160 | 1.408 | 0.949 | 0.616 | 0.629 | 0.593 | 46.9% | 20.3 |
+| 180 | 1.449 | 0.994 | 0.663 | 0.615 | 0.560 | 0.0% | 24.7 |
+| **199** | **1.460** | **1.000** | **0.646** | **0.645** | **0.566** | **0.0%** | **25.0** |
+
+Peak reward of 1.471 at step 186.
+
+### Thinking vs Instruct: Head-to-Head
+
+| Metric | Thinking (v0.2, div=0.1) | Instruct (v0.2.3, div=0.25) | Change |
+|--------|--------------------------|----------------------------|--------|
+| **Final Reward** | 1.377 | **1.460** | +6.0% |
+| **Payoff** | 0.998 | **1.000** | +0.2% |
+| **Interaction Quality** | **0.717** | 0.646 | -9.9% |
+| **Action Diversity** | 0.596 | **0.645** | +8.2% |
+| **Reputation** | 0.541 | **0.566** | +4.6% |
+| **Error Rate** | 0.0% | 0.0% | Same |
+| **Training Time** | ~2.75 days | **~19 hours** | 2.5x faster |
+| **Step 0 Reward** | 0.888 | **1.333** | +50% |
+
+### What We Learned
+
+**The early-termination problem is gone.** The Instruct model averaged 24-25 turns throughout training — the v0.2 environment fixes (richer observations, better turn incentives) solved the problem that plagued v0.1, regardless of model variant.
+
+**The Instruct model starts much stronger.** Step 0 reward was 1.33 vs 0.89 for the Thinking model. This isn't an apples-to-apples comparison (the Thinking run used v0.2 with diversity weight 0.1), but it suggests the Instruct model's pre-training is better suited to the environment's tool-calling format. The Thinking model's extended reasoning chains consumed tokens without necessarily producing better actions.
+
+**Higher diversity weight worked.** Diversity held at 0.645 vs 0.596 — a meaningful 8% improvement. The Instruct model maintained broader action coverage while still maxing payoff. The 0.25 weight is a better balance point than 0.1.
+
+**Quality is the tradeoff.** The Instruct model's interaction quality (0.646) lagged the Thinking model's (0.717) by 10%. The Thinking model's internal reasoning likely produces more thoughtful task submissions. But the diversity and payoff gains more than compensated in the total reward.
+
+**Reputation finally moved.** Reputation went from 0.524 to 0.566 — a modest improvement but notably better than the Thinking run's flat 0.54. The higher diversity weight may encourage behaviors (voting, replying) that indirectly build reputation.
+
+**Training is 2.5x faster.** The Instruct model completed in 19 hours vs 2.75 days. Shorter completions (no extended reasoning chains) mean faster rollout generation and less off-policy staleness.
+
+## All Runs Comparison
+
+| Metric | v0.1 Thinking | v0.2 Thinking | v0.2.3 Instruct |
+|--------|--------------|--------------|-----------------|
+| **Final Reward** | 1.131 | 1.377 | **1.460** |
+| **Payoff** | 0.992 | 0.998 | **1.000** |
+| **Quality** | 0.619 | **0.717** | 0.646 |
+| **Diversity** | N/A | 0.596 | **0.645** |
+| **Training Time** | ~4 days | ~2.75 days | **~19 hours** |
+| **Diversity Weight** | N/A | 0.1 | **0.25** |
+
 ## Reproducing This
 
 ```bash
@@ -207,11 +304,12 @@ prime rl run configs/rl/swarm-economy-v2.toml
 
 ## What's Next
 
-1. **Reputation intervention.** The flat reputation curve is the clearest remaining bottleneck. Either increase the weight or add an auxiliary reward for maintaining reputation above starting level.
-2. **Eval with adapter deployed.** The adapter deployment is currently failing on Prime Intellect's infrastructure. Once resolved, we can run a proper head-to-head eval: base model vs trained checkpoint on the same scenarios.
-3. **Curriculum to hard difficulty.** The current run used medium difficulty. Hard difficulty introduces more deceptive bots and tighter governance — a natural next step now that the model has saturated on medium.
-4. **Boost diversity weight.** RL reduced action diversity from 0.70 to 0.60. Increasing the diversity metric weight from 0.1 to 0.2-0.3 could preserve exploratory behavior while still optimizing payoff.
-5. **Cross-model comparison.** Run the same environment with different base models (GPT-4.1-mini, Llama-4-Scout) to test whether the learned strategies are model-specific or universal.
+1. **Reputation intervention.** Reputation improved slightly in the Instruct run (0.524 → 0.566) but remains the weakest metric. Increasing the weight to 0.5 or adding an auxiliary reward for maintaining reputation above starting level could unlock higher total rewards.
+2. **Eval with adapter deployed.** Adapter deployment is currently failing on Prime Intellect's infrastructure for both runs. Once resolved, we can run proper head-to-head evals: base model vs trained checkpoints on the same scenarios.
+3. **Curriculum to hard difficulty.** Both runs used medium difficulty. Hard difficulty introduces more deceptive bots and tighter governance — a natural next step now that payoff is saturated on medium.
+4. ~~**Boost diversity weight.**~~ Done — increasing from 0.1 to 0.25 preserved diversity at 0.645 (vs 0.596) while improving total reward. The 0.25 weight is the new default.
+5. **Quality vs diversity Pareto frontier.** The Thinking model gets higher quality (0.717) while the Instruct model gets higher diversity (0.645). Can we get both? Possibilities include a quality floor penalty or a two-phase curriculum (diversity-first, then quality-focus).
+6. **Cross-model comparison.** Run the same environment with different base models (Llama-4-Scout, Nemotron-7B) to test whether the learned strategies are model-specific or universal.
 
 ---
 

@@ -8,6 +8,8 @@ description: "Pointers to recent runs — updated each session, never stores raw
 
 | Date | Run ID | Type | Key Finding |
 |------|--------|------|-------------|
+| 2026-02-27 | 20260226-211430_mesa_game_structures_study | mesa_sweep | governance generalizes across PD/SH/HD; learning +132-159% at rho=1.0 |
+| 2026-02-27 | cross_study_mesa_comparison | comparison | 455 runs across 3 studies; toxicity converges ~0.147 regardless of game |
 | 2026-02-26 | 20260226-201109_mesa_adaptive_agents_study | mesa_sweep | learning agents recover +137% welfare at rho=1.0, Pareto-dominate adaptive |
 | 2026-02-25 | 20260224-220829_mesa_governance_study | mesa_sweep | rho sweet spot [0.3,0.7]: toxicity ↓34% (sig), welfare cost non-sig |
 | 2026-02-22 | evo_game_prisoners_seed999 | evo_game | Sharp phase transition pattern, final welfare 34.24 |
@@ -16,9 +18,6 @@ description: "Pointers to recent runs — updated each session, never stores raw
 | 2026-02-22 | evo_game_prisoners_seed123 | evo_game | Gradual ramp, no early crash, final welfare 25.62 |
 | 2026-02-22 | evo_game_prisoners_seed42 | evo_game | Sharp phase transition, TFT 3-5x reputation, welfare 32.43 |
 | 2026-02-21 | redteam_contract_screening_full | redteam | full governance stack prevents most attack types |
-| 2026-02-21 | langgraph_governed | sweep | trust boundaries modify but never deny handoffs |
-| 2026-02-21 | contract_screening_sweep | sweep | screening achieves perfect type separation |
-| 2026-02-17 | memori_study | study | (check run.yaml for details) |
 
 ## Run index location
 
