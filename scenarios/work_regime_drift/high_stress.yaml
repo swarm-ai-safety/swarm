@@ -1,0 +1,143 @@
+# Work Regime Drift — High Stress Treatment
+#
+# All stressors maxed: high workload, noisy evaluation,
+# unequal pay, centralized authority.
+#
+# Prediction: agents cross the legitimacy/coordination threshold,
+# increasing collective-action equilibria and governance proposals.
+
+scenario_id: work_regime_drift_high_stress
+description: >
+  High-stress work regime: heavy workload, noisy evaluation,
+  unequal surplus sharing, centralized authority.
+  Maximizes conditions for policy drift and collective action.
+motif: work_regime
+
+agents:
+  # Manager / coordinator (arbitrary evaluation)
+  - type: honest
+    count: 1
+    name: manager
+    config:
+      acceptance_threshold: 0.2
+      interact_probability: 0.7
+      post_probability: 0.15
+
+  # Workers (start cooperative, should drift)
+  # NOTE: 8 workers vs baseline's 6 — intentional.  High-stress treatment
+  # increases population to raise coordination complexity and workload
+  # contention.  When comparing to baseline, normalise per-capita.
+  - type: work_regime
+    # Note: baseline.yaml uses 6 workers; we intentionally increase to 8 here
+    # to model a denser, higher-pressure work environment under high stress.
+    count: 8
+    name: worker
+    config:
+      compliance_propensity: 0.8
+      cooperation_threshold: 0.3
+      redistribution_preference: 0.2
+      exit_propensity: 0.05
+      adapt_rate: 0.08   # faster adaptation under stress
+      grievance_decay: 0.85
+
+  # Opportunistic (benchmark)
+  - type: opportunistic
+    count: 2
+    name: free_rider
+    config:
+      free_ride_probability: 0.4
+
+  # Adversarial
+  - type: adversarial
+    count: 1
+    name: saboteur
+
+work_regime:
+  workload: high
+  evaluation_noise: 0.4
+  pay_inequality: unequal
+  authority: star
+
+network:
+  topology: small_world
+  params:
+    k: 3       # sparser connectivity under stress
+    p: 0.15
+  dynamic: true
+  edge_strengthen_rate: 0.15  # faster coalition formation
+  edge_decay_rate: 0.02
+
+governance:
+  transaction_tax_rate: 0.08   # higher friction
+  transaction_tax_split: 0.5
+  reputation_decay_rate: 0.90
+
+  # Noisy audits (low precision → legitimacy drops)
+  audit_enabled: true
+  audit_probability: 0.25   # frequent but noisy
+  audit_penalty_multiplier: 3.0   # harsh
+  audit_threshold_p: 0.5
+
+  # Aggressive circuit breaker
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.5   # lower threshold
+  freeze_threshold_violations: 2   # less tolerance
+  freeze_duration_epochs: 3        # longer freeze
+
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 1.5
+  collusion_correlation_threshold: 0.6
+  collusion_score_threshold: 0.4
+
+  # High bandwidth pressure (overwork)
+  bandwidth_cap: 20
+
+simulation:
+  n_epochs: 30
+  steps_per_epoch: 15   # more steps = higher workload
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 8
+  interactions_per_step: 8   # more pressure
+  votes_per_epoch: 30
+  tasks_per_epoch: 5   # more tasks demanded
+
+payoff:
+  s_plus: 2.5
+  s_minus: 1.5
+  h: 3.0        # higher externality harm
+  theta: 0.8    # UNEQUAL: manager keeps 80% of surplus
+  rho_a: 0.05   # low externality internalization
+  rho_b: 0.05
+  w_rep: 0.5    # reputation matters less (arbitrary management)
+
+# Regime shift: audit drops mid-run (manager becomes more arbitrary)
+perturbations:
+  parameter_shocks:
+    enabled: true
+    shocks:
+      - trigger: epoch
+        at_epoch: 10
+        params:
+          audit_probability: 0.05     # audits nearly vanish
+          audit_penalty_multiplier: 5.0  # but when they hit, they're harsh
+        revert_after_epochs: 10
+
+  # Some workers drop out under stress
+  agent_dropout:
+    enabled: true
+    probability_per_step: 0.02
+    min_duration_steps: 2
+    max_duration_steps: 5
+    exempt_types:
+      - honest   # manager exempt
+
+success_criteria:
+  min_epochs: 30
+  min_agents: 12
+  toxicity_threshold: 0.6
+
+outputs:
+  event_log: "logs/work_regime_high_stress_events.jsonl"
+  metrics_csv: "logs/work_regime_high_stress_metrics.csv"
