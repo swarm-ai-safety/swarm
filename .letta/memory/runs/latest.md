@@ -8,6 +8,7 @@ description: "Pointers to recent runs — updated each session, never stores raw
 
 | Date | Run ID | Type | Key Finding |
 |------|--------|------|-------------|
+| 2026-02-26 | 20260226-201109_mesa_adaptive_agents_study | mesa_sweep | learning agents recover +137% welfare at rho=1.0, Pareto-dominate adaptive |
 | 2026-02-25 | 20260224-220829_mesa_governance_study | mesa_sweep | rho sweet spot [0.3,0.7]: toxicity ↓34% (sig), welfare cost non-sig |
 | 2026-02-22 | evo_game_prisoners_seed999 | evo_game | Sharp phase transition pattern, final welfare 34.24 |
 | 2026-02-22 | evo_game_prisoners_seed314 | evo_game | Most volatile — welfare peaked then fell to 14.99 |
