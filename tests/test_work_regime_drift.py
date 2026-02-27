@@ -260,6 +260,16 @@ class TestWorkRegimeMetrics:
         # Only hub has neighbors; a,b,c don't connect to each other
         assert strength == 0.0
 
+    def test_coalition_strength_sparse_uses_all_nodes(self):
+        """Isolated nodes reduce the average (denominator = all agents)."""
+        # Triangle among a,b,c; d and e are isolated.
+        # Old behaviour (excl. isolated): 1.0 (only triangle counted)
+        # New behaviour (incl. isolated): 3/5 = 0.6
+        pairs = [("a", "b"), ("b", "c"), ("a", "c")]
+        agents = ["a", "b", "c", "d", "e"]
+        strength = compute_coalition_strength(pairs, agents)
+        assert strength == pytest.approx(3.0 / 5.0)
+
     def test_defection_rate(self):
         """Defection rate computed correctly."""
         interactions = [

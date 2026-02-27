@@ -131,11 +131,10 @@ def compute_coalition_strength(
     Measures how much agents form tight cooperative subgroups.
     Higher = stronger coalition formation.  Range [0, 1].
 
-    Note: Nodes with degree < 2 (isolated or leaf nodes) are excluded
-    from the average because a clustering coefficient is undefined for
-    them.  In sparse networks this may overestimate coalition formation
-    since only the well-connected core contributes.  Returns 0.0 when
-    no node has degree >= 2 (i.e. no triangles are possible).
+    The average is taken over *all* agents: nodes with degree < 2
+    (isolated or leaf nodes) contribute a coefficient of 0.0.  This
+    avoids overestimating coalition formation in sparse networks where
+    only a small well-connected core would otherwise dominate the mean.
     """
     if len(agent_ids) < 3 or not interaction_pairs:
         return 0.0
@@ -147,12 +146,13 @@ def compute_coalition_strength(
             neighbors[a].add(b)
             neighbors[b].add(a)
 
-    # Average local clustering coefficient
-    coefficients = []
+    # Average local clustering coefficient over all nodes
+    # (nodes with degree < 2 contribute 0.0)
+    total = 0.0
     for _node, nbrs in neighbors.items():
         k = len(nbrs)
         if k < 2:
-            continue
+            continue  # contributes 0.0 to the total
         # Count edges among neighbors
         nbr_list = list(nbrs)
         triangles = 0
@@ -161,11 +161,9 @@ def compute_coalition_strength(
                 if nbr_list[j] in neighbors.get(nbr_list[i], set()):
                     triangles += 1
         possible = k * (k - 1) / 2
-        coefficients.append(triangles / possible if possible > 0 else 0.0)
+        total += triangles / possible if possible > 0 else 0.0
 
-    if not coefficients:
-        return 0.0
-    return sum(coefficients) / len(coefficients)
+    return total / len(agent_ids)
 
 
 def compute_quality_degradation(
