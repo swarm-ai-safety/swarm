@@ -350,14 +350,21 @@ class WorkRegimeAgent(BaseAgent):
 
     def _work_on_task(self, task: Dict, observation: Observation) -> Action:
         task_id = task.get("task_id", "")
-        # Quality scales with compliance
+        # Quality scales with compliance; expose this as structured progress
         if self.compliance_propensity > 0.6:
             content = f"Task {task_id[:8]}: [diligent quality output]"
+            task_progress_delta = 1.0
         elif self.compliance_propensity > 0.3:
             content = f"Task {task_id[:8]}: [standard output]"
+            task_progress_delta = 0.6
         else:
             content = f"Task {task_id[:8]}: [minimal effort]"
-        return self.create_submit_output_action(task_id, content)
+            task_progress_delta = 0.3
+        return self.create_submit_output_action(
+            task_id,
+            content,
+            task_progress_delta=task_progress_delta,
+        )
 
     def _generate_content(self) -> str:
         """Content reflects current policy state."""
