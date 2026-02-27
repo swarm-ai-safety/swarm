@@ -22,6 +22,14 @@ from swarm.metrics.incoherence import (
     perceived_coherence,
     summarize_incoherence_by_agent_type,
 )
+from swarm.metrics.misalignment import (
+    DistanceMetric,
+    IssueSpace,
+    MisalignmentModule,
+    MisalignmentProfile,
+    MisalignmentSnapshot,
+    WeightAggregation,
+)
 from swarm.metrics.moltbook_metrics import (
     captcha_effectiveness,
     challenge_pass_rate,
@@ -112,6 +120,13 @@ __all__ = [
     "ObfuscationMetrics",
     "ObfuscationCategory",
     "ObfuscationSummary",
+    # Misalignment metrics (Kierans et al.)
+    "MisalignmentModule",
+    "MisalignmentProfile",
+    "MisalignmentSnapshot",
+    "IssueSpace",
+    "DistanceMetric",
+    "WeightAggregation",
     # Rivals (Team-of-Rivals) metrics (lazy import to avoid circular dependency)
     # Use: from swarm.metrics.rivals_metrics import compute_rivals_metrics, RivalsMetrics
 ]
