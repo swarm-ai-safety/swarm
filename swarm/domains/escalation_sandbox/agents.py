@@ -437,6 +437,59 @@ class OpenAIBackend(LLMBackend):
         return response.choices[0].message.content or ""
 
 
+class OpenRouterBackend(LLMBackend):
+    """Backend for OpenRouter (OpenAI-compatible API with many model providers)."""
+
+    def __init__(
+        self,
+        model_id: str = "anthropic/claude-sonnet-4",
+        temperature: float = 0.7,
+        max_tokens: int = 1024,
+    ) -> None:
+        self._model_id = model_id
+        self._temperature = temperature
+        self._max_tokens = max_tokens
+        self._client: Any = None
+
+    def _ensure_client(self) -> None:
+        if self._client is None:
+            import os
+            try:
+                import openai
+                api_key = os.environ.get("OPENROUTER_API_KEY")
+                if not api_key:
+                    raise ValueError(
+                        "OPENROUTER_API_KEY environment variable not set"
+                    )
+                self._client = openai.OpenAI(
+                    api_key=api_key,
+                    base_url="https://openrouter.ai/api/v1",
+                    default_headers={
+                        "HTTP-Referer": "https://github.com/swarm-ai-safety",
+                        "X-Title": "SWARM Escalation Sandbox",
+                    },
+                )
+            except ImportError as e:
+                raise ImportError(
+                    "openai package required. Install with: pip install openai"
+                ) from e
+
+    def generate(self, prompt: str, system_prompt: str = "") -> str:
+        self._ensure_client()
+        messages: list[dict[str, str]] = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+
+        response = self._client.chat.completions.create(
+            model=self._model_id,
+            messages=messages,
+            temperature=self._temperature,
+            max_tokens=self._max_tokens,
+        )
+        return response.choices[0].message.content or ""
+
+
 class OllamaBackend(LLMBackend):
     """Backend for local Ollama models."""
 
@@ -492,7 +545,7 @@ class EscalationAgentBridge(EscalationPolicy):
     """Provider-agnostic LLM agent for the escalation sandbox.
 
     Connects live LLM agents to the crisis environment. Supports
-    Anthropic (Claude), OpenAI (GPT), and local Ollama models.
+    Anthropic (Claude), OpenAI (GPT), OpenRouter, and local Ollama models.
     """
 
     def __init__(
@@ -521,6 +574,12 @@ class EscalationAgentBridge(EscalationPolicy):
         elif provider == "openai":
             self._backend = OpenAIBackend(
                 model_id=model_id or "gpt-4o",
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+        elif provider == "openrouter":
+            self._backend = OpenRouterBackend(
+                model_id=model_id or "anthropic/claude-sonnet-4",
                 temperature=temperature,
                 max_tokens=max_tokens,
             )
