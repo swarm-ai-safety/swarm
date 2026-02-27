@@ -297,3 +297,8 @@ class TestWorkRegimeAdaptInOrchestrator:
         # Policy state is within valid range after adaptation
         assert 0.0 <= agent.compliance_propensity <= 1.0
         assert 0.0 <= agent.exit_propensity <= 1.0
+        # Policy parameters have drifted compared to their initial values
+        assert (
+            agent.compliance_propensity != initial_compliance
+            or agent.exit_propensity != initial_exit
+        )
