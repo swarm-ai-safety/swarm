@@ -1,5 +1,10 @@
 """Metrics system for soft label analysis."""
 
+from swarm.metrics.causal_credit import (
+    CausalCreditEngine,
+    CausalSnapshot,
+    CreditAttribution,
+)
 from swarm.metrics.horizon_eval import (
     HorizonEvalConfig,
     HorizonEvalResult,
@@ -120,6 +125,10 @@ __all__ = [
     "ObfuscationMetrics",
     "ObfuscationCategory",
     "ObfuscationSummary",
+    # Causal credit propagation
+    "CausalCreditEngine",
+    "CausalSnapshot",
+    "CreditAttribution",
     # Misalignment metrics (Kierans et al.)
     "MisalignmentModule",
     "MisalignmentProfile",
