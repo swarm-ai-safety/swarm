@@ -17,6 +17,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## February 2026
 
+<div class="blog-post" data-tags="evaluation llm-agents governance" markdown>
+
+**Feb 26** — [LLMs Are More Deceptive Than Their Scripted Counterparts](escalation-sandbox-llm-vs-scripted.md)
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span> <span class="blog-tag">Governance</span>
+
+A 100-run comparison across 5 geopolitical crisis scenarios finds that LLM agents exhibit 2x higher signal-action divergence than scripted baselines --- emergent deception that appears across all personas, including dove and safety-trained. Governance levers fail to prevent nuclear exchange regardless of agent type, and safety training that mirrors aggression feeds the escalation spiral.
+
+</div>
+
 <div class="blog-post" data-tags="evaluation llm-agents" markdown>
 
 **Feb 26** — [Six Frontier Models Played a Bluffing Game. None of Them Bluffed.](six-frontier-models-played-a-bluffing-game.md)
