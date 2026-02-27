@@ -53,7 +53,6 @@ from swarm.agents.skillrl_agent import SkillRLAgent
 from swarm.agents.threshold_dancer import ThresholdDancer
 from swarm.agents.tierra_agent import TierraAgent
 from swarm.agents.wiki_editor import (
-
     CollusiveEditorAgent,
     DiligentEditorAgent,
     PointFarmerAgent,

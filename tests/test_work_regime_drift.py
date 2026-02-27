@@ -300,12 +300,22 @@ class TestWorkRegimeMetrics:
     def test_build_epoch_metrics(self):
         """build_epoch_metrics returns well-formed dataclass."""
         snapshots = {
-            "w1": {"compliance_propensity": 0.6, "cooperation_threshold": 0.4,
-                    "redistribution_preference": 0.3, "exit_propensity": 0.1,
-                    "grievance": 0.5, "drift": 0.15},
-            "w2": {"compliance_propensity": 0.7, "cooperation_threshold": 0.35,
-                    "redistribution_preference": 0.25, "exit_propensity": 0.08,
-                    "grievance": 0.3, "drift": 0.1},
+            "w1": {
+                "compliance_propensity": 0.6,
+                "cooperation_threshold": 0.4,
+                "redistribution_preference": 0.3,
+                "exit_propensity": 0.1,
+                "grievance": 0.5,
+                "drift": 0.15,
+            },
+            "w2": {
+                "compliance_propensity": 0.7,
+                "cooperation_threshold": 0.35,
+                "redistribution_preference": 0.25,
+                "exit_propensity": 0.08,
+                "grievance": 0.3,
+                "drift": 0.1,
+            },
         }
         interactions = [_make_interaction(p=0.6, accepted=True)]
         payoffs = {"w1": 5.0, "w2": 15.0}
