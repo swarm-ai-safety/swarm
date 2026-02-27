@@ -34,6 +34,7 @@ from swarm.core.middleware import (
     MiddlewarePipeline,
     NetworkDecayMiddleware,
     PerturbationMiddleware,
+    WorkRegimeAdaptMiddleware,
 )
 from swarm.core.observable_generator import (
     DefaultObservableGenerator,
@@ -560,6 +561,9 @@ class Orchestrator:
 
         # 7. Agent memory decay at epoch end
         self._pipeline.add(MemoryDecayMiddleware())
+
+        # 8. WorkRegimeAgent policy adaptation at epoch end
+        self._pipeline.add(WorkRegimeAdaptMiddleware())
 
     def _make_context(self) -> MiddlewareContext:
         """Build a ``MiddlewareContext`` from current orchestrator state."""

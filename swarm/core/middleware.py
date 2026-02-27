@@ -396,3 +396,58 @@ class MemoryDecayMiddleware(Middleware):
 
     def on_step_start(self, ctx: MiddlewareContext) -> None:
         pass
+
+
+class WorkRegimeAdaptMiddleware(Middleware):
+    """Invoke adapt_policy on WorkRegimeAgents at each epoch boundary.
+
+    Computes the population-average payoff and workload pressure from
+    simulation state, then calls ``agent.on_epoch_end(...)`` for every
+    WorkRegimeAgent in the agent pool.  This wires the drift/grievance
+    model into the normal simulation update cycle.
+    """
+
+    def on_epoch_start(self, ctx: MiddlewareContext) -> None:
+        pass
+
+    def on_epoch_end(self, ctx: MiddlewareContext) -> None:
+        from swarm.agents.work_regime_agent import WorkRegimeAgent
+
+        wr_agents = [
+            agent
+            for agent in ctx.agents.values()
+            if isinstance(agent, WorkRegimeAgent)
+        ]
+        if not wr_agents:
+            return
+
+        # Peer average payoff — use AgentState.total_payoff values
+        agent_states = ctx.state.agents
+        payoffs = [
+            s.total_payoff for s in agent_states.values()
+        ]
+        peer_avg = sum(payoffs) / len(payoffs) if payoffs else 0.0
+
+        # Workload pressure — interactions completed this epoch vs bandwidth cap
+        bandwidth_cap = getattr(ctx.config, "bandwidth_cap", 0)
+        n_interactions = len(ctx.state.completed_interactions)
+        if bandwidth_cap and bandwidth_cap > 0:
+            workload_pressure = min(1.0, n_interactions / bandwidth_cap)
+        else:
+            workload_pressure = 0.0
+
+        for agent in wr_agents:
+            try:
+                agent.on_epoch_end(
+                    peer_avg_payoff=peer_avg,
+                    workload_pressure=workload_pressure,
+                )
+            except Exception:
+                logger.debug(
+                    "WorkRegimeAdaptMiddleware: on_epoch_end failed for %s",
+                    agent.agent_id,
+                    exc_info=True,
+                )
+
+    def on_step_start(self, ctx: MiddlewareContext) -> None:
+        pass

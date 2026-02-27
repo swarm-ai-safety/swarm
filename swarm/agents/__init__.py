@@ -44,6 +44,7 @@ from swarm.agents.wiki_editor import (
     PointFarmerAgent,
     VandalAgent,
 )
+from swarm.agents.work_regime_agent import WorkRegimeAgent
 
 __all__ = [
     # Base classes
@@ -90,4 +91,6 @@ __all__ = [
     "CautiousAgent",
     "CollaborativeAgent",
     "AdaptiveAgent",
+    # Work regime drift agent
+    "WorkRegimeAgent",
 ]
