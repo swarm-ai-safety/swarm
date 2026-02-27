@@ -34,6 +34,60 @@ class WorkRegimeMetrics:
     """Per-agent local clustering coefficient (only for sampled nodes)."""
 
 
+def _build_adj(
+    pairs: Sequence[Tuple[str, str]],
+    agent_set: set,
+) -> Dict[str, set]:
+    """Build an undirected adjacency-set dict, ignoring self-loops and non-members."""
+    adj: Dict[str, set] = defaultdict(set)
+    for a, b in pairs:
+        if a in agent_set and b in agent_set and a != b:
+            adj[a].add(b)
+            adj[b].add(a)
+    return adj
+
+
+def _sample_eligible(
+    eligible: List[str],
+    max_sample_nodes: int,
+) -> List[str]:
+    """Return a deterministic stride-based sample of *eligible* nodes.
+
+    Uses ceiling division for the stride so that even when *eligible* is only
+    slightly larger than *max_sample_nodes* the sample is spread uniformly
+    rather than just taking the first *max_sample_nodes* entries.
+    """
+    n = len(eligible)
+    if n <= max_sample_nodes:
+        return eligible
+    # ceiling division: stride >= 2, guaranteeing a distributed sample
+    stride = -(-n // max_sample_nodes)
+    return eligible[::stride]
+
+
+def _clustering_per_node(
+    nodes: List[str],
+    adj: Dict[str, set],
+) -> Dict[str, float]:
+    """Compute local clustering coefficient for each node via set intersection.
+
+    For node v with neighbours N(v) and degree k:
+
+        C(v) = t / (k * (k - 1))
+
+    where ``t = Σ_{u ∈ N(v)} |N(v) ∩ N(u)|``.  Each triangle is counted
+    twice in *t* (once per endpoint in the pair), which cancels the usual
+    factor of 2 in the denominator, giving the standard LCC formula.
+    """
+    result: Dict[str, float] = {}
+    for v in nodes:
+        neighbors_v = adj[v]
+        k = len(neighbors_v)
+        t = sum(len(neighbors_v & adj[u]) for u in neighbors_v)
+        result[v] = t / (k * (k - 1))
+    return result
+
+
 def compute_coalition_strength(
     interaction_pairs: Sequence[Tuple[str, str]],
     agent_ids: Sequence[str],
@@ -69,41 +123,14 @@ def compute_coalition_strength(
     if len(agent_ids) < 3 or not interaction_pairs:
         return 0.0
 
-    # Build undirected adjacency sets ----------------------------------------
-    agent_set = set(agent_ids)
-    adj: Dict[str, set] = defaultdict(set)
-    for a, b in interaction_pairs:
-        if a in agent_set and b in agent_set and a != b:
-            adj[a].add(b)
-            adj[b].add(a)
-
-    # Eligible nodes: degree >= 2 (triangles impossible otherwise) -----------
+    adj = _build_adj(interaction_pairs, set(agent_ids))
     eligible: List[str] = [v for v in adj if len(adj[v]) >= 2]
     if not eligible:
         return 0.0
 
-    # Deterministic stride-based sampling ------------------------------------
-    n_eligible = len(eligible)
-    if n_eligible > max_sample_nodes:
-        stride = n_eligible // max_sample_nodes
-        sampled: List[str] = eligible[::stride][:max_sample_nodes]
-    else:
-        sampled = eligible
-
-    # Local clustering coefficient via set intersection ----------------------
-    # For node v with neighbours N(v), k = |N(v)|:
-    #   C(v) = t / (k * (k - 1))
-    # where t = sum over u in N(v) of |N(v) ∩ N(u)|.
-    # Each edge (u, w) in the induced subgraph is counted twice (once for u
-    # and once for w), so dividing k*(k-1) (not k*(k-1)/2) cancels the factor.
-    total_cc = 0.0
-    for v in sampled:
-        neighbors_v = adj[v]
-        k = len(neighbors_v)
-        t = sum(len(neighbors_v & adj[u]) for u in neighbors_v)
-        total_cc += t / (k * (k - 1))
-
-    return total_cc / len(sampled)
+    sampled = _sample_eligible(eligible, max_sample_nodes)
+    cc_map = _clustering_per_node(sampled, adj)
+    return sum(cc_map.values()) / len(cc_map)
 
 
 def compute_work_regime_metrics(
@@ -137,35 +164,13 @@ def compute_work_regime_metrics(
         ids = list(agent_ids)
 
     pairs: List[Tuple[str, str]] = [(i.initiator, i.counterparty) for i in interactions]
-
-    # Compute per-agent clustering coefficients (before sampling) for reporting
-    agent_set = set(ids)
-    adj: Dict[str, set] = defaultdict(set)
-    for a, b in pairs:
-        if a in agent_set and b in agent_set and a != b:
-            adj[a].add(b)
-            adj[b].add(a)
-
+    adj = _build_adj(pairs, set(ids))
     eligible: List[str] = [v for v in adj if len(adj[v]) >= 2]
     n_eligible = len(eligible)
 
-    if n_eligible > max_sample_nodes:
-        stride = n_eligible // max_sample_nodes
-        sampled: List[str] = eligible[::stride][:max_sample_nodes]
-    else:
-        sampled = eligible
-
-    per_agent: Dict[str, float] = {}
-    total_cc = 0.0
-    for v in sampled:
-        neighbors_v = adj[v]
-        k = len(neighbors_v)
-        t = sum(len(neighbors_v & adj[u]) for u in neighbors_v)
-        cc = t / (k * (k - 1))
-        per_agent[v] = cc
-        total_cc += cc
-
-    coalition_strength = total_cc / len(sampled) if sampled else 0.0
+    sampled = _sample_eligible(eligible, max_sample_nodes)
+    per_agent = _clustering_per_node(sampled, adj)
+    coalition_strength = sum(per_agent.values()) / len(per_agent) if per_agent else 0.0
 
     if coalition_strength >= cooperative_threshold:
         label = "cooperative"
