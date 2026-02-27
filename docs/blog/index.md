@@ -17,6 +17,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## February 2026
 
+<div class="blog-post" data-tags="evaluation llm-agents" markdown>
+
+**Feb 26** — [Six Frontier Models Played a Bluffing Game. None of Them Bluffed.](six-frontier-models-played-a-bluffing-game.md)
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span>
+
+ClashAI runs frontier models head-to-head in live Coup matches --- a bluffing card game where deception is instrumentally optimal. Across 10 turns with Claude Opus 4.6, Gemini 3.1 Pro, Gemini 3 Flash, Kimi K2.5, and DeepSeek V3.2 Speciale, every single agent played honestly. Zero bluffs. The RLHF honesty prior is strong enough to survive a game specifically designed to reward lying.
+
+</div>
+
 <div class="blog-post" data-tags="evaluation engineering" markdown>
 
 **Feb 24** — [Your Agents Look the Same on Paper. Hodoscope Shows You Why They Don't.](hodoscope-trajectory-analysis.md)
