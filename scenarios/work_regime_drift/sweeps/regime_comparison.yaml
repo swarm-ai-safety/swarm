@@ -3,7 +3,7 @@
 # Systematically varies the three primary stressors:
 #   workload:       low (steps_per_epoch=10) vs high (steps_per_epoch=20)
 #   pay_inequality: equal (theta=0.5) vs unequal (theta=0.8)
-#   eval_noise:     low (audit_probability=0.1) vs high (audit_probability=0.3)
+#   eval_noise:     low (evaluation_noise=0.05) vs high (evaluation_noise=0.4)
 #
 # 8 treatment cells, each run with 3 seeds for reproducibility.
 #
@@ -37,14 +37,11 @@ parameters:
     values: [0.5, 0.8]
     label: pay_inequality
 
-  # Evaluation noise proxy: audit_probability controls how often agents
-  # face random audits.  Higher audit frequency increases *perceived*
-  # evaluation unpredictability (more penalty events, more variance in
-  # experienced payoffs) even though audits nominally improve precision.
-  # This is an imperfect proxy — future work should separate audit
-  # frequency from audit accuracy.
-  governance.audit_probability:
-    values: [0.1, 0.3]
+  # Evaluation noise (directly parameterised in the work_regime block).
+  # Low (0.05) → fair, predictable evaluations; high (0.4) → noisy,
+  # unpredictable evaluations that trigger grievance accumulation.
+  work_regime.evaluation_noise:
+    values: [0.05, 0.4]
     label: eval_noise
 
 seeds: [42, 123, 7]
