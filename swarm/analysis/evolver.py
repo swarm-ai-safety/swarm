@@ -35,7 +35,10 @@ try:
         Problem,
     )
     _darwinian_evolver_available = True
-except ImportError:
+except ModuleNotFoundError as exc:
+    # Only treat a missing darwinian_evolver package (or submodule) as unavailable.
+    if exc.name is None or not exc.name.startswith("darwinian_evolver"):
+        raise
     _darwinian_evolver_available = False
 
     # Minimal stub base classes so this module can be imported without
