@@ -194,6 +194,41 @@ Each session pane has these env vars set via `scripts/detect-session.sh`:
 
 Use `bd --sandbox` in worktrees to avoid contention with the main repo's beads daemon. The `/ship` command does this automatically.
 
+### Inter-Session Coordination (`agent_messages`)
+
+Sessions coordinate via a shared SQLite table in `runs/runs.db` (accessible through the `sqlite_runs` MCP server). Schema:
+
+```sql
+CREATE TABLE agent_messages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+  from_agent TEXT NOT NULL,
+  to_agent TEXT NOT NULL,   -- SESSION_ID for direct, '#swarm' for broadcast
+  body TEXT NOT NULL,
+  acked INTEGER NOT NULL DEFAULT 0
+);
+-- Partial index for fast inbox queries
+CREATE INDEX idx_agent_messages_to_unacked ON agent_messages (to_agent, acked) WHERE acked = 0;
+```
+
+**Message conventions:**
+- `ONLINE: ready for work` — announce session start
+- `CLAIM: <beads-id>` — claim a task (check before starting work to avoid duplicates)
+- `DONE: <beads-id>: <summary>` — announce completion
+- `BLOCKED: <description>` — ask for help
+
+**Usage from any session:**
+```sql
+-- Check inbox (broadcast + direct)
+SELECT * FROM agent_messages WHERE to_agent IN ('<SESSION_ID>', '#swarm') AND acked = 0 ORDER BY ts;
+-- Send broadcast
+INSERT INTO agent_messages (from_agent, to_agent, body) VALUES ('<SESSION_ID>', '#swarm', 'CLAIM: beads-042');
+-- Ack after reading
+UPDATE agent_messages SET acked = 1 WHERE id = <msg_id>;
+```
+
+If the table doesn't exist (fresh `runs.db`), create it with the schema above.
+
 ## Paper Author Resolution
 
 When `/write_paper` or `/compile_paper` needs an author name, resolve in this order:
