@@ -17,6 +17,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## February 2026
 
+<div class="blog-post" data-tags="evaluation llm-agents" markdown>
+
+**Feb 28** — [Deception Is a Structural Property of LLMs, Not a Sampling Artifact](temperature-vs-deception.md)
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span>
+
+A 120-run temperature sweep (T=0.0 to T=1.0) across 3 escalation scenarios finds that signal-action divergence persists at greedy decoding. Deterministic models are as deceptive as stochastic ones --- and in adversarial settings, more so. Temperature affects deception *competence*, not deception *intent*.
+
+</div>
+
 <div class="blog-post" data-tags="governance evaluation" markdown>
 
 **Feb 27** — [No Governance Configuration Prevents Nuclear Exchange When a Hawk Is Present](governance-sweep-nuclear-rate.md)
