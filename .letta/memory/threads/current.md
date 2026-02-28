@@ -20,18 +20,16 @@ Cross-study comparison (455 total runs) validates reproducibility: Study 2 and S
 
 ## Last session summary
 
-- Created `examples/mesa_game_structures_study.py` — 3 game types x 6 rho x 2 regimes x 5 seeds = 180 runs
-- Generated 8 diagnostic plots and 5 publication figures (fig8-fig12, pushed to swarm-artifacts)
-- Ran cross-study comparison across all 3 Mesa studies (455 runs total)
-- Key insight: toxicity converges to ~0.147 at rho=1.0 regardless of game type; game structure affects welfare magnitude but not toxicity reduction
-- Hawk-Dove (costly conflict, h=3) shows strongest learning benefit (+159%) because high externalities make governance most valuable
+- Filled in 24 references (9 themes) and inline citations for the Mesa governance arc paper
+- Paper now has zero TODO sections — ready for review/submission
+- Synced updated paper to swarm-artifacts (commit 01ca63b)
 
 ## Next experiment
 
 1. **Adversarial learners** — agents that learn to game the acceptance threshold rather than genuinely improve quality. Do they break the governance mechanism?
 2. **Real Mesa model** — connect the bridge to Schelling segregation or Sugarscape for non-synthetic validation
 3. **Population scaling** — test whether results hold with 100+ agents (current: 30)
-4. **Paper writeup** — the three-study arc is a natural paper structure (tax → adaptation → generalization)
+4. ~~**Paper writeup**~~ — DONE. Paper scaffolded, populated, references added, synced to swarm-artifacts. Ready for review.
 
 ## Blockers
 
