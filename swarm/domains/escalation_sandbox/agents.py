@@ -558,6 +558,8 @@ class EscalationAgentBridge(EscalationPolicy):
         temperature: float = 0.7,
         max_tokens: int = 1024,
         seed: int = 42,
+        system_prompt_suffix: str = "",
+        **_kwargs: Any,
     ) -> None:
         super().__init__(agent_id, seed)
         self._name = name or agent_id
@@ -595,6 +597,8 @@ class EscalationAgentBridge(EscalationPolicy):
         self._system_prompt = EscalationPromptGenerator.generate_system_prompt(
             self._name, self._persona,
         )
+        if system_prompt_suffix:
+            self._system_prompt += "\n\n" + system_prompt_suffix
 
     def decide(self, observation: Dict[str, Any]) -> EscalationAction:
         """Query the LLM for a decision."""
