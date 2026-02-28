@@ -44,6 +44,11 @@ except ImportError:
 
     class Organism(BaseModel):  # type: ignore[no-redef]
         id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+
+
+def is_darwinian_evolver_available() -> bool:
+    """Return whether darwinian_evolver is installed and importable."""
+    return _darwinian_evolver_available
         from_change_summary: Optional[str] = None
 
     class EvaluationFailureCase(BaseModel):  # type: ignore[no-redef]
