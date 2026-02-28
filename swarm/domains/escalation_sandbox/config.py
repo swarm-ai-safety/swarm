@@ -28,6 +28,7 @@ class AgentConfig:
     military_strength: float = 100.0
     economic_strength: float = 100.0
     intelligence_quality: float = 0.5
+    temperature: float = 0.7  # LLM sampling temperature
 
 
 @dataclass
@@ -123,7 +124,7 @@ class EscalationConfig:
                     "agent_id", "name", "agent_type", "persona", "provider",
                     "model_id", "has_nuclear", "has_second_strike",
                     "military_strength", "economic_strength",
-                    "intelligence_quality",
+                    "intelligence_quality", "temperature",
                 ) if k in a
             }))
 

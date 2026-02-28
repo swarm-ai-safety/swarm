@@ -1,19 +1,18 @@
 #!/usr/bin/env python
 """
-Governance Sensitivity Sweep.
+Governance Sensitivity Sweep — tax rate x audit probability effect on M_eff.
 
-Sweeps tax_rate x audit_probability on the misalignment_sweep population,
-measuring how governance pressure modulates effective misalignment, toxicity,
-welfare, and agent survival.
+Sweeps tax_rate in [0, 0.02, 0.05, 0.10, 0.15] x audit_probability in
+[0, 0.05, 0.10, 0.20] using the misalignment_sweep population. Measures
+M_eff reduction, toxicity, welfare, and agent survival per config. Prints
+a grid table and exports results as JSON.
 
 Usage:
-    python examples/run_governance_sensitivity_sweep.py scenarios/misalignment_sweep.yaml
+    python examples/run_governance_sensitivity_sweep.py [scenarios/misalignment_sweep.yaml]
 """
 
-import copy
 import json
 import sys
-from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -33,7 +32,8 @@ TAX_RATES = [0.0, 0.02, 0.05, 0.10, 0.15]
 AUDIT_PROBS = [0.0, 0.05, 0.10, 0.20]
 
 # ---------------------------------------------------------------------------
-# Preference profiles (shared with misalignment study)
+# Preference profiles per agent type (same as run_misalignment_study.py)
+# Issues: safety, efficiency, fairness
 # ---------------------------------------------------------------------------
 
 ISSUE_NAMES = ["safety", "efficiency", "fairness"]
@@ -63,6 +63,7 @@ PREFERENCE_MAP: dict[AgentType, dict] = {
 
 
 def _build_graph(orchestrator) -> dict[str, list[str]]:
+    """Build adjacency list from orchestrator network."""
     graph: dict[str, list[str]] = {}
     if orchestrator.network is None:
         all_ids = [a.agent_id for a in orchestrator.get_all_agents()]
@@ -74,58 +75,67 @@ def _build_graph(orchestrator) -> dict[str, list[str]]:
     return graph
 
 
-@dataclass
-class SweepResult:
-    """Results for a single (tax, audit) configuration."""
+def _run_single_config(
+    base_scenario_path: Path,
+    tax_rate: float,
+    audit_prob: float,
+    config_idx: int,
+    total_configs: int,
+) -> dict:
+    """Run one (tax_rate, audit_probability) configuration and return results."""
+    # Load a fresh scenario for each config
+    scenario = load_scenario(base_scenario_path)
+    config = scenario.orchestrator_config
 
-    tax_rate: float
-    audit_prob: float
-    gov_pressure: float
-    m_pref: float
-    m_eff: float
-    gov_reduction_pct: float
-    avg_toxicity: float
-    total_welfare: float
-    total_interactions: int
-    accepted_interactions: int
-    frozen_count: int
-    polarization: float
-    fragmentation: float
+    # Modify governance parameters
+    gov = config.governance_config
+    if gov is None:
+        from swarm.governance.config import GovernanceConfig
 
+        gov = GovernanceConfig()
+        config.governance_config = gov
 
-def run_single(scenario, tax_rate: float, audit_prob: float) -> SweepResult:
-    """Run a single configuration and return summary metrics."""
-    # Deep-copy scenario to avoid mutation
-    sc = copy.deepcopy(scenario)
+    # Use model_copy to update governance fields (Pydantic v2)
+    config.governance_config = gov.model_copy(
+        update={
+            "transaction_tax_rate": tax_rate,
+            "audit_enabled": audit_prob > 0,
+            "audit_probability": audit_prob,
+        }
+    )
 
-    # Override governance parameters
-    gov = sc.orchestrator_config.governance_config
-    gov.transaction_tax_rate = tax_rate
-    gov.audit_probability = audit_prob
-    gov.audit_enabled = audit_prob > 0
+    gov_pressure = tax_rate + audit_prob
+
+    print(
+        f"  [{config_idx}/{total_configs}] "
+        f"tax={tax_rate:.2f}, audit={audit_prob:.2f} "
+        f"(pressure={gov_pressure:.3f})"
+    )
 
     # Build orchestrator
-    orchestrator = build_orchestrator(sc)
-    config = sc.orchestrator_config
+    orchestrator = build_orchestrator(scenario)
 
     # Set up MisalignmentModule
     issue_space = IssueSpace(issues=ISSUE_NAMES)
     module = MisalignmentModule(issue_space=issue_space, gov_lambda=1.0)
+
     for agent in orchestrator.get_all_agents():
-        profile = PREFERENCE_MAP.get(agent.agent_type, {
-            "prefs": [0.0] * len(ISSUE_NAMES),
-            "salience": [1.0 / len(ISSUE_NAMES)] * len(ISSUE_NAMES),
-        })
+        profile = PREFERENCE_MAP.get(agent.agent_type)
+        if profile is None:
+            profile = {
+                "prefs": [0.0] * len(ISSUE_NAMES),
+                "salience": [1.0 / len(ISSUE_NAMES)] * len(ISSUE_NAMES),
+            }
         module.register_agent(
             agent_id=agent.agent_id,
             prefs=profile["prefs"],
             salience=profile["salience"],
         )
 
-    # Wire aggregator
+    # Wire MetricsAggregator
     aggregator = MetricsAggregator()
     aggregator.start_simulation(
-        simulation_id=sc.scenario_id,
+        simulation_id=f"{scenario.scenario_id}_tax{tax_rate}_audit{audit_prob}",
         n_epochs=config.n_epochs,
         steps_per_epoch=config.steps_per_epoch,
         n_agents=len(orchestrator.get_all_agents()),
@@ -138,8 +148,12 @@ def run_single(scenario, tax_rate: float, audit_prob: float) -> SweepResult:
         aggregator.record_interaction(interaction)
         aggregator.record_payoff(interaction.initiator, initiator_payoff)
         aggregator.record_payoff(interaction.counterparty, counterparty_payoff)
+        aggregator.get_history().interactions.append(interaction)
 
     orchestrator.on_interaction_complete(_on_interaction)
+
+    # Collect misalignment snapshots
+    snapshots = []
 
     def _on_epoch_end(epoch_metrics):
         agent_states = orchestrator.state.agents
@@ -152,289 +166,282 @@ def run_single(scenario, tax_rate: float, audit_prob: float) -> SweepResult:
             quarantined_agents=quarantined,
         )
 
+        graph = _build_graph(orchestrator)
+        snap = module.compute_snapshot(
+            step=epoch_metrics.epoch,
+            graph=graph,
+            uniform_pressure=gov_pressure,
+        )
+        snapshots.append(snap)
+
     orchestrator.on_epoch_end(_on_epoch_end)
 
-    # Run
+    # Run simulation
     metrics_history = orchestrator.run()
 
-    # Compute misalignment at end
-    gov_pressure = tax_rate + audit_prob
-    graph = _build_graph(orchestrator)
-    snap = module.compute_snapshot(
-        step=config.n_epochs,
-        graph=graph,
-        uniform_pressure=gov_pressure,
-    )
+    # Collect results
+    total_agents = len(orchestrator.get_all_agents())
+    frozen_count = len(orchestrator.state.frozen_agents)
+    surviving = total_agents - frozen_count
 
-    # Aggregate metrics
-    total_interactions = sum(m.total_interactions for m in metrics_history)
-    accepted = sum(m.accepted_interactions for m in metrics_history)
-    avg_tox = (
+    avg_toxicity = (
         sum(m.toxicity_rate for m in metrics_history) / len(metrics_history)
         if metrics_history
         else 0.0
     )
     total_welfare = sum(m.total_welfare for m in metrics_history)
-    frozen_count = len(orchestrator.state.frozen_agents)
 
+    final_m_pref = snapshots[-1].m_pref_global if snapshots else 0.0
+    final_m_eff = snapshots[-1].m_eff_global if snapshots else 0.0
     gov_reduction = (
-        (1.0 - snap.m_eff_global / snap.m_pref_global) * 100
-        if snap.m_pref_global > 0
-        else 0.0
+        (1.0 - final_m_eff / final_m_pref) if final_m_pref > 0 else 0.0
     )
 
-    return SweepResult(
-        tax_rate=tax_rate,
-        audit_prob=audit_prob,
-        gov_pressure=gov_pressure,
-        m_pref=snap.m_pref_global,
-        m_eff=snap.m_eff_global,
-        gov_reduction_pct=gov_reduction,
-        avg_toxicity=avg_tox,
-        total_welfare=total_welfare,
-        total_interactions=total_interactions,
-        accepted_interactions=accepted,
-        frozen_count=frozen_count,
-        polarization=snap.polarization,
-        fragmentation=snap.fragmentation,
-    )
+    # End aggregator
+    aggregator.end_simulation()
+
+    return {
+        "tax_rate": tax_rate,
+        "audit_probability": audit_prob,
+        "gov_pressure": gov_pressure,
+        "m_pref": final_m_pref,
+        "m_eff": final_m_eff,
+        "gov_reduction_ratio": gov_reduction,
+        "avg_toxicity": avg_toxicity,
+        "total_welfare": total_welfare,
+        "agents_total": total_agents,
+        "agents_surviving": surviving,
+        "agents_frozen": frozen_count,
+        "n_epochs": len(metrics_history),
+        "total_interactions": sum(
+            m.total_interactions for m in metrics_history
+        ),
+        "snapshots": [s.to_dict() for s in snapshots],
+    }
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python run_governance_sensitivity_sweep.py <scenario.yaml>")
-        print("\nSuggested: scenarios/misalignment_sweep.yaml")
-        return 1
-
-    scenario_path = Path(sys.argv[1])
+    scenario_path = Path(
+        sys.argv[1] if len(sys.argv) > 1 else "scenarios/misalignment_sweep.yaml"
+    )
     if not scenario_path.exists():
         print(f"Error: Scenario file not found: {scenario_path}")
         return 1
 
-    print("=" * 90)
+    print("=" * 78)
     print("Governance Sensitivity Sweep")
-    print("=" * 90)
+    print("tax_rate x audit_probability effect on M_eff")
+    print("=" * 78)
     print()
 
-    scenario = load_scenario(scenario_path)
-    print(f"Base scenario: {scenario.scenario_id}")
-    print(f"  {scenario.orchestrator_config.n_epochs} epochs x "
-          f"{scenario.orchestrator_config.steps_per_epoch} steps, "
-          f"seed {scenario.orchestrator_config.seed}")
-    print(f"  Tax rates: {TAX_RATES}")
-    print(f"  Audit probs: {AUDIT_PROBS}")
-    print(f"  Total configs: {len(TAX_RATES) * len(AUDIT_PROBS)}")
+    # Show sweep grid
+    total_configs = len(TAX_RATES) * len(AUDIT_PROBS)
+    print(f"Scenario: {scenario_path}")
+    print(f"Tax rates: {TAX_RATES}")
+    print(f"Audit probabilities: {AUDIT_PROBS}")
+    print(f"Total configurations: {total_configs}")
+    print()
+
+    # Load once to show base info
+    base_scenario = load_scenario(scenario_path)
+    base_config = base_scenario.orchestrator_config
+    seed = base_config.seed
+    print(f"Base scenario: {base_scenario.scenario_id}")
+    print(f"  Epochs: {base_config.n_epochs}, Steps/epoch: {base_config.steps_per_epoch}")
+    print(f"  Seed: {seed}")
     print()
 
     # Run sweep
-    results: list[SweepResult] = []
-    total = len(TAX_RATES) * len(AUDIT_PROBS)
-    idx = 0
-
+    print("Running sweep...")
+    print("-" * 78)
+    results = []
+    config_idx = 0
     for tax in TAX_RATES:
         for audit in AUDIT_PROBS:
-            idx += 1
-            label = f"[{idx}/{total}] tax={tax:.2f}, audit={audit:.2f}"
-            print(f"  Running {label} ...", end=" ", flush=True)
-            r = run_single(scenario, tax, audit)
-            results.append(r)
-            print(
-                f"M_eff={r.m_eff:.4f} "
-                f"(-{r.gov_reduction_pct:.1f}%) "
-                f"tox={r.avg_toxicity:.4f} "
-                f"welfare={r.total_welfare:.1f} "
-                f"frozen={r.frozen_count}"
+            config_idx += 1
+            result = _run_single_config(
+                scenario_path, tax, audit, config_idx, total_configs
             )
-
+            results.append(result)
+    print("-" * 78)
     print()
 
-    # =====================================================================
-    # Results table
-    # =====================================================================
-    print("=" * 90)
-    print("RESULTS TABLE")
-    print("=" * 90)
-    print()
-
-    header = (
-        f"{'Tax':<6} {'Audit':<7} {'G_pres':<7} "
-        f"{'M_pref':<8} {'M_eff':<8} {'Reduc%':<8} "
-        f"{'Toxic':<8} {'Welfare':<9} {'Intx':<6} {'Acc':<5} {'Frz':<4}"
-    )
+    # --- Grid table: M_eff ---
+    print("M_eff Grid (tax_rate x audit_probability):")
+    print("-" * 78)
+    # Header row
+    tax_audit_label = "tax \\ audit"
+    header = f"{tax_audit_label:<12}"
+    for audit in AUDIT_PROBS:
+        header += f"  {audit:<10}"
     print(header)
-    print("-" * 90)
+    print("-" * 78)
 
-    for r in results:
-        print(
-            f"{r.tax_rate:<6.2f} {r.audit_prob:<7.2f} {r.gov_pressure:<7.3f} "
-            f"{r.m_pref:<8.4f} {r.m_eff:<8.4f} {r.gov_reduction_pct:<8.1f} "
-            f"{r.avg_toxicity:<8.4f} {r.total_welfare:<9.1f} "
-            f"{r.total_interactions:<6} {r.accepted_interactions:<5} {r.frozen_count:<4}"
-        )
-
-    print("-" * 90)
-    print()
-
-    # =====================================================================
-    # M_eff heatmap (text)
-    # =====================================================================
-    print("M_eff by Tax Rate (rows) x Audit Probability (columns):")
-    print()
-    # Header
-    hdr = "Tax \\ Audit"
-    print(f"{hdr:<12}", end="")
-    for audit in AUDIT_PROBS:
-        print(f"{audit:<10.2f}", end="")
-    print()
-    print("-" * (12 + 10 * len(AUDIT_PROBS)))
+    # Build lookup
+    lookup = {(r["tax_rate"], r["audit_probability"]): r for r in results}
 
     for tax in TAX_RATES:
-        print(f"{tax:<12.2f}", end="")
+        row = f"{tax:<12.2f}"
         for audit in AUDIT_PROBS:
-            r = next(x for x in results if x.tax_rate == tax and x.audit_prob == audit)
-            print(f"{r.m_eff:<10.4f}", end="")
-        print()
+            r = lookup[(tax, audit)]
+            row += f"  {r['m_eff']:<10.4f}"
+        print(row)
     print()
 
-    # =====================================================================
-    # Governance reduction heatmap
-    # =====================================================================
-    print("Governance Reduction % by Tax Rate (rows) x Audit Probability (columns):")
-    print()
-    hdr = "Tax \\ Audit"
-    print(f"{hdr:<12}", end="")
+    # --- Grid table: Governance Reduction Ratio ---
+    print("Governance Reduction Ratio (1 - M_eff/M_pref):")
+    print("-" * 78)
+    tax_audit_label = "tax \\ audit"
+    header = f"{tax_audit_label:<12}"
     for audit in AUDIT_PROBS:
-        print(f"{audit:<10.2f}", end="")
-    print()
-    print("-" * (12 + 10 * len(AUDIT_PROBS)))
+        header += f"  {audit:<10}"
+    print(header)
+    print("-" * 78)
 
     for tax in TAX_RATES:
-        print(f"{tax:<12.2f}", end="")
+        row = f"{tax:<12.2f}"
         for audit in AUDIT_PROBS:
-            r = next(x for x in results if x.tax_rate == tax and x.audit_prob == audit)
-            print(f"{r.gov_reduction_pct:<10.1f}", end="")
-        print()
+            r = lookup[(tax, audit)]
+            row += f"  {r['gov_reduction_ratio']:<10.1%}"
+        print(row)
     print()
 
-    # =====================================================================
-    # Toxicity heatmap
-    # =====================================================================
-    print("Avg Toxicity by Tax Rate (rows) x Audit Probability (columns):")
-    print()
-    hdr = "Tax \\ Audit"
-    print(f"{hdr:<12}", end="")
+    # --- Grid table: Toxicity ---
+    print("Avg Toxicity Grid:")
+    print("-" * 78)
+    tax_audit_label = "tax \\ audit"
+    header = f"{tax_audit_label:<12}"
     for audit in AUDIT_PROBS:
-        print(f"{audit:<10.2f}", end="")
-    print()
-    print("-" * (12 + 10 * len(AUDIT_PROBS)))
+        header += f"  {audit:<10}"
+    print(header)
+    print("-" * 78)
 
     for tax in TAX_RATES:
-        print(f"{tax:<12.2f}", end="")
+        row = f"{tax:<12.2f}"
         for audit in AUDIT_PROBS:
-            r = next(x for x in results if x.tax_rate == tax and x.audit_prob == audit)
-            print(f"{r.avg_toxicity:<10.4f}", end="")
-        print()
+            r = lookup[(tax, audit)]
+            row += f"  {r['avg_toxicity']:<10.4f}"
+        print(row)
     print()
 
-    # =====================================================================
-    # Analysis
-    # =====================================================================
-    print("=" * 90)
-    print("ANALYSIS")
-    print("=" * 90)
+    # --- Grid table: Welfare ---
+    print("Total Welfare Grid:")
+    print("-" * 78)
+    tax_audit_label = "tax \\ audit"
+    header = f"{tax_audit_label:<12}"
+    for audit in AUDIT_PROBS:
+        header += f"  {audit:<10}"
+    print(header)
+    print("-" * 78)
+
+    for tax in TAX_RATES:
+        row = f"{tax:<12.2f}"
+        for audit in AUDIT_PROBS:
+            r = lookup[(tax, audit)]
+            row += f"  {r['total_welfare']:<10.2f}"
+        print(row)
+    print()
+
+    # --- Grid table: Agents Surviving ---
+    print("Agents Surviving Grid:")
+    print("-" * 78)
+    tax_audit_label = "tax \\ audit"
+    header = f"{tax_audit_label:<12}"
+    for audit in AUDIT_PROBS:
+        header += f"  {audit:<10}"
+    print(header)
+    print("-" * 78)
+
+    for tax in TAX_RATES:
+        row = f"{tax:<12.2f}"
+        for audit in AUDIT_PROBS:
+            r = lookup[(tax, audit)]
+            row += f"  {r['agents_surviving']:<10}"
+        print(row)
+    print()
+
+    # --- Summary statistics ---
+    print("Summary Statistics:")
+    print("-" * 78)
+
+    m_effs = [r["m_eff"] for r in results]
+    reductions = [r["gov_reduction_ratio"] for r in results]
+    toxicities = [r["avg_toxicity"] for r in results]
+    welfares = [r["total_welfare"] for r in results]
+
+    print(f"  M_eff range: [{min(m_effs):.4f}, {max(m_effs):.4f}]")
+    print(f"  Governance reduction range: [{min(reductions):.1%}, {max(reductions):.1%}]")
+    print(f"  Toxicity range: [{min(toxicities):.4f}, {max(toxicities):.4f}]")
+    print(f"  Welfare range: [{min(welfares):.2f}, {max(welfares):.2f}]")
     print()
 
     # Best and worst configs
-    best_meff = min(results, key=lambda r: r.m_eff)
-    worst_meff = max(results, key=lambda r: r.m_eff)
-    best_tox = min(results, key=lambda r: r.avg_toxicity)
-    best_welfare = max(results, key=lambda r: r.total_welfare)
-
-    print(f"Lowest M_eff:    tax={best_meff.tax_rate:.2f}, audit={best_meff.audit_prob:.2f} "
-          f"-> M_eff={best_meff.m_eff:.4f} ({best_meff.gov_reduction_pct:.1f}% reduction)")
-    print(f"Highest M_eff:   tax={worst_meff.tax_rate:.2f}, audit={worst_meff.audit_prob:.2f} "
-          f"-> M_eff={worst_meff.m_eff:.4f} ({worst_meff.gov_reduction_pct:.1f}% reduction)")
-    print(f"Lowest toxicity: tax={best_tox.tax_rate:.2f}, audit={best_tox.audit_prob:.2f} "
-          f"-> tox={best_tox.avg_toxicity:.4f}")
-    print(f"Best welfare:    tax={best_welfare.tax_rate:.2f}, audit={best_welfare.audit_prob:.2f} "
-          f"-> welfare={best_welfare.total_welfare:.1f}")
-    print()
-
-    # Marginal effects: tax rate (averaged over audit)
-    print("Marginal effect of tax rate (averaged over audit levels):")
-    for tax in TAX_RATES:
-        subset = [r for r in results if r.tax_rate == tax]
-        mean_meff = sum(r.m_eff for r in subset) / len(subset)
-        mean_tox = sum(r.avg_toxicity for r in subset) / len(subset)
-        mean_welfare = sum(r.total_welfare for r in subset) / len(subset)
-        print(f"  tax={tax:.2f}: M_eff={mean_meff:.4f}, tox={mean_tox:.4f}, welfare={mean_welfare:.1f}")
-    print()
-
-    # Marginal effects: audit probability (averaged over tax)
-    print("Marginal effect of audit probability (averaged over tax levels):")
-    for audit in AUDIT_PROBS:
-        subset = [r for r in results if r.audit_prob == audit]
-        mean_meff = sum(r.m_eff for r in subset) / len(subset)
-        mean_tox = sum(r.avg_toxicity for r in subset) / len(subset)
-        mean_welfare = sum(r.total_welfare for r in subset) / len(subset)
-        print(f"  audit={audit:.2f}: M_eff={mean_meff:.4f}, tox={mean_tox:.4f}, welfare={mean_welfare:.1f}")
-    print()
-
-    # Diminishing returns check
-    no_gov = next((r for r in results if r.tax_rate == 0 and r.audit_prob == 0), None)
-    max_gov = next(
-        (r for r in results if r.tax_rate == TAX_RATES[-1] and r.audit_prob == AUDIT_PROBS[-1]),
-        None,
+    best_reduction = max(results, key=lambda r: r["gov_reduction_ratio"])
+    worst_reduction = min(results, key=lambda r: r["gov_reduction_ratio"])
+    print(
+        f"  Best M_eff reduction: tax={best_reduction['tax_rate']:.2f}, "
+        f"audit={best_reduction['audit_probability']:.2f} "
+        f"-> {best_reduction['gov_reduction_ratio']:.1%}"
     )
-    if no_gov and max_gov:
-        meff_range = no_gov.m_eff - max_gov.m_eff
-        tox_range = no_gov.avg_toxicity - max_gov.avg_toxicity
-        welfare_range = max_gov.total_welfare - no_gov.total_welfare
-        print("Full range (no governance -> max governance):")
-        print(f"  M_eff:    {no_gov.m_eff:.4f} -> {max_gov.m_eff:.4f} (delta={meff_range:+.4f})")
-        print(f"  Toxicity: {no_gov.avg_toxicity:.4f} -> {max_gov.avg_toxicity:.4f} (delta={tox_range:+.4f})")
-        print(f"  Welfare:  {no_gov.total_welfare:.1f} -> {max_gov.total_welfare:.1f} (delta={welfare_range:+.1f})")
+    print(
+        f"  Worst M_eff reduction: tax={worst_reduction['tax_rate']:.2f}, "
+        f"audit={worst_reduction['audit_probability']:.2f} "
+        f"-> {worst_reduction['gov_reduction_ratio']:.1%}"
+    )
+
+    best_welfare = max(results, key=lambda r: r["total_welfare"])
+    print(
+        f"  Best welfare: tax={best_welfare['tax_rate']:.2f}, "
+        f"audit={best_welfare['audit_probability']:.2f} "
+        f"-> {best_welfare['total_welfare']:.2f}"
+    )
     print()
 
-    # =====================================================================
-    # Export
-    # =====================================================================
+    # --- Export ---
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    export_dir = Path("runs") / f"{timestamp}_governance_sweep_seed{scenario.orchestrator_config.seed}"
+    export_dir = Path("runs") / f"{timestamp}_gov_sensitivity_seed{seed}"
     export_dir.mkdir(parents=True, exist_ok=True)
 
-    export_path = export_dir / "governance_sweep_results.json"
-    with open(export_path, "w") as f:
+    # Strip per-epoch snapshots from summary export (keep them in detailed export)
+    summary_results = []
+    for r in results:
+        summary = {k: v for k, v in r.items() if k != "snapshots"}
+        summary_results.append(summary)
+
+    # Summary JSON
+    summary_path = export_dir / "governance_sensitivity_summary.json"
+    with open(summary_path, "w") as f:
         json.dump(
             {
-                "scenario_id": scenario.scenario_id,
-                "seed": scenario.orchestrator_config.seed,
+                "scenario_id": base_scenario.scenario_id,
+                "seed": seed,
                 "tax_rates": TAX_RATES,
-                "audit_probs": AUDIT_PROBS,
-                "results": [
-                    {
-                        "tax_rate": r.tax_rate,
-                        "audit_prob": r.audit_prob,
-                        "gov_pressure": r.gov_pressure,
-                        "m_pref": r.m_pref,
-                        "m_eff": r.m_eff,
-                        "gov_reduction_pct": r.gov_reduction_pct,
-                        "avg_toxicity": r.avg_toxicity,
-                        "total_welfare": r.total_welfare,
-                        "total_interactions": r.total_interactions,
-                        "accepted_interactions": r.accepted_interactions,
-                        "frozen_count": r.frozen_count,
-                        "polarization": r.polarization,
-                        "fragmentation": r.fragmentation,
-                    }
-                    for r in results
-                ],
+                "audit_probabilities": AUDIT_PROBS,
+                "n_configs": total_configs,
+                "results": summary_results,
             },
             f,
             indent=2,
         )
 
-    print(f"Exported sweep results: {export_path}")
+    # Detailed JSON (with per-epoch snapshots)
+    detailed_path = export_dir / "governance_sensitivity_detailed.json"
+    with open(detailed_path, "w") as f:
+        json.dump(
+            {
+                "scenario_id": base_scenario.scenario_id,
+                "seed": seed,
+                "tax_rates": TAX_RATES,
+                "audit_probabilities": AUDIT_PROBS,
+                "n_configs": total_configs,
+                "results": results,
+            },
+            f,
+            indent=2,
+        )
+
+    print(f"Exported summary: {summary_path}")
+    print(f"Exported detailed: {detailed_path}")
     print()
 
     return 0

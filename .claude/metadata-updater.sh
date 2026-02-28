@@ -40,9 +40,9 @@ if [[ "$tool_name" != "Bash" ]]; then
   exit 0
 fi
 
-# Validate AO_SESSION is set
+# Validate AO_SESSION is set — exit silently if not (avoid spamming on every tool call)
 if [[ -z "${AO_SESSION:-}" ]]; then
-  echo '{"systemMessage": "AO_SESSION environment variable not set, skipping metadata update"}'
+  echo '{}'
   exit 0
 fi
 

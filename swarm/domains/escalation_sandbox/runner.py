@@ -71,6 +71,7 @@ class EscalationRunner:
                 name=agent_cfg.name,
                 provider=agent_cfg.provider,
                 model_id=agent_cfg.model_id,
+                temperature=agent_cfg.temperature,
             )
             self._policies[agent_id] = policy
 
