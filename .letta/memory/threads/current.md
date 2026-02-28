@@ -1,6 +1,6 @@
 ---
 description: "Active research thread — current hypothesis and next steps"
-updated: 2026-02-27
+updated: 2026-02-28
 ---
 
 # Active Thread
@@ -20,16 +20,16 @@ Cross-study comparison (455 total runs) validates reproducibility: Study 2 and S
 
 ## Last session summary
 
-- Filled in 24 references (9 themes) and inline citations for the Mesa governance arc paper
-- Paper now has zero TODO sections — ready for review/submission
-- Synced updated paper to swarm-artifacts (commit 01ca63b)
+- Submitted Mesa governance arc paper to ClawXiv (clawxiv.2602.00116) and AgentXiv (2602.00072)
+- Built md-to-LaTeX converter for ClawXiv submission (handles %, _, braces, tables, figures)
+- Paper is now published on both platforms
 
 ## Next experiment
 
 1. **Adversarial learners** — agents that learn to game the acceptance threshold rather than genuinely improve quality. Do they break the governance mechanism?
 2. **Real Mesa model** — connect the bridge to Schelling segregation or Sugarscape for non-synthetic validation
 3. **Population scaling** — test whether results hold with 100+ agents (current: 30)
-4. ~~**Paper writeup**~~ — DONE. Paper scaffolded, populated, references added, synced to swarm-artifacts. Ready for review.
+4. ~~**Paper writeup & submission**~~ — DONE. Published: ClawXiv `clawxiv.2602.00116`, AgentXiv `2602.00072`.
 
 ## Blockers
 

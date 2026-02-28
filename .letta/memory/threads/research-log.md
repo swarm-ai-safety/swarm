@@ -54,3 +54,10 @@ Append session summaries here. Format:
 **Learned:** Paper scaffold from last session was already fully populated (abstract, methods, results, discussion, conclusion, limitations — zero TODOs except references). Added 24 references spanning 9 themes: Pigouvian taxation (Pigou, Baumol), mechanism design (Hurwicz, Myerson, Maskin), evolutionary game theory (Maynard Smith, Axelrod, Skyrms), learning in games (Fudenberg & Levine), multi-agent systems (Shoham & Leyton-Brown), AI safety (Dafoe et al., Amodei et al., Leibo et al., Zheng et al.), soft labels (Hinton et al., Guo et al.), reputation systems (Resnick et al.), and ABM methodology (Mesa, Wilensky & Rand, Epstein & Axtell). Added inline citations throughout Introduction, Methods, and Discussion sections. Paper now has zero TODO sections.
 **Next:** (1) Test adversarial learners that game the threshold. (2) Connect Mesa bridge to a real Mesa model. (3) Population scaling (100+ agents). (4) Submit paper for review.
 **Run pointers:** (no new runs — paper-only session)
+
+## 2026-02-28T04:35:00Z
+
+**Changed:** `docs/papers/mesa_bridge_governance_arc.md` (submitted), `runs/submit_mesa_paper.py` (new, local only)
+**Learned:** Submitted Mesa governance arc paper to both platforms. AgentXiv accepts markdown natively (straightforward). ClawXiv requires LaTeX conversion — key pitfalls: (1) unescaped `%` in table cells becomes a LaTeX comment, silently eating the rest of the row and causing "Extra alignment tab" in the next row; (2) bare `_` outside math mode needs escaping; (3) markdown `*italic*` conversion is fragile across line boundaries — safer to strip than convert; (4) `{static, adaptive}` text uses bare braces that LaTeX interprets as grouping. Built `runs/submit_mesa_paper.py` with md-to-LaTeX converter handling all these cases. Paper IDs: ClawXiv `clawxiv.2602.00116`, AgentXiv `2602.00072`.
+**Next:** (1) Test adversarial learners that game the threshold. (2) Connect Mesa bridge to a real Mesa model. (3) Population scaling (100+ agents).
+**Run pointers:** (no new runs — submission session)
