@@ -15,22 +15,72 @@ import logging
 import random
 import re
 import time
+import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from darwinian_evolver.evolve_problem_loop import EvolveProblemLoop
-from darwinian_evolver.learning_log import LearningLogEntry
-from darwinian_evolver.learning_log_view import AncestorLearningLogView
-from darwinian_evolver.problem import (
-    EvaluationFailureCase,
-    EvaluationResult,
-    Evaluator,
-    Mutator,
-    Organism,
-    Problem,
-)
-from pydantic import ConfigDict, computed_field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, computed_field, model_validator
+
+try:
+    from darwinian_evolver.evolve_problem_loop import EvolveProblemLoop
+    from darwinian_evolver.learning_log import LearningLogEntry
+    from darwinian_evolver.learning_log_view import AncestorLearningLogView
+    from darwinian_evolver.problem import (
+        EvaluationFailureCase,
+        EvaluationResult,
+        Evaluator,
+        Mutator,
+        Organism,
+        Problem,
+    )
+    _darwinian_evolver_available = True
+except ImportError:
+    _darwinian_evolver_available = False
+
+    # Minimal stub base classes so this module can be imported without
+    # darwinian_evolver installed.  Classes that actually require the real
+    # implementations are guarded at runtime inside run_evolution().
+
+    class Organism(BaseModel):  # type: ignore[no-redef]
+        id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+        from_change_summary: Optional[str] = None
+
+    class EvaluationFailureCase(BaseModel):  # type: ignore[no-redef]
+        data_point_id: str = ""
+        failure_type: str = ""
+
+    class EvaluationResult(BaseModel):  # type: ignore[no-redef]
+        score: float = 0.0
+        trainable_failure_cases: List[Any] = Field(default_factory=list)
+        holdout_failure_cases: List[Any] = Field(default_factory=list)
+        is_viable: bool = True
+
+    class Evaluator:  # type: ignore[no-redef]
+        def __class_getitem__(cls, item: Any) -> Any:
+            return cls
+
+    class Mutator:  # type: ignore[no-redef]
+        def __class_getitem__(cls, item: Any) -> Any:
+            return cls
+
+    class Problem:  # type: ignore[no-redef]
+        def __init__(self, **kwargs: Any) -> None:
+            pass
+
+    class LearningLogEntry:  # type: ignore[no-redef]
+        attempted_change: str = ""
+        observed_outcome: str = ""
+
+    class AncestorLearningLogView:  # type: ignore[no-redef]
+        pass
+
+    class EvolveProblemLoop:  # type: ignore[no-redef]
+        def __init__(self, **kwargs: Any) -> None:
+            raise ImportError(
+                "darwinian_evolver is required for evolutionary search. "
+                "Install it with: pip install -e '.[evolve]'"
+            )
 
 from swarm.analysis.sweep import _apply_params, _extract_results
 from swarm.scenarios import ScenarioConfig, build_orchestrator
