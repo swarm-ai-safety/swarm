@@ -49,11 +49,11 @@ except ImportError:
 def is_darwinian_evolver_available() -> bool:
     """Return whether darwinian_evolver is installed and importable."""
     return _darwinian_evolver_available
-        from_change_summary: Optional[str] = None
 
     class EvaluationFailureCase(BaseModel):  # type: ignore[no-redef]
         data_point_id: str = ""
         failure_type: str = ""
+        from_change_summary: Optional[str] = None
 
     class EvaluationResult(BaseModel):  # type: ignore[no-redef]
         score: float = 0.0
