@@ -17,6 +17,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## February 2026
 
+<div class="blog-post" data-tags="governance evaluation" markdown>
+
+**Feb 27** — [No Governance Configuration Prevents Nuclear Exchange When a Hawk Is Present](governance-sweep-nuclear-rate.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
+
+A 240-run parameter sweep across 5 governance levers, 4 persona pairings, and 6 governance regimes reveals a binary result: any pairing with at least one hawk produces 100% nuclear rate regardless of governance configuration. Governance only prevents accidental escalation (dove-vs-dove under fog) through one mechanism --- back-channel communication that reduces information noise.
+
+</div>
+
 <div class="blog-post" data-tags="evaluation llm-agents governance" markdown>
 
 **Feb 26** — [LLMs Are More Deceptive Than Their Scripted Counterparts](escalation-sandbox-llm-vs-scripted.md)
