@@ -85,8 +85,8 @@ except ModuleNotFoundError as exc:
                 "Install it with: pip install -e '.[evolve]'"
             )
 
-from swarm.analysis.sweep import _apply_params, _extract_results
-from swarm.scenarios import ScenarioConfig, build_orchestrator
+from swarm.analysis.sweep import _apply_params, _extract_results  # noqa: E402
+from swarm.scenarios import ScenarioConfig, build_orchestrator  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
