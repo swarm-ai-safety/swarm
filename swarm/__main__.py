@@ -312,6 +312,50 @@ def _check_criteria(criteria: dict, metrics_history: list) -> None:
     print(f"Result: {'ALL CRITERIA PASSED' if all_passed else 'SOME CRITERIA FAILED'}")
 
 
+def cmd_evolve(args: argparse.Namespace) -> int:
+    """Run evolutionary governance search."""
+    from swarm.analysis.evolver import EvolverConfig, run_evolution
+    from swarm.scenarios.loader import load_scenario
+
+    scenario_path = Path(args.scenario)
+    if not scenario_path.exists():
+        print(f"Error: scenario file not found: {scenario_path}", file=sys.stderr)
+        return 1
+
+    scenario = load_scenario(scenario_path)
+
+    # Disable log paths for evolution runs
+    scenario.orchestrator_config.log_path = None
+    scenario.orchestrator_config.log_events = False
+
+    config = EvolverConfig(
+        base_scenario=scenario,
+        n_iterations=args.iterations,
+        num_parents_per_iteration=args.parents,
+        eval_epochs=args.eval_epochs,
+        eval_steps=args.eval_steps,
+        final_eval_epochs=args.final_eval_epochs,
+        final_eval_steps=args.final_eval_steps,
+        use_llm_mutator=args.use_llm,
+        llm_model=args.llm_model,
+        seed_base=args.seed,
+        output_dir=Path(args.output_dir) if args.output_dir else None,
+        resume_from=Path(args.resume_from) if args.resume_from else None,
+    )
+
+    print("=" * 60)
+    print("Evolutionary Governance Search")
+    print("=" * 60)
+    print(f"Scenario:    {scenario.scenario_id}")
+    print(f"Iterations:  {config.n_iterations}")
+    print(f"Eval:        {config.eval_epochs} epochs x {config.eval_steps} steps")
+    print(f"LLM mutator: {'yes' if config.use_llm_mutator else 'no'}")
+    print()
+
+    run_evolution(config)
+    return 0
+
+
 def cmd_list(args: argparse.Namespace) -> int:
     """List available scenario files."""
     scenarios_dir = Path(args.dir)
@@ -612,10 +656,49 @@ def main() -> int:
     arxiv_status = arxiv_subparsers.add_parser("status", help="Check AgentRxiv server status")
     arxiv_status.add_argument("--url", help="AgentRxiv server URL (default: http://127.0.0.1:5000)")
 
+    # evolve
+    evolve_parser = subparsers.add_parser("evolve", help="Evolve governance configurations")
+    evolve_parser.add_argument("scenario", help="Path to YAML scenario file")
+    evolve_parser.add_argument(
+        "--iterations", type=int, default=20, help="Number of evolution iterations (default: 20)"
+    )
+    evolve_parser.add_argument(
+        "--eval-epochs", type=int, default=3, help="Epochs per evaluation (default: 3)"
+    )
+    evolve_parser.add_argument(
+        "--eval-steps", type=int, default=5, help="Steps per epoch in evaluation (default: 5)"
+    )
+    evolve_parser.add_argument(
+        "--final-eval-epochs", type=int, default=10, help="Epochs for final validation (default: 10)"
+    )
+    evolve_parser.add_argument(
+        "--final-eval-steps", type=int, default=10, help="Steps per epoch for final validation (default: 10)"
+    )
+    evolve_parser.add_argument(
+        "--use-llm", action="store_true", help="Use LLM-guided mutator (requires ANTHROPIC_API_KEY)"
+    )
+    evolve_parser.add_argument(
+        "--llm-model", default="claude-sonnet-4-20250514", help="LLM model for mutations"
+    )
+    evolve_parser.add_argument(
+        "--output-dir", metavar="DIR", help="Output directory for results"
+    )
+    evolve_parser.add_argument(
+        "--resume-from", metavar="PATH", help="Resume from a snapshot .pkl file"
+    )
+    evolve_parser.add_argument(
+        "--seed", type=int, default=42, help="Base random seed (default: 42)"
+    )
+    evolve_parser.add_argument(
+        "--parents", type=int, default=3, help="Parents per iteration (default: 3)"
+    )
+
     args = parser.parse_args()
 
     if args.command == "run":
         return cmd_run(args)
+    elif args.command == "evolve":
+        return cmd_evolve(args)
     elif args.command == "list":
         return cmd_list(args)
     elif args.command == "sandbox":

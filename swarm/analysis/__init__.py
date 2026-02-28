@@ -89,7 +89,7 @@ __all__ = [
 
 
 def __getattr__(name: str) -> object:
-    """Lazy-load theme symbols so matplotlib is not required at import time."""
+    """Lazy-load optional symbols so heavy deps are not required at import time."""
     _theme_names = {
         "COLORS", "SWARM_STYLE", "SWARM_LIGHT_STYLE",
         "apply_theme", "swarm_theme", "agent_color", "metric_color",
@@ -98,4 +98,17 @@ def __getattr__(name: str) -> object:
         from swarm.analysis import theme  # noqa: F811
 
         return getattr(theme, name)
+
+    _evolver_names = {
+        "EvolverConfig", "EvolutionResult", "run_evolution",
+        "GovernanceOrganism", "GovernanceEvaluator",
+        "GovernanceEvaluationResult", "SimulationFailureCase",
+        "RandomGovernanceMutator", "LLMGovernanceMutator",
+        "compute_fitness",
+    }
+    if name in _evolver_names:
+        from swarm.analysis import evolver
+
+        return getattr(evolver, name)
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
