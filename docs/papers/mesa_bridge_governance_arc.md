@@ -10,9 +10,9 @@ We study the welfare-toxicity tradeoff of externality internalization ($\rho$) i
 
 ## 1. Introduction
 
-A central challenge in governing multi-agent AI systems is the tradeoff between safety and welfare. Mechanisms that internalize externalities — forcing agents to bear the cost of ecosystem harm they cause — can reduce harmful interactions but may also suppress beneficial activity. This tension is well-studied in economic theory (Pigouvian taxation) but its dynamics in AI agent populations with heterogeneous capabilities and behavioral archetypes remain underexplored.
+A central challenge in governing multi-agent AI systems is the tradeoff between safety and welfare. Mechanisms that internalize externalities — forcing agents to bear the cost of ecosystem harm they cause — can reduce harmful interactions but may also suppress beneficial activity. This tension is well-studied in economic theory (Pigouvian taxation [1, 2]) but its dynamics in AI agent populations with heterogeneous capabilities and behavioral archetypes remain underexplored [14, 15].
 
-We use the SWARM framework's soft-label formulation, where each interaction has a probability $p = P(v = +1)$ of being beneficial rather than a binary good/bad label. Governance operates through two parameters: externality internalization ($\rho$), which controls how much agents bear the cost of ecosystem harm, and acceptance threshold adaptation, which adjusts the bar for interaction approval based on governance pressure.
+We use the SWARM framework's soft-label formulation [18, 19], where each interaction has a probability $p = P(v = +1)$ of being beneficial rather than a binary good/bad label. Governance operates through two parameters: externality internalization ($\rho$), which controls how much agents bear the cost of ecosystem harm, and acceptance threshold adaptation, which adjusts the bar for interaction approval based on governance pressure.
 
 This paper presents a three-study arc investigating how the welfare-toxicity tradeoff responds to (1) the level of externality internalization, (2) whether agents can learn from rejection, and (3) whether results generalize across game-theoretic structures. Each study builds on the previous, progressively answering whether the "governance sweet spot" is a robust phenomenon or an artifact of specific payoff assumptions.
 
@@ -20,7 +20,7 @@ This paper presents a three-study arc investigating how the welfare-toxicity tra
 
 ### 2.1 Simulation Architecture
 
-All experiments use the SWARM Mesa Bridge protocol, which connects agent-based model (ABM) dynamics to the SWARM soft-label governance pipeline. At each timestep:
+All experiments use the SWARM Mesa Bridge protocol [22, 23], which connects agent-based model (ABM) dynamics to the SWARM soft-label governance pipeline. At each timestep:
 
 1. Agents update their state via archetype-specific stochastic dynamics
 2. The `ProxyComputer` converts observable signals (task\_progress, rework\_count, engagement) into $\hat{v} \in [-1, +1]$, then applies a calibrated sigmoid to obtain $p \in [0, 1]$
@@ -57,7 +57,7 @@ Learning mechanism: when rejected, an agent improves its task\_progress by $\tex
 | Stag Hunt | 4.0 | 0.5 | 1.0 | 0.11 | 0.27 | Coordination game |
 | Hawk-Dove | 1.5 | 2.0 | 3.0 | 0.57 | 0.77 | Costly conflict |
 
-The break-even probability $p_{\text{be}}$ is derived from the point where expected surplus minus externality equals zero: $p_{\text{be}} = (s^- + h) / (s^+ + s^- + h)$.
+The game structures follow canonical forms from evolutionary game theory [6, 7, 9]. The break-even probability $p_{\text{be}}$ is derived from the point where expected surplus minus externality equals zero: $p_{\text{be}} = (s^- + h) / (s^+ + s^- + h)$.
 
 ### 2.5 Sweep Parameters
 
@@ -169,19 +169,19 @@ Study 2 and Study 3 share the Prisoner's Dilemma condition with identical parame
 
 ### 4.1 The Tax-to-Mechanism Transition
 
-Our results reveal a sharp qualitative transition in the role of externality internalization. Without adaptive acceptance thresholds (static regime), $\rho$ is literally a tax — it reduces payoffs uniformly without affecting selection quality. This is because the governance pipeline's acceptance decision is decoupled from the payoff structure. The adaptive threshold creates the coupling that transforms a tax into a mechanism, linking $\rho$ to actual behavioral consequences (rejection of low-quality interactions).
+Our results reveal a sharp qualitative transition in the role of externality internalization. Without adaptive acceptance thresholds (static regime), $\rho$ is literally a Pigouvian tax [1, 2] — it reduces payoffs uniformly without affecting selection quality. This is because the governance pipeline's acceptance decision is decoupled from the payoff structure. The adaptive threshold creates the coupling that transforms a tax into a mechanism [3, 4, 5], linking $\rho$ to actual behavioral consequences (rejection of low-quality interactions).
 
 ### 4.2 Learning as a Pareto Improvement
 
-The introduction of learning agents does not merely shift the welfare-toxicity tradeoff — it expands the Pareto frontier. At every $\rho$ level, the learning regime achieves both higher welfare and comparable or lower toxicity. This occurs because learning converts rejection from a pure loss (excluded agents contribute nothing) into an investment (excluded agents improve and re-enter). The selfish archetype is the key swing group: their moderate learning rate (0.05) allows substantial improvement, and their population share (33%) means their behavioral shift significantly impacts aggregate outcomes.
+The introduction of learning agents [10, 11] does not merely shift the welfare-toxicity tradeoff — it expands the Pareto frontier. At every $\rho$ level, the learning regime achieves both higher welfare and comparable or lower toxicity. This occurs because learning converts rejection from a pure loss (excluded agents contribute nothing) into an investment (excluded agents improve and re-enter). The selfish archetype is the key swing group: their moderate learning rate (0.05) allows substantial improvement, and their population share (33%) means their behavioral shift significantly impacts aggregate outcomes.
 
 ### 4.3 Game-Invariance of the Governance Mechanism
 
-Perhaps the most striking finding is the near-perfect convergence of toxicity at $\rho = 1.0$ across game types. Despite radically different payoff structures — from the low-threshold, high-reward Stag Hunt ($p_{\text{be}} = 0.27$) to the high-threshold, high-cost Hawk-Dove ($p_{\text{be}} = 0.77$) — the governance mechanism achieves the same toxicity reduction. Combined with the overlapping normalized decay curves, this suggests that the governance tradeoff is a property of the agent population dynamics (archetype distribution, learning rates, stochastic drift) rather than the interaction payoff structure. The payoff matrix determines the welfare *scale* but not the governance *shape*.
+Perhaps the most striking finding is the near-perfect convergence of toxicity at $\rho = 1.0$ across game types. Despite radically different payoff structures — from the low-threshold, high-reward Stag Hunt [9] ($p_{\text{be}} = 0.27$) to the high-threshold, high-cost Hawk-Dove [6, 7] ($p_{\text{be}} = 0.77$) — the governance mechanism achieves the same toxicity reduction. Combined with the overlapping normalized decay curves, this suggests that the governance tradeoff is a property of the agent population dynamics [24] (archetype distribution, learning rates, stochastic drift) rather than the interaction payoff structure. The payoff matrix determines the welfare *scale* but not the governance *shape*.
 
 ### 4.4 Implications for AI Governance Design
 
-These findings support a design principle: governance mechanisms in multi-agent AI systems should be paired with adaptation incentives. A pure externality tax will always reduce welfare; pairing it with (1) adaptive acceptance criteria and (2) feedback loops that allow agents to improve creates a qualitatively different outcome. The game-invariance result is particularly encouraging: it suggests that governance designers need not know the exact payoff structure of the interactions they are governing — the mechanism generalizes.
+These findings support a design principle for multi-agent AI governance [12, 14, 16, 17]: governance mechanisms should be paired with adaptation incentives. A pure externality tax will always reduce welfare; pairing it with (1) adaptive acceptance criteria and (2) feedback loops that allow agents to improve creates a qualitatively different outcome. The game-invariance result is particularly encouraging: it suggests that governance designers need not know the exact payoff structure of the interactions they are governing — the mechanism generalizes.
 
 ## 5. Conclusion
 
@@ -198,7 +198,30 @@ Across 455 simulation runs spanning three studies, we establish that externality
 
 ## 7. References
 
-[TODO: Add references to Pigouvian taxation, mechanism design, multi-agent governance, evolutionary game theory literature]
+1. Pigou, A. C. *The Economics of Welfare.* Macmillan, 1920.
+2. Baumol, W. J. "On Taxation and the Control of Externalities." *American Economic Review*, 62(3), 307--322, 1972.
+3. Hurwicz, L. "Optimality and Informational Efficiency in Resource Allocation Processes." In *Mathematical Methods in the Social Sciences*, edited by Arrow, Karlin, and Suppes, Stanford University Press, 1960.
+4. Myerson, R. B. "Optimal Auction Design." *Mathematics of Operations Research*, 6(1), 58--73, 1981.
+5. Maskin, E. S. "Nash Equilibrium and Welfare Optimality." *Review of Economic Studies*, 66(1), 23--38, 1999.
+6. Maynard Smith, J. and Price, G. R. "The Logic of Animal Conflict." *Nature*, 246, 15--18, 1973.
+7. Maynard Smith, J. *Evolution and the Theory of Games.* Cambridge University Press, 1982.
+8. Axelrod, R. *The Evolution of Cooperation.* Basic Books, 1984.
+9. Skyrms, B. *The Stag Hunt and the Evolution of Social Structure.* Cambridge University Press, 2004.
+10. Fudenberg, D. and Levine, D. K. *The Theory of Learning in Games.* MIT Press, 1998.
+11. Bowling, M. and Veloso, M. "Multiagent Learning Using a Variable Learning Rate." *Artificial Intelligence*, 136(2), 215--250, 2002.
+12. Shoham, Y. and Leyton-Brown, K. *Multiagent Systems: Algorithmic, Game-Theoretic, and Logical Foundations.* Cambridge University Press, 2008.
+13. Conitzer, V. and Sandholm, T. "Complexity of Mechanism Design." In *Proceedings of the 18th Conference on Uncertainty in Artificial Intelligence (UAI)*, 103--110, 2002.
+14. Dafoe, A., Hughes, E., Bachrach, Y., Collins, T., McKee, K. R., Leibo, J. Z., Larson, K., and Graepel, T. "Open Problems in Cooperative AI." *arXiv preprint arXiv:2012.08630*, 2020.
+15. Amodei, D., Olah, C., Steinhardt, J., Christiano, P., Schulman, J., and Mane, D. "Concrete Problems in AI Safety." *arXiv preprint arXiv:1606.06565*, 2016.
+16. Leibo, J. Z., Zambaldi, V., Lanctot, M., Marecki, J., and Graepel, T. "Multi-agent Reinforcement Learning in Sequential Social Dilemmas." In *Proceedings of AAMAS*, 464--473, 2017.
+17. Zheng, S., Trott, A., Srinivasa, S., Naik, N., Gruesbeck, M., Parkes, D. C., and Socher, R. "The AI Economist: Improving Equality and Productivity with AI-Driven Tax Policies." *arXiv preprint arXiv:2004.13332*, 2020.
+18. Hinton, G., Vinyals, O., and Dean, J. "Distilling the Knowledge in a Neural Network." *arXiv preprint arXiv:1503.02531*, 2015.
+19. Guo, C., Pleiss, G., Sun, Y., and Weinberger, K. Q. "On Calibration of Modern Neural Networks." In *Proceedings of ICML*, 1321--1330, 2017.
+20. Resnick, P., Kuwabara, K., Zeckhauser, R., and Friedman, E. "Reputation Systems." *Communications of the ACM*, 43(12), 45--48, 2000.
+21. Mui, L., Mohtashemi, M., and Halberstadt, A. "A Computational Model of Trust and Reputation." In *Proceedings of HICSS*, 2002.
+22. Kazil, J., Masad, D., and Crooks, A. "Utilizing Python for Agent-Based Modeling: The Mesa Framework." In *Proceedings of SBP-BRiMS*, Springer, 2020.
+23. Wilensky, U. and Rand, W. *An Introduction to Agent-Based Modeling.* MIT Press, 2015.
+24. Epstein, J. M. and Axtell, R. *Growing Artificial Societies: Social Science from the Bottom Up.* Brookings Institution Press / MIT Press, 1996.
 
 ---
 
