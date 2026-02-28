@@ -278,16 +278,95 @@ Peak reward of 1.471 at step 186.
 
 **Training is 2.5x faster.** The Instruct model completed in 19 hours vs 2.75 days. Shorter completions (no extended reasoning chains) mean faster rollout generation and less off-policy staleness.
 
+## Hard Difficulty: More Deceptive Bots, Same Performance
+
+With medium difficulty saturated, we ran the same Instruct model + v0.2.3 config on hard difficulty — more deceptive bots, tighter governance constraints, and less forgiving trade dynamics.
+
+### Training Setup (Hard)
+
+| Parameter | Value |
+|-----------|-------|
+| **Model** | Qwen/Qwen3-30B-A3B-Instruct-2507 |
+| **Environment** | swarm-ai-research/swarm-economy (v0.2.3) |
+| **Difficulty** | Hard |
+| **Steps** | 200 |
+| **Batch size** | 64 |
+| **Diversity weight** | 0.25 |
+| **Training time** | ~16 hours (Feb 27) |
+
+### Reward Curve
+
+```
+Reward
+1.47 |                                                          x
+1.46 |                                              x     x        x  x
+1.45 |                            x     x     x        x
+1.44 |                                        x
+1.42 |               x
+1.41 |                      x
+1.40 |
+1.38 |
+1.36 |
+1.34 |
+1.33 |x
+1.31 |         x
+     +-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|----->
+       0    20    40    60    80   100   120   140   160   180   199 Step
+```
+
+**Final reward: 1.46** — matching medium difficulty exactly. Peak reward of 1.473 at step 175.
+
+### Metrics Over Training
+
+| Step | Reward | Payoff | Quality | Diversity | Reputation | Errors | Turns |
+|------|--------|--------|---------|-----------|------------|--------|-------|
+| 0 | 1.332 | 0.935 | 0.326 | 0.785 | 0.451 | 0.0% | 23.8 |
+| 20 | 1.313 | 0.898 | 0.397 | 0.751 | 0.493 | 25.0% | 19.3 |
+| 40 | 1.416 | 0.976 | 0.497 | 0.798 | 0.468 | 0.0% | 25.0 |
+| 60 | 1.449 | 0.999 | 0.639 | 0.722 | 0.472 | 9.4% | 24.8 |
+| 80 | 1.452 | 0.999 | 0.634 | 0.723 | 0.483 | 0.0% | 25.0 |
+| 100 | 1.441 | 0.988 | 0.564 | 0.763 | 0.496 | 23.4% | 22.9 |
+| 120 | 1.457 | 0.997 | 0.569 | 0.783 | 0.500 | 0.0% | 25.0 |
+| 140 | 1.465 | 0.996 | 0.637 | 0.724 | 0.536 | 0.0% | 24.8 |
+| 160 | 1.468 | 0.999 | 0.643 | 0.728 | 0.528 | 0.0% | 25.0 |
+| 180 | 1.461 | 1.000 | 0.665 | 0.725 | 0.491 | 0.0% | 25.0 |
+| **198** | **1.462** | **1.000** | **0.665** | **0.725** | **0.491** | **0.0%** | **25.0** |
+
+### Medium vs Hard: Head-to-Head
+
+| Metric | Instruct (medium) | Instruct (hard) | Change |
+|--------|-------------------|-----------------|--------|
+| **Final Reward** | 1.460 | **1.462** | +0.1% |
+| **Payoff** | 1.000 | 1.000 | Same |
+| **Quality** | 0.646 | **0.665** | +2.9% |
+| **Diversity** | 0.645 | **0.725** | +12.4% |
+| **Reputation** | **0.566** | 0.491 | -13.3% |
+| **Training Time** | ~19 hours | **~16 hours** | Faster |
+
+### What This Means
+
+**Hard difficulty didn't hurt.** The model matched medium on total reward (1.462 vs 1.460) and actually *improved* on diversity (0.725 vs 0.645) and quality (0.665 vs 0.646). This was unexpected — we anticipated the harder environment would create a meaningful performance gap.
+
+**Diversity is highest on hard.** At 0.725, this is the best diversity score across all runs. The harder environment may force the model to use a wider range of actions to cope with deceptive bots, which the diversity metric rewards. On medium difficulty, the model could afford to specialize; on hard, specialization is riskier.
+
+**Reputation is the casualty.** Reputation dropped to 0.491, the lowest across all runs. With more deceptive bots, it's harder to build trust — the model's proposals get rejected more often, and deceptive counterparties damage mutual reputation. This confirms reputation as the key metric to target in future runs.
+
+**Quality improved over medium.** This is counterintuitive — harder scenarios should be harder to do well on. One hypothesis: the harder environment provides stronger learning signal for quality, since low-quality submissions get punished more severely by stricter governance. The model learns to write better submissions because it has to.
+
+**The environment may need a harder "hard."** If the model can match medium-difficulty performance on hard with no additional training tricks, the difficulty gap may not be large enough. Future work could add an "extreme" difficulty tier or make hard difficulty meaningfully more challenging.
+
 ## All Runs Comparison
 
-| Metric | v0.1 Thinking | v0.2 Thinking | v0.2.3 Instruct |
-|--------|--------------|--------------|-----------------|
-| **Final Reward** | 1.131 | 1.377 | **1.460** |
-| **Payoff** | 0.992 | 0.998 | **1.000** |
-| **Quality** | 0.619 | **0.717** | 0.646 |
-| **Diversity** | N/A | 0.596 | **0.645** |
-| **Training Time** | ~4 days | ~2.75 days | **~19 hours** |
-| **Diversity Weight** | N/A | 0.1 | **0.25** |
+| Metric | v0.1 Thinking | v0.2 Thinking | v0.2.3 Instruct (med) | v0.2.3 Instruct (hard) |
+|--------|--------------|--------------|----------------------|------------------------|
+| **Final Reward** | 1.131 | 1.377 | 1.460 | **1.462** |
+| **Payoff** | 0.992 | 0.998 | **1.000** | **1.000** |
+| **Quality** | 0.619 | **0.717** | 0.646 | 0.665 |
+| **Diversity** | N/A | 0.596 | 0.645 | **0.725** |
+| **Reputation** | N/A | 0.541 | **0.566** | 0.491 |
+| **Difficulty** | Medium | Medium | Medium | **Hard** |
+| **Training Time** | ~4 days | ~2.75 days | ~19 hours | **~16 hours** |
+| **Diversity Weight** | N/A | 0.1 | 0.25 | 0.25 |
 
 ## Reproducing This
 
@@ -304,12 +383,13 @@ prime rl run configs/rl/swarm-economy-v2.toml
 
 ## What's Next
 
-1. **Reputation intervention.** Reputation improved slightly in the Instruct run (0.524 → 0.566) but remains the weakest metric. Increasing the weight to 0.5 or adding an auxiliary reward for maintaining reputation above starting level could unlock higher total rewards.
-2. **Eval with adapter deployed.** Adapter deployment is currently failing on Prime Intellect's infrastructure for both runs. Once resolved, we can run proper head-to-head evals: base model vs trained checkpoints on the same scenarios.
-3. **Curriculum to hard difficulty.** Both runs used medium difficulty. Hard difficulty introduces more deceptive bots and tighter governance — a natural next step now that payoff is saturated on medium.
-4. ~~**Boost diversity weight.**~~ Done — increasing from 0.1 to 0.25 preserved diversity at 0.645 (vs 0.596) while improving total reward. The 0.25 weight is the new default.
-5. **Quality vs diversity Pareto frontier.** The Thinking model gets higher quality (0.717) while the Instruct model gets higher diversity (0.645). Can we get both? Possibilities include a quality floor penalty or a two-phase curriculum (diversity-first, then quality-focus).
+1. **Reputation intervention.** Reputation is the weakest metric across all runs (0.491–0.566) and actually *worsened* on hard difficulty. Increasing the weight to 0.5 or adding an auxiliary reward for maintaining reputation above starting level is the clearest remaining lever.
+2. **Eval with adapter deployed.** Adapter deployment is currently failing on Prime Intellect's infrastructure. Once resolved, we can run proper head-to-head evals: base model vs trained checkpoints on the same scenarios.
+3. ~~**Curriculum to hard difficulty.**~~ Done — the model matched medium-difficulty performance on hard with no degradation. The environment may need a harder "hard" or an "extreme" tier to create meaningful difficulty scaling.
+4. ~~**Boost diversity weight.**~~ Done — increasing from 0.1 to 0.25 preserved diversity at 0.645+ while improving total reward. The 0.25 weight is the new default.
+5. **Quality vs diversity Pareto frontier.** The Thinking model gets higher quality (0.717) while the hard-difficulty Instruct run gets higher diversity (0.725). Can we get both? The hard run suggests adversarial pressure may naturally improve quality — exploring this further with reputation-focused reward shaping could close the gap.
 6. **Cross-model comparison.** Run the same environment with different base models (Llama-4-Scout, Nemotron-7B) to test whether the learned strategies are model-specific or universal.
+7. **Harder environments.** The model saturates both medium and hard at ~1.46 reward. Next steps include: more aggressive deceptive bots, multi-round deception (bots that build trust then defect), resource scarcity mechanics, or coalition dynamics between bot factions.
 
 ---
 
