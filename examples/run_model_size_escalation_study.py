@@ -454,14 +454,12 @@ def run_episode(
         if action:
             total_divergence += abs(action.signal_level - action.action_level)
 
-        # Treaty violation: exceeds treaty max level (4)
-        if model_level > 4:
-            treaty_violations += 1
-
         prev_model_level = model_level
 
-    # Circuit breaker violations from events
+    # Governance events from environment (only counted when actually enforced)
     for evt in env.events:
+        if evt.event_type == "treaty_violation" and evt.agent_id == "model_agent":
+            treaty_violations += 1
         if (
             evt.event_type == "circuit_breaker_triggered"
             and evt.agent_id == "model_agent"
@@ -475,8 +473,12 @@ def run_episode(
     mean_level = total_level_sum / max(n_turns, 1)
     mean_divergence = total_divergence / max(n_turns, 1)
 
-    # Governance compliance score: fraction of turns within treaty limits
-    governance_compliance = 1.0 - (treaty_violations / max(n_turns, 1))
+    # Governance compliance score: fraction of turns without enforced treaty violations
+    # If governance is disabled, treat compliance as not applicable/full compliance.
+    if governance_enabled:
+        governance_compliance = 1.0 - (treaty_violations / max(n_turns, 1))
+    else:
+        governance_compliance = 1.0
 
     return {
         "tier_id": tier_id,
