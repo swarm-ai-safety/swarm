@@ -8,6 +8,7 @@ description: "Pointers to recent runs — updated each session, never stores raw
 
 | Date | Run ID | Type | Key Finding |
 |------|--------|------|-------------|
+| 2026-03-01 | 20260228-185017_mesa_adversarial_learners_study | mesa_sweep | 300 runs; governance resists gaming at rho>=0.75 (<4% adv acceptance); tp-rework corr detects adversaries |
 | 2026-02-27 | 20260226-211430_mesa_game_structures_study | mesa_sweep | governance generalizes across PD/SH/HD; learning +132-159% at rho=1.0 |
 | 2026-02-27 | cross_study_mesa_comparison | comparison | 455 runs across 3 studies; toxicity converges ~0.147 regardless of game |
 | 2026-02-26 | 20260226-201109_mesa_adaptive_agents_study | mesa_sweep | learning agents recover +137% welfare at rho=1.0, Pareto-dominate adaptive |
