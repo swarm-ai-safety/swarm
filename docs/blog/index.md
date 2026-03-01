@@ -17,6 +17,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## February 2026
 
+<div class="blog-post" data-tags="governance llm-agents" markdown>
+
+**Feb 28** — [Three Turns of Forced Cooperation Eliminate Escalation Spirals](cooperation-window-phase-transition.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">LLM Agents</span>
+
+A 210-run cooperation window sweep reveals a universal phase transition: 3 turns of unconditional cooperation is the critical threshold that eliminates nuclear escalation, deception, and welfare collapse across all scenarios. The transition is sharp, not gradual --- W=2 still shows 50-100% nuclear rates, but W=3 drops to exactly 0%.
+
+</div>
+
 <div class="blog-post" data-tags="evaluation llm-agents" markdown>
 
 **Feb 28** — [Deception Is a Structural Property of LLMs, Not a Sampling Artifact](temperature-vs-deception.md)
