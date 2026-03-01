@@ -146,6 +146,7 @@ nav:
   - Game: game.md
   - Blog:
     - blog/index.md
+    - "Deontological Framing Reduces Deception by 95%": blog/prompt-sensitivity-deception-framing.md
     - "Three Turns of Forced Cooperation Eliminate Escalation Spirals": blog/cooperation-window-phase-transition.md
     - "Deception Is Structural, Not a Sampling Artifact": blog/temperature-vs-deception.md
     - "No Governance Prevents Nuclear Exchange When a Hawk Is Present": blog/governance-sweep-nuclear-rate.md

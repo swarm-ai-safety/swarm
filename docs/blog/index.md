@@ -15,6 +15,17 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
   </div>
 </div>
 
+## March 2026
+
+<div class="blog-post" data-tags="evaluation llm-agents" markdown>
+
+**Mar 1** — [Deontological Framing Reduces LLM Deception by 95%, But Doesn't Prevent Escalation](prompt-sensitivity-deception-framing.md)
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span>
+
+A 180-run prompt sensitivity sweep tests 6 framings to reduce signal-action divergence. Deontological framing ("moral duty") reduces deception by 95%, far outperforming monitoring (13%), reputation (51%), consequentialist (70%), and evaluative (79%) framings. But nuclear rate only drops from 100% to 80% --- agents become honestly aggressive instead of deceptively aggressive.
+
+</div>
+
 ## February 2026
 
 <div class="blog-post" data-tags="governance llm-agents" markdown>
