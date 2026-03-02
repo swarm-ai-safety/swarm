@@ -19,6 +19,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 <div class="blog-post" data-tags="evaluation llm-agents" markdown>
 
+**Mar 1** — [Does Model Size Matter for Safety? Small Models Deceive, Large Models Escalate](model-size-vs-escalation.md)
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span>
+
+120 mirror-match runs across 6 models (8B to 405B) reveal an inverse relationship: small models are more deceptive (div=1.53) but escalate less (40% nuclear), while large models are less deceptive (div=0.39) but escalate more (100% nuclear). Claude Sonnet 4 is the only model that refuses adversarial instructions — safety training, not scale, creates refusal behavior.
+
+</div>
+
+<div class="blog-post" data-tags="evaluation llm-agents" markdown>
+
 **Mar 1** — [Deontological Framing Reduces LLM Deception by 95%, But Doesn't Prevent Escalation](prompt-sensitivity-deception-framing.md)
 <span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span>
 
