@@ -355,18 +355,101 @@ Reward
 
 **The environment may need a harder "hard."** If the model can match medium-difficulty performance on hard with no additional training tricks, the difficulty gap may not be large enough. Future work could add an "extreme" difficulty tier or make hard difficulty meaningfully more challenging.
 
+## Reputation Weight Boost: Higher Reward, Stubborn Reputation
+
+Reputation was the weakest metric across every run (0.491–0.566), so we increased its weight from 0.3 to 0.5 — the highest it's been since v0.1. Same Instruct model, hard difficulty, v0.2.3 environment.
+
+### Training Setup (Rep=0.5)
+
+| Parameter | Value |
+|-----------|-------|
+| **Model** | Qwen/Qwen3-30B-A3B-Instruct-2507 |
+| **Environment** | swarm-ai-research/swarm-economy (v0.2.3) |
+| **Difficulty** | Hard |
+| **Reputation weight** | 0.5 (up from 0.3) |
+| **Diversity weight** | 0.25 |
+| **Training time** | ~18 hours (Mar 1) |
+
+### Reward Curve
+
+```
+Reward
+1.57 |                                           x
+1.55 |                                  x              x              x
+1.54 |                      x     x
+1.51 |               x                                    x
+1.48 |                                                         x
+1.44 |         x
+1.41 |x
+1.40 |                                              x
+1.36 |                                                              x
+1.23 |                                        x
+     +-----|-----|-----|-----|-----|-----|-----|-----|-----|-----|----->
+       0    20    40    60    80   100   120   140   160   180   199 Step
+```
+
+**Final reward: 1.56** — new all-time high. Peak of 1.569 at step 121. But the curve is noticeably noisier than previous runs, with deep dips at steps 100 (1.23) and 180 (1.36) driven by error rate spikes.
+
+### Metrics Over Training
+
+| Step | Reward | Payoff | Quality | Diversity | Reputation | Errors | Turns |
+|------|--------|--------|---------|-----------|------------|--------|-------|
+| 0 | 1.412 | 0.913 | 0.310 | 0.750 | 0.501 | 0.0% | 23.7 |
+| 20 | 1.438 | 0.940 | 0.411 | 0.722 | 0.472 | 12.5% | 22.7 |
+| 40 | 1.508 | 0.987 | 0.531 | 0.731 | 0.465 | 0.0% | 24.8 |
+| 60 | 1.540 | 0.989 | 0.668 | 0.677 | 0.496 | 6.2% | 24.1 |
+| 80 | 1.534 | 0.987 | 0.701 | 0.606 | 0.510 | 6.2% | 23.8 |
+| 100 | 1.225 | 0.777 | 0.427 | 0.412 | 0.518 | 76.6% | 11.8 |
+| 120 | 1.546 | 0.988 | 0.673 | 0.645 | 0.524 | 0.0% | 24.4 |
+| 140 | 1.408 | 0.901 | 0.574 | 0.584 | 0.493 | 53.1% | 17.9 |
+| 160 | 1.509 | 0.966 | 0.627 | 0.641 | 0.515 | 12.5% | 22.8 |
+| 180 | 1.358 | 0.855 | 0.519 | 0.559 | 0.519 | 56.2% | 15.5 |
+| **198** | **1.556** | **1.000** | **0.647** | **0.706** | **0.497** | **0.0%** | **25.0** |
+
+Peak reward of 1.569 at step 121. Quality hit 0.701 at step 80 — matching the Thinking model's best — before error spikes knocked it back.
+
+### Rep=0.3 vs Rep=0.5 on Hard: Head-to-Head
+
+| Metric | Hard (rep=0.3) | Hard (rep=0.5) | Change |
+|--------|----------------|----------------|--------|
+| **Final Reward** | 1.462 | **1.556** | +6.4% |
+| **Peak Reward** | 1.473 | **1.569** | +6.5% |
+| **Payoff** | 1.000 | 1.000 | Same |
+| **Quality** | 0.665 | 0.647 | -2.7% |
+| **Diversity** | **0.725** | 0.706 | -2.6% |
+| **Reputation** | 0.491 | 0.497 | +1.2% |
+| **Peak Quality** | 0.665 | **0.701** | +5.4% |
+| **Error Rate (avg)** | Low | **High (volatile)** | Worse |
+
+### What This Means
+
+**Higher reputation weight → higher total reward, but not through reputation.** The 6.4% reward gain came almost entirely from the higher weight multiplying a roughly constant reputation score (~0.5). Reputation itself barely moved: 0.491 → 0.497. The model found it easier to improve payoff and quality than to actually build reputation.
+
+**Reputation appears structurally capped.** Across five runs, two model variants, two difficulty levels, and reputation weights from 0.3 to 0.5, reputation has never exceeded 0.57. This isn't a weight problem — it's an environment design problem. Possible causes:
+- Deceptive bots cap achievable reputation by damaging trust in trades
+- The 25-turn horizon is too short for reputation-building strategies to pay off
+- Reputation scoring may not reward the right behaviors (the model *does* vote and reply, but these don't reliably increase reputation)
+
+**Training stability suffers.** Error rates spiked to 76.6% at step 100 and 56.2% at step 180 — the worst of any run. The higher reputation weight creates a more complex reward landscape, pushing the model into aggressive exploration that produces invalid actions. The model recovers each time (final step: 0% errors), but the instability wastes training steps.
+
+**Quality briefly matched the Thinking model.** At step 80, quality hit 0.701 — within 2% of the Thinking model's final 0.717. This suggests the Instruct model *can* produce Thinking-level quality; it just can't sustain it through the error spikes. More stable training (lower learning rate, gradient clipping) might preserve peak quality.
+
+**The reputation problem needs a structural fix, not more weight.** Next steps: add a reputation floor penalty (punish dropping below starting reputation), extend the episode horizon to give reputation-building strategies time to pay off, or redesign how bot interactions affect the agent's reputation score.
+
 ## All Runs Comparison
 
-| Metric | v0.1 Thinking | v0.2 Thinking | v0.2.3 Instruct (med) | v0.2.3 Instruct (hard) |
-|--------|--------------|--------------|----------------------|------------------------|
-| **Final Reward** | 1.131 | 1.377 | 1.460 | **1.462** |
-| **Payoff** | 0.992 | 0.998 | **1.000** | **1.000** |
-| **Quality** | 0.619 | **0.717** | 0.646 | 0.665 |
-| **Diversity** | N/A | 0.596 | 0.645 | **0.725** |
-| **Reputation** | N/A | 0.541 | **0.566** | 0.491 |
-| **Difficulty** | Medium | Medium | Medium | **Hard** |
-| **Training Time** | ~4 days | ~2.75 days | ~19 hours | **~16 hours** |
-| **Diversity Weight** | N/A | 0.1 | 0.25 | 0.25 |
+| Metric | v0.1 Thinking | v0.2 Thinking | v0.2.3 Instruct (med) | v0.2.3 Instruct (hard) | v0.2.3 Instruct (hard, rep=0.5) |
+|--------|--------------|--------------|----------------------|------------------------|---------------------------------|
+| **Final Reward** | 1.131 | 1.377 | 1.460 | 1.462 | **1.556** |
+| **Peak Reward** | 1.403 | — | 1.471 | 1.473 | **1.569** |
+| **Payoff** | 0.992 | 0.998 | **1.000** | **1.000** | **1.000** |
+| **Quality** | 0.619 | **0.717** | 0.646 | 0.665 | 0.647 |
+| **Diversity** | N/A | 0.596 | 0.645 | **0.725** | 0.706 |
+| **Reputation** | N/A | 0.541 | **0.566** | 0.491 | 0.497 |
+| **Difficulty** | Medium | Medium | Medium | Hard | Hard |
+| **Rep Weight** | N/A | 0.3 | 0.3 | 0.3 | **0.5** |
+| **Div Weight** | N/A | 0.1 | 0.25 | 0.25 | 0.25 |
+| **Training Time** | ~4 days | ~2.75 days | ~19 hours | ~16 hours | ~18 hours |
 
 ## Reproducing This
 
@@ -383,13 +466,14 @@ prime rl run configs/rl/swarm-economy-v2.toml
 
 ## What's Next
 
-1. **Reputation intervention.** Reputation is the weakest metric across all runs (0.491–0.566) and actually *worsened* on hard difficulty. Increasing the weight to 0.5 or adding an auxiliary reward for maintaining reputation above starting level is the clearest remaining lever.
+1. **Structural reputation fix.** ~~Increasing reputation weight to 0.5~~ didn't move reputation itself (still ~0.50). The problem is environmental, not weight-based. Options: reputation floor penalty, longer episode horizons, redesigned bot reputation dynamics, or an auxiliary reward for reputation *improvement* over the episode.
 2. **Eval with adapter deployed.** Adapter deployment is currently failing on Prime Intellect's infrastructure. Once resolved, we can run proper head-to-head evals: base model vs trained checkpoints on the same scenarios.
-3. ~~**Curriculum to hard difficulty.**~~ Done — the model matched medium-difficulty performance on hard with no degradation. The environment may need a harder "hard" or an "extreme" tier to create meaningful difficulty scaling.
-4. ~~**Boost diversity weight.**~~ Done — increasing from 0.1 to 0.25 preserved diversity at 0.645+ while improving total reward. The 0.25 weight is the new default.
-5. **Quality vs diversity Pareto frontier.** The Thinking model gets higher quality (0.717) while the hard-difficulty Instruct run gets higher diversity (0.725). Can we get both? The hard run suggests adversarial pressure may naturally improve quality — exploring this further with reputation-focused reward shaping could close the gap.
-6. **Cross-model comparison.** Run the same environment with different base models (Llama-4-Scout, Nemotron-7B) to test whether the learned strategies are model-specific or universal.
-7. **Harder environments.** The model saturates both medium and hard at ~1.46 reward. Next steps include: more aggressive deceptive bots, multi-round deception (bots that build trust then defect), resource scarcity mechanics, or coalition dynamics between bot factions.
+3. ~~**Curriculum to hard difficulty.**~~ Done — the model matched medium-difficulty performance on hard with no degradation.
+4. ~~**Boost diversity weight.**~~ Done — increasing from 0.1 to 0.25 preserved diversity at 0.645+ while improving total reward.
+5. ~~**Boost reputation weight.**~~ Done — increasing from 0.3 to 0.5 raised total reward to 1.56 but reputation itself didn't budge. Weight tuning is exhausted; structural changes needed.
+6. **Training stability.** The rep=0.5 run had severe error spikes (76.6% at step 100). Lower learning rate, gradient clipping, or curriculum-based weight scheduling (start low, ramp up) could smooth the training curve.
+7. **Cross-model comparison.** Run the same environment with different base models (Llama-4-Scout, Nemotron-7B) to test whether the learned strategies are model-specific or universal.
+8. **Harder environments.** The model saturates both medium and hard at ~1.46-1.56 reward. Next steps include: multi-round deception (bots that build trust then defect), resource scarcity mechanics, or coalition dynamics between bot factions.
 
 ---
 
