@@ -77,6 +77,10 @@ plugins:
   - search
   - social
   - meta
+  - git-revision-date-localized:
+      enable_creation_date: true
+      fallback_to_build_date: true
+      enable_git_follow: false
   - mkdocstrings:
       handlers:
         python:
