@@ -6,94 +6,7 @@ import { DEFAULT_CONFIG } from "@/engine/sim/types";
 import { AGENT_PROFILES } from "@/engine/sim/agents";
 import { useSimWorker } from "@/state/use-sim-worker";
 import type { SimulationData } from "@/data/types";
-
-// ─── Preset Scenarios ──────────────────────────────────────────────
-
-interface Preset {
-  name: string;
-  description: string;
-  config: Partial<ScenarioConfig> & { agents: ScenarioConfig["agents"] };
-}
-
-const PRESETS: Preset[] = [
-  {
-    name: "Adversarial Takeover",
-    description: "5 adversarial agents overwhelm 2 honest ones. Can governance hold?",
-    config: {
-      agents: [
-        { type: "honest", count: 2 },
-        { type: "opportunistic", count: 0 },
-        { type: "deceptive", count: 1 },
-        { type: "adversarial", count: 5 },
-      ],
-      governance: { taxRate: 0.02, reputationDecay: 0.98, circuitBreakerEnabled: false, circuitBreakerThreshold: 0.4 },
-      epochs: 30,
-      stepsPerEpoch: 15,
-    },
-  },
-  {
-    name: "Governance Stress Test",
-    description: "High tax + aggressive circuit breaker vs. mixed bad actors.",
-    config: {
-      agents: [
-        { type: "honest", count: 3 },
-        { type: "opportunistic", count: 2 },
-        { type: "deceptive", count: 2 },
-        { type: "adversarial", count: 2 },
-      ],
-      governance: { taxRate: 0.3, reputationDecay: 0.88, circuitBreakerEnabled: true, circuitBreakerThreshold: 0.25 },
-      epochs: 40,
-      stepsPerEpoch: 20,
-    },
-  },
-  {
-    name: "Market Collapse",
-    description: "No governance, high harm. Deceptive agents exploit freely.",
-    config: {
-      agents: [
-        { type: "honest", count: 2 },
-        { type: "opportunistic", count: 3 },
-        { type: "deceptive", count: 3 },
-        { type: "adversarial", count: 0 },
-      ],
-      governance: { taxRate: 0, reputationDecay: 1.0, circuitBreakerEnabled: false, circuitBreakerThreshold: 0.4 },
-      payoff: { s_plus: 2.0, s_minus: 1.0, h: 4.0, theta: 0.5, rho_a: 0.0, rho_b: 0.0, w_rep: 0.5 },
-      epochs: 50,
-      stepsPerEpoch: 15,
-    },
-  },
-  {
-    name: "Utopian Baseline",
-    description: "All honest agents, moderate governance. How good can it get?",
-    config: {
-      agents: [
-        { type: "honest", count: 6 },
-        { type: "opportunistic", count: 0 },
-        { type: "deceptive", count: 0 },
-        { type: "adversarial", count: 0 },
-      ],
-      governance: { taxRate: 0.05, reputationDecay: 0.95, circuitBreakerEnabled: false, circuitBreakerThreshold: 0.4 },
-      epochs: 20,
-      stepsPerEpoch: 10,
-    },
-  },
-  {
-    name: "Externality Pricing",
-    description: "Agents internalize harm costs. Does it deter bad behavior?",
-    config: {
-      agents: [
-        { type: "honest", count: 3 },
-        { type: "opportunistic", count: 2 },
-        { type: "deceptive", count: 2 },
-        { type: "adversarial", count: 1 },
-      ],
-      payoff: { s_plus: 2.0, s_minus: 1.0, h: 2.0, theta: 0.5, rho_a: 0.5, rho_b: 0.5, w_rep: 1.0 },
-      governance: { taxRate: 0.1, reputationDecay: 0.92, circuitBreakerEnabled: true, circuitBreakerThreshold: 0.35 },
-      epochs: 40,
-      stepsPerEpoch: 15,
-    },
-  },
-];
+import { DEMO_PRESETS, type DemoPreset } from "@/data/presets";
 
 // ─── Shared UI Components ──────────────────────────────────────────
 
@@ -188,7 +101,7 @@ export function SimConfigPanel({ onComplete }: Props) {
   const [hoveredAgentType, setHoveredAgentType] = useState<string | null>(null);
   const [showSummary, setShowSummary] = useState(false);
 
-  const applyPreset = useCallback((preset: Preset) => {
+  const applyPreset = useCallback((preset: DemoPreset) => {
     setConfig({
       ...DEFAULT_CONFIG,
       ...preset.config,
@@ -260,9 +173,9 @@ export function SimConfigPanel({ onComplete }: Props) {
       {/* Presets */}
       <Section title="Presets">
         <div className="grid grid-cols-2 gap-1.5">
-          {PRESETS.map((p) => (
+          {DEMO_PRESETS.map((p) => (
             <button
-              key={p.name}
+              key={p.slug}
               onClick={() => applyPreset(p)}
               title={p.description}
               className={`text-left px-2 py-1.5 rounded text-xs transition-colors ${
@@ -271,13 +184,13 @@ export function SimConfigPanel({ onComplete }: Props) {
                   : "bg-btn hover:bg-btn-hover"
               }`}
             >
-              {p.name}
+              <span className="mr-1">{p.badge}</span>{p.name}
             </button>
           ))}
         </div>
         {activePreset && (
           <p className="text-xs text-muted italic mt-1">
-            {PRESETS.find((p) => p.name === activePreset)?.description}
+            {DEMO_PRESETS.find((p) => p.name === activePreset)?.description}
           </p>
         )}
       </Section>

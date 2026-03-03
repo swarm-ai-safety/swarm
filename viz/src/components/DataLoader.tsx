@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useRef, useState, useEffect } from "react";
 import { useSimulation } from "@/state/use-simulation";
 import { loadSimulationData, loadSimulationBundle } from "@/data/loader";
 import { SimConfigPanel } from "./SimConfigPanel";
@@ -9,6 +9,10 @@ import { SweepPanel } from "./SweepPanel";
 import { GameModePanel } from "./GameModePanel";
 import { recordToLeaderboard } from "./Leaderboard";
 import { useGame } from "@/state/game-context";
+import { DEMO_PRESETS } from "@/data/presets";
+import { DEFAULT_CONFIG } from "@/engine/sim/types";
+import { useSimWorker } from "@/state/use-sim-worker";
+import { useUrlState, configFromUrlState } from "@/state/use-url-state";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -39,6 +43,9 @@ export function DataLoader() {
   const [tab, setTab] = useState<Tab>("game");
   const [historyFile, setHistoryFile] = useState<File | null>(null);
   const [eventsFile, setEventsFile] = useState<File | null>(null);
+  const { status: quickPlayStatus, progress: quickPlayProgress, result: quickPlayResult, run: quickPlayRun } = useSimWorker();
+  const [quickPlayRunning, setQuickPlayRunning] = useState(false);
+  const urlState = useUrlState();
 
   const handleLoadData = useCallback(
     (sim: import("@/data/types").SimulationData) => {
@@ -99,17 +106,88 @@ export function DataLoader() {
     [handleLoadData],
   );
 
+  // Quick-play: run a preset directly from the card grid
+  const handleQuickPlay = useCallback(async (presetSlug: string) => {
+    const preset = DEMO_PRESETS.find((p) => p.slug === presetSlug);
+    if (!preset) return;
+    const config = {
+      ...DEFAULT_CONFIG,
+      ...preset.config,
+      governance: { ...DEFAULT_CONFIG.governance, ...preset.config.governance },
+      payoff: { ...DEFAULT_CONFIG.payoff, ...preset.config.payoff },
+    };
+    setQuickPlayRunning(true);
+    const result = await quickPlayRun(config);
+    setQuickPlayRunning(false);
+    if (result) {
+      recordToLeaderboard(result);
+      loadData(result);
+    }
+  }, [quickPlayRun, loadData]);
+
+  // Auto-run from URL params (e.g. ?preset=chaos&seed=42&autorun=1)
+  const autoRunDone = useRef(false);
+  useEffect(() => {
+    if (autoRunDone.current || data || gameState.isLive) return;
+    if (!urlState.preset || !urlState.autorun) return;
+    autoRunDone.current = true;
+    handleQuickPlay(urlState.preset);
+  }, [urlState, data, gameState.isLive, handleQuickPlay]);
+
+  // When quick-play result arrives, load it
+  useEffect(() => {
+    if (quickPlayResult && quickPlayRunning === false) {
+      // Already handled in handleQuickPlay callback
+    }
+  }, [quickPlayResult, quickPlayRunning]);
+
   if (data || gameState.isLive) return null; // Hide once data is loaded or game is live
 
   return (
     <div className="absolute inset-0 flex items-center justify-center z-30 bg-bg">
-      <div className="bg-panel border border-border rounded-xl p-8 max-w-md w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
-        <h1 className="text-xl font-bold mb-1">SWARM Isometric Viewer</h1>
+      <div className="bg-panel border border-border rounded-xl p-8 max-w-lg w-full mx-4 shadow-2xl max-h-[90vh] overflow-y-auto">
+        <h1 className="text-xl font-bold mb-1">SWARM</h1>
         <p className="text-sm text-muted mb-4">
-          Visualize multi-agent simulation data as an interactive isometric city
+          Governance benchmark suite with receipts
         </p>
 
-        {/* Tab toggle */}
+        {/* Quick Play presets */}
+        {!quickPlayRunning && (
+          <div className="mb-5">
+            <p className="text-xs text-muted uppercase tracking-wider font-bold mb-2">Quick Play</p>
+            <div className="grid grid-cols-3 gap-2">
+              {DEMO_PRESETS.slice(0, 6).map((p) => (
+                <button
+                  key={p.slug}
+                  onClick={() => handleQuickPlay(p.slug)}
+                  className="group text-left px-3 py-2.5 rounded-lg bg-btn hover:bg-btn-hover border border-transparent hover:border-accent/30 transition-all"
+                >
+                  <div className="text-lg mb-0.5">{p.badge}</div>
+                  <div className="text-xs font-bold text-text group-hover:text-accent transition-colors leading-tight">{p.name}</div>
+                  <div className="text-[10px] text-muted mt-0.5 leading-tight">{p.description}</div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Quick-play progress */}
+        {quickPlayRunning && (
+          <div className="mb-5 py-8 text-center">
+            <div className="text-sm text-muted mb-3">Running simulation...</div>
+            <div className="h-1.5 bg-btn rounded overflow-hidden max-w-xs mx-auto">
+              <div
+                className="h-full bg-accent transition-all duration-200"
+                style={{ width: `${Math.round(quickPlayProgress * 100)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {!quickPlayRunning && (
+          <div className="border-t border-border pt-4">
+            <p className="text-xs text-muted uppercase tracking-wider font-bold mb-2">Advanced</p>
+            {/* Tab toggle */}
         <div className="flex gap-0.5 mb-4 bg-btn rounded-lg p-0.5">
           {TABS.map((t) => (
             <button
@@ -243,6 +321,8 @@ export function DataLoader() {
 
         {tab === "sweep" && (
           <SweepPanel />
+        )}
+          </div>
         )}
       </div>
     </div>

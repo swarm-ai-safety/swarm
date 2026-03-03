@@ -29,6 +29,102 @@ const EVENT_LABELS: Partial<Record<SwarmEventType, string>> = {
   epoch_completed: "EPOCH",
 };
 
+// ─── Governance Receipt Detection ──────────────────────────────────
+
+interface GovernanceReceipt {
+  type: "circuit_breaker" | "quarantine" | "collusion" | "freeze" | "high_tax";
+  label: string;
+  detail: string;
+  color: string;
+}
+
+function detectReceipt(evt: SwarmEvent): GovernanceReceipt | null {
+  const p = evt.payload;
+
+  // Circuit breaker fired
+  if (evt.event_type === "governance_cost_applied" && p.circuit_breaker_triggered) {
+    return {
+      type: "circuit_breaker",
+      label: "CIRCUIT BREAKER",
+      detail: `Triggered at toxicity ${((p.toxicity_rate as number) ?? 0).toFixed(2)} \u2014 interactions halted`,
+      color: "#EB5757",
+    };
+  }
+
+  // Agent quarantined
+  if (evt.event_type === "reputation_updated" && p.quarantined) {
+    return {
+      type: "quarantine",
+      label: "QUARANTINE",
+      detail: `${evt.agent_id} quarantined (reputation collapsed)`,
+      color: "#F2994A",
+    };
+  }
+
+  // Agent frozen
+  if (evt.event_type === "reputation_updated" && p.frozen) {
+    return {
+      type: "freeze",
+      label: "FROZEN",
+      detail: `${evt.agent_id} frozen by governance`,
+      color: "#56CCF2",
+    };
+  }
+
+  // Collusion detected
+  if (evt.event_type === "contract_metrics" && (p.collusion_detected || p.flagged_pairs)) {
+    const nPairs = (p.flagged_pairs as number) ?? (p.n_flagged_pairs as number) ?? 0;
+    return {
+      type: "collusion",
+      label: "COLLUSION DETECTED",
+      detail: `${nPairs} suspicious pair${nPairs !== 1 ? "s" : ""} flagged`,
+      color: "#EB5757",
+    };
+  }
+
+  // High governance cost (tax > 0.5)
+  if (evt.event_type === "governance_cost_applied") {
+    const cost = p.cost as number;
+    if (cost != null && cost > 0.5) {
+      return {
+        type: "high_tax",
+        label: "HEAVY TAX",
+        detail: `${evt.agent_id} taxed ${cost.toFixed(2)}`,
+        color: "#F2994A",
+      };
+    }
+  }
+
+  return null;
+}
+
+// ─── Receipt Card ──────────────────────────────────────────────────
+
+function ReceiptCard({ receipt }: { receipt: GovernanceReceipt }) {
+  return (
+    <div
+      className="mx-1 my-1.5 px-3 py-2 rounded-lg border text-xs"
+      style={{
+        borderColor: receipt.color + "44",
+        backgroundColor: receipt.color + "11",
+      }}
+    >
+      <div className="flex items-center gap-2 mb-0.5">
+        <span
+          className="px-1.5 py-0.5 rounded font-bold text-[10px] tracking-wider"
+          style={{ backgroundColor: receipt.color + "33", color: receipt.color }}
+        >
+          {receipt.label}
+        </span>
+        <span className="text-muted/60 text-[10px]">Governance Receipt</span>
+      </div>
+      <div className="text-muted font-mono mt-1">{receipt.detail}</div>
+    </div>
+  );
+}
+
+// ─── Payload Formatting ────────────────────────────────────────────
+
 function formatPayload(evt: SwarmEvent): string {
   switch (evt.event_type) {
     case "interaction_proposed":
@@ -59,6 +155,18 @@ export function EventFeed() {
     return eventIndex.eventsAt(currentEpoch, currentStep);
   }, [eventIndex, stepPlayback, currentEpoch, currentStep]);
 
+  // Separate governance receipts from normal events
+  const { receipts, normalEvents } = useMemo(() => {
+    const r: GovernanceReceipt[] = [];
+    const n: SwarmEvent[] = [];
+    for (const evt of events) {
+      const receipt = detectReceipt(evt);
+      if (receipt) r.push(receipt);
+      n.push(evt);
+    }
+    return { receipts: r, normalEvents: n };
+  }, [events]);
+
   // Don't render toggle if no event data
   if (!data?.rawEvents || data.rawEvents.length === 0) return null;
 
@@ -71,20 +179,34 @@ export function EventFeed() {
           visible ? "bg-secondary text-bg font-bold" : "bg-btn hover:bg-btn-hover text-muted"
         }`}
       >
-        Events
+        Events{receipts.length > 0 && (
+          <span className="ml-1 px-1 py-0.5 rounded-full bg-red-500/80 text-white text-[9px] font-bold">
+            {receipts.length}
+          </span>
+        )}
       </button>
 
       {/* Feed panel */}
       {visible && (
         <div className="absolute top-10 right-2 z-[10001] w-80 max-h-[50vh] bg-panel/95 border border-border rounded-lg overflow-hidden flex flex-col backdrop-blur-sm">
           <div className="px-3 py-2 border-b border-border text-xs text-muted font-mono">
-            Epoch {currentEpoch} / Step {currentStep} — {events.length} events
+            Epoch {currentEpoch} / Step {currentStep} \u2014 {events.length} events
           </div>
+
+          {/* Governance receipts (pinned at top) */}
+          {receipts.length > 0 && (
+            <div className="border-b border-border">
+              {receipts.map((r, i) => (
+                <ReceiptCard key={`receipt-${i}`} receipt={r} />
+              ))}
+            </div>
+          )}
+
           <div className="overflow-y-auto flex-1 p-1">
-            {events.length === 0 ? (
+            {normalEvents.length === 0 ? (
               <div className="text-xs text-muted/50 text-center py-4">No events at this step</div>
             ) : (
-              events.map((evt, i) => (
+              normalEvents.map((evt, i) => (
                 <div key={evt.event_id || i} className="flex items-start gap-2 px-2 py-1 hover:bg-btn/50 rounded text-xs">
                   <span
                     className="shrink-0 px-1 py-0.5 rounded font-mono text-[10px] leading-tight"
