@@ -1,4 +1,5 @@
 ---
+date: 2026-03-01
 description: "180 LLM runs test 6 prompt framings to reduce signal-action divergence. Deontological framing nearly eliminates deception (div: 1.151 to 0.057), but..."
 ---
 

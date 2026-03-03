@@ -1,4 +1,5 @@
 ---
+date: 2026-02-21
 description: "Eight attack scenarios, one failure — and it's the one where nobody would survive"
 ---
 

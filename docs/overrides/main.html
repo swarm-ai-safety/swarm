@@ -7,6 +7,10 @@
   {% set img = config.site_url ~ page.meta.image if page and page.meta and page.meta.image else config.site_url ~ "assets/logo.svg" %}
   {% set is_blog = page and page.url and "blog/" in page.url %}
   {% set is_api = page and page.url and "api/" in page.url %}
+  {% set pub_date = page.meta.date if page and page.meta and page.meta.date else "" %}
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="{{ url }}" />
 
   <!-- Open Graph -->
   <meta property="og:type" content="{% if is_blog %}article{% else %}website{% endif %}" />
@@ -15,6 +19,9 @@
   <meta property="og:url" content="{{ url }}" />
   <meta property="og:site_name" content="{{ config.site_name }}" />
   <meta property="og:image" content="{{ img }}" />
+  {% if is_blog and pub_date %}
+  <meta property="article:published_time" content="{{ pub_date }}" />
+  {% endif %}
 
   <!-- Twitter Card -->
   <meta name="twitter:card" content="summary_large_image" />
@@ -32,6 +39,7 @@
     "headline": "{{ title }}",
     "description": "{{ desc }}",
     "url": "{{ url }}",
+    {% if pub_date %}"datePublished": "{{ pub_date }}",{% endif %}
     "publisher": {
       "@type": "Organization",
       "name": "SWARM",

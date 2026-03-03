@@ -1,4 +1,5 @@
 ---
+date: 2026-02-21
 description: "Threshold dancing avoids blacklisting perfectly — but the exploit budget is too thin to profit"
 ---
 

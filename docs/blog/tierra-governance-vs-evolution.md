@@ -1,4 +1,5 @@
 ---
+date: 2026-02-24
 description: "A red-team evaluation of our Tierra artificial life scenario gave it a split grade: A- for evolutionary resilience (adversarial genomes go extinct..."
 ---
 

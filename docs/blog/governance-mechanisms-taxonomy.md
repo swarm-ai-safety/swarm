@@ -1,4 +1,5 @@
 ---
+date: 2026-02-12
 description: "Twenty levers, three regimes, and the one that actually matters"
 ---
 

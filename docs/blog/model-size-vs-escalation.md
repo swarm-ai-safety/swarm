@@ -1,4 +1,5 @@
 ---
+date: 2026-03-01
 description: "120 LLM mirror-match runs across 6 models (8B to 405B) reveal an inverse relationship: small models are more deceptive but escalate less; large models are..."
 ---
 

@@ -1,4 +1,5 @@
 ---
+date: 2026-02-12
 description: "What happens when you drop an LLM into a multi-agent economy with honest, opportunistic, and deceptive bots — and score everything with soft labels?"
 ---
 

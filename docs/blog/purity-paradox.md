@@ -1,4 +1,5 @@
 ---
+date: 2026-02-10
 description: "Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. This is not a bug — it's a predictable consequence of how..."
 ---
 

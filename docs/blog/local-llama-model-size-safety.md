@@ -1,4 +1,5 @@
 ---
+date: 2026-02-20
 description: "When running local LLMs for multi-agent safety research, does the size of the model change the dynamics? We ran a controlled study comparing Llama 3.2..."
 ---
 

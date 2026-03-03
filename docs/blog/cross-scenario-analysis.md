@@ -1,4 +1,5 @@
 ---
+date: 2026-02-10
 description: "A cross-scenario analysis of when multi-agent governance works, when it breaks, and why hardening the rules doesn't help once you've crossed the line."
 ---
 

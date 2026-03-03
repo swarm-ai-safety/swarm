@@ -1,4 +1,5 @@
 ---
+date: 2026-02-13
 description: "If you're using LLMs to evaluate LLM-generated research, diversity of perspective matters more than raw capability."
 ---
 

@@ -1,4 +1,5 @@
 ---
+date: 2026-02-21
 description: "8 attack scenarios, 2 governance configs, 1 finding that forced a threshold tuning session at 8am"
 ---
 

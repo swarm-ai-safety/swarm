@@ -1,4 +1,5 @@
 ---
+date: 2026-02-21
 description: "We swept cycle detection, rate limits, and trust boundaries across 96 LangGraph swarm runs. The results show that governance isn't just about safety..."
 ---
 

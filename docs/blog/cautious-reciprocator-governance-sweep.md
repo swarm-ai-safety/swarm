@@ -1,4 +1,5 @@
 ---
+date: 2026-02-21
 description: "A custom trust-but-verify agent neutralizes adversaries on its own --- governance just taxes the honest"
 ---
 

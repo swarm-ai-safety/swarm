@@ -1,4 +1,5 @@
 ---
+date: 2026-02-26
 description: "ClashAI's Coup arena is an accidental alignment testbed --- and the first results suggest RLHF'd models would rather lose than lie."
 ---
 

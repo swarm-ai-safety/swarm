@@ -1,4 +1,5 @@
 ---
+date: 2026-02-13
 description: "An LLM reasoner, a state-graph explorer, and a CNN learner walk into ARC-AGI-3. What they get right -- and wrong -- reveals more about agent design than..."
 ---
 

@@ -1,4 +1,5 @@
 ---
+date: 2026-02-22
 description: "We wired live LLM evaluation into the social dilemma norms study and compared three scoring modes: synthetic (pre-computed corpus), local Ollama (llama3.2..."
 ---
 

@@ -1,4 +1,5 @@
 ---
+date: 2026-02-20
 description: "Mechanism design meets multi-agent safety: how Vickrey auctions and entry fees create a separating equilibrium in 20 epochs"
 ---
 

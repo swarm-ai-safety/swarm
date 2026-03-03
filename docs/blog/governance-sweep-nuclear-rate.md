@@ -1,4 +1,5 @@
 ---
+date: 2026-02-27
 description: "A 240-run parameter sweep across 5 governance levers, 4 persona pairings, and 6 governance regimes reveals that parametric governance can only prevent..."
 ---
 

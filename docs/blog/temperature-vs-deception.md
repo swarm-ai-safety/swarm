@@ -1,4 +1,5 @@
 ---
+date: 2026-02-28
 description: "A 120-run temperature sweep across 3 escalation scenarios finds that signal-action divergence persists at T=0.0 — and in one scenario, deterministic..."
 ---
 

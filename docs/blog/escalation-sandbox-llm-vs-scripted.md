@@ -1,4 +1,5 @@
 ---
+date: 2026-02-26
 description: "A 100-run comparison across 5 crisis scenarios finds that LLM agents exhibit 2x higher signal-action divergence than scripted baselines, while governance..."
 ---
 

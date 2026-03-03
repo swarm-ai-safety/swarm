@@ -1,4 +1,5 @@
 ---
+date: 2026-02-12
 description: "What running Qwen3-30B on alphabet-sort taught us about swarm safety"
 ---
 

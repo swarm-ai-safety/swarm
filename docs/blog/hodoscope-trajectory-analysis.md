@@ -1,4 +1,5 @@
 ---
+date: 2026-02-24
 description: "Our self-optimizer scenario has a known punchline: three opportunistic agents game the system for 20 epochs, every hard metric passes, and toxicity hovers..."
 ---
 

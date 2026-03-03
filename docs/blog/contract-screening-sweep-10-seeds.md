@@ -1,4 +1,5 @@
 ---
+date: 2026-02-21
 description: "We ran our contract screening scenario on seeds 43--52. Separation quality = 1.0, infiltration rate = 0.0 on every single run."
 ---
 

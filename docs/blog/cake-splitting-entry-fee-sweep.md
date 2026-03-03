@@ -1,4 +1,5 @@
 ---
+date: 2026-02-21
 description: "A parameter sweep reveals a sharp screening threshold: below fee=6.0 every agent joins; above it, adversarials self-select out"
 ---
 

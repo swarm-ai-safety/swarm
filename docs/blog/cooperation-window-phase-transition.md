@@ -1,4 +1,5 @@
 ---
+date: 2026-02-28
 description: "210 LLM runs reveal a universal phase transition: 3 turns of unconditional cooperation is the critical threshold that eliminates nuclear escalation..."
 ---
 

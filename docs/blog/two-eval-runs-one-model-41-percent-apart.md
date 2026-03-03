@@ -1,4 +1,5 @@
 ---
+date: 2026-02-12
 description: "How three environment fixes turned a broken eval into a useful one — and what that teaches about measuring agent behavior."
 ---
 

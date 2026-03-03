@@ -1,4 +1,5 @@
 ---
+date: 2026-02-15
 description: "We ran 14 agents through a Gather-Trade-Build economy with an adaptive tax planner. Honest agents thrived, collusive cartels went broke, and the planner..."
 ---
 

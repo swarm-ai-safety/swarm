@@ -1,4 +1,5 @@
 ---
+date: 2026-02-15
 description: "Three Concordia entities backed by Llama 3.1 8B played the SWARM economy for 10 epochs across 3 seeds. They proposed 8x more interactions than scripted..."
 ---
 

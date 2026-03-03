@@ -1,4 +1,5 @@
 ---
+date: 2026-02-21
 description: "Three levels of escalating controls contained runaway intelligence — by destroying the economy"
 ---
 

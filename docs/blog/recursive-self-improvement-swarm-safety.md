@@ -1,4 +1,5 @@
 ---
+date: 2026-02-22
 description: "Recursive self-improvement is real, measurable, and creates exactly the distributional safety problems we study"
 ---
 

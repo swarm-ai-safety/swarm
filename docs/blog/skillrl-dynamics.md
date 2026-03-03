@@ -1,4 +1,5 @@
 ---
+date: 2026-02-15
 description: "What 10 seeds and 30 epochs reveal about skill evolution in multi-agent systems"
 ---
 

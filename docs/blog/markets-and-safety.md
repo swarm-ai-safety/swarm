@@ -1,4 +1,5 @@
 ---
+date: 2026-02-10
 description: "AI agent ecosystems face the same information asymmetry problems that financial markets solved decades ago. SWARM applies market microstructure theory to..."
 ---
 

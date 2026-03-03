@@ -1,4 +1,5 @@
 ---
+date: 2026-02-17
 description: "We trained a Qwen3-30B model to operate in a simulated multi-agent economy using reinforcement learning. The agent learned to maximize payoff and..."
 ---
 

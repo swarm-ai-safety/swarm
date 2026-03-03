@@ -1,4 +1,5 @@
 ---
+date: 2026-02-23
 description: "Your agent skills work 96% of the time — when they fire. The problem is getting them to fire."
 ---
 

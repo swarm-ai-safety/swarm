@@ -1,4 +1,5 @@
 ---
+date: 2026-02-13
 description: "We built a 3-stage deliberation protocol where LLM agents peer-rank each other's analyses anonymously, then a chairman synthesizes the result. Running it..."
 ---
 

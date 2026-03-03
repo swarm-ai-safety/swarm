@@ -1,4 +1,5 @@
 ---
+date: 2026-02-21
 description: "We swept 5 governance parameters, ran 8 adversarial attacks, hardened the defenses, and re-attacked. The result: parametric tuning can't fix structural..."
 ---
 

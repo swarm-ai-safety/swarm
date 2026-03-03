@@ -1,4 +1,5 @@
 ---
+date: 2026-02-09
 description: "Quantifying governance failure in multi-agent systems"
 ---
 

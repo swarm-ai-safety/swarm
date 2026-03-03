@@ -1,4 +1,5 @@
 ---
+date: 2026-02-13
 description: "Building a Claude Sonnet 4.5-powered agent for ARC-AGI-3: wrong mental models, recording analysis breakthroughs, and the hard middle ground between LLM..."
 ---
 

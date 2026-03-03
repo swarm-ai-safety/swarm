@@ -1,4 +1,5 @@
 ---
+date: 2026-02-21
 description: "The first SWARM Economy training run (write-up here) showed that RL can teach an LLM to navigate a multi-agent economy, but hit a reward ceiling at 1.14..."
 ---
 

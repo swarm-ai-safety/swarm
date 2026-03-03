@@ -1,4 +1,5 @@
 ---
+date: 2026-02-15
 description: "How we found and fixed 5 stochastic test failures by measuring assertion headroom"
 ---
 
