@@ -1,10 +1,14 @@
+---
+description: "And then tried to make them spawn their own. It didn't work."
+---
+
 # I Got Claude Code to Spin Up 10 Subagents at Once
 
 *And then tried to make them spawn their own. It didn't work.*
 
 ---
 
-When you're running a research simulation framework with 15+ scenarios, dozens of parameter sweeps, and a paper to write, serial execution is the enemy. Claude Code's Task tool can launch specialized subagents — independent processes that run in parallel, each with their own context window. I wanted to see how far that scales.
+When you're running a research simulation framework with 15+ scenarios, dozens of [parameter sweeps](../getting-started/first-scenario.md), and a paper to write, serial execution is the enemy. Claude Code's Task tool can launch specialized subagents — independent processes that run in parallel, each with their own context window. I wanted to see how far that scales.
 
 The answer: 10 concurrent subagents, comfortably. Recursive subagents: hard no.
 
@@ -16,7 +20,7 @@ Subagents fix this. Each Task tool call launches an independent agent with its o
 
 ## The 10-agent pattern
 
-Here's what 10 concurrent subagents look like in practice. We used this to parallelize a full study — scenario design, parameter sweeps, metric auditing, and writeup — across specialized agents:
+Here's what 10 concurrent subagents look like in practice. We used this to parallelize a full study — [scenario design](../papers/research_swarm_governance.md), parameter sweeps, metric auditing, and writeup — across specialized agents:
 
 | Agent | Role | Tools used |
 |-------|------|------------|

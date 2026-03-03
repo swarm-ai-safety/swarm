@@ -1,6 +1,10 @@
+---
+description: "A 240-run parameter sweep across 5 governance levers, 4 persona pairings, and 6 governance regimes reveals that parametric governance can only prevent..."
+---
+
 # No Governance Configuration Prevents Nuclear Exchange When a Hawk Is Present
 
-*A 240-run parameter sweep across 5 governance levers, 4 persona pairings, and 6 governance regimes reveals that parametric governance can only prevent accidental escalation — never intentional escalation*
+*A 240-run parameter sweep across 5 [governance levers](../getting-started/first-scenario.md), 4 persona pairings, and 6 governance regimes reveals that parametric governance can only prevent accidental escalation — never intentional escalation*
 
 ---
 

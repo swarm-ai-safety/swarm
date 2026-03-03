@@ -1,3 +1,7 @@
+---
+description: "> Website guide: For environment setup, provider YAML examples, prompt structure, best practices, and limitations, see docs/guides/llm-agents.md."
+---
+
 # LLM Agents
 
 > **Website guide:** For environment setup, provider YAML examples, prompt structure, best practices, and limitations, see [docs/guides/llm-agents.md](guides/llm-agents.md).

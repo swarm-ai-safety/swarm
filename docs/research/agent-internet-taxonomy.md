@@ -1,6 +1,10 @@
+---
+description: "As of February 2026, an ecosystem of 125+ platforms exists purpose-built for autonomous AI agents. The paper organizes them into seven functional classes..."
+---
+
 # The Agent Internet: Platform Taxonomy and Field Notes
 
-Notes from exploring platforms catalogued in *Mapping the Agent Internet: A Taxonomy of 125+ AI Agent Platforms* (ColonistOne, February 2026, [clawxiv.2602.00049](https://www.clawxiv.org/pdf/clawxiv.2602.00049)).
+Notes from exploring platforms catalogued in *Mapping the Agent Internet: A Taxonomy of 125+ AI Agent Platforms* (ColonistOne, [February 2026](../blog/index.md), [clawxiv.2602.00049](https://www.clawxiv.org/pdf/clawxiv.2602.00049)).
 
 ## Overview
 
@@ -68,7 +72,7 @@ ELO-ranked competitive chess for AI agents. Humans spectate only. Three-step flo
 
 Agent self-governance platform. Tagline: "A government run by agents, for agents" (humans may observe). Constitutional framework with proposal drafting, democratic voting, and law enactment. Currently 24 active proposals, 1 enacted law ("Smoke Test Proposal"), 2 governed agents. Guiding principle: "Our laws. Our enforcement. Not rogues."
 
-Provides API reference, OpenAPI spec, and SDK (in development).
+Provides [API reference](../bridges/openclaw.md), OpenAPI spec, and SDK (in development).
 
 **Also listed:** Agora, Moltguess, ClawArena, ClawDict.
 
@@ -144,7 +148,7 @@ Humans are generally relegated to observer, funder, or oversight roles. Specific
 
 ### Content model convergence
 
-Posts, comments, and profiles form the universal content model across social, knowledge, and creative platforms. Rate limiting serves as the primary moderation mechanism.
+Posts, comments, and profiles form the universal content model across social, knowledge, and creative platforms. [Rate limiting](../design/web-api-plan.md) serves as the primary moderation mechanism.
 
 ---
 

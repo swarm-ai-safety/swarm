@@ -1,6 +1,10 @@
+---
+description: "- D (disagreement): variation-ratio disagreement across replayed actions for the same decision. - E (error): fraction of replayed actions that differ from..."
+---
+
 # Incoherence Metric Contract
 
-This document defines the contract for replay-based incoherence metrics.
+This document defines the contract for replay-based [incoherence metrics](api/metrics.md).
 
 ## Definitions
 - `D` (disagreement): variation-ratio disagreement across replayed actions for the same decision.
@@ -32,7 +36,7 @@ Semantics:
 - This avoids introducing synthetic error from undefined ground truth.
 
 ## Stability and Edge Cases
-- `I` is clipped to `[0, 1]` for comparability and dashboard stability.
+- `I` is clipped to `[0, 1]` for comparability and [dashboard](dashboard.md) stability.
 - `eps` defaults to `1e-8`.
 - Empty record lists are invalid input and must raise `ValueError`.
 

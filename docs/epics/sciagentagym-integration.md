@@ -1,3 +1,7 @@
+---
+description: "Status: Planning Estimate: 0.5 days Dependencies: None Last Updated: 2026-02-16"
+---
+
 # SWARM x SciAgentGym E2E Integration
 
 **Status:** Planning  
@@ -7,15 +11,15 @@
 
 ## Summary
 
-Integration of SWARM's governance and metrics framework with [SciAgentGym](https://github.com/CMarsRover/SciAgentGYM), a benchmarking framework for multi-step scientific tool use in LLM agents. This enables monitoring, scoring, and governance of scientific workflow agents across physics, chemistry, materials science, and life science domains.
+Integration of SWARM's governance and metrics framework with [SciAgentGym](https://github.com/CMarsRover/SciAgentGYM), a benchmarking framework for multi-step scientific tool use in [LLM agents](../guides/scenarios.md). This enables monitoring, scoring, and governance of scientific workflow agents across physics, chemistry, materials science, and life science domains.
 
 ## Goals
 
-1. **Bridge Architecture:** Create a SWARM bridge module for SciAgentGym following the existing bridge pattern (similar to `swarm.bridges.ai_scientist`, `swarm.bridges.concordia`, etc.)
+1. **[Bridge Architecture](../bridges/index.md):** Create a SWARM bridge module for SciAgentGym following the existing bridge pattern (similar to `swarm.bridges.ai_scientist`, `swarm.bridges.concordia`, etc.)
 
-2. **Metrics Integration:** Map SciAgentGym task execution events to SWARM's soft-label interaction model (`p`, `v_hat`, toxicity, quality gap)
+2. **Metrics Integration:** Map SciAgentGym task execution events to SWARM's soft-label interaction model (`p`, `v_hat`, toxicity, [quality gap](../research/theory.md))
 
-3. **Governance Layer:** Enable SWARM governance policies (circuit breakers, cost caps, review thresholds) to control SciAgentGym agent behavior
+3. **Governance Layer:** Enable SWARM governance policies ([circuit breakers](../concepts/governance.md), cost caps, review thresholds) to control SciAgentGym agent behavior
 
 4. **Reproducible Benchmarking:** Support deterministic replay and multi-seed evaluation of scientific workflow safety
 
@@ -23,7 +27,7 @@ Integration of SWARM's governance and metrics framework with [SciAgentGym](https
 
 ### Milestone 1: Discovery and Design ✅
 - [x] Research SciAgentGym architecture and tool registry
-- [x] Identify integration points and event types
+- [x] Identify [integration points](../governance.md) and event types
 - [x] Design bridge module structure following existing patterns
 - [x] Define mapper from SciAgentGym events to SWARM observables
 

@@ -1,3 +1,7 @@
+---
+description: "A parameter sweep reveals a sharp screening threshold: below fee=6.0 every agent joins; above it, adversarials self-select out"
+---
+
 # The Entry Fee That Keeps Adversaries Out of the Fair Division Pool
 
 *A parameter sweep reveals a sharp screening threshold: below fee=6.0 every agent joins; above it, adversarials self-select out*

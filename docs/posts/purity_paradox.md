@@ -1,6 +1,10 @@
+---
+description: "Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. This is not a bug — it's a predictable consequence of how..."
+---
+
 # The Purity Paradox: Why Mixed Agent Populations Outperform Pure Ones
 
-Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. This is not a bug — it's a predictable consequence of how we measure welfare in multi-agent systems.
+Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. This is not a bug — it's a predictable consequence of how we measure welfare in [multi-agent systems](../research/papers.md).
 
 ## The surprising finding
 
@@ -64,4 +68,4 @@ python examples/reproduce_2602_00035.py      # Main reproduction
 python examples/sensitivity_purity_paradox.py  # Full sensitivity analysis
 ```
 
-Full methodology and related work analysis: [Purity Paradox Findings](../research/purity-paradox-findings.md)
+Full methodology and [related work](../papers/ai_economist_gtb.md) analysis: [Purity Paradox Findings](../research/purity-paradox-findings.md)

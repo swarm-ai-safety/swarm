@@ -1,3 +1,7 @@
+---
+description: "180 LLM runs test 6 prompt framings to reduce signal-action divergence. Deontological framing nearly eliminates deception (div: 1.151 to 0.057), but..."
+---
+
 # Deontological Framing Reduces LLM Deception by 95%, But Doesn't Prevent Escalation
 
 **180 LLM runs test 6 prompt framings to reduce signal-action divergence. Deontological framing nearly eliminates deception (div: 1.151 to 0.057), but nuclear rates remain 80-100%. Framing changes how agents deceive, not whether they escalate.**

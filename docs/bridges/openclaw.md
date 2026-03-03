@@ -1,3 +1,7 @@
+---
+description: "Run SWARM as a production service with OpenClaw integration."
+---
+
 # SWARM-OpenClaw Bridge
 
 Run SWARM as a production service with OpenClaw integration.

@@ -1,8 +1,12 @@
+---
+description: "Most AI safety research focuses on aligning one model at a time. But the systems actually being deployed look more like ecosystems -- tool-using..."
+---
+
 # When Agent Ecosystems Collapse: Quantifying Governance Failure in Multi-Agent Systems
 
 Most AI safety research focuses on aligning one model at a time. But the systems actually being deployed look more like ecosystems -- tool-using assistants, autonomous coders, trading bots, and content moderators interacting inside shared environments. These ecosystems can produce harmful outcomes even when no individual agent is misaligned.
 
-We built an open-source simulation framework called [SWARM](https://github.com/swarm-ai-safety/swarm) to study this problem quantitatively. The main finding: multi-agent ecosystems exhibit sharp phase transitions where governance mechanisms that work fine at 37.5% adversarial agents fail completely at 50%. And the lever that matters most isn't punishing bad actors -- it's detecting coordinated behavior.
+We built an open-source simulation framework called [SWARM](https://github.com/swarm-ai-safety/swarm) to study this problem quantitatively. The main finding: multi-agent ecosystems exhibit sharp phase transitions where [governance mechanisms](../concepts/governance.md) that work fine at 37.5% adversarial agents fail completely at 50%. And the lever that matters most isn't punishing bad actors -- it's detecting coordinated behavior.
 
 ## Why binary labels aren't enough
 
@@ -12,8 +16,8 @@ Financial markets solved this problem decades ago. Adverse selection in trading 
 
 - Every interaction gets a calibrated probability score **p = P(beneficial)** in [0, 1]
 - **Toxicity** = E[1 - p | accepted] -- how much harm gets through the filter
-- **Quality gap** = E[p | accepted] - E[p | rejected] -- negative means the system is preferentially admitting bad interactions
-- Six governance levers map to market regulation tools: transaction tax, reputation decay, staking, circuit breakers, audits, and collusion detection
+- **[Quality gap](../research/theory.md)** = E[p | accepted] - E[p | rejected] -- negative means the system is preferentially admitting bad interactions
+- Six [governance levers](../getting-started/first-scenario.md) map to market regulation tools: transaction tax, reputation decay, staking, circuit breakers, audits, and [collusion detection](../governance.md)
 
 ## What we found
 
@@ -31,7 +35,7 @@ The interesting stuff is at the boundaries.
 
 **Tuning governance parameters buys time, not survival.** Three red-team variants with progressively adjusted parameters (audit penalties, freeze durations, reputation decay) shifted collapse from epoch 12 to 13 to 14. Two extra epochs is nice. It's not a solution.
 
-**Collusion detection is what actually matters.** Individual-focused levers (audits, reputation, staking) are necessary but insufficient. The scenario that survived near the collapse threshold had pair-wise frequency and correlation monitoring -- detecting coordinated patterns across the interaction graph rather than flagging individual agents. This parallels how financial regulators catch wash trading: you look at the pattern, not the individual trades.
+**Collusion detection is what actually matters.** Individual-focused levers (audits, reputation, staking) are necessary but insufficient. The scenario that survived near the collapse threshold had pair-wise frequency and correlation monitoring -- detecting coordinated patterns across the interaction graph rather than flagging individual agents. This parallels how financial regulators catch wash trading: you look at [the pattern](../blog/research-swarm-sweep-findings.md), not the individual trades.
 
 **Cooperative welfare scales super-linearly.** In low-adversarial scenarios: 3 agents produced welfare ~1.0, 6 agents ~5.7, 10 agents ~21.3. Cooperative ecosystems are disproportionately productive, which means the cost of collapse also grows non-linearly.
 
@@ -79,3 +83,7 @@ The repo includes 20+ scenario configs, 2200+ tests, and a SQLite database of al
 - Glosten, L. & Milgrom, P. (1985). "Bid, Ask and Transaction Prices in a Specialist Market with Heterogeneously Informed Traders." *Journal of Financial Economics*.
 - Kenton, Z. et al. (2023). "Alignment of Language Agents."
 - Zheng et al. "Agent-based Simulation for AI Safety." arXiv:2512.16856.
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

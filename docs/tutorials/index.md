@@ -1,3 +1,7 @@
+---
+description: "Step-by-step tutorials for learning SWARM by doing."
+---
+
 # Tutorials
 
 Step-by-step tutorials for learning SWARM by doing.

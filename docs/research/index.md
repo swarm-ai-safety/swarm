@@ -1,3 +1,7 @@
+---
+description: "Academic foundations and related publications."
+---
+
 # Research
 
 Academic foundations and related publications.

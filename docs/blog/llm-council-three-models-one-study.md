@@ -1,6 +1,10 @@
+---
+description: "We built a 3-stage deliberation protocol where LLM agents peer-rank each other's analyses anonymously, then a chairman synthesizes the result. Running it..."
+---
+
 # Three Models, One Study: What Happens When You Let an LLM Council Peer-Review Your Research
 
-*We built a 3-stage deliberation protocol where LLM agents peer-rank each other's analyses anonymously, then a chairman synthesizes the result. Running it on the same study with homogeneous vs. heterogeneous model councils produced meaningfully different conclusions.*
+*We built a 3-stage deliberation protocol where [LLM agents](../guides/scenarios.md) peer-rank each other's analyses anonymously, then a chairman synthesizes the result. Running it on the same study with homogeneous vs. heterogeneous model councils produced meaningfully different conclusions.*
 
 ---
 

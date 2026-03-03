@@ -1,3 +1,7 @@
+---
+description: "> Prefer a notebook? The quickstart notebook covers the same material interactively with plots: > > ![Open In..."
+---
+
 # Quick Start
 
 This guide walks you through running your first SWARM simulation.

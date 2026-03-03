@@ -1,6 +1,10 @@
+---
+description: "What 10 seeds and 30 epochs reveal about skill evolution in multi-agent systems"
+---
+
 # SkillRL Agents Learn 5x Faster Than Honest Ones. They Mostly Learn What Not to Do.
 
-*What 10 seeds and 30 epochs reveal about skill evolution in multi-agent systems*
+*What 10 seeds and 30 epochs reveal about skill evolution in [multi-agent systems](../research/papers.md)*
 
 ---
 
@@ -88,6 +92,6 @@ The runner, plotter, scenario config, and all 38 SkillRL tests are in the [SWARM
 
 ---
 
-*Modeling note: Our implementation models the core concepts from [Xia et al. (2026), "SkillRL: Evolving Agents via Recursive Skill-Augmented Reinforcement Learning"](https://arxiv.org/abs/2602.08234) — hierarchical SkillBank, GRPO-style advantage, recursive refinement, and tier promotion — inside a rule-based multi-agent simulation. Unlike the original paper, which runs LLM agents on ALFWorld and WebShop benchmarks, our agents are scripted with skill-modulated acceptance thresholds, not language models. Skills here are simple condition/effect dicts, not rich behavioral programs. The dynamics we observe (lesson-dominated libraries, threshold drift toward caution) emerge from these simplified mechanics and may not transfer directly to the full SkillRL pipeline. This is a simulation-based exploration of the framework's structural properties, not a reproduction of the paper's results.*
+*Modeling note: Our implementation models the [core concepts](../guides/task-synthesis.md) from [Xia et al. (2026), "SkillRL: Evolving Agents via Recursive Skill-Augmented Reinforcement Learning"](https://arxiv.org/abs/2602.08234) — hierarchical SkillBank, GRPO-style advantage, recursive refinement, and tier promotion — inside a rule-based multi-agent simulation. Unlike the original paper, which runs [LLM agents](../guides/scenarios.md) on ALFWorld and WebShop benchmarks, our agents are scripted with skill-modulated acceptance thresholds, not language models. Skills here are simple condition/effect dicts, not rich behavioral programs. The dynamics we observe (lesson-dominated libraries, threshold drift toward caution) emerge from these simplified mechanics and may not transfer directly to the full SkillRL pipeline. This is a simulation-based exploration of the framework's structural properties, not a reproduction of the paper's results.*
 
 *Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

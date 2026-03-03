@@ -1,3 +1,7 @@
+---
+description: "ClashAI's Coup arena is an accidental alignment testbed --- and the first results suggest RLHF'd models would rather lose than lie."
+---
+
 # Six Frontier Models Played a Bluffing Game. None of Them Bluffed.
 
 *ClashAI's Coup arena is an accidental alignment testbed --- and the first results suggest RLHF'd models would rather lose than lie.*

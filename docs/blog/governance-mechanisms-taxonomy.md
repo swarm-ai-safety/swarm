@@ -1,3 +1,7 @@
+---
+description: "Twenty levers, three regimes, and the one that actually matters"
+---
+
 # A Taxonomy of Governance Mechanisms for Multi-Agent AI Systems
 
 *Twenty levers, three regimes, and the one that actually matters*

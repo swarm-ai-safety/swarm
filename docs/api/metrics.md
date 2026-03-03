@@ -1,10 +1,14 @@
+---
+description: "Metrics for measuring multi-agent system health."
+---
+
 # Metrics API
 
 Metrics for measuring multi-agent system health.
 
 ## SoftMetrics
 
-Core metrics computed from soft probabilistic labels.
+Core metrics computed from [soft probabilistic labels](../concepts/soft-labels.md).
 
 ::: swarm.metrics.soft_metrics.SoftMetrics
     options:

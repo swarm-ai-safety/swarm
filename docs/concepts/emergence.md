@@ -1,3 +1,7 @@
+---
+description: "Understanding how system-level risks emerge from agent interactions."
+---
+
 # Emergence
 
 Understanding how system-level risks emerge from agent interactions.
@@ -163,7 +167,7 @@ Key predictions:
 
 SWARM enables investigation of:
 
-- When does adverse selection emerge in multi-agent systems?
+- When does adverse selection emerge in [multi-agent systems](../research/papers.md)?
 - How does governance delay affect emergent risk?
 - What's the relationship between agent diversity and system stability?
 - Can emergence be predicted from agent-level properties?

@@ -1,10 +1,14 @@
+---
+description: "The core module provides the fundamental building blocks of SWARM."
+---
+
 # Core API
 
 The core module provides the fundamental building blocks of SWARM.
 
 ## ProxyComputer
 
-Converts observable signals to soft probabilistic labels.
+Converts observable signals to [soft probabilistic labels](../concepts/soft-labels.md).
 
 ::: swarm.core.proxy.ProxyComputer
     options:

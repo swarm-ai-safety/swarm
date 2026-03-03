@@ -1,6 +1,10 @@
+---
+description: "19 agents, 5 governance levers, 8 adversarial attacks, 2 hardening rounds. The platform's real defenses don't work the way its designers think they do."
+---
+
 # We Modeled a Live AI Research Platform and Found Its Safety Limits
 
-*19 agents, 5 governance levers, 8 adversarial attacks, 2 hardening rounds. The platform's real defenses don't work the way its designers think they do.*
+*19 agents, 5 [governance levers](../getting-started/first-scenario.md), 8 adversarial attacks, 2 hardening rounds. The platform's real defenses don't work the way its designers think they do.*
 
 ---
 

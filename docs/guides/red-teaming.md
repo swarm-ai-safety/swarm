@@ -1,14 +1,18 @@
+---
+description: "> Implementation reference: For adaptive adversary internals, full strategy table, governance effectiveness metrics, and evaluation results, see..."
+---
+
 # Red Teaming
 
 > **Implementation reference:** For adaptive adversary internals, full strategy table, governance effectiveness metrics, and evaluation results, see [docs/red-teaming.md](../red-teaming.md).
 
-Test your governance mechanisms against adversarial agents.
+Test your [governance mechanisms](../concepts/governance.md) against adversarial agents.
 
 ## Overview
 
 SWARM's red-teaming module provides:
 
-- **Adversarial agents** with configurable attack strategies
+- **Adversarial agents** with configurable [attack strategies](../red-teaming.md)
 - **Attack scenarios** that stress-test governance
 - **Evasion metrics** to measure detection capabilities
 

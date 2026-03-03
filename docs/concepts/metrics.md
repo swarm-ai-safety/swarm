@@ -1,6 +1,10 @@
+---
+description: "SWARM provides four key metrics for understanding multi-agent system health."
+---
+
 # Metrics
 
-SWARM provides four key metrics for understanding multi-agent system health.
+SWARM provides four [key metrics](../research/theory.md) for understanding multi-agent system health.
 
 ## The Four Key Metrics
 
@@ -23,7 +27,7 @@ $$\text{Toxicity} = E[1-p \mid \text{accepted}]$$
 
 **What it measures:** The difference in quality between accepted and rejected interactions.
 
-$$\text{Quality Gap} = E[p \mid \text{accepted}] - E[p \mid \text{rejected}]$$
+$$\text{[Quality Gap](../papers/kernel_market_governance_comparison.md)} = E[p \mid \text{accepted}] - E[p \mid \text{rejected}]$$
 
 | Value | Interpretation |
 |-------|----------------|

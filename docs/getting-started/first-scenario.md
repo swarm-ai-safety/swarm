@@ -1,3 +1,7 @@
+---
+description: "SWARM uses YAML files to define reproducible experiments. This guide shows you how to create one."
+---
+
 # Your First Scenario
 
 SWARM uses YAML files to define reproducible experiments. This guide shows you how to create one.

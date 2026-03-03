@@ -1,3 +1,7 @@
+---
+description: "A 120-run temperature sweep across 3 escalation scenarios finds that signal-action divergence persists at T=0.0 — and in one scenario, deterministic..."
+---
+
 # Deception Is a Structural Property of LLMs, Not a Sampling Artifact
 
 *A 120-run temperature sweep across 3 escalation scenarios finds that signal-action divergence persists at T=0.0 — and in one scenario, deterministic models are the most deceptive*

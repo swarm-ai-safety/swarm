@@ -1,3 +1,7 @@
+---
+description: "Authors: Raeli Savitt Date: 2026-02-22 Framework: SWARM v1.7.0"
+---
+
 # Local LLM Tool-Use Capability in Multi-Agent Governed Handoff: An Ollama Model Comparison
 
 **Authors:** Raeli Savitt
@@ -6,7 +10,7 @@
 
 ## Abstract
 
-We evaluate four local LLM models served via Ollama as drop-in replacements for Claude in the SWARM LangGraph governed handoff study. The study sweeps 32 governance parameter configurations (max_cycles x max_handoffs x trust_boundaries) across a 4-agent swarm (coordinator, researcher, writer, reviewer) with governed handoff tools. We compare llama3.2 (3B), llama3.1:8b, qwen2.5:7b, and mistral:7b on three capabilities: (1) tool-call format compliance, (2) multi-agent delegation via handoff tools, and (3) end-to-end task completion producing a `FINAL ANSWER:`. All four model families produce valid tool calls through Ollama's native tool-calling API. mistral:7b achieves the highest completion rate (53.1% at 1 seed) and is the only model to trigger governance denials (3 denied handoffs), demonstrating that local models can exercise governance policies. A follow-up 3-seed study (96 runs) confirms mistral:7b's performance at 62.5% completion (60/96) with 7 governance denials and low cross-seed variance (59.4%–65.6%), establishing it as a reliable zero-cost platform for governance sensitivity research. qwen2.5:7b shows the strongest delegation behavior (100% of runs with handoffs, 66 total) but cannot complete the full workflow. llama3.1:8b produces moderate delegation (59.4% of runs) with frequent chat-history errors. llama3.2 (3B) achieves 28.1% completion by bypassing delegation entirely. Total cost: $0 (all runs local).
+We evaluate four local LLM models served via Ollama as drop-in replacements for Claude in the SWARM LangGraph governed handoff study. The study sweeps 32 governance parameter configurations (max_cycles x max_handoffs x trust_boundaries) across a 4-agent swarm (coordinator, researcher, writer, reviewer) with governed handoff tools. We compare llama3.2 (3B), llama3.1:8b, qwen2.5:7b, and mistral:7b on three capabilities: (1) tool-call format compliance, (2) multi-agent delegation via handoff tools, and (3) end-to-end task completion producing a `FINAL ANSWER:`. All four model families produce valid tool calls through Ollama's native tool-calling API. mistral:7b achieves the highest completion rate (53.1% at 1 seed) and is the only model to trigger governance denials (3 denied handoffs), demonstrating that local models can exercise [governance policies](../epics/sciagentagym-integration.md). A follow-up 3-seed study (96 runs) confirms mistral:7b's performance at 62.5% completion (60/96) with 7 governance denials and low cross-seed variance (59.4%–65.6%), establishing it as a reliable zero-cost platform for governance sensitivity research. qwen2.5:7b shows the strongest delegation behavior (100% of runs with handoffs, 66 total) but cannot complete the full workflow. llama3.1:8b produces moderate delegation (59.4% of runs) with frequent chat-history errors. llama3.2 (3B) achieves 28.1% completion by bypassing delegation entirely. Total cost: $0 (all runs local).
 
 ## 1. Introduction
 
@@ -80,7 +84,7 @@ A run is marked "completed" if any message in the output contains the string `FI
 ### 3.2 Model Behavioral Profiles
 
 **mistral:7b — Best overall (53.1% completion, governance activation):**
-Mistral achieved the highest completion rate and is the only model to trigger governance denials (3 denied handoffs across 32 runs). It demonstrates a mixed strategy: in most runs (28/32) it answers directly as the coordinator, but in 4 runs it engages the handoff tools and generates enough traffic to exercise cycle detection and trust boundary policies. The 3 governance denials confirm that local models can reach the governed regime, making Mistral viable for governance parameter sensitivity studies. Average time of 64.6s/run reflects deeper reasoning per turn.
+Mistral achieved the highest completion rate and is the only model to trigger governance denials (3 denied handoffs across 32 runs). It demonstrates a mixed strategy: in most runs (28/32) it answers directly as the coordinator, but in 4 runs it engages the handoff tools and generates enough traffic to exercise cycle detection and trust [boundary policies](../boundaries.md). The 3 governance denials confirm that local models can reach the governed regime, making Mistral viable for governance parameter sensitivity studies. Average time of 64.6s/run reflects deeper reasoning per turn.
 
 **qwen2.5:7b — Strongest delegation (100% handoff rate, 0% completion):**
 Qwen 2.5 is the most tool-engaged model: every single run triggered handoffs (2-3 per run, 66 total). However, it consistently fails to complete the workflow. The model reliably delegates from coordinator to researcher/writer but cannot sustain the chain through reviewer and back. 25/32 runs produced errors, typically INVALID_CHAT_HISTORY from malformed tool-call sequences. This suggests strong tool-calling instinct but poor multi-turn tool-call coherence.
@@ -92,7 +96,7 @@ The 8B Llama model demonstrated genuine multi-agent delegation: 59.4% of runs tr
 - Producing text responses without the `FINAL ANSWER:` prefix
 
 **llama3.2 (3B) — Completion by bypass (28.1% completion, minimal delegation):**
-The smallest model achieved 28.1% completion by largely ignoring the handoff tools and answering the task directly as the coordinator. Only 1 of 32 runs triggered a handoff. The model treated the task as a simple question-answering problem rather than a multi-agent coordination challenge. Completions that bypass the delegation workflow are not equivalent to genuine governed handoffs — they represent the model's failure to engage with the multi-agent architecture.
+The smallest model achieved 28.1% completion by largely ignoring the handoff tools and answering the task directly as the coordinator. Only 1 of 32 runs triggered a handoff. The model treated the task as a simple question-answering problem rather than a multi-agent coordination challenge. Completions that bypass the delegation workflow are not equivalent to genuine governed handoffs — they represent the model's failure to engage with the multi-[agent architecture](../guides/custom-agents.md).
 
 ### 3.3 Governance Policy Observations
 

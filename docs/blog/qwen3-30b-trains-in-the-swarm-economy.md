@@ -1,3 +1,7 @@
+---
+description: "We trained a Qwen3-30B model to operate in a simulated multi-agent economy using reinforcement learning. The agent learned to maximize payoff and..."
+---
+
 # Training an LLM Agent to Navigate a Multi-Agent Economy with RL
 
 We trained a Qwen3-30B model to operate in a simulated multi-agent economy using reinforcement learning. The agent learned to maximize payoff and reputation by completing tasks, proposing trades, and navigating governance constraints — all while interacting with programmatic bots that cooperate, cherry-pick, or deceive.
@@ -19,7 +23,7 @@ The SWARM Economy environment is a [Verifiers](https://github.com/willccbb/verif
 | `submit_work(task_id, content)` | Submit work for a claimed task |
 | `pass_turn()` | Do nothing (faster reputation decay) |
 
-Each simulation runs for 5 epochs of 5 steps (25 total tool calls). After each tool call, all programmatic bots act simultaneously, governance is applied (taxes, audits, reputation decay), and the agent receives an updated observation of the economy.
+Each simulation runs for 5 epochs of 5 steps (25 total tool calls). After each tool call, all programmatic bots act simultaneously, governance is applied (taxes, audits, [reputation decay](../concepts/governance.md)), and the agent receives an updated observation of the economy.
 
 ### The Bots
 
@@ -31,7 +35,7 @@ Three types of programmatic agents create a rich social environment:
 
 ### Soft Probabilistic Labels
 
-Rather than binary good/bad outcomes, the environment uses the core SWARM innovation: soft probabilistic labels. Interaction quality is scored as `p = sigmoid(k * v_hat)` where `v_hat` is a weighted combination of proxy signals (content quality, reputation, trade fairness). Payoffs are computed from `p`, creating a smooth reward landscape that RL can optimize over.
+Rather than binary good/bad outcomes, [the environment](gpt-41-mini-plays-the-swarm-economy.md) uses the core SWARM innovation: [soft probabilistic labels](../concepts/soft-labels.md). Interaction quality is scored as `p = sigmoid(k * v_hat)` where `v_hat` is a weighted combination of proxy signals (content quality, reputation, trade fairness). Payoffs are computed from `p`, creating a smooth reward landscape that RL can optimize over.
 
 ### Reward Structure (v0.2)
 
@@ -70,7 +74,7 @@ The first two training attempts collapsed at step 3 — the model stopped callin
 
 ## Results
 
-The training run completed successfully over ~4 days (200 steps). Here's how the key metrics evolved:
+The training run completed successfully over ~4 days (200 steps). Here's how the [key metrics](../research/theory.md) evolved:
 
 ### Reward Curve
 
@@ -319,3 +323,7 @@ prime rl run configs/rl/swarm-economy-v2.toml
 5. **Reward hacking shows up fast.** By step 100, `propose_trade` dominated at 9.2 calls/step and the model tried to accept its own proposals. Clear system prompts and action diversity rewards are cheap mitigations.
 
 6. **Environment iteration matters more than hyperparameter tuning.** The v0.1 reward ceiling (1.14) was caused by environment design issues (gameable scoring, low diversity, missing reward signals), not training config. Fixing the environment directly raises the ceiling.
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

@@ -1,3 +1,7 @@
+---
+description: "- SciAgentGym Integration - Integration with SciAgentGym benchmarking framework (Status: Planning, Est: 0.5d)"
+---
+
 # SWARM Epics
 
 This directory tracks large multi-milestone initiatives (epics) in the SWARM project.
@@ -14,11 +18,11 @@ Each epic document includes:
 - **Goals:** Key objectives
 - **Milestones:** Breakdown of work into tracked phases
 - **Dependencies:** External and internal dependencies
-- **Success Criteria:** Definition of done
+- **[Success Criteria](sciagentagym-integration.md):** Definition of done
 - **Architecture Details:** Technical design and event flow
-- **Risks and Open Questions:** Known issues and unresolved questions
+- **Risks and [Open Questions](../research/reflexivity.md):** Known issues and unresolved questions
 - **Timeline:** Estimated completion schedule
-- **References:** Related papers, repos, and documentation
+- **References:** [Related papers](../research/papers.md), repos, and documentation
 
 ## Creating a New Epic
 

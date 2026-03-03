@@ -1,3 +1,7 @@
+---
+description: "Title: Show HN: SWARM -- Open-source framework for studying when multi-agent AI systems fail"
+---
+
 # Show HN Draft
 
 ---
@@ -44,8 +48,12 @@ Quickstart notebook: 5 min, no API keys
 - Monitor comments for the first 2 hours and respond promptly
 - Common HN objections to anticipate:
   - "Simulation != reality" -- acknowledge explicitly. These are toy models of real dynamics. The value is in the phase transitions and governance tradeoffs, not in predicting specific real-world outcomes.
-  - "What's new vs existing multi-agent frameworks?" -- soft (probabilistic) labels instead of binary, financial market theory basis, 20+ governance levers with factorial sweep infrastructure.
+  - "What's new vs existing multi-agent frameworks?" -- soft (probabilistic) labels instead of binary, financial market theory basis, 20+ [governance levers](../getting-started/first-scenario.md) with factorial sweep infrastructure.
   - "How does this scale?" -- largest tested is 10 agents. Scale experiments are future work. Be honest.
   - "Is this just a toy?" -- point to 2800+ tests, 51 scenarios, 5 papers, 7 framework bridges, built-in statistical analysis.
   - "Why not just use [CrewAI/AutoGen/etc]?" -- those are agent orchestration frameworks. SWARM is a safety measurement framework. It studies what goes wrong, not how to build agents.
-  - "Circuit breakers don't work?" -- they fire too late (after damage is done) and the freeze period removes agents that might have been learning. Our 40-run factorial sweep showed d=-0.02 with p=0.88. Null effect.
+  - "[Circuit breakers](../concepts/governance.md) don't work?" -- they fire too late (after damage is done) and the freeze period removes agents that might have been learning. Our 40-run factorial sweep showed d=-0.02 with p=0.88. Null effect.
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

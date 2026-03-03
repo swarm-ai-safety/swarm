@@ -1,3 +1,7 @@
+---
+description: "Instrument GasTown multi-agent workspaces with SWARM metrics."
+---
+
 # SWARM-GasTown Bridge
 
 Instrument GasTown multi-agent workspaces with SWARM metrics.

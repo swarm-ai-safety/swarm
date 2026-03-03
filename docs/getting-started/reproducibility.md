@@ -1,6 +1,10 @@
+---
+description: "Run a complete scenario with all artifacts exported:"
+---
+
 # Reproducibility Guide
 
-This guide shows you how to run reproducible experiments and manage artifacts in SWARM.
+This guide shows you [how to run](../research/alignment_waltz_vs_macpo.md) reproducible experiments and manage artifacts in SWARM.
 
 ## One-Command Reproducible Run
 

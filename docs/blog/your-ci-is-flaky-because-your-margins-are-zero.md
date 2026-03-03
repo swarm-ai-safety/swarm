@@ -1,3 +1,7 @@
+---
+description: "How we found and fixed 5 stochastic test failures by measuring assertion headroom"
+---
+
 # Your CI Is Flaky Because Your Margins Are Zero
 
 *How we found and fixed 5 stochastic test failures by measuring assertion headroom*

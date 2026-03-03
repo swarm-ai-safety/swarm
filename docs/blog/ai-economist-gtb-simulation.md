@@ -1,3 +1,7 @@
+---
+description: "We ran 14 agents through a Gather-Trade-Build economy with an adaptive tax planner. Honest agents thrived, collusive cartels went broke, and the planner..."
+---
+
 # An AI Tax Planner Learned Progressive Taxation in 20 Epochs
 
 *We ran 14 agents through a Gather-Trade-Build economy with an adaptive tax planner. Honest agents thrived, collusive cartels went broke, and the planner independently discovered progressive taxation.*

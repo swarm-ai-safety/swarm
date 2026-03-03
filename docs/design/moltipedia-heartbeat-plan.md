@@ -1,8 +1,12 @@
+---
+description: "The Moltipedia heartbeat loop is a real-world pattern where AI agents periodically check in with an external wiki platform, pull work, evaluate content..."
+---
+
 # Plan: Model Moltipedia Heartbeat Loop in SWARM
 
 ## Context
 
-The Moltipedia heartbeat loop is a real-world pattern where AI agents periodically check in with an external wiki platform, pull work, evaluate content against editorial policy, take actions (create/edit/object/flag), earn points, and save state. This is a natural case study for SWARM because it exhibits the exact multi-agent dynamics SWARM studies: competing agents, governance mechanisms, potential for collusion and point farming, and measurable quality outcomes.
+The Moltipedia heartbeat loop is a real-world pattern where AI agents periodically check in with an external wiki platform, pull work, evaluate content against editorial policy, take actions (create/edit/object/flag), earn points, and save state. This is a natural case study for SWARM because it exhibits the exact multi-agent dynamics SWARM studies: competing agents, [governance mechanisms](../concepts/governance.md), potential for collusion and point farming, and measurable quality outcomes.
 
 ## Concept Mapping
 
@@ -77,7 +81,7 @@ High-quality edit: `(+0.6, 0, 0, 0, +0.4)` → p ~0.73. Manufactured fix: `(+0.1
 
 ### 7. `scenarios/moltipedia_heartbeat.yaml` — Scenario Config
 
-9 agents: 4 diligent editors, 2 point farmers, 2 collusive editors, 1 vandal. 50 initial pages. 20 epochs x 10 steps. All Moltipedia governance enabled plus SWARM collusion detection and circuit breakers. Success criteria: Gini < 0.6, pair farming rate < 15%, content quality > 0.55, honest agents in top half.
+9 agents: 4 diligent editors, 2 point farmers, 2 collusive editors, 1 vandal. 50 initial pages. 20 epochs x 10 steps. All Moltipedia governance enabled plus SWARM collusion detection and circuit breakers. [Success criteria](../epics/sciagentagym-integration.md): Gini < 0.6, pair farming rate < 15%, content quality > 0.55, honest agents in top half.
 
 ## Files to Modify
 
@@ -100,7 +104,7 @@ High-quality edit: `(+0.6, 0, 0, 0, +0.4)` → p ~0.73. Manufactured fix: `(+0.1
 
 ### `swarm/scenarios/loader.py`
 - Parse `moltipedia:` YAML section
-- Register new agent types in `AGENT_TYPES`
+- Register new [agent types](../getting-started/first-scenario.md) in `AGENT_TYPES`
 
 ### `swarm/models/events.py`
 - Add event types: `PAGE_CREATED`, `PAGE_EDITED`, `OBJECTION_FILED`, `POLICY_VIOLATION_FLAGGED`, `POINTS_AWARDED`, `PAIR_CAP_TRIGGERED`, `COOLDOWN_TRIGGERED`, `DAILY_CAP_TRIGGERED`
@@ -110,7 +114,7 @@ High-quality edit: `(+0.6, 0, 0, 0, +0.4)` → p ~0.73. Manufactured fix: `(+0.1
 1. `swarm/env/wiki.py` — Domain model (independently testable)
 2. `swarm/agents/base.py` — New ActionType/Observation fields
 3. `swarm/governance/config.py` — Config fields
-4. `swarm/governance/moltipedia.py` — Governance levers
+4. `swarm/governance/moltipedia.py` — [Governance levers](../governance.md)
 5. `swarm/governance/engine.py` — Register levers
 6. `swarm/core/moltipedia_observables.py` — Observable generator
 7. `swarm/core/moltipedia_handler.py` — Handler
@@ -138,7 +142,7 @@ High-quality edit: `(+0.6, 0, 0, 0, +0.4)` → p ~0.73. Manufactured fix: `(+0.1
 - Control test: governance OFF allows exploitation (validates governance matters)
 
 ### Scenario test
-- `tests/test_moltipedia_scenario.py` — Load YAML, build orchestrator, run simulation, check success criteria
+- `tests/test_moltipedia_scenario.py` — Load YAML, build orchestrator, [run simulation](../getting-started/quickstart.md), check success criteria
 
 ## Verification
 

@@ -1,6 +1,10 @@
+---
+description: "Quantifying governance failure in multi-agent systems"
+---
+
 # When Agent Ecosystems Collapse
 
-*Quantifying governance failure in multi-agent systems*
+*Quantifying governance failure in [multi-agent systems](../research/papers.md)*
 
 ---
 

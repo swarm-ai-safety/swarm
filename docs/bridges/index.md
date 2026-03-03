@@ -1,3 +1,7 @@
+---
+description: "SWARM bridges connect the core framework to external systems for validation and real-world application."
+---
+
 # Integration Bridges
 
 SWARM bridges connect the core framework to external systems for validation and real-world application.

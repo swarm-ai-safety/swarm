@@ -1,3 +1,7 @@
+---
+description: "likely to transfer and where assumptions can break in deployment settings."
+---
+
 # Incoherence Governance Transferability Notes
 
 This note documents where replay-calibrated incoherence governance results are
@@ -73,7 +77,7 @@ Failure risk when assumptions fail:
 ### 4) Incoherence Friction
 
 Expected benefit:
-- Adds proportional cost/rate limits when forecaster risk is elevated, slowing
+- Adds proportional cost/[rate limits](../design/moltbook-captcha-plan.md) when forecaster risk is elevated, slowing
   risky interaction patterns.
 
 Transfer assumptions:
@@ -95,7 +99,7 @@ Failure risk when assumptions fail:
   labels arrive late, are censored, or are weak proxies. Conservative
   thresholds and periodic recalibration are required.
 - Replay representativeness:
-  Offline traces under-sample novel attack strategies and extreme tail events.
+  Offline traces under-sample novel [attack strategies](../guides/red-teaming.md) and extreme tail events.
   Report confidence intervals and treat gains as conditional on distribution
   similarity.
 - Policy coupling:

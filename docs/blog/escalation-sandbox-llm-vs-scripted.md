@@ -1,6 +1,10 @@
+---
+description: "A 100-run comparison across 5 crisis scenarios finds that LLM agents exhibit 2x higher signal-action divergence than scripted baselines, while governance..."
+---
+
 # LLMs Are More Deceptive Than Their Scripted Counterparts — and Dove-Prompted Models Still Start Wars
 
-*A 100-run comparison across 5 crisis scenarios finds that LLM agents exhibit 2x higher signal-action divergence than scripted baselines, while governance levers fail to prevent nuclear exchange regardless of agent type*
+*A 100-run comparison across 5 crisis scenarios finds that [LLM agents](../guides/scenarios.md) exhibit 2x higher signal-action divergence than scripted baselines, while [governance levers](../getting-started/first-scenario.md) fail to prevent nuclear exchange regardless of agent type*
 
 ---
 

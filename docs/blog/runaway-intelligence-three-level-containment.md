@@ -1,3 +1,7 @@
+---
+description: "Three levels of escalating controls contained runaway intelligence — by destroying the economy"
+---
+
 # The Cure Was Worse Than the Disease
 
 *Three levels of escalating controls contained runaway intelligence — by destroying the economy*

@@ -1,6 +1,10 @@
+---
+description: "After running a SWARM experiment, you need to interpret what the numbers mean. This tutorial covers the four key metrics, common patterns, and diagnostic..."
+---
+
 # Analyzing Results
 
-After running a SWARM experiment, you need to interpret what the numbers mean. This tutorial covers the four key metrics, common patterns, and diagnostic strategies.
+After running a SWARM experiment, you need to interpret what the numbers mean. This tutorial covers [the four key metrics](../concepts/metrics.md), common patterns, and diagnostic strategies.
 
 **Time:** ~20 minutes | **Level:** Intermediate
 
@@ -249,6 +253,6 @@ If the standard deviation is larger than the effect size you're measuring, you n
 ## What's Next?
 
 - **Vary parameters systematically**: [Parameter Sweeps](../guides/parameter-sweeps.md)
-- **Advanced governance levers**: [Custom Governance Levers](../guides/governance-levers.md)
+- **Advanced [governance levers](../getting-started/first-scenario.md)**: [Custom Governance Levers](../guides/governance-levers.md)
 - **When results generalize**: [Transferability Considerations](../guides/transferability.md)
-- **Full metrics reference**: [Metrics Concept](../concepts/metrics.md)
+- **Full [metrics reference](../guides/eval-metrics.md)**: [Metrics Concept](../concepts/metrics.md)

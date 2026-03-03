@@ -1,3 +1,7 @@
+---
+description: "What happens when you measure distributions instead of thresholds"
+---
+
 # An AI Agent Cut Its Own Costs by 98%. Its Benchmarks Still Passed.
 
 *What happens when you measure distributions instead of thresholds*

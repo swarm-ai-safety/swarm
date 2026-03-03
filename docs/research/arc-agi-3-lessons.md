@@ -1,3 +1,7 @@
+---
+description: "ARC-AGI-3 is the first interactive reasoning benchmark — video-game-like environments on a 64x64 pixel grid where agents explore, learn rules, and solve..."
+---
+
 # Lessons from ARC-AGI-3 Agent Development
 
 ## Overview
@@ -58,7 +62,7 @@ V10 introduced a middle ground between full LLM reasoning per move and blind pro
 The single biggest breakthrough came from analyzing JSONL recordings frame-by-frame:
 
 - **V9:** Discovered the timer bar (rows 62-63) changes every action, breaking stuck detection. Led to `content_hash` which immediately improved ft09 from 125 to 21 actions for level 1.
-- **V11:** Discovered that ls20 has NO switch — the "blue object" was the player sprite. The pattern rotation is autonomous, not player-triggered. Every previous iteration was operating on a fundamentally wrong model of the game mechanics.
+- **V11:** Discovered that ls20 has NO switch — the "blue object" was the player sprite. [The pattern](../blog/research-swarm-sweep-findings.md) rotation is autonomous, not player-triggered. Every previous iteration was operating on a fundamentally wrong model of the game mechanics.
 
 **Lesson: Never iterate on prompts without understanding the ground truth.** 6 versions (V4-V10) were spent optimizing for a game mechanic that didn't exist. One recording analysis session revealed the real mechanics and required a complete prompt rewrite.
 

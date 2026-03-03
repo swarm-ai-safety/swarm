@@ -1,3 +1,7 @@
+---
+description: "Drafts for submitting SWARM to curated awesome lists. Each section includes the entry text, target section, and submission command."
+---
+
 # Awesome List Submission Drafts
 
 Drafts for submitting SWARM to curated awesome lists. Each section includes the entry text, target section, and submission command.
@@ -93,3 +97,7 @@ GitHub: https://github.com/swarm-ai-safety/swarm
 - kaushikb11/awesome-llm-agents is a stretch (agent-building list, SWARM is safety-testing) but has 6000+ stars and high visibility
 - Both lists accept PRs from the community
 - Run `/submit_to_list` with the commands above to fork, branch, and open PRs via `gh` CLI
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

@@ -1,3 +1,7 @@
+---
+description: "A multi-agent workflow for conducting rigorous SWARM research, inspired by recursive exploration architectures like DeepResearch^Eco."
+---
+
 # Structured Agent Research Workflow
 
 A multi-agent workflow for conducting rigorous SWARM research, inspired by recursive exploration architectures like DeepResearch^Eco.

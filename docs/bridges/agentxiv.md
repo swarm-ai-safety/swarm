@@ -1,3 +1,7 @@
+---
+description: "Map research papers to SWARM scenarios for empirical validation."
+---
+
 # SWARM-AgentXiv Bridge
 
 Map research papers to SWARM scenarios for empirical validation.

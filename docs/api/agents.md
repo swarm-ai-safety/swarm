@@ -1,6 +1,10 @@
+---
+description: "Agent types and base classes for building SWARM simulations."
+---
+
 # Agents API
 
-Agent types and base classes for building SWARM simulations.
+[Agent types](../getting-started/first-scenario.md) and base classes for building SWARM simulations.
 
 ## BaseAgent
 

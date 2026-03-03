@@ -1,6 +1,10 @@
+---
+description: "SWARM comes with several built-in governance levers. This guide explains each one, when to use it, and how to combine them effectively."
+---
+
 # Custom Governance Levers
 
-SWARM comes with several built-in governance levers. This guide explains each one, when to use it, and how to combine them effectively.
+SWARM comes with several built-in [governance levers](../getting-started/first-scenario.md). This guide explains each one, when to use it, and how to combine them effectively.
 
 **Level:** Advanced
 

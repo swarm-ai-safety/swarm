@@ -1,3 +1,7 @@
+---
+description: "If you're using LLMs to evaluate LLM-generated research, diversity of perspective matters more than raw capability."
+---
+
 # Using LLM Councils for Multi-Agent Research Evaluation
 
 *If you're using LLMs to evaluate LLM-generated research, diversity of perspective matters more than raw capability.*

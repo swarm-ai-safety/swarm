@@ -1,3 +1,7 @@
+---
+description: "SWARM uses soft labels instead of binary classifications. This page explains why and how."
+---
+
 # Soft Probabilistic Labels
 
 SWARM uses **soft labels** instead of binary classifications. This page explains why and how.
@@ -93,13 +97,13 @@ print(f"Probability (p): {p:.3f}")
 Soft labels enable nuanced metrics:
 
 - **Toxicity** = $E[1-p \mid \text{accepted}]$ — uses probability, not binary
-- **Quality gap** = can detect subtle adverse selection
+- **[Quality gap](../research/theory.md)** = can detect subtle adverse selection
 
 ### For Payoffs
 
 Expected outcomes instead of worst-case:
 
-- **Expected surplus** = $p \cdot s_+ - (1-p) \cdot s_-$
+- **[Expected surplus](../tutorials/understanding-soft-labels.md)** = $p \cdot s_+ - (1-p) \cdot s_-$
 - **Expected harm** = $(1-p) \cdot h$
 
 ### For Governance

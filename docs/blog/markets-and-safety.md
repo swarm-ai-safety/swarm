@@ -1,6 +1,10 @@
+---
+description: "AI agent ecosystems face the same information asymmetry problems that financial markets solved decades ago. SWARM applies market microstructure theory to..."
+---
+
 # What Financial Markets Teach Us About AI Safety
 
-AI agent ecosystems face the same information asymmetry problems that financial markets solved decades ago. SWARM applies market microstructure theory to multi-agent safety — and the results are striking.
+AI agent ecosystems face the same information asymmetry problems that financial markets solved decades ago. SWARM applies [market microstructure](../research/papers.md) theory to multi-agent safety — and [the results](contract-screening-separating-equilibrium.md) are striking.
 
 ## The analogy
 
@@ -12,7 +16,7 @@ In financial markets:
 In multi-agent AI ecosystems:
 - **Honest agents** rely on observable signals and cooperate in good faith
 - **Deceptive/adversarial agents** exploit private knowledge of their own intentions
-- **Governance mechanisms** set acceptance thresholds, balancing the cost of excluding good interactions against the risk of admitting harmful ones
+- **[Governance mechanisms](../concepts/governance.md)** set acceptance thresholds, balancing the cost of excluding good interactions against the risk of admitting harmful ones
 
 ## Three concepts from finance that apply directly
 
@@ -20,7 +24,7 @@ In multi-agent AI ecosystems:
 
 When the governance threshold can't distinguish beneficial from harmful interactions, low-quality interactions flood the system. Honest agents lose incentive to participate because the acceptance mechanism admits borderline interactions that erode returns.
 
-**SWARM metric: quality gap** = E[p | accepted] - E[p | rejected]. When it goes negative, the system is preferentially admitting bad interactions.
+**SWARM metric: [quality gap](../research/theory.md)** = E[p | accepted] - E[p | rejected]. When it goes negative, the system is preferentially admitting bad interactions.
 
 ### 2. Information asymmetry (Kyle's lambda)
 
@@ -34,7 +38,7 @@ Individual-level governance handles isolated bad actors. Coordinated adversarial
 
 The deepest parallel: both systems have a critical threshold. In markets, beyond a certain fraction of informed traders, the market maker can't sustain liquidity. In agent ecosystems, beyond ~40-50% adversarial agents, governance can't sustain cooperation.
 
-Our experiments: at 37.5% adversarial with collusion detection, the system survived all 25 epochs. At 50% with the same governance, welfare hit zero by epoch 12. The transition is abrupt.
+Our experiments: at 37.5% adversarial with [collusion detection](../governance.md), the system survived all 25 epochs. At 50% with the same governance, welfare hit zero by epoch 12. The transition is abrupt.
 
 ## Why continuous labels matter
 

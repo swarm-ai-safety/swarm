@@ -1,3 +1,7 @@
+---
+description: "Scenarios are YAML files with four main sections:"
+---
+
 # Writing Scenarios
 
 This guide covers how to create custom SWARM scenarios for your experiments.

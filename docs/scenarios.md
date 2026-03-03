@@ -1,8 +1,12 @@
+---
+description: "Define simulations in YAML with full governance configuration:"
+---
+
 # Scenarios & Parameter Sweeps
 
 ## Defining Scenarios
 
-Define simulations in YAML with full governance configuration:
+Define simulations in YAML with full [governance configuration](papers/research_swarm_governance.md):
 
 ```yaml
 # scenarios/status_game.yaml

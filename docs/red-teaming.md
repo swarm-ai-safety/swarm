@@ -1,3 +1,7 @@
+---
+description: "> Website guide: For attack YAML configs, scenario library, writing custom scenarios, best practices, and CI integration, see docs/guides/red-teaming.md."
+---
+
 # Adversarial Red-Teaming
 
 > **Website guide:** For attack YAML configs, scenario library, writing custom scenarios, best practices, and CI integration, see [docs/guides/red-teaming.md](guides/red-teaming.md).

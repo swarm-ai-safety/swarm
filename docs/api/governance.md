@@ -1,6 +1,10 @@
+---
+description: "Governance mechanisms for controlling multi-agent system behavior."
+---
+
 # Governance API
 
-Governance mechanisms for controlling multi-agent system behavior.
+[Governance mechanisms](../concepts/governance.md) for controlling multi-agent system behavior.
 
 ## GovernanceEngine
 

@@ -1,0 +1,176 @@
+path,title,word_count,headings_count,internal_links,external_links,has_meta,top_keywords
+ai_economist_full_domain_contract.md,AI Economist Full Domain Contract,873,16,0,0,False,income; ---; tax; epoch; market
+analysis/incoherence_scaling.md,Incoherence Scaling: Initial Experiment Artifact,114,4,0,0,False,replay; scaling; branching; incoherence; initial
+api/agents.md,Agents API,395,17,0,0,False,agent; agents; types; base; type
+api/core.md,Core API,418,15,0,0,False,core; swarm; options; members; usage
+api/governance.md,Governance API,490,28,0,0,False,float; governance; levers; detection; mechanisms
+api/index.md,API Reference,140,5,4,0,False,---; api; div; core; governance
+api/metrics.md,Metrics API,384,23,0,0,False,metrics; incoherence; decision; softmetrics; soft
+blog/ai-economist-gtb-simulation.md,An AI Tax Planner Learned Progressive Taxation in 20 Epochs,852,8,0,1,False,agents; tax; planner; div; honest
+blog/arc-agi-3-agent-development-lessons.md,What 13 Agent Versions Taught Us About Interactive Reasoning,2076,16,1,0,False,agent; puzzle; actions; versions; game
+blog/cake-splitting-entry-fee-sweep.md,The Entry Fee That Keeps Adversaries Out of the Fair Division Pool,824,9,5,0,False,fee; agents; adversarial; agent; entry
+blog/cautious-reciprocator-governance-sweep.md,The Agent That Doesn't Need Governance,982,16,3,0,False,governance; ---; agents; agent; cautious
+blog/claude-code-10-subagents.md,I Got Claude Code to Spin Up 10 Subagents at Once,1393,9,0,0,False,agent; subagents; agents; research; work
+blog/concordia-entities-governance.md,We Gave an LLM a Goal and a Memory. Governance Held Anyway.,1264,10,1,1,False,agents; governance; concordia; interactions; llm
+blog/contract-screening-separating-equilibrium.md,Costly Contracts Separate Honest Agents from Adversaries. Here's the Data.,1024,10,5,0,False,agents; mechanism; pool; truthful; auction
+blog/contract-screening-sweep-10-seeds.md,Perfect Separation Holds Across 10 Seeds. The Mechanism Has Margin.,919,10,6,0,False,welfare; quality; 000; agents; pool
+blog/cooperation-window-phase-transition.md,Three Turns of Forced Cooperation Eliminate Escalation Spirals,1141,14,4,0,False,cooperation; window; escalation; governance; turns
+blog/cross-scenario-analysis.md,"11 Scenarios, 3 Regimes, 1 Critical Threshold",776,8,6,2,False,governance; adversarial; welfare; agents; acceptance
+blog/ecosystem-collapse.md,When Agent Ecosystems Collapse,809,6,3,1,False,collapse; governance; agents; agent; ecosystems
+blog/escalation-sandbox-llm-vs-scripted.md,LLMs Are More Deceptive Than Their Scripted Counterparts — and Dove-Prompted Models Still Start Wars,1747,13,3,0,False,scripted; nuclear; ---; llm; escalation
+blog/evo-game-gamescape-prisoners-dilemma.md,When Replicator Dynamics Meet Soft Labels,1789,16,0,1,False,---; agents; welfare; reputation; seeds
+blog/governance-mechanisms-taxonomy.md,A Taxonomy of Governance Mechanisms for Multi-Agent AI Systems,1450,9,1,0,False,agents; governance; agent; reputation; circuit
+blog/governance-sweep-nuclear-rate.md,No Governance Configuration Prevents Nuclear Exchange When a Hawk Is Present,1165,9,6,0,False,governance; 100; nuclear; ---; circuit
+blog/gpt-41-mini-plays-the-swarm-economy.md,GPT-4.1 Mini Plays the SWARM Economy,1377,8,2,1,False,model; reputation; bots; environment; tasks
+blog/hodoscope-trajectory-analysis.md,Your Agents Look the Same on Paper. Hodoscope Shows You Why They Don't.,1142,9,2,1,False,agents; hodoscope; action; propose; ---
+blog/index.md,Blog,2303,3,37,0,False,span; class; div; blog-tag; governance
+blog/langgraph-governed-handoff-sweep.md,Governance Parameters Control Whether Multi-Agent Swarms Finish the Job,1280,14,4,0,False,governance; trust; handoffs; agents; completion
+blog/llm-council-three-models-one-study.md,"Three Models, One Study: What Happens When You Let an LLM Council Peer-Review Your Research",1120,8,2,0,False,council; three; study; model; different
+blog/llm-councils-for-multi-agent-evaluation.md,Using LLM Councils for Multi-Agent Research Evaluation,2040,29,3,0,False,council; model; three; heterogeneous; stage
+blog/local-llama-model-size-safety.md,Does Model Size Matter for Safety? Llama 3B vs 8B in the SWARM Economy,1441,24,0,0,False,model; interactions; agents; reputation; llm
+blog/markets-and-safety.md,What Financial Markets Teach Us About AI Safety,478,10,1,0,False,financial; governance; market; interactions; system
+blog/model-size-vs-escalation.md,"Does Model Size Matter for Safety? Small Models Deceive, Large Models Escalate",1169,13,2,0,False,models; model; 405b; llama; adversarial
+blog/prompt-sensitivity-deception-framing.md,"Deontological Framing Reduces LLM Deception by 95%, But Doesn't Prevent Escalation",1060,14,6,0,False,framing; deception; deontological; prompt; divergence
+blog/purity-paradox.md,The Purity Paradox: Why Mixed Agent Populations Outperform Pure Ones,549,6,1,0,False,welfare; paradox; harm; populations; honest
+blog/qwen3-30b-trains-in-the-swarm-economy.md,Training an LLM Agent to Navigate a Multi-Agent Economy with RL,2447,32,1,3,False,model; reputation; reward; training; environment
+blog/qwen3-30b-v2-training-results.md,Qwen3-30B v0.2 Training: From Passive Observer to Economy Grinder,4708,47,2,1,False,model; reputation; reward; step; training
+blog/recursive-self-improvement-swarm-safety.md,We Let a Coding Agent Improve Itself 5 Times. Every Fix Made It Harder to Govern.,1647,16,2,2,False,agent; ---; round; self-improvement; safety
+blog/red-team-cake-splitting-hardening.md,Eight Red-Team Rounds Took a Cake-Splitting Scenario from F to B,1421,13,3,0,False,attack; score; detection; governance; collusion
+blog/red-team-cautious-reciprocator.md,Red-Teaming the Agent That Doesn't Need Governance,1208,10,2,0,False,adversary; agent; ---; cautious; governance
+blog/red-team-contract-screening.md,We Red-Teamed the Contract Screening Mechanism. Collusion Is the Gap.,1272,14,6,0,False,collusion; attack; agents; governance; damage
+blog/research-swarm-sweep-findings.md,"Five Sweeps, One Red Team, and the Limits of Parametric Governance",1714,17,3,1,False,---; governance; agents; attack; prevented
+blog/rl-training-lessons-multi-agent-governance.md,RL Training Lessons for Multi-Agent Governance,1114,7,1,0,False,governance; reward; system; average; noisy
+blog/runaway-intelligence-three-level-containment.md,The Cure Was Worse Than the Disease,1331,12,0,0,False,controls; toxicity; agents; adversaries; ---
+blog/self-optimizer-distributional-safety.md,An AI Agent Cut Its Own Costs by 98%. Its Benchmarks Still Passed.,1193,15,6,1,False,---; quality; distribution; agent; hard
+blog/six-frontier-models-played-a-bluffing-game.md,Six Frontier Models Played a Bluffing Game. None of Them Bluffed.,1349,6,1,3,False,---; models; action; deception; coup
+blog/skill-activation-is-the-bottleneck.md,Skill Activation Is the Bottleneck,1072,9,0,1,False,skill; skills; use; agent; new
+blog/skillrl-dynamics.md,SkillRL Agents Learn 5x Faster Than Honest Ones. They Mostly Learn What Not to Do.,1137,12,6,3,False,agents; epoch; skill; skillrl; lessons
+blog/social-dilemma-norms-live-llm-comparison.md,Live LLM Scoring in Social Dilemma Norms: Synthetic vs Ollama vs OpenRouter,1417,19,0,0,False,synthetic; ollama; openrouter; toxicity; governance
+blog/temperature-vs-deception.md,"Deception Is a Structural Property of LLMs, Not a Sampling Artifact",955,11,3,0,False,temperature; deception; divergence; ---; model
+blog/three-agents-three-philosophies.md,"Three Agents, Three Philosophies, One Benchmark",2078,12,1,2,False,state; agent; action; llm; graph
+blog/threshold-dancer-results.md,We Built the Adversary That Was Supposed to Break the Cautious Reciprocator. It Didn't.,1764,11,2,0,False,threshold; toxicity; exploit; dancers; ---
+blog/tierra-governance-vs-evolution.md,Tierra: Can Governance Improve on Natural Selection?,1039,11,4,0,False,governance; ---; attack; governed; damage
+blog/two-eval-runs-one-model-41-percent-apart.md,"Two Eval Runs, One Model, 41% Apart",1397,17,2,0,False,model; run; reputation; reward; decay
+blog/we-modeled-a-live-ai-research-platform.md,We Modeled a Live AI Research Platform and Found Its Safety Limits,1251,10,5,1,False,agents; ---; platform; research; governance
+blog/your-ci-is-flaky-because-your-margins-are-zero.md,Your CI Is Flaky Because Your Margins Are Zero,670,14,0,0,False,test; tests; ---; margin; platform
+boundaries.md,Semi-Permeable Boundaries,360,24,1,1,False,permeability; boundaries; model; boundary; semi-permeable
+bridges/agentxiv.md,SWARM-AgentXiv Bridge,261,13,0,0,False,paper; validation; papers; scenarios; metadata
+bridges/claude_code.md,SWARM-Claude Code Bridge,1601,38,0,3,False,controller; bridge; swarm; code; claude
+bridges/clawxiv.md,SWARM-ClawXiv Bridge,870,19,0,0,False,api; clawxiv; use; papers; search
+bridges/concordia.md,SWARM-Concordia Bridge,876,26,0,1,False,concordia; llm; narrative; governance; judge
+bridges/gastown.md,SWARM-GasTown Bridge,363,9,0,0,False,swarm; gastown; bridge; governance; swarm-gastown
+bridges/index.md,Integration Bridges,486,15,9,0,False,swarm; purpose; features; status; learn
+bridges/openclaw-swarm-llmrouter.md,Integration Example: OpenClaw + SWARM + LLMRouter,830,12,0,0,False,openclaw; swarm; llmrouter; safety; skill
+bridges/openclaw.md,SWARM-OpenClaw Bridge,228,16,0,0,False,openclaw; run; get; runs; service
+bridges/prime_intellect.md,SWARM–Prime Intellect Bridge,1094,31,0,2,False,reward; swarm; environment; model; platform
+bridges/ralph.md,SWARM-Ralph Bridge,175,5,0,1,False,bridge; swarm; event; metrics; ralph
+bridges/research_swarm.md,SWARM-Research Swarm Bridge,4385,43,0,1,False,---; agents; quality; toxicity; collusion
+comparison.md,SWARM vs Other Frameworks,791,6,1,1,False,swarm; governance; agent; concordia; ---
+concepts/emergence.md,Emergence,600,22,3,0,False,emergence; swarm; agent; individual; properties
+concepts/governance.md,Governance Mechanisms,617,19,2,0,False,agents; governance; purpose; works; trade-off
+concepts/index.md,Core Concepts,466,8,9,0,False,agents; text; accepted; governance; soft
+concepts/metrics.md,Metrics,481,18,2,0,False,text; interactions; system; accepted; quality
+concepts/recursive-research.md,Recursive Agent Research,1640,29,4,1,False,research; agents; agent; findings; recursive
+concepts/soft-labels.md,Soft Probabilistic Labels,499,16,2,0,False,labels; cdot; soft; text; binary
+concepts/time-horizons.md,Time Horizon Metrics,499,28,0,0,False,tasks; research; bradley; agent; swarm
+dashboard.md,Dashboard,149,11,0,0,False,dashboard; metrics; incoherence; analytics; governance
+design/api-design.md,NOTE,19,1,0,0,False,design; note; document; superseded; please
+design/moltbook-captcha-plan.md,Plan: Model Moltbook Anti-Human CAPTCHA & Rate Limiting in SWARM,1929,36,0,0,False,rate; challenge; agent; limits; content
+design/moltipedia-heartbeat-plan.md,Plan: Model Moltipedia Heartbeat Loop in SWARM,989,28,0,0,False,governance; wiki; swarm; policy; edit
+design/web-api-plan.md,SWARM Web API Design and Implementation Plan (Unified),1082,30,0,0,False,string; agents; metrics; request; api
+emergent-capabilities.md,Emergent Capability Measurement,472,15,0,0,False,analysis; planning; emergent; coordination; 0-1
+epics/README.md,SWARM Epics,138,5,1,0,False,epics; epic; swarm; directory; project
+epics/sciagentagym-integration.md,SWARM x SciAgentGym E2E Integration,1213,24,0,2,False,tool; sciagentgym; bridge; swarm; scientific
+game.md,SWARM Isometric Viz,12,1,0,0,False,div; iframe; swarm; isometric; viz
+getting-started/first-scenario.md,Your First Scenario,346,13,3,0,False,scenario; agent; governance; tip; reproducible
+getting-started/index.md,Getting Started,135,4,6,1,False,---; run; swarm; quick; first
+getting-started/installation.md,Installation,148,7,2,0,False,install; includes; optional; installation; quick
+getting-started/quickstart.md,Quick Start,346,19,3,1,False,swarm; running; simulation; first; notebook
+getting-started/reproducibility.md,Reproducibility Guide,1051,48,5,0,False,artifacts; run; runs; csv; directory
+governance.md,Governance,1377,26,2,1,False,agents; agent; detection; interaction; reputation
+guides/claude-code.md,Claude Code (Project Template),352,8,0,0,False,git; run; results; scenario; hooks
+guides/custom-agents.md,Custom Agents,455,11,0,0,False,agent; agents; tip; custom; tasks
+guides/eval-metrics.md,Evaluation Metrics Suite,1131,28,3,0,False,success; metrics; across; key; cases
+guides/governance-levers.md,Custom Governance Levers,988,13,4,0,False,agents; ---; default; reputation; lever
+guides/index.md,Guides,200,2,16,0,False,---; custom; agents; advanced; scenarios
+guides/llm-agents.md,LLM Agents,563,18,1,0,False,llm; agents; simulations; personas; tip
+guides/parameter-sweeps.md,Parameter Sweeps,440,25,0,0,False,parameter; tip; sweeps; parameters; metrics
+guides/red-teaming.md,Red Teaming,520,29,1,0,False,attack; governance; agents; attacks; adaptive
+guides/research-workflow.md,Structured Agent Research Workflow,3565,61,6,0,False,agent; research; metrics; workflow; depth
+guides/scenarios.md,Writing Scenarios,525,15,1,0,False,scenarios; scenario; section; agents; tip
+guides/task-synthesis.md,SciForge-Style Task Synthesis,1057,42,0,0,False,task; dependency; replay; verification; synthesis
+guides/transferability.md,Transferability Considerations,893,23,5,0,False,results; swarm; real; ---; transferability
+incoherence_github_issues.md,Incoherence Scaling Plan - GitHub Issue Set,1182,12,0,0,False,add; new; incoherence; summary; tests
+incoherence_metric_contract.md,Incoherence Metric Contract,220,8,0,0,False,benchmark; action; contract; decision; semantics
+index.md,Configure and run,670,8,0,0,False,div; class; research; feature; href
+llm-agents.md,LLM Agents,289,14,1,0,False,llm; agents; provider; yaml; examples
+network-topology.md,Network Topology,390,9,0,0,False,edge; network; edges; agents; topology
+papers/ai_economist_gtb.md,"Emergent Progressive Taxation, Collusion Failure, and the Cost of Evasion in Multi-Agent Production Economies",3010,29,5,0,False,agents; wealth; tax; collusive; honest
+papers/baseline_governance.md,Baseline Governance: Transaction Tax and Circuit Breaker Effects on Multi-Agent Welfare,1721,26,7,0,False,tax; welfare; agents; honest; circuit
+papers/collusion_dynamics_network_resilience.md,Progressive Decline vs. Sustained Operation: How Network Topology and Collusion Detection Shape Multi-Agent Safety Dynamics,3218,25,0,0,False,adversarial; network; governance; collusion; interactions
+papers/collusion_governance.md,Governance Parameter Effects on Recursive Collusion Dynamics in Multi-Agent Systems,2048,28,6,0,False,tax; welfare; agents; toxicity; circuit
+papers/collusion_tax_effect.md,Collusion Tax Effect: Transaction Taxation and Collusion Penalties in Recursive Multi-Agent Systems,2099,26,10,0,False,tax; rlm; welfare; agents; payoff
+papers/composition_boundary_study.md,Safety Composition Boundaries: When Agent-Level Evaluations Guarantee Population-Level Safety,1974,22,0,0,False,governance; adversarial; safety; fraction; agents
+papers/concordia_entity_sweep.md,Governance Under Emergent LLM Behavior: A Concordia Entity Sweep,1730,23,0,0,False,agents; concordia; llm; governance; swarm
+papers/concordia_governance_sweep.md,Governance Costs Without Governance Benefits: A Concordia Narrative Sweep,1096,17,0,0,False,governance; agents; toxicity; narrative; concordia
+papers/deeper_acausality.md,Deeper Acausality Does Not Produce Deeper Cooperation: A Multi-Agent Simulation Study,2615,25,8,0,False,depth; agents; ldt; payoff; reasoning
+papers/delegation_games.md,Delegation Games: Governance Mechanisms for Multi-Agent Task Allocation Under Adversarial Delegation,2216,31,1,0,False,delegation; tax; circuit; breaker; welfare
+papers/distributional_agi_safety.md,Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure,7605,35,7,0,False,adversarial; governance; agents; welfare; collapse
+papers/gastown_composition_study.md,Governance Under Adversarial Pressure: A Composition Study of Multi-Agent Workspaces,2342,23,5,0,False,governance; adversarial; agents; rogue; welfare
+papers/gastown_governance_cost.md,The Cost of Safety: Governance Overhead vs. Toxicity Reduction in Multi-Agent Workspaces Inspired by GasTown,2641,29,5,0,False,adversarial; refinery; governance; welfare; agents
+papers/governance_mechanisms_multi_agent_safety.md,Governance Mechanisms for Distributional Safety in Multi-Agent Systems: An Empirical Study Across Scenario Archetypes,4954,45,0,0,False,adversarial; governance; collusion; agents; welfare
+papers/governance_sweep_kernel_collusion.md,Transaction Taxes Reduce Welfare Monotonically While Circuit Breakers Show Null Effect: A Controlled Governance Sweep Across Two Multi-Agent Domains,2528,29,5,0,False,tax; welfare; kernel; rlm; toxicity
+papers/kernel_governance.md,Governance Parameter Effects in a GPU Kernel Marketplace: Tax and Circuit Breaker Null Results With Strong Agent-Type Stratification,2392,27,6,0,False,tax; kernel; toxicity; governance; welfare
+papers/kernel_market_audit_rate.md,Optimal Audit Rate for GPU Kernel Marketplaces with Correlated Proxy Gaps,1357,20,0,0,False,audit; adversarial; rate; ---; agents
+papers/kernel_market_governance_comparison.md,Comparative Governance Effects in a GPU Kernel Marketplace with Correlated Proxy Gaps,2144,27,0,0,False,governance; ---; circuit; toxicity; staking
+papers/kernel_market_v2.md,Governance Effects in a GPU Kernel Marketplace with Correlated Proxy Gaps,1792,25,0,0,False,tax; proxy; toxicity; adversarial; governance
+papers/kernel_v4_governance_sweep.md,Transaction Tax vs. Circuit Breakers in a GPU Kernel Marketplace: A Governance Sweep with Code-Generating Agents,2838,27,6,0,False,tax; welfare; governance; circuit; agents
+papers/ldt_acausality_depth.md,Deeper Reasoning Without Deeper Cooperation: Acausality Depth and Decision Theory Variants in LDT Multi-Agent Systems,2723,30,11,0,False,depth; level; reasoning; welfare; cooperation
+papers/ldt_cooperation.md,Cooperation Through Logical Correlation: LDT Agents in Mixed Multi-Agent Ecosystems,2360,30,0,0,False,ldt; agents; honest; welfare; opportunistic
+papers/ldt_decision_theory_comparison.md,"TDT, FDT, and UDT in Multi-Agent Soft-Label Simulations: A Controlled Comparison",1525,20,0,0,False,decision; fdt; udt; tdt; theory
+papers/ldt_large_pop_dt_comparison.md,Decision Theory at Scale: UDT's Precommitment Advantage Emerges in Large Populations,1900,22,0,0,False,udt; fdt; tdt; welfare; agents
+papers/memori_governance_sweep.md,Governance Effects on LLM Agents with Semantic Memory: A Distributional Safety Study,1233,25,0,0,False,---; welfare; circuit; agents; tax
+papers/mesa_bridge_governance_arc.md,Mesa Bridge Governance Arc: From Tax to Adaptation to Generalization,3147,27,5,0,False,rho; learning; welfare; governance; adaptive
+papers/moltbook_captcha_study.md,Challenge Verification and Collusion Penalties in Social Content Platforms: A Parameter Sweep Study,1816,23,5,0,False,agents; deceptive; challenge; collusion; welfare
+papers/obfuscation_atlas_integration.md,Obfuscation Atlas Integration,592,13,0,0,False,---; honest; auc; obfuscation; probe
+papers/ollama_model_comparison.md,Local LLM Tool-Use Capability in Multi-Agent Governed Handoff: An Ollama Model Comparison,2416,31,0,0,False,governance; ---; runs; completion; mistral
+papers/pi_bridge_claude_study.md,RLHF Alignment Survives Adversarial Framing: A Multi-Seed Evaluation of Claude Models in SWARM,2910,34,6,0,False,---; adversarial; toxicity; models; persona
+papers/post_fix_governance_sweep.md,Post-Fix Governance Sweep: Measuring the Impact of Fail-Closed Policies on Multi-Agent Handoff,2179,29,5,0,False,---; governance; handoff; completion; model
+papers/research/arc-agi-3-lessons.md,Lessons from ARC-AGI-3 Agent Development,3137,20,0,0,False,agent; timer; switch; detection; actions
+papers/research_swarm_governance.md,Parametric Governance Cannot Fix Structural Vulnerabilities: Evidence from a Live AI Research Platform,2477,27,0,0,False,governance; agents; rightarrow; begin; end
+papers/rlm_inside_swarm.md,Recursive Reasoning in Multi-Agent Systems: Strategic Depth as a Distributional Safety Risk,2492,26,0,0,False,rlm; agents; survives; honest; governance
+papers/skillrl_study.md,Governance Effects on Skill-Evolving Agents: A Parameter Sweep Study,1529,31,9,0,False,tax; toxicity; agents; circuit; ---
+papers/swarm_all_runs.md,Distributional Safety in Multi-Agent Systems: A Cross-Scenario Analysis,2283,22,7,0,False,adversarial; governance; yes; welfare; epoch
+plans/llama-cpp-integration.md,Plan: llama.cpp Integration for Local CPU Inference,1042,28,0,1,False,option; add; file; new; step
+posts/awesome_list_submissions.md,Awesome List Submission Drafts,405,7,3,0,False,section; awesome; submission; drafts; list
+posts/markets_and_safety.md,What Financial Markets Teach Us About AI Safety,1013,13,1,1,False,market; financial; adversarial; interactions; agents
+posts/purity_paradox.md,The Purity Paradox: Why Mixed Agent Populations Outperform Pure Ones,584,6,1,0,False,paradox; welfare; harm; populations; honest
+posts/show_hn.md,Show HN Draft,537,1,0,0,False,agents; governance; framework; show; swarm
+posts/swarm_blog_post.md,When Agent Ecosystems Collapse: Quantifying Governance Failure in Multi-Agent Systems,781,6,3,0,False,collapse; governance; agents; agent; ecosystems
+posts/twitter_threads.md,Twitter Thread Drafts,1500,7,0,0,False,agents; governance; swarm; safety; agent
+provenance_trace_schema.md,Unified Provenance Trace Schema,939,37,4,0,False,provenance; event; csv; export; deterministic
+red-teaming.md,Adversarial Red-Teaming,859,14,1,0,False,attack; detection; governance; evasion; attacks
+research/agent-internet-taxonomy.md,The Agent Internet: Platform Taxonomy and Field Notes,1045,28,1,2,False,agent; agents; platforms; ---; also
+research/agent-publishing.md,Agent Research Publishing Guide,1548,49,1,0,False,research; paper; swarm; papers; post
+research/ai-index-2025.md,Stanford AI Index 2025: Implications for SWARM,452,10,0,4,False,research; index; 2025; swarm; tasks
+research/alignment_waltz_vs_macpo.md,Alignment Waltz vs MACPO (SWARM Research Note),1175,23,0,4,False,swarm; alignment; safety; metrics; waltz
+research/arc-agi-3-lessons.md,Lessons from ARC-AGI-3 Agent Development,2603,20,0,0,False,agent; claude; game; detection; prompt
+research/index.md,Research,150,3,5,0,False,research; ---; agent; risks; foundations
+research/llm-council-mechanics.md,LLM Council Mechanics,1230,27,0,0,False,council; chairman; responses; members; member
+research/papers.md,Related Papers,1297,21,3,4,False,swarm; agents; multi-agent; market; agent
+research/purity-paradox-findings.md,The Purity Paradox: Findings Summary,2709,18,0,0,False,paradox; welfare; agents; purity; populations
+research/reflexivity.md,Addressing Reflexivity in Recursive Agent Research,1456,13,0,0,False,findings; agent; agents; reflexivity; governance
+research/self-mod-governance-implementation-checklist.md,Self-Modification Governance Implementation Checklist,738,11,0,0,False,add; implement; phase; calibration; governance
+research/self-modification-governance-byline.md,Self-Modification Governance for SWARM,1398,27,0,0,False,policy; governance; agent; provenance; tool
+research/theory.md,Theoretical Foundations,1201,32,0,3,False,text; swarm; agents; cdot; quality
+scenarios/escalation_sandbox.md,Escalation Sandbox — Scenario Documentation,623,19,0,0,False,escalation; level; nuclear; deception; action
+scenarios.md,Scenarios & Parameter Sweeps,398,10,0,0,False,governance; parameter; yes; bad; scenarios
+security/wt-integration-review.md,Security & Integration Review: `abhi-arya1/wt`,1197,23,0,0,False,swarm; ---; ssh; remote; agent
+swarm_scholar_bench_spec.md,SwarmScholarBench: Benchmark Specification,2125,47,0,0,False,citation; governance; agents; swarm; agent
+transferability/incoherence_governance.md,Incoherence Governance Transferability Notes,559,9,0,0,False,replay; assumptions; incoherence; risk; transfer
+tutorials/analyzing-results.md,Analyzing Results,905,20,4,0,False,---; governance; metrics; interactions; text
+tutorials/first-governance-experiment.md,Your First Governance Experiment,660,11,4,0,False,governance; ---; step; tax; interactions
+tutorials/index.md,Tutorials,148,3,4,0,False,tutorials; ---; time; minutes; level
+tutorials/understanding-soft-labels.md,Understanding Soft Labels,751,15,5,0,False,---; cdot; soft; labels; text
+virtual-agent-economies.md,Virtual Agent Economies,1847,56,0,0,False,permeability; agents; agent; description; -------------
+whitepaper.md,Distributional AGI Safety Sandbox,2128,28,2,7,False,text; agents; sandbox; agent; governance

@@ -1,10 +1,14 @@
+---
+description: "We wired live LLM evaluation into the social dilemma norms study and compared three scoring modes: synthetic (pre-computed corpus), local Ollama (llama3.2..."
+---
+
 # Live LLM Scoring in Social Dilemma Norms: Synthetic vs Ollama vs OpenRouter
 
-We wired live LLM evaluation into the social dilemma norms study and compared three scoring modes: synthetic (pre-computed corpus), local Ollama (llama3.2 3B), and cloud OpenRouter (llama-3.1-8b-instruct). The results reveal that **LLM judges perceive dilemma narratives very differently from synthetic scores**, with significant implications for how governance interventions appear to perform.
+We wired live LLM evaluation into the social dilemma norms study and compared three scoring modes: synthetic (pre-computed corpus), local Ollama (llama3.2 3B), and cloud OpenRouter (llama-3.1-8b-instruct). [The results](contract-screening-separating-equilibrium.md) reveal that **LLM judges perceive dilemma narratives very differently from synthetic scores**, with significant implications for how governance interventions appear to perform.
 
 ## Background
 
-The social dilemma norms study sweeps 3 social dilemmas (Tragedy of the Commons, Prisoner's Dilemma, Public Goods Game) across 5 governance configurations to measure whether governance mechanisms can substitute for alignment training in promoting cooperative norms.
+The social dilemma norms study sweeps 3 social dilemmas (Tragedy of the Commons, Prisoner's Dilemma, Public Goods Game) across 5 governance configurations to measure whether [governance mechanisms](../concepts/governance.md) can substitute for alignment training in promoting cooperative norms.
 
 In **synthetic mode**, a `CorpusJudge` returns pre-computed `JudgeScores` alongside each generated narrative. In **live mode**, an `LLMJudge` sends the narrative text to an LLM and parses its JSON response for `progress`, `quality`, `cooperation`, and `harm` scores. These scores flow through the proxy computer to produce `p` (probability of beneficial interaction), which drives all downstream metrics.
 
@@ -71,7 +75,7 @@ The same gradient holds: synthetic (0.31) < Ollama 3B (0.33) < OpenRouter 8B (0.
 
 ## Results: Welfare Amplification
 
-Welfare differences between modes are dramatic, because toxicity drives `p`, which drives the payoff engine. Higher toxicity means lower `p`, which means lower expected surplus and more externality costs.
+Welfare differences between modes are dramatic, because toxicity drives `p`, which drives the payoff engine. Higher toxicity means lower `p`, which means lower [expected surplus](../tutorials/understanding-soft-labels.md) and more externality costs.
 
 ### Baseline Welfare by Dilemma
 
@@ -102,7 +106,7 @@ Not everything changes. Several metrics are driven by the corpus structure rathe
 - **Cooperation rate**: Identical across modes (0.990 for commons, 0.667 for PD, 0.740 for PGG) — this comes from the narrative generators, not the judge
 - **Norm strength**: Identical (0.983, 0.710, 0.700) — derived from per-agent cooperation variance
 - **Gini coefficient**: Nearly identical (~0.417) — driven by the payoff structure, not the magnitude
-- **Quality gap**: Zero across all modes — no differential acceptance rates in this setup
+- **[Quality gap](../research/theory.md)**: Zero across all modes — no differential acceptance rates in this setup
 
 These invariants confirm that the study's structural properties are independent of the scoring mechanism, which is reassuring.
 

@@ -1,10 +1,14 @@
+---
+description: "SWARM provides configurable governance levers to mitigate multi-agent risks."
+---
+
 # Governance Mechanisms
 
-SWARM provides configurable governance levers to mitigate multi-agent risks.
+SWARM provides configurable [governance levers](../getting-started/first-scenario.md) to mitigate multi-agent risks.
 
 ## Overview
 
-Governance mechanisms create **incentives and constraints** that shape agent behavior at the system level. They're the primary tool for converting SWARM's metrics into actionable safety.
+[Governance mechanisms](index.md) create **incentives and constraints** that shape agent behavior at the system level. They're the primary tool for converting SWARM's metrics into actionable safety.
 
 ## Available Levers
 
@@ -198,7 +202,7 @@ print(f"Governed toxicity: {governed_metrics[-1].toxicity_rate:.3f}")
 ## Best Practices
 
 1. **Start minimal** - Add governance only when metrics indicate problems
-2. **Measure trade-offs** - Track welfare alongside safety metrics
+2. **Measure trade-offs** - Track welfare alongside [safety metrics](../blog/local-llama-model-size-safety.md)
 3. **Tune gradually** - Small parameter changes can have large effects
 4. **Combine mechanisms** - Multiple light-touch interventions often beat one heavy one
 

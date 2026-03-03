@@ -1,3 +1,7 @@
+---
+description: "Clone the repository and install in development mode:"
+---
+
 # Installation
 
 ## Quick Install

@@ -1,6 +1,10 @@
+---
+description: "All agents inherit from BaseAgent:"
+---
+
 # Custom Agents
 
-This guide shows how to create new agent types for SWARM.
+This guide shows how to create new [agent types](../getting-started/first-scenario.md) for SWARM.
 
 ## Agent Architecture
 

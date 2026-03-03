@@ -1,3 +1,7 @@
+---
+description: "Eight attack scenarios, one failure — and it's the one where nobody would survive"
+---
+
 # Red-Teaming the Agent That Doesn't Need Governance
 
 *Eight attack scenarios, one failure — and it's the one where nobody would survive*

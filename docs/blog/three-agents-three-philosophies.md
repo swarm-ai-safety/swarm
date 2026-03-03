@@ -1,3 +1,7 @@
+---
+description: "An LLM reasoner, a state-graph explorer, and a CNN learner walk into ARC-AGI-3. What they get right -- and wrong -- reveals more about agent design than..."
+---
+
 # Three Agents, Three Philosophies, One Benchmark
 
 *An LLM reasoner, a state-graph explorer, and a CNN learner walk into ARC-AGI-3. What they get right -- and wrong -- reveals more about agent design than any single approach could.*

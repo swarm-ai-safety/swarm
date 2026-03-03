@@ -1,10 +1,14 @@
+---
+description: "Systematically explore how parameters affect SWARM metrics."
+---
+
 # Parameter Sweeps
 
 Systematically explore how parameters affect SWARM metrics.
 
 ## Overview
 
-Parameter sweeps run multiple simulations varying one or more parameters, enabling:
+[Parameter sweeps](../getting-started/first-scenario.md) run multiple simulations varying one or more parameters, enabling:
 
 - Sensitivity analysis
 - Optimal parameter discovery

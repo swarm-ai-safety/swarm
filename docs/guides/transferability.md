@@ -1,3 +1,7 @@
+---
+description: "SWARM results come from stylized simulations. This guide helps you reason about when and how your findings transfer to real-world AI systems."
+---
+
 # Transferability Considerations
 
 SWARM results come from stylized simulations. This guide helps you reason about when and how your findings transfer to real-world AI systems.
@@ -73,7 +77,7 @@ Specific quantitative claims about real systems require empirical calibration. W
 
 ### Agent Model Fidelity
 
-SWARM's built-in agent types (honest, opportunistic, deceptive, adversarial) are stylized abstractions. Real AI agents:
+SWARM's built-in [agent types](../getting-started/first-scenario.md) (honest, opportunistic, deceptive, adversarial) are stylized abstractions. Real AI agents:
 
 - Have richer internal states
 - Can adapt strategies more rapidly

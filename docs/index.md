@@ -1,4 +1,6 @@
 ---
+description: "SWARM System-Wide Assessment of Risk in Multi-agent systems"
+
 hide:
   - navigation
   - toc

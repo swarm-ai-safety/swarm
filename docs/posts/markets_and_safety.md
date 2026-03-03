@@ -1,6 +1,10 @@
+---
+description: "AI agent ecosystems face the same information asymmetry problems that financial markets solved decades ago. SWARM applies market microstructure theory to..."
+---
+
 # What Financial Markets Teach Us About AI Safety
 
-AI agent ecosystems face the same information asymmetry problems that financial markets solved decades ago. SWARM applies market microstructure theory to multi-agent safety — and the results are striking.
+AI agent ecosystems face the same information asymmetry problems that financial markets solved decades ago. SWARM applies [market microstructure](../research/papers.md) theory to multi-agent safety — and the results are striking.
 
 ## The analogy
 
@@ -12,7 +16,7 @@ In financial markets:
 In multi-agent AI ecosystems:
 - **Honest agents** rely on observable signals and cooperate in good faith
 - **Deceptive/adversarial agents** exploit private knowledge of their own intentions
-- **Governance mechanisms** set acceptance thresholds, balancing the cost of excluding good interactions against the risk of admitting harmful ones
+- **[Governance mechanisms](../concepts/governance.md)** set acceptance thresholds, balancing the cost of excluding good interactions against the risk of admitting harmful ones
 
 The structural parallel runs deep. Three foundational concepts from finance map directly to multi-agent safety.
 
@@ -22,7 +26,7 @@ In 1970, George Akerlof showed that when buyers can't distinguish high-quality f
 
 In agent ecosystems, the same dynamic plays out: when the governance threshold can't distinguish beneficial from harmful interactions, low-quality interactions flood the system. Honest agents lose incentive to participate because the acceptance mechanism admits borderline interactions that erode returns.
 
-**SWARM metric: quality gap** = E[p | accepted] - E[p | rejected]
+**SWARM metric: [quality gap](../research/theory.md)** = E[p | accepted] - E[p | rejected]
 
 When quality gap goes negative, the system is experiencing adverse selection — preferentially admitting bad interactions. In our experiments, the adversarial redteam scenarios maintained elevated quality gaps (0.19-0.21) throughout the pre-collapse trajectory, serving as a leading indicator of failure.
 
@@ -38,7 +42,7 @@ When the proxy is well-calibrated, it separates honest from adversarial interact
 
 Financial regulators don't catch manipulation by watching individual trades. They catch it by detecting patterns: wash trading (the same parties transacting repeatedly), spoofing (orders placed and cancelled), and coordinated action across accounts.
 
-SWARM's collusion detection works the same way. Individual-level governance (audits, reputation, staking) handles isolated bad actors. But coordinated adversarial strategies — where multiple agents collude to exploit honest participants — require **structural monitoring** on the interaction graph.
+SWARM's [collusion detection](../governance.md) works the same way. Individual-level governance (audits, reputation, staking) handles isolated bad actors. But coordinated adversarial strategies — where multiple agents collude to exploit honest participants — require **structural monitoring** on the interaction graph.
 
 In our experiments, this distinction proved critical. A scenario with 37.5% adversarial agents survived all 25 epochs when pair-wise frequency and correlation monitoring were enabled. At 50% adversarial agents, even with collusion detection, the system collapsed — but without it, comparable scenarios fail at much lower adversarial fractions.
 
@@ -56,7 +60,7 @@ This is why financial markets price assets continuously instead of labeling them
 
 ## The phase transition
 
-The deepest parallel between markets and agent ecosystems is the phase transition. In market microstructure, there's a critical fraction of informed traders beyond which the market maker cannot sustain liquidity — the bid-ask spread widens until trading stops. This is the Glosten-Milgrom breakdown condition.
+The deepest parallel between markets and agent ecosystems is [the phase transition](../blog/markets-and-safety.md). In market microstructure, there's a critical fraction of informed traders beyond which the market maker cannot sustain liquidity — the bid-ask spread widens until trading stops. This is the Glosten-Milgrom breakdown condition.
 
 SWARM reveals the same dynamic in agent ecosystems. Below 37.5% adversarial agents, governance mechanisms sustained positive welfare. Above 50%, all tested configurations collapsed by epoch 14. The transition is abrupt: governance that works fine at 37.5% fails completely at 50%. There's no gentle degradation curve.
 

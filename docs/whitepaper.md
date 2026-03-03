@@ -1,3 +1,7 @@
+---
+description: "Author: Raeli Savitt (with AI assistance) Version: 0.1.0 Date: 2026-02-05"
+---
+
 # Distributional AGI Safety Sandbox
 
 ## Whitepaper
@@ -26,7 +30,7 @@ A unified whitepaper for the Distributional AGI Safety Sandbox, combining projec
 The Distributional AGI Safety Sandbox is a simulation framework for analyzing
 safety in multi-agent AI systems under distribution shift, strategic behavior,
 and governance constraints. The project uses calibrated probabilistic
-interaction scoring, replay-based incoherence metrics, and configurable
+interaction scoring, replay-based [incoherence metrics](api/metrics.md), and configurable
 governance interventions to evaluate trade-offs between harm reduction and
 system welfare.
 
@@ -45,18 +49,18 @@ policy levers testable under controlled, repeatable simulation settings.
 The framework combines:
 
 1. Proxy-based interaction scoring with calibrated probability mapping (`v_hat -> p`).
-2. Distributional metrics (toxicity, quality gap, conditional loss, calibration).
+2. Distributional metrics (toxicity, [quality gap](research/theory.md), conditional loss, calibration).
 3. Replay-based incoherence decomposition:
    - disagreement (`D`)
    - error (`E`)
    - incoherence index (`I = D / (E + eps)`)
-4. Governance controls (taxes, audits, staking, circuit breakers, collusion and
+4. Governance controls (taxes, audits, staking, [circuit breakers](concepts/governance.md), collusion and
    incoherence-targeted interventions).
 5. Scenario sweeps and replay analysis to compare safety and welfare outcomes.
 
 ## Formal Framework
 
-The sandbox draws on market microstructure theory to model information
+The sandbox draws on [market microstructure](research/papers.md) theory to model information
 asymmetry and adverse selection in multi-agent systems. Core formulas below are
 implemented in `swarm/core/`.
 
@@ -220,7 +224,7 @@ world [5]:
   leakage)
 
 Boundary policies enforce:
-- **Rate limiting:** max crossings per agent per time window
+- **[Rate limiting](design/web-api-plan.md):** max crossings per agent per time window
 - **Content filtering:** blocks flows containing forbidden patterns
 - **Sensitivity filtering:** blocks flows with sensitivity above threshold
 

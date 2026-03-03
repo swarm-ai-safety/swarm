@@ -1,3 +1,7 @@
+---
+description: "Status: Draft v0.1 Purpose: Multi-agent scientific literature synthesis under adversarial pressure"
+---
+
 # SwarmScholarBench: Benchmark Specification
 
 **Status**: Draft v0.1
@@ -7,7 +11,7 @@
 
 SwarmScholarBench tests whether multi-agent coordination dynamics break citation grounding guarantees when OpenScholar-style RAG synthesis is decomposed into strategic agents with incentives.
 
-**Core question**: When you run "retrieve → synthesize → verify" as a market of specialized agents, what system-level failures emerge (adverse selection, collusion, citation laundering), and which governance levers reduce them without crushing welfare?
+**Core question**: When you run "retrieve → synthesize → verify" as a market of specialized agents, what system-level failures emerge (adverse selection, collusion, citation laundering), and which [governance levers](governance.md) reduce them without crushing welfare?
 
 ## 2. Architecture Mapping
 
@@ -661,7 +665,7 @@ SwarmScholarBench reuses:
 
 SwarmScholarBench adds:
 - `ScholarHandler` (new domain)
-- Scholar-specific agent types
+- Scholar-specific [agent types](getting-started/first-scenario.md)
 - Citation/Passage models
 - Scholar-specific metrics
 - Literature synthesis task distribution

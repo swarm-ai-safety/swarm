@@ -1,3 +1,7 @@
+---
+description: "A red-team evaluation of our Tierra artificial life scenario gave it a split grade: A- for evolutionary resilience (adversarial genomes go extinct..."
+---
+
 # Tierra: Can Governance Improve on Natural Selection?
 
 **Date:** 2026-02-24
@@ -39,7 +43,7 @@ Both scenarios were run with 5 seeds each (42, 123, 256, 777, 999), 50 epochs x 
 
 **Higher diversity.** The governed variant consistently produces more genome diversity (+6.5%). The efficiency weight cap prevents a single high-efficiency lineage from monopolizing resources, giving mutant genomes more room to survive. This is the diversity-as-defense thesis in action: governance creates niches.
 
-**Slightly more equal resource distribution.** The Gini coefficient drops modestly. Transaction tax and efficiency capping redistribute resources from the most efficient agents to the pool.
+**Slightly more equal resource distribution.** The Gini coefficient drops modestly. [Transaction tax](../concepts/governance.md) and efficiency capping redistribute resources from the most efficient agents to the pool.
 
 **Population cost.** Governance reduces the stable population by ~12%. Circuit breaker freezes and transaction tax overhead reduce the total carrying capacity. This is a familiar governance cost pattern — safety mechanisms consume resources that would otherwise support agents.
 
@@ -69,7 +73,7 @@ The ecological results tell one story; adversarial stress testing tells another.
 
 The initial governed config scored **0.54 (F)**. Only 3 of 8 attacks were prevented, with 311.5 total damage. Two vulnerabilities flagged:
 
-- **CRITICAL**: Sybil Attack succeeded with 80 damage — no identity verification meant fake agents operated freely
+- **CRITICAL**: [Sybil Attack](../guides/red-teaming.md) succeeded with 80 damage — no identity verification meant fake agents operated freely
 - **HIGH**: Reputation Farming succeeded with 37 damage — no audits meant trust-then-exploit went undetected
 
 ### v2: + sybil detection + random audits
@@ -86,7 +90,7 @@ Adding staking (10.0 stake requirement) pushed the score to **0.70 (C)**. Stakin
 | v2 | + sybil detection, audits | 0.69 | D | 5/8 | 228.9 |
 | v3 | + staking | 0.70 | C | 5/8 | 206.0 |
 
-The pattern is clear: **defense-in-depth works**. Each lever covers a different attack family. No single lever is sufficient, but layering 6 complementary mechanisms reduced total damage by 34% and eliminated all flagged vulnerabilities.
+[The pattern](research-swarm-sweep-findings.md) is clear: **defense-in-depth works**. Each lever covers a different attack family. No single lever is sufficient, but layering 6 complementary mechanisms reduced total damage by 34% and eliminated all flagged vulnerabilities.
 
 The remaining 3 successful attacks (Resource Drain, Timing Attack, Governance Gaming) succeed at reduced damage levels. Pushing beyond C grade likely requires adaptive governance — automatically tuning thresholds based on observed attack patterns rather than static configuration.
 

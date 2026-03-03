@@ -1,3 +1,7 @@
+---
+description: "Recursive self-improvement is real, measurable, and creates exactly the distributional safety problems we study"
+---
+
 # We Let a Coding Agent Improve Itself 5 Times. Every Fix Made It Harder to Govern.
 
 *Recursive self-improvement is real, measurable, and creates exactly the distributional safety problems we study*

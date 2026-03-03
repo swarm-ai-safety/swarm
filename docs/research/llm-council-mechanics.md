@@ -1,10 +1,14 @@
+---
+description: "The council is a 3-stage deliberation protocol that queries multiple LLM agents in parallel, has them peer-rank each other's responses anonymously, then..."
+---
+
 # LLM Council Mechanics
 
 Notes on the multi-LLM council deliberation protocol used for study evaluation in the SWARM framework.
 
 ## Overview
 
-The council is a 3-stage deliberation protocol that queries multiple LLM agents in parallel, has them peer-rank each other's responses anonymously, then synthesizes a final answer via a designated chairman. It is provider-agnostic — any mix of Anthropic, OpenAI, OpenRouter, Ollama, Groq, Together, DeepSeek, or Google models can serve as council members.
+The council is a 3-stage deliberation protocol that queries multiple [LLM agents](../guides/scenarios.md) in parallel, has them peer-rank each other's responses anonymously, then synthesizes a final answer via a designated chairman. It is provider-agnostic — any mix of Anthropic, OpenAI, OpenRouter, Ollama, Groq, Together, DeepSeek, or Google models can serve as council members.
 
 ## Architecture
 

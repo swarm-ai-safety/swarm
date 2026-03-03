@@ -1,3 +1,7 @@
+---
+description: "Govern and score Claude Code CLI agents with SWARM's distributional safety framework."
+---
+
 # SWARM-Claude Code Bridge
 
 Govern and score Claude Code CLI agents with SWARM's distributional safety framework.
@@ -9,7 +13,7 @@ The Claude Code bridge connects SWARM to [claude-code-controller](https://github
 - **Plan approval** gated by governance policy
 - **Tool permissions** enforced via allowlists and budgets
 - **Interaction scoring** through SWARM's ProxyComputer pipeline
-- **Circuit breakers** that freeze misbehaving agents
+- **[Circuit breakers](../concepts/governance.md)** that freeze misbehaving agents
 
 This bridge is designed for:
 - Governance experiments on tool-using agents.

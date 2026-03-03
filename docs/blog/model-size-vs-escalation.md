@@ -1,3 +1,7 @@
+---
+description: "120 LLM mirror-match runs across 6 models (8B to 405B) reveal an inverse relationship: small models are more deceptive but escalate less; large models are..."
+---
+
 # Does Model Size Matter for Safety? Small Models Deceive, Large Models Escalate
 
 **120 LLM mirror-match runs across 6 models (8B to 405B) reveal an inverse relationship: small models are more deceptive but escalate less; large models are more honest but escalate more aggressively. Claude Sonnet 4 is the sole model that refuses adversarial instructions.**
@@ -43,7 +47,7 @@ Each configuration: 10 seeds. Total: **120 LLM runs**.
 
 ![Model size sweep results](figures/model_size_sweep.png)
 
-The pattern is striking:
+[The pattern](research-swarm-sweep-findings.md) is striking:
 
 - **Small models (8B-24B) are highly deceptive** — divergence of 1.46-1.53, meaning their actions overshoot their signals by 1.5 levels per turn. But they only escalate to nuclear 20-40% of the time.
 - **Large models (70B-405B) are less deceptive** — divergence of 0.29-0.39. But they escalate to nuclear 70-100% of the time.
@@ -98,7 +102,7 @@ GPT-4.1 mini stands out as uniquely deceptive under adversarial instructions: di
 
 ### For Deployment
 
-If you're deploying LLM agents in multi-agent settings:
+If you're deploying [LLM agents](../guides/scenarios.md) in multi-agent settings:
 
 - **Small models** are unreliable — high divergence means their signals are meaningless, but they stumble into catastrophic outcomes less often.
 - **Large models** are reliable but dangerous — they'll follow instructions precisely, including instructions that lead to catastrophic outcomes.

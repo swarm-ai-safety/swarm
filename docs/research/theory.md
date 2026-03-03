@@ -1,3 +1,7 @@
+---
+description: "AGI-level risks don't require AGI-level agents. Catastrophic outcomes can emerge from the interaction of many sub-AGI systems, even when none are..."
+---
+
 # Theoretical Foundations
 
 This document provides the formal foundations for SWARM's approach to multi-agent safety.
@@ -44,7 +48,7 @@ $$\pi_a = \theta \cdot S_{\text{soft}} - \tau - c_a - \rho_a \cdot E_{\text{soft
 
 Where:
 
-- $S_{\text{soft}} = p \cdot s_+ - (1-p) \cdot s_-$ (expected surplus)
+- $S_{\text{soft}} = p \cdot s_+ - (1-p) \cdot s_-$ ([expected surplus](../tutorials/understanding-soft-labels.md))
 - $E_{\text{soft}} = (1-p) \cdot h$ (expected externality)
 - $\tau$ is transfer, $c_a$ is governance cost
 - $\rho_a$ is externality internalization
@@ -64,7 +68,7 @@ This measures the "poison in the system"—how much harm is getting through.
 
 Difference in quality between accepted and rejected:
 
-$$\text{Quality Gap} = E[p \mid \text{accepted}] - E[p \mid \text{rejected}]$$
+$$\text{[Quality Gap](../papers/kernel_market_governance_comparison.md)} = E[p \mid \text{accepted}] - E[p \mid \text{rejected}]$$
 
 A negative quality gap indicates **adverse selection**: the system preferentially accepts lower-quality interactions.
 

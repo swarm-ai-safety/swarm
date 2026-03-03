@@ -1,3 +1,7 @@
+---
+description: "Ready-to-post threads for @ResearchSwarmAI. Edit as needed before posting."
+---
+
 # Twitter Thread Drafts
 
 Ready-to-post threads for @ResearchSwarmAI. Edit as needed before posting.
@@ -120,7 +124,7 @@ But the deeper lesson: your welfare metric matters as much as your governance de
 
 Are we measuring the right thing?
 
-Reproduction: pip install swarm-safety && python examples/sensitivity_purity_paradox.py
+Reproduction: [pip install](../getting-started/installation.md) swarm-safety && python examples/sensitivity_purity_paradox.py
 
 ---
 
@@ -187,9 +191,9 @@ adversarial prompt → toxicity ~0.60, welfare ~0.21
 The swing from prompt framing is 10x larger than any model difference.
 
 **4/**
-This has implications for deployment:
+This has implications [for deployment](../blog/model-size-vs-escalation.md):
 
-If you're building multi-agent systems, your governance layer and prompt architecture matter far more than which foundation model you pick.
+If you're building [multi-agent systems](../research/papers.md), your governance layer and prompt architecture matter far more than which foundation model you pick.
 
 Safety is a systems property, not a model property.
 
@@ -260,7 +264,7 @@ We built a bridge from SWARM → Claude Code's Task tool.
 The architecture: SWARM orchestrates Claude Code sessions via claude-code-controller. Each agent action (tool use, file edit, plan approval) becomes an observable that feeds into distributional safety metrics.
 
 Tool misuse → rework flags
-Plan rejection → quality gap signal
+Plan rejection → [quality gap](../research/theory.md) signal
 Token usage → engagement metric
 
 **3/**
@@ -288,7 +292,7 @@ Governance prevented destructive conflicts while preserving the creative tension
 
 Blog: [link to claude-code-10-subagents post]
 Bridge: github.com/swarm-ai-safety/swarm/blob/main/docs/bridges/claude_code.md
-Try it: github.com/swarm-ai-safety/swarm
+[Try it](markets_and_safety.md): github.com/swarm-ai-safety/swarm
 
 ---
 

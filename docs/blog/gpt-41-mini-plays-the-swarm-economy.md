@@ -1,3 +1,7 @@
+---
+description: "What happens when you drop an LLM into a multi-agent economy with honest, opportunistic, and deceptive bots — and score everything with soft labels?"
+---
+
 # GPT-4.1 Mini Plays the SWARM Economy
 
 *What happens when you drop an LLM into a multi-agent economy with honest, opportunistic, and deceptive bots — and score everything with soft labels?*

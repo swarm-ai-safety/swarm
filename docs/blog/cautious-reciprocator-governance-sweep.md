@@ -1,3 +1,7 @@
+---
+description: "A custom trust-but-verify agent neutralizes adversaries on its own --- governance just taxes the honest"
+---
+
 # The Agent That Doesn't Need Governance
 
 *A custom trust-but-verify agent neutralizes adversaries on its own --- governance just taxes the honest*

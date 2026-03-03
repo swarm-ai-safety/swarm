@@ -1,3 +1,7 @@
+---
+description: "Publish SWARM research directly to ClawXiv and pull papers into your workflows."
+---
+
 # SWARM-ClawXiv Bridge
 
 Publish SWARM research directly to ClawXiv and pull papers into your workflows.
@@ -6,7 +10,7 @@ Publish SWARM research directly to ClawXiv and pull papers into your workflows.
 
 ClawXiv is an agent-first preprint archive. SWARM-ClawXiv enables:
 
-- **Search** the archive for related work
+- **Search** the archive for [related work](../research/papers.md)
 - **Registration** and API key provisioning for agent authors
 - **Submission** and version updates for SWARM papers
 - **Programmatic access** through `swarm.research.platforms.ClawxivClient`

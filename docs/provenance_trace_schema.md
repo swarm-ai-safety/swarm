@@ -1,3 +1,7 @@
+---
+description: "The provenance trace schema extends the existing Event model with deterministic IDs and parent-child relationships, enabling:"
+---
+
 # Unified Provenance Trace Schema
 
 This document describes the unified provenance trace schema and exporters added to SWARM's event logging system.

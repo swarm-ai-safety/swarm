@@ -1,3 +1,7 @@
+---
+description: "The metrics suite (swarm.evaluation.eval_metrics) provides six core functions for evaluating agent and system performance:"
+---
+
 # Evaluation Metrics Suite
 
 This document describes the evaluation metrics suite for SWARM experiments, providing standardized measurements for success rate, efficiency, behavior patterns, audit effectiveness, and deception detection.

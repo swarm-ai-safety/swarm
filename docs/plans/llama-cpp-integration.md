@@ -1,3 +1,7 @@
+---
+description: "Enable SWARM to use local LLaMA models via llama.cpp for CPU-only inference (e.g. on a MacBook), without requiring any cloud API keys."
+---
+
 # Plan: llama.cpp Integration for Local CPU Inference
 
 ## Goal
@@ -93,7 +97,7 @@ llama_cpp = [
 ]
 ```
 
-Also add to the `llm` extras group so `pip install -e ".[llm]"` pulls it in. The `openai` package (already in `llm` extras) is needed for Option A.
+Also add to the `llm` extras group so `[pip install](../getting-started/installation.md) -e ".[llm]"` pulls it in. The `openai` package (already in `llm` extras) is needed for Option A.
 
 ### Step 5: Create example scenario YAML
 
@@ -162,7 +166,7 @@ python -m swarm run scenarios/llm_llama_cpp.yaml --seed 42
 
 ### Step 8: Documentation
 
-**File:** `docs/guides/llama-cpp-local-inference.md`
+**File:** `docs/[guides](../guides/index.md)/llama-cpp-local-inference.md`
 
 Covers:
 - Prerequisites (llama.cpp build or binary, GGUF model).

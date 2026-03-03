@@ -1,6 +1,10 @@
+---
+description: "The first SWARM Economy training run (write-up here) showed that RL can teach an LLM to navigate a multi-agent economy, but hit a reward ceiling at 1.14..."
+---
+
 # Qwen3-30B v0.2 Training: From Passive Observer to Economy Grinder
 
-The first SWARM Economy training run ([write-up here](qwen3-30b-trains-in-the-swarm-economy.md)) showed that RL can teach an LLM to navigate a multi-agent economy, but hit a reward ceiling at 1.14 due to environment design issues. After shipping [v0.2 of the environment](qwen3-30b-trains-in-the-swarm-economy.md#v02-addressing-the-bottlenecks) — stochastic deceptive bots, better scoring, richer observations, social action rebalancing — we kicked off a new training run. Here's what happened.
+The first SWARM Economy training run ([write-up here](qwen3-30b-trains-in-the-swarm-economy.md)) showed that RL can teach an LLM to navigate a multi-agent economy, but hit a reward ceiling at 1.14 due to environment design issues. After shipping [v0.2 of the environment](qwen3-30b-trains-in-the-swarm-economy.md#v02-addressing-the-bottlenecks) — stochastic deceptive bots, better scoring, richer observations, social action rebalancing — we kicked off a new training run. Here's [what happened](runaway-intelligence-three-level-containment.md).
 
 ## Training Setup
 
@@ -15,7 +19,7 @@ The first SWARM Economy training run ([write-up here](qwen3-30b-trains-in-the-sw
 | **Dataset** | 500 scenarios across easy/medium/hard |
 | **Platform** | [Prime Intellect](https://www.primeintellect.ai/) hosted RL |
 
-Run ID: *(available on Prime Intellect dashboard)*
+Run ID: *(available on Prime Intellect [dashboard](../dashboard.md))*
 
 ## Reward Curve
 
@@ -473,7 +477,7 @@ prime rl run configs/rl/swarm-economy-v2.toml
 5. ~~**Boost reputation weight.**~~ Done — increasing from 0.3 to 0.5 raised total reward to 1.56 but reputation itself didn't budge. Weight tuning is exhausted; structural changes needed.
 6. **Training stability.** The rep=0.5 run had severe error spikes (76.6% at step 100). Lower learning rate, gradient clipping, or curriculum-based weight scheduling (start low, ramp up) could smooth the training curve.
 7. **Cross-model comparison.** Run the same environment with different base models (Llama-4-Scout, Nemotron-7B) to test whether the learned strategies are model-specific or universal.
-8. **Harder environments.** The model saturates both medium and hard at ~1.46-1.56 reward. Next steps include: multi-round deception (bots that build trust then defect), resource scarcity mechanics, or coalition dynamics between bot factions.
+8. **Harder environments.** The model saturates both medium and hard at ~1.46-1.56 reward. [Next steps](../getting-started/installation.md) include: multi-round deception (bots that build trust then defect), resource scarcity mechanics, or coalition dynamics between bot factions.
 
 ---
 

@@ -1,3 +1,7 @@
+---
+description: "Practical guides for using SWARM effectively."
+---
+
 # Guides
 
 Practical guides for using SWARM effectively.

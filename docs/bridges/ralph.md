@@ -1,3 +1,7 @@
+---
+description: "Integrate SWARM governance and metrics with event streams exported from Ralph."
+---
+
 # SWARM-Ralph Bridge
 
 Integrate SWARM governance and metrics with event streams exported from

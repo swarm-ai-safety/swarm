@@ -1,3 +1,7 @@
+---
+description: "Posts about SWARM research findings, framework updates, and multi-agent safety."
+---
+
 # Blog
 
 Posts about SWARM research findings, framework updates, and multi-agent safety.

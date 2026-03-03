@@ -1,13 +1,17 @@
+---
+description: "Train and evaluate RL models on SWARM safety metrics using Prime Intellect's distributed training platform and the verifiers library."
+---
+
 # SWARM–Prime Intellect Bridge
 
-Train and evaluate RL models on SWARM safety metrics using [Prime Intellect](https://www.primeintellect.ai/)'s distributed training platform and the [verifiers](https://github.com/willcrichton/verifiers) library.
+Train and evaluate RL models on SWARM [safety metrics](../blog/local-llama-model-size-safety.md) using [Prime Intellect](https://www.primeintellect.ai/)'s distributed training platform and the [verifiers](https://github.com/willcrichton/verifiers) library.
 
 ## Overview
 
 The bridge provides three integration modes:
 
 1. **Environment export** — publish SWARM scenarios as verifiers-compatible RL environments on the Prime Intellect Environments Hub.
-2. **Safety-reward RL** — train models using SWARM metrics (toxicity, quality gap, adverse selection) as the RL reward signal.
+2. **Safety-reward RL** — train models using SWARM metrics (toxicity, [quality gap](../research/theory.md), adverse selection) as the RL reward signal.
 3. **Evaluation bridge** — load a PI-trained model back into a SWARM simulation to measure population-level safety properties.
 
 ## Installation
