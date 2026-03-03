@@ -35,7 +35,7 @@ export function useUrlState(): UrlState {
 
     return {
       preset: presetSlug && findPresetBySlug(presetSlug) ? presetSlug : null,
-      seed: seedStr ? parseInt(seedStr, 10) || null : null,
+      seed: seedStr ? (Number.isNaN(parseInt(seedStr, 10)) ? null : parseInt(seedStr, 10)) : null,
       autorun,
     };
   }, []);

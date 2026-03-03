@@ -12,7 +12,7 @@ import { useGame } from "@/state/game-context";
 import { DEMO_PRESETS } from "@/data/presets";
 import { DEFAULT_CONFIG } from "@/engine/sim/types";
 import { useSimWorker } from "@/state/use-sim-worker";
-import { useUrlState, configFromUrlState } from "@/state/use-url-state";
+import { useUrlState } from "@/state/use-url-state";
 
 const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 
@@ -43,7 +43,7 @@ export function DataLoader() {
   const [tab, setTab] = useState<Tab>("game");
   const [historyFile, setHistoryFile] = useState<File | null>(null);
   const [eventsFile, setEventsFile] = useState<File | null>(null);
-  const { status: quickPlayStatus, progress: quickPlayProgress, result: quickPlayResult, run: quickPlayRun } = useSimWorker();
+  const { progress: quickPlayProgress, run: quickPlayRun } = useSimWorker();
   const [quickPlayRunning, setQuickPlayRunning] = useState(false);
   const urlState = useUrlState();
 
@@ -107,7 +107,7 @@ export function DataLoader() {
   );
 
   // Quick-play: run a preset directly from the card grid
-  const handleQuickPlay = useCallback(async (presetSlug: string) => {
+  const handleQuickPlay = useCallback(async (presetSlug: string, seedOverride?: number | null) => {
     const preset = DEMO_PRESETS.find((p) => p.slug === presetSlug);
     if (!preset) return;
     const config = {
@@ -116,6 +116,7 @@ export function DataLoader() {
       governance: { ...DEFAULT_CONFIG.governance, ...preset.config.governance },
       payoff: { ...DEFAULT_CONFIG.payoff, ...preset.config.payoff },
     };
+    if (seedOverride != null) config.seed = seedOverride;
     setQuickPlayRunning(true);
     const result = await quickPlayRun(config);
     setQuickPlayRunning(false);
@@ -131,15 +132,8 @@ export function DataLoader() {
     if (autoRunDone.current || data || gameState.isLive) return;
     if (!urlState.preset || !urlState.autorun) return;
     autoRunDone.current = true;
-    handleQuickPlay(urlState.preset);
+    handleQuickPlay(urlState.preset, urlState.seed);
   }, [urlState, data, gameState.isLive, handleQuickPlay]);
-
-  // When quick-play result arrives, load it
-  useEffect(() => {
-    if (quickPlayResult && quickPlayRunning === false) {
-      // Already handled in handleQuickPlay callback
-    }
-  }, [quickPlayResult, quickPlayRunning]);
 
   if (data || gameState.isLive) return null; // Hide once data is loaded or game is live
 

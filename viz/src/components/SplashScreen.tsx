@@ -42,10 +42,10 @@ export function SplashScreen() {
             : ""
         }`}
       />
-      <p className="text-muted text-sm mt-4 animate-[splash-enter_1.2s_ease-out_forwards] opacity-0" style={{ animationDelay: "0.6s", animationFillMode: "forwards" }}>
+      <p className="text-muted text-sm mt-4 animate-[splash-enter_1.2s_ease-out_forwards] opacity-0" style={{ animationDelay: "0.6s" }}>
         Governance benchmark suite with receipts
       </p>
-      <p className="text-muted/40 text-xs mt-6 animate-[splash-enter_1.4s_ease-out_forwards] opacity-0" style={{ animationDelay: "1.2s", animationFillMode: "forwards" }}>
+      <p className="text-muted/40 text-xs mt-6 animate-[splash-enter_1.4s_ease-out_forwards] opacity-0" style={{ animationDelay: "1.2s" }}>
         click to continue
       </p>
     </div>

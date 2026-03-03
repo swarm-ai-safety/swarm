@@ -20,29 +20,32 @@ import { LiveTickDriver } from "./LiveTickDriver";
 import dynamic from "next/dynamic";
 const Leaderboard = dynamic(() => import("./Leaderboard").then((m) => m.Leaderboard), { ssr: false });
 import { EventFeed } from "./EventFeed";
+import { useShareUrl } from "@/state/use-url-state";
+import { DEFAULT_CONFIG } from "@/engine/sim/types";
 
 // ─── Share Button ──────────────────────────────────────────────────
 
 function ShareButton() {
   const { data } = useSimulation();
   const [copied, setCopied] = useState(false);
+  const buildShareUrl = useShareUrl();
 
   const handleShare = useCallback(() => {
     if (!data || typeof window === "undefined") return;
 
-    const params = new URLSearchParams();
-    if (data.seed != null) params.set("seed", data.seed.toString());
-    if (data.n_epochs) params.set("epochs", data.n_epochs.toString());
-    if (data.steps_per_epoch) params.set("steps", data.steps_per_epoch.toString());
-
-    const base = window.location.origin + window.location.pathname;
-    const url = params.toString() ? `${base}?${params.toString()}` : base;
+    const config = {
+      ...DEFAULT_CONFIG,
+      seed: data.seed ?? DEFAULT_CONFIG.seed,
+      epochs: data.n_epochs ?? DEFAULT_CONFIG.epochs,
+      stepsPerEpoch: data.steps_per_epoch ?? DEFAULT_CONFIG.stepsPerEpoch,
+    };
+    const url = buildShareUrl(config) + "&autorun=1";
 
     navigator.clipboard.writeText(url).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
-  }, [data]);
+  }, [data, buildShareUrl]);
 
   if (!data) return null;
 
