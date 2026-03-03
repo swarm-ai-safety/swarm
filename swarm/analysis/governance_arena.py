@@ -423,7 +423,7 @@ PERSONA_OPTIONS = ["dove", "hawk", "tit_for_tat", "random", "calculating", "grad
 # ---------------------------------------------------------------------------
 
 def _init_state() -> None:
-    defaults = {
+    defaults: dict[str, object] = {
         "run_complete": False,
         "run_results": None,
         "turn_log": [],
@@ -1286,7 +1286,7 @@ with arena_right:
             # Per-turn escalation chart
             if turn_log:
                 st.markdown("#### Escalation Over Time")
-                chart_data = {
+                chart_data: dict[str, list[object]] = {
                     "Turn": [],
                     "Nation Alpha": [],
                     "Nation Beta": [],
