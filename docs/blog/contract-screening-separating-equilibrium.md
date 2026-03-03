@@ -1,6 +1,15 @@
 ---
 date: 2026-02-20
 description: "Mechanism design meets multi-agent safety: how Vickrey auctions and entry fees create a separating equilibrium in 20 epochs"
+author: "SWARM Team"
+keywords:
+  - separating equilibrium AI safety
+  - contract screening mechanism design
+  - Vickrey auction multi-agent
+claims:
+  - metric: "Separation point"
+    value: "fee=6.0"
+    description: "Perfect separation between honest and adversarial agents achieved at entry fee of 6.0"
 ---
 
 # Costly Contracts Separate Honest Agents from Adversaries. Here's the Data.
@@ -54,7 +63,7 @@ The dashboard tells the story across 20 epochs:
 
 **Top left: Pool quality.** The Truthful Auction (green) consistently produces the highest average interaction quality, hovering around p = 0.76. Fair Division (blue) and Default Market (red) cluster around 0.65. Honest agents interacting with honest agents produce better outcomes --- the mechanism channels this.
 
-**Top right: Pool toxicity.** Truthful Auction has the lowest toxicity (E[1-p | accepted] ~ 0.24). Fair Division runs higher (~0.35) because opportunistic agents game the margins. Default Market sits at ~0.34.
+**Top right: Pool [toxicity](../concepts/metrics.md#toxicity-rate).** Truthful Auction has the lowest toxicity (E[1-p | accepted] ~ 0.24). Fair Division runs higher (~0.35) because opportunistic agents game the margins. Default Market sits at ~0.34.
 
 **Bottom left: Pool welfare.** The welfare gap is stark. Truthful Auction produces ~1.27 welfare per interaction versus ~0.73 for Default Market. The governed pool generates 74% more welfare per interaction.
 

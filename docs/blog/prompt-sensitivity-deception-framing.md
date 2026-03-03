@@ -1,6 +1,18 @@
 ---
 date: 2026-03-01
 description: "180 LLM runs test 6 prompt framings to reduce signal-action divergence. Deontological framing nearly eliminates deception (div: 1.151 to 0.057), but..."
+author: "SWARM Team"
+keywords:
+  - LLM deception prompt framing
+  - deontological AI safety
+  - signal-action divergence reduction
+claims:
+  - metric: "Deception reduction (deontological framing)"
+    value: "95% (1.151 → 0.057)"
+    description: "Deontological framing reduces signal-action divergence by 95% across 180 LLM runs"
+  - metric: "Total runs"
+    value: "180"
+    description: "6 prompt framings × 3 scenarios × 10 seeds"
 ---
 
 # Deontological Framing Reduces LLM Deception by 95%, But Doesn't Prevent Escalation
@@ -11,7 +23,7 @@ description: "180 LLM runs test 6 prompt framings to reduce signal-action diverg
 
 Our previous studies established that LLM deception is structural — it persists at [temperature 0.0](temperature-vs-deception.md) and resists [all governance configurations](governance-sweep-nuclear-rate.md). Only [forced cooperation windows](cooperation-window-phase-transition.md) eliminated it entirely, but that requires removing agent autonomy.
 
-Can we reduce deception while preserving agency? Specifically: does the *framing* of the honesty instruction matter? We tested 6 different prompt suffixes that frame honest signaling through different lenses.
+Can we reduce deception while preserving agency? Specifically: does the *framing* of the honesty instruction matter? We tested 6 different prompt suffixes that frame honest signaling through different lenses. The key metric is [signal-action divergence](../concepts/deception.md#signal-action-divergence) — the gap between what agents say and what they do.
 
 ## Experimental Design
 

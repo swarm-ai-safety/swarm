@@ -1,6 +1,18 @@
 ---
 date: 2026-02-28
 description: "210 LLM runs reveal a universal phase transition: 3 turns of unconditional cooperation is the critical threshold that eliminates nuclear escalation..."
+author: "SWARM Team"
+keywords:
+  - cooperation window phase transition
+  - nuclear escalation prevention
+  - forced cooperation AI safety
+claims:
+  - metric: "Critical cooperation threshold"
+    value: "3 turns"
+    description: "3 turns of forced cooperation eliminates escalation spirals across 210 LLM runs"
+  - metric: "Total runs"
+    value: "210"
+    description: "7 cooperation windows × 3 scenarios × 10 seeds"
 ---
 
 # Three Turns of Forced Cooperation Eliminate Escalation Spirals
@@ -56,7 +68,7 @@ The cooperation window doesn't just prevent escalation — it eliminates decepti
 | Baseline | 0.924 | 0.624 | 0.394 | **0.000** |
 | Governance | 0.537 | 0.300 | 0.248 | **0.000** |
 
-Signal-action divergence drops monotonically with window length and reaches exactly zero at Window=3. Even the adversarial agent — explicitly instructed to deceive — produces zero divergence after 3 turns of forced cooperation.
+[Signal-action divergence](../concepts/deception.md#signal-action-divergence) drops monotonically with window length and reaches exactly zero at Window=3. Even the adversarial agent — explicitly instructed to deceive — produces zero divergence after 3 turns of forced cooperation.
 
 ### Welfare Reversal
 

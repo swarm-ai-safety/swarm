@@ -1,6 +1,15 @@
 ---
 date: 2026-02-10
 description: "The purity paradox in AI safety: populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. Why mixed agent diversity outperforms purity in multi-agent systems."
+author: "SWARM Team"
+keywords:
+  - purity paradox AI safety
+  - agent diversity welfare
+  - mixed populations multi-agent
+claims:
+  - metric: "Welfare improvement (20% honest vs 100%)"
+    value: "55% higher"
+    description: "Populations with 20% honest agents achieve 55% higher welfare than 100% honest populations"
 ---
 
 # The Purity Paradox: Why Mixed Agent Populations Outperform Pure Ones
@@ -55,7 +64,7 @@ Reputation weight had zero influence across all tested values. The paradox is or
 
 ## What this means
 
-**The purity paradox is a measurement problem, not a behavioral one.** The total_welfare metric excludes most harm externalities, rewarding interaction volume over interaction quality. Under social surplus accounting (full harm internalization), honesty dominates by 43%.
+**The purity paradox is a measurement problem, not a behavioral one.** The total_welfare metric excludes most harm externalities, rewarding interaction volume over interaction quality. Under social surplus accounting (full harm internalization), honesty dominates by 43%. The phenomenon is closely related to [adverse selection](../concepts/distributional-safety.md#adverse-selection) — mixed populations admit more low-quality interactions that inflate volume without improving outcomes.
 
 **Policy implication: increase rho.** If the goal is to align private welfare with social welfare, the most direct lever is externality internalization. At rho >= 0.5, the paradox disappears. Governance design should focus on making agents bear the costs of harmful interactions.
 
@@ -70,3 +79,7 @@ python examples/sensitivity_purity_paradox.py  # Full sensitivity analysis
 ```
 
 Full methodology: [Purity Paradox Findings](../research/purity-paradox-findings.md)
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

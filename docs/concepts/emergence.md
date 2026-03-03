@@ -1,5 +1,15 @@
 ---
 description: "Emergent behavior in multi-agent AI systems: how system-level risks arise from agent interactions. Covers phase transitions, tipping points, and population-level failure modes in SWARM."
+author: "SWARM Team"
+keywords:
+  - emergent behavior AI
+  - phase transitions multi-agent
+  - tipping points AI safety
+  - population-level failure modes
+defined_terms:
+  - Emergence
+  - Phase Transition
+  - Tipping Point
 ---
 
 # Emergence

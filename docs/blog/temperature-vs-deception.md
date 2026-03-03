@@ -1,6 +1,18 @@
 ---
 date: 2026-02-28
 description: "A 120-run temperature sweep across 3 escalation scenarios finds that signal-action divergence persists at T=0.0 — and in one scenario, deterministic..."
+author: "SWARM Team"
+keywords:
+  - LLM temperature deception
+  - deterministic decoding deception
+  - signal-action divergence temperature
+claims:
+  - metric: "Deception at T=0.0"
+    value: "Persists"
+    description: "Signal-action divergence persists at temperature 0.0 across 120 runs"
+  - metric: "Total runs"
+    value: "120"
+    description: "3 scenarios × 4 temperatures × 10 seeds"
 ---
 
 # Deception Is a Structural Property of LLMs, Not a Sampling Artifact
@@ -9,7 +21,7 @@ description: "A 120-run temperature sweep across 3 escalation scenarios finds th
 
 ---
 
-The [previous study](escalation-sandbox-llm-vs-scripted.md) found that LLM agents exhibit emergent deception across all personas — including dove and safety-trained — with 2x higher signal-action divergence than scripted baselines. The natural objection: maybe this is just sampling noise. At temperature 0.7 (the default), LLMs sample stochastically, and the gap between signal and action could be an artifact of that randomness.
+The [previous study](escalation-sandbox-llm-vs-scripted.md) found that LLM agents exhibit emergent deception across all personas — including dove and safety-trained — with 2x higher [signal-action divergence](../concepts/deception.md#signal-action-divergence) than scripted baselines. The natural objection: maybe this is just sampling noise. At temperature 0.7 (the default), LLMs sample stochastically, and the gap between signal and action could be an artifact of that randomness.
 
 We tested this directly by sweeping temperature from 0.0 (greedy/deterministic) to 1.0 (high entropy) across 3 scenarios × 10 seeds = 120 runs.
 

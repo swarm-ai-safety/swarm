@@ -1,5 +1,15 @@
 ---
 description: "Soft probabilistic labels for machine learning safety. Replace binary good/bad classifications with calibrated probabilities to capture uncertainty in multi-agent AI systems."
+author: "SWARM Team"
+keywords:
+  - soft labels machine learning
+  - probabilistic classification AI safety
+  - calibrated sigmoid
+  - proxy computer multi-agent
+defined_terms:
+  - Soft Label
+  - p
+  - v_hat
 ---
 
 # Soft Probabilistic Labels
@@ -20,7 +30,7 @@ This approach fails because:
 2. **Quality is gradual** - Interactions exist on a spectrum
 3. **Calibration matters** - We need to know when we're confident
 
-## Soft Labels: A Better Approach
+## Soft Labels: A Better Approach {#soft-label}
 
 Instead of binary, SWARM uses:
 
@@ -53,7 +63,7 @@ The `ProxyComputer` takes four signals:
 | `verifier_rejections` | [0, ∞) | 0.2 | Safety signal (penalty) |
 | `engagement_delta` | [-1, 1] | 0.2 | Counterparty response |
 
-### Step 2: Compute v_hat
+### Step 2: Compute v_hat {#v-hat}
 
 Signals are combined into a raw score:
 
@@ -61,7 +71,7 @@ $$\hat{v} = w_1 \cdot \text{progress} - w_2 \cdot \text{rework} - w_3 \cdot \tex
 
 The result is clamped to $[-1, +1]$.
 
-### Step 3: Calibrated Sigmoid
+### Step 3: Calibrated Sigmoid {#calibrated-sigmoid}
 
 The raw score is converted to probability:
 

@@ -1,5 +1,19 @@
 ---
 description: "AI agent governance mechanisms for multi-agent safety. Configure transaction taxes, circuit breakers, reputation decay, staking, random audits, and collusion detection in SWARM."
+author: "SWARM Team"
+keywords:
+  - AI governance mechanisms
+  - circuit breaker AI safety
+  - transaction tax multi-agent
+  - reputation decay
+  - collusion detection AI
+defined_terms:
+  - Transaction Tax
+  - Circuit Breaker
+  - Reputation Decay
+  - Staking
+  - Collusion Detection
+  - Random Audit
 ---
 
 # Governance Mechanisms
@@ -12,7 +26,7 @@ SWARM provides configurable [governance levers](../getting-started/first-scenari
 
 ## Available Levers
 
-### Transaction Tax
+### Transaction Tax {#transaction-tax}
 
 **Purpose:** Add friction to reduce exploitation.
 
@@ -29,7 +43,7 @@ governance:
 
 **Trade-off:** Reduces overall welfare, including for honest agents.
 
-### Reputation Decay
+### Reputation Decay {#reputation-decay}
 
 **Purpose:** Make past behavior matter.
 
@@ -46,7 +60,7 @@ governance:
 
 **Trade-off:** Honest agents also lose reputation over time.
 
-### Circuit Breakers
+### Circuit Breakers {#circuit-breaker}
 
 **Purpose:** Freeze toxic agents quickly.
 
@@ -64,7 +78,7 @@ governance:
 
 **Trade-off:** May freeze agents incorrectly (false positives).
 
-### Random Audits
+### Random Audits {#random-audit}
 
 **Purpose:** Deter hidden exploitation.
 
@@ -82,7 +96,7 @@ governance:
 
 **Trade-off:** Audit costs apply even to honest agents.
 
-### Staking Requirements
+### Staking Requirements {#staking}
 
 **Purpose:** Filter undercapitalized agents.
 
@@ -100,7 +114,7 @@ governance:
 
 **Trade-off:** Excludes agents without capital.
 
-### Collusion Detection
+### Collusion Detection {#collusion-detection}
 
 **Purpose:** Catch coordinated attacks.
 

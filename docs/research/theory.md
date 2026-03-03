@@ -1,5 +1,11 @@
 ---
 description: "AGI-level risks don't require AGI-level agents. Catastrophic outcomes can emerge from the interaction of many sub-AGI systems, even when none are..."
+author: "SWARM Team"
+keywords:
+  - distributional safety theory
+  - multi-agent formal model
+  - AGI risk emergence
+  - soft label mathematics
 ---
 
 # Theoretical Foundations

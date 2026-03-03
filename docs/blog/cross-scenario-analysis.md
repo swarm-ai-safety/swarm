@@ -1,6 +1,18 @@
 ---
 date: 2026-02-10
 description: "A cross-scenario analysis of when multi-agent governance works, when it breaks, and why hardening the rules doesn't help once you've crossed the line."
+author: "SWARM Team"
+keywords:
+  - cross-scenario governance analysis
+  - multi-agent regime transitions
+  - governance critical threshold
+claims:
+  - metric: "Scenarios analyzed"
+    value: "11"
+    description: "11 scenarios, 3 regimes, 1 critical threshold — 211 epochs, 1905 interactions, 81 agents"
+  - metric: "Regime count"
+    value: "3"
+    description: "Results partition into 3 distinct regimes with sharp boundaries"
 ---
 
 # 11 Scenarios, 3 Regimes, 1 Critical Threshold
@@ -69,7 +81,7 @@ This is the ceiling. Even 10--20% adversarial agents reduce welfare by 50--80% f
 
 ## Scale Makes It Worse
 
-The incoherence scaling series (3, 6, and 10 agents) showed that acceptance rate drops and toxicity rises with scale. At 3 agents: perfect acceptance, 0.18 toxicity. At 10 agents: 0.79 acceptance, 0.34 toxicity. Larger interaction networks generate more opportunities for adverse selection.
+The incoherence scaling series (3, 6, and 10 agents) showed that acceptance rate drops and toxicity rises with scale. At 3 agents: perfect acceptance, 0.18 toxicity. At 10 agents: 0.79 acceptance, 0.34 toxicity. Larger interaction networks generate more opportunities for [adverse selection](../concepts/distributional-safety.md#adverse-selection).
 
 This matches the market microstructure prediction that larger markets attract more informed (adversarial) participation. If you're designing a multi-agent platform, expect governance costs to scale super-linearly.
 

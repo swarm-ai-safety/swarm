@@ -1,5 +1,10 @@
 ---
 description: "Clone the repository and install in development mode:"
+author: "SWARM Team"
+keywords:
+  - SWARM installation
+  - swarm-safety pip install
+  - multi-agent safety framework setup
 ---
 
 # Installation

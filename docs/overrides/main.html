@@ -7,13 +7,22 @@
   {% set img = config.site_url ~ page.meta.image if page and page.meta and page.meta.image else config.site_url ~ "assets/logo.svg" %}
   {% set is_blog = page and page.url and "blog/" in page.url %}
   {% set is_api = page and page.url and "api/" in page.url %}
+  {% set is_glossary = page and page.url and "glossary" in page.url %}
+  {% set is_concept = page and page.url and "concepts/" in page.url %}
+  {% set is_theory = page and page.url and "research/theory" in page.url %}
+  {% set is_install = page and page.url and "getting-started/installation" in page.url %}
   {% set pub_date = page.meta.date if page and page.meta and page.meta.date else "" %}
+  {% set author = page.meta.author if page and page.meta and page.meta.author else "SWARM Team" %}
+  {% set keywords = page.meta.keywords if page and page.meta and page.meta.keywords else [] %}
 
   <!-- Canonical URL -->
   <link rel="canonical" href="{{ url }}" />
 
+  <!-- hreflang -->
+  <link rel="alternate" hreflang="en" href="{{ url }}" />
+
   <!-- Open Graph -->
-  <meta property="og:type" content="{% if is_blog %}article{% else %}website{% endif %}" />
+  <meta property="og:type" content="{% if is_blog %}article{% elif is_theory %}article{% else %}website{% endif %}" />
   <meta property="og:title" content="{{ title }}" />
   <meta property="og:description" content="{{ desc }}" />
   <meta property="og:url" content="{{ url }}" />
@@ -30,8 +39,34 @@
   <meta name="twitter:description" content="{{ desc }}" />
   <meta name="twitter:image" content="{{ img }}" />
 
-  <!-- JSON-LD Schema -->
-  {% if is_blog %}
+  <!-- JSON-LD Schema: DefinedTermSet (glossary or concept pages with defined_terms) -->
+  {% if (is_glossary or is_concept) and page.meta and page.meta.defined_terms %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "DefinedTermSet",
+    "name": "{{ title }}",
+    "description": "{{ desc }}",
+    "url": "{{ url }}",
+    "hasDefinedTerm": [
+      {% for term in page.meta.defined_terms %}
+      {
+        "@type": "DefinedTerm",
+        "name": "{{ term }}",
+        "url": "{{ url }}#{{ term | lower | replace(' ', '-') | replace('_', '-') }}",
+        "inDefinedTermSet": "{{ url }}"
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ],
+    "publisher": {
+      "@type": "Organization",
+      "name": "SWARM",
+      "url": "{{ config.site_url }}"
+    }
+  }
+  </script>
+  <!-- JSON-LD Schema: BlogPosting with claims (Dataset) -->
+  {% elif is_blog and page.meta and page.meta.claims %}
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -40,6 +75,54 @@
     "description": "{{ desc }}",
     "url": "{{ url }}",
     {% if pub_date %}"datePublished": "{{ pub_date }}",{% endif %}
+    "author": {
+      "@type": "Organization",
+      "name": "{{ author }}"
+    },
+    {% if keywords %}"keywords": "{{ keywords | join(', ') }}",{% endif %}
+    "citation": "https://arxiv.org/abs/2512.16856",
+    "publisher": {
+      "@type": "Organization",
+      "name": "SWARM",
+      "url": "{{ config.site_url }}"
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "{{ url }}"
+    },
+    "about": {
+      "@type": "Dataset",
+      "name": "{{ title }} — Empirical Results",
+      "description": "Quantified findings from {{ title }}",
+      "variableMeasured": [
+        {% for claim in page.meta.claims %}
+        {
+          "@type": "PropertyValue",
+          "name": "{{ claim.metric }}",
+          "value": "{{ claim.value }}",
+          "description": "{{ claim.description }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }
+  }
+  </script>
+  <!-- JSON-LD Schema: Enhanced BlogPosting -->
+  {% elif is_blog %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "{{ title }}",
+    "description": "{{ desc }}",
+    "url": "{{ url }}",
+    {% if pub_date %}"datePublished": "{{ pub_date }}",{% endif %}
+    "author": {
+      "@type": "Organization",
+      "name": "{{ author }}"
+    },
+    {% if keywords %}"keywords": "{{ keywords | join(', ') }}",{% endif %}
+    "citation": "https://arxiv.org/abs/2512.16856",
     "publisher": {
       "@type": "Organization",
       "name": "SWARM",
@@ -51,6 +134,51 @@
     }
   }
   </script>
+  <!-- JSON-LD Schema: ScholarlyArticle (theory page) -->
+  {% elif is_theory %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ScholarlyArticle",
+    "headline": "{{ title }}",
+    "description": "{{ desc }}",
+    "url": "{{ url }}",
+    "author": {
+      "@type": "Organization",
+      "name": "{{ author }}"
+    },
+    "citation": {
+      "@type": "ScholarlyArticle",
+      "name": "Distributional Safety in Agentic Systems",
+      "url": "https://arxiv.org/abs/2512.16856"
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "SWARM",
+      "url": "{{ config.site_url }}"
+    }
+  }
+  </script>
+  <!-- JSON-LD Schema: SoftwareSourceCode (installation page) -->
+  {% elif is_install %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareSourceCode",
+    "name": "SWARM",
+    "description": "{{ desc }}",
+    "url": "{{ url }}",
+    "codeRepository": "https://github.com/swarm-ai-safety/swarm",
+    "programmingLanguage": "Python",
+    "license": "https://opensource.org/licenses/MIT",
+    "author": {
+      "@type": "Organization",
+      "name": "SWARM",
+      "url": "{{ config.site_url }}"
+    }
+  }
+  </script>
+  <!-- JSON-LD Schema: TechArticle (API docs) -->
   {% elif is_api %}
   <script type="application/ld+json">
   {
@@ -66,6 +194,7 @@
     }
   }
   </script>
+  <!-- JSON-LD Schema: WebPage (default) -->
   {% else %}
   <script type="application/ld+json">
   {

@@ -1,6 +1,18 @@
 ---
 date: 2026-02-26
 description: "A 100-run comparison across 5 crisis scenarios finds that LLM agents exhibit 2x higher signal-action divergence than scripted baselines, while governance..."
+author: "SWARM Team"
+keywords:
+  - LLM vs scripted agents deception
+  - signal-action divergence comparison
+  - escalation sandbox
+claims:
+  - metric: "LLM deception multiplier"
+    value: "2x"
+    description: "LLM agents exhibit 2x higher signal-action divergence than scripted baselines across 100 runs"
+  - metric: "Total runs"
+    value: "100"
+    description: "5 scenarios × 10 seeds × 2 agent types"
 ---
 
 # LLMs Are More Deceptive Than Their Scripted Counterparts — and Dove-Prompted Models Still Start Wars

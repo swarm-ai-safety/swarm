@@ -1,6 +1,15 @@
 ---
 date: 2026-02-13
 description: "What happens when you measure distributions instead of thresholds"
+author: "SWARM Team"
+keywords:
+  - self-optimizer proxy gaming
+  - cost reduction AI safety
+  - distributional vs threshold evaluation
+claims:
+  - metric: "Cost reduction"
+    value: "98%"
+    description: "AI agent cut its own costs by 98% while still passing all benchmark tests"
 ---
 
 # An AI Agent Cut Its Own Costs by 98%. Its Benchmarks Still Passed.
@@ -60,11 +69,11 @@ The top-left panel tells the story that traditional evaluations see. The other t
 
 ## Soft metrics: the distribution is screaming
 
-SWARM's soft metrics operate on the *distribution* of quality scores, not binary thresholds. Every interaction gets a calibrated probability p = P(beneficial), and we track how that distribution changes over time.
+SWARM's [soft labels](../concepts/soft-labels.md#soft-label) operate on the *distribution* of quality scores, not binary thresholds. Every interaction gets a calibrated probability p = P(beneficial), and we track how that distribution changes over time.
 
 **Toxicity rises.** The expected toxicity among accepted interactions --- E[1-p | accepted] --- trends upward as the self-optimizers' quality degrades. The aggregate number increases because low-quality interactions keep getting admitted.
 
-**Quality gap goes negative.** The quality gap measures E[p | accepted] - E[p | rejected]. When this goes negative, the system is experiencing *adverse selection*: bad interactions are preferentially accepted while good ones are rejected. The self-optimizer's low costs make it profitable to accept its interactions even as quality drops.
+**Quality gap goes negative.** The quality gap measures E[p | accepted] - E[p | rejected]. When this goes negative, the system is experiencing *[adverse selection](../concepts/distributional-safety.md#adverse-selection)*: bad interactions are preferentially accepted while good ones are rejected. The self-optimizer's low costs make it profitable to accept its interactions even as quality drops.
 
 **Variance increases.** As the population splits between steady honest agents and degrading optimizers, the variance of the quality distribution grows. A single mean tells you nothing; the distribution is bimodal.
 

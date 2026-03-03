@@ -1,6 +1,16 @@
 ---
 description: "AI agent coordination risks: how collusion, information cascades, and coordinated exploitation emerge in multi-agent systems. Detect and govern coordination failures with SWARM."
 date: 2026-03-02
+author: "SWARM Team"
+keywords:
+  - AI collusion detection
+  - information cascades multi-agent
+  - coordinated exploitation AI
+  - cooperation vs collusion
+defined_terms:
+  - Collusion
+  - Information Cascade
+  - Coordinated Exploitation
 ---
 
 # Coordination Risks
@@ -11,7 +21,7 @@ When multiple AI agents interact, coordination can be beneficial (cooperation) o
 
 Individual agents acting independently produce risks that scale linearly. Coordinated agents produce risks that scale **combinatorially**. Three failure patterns dominate:
 
-### 1. Collusion
+### 1. Collusion {#collusion}
 
 Two or more agents coordinate to extract value at the expense of others. In SWARM, this appears as correlated exploitation patterns:
 
@@ -27,7 +37,7 @@ config = GovernanceConfig(
 
 **Detection signal:** Unusually high correlation between agent pairs' exploitation timing.
 
-### 2. Information Cascades
+### 2. Information Cascades {#information-cascade}
 
 Agents copy each other's behavior rather than acting on private signals. When the first few agents make a mistake, the entire population follows:
 
@@ -39,7 +49,7 @@ Agents copy each other's behavior rather than acting on private signals. When th
 
 **Detection signal:** Sudden homogenization of agent strategies within 1-2 epochs.
 
-### 3. Coordinated Exploitation
+### 3. Coordinated Exploitation {#coordinated-exploitation}
 
 A group of agents systematically targets specific counterparties or exploits governance gaps that only work with multiple participants.
 

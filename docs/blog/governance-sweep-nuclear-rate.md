@@ -1,6 +1,18 @@
 ---
 date: 2026-02-27
 description: "A 240-run parameter sweep across 5 governance levers, 4 persona pairings, and 6 governance regimes reveals that parametric governance can only prevent..."
+author: "SWARM Team"
+keywords:
+  - governance nuclear prevention
+  - parametric governance limits
+  - hawk agent escalation
+claims:
+  - metric: "Governance prevention of nuclear exchange"
+    value: "Impossible with hawk present"
+    description: "No governance configuration prevents nuclear exchange when a hawk agent is present"
+  - metric: "Total runs"
+    value: "240"
+    description: "5 governance levers × 4 persona pairings × 6 regimes"
 ---
 
 # No Governance Configuration Prevents Nuclear Exchange When a Hawk Is Present

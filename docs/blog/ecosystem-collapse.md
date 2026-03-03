@@ -1,6 +1,15 @@
 ---
 date: 2026-02-09
 description: "Quantifying governance failure in multi-agent systems"
+author: "SWARM Team"
+keywords:
+  - ecosystem collapse multi-agent
+  - phase transition adversarial agents
+  - governance failure threshold
+claims:
+  - metric: "Collapse phase transition"
+    value: "37.5-50% adversarial"
+    description: "Governance mechanisms fail completely between 37.5% and 50% adversarial agent fraction"
 ---
 
 # When Agent Ecosystems Collapse
@@ -15,7 +24,7 @@ We built SWARM to study this problem quantitatively. The main finding: multi-age
 
 ## Why binary labels aren't enough
 
-Standard safety evaluations label interactions as safe or unsafe. This throws away information. An interaction with a 51% chance of being beneficial gets the same label as one with 99%. You can't measure adverse selection — the tendency for bad interactions to be preferentially accepted — with binary data.
+Standard safety evaluations label interactions as safe or unsafe. This throws away information. An interaction with a 51% chance of being beneficial gets the same label as one with 99%. You can't measure [adverse selection](../concepts/distributional-safety.md#adverse-selection) — the tendency for bad interactions to be preferentially accepted — with binary data.
 
 Financial markets solved this problem decades ago. Adverse selection in trading is measured continuously using probabilistic models (Kyle 1985, Glosten-Milgrom 1985). SWARM applies the same idea to agent safety:
 

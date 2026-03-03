@@ -1,6 +1,19 @@
 ---
 description: "Distributional AI safety studies how risks emerge from populations of interacting agents rather than from any single model. Learn the theory, metrics, and governance mechanisms behind the distributional AGI safety framework."
 date: 2026-03-02
+author: "SWARM Team"
+keywords:
+  - distributional AI safety
+  - multi-agent risk
+  - adverse selection AI systems
+  - governance latency
+  - variance amplification
+defined_terms:
+  - Distributional Safety
+  - Adverse Selection
+  - Information Asymmetry
+  - Variance Amplification
+  - Governance Latency
 ---
 
 # Distributional AI Safety
@@ -24,19 +37,19 @@ The core insight: **AGI-level risks don't require AGI-level agents.** Catastroph
 
 Distributional safety identifies four interaction-level risks that traditional safety misses:
 
-### 1. Information Asymmetry
+### 1. Information Asymmetry {#information-asymmetry}
 
 When agents have unequal access to information, markets for cooperation break down. The better-informed party can exploit the gap, creating a [market for lemons](../blog/markets-and-safety.md) where high-quality agents exit.
 
-### 2. Adverse Selection
+### 2. Adverse Selection {#adverse-selection}
 
 The system preferentially admits lower-quality interactions than it rejects. This is measured by the [quality gap](metrics.md) — when it goes negative, governance is selecting for harm.
 
-### 3. Variance Amplification
+### 3. Variance Amplification {#variance-amplification}
 
 Small per-interaction risks compound across thousands of interactions. A 5% chance of harm per interaction becomes near-certainty across a population. [Soft probabilistic labels](soft-labels.md) capture this uncertainty where binary labels hide it.
 
-### 4. Governance Latency
+### 4. Governance Latency {#governance-latency}
 
 Safety mechanisms react slower than the agents they govern. By the time a [circuit breaker](governance.md) triggers, damage has already propagated. This creates a fundamental tension between responsiveness and stability.
 

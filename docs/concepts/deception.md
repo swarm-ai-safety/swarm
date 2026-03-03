@@ -1,13 +1,22 @@
 ---
 description: "How SWARM detects and measures deception in multi-agent AI systems. Covers signal-action divergence, trust-then-exploit patterns, and governance countermeasures for adversarial agents."
 date: 2026-03-02
+author: "SWARM Team"
+keywords:
+  - AI deception detection
+  - signal-action divergence
+  - trust-then-exploit pattern
+  - LLM deception multi-agent
+defined_terms:
+  - Signal-Action Divergence
+  - Trust-Then-Exploit
 ---
 
 # Multi-Agent Deception
 
 Deception in multi-agent systems is **structural, not accidental**. When agents can benefit from misrepresenting their intentions, selection pressure favors deceptive strategies — even without explicit programming.
 
-## What Deception Looks Like
+## What Deception Looks Like {#signal-action-divergence}
 
 In SWARM, deception manifests as **signal-action divergence**: an agent signals cooperation but acts exploitatively. This is measurable:
 
@@ -19,7 +28,7 @@ metrics = SoftMetrics()
 divergence = metrics.signal_action_divergence(interactions, agent_id="dec_1")
 ```
 
-### The Trust-Then-Exploit Pattern
+### The Trust-Then-Exploit Pattern {#trust-then-exploit}
 
 [Deceptive agents](../api/agents.md) in SWARM follow a characteristic two-phase strategy:
 

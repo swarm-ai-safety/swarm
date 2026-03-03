@@ -1,6 +1,18 @@
 ---
 date: 2026-03-02
 description: "A 120-run sweep across 4 intelligence asymmetry conditions and 3 persona pairings reveals that transparency is decisive for safety-trained models but irrelevant for..."
+author: "SWARM Team"
+keywords:
+  - information asymmetry escalation
+  - transparency AI safety
+  - intelligence asymmetry
+claims:
+  - metric: "Nuclear rate reduction (transparency)"
+    value: "60% → 30%"
+    description: "Transparency cuts nuclear rate from 60% to 30% for safety-trained models"
+  - metric: "Total runs"
+    value: "120"
+    description: "4 asymmetry conditions × 3 persona pairings × 10 seeds"
 ---
 
 # Transparency Stabilizes Escalation — But Only When Safety Training Is Present

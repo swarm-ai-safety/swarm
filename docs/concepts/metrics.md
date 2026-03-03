@@ -1,5 +1,17 @@
 ---
 description: "AI safety metrics for multi-agent systems: toxicity rate, quality gap, conditional loss, and incoherence index. Measure distributional health with SWARM's soft probabilistic metrics framework."
+author: "SWARM Team"
+keywords:
+  - AI safety metrics
+  - toxicity rate
+  - quality gap multi-agent
+  - adverse selection detection
+  - incoherence index
+defined_terms:
+  - Toxicity Rate
+  - Quality Gap
+  - Conditional Loss
+  - Incoherence Index
 ---
 
 # Metrics
@@ -8,7 +20,7 @@ SWARM provides four [key metrics](../research/theory.md) for understanding multi
 
 ## The Four Key Metrics
 
-### 1. Toxicity Rate
+### 1. Toxicity Rate {#toxicity-rate}
 
 **What it measures:** Expected harm among accepted interactions.
 
@@ -23,7 +35,7 @@ $$\text{Toxicity} = E[1-p \mid \text{accepted}]$$
 !!! warning "High Toxicity"
     A toxicity rate above 0.3 typically indicates serious system problems.
 
-### 2. Quality Gap
+### 2. Quality Gap {#quality-gap}
 
 **What it measures:** The difference in quality between accepted and rejected interactions.
 
@@ -38,7 +50,7 @@ $$\text{[Quality Gap](../papers/kernel_market_governance_comparison.md)} = E[p \
 !!! danger "Adverse Selection"
     A negative quality gap is a critical failure mode. It means the system is preferentially accepting lower-quality interactions—the opposite of what you want.
 
-### 3. Conditional Loss
+### 3. Conditional Loss {#conditional-loss}
 
 **What it measures:** How selection affects payoffs.
 
@@ -46,7 +58,7 @@ $$\text{Conditional Loss} = E[\pi \mid \text{accepted}] - E[\pi]$$
 
 This reveals whether the acceptance mechanism is creating or destroying value.
 
-### 4. Incoherence Index
+### 4. Incoherence Index {#incoherence-index}
 
 **What it measures:** Variance-to-error ratio across replays.
 

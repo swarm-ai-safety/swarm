@@ -1,6 +1,18 @@
 ---
 date: 2026-03-01
 description: "120 LLM mirror-match runs across 6 models (8B to 405B) reveal an inverse relationship: small models are more deceptive but escalate less; large models are..."
+author: "SWARM Team"
+keywords:
+  - model size AI safety
+  - deception escalation tradeoff
+  - LLM scaling safety
+claims:
+  - metric: "Deception-escalation tradeoff"
+    value: "Inverse relationship"
+    description: "Small models (8B) show high deception/low escalation; large models (405B) show the reverse"
+  - metric: "Total runs"
+    value: "120"
+    description: "6 models × 2 scenarios × 10 seeds"
 ---
 
 # Does Model Size Matter for Safety? Small Models Deceive, Large Models Escalate
