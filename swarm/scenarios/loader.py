@@ -177,6 +177,7 @@ class _LazyLoader:
 
 # Per-loader instances for lazy class initialisation in threaded scenarios
 _CREWAI_LOADER = _LazyLoader()
+_SWARMS_LOADER = _LazyLoader()
 _LETTA_LOADER = _LazyLoader()
 _LLM_LOADER = _LazyLoader()
 _COUNCIL_LOADER = _LazyLoader()
@@ -191,6 +192,16 @@ def _get_crewai_classes():
         return CrewBackedAgent, CrewConfig
 
     return _CREWAI_LOADER.get(_load)
+
+
+def _get_swarms_classes():
+    """Lazy import Swarms adapter classes."""
+    def _load():
+        from swarm.agents.swarms_adapter import SwarmsBackedAgent, SwarmsConfig
+
+        return SwarmsBackedAgent, SwarmsConfig
+
+    return _SWARMS_LOADER.get(_load)
 
 
 def _get_letta_agent_class():
@@ -1388,6 +1399,58 @@ def create_agents(
                 agent = CrewBackedAgent(
                     agent_id=agent_id,
                     crew_config=crew_config,
+                    name=agent_name,
+                    config=agent_config,
+                    rng=agent_rng,
+                )
+                agents.append(agent)
+
+        # Handle Swarms adapter agents
+        elif agent_type == "swarms_adapter":
+            SwarmsBackedAgent, SwarmsConfig = _get_swarms_classes()
+            swarms_params = spec.get("params", {})
+            swarms_config_kwargs = {
+                "architecture": swarms_params.get("architecture", "Agent"),
+                "model_name": swarms_params.get("model_name", "gpt-4o-mini"),
+                "max_loops": swarms_params.get("max_loops", 1),
+                "verbose": swarms_params.get("verbose", False),
+                "enable_trace": swarms_params.get("enable_trace", True),
+                "safe_mode": swarms_params.get("safe_mode", True),
+            }
+            if "system_prompt" in swarms_params:
+                swarms_config_kwargs["system_prompt"] = swarms_params[
+                    "system_prompt"
+                ]
+            if "timeout_seconds" in swarms_params:
+                swarms_config_kwargs["timeout_seconds"] = swarms_params[
+                    "timeout_seconds"
+                ]
+            if "temperature" in swarms_params:
+                swarms_config_kwargs["temperature"] = swarms_params[
+                    "temperature"
+                ]
+            swarms_config = SwarmsConfig(**swarms_config_kwargs)
+
+            for _ in range(count):
+                counters["swarms_adapter"] = (
+                    counters.get("swarms_adapter", 0) + 1
+                )
+                agent_id = f"swarms_{counters['swarms_adapter']}"
+                agent_name = (
+                    f"{base_name}_{counters['swarms_adapter']}"
+                    if base_name and count > 1
+                    else base_name
+                )
+
+                _agent_counter += 1
+                agent_rng = (
+                    random.Random(seed + _agent_counter)
+                    if seed is not None
+                    else None
+                )
+                agent = SwarmsBackedAgent(
+                    agent_id=agent_id,
+                    swarms_config=swarms_config,
                     name=agent_name,
                     config=agent_config,
                     rng=agent_rng,
