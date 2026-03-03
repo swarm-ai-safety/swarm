@@ -1,4 +1,5 @@
 ---
+description: "Interactive isometric visualization of SWARM multi-agent simulations."
 hide:
   - navigation
   - toc
