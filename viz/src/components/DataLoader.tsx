@@ -132,7 +132,8 @@ export function DataLoader() {
     if (autoRunDone.current || data || gameState.isLive) return;
     if (!urlState.preset || !urlState.autorun) return;
     autoRunDone.current = true;
-    handleQuickPlay(urlState.preset, urlState.seed);
+    // Defer to avoid synchronous setState within effect body
+    void Promise.resolve().then(() => handleQuickPlay(urlState.preset!, urlState.seed));
   }, [urlState, data, gameState.isLive, handleQuickPlay]);
 
   if (data || gameState.isLive) return null; // Hide once data is loaded or game is live
