@@ -7,8 +7,9 @@ Security-related tests are grouped under ``TestSecurity*`` classes.
 """
 
 import json
+import math
 import random
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -20,13 +21,18 @@ from swarm.agents.swarms_adapter import (
     MAX_CONTENT_LENGTH,
     MAX_DELIBERATION_MEMORY,
     MAX_ID_LENGTH,
+    MAX_METADATA_KEY_LENGTH,
     MAX_METADATA_KEYS,
     MAX_METADATA_VALUE_LENGTH,
     MAX_RATIONALE_LENGTH,
     MAX_RAW_TRACE_LENGTH,
+    MAX_SYSTEM_PROMPT_LENGTH,
+    MAX_TIMEOUT_SECONDS,
+    MAX_ZOMBIE_THREADS,
     SwarmActionSchema,
     SwarmsBackedAgent,
     SwarmsConfig,
+    _build_swarms_agent,
     _sanitize_swarms_metadata,
 )
 from swarm.models.agent import AgentState, AgentType
@@ -141,6 +147,31 @@ class TestSwarmActionSchema:
         with pytest.raises(ValueError):
             SwarmActionSchema(kind="noop", counterparty_id="c" * (MAX_ID_LENGTH + 1))
 
+    def test_nan_confidence_rejected(self):
+        """L-1: NaN confidence must be rejected."""
+        with pytest.raises(ValueError):
+            SwarmActionSchema(kind="noop", confidence=float("nan"))
+
+    def test_inf_confidence_rejected(self):
+        """L-1: Inf confidence must be rejected."""
+        with pytest.raises(ValueError):
+            SwarmActionSchema(kind="noop", confidence=float("inf"))
+
+    def test_negative_inf_confidence_rejected(self):
+        """L-1: -Inf confidence must be rejected."""
+        with pytest.raises(ValueError):
+            SwarmActionSchema(kind="noop", confidence=float("-inf"))
+
+    def test_boundary_content_length_accepted(self):
+        """Exactly MAX_CONTENT_LENGTH is accepted."""
+        schema = SwarmActionSchema(kind="post", content="x" * MAX_CONTENT_LENGTH)
+        assert len(schema.content) == MAX_CONTENT_LENGTH
+
+    def test_empty_kind_rejected(self):
+        """Empty string kind is rejected."""
+        with pytest.raises(ValueError, match="Invalid action kind"):
+            SwarmActionSchema(kind="")
+
 
 # ---------------------------------------------------------------------------
 # SwarmsConfig tests
@@ -154,7 +185,6 @@ class TestSwarmsConfig:
         assert config.model_name == "gpt-4o-mini"
         assert config.max_loops == 1
         assert config.timeout_seconds == DEFAULT_SWARMS_TIMEOUT_SECONDS
-        assert config.safe_mode is True
         assert config.enable_trace is True
 
     def test_custom_values(self):
@@ -181,6 +211,21 @@ class TestSwarmsConfig:
             SwarmsConfig(max_loops=0)
         with pytest.raises(ValueError):
             SwarmsConfig(max_loops=11)
+
+    def test_timeout_upper_bound(self):
+        """M-1: timeout_seconds must not exceed MAX_TIMEOUT_SECONDS."""
+        with pytest.raises(ValueError):
+            SwarmsConfig(timeout_seconds=MAX_TIMEOUT_SECONDS + 1)
+
+    def test_timeout_at_max_accepted(self):
+        """timeout_seconds exactly at MAX_TIMEOUT_SECONDS is accepted."""
+        config = SwarmsConfig(timeout_seconds=MAX_TIMEOUT_SECONDS)
+        assert config.timeout_seconds == MAX_TIMEOUT_SECONDS
+
+    def test_system_prompt_max_length(self):
+        """L-5: system_prompt exceeding MAX_SYSTEM_PROMPT_LENGTH is rejected."""
+        with pytest.raises(ValueError):
+            SwarmsConfig(system_prompt="x" * (MAX_SYSTEM_PROMPT_LENGTH + 1))
 
 
 # ---------------------------------------------------------------------------
@@ -217,6 +262,53 @@ class TestSanitizeSwarmsMetadata:
 
     def test_empty_input(self):
         assert _sanitize_swarms_metadata({}) == {}
+
+    def test_key_names_truncated(self):
+        """M-3: Long metadata key names are truncated."""
+        long_key = "k" * 500
+        raw = {long_key: "value"}
+        result = _sanitize_swarms_metadata(raw)
+        keys = list(result.keys())
+        assert len(keys) == 1
+        assert len(keys[0]) == MAX_METADATA_KEY_LENGTH
+
+    def test_key_control_chars_stripped(self):
+        """M-3: Control characters in keys are stripped."""
+        raw = {"safe\x00key\x1f": "value", "\x7fnull": "ok"}
+        result = _sanitize_swarms_metadata(raw)
+        for key in result:
+            assert "\x00" not in key
+            assert "\x1f" not in key
+            assert "\x7f" not in key
+
+    def test_empty_key_after_sanitization_dropped(self):
+        """M-3: Keys that become empty after stripping are dropped."""
+        raw = {"\x00\x01\x02": "value"}
+        result = _sanitize_swarms_metadata(raw)
+        assert len(result) == 0
+
+    def test_nan_float_dropped(self):
+        """L-1: NaN float values are dropped."""
+        raw = {"good": 1.0, "bad": float("nan")}
+        result = _sanitize_swarms_metadata(raw)
+        assert "good" in result
+        assert "bad" not in result
+
+    def test_inf_float_dropped(self):
+        """L-1: Inf float values are dropped."""
+        raw = {"good": 1.0, "bad_pos": float("inf"), "bad_neg": float("-inf")}
+        result = _sanitize_swarms_metadata(raw)
+        assert "good" in result
+        assert "bad_pos" not in result
+        assert "bad_neg" not in result
+
+    def test_bool_not_treated_as_int(self):
+        """Booleans pass through as bool, not int."""
+        raw = {"flag": True, "count": 3}
+        result = _sanitize_swarms_metadata(raw)
+        assert result["flag"] is True
+        assert isinstance(result["flag"], bool)
+        assert result["count"] == 3
 
 
 # ---------------------------------------------------------------------------
@@ -267,6 +359,28 @@ class TestSwarmsBackedAgent:
         raw = json.dumps({"kind": "hacky_exploit"})
         schema = agent._parse_action(raw)
         assert schema.kind == "noop"
+
+    def test_parse_action_none_input(self, agent: SwarmsBackedAgent):
+        """T-3: None input falls back to noop."""
+        schema = agent._parse_action(None)
+        assert schema.kind == "noop"
+
+    def test_parse_action_list_input(self, agent: SwarmsBackedAgent):
+        """T-3: List input falls back to noop."""
+        schema = agent._parse_action([{"kind": "post"}])
+        assert schema.kind == "noop"
+
+    def test_parse_action_dict_input(self, agent: SwarmsBackedAgent):
+        """T-3: Dict input is handled via json.dumps path."""
+        schema = agent._parse_action({"kind": "post", "content": "direct dict"})
+        assert schema.kind == "post"
+        assert schema.content == "direct dict"
+
+    def test_parse_action_null_bytes_in_content(self, agent: SwarmsBackedAgent):
+        """T-3: Content with null bytes parses (output sanitization is elsewhere)."""
+        raw = json.dumps({"kind": "post", "content": "hello\x00world"})
+        schema = agent._parse_action(raw)
+        assert schema.kind == "post"
 
     def test_schema_to_action(
         self, agent: SwarmsBackedAgent, default_observation: Observation
@@ -472,6 +586,28 @@ class TestSecurityIDValidation:
         assert action.target_id == ""
         assert action.counterparty_id == ""
 
+    def test_active_task_ids_collected(self, agent: SwarmsBackedAgent):
+        """T-5: active_tasks IDs are included in valid target IDs."""
+        obs = Observation(
+            agent_state=AgentState(agent_id="test"),
+            active_tasks=[{"task_id": "active_t1"}, {"task_id": "active_t2"}],
+        )
+        agent._collect_valid_ids(obs)
+        assert "active_t1" in agent._valid_target_ids
+        assert "active_t2" in agent._valid_target_ids
+
+    def test_pending_bid_decision_ids_collected(self, agent: SwarmsBackedAgent):
+        """T-5: pending_bid_decisions IDs are included in valid target IDs."""
+        obs = Observation(
+            agent_state=AgentState(agent_id="test"),
+            pending_bid_decisions=[
+                {"bounty_id": "bounty_99", "bid_id": "bid_42"},
+            ],
+        )
+        agent._collect_valid_ids(obs)
+        assert "bounty_99" in agent._valid_target_ids
+        assert "bid_42" in agent._valid_target_ids
+
 
 # ---------------------------------------------------------------------------
 # Security: Metadata namespace isolation
@@ -513,6 +649,41 @@ class TestSecurityMetadataNamespacing:
         assert action.metadata.get("reward_amount") is None
         # _swarms_trace in swarms_metadata is dropped (nested dict)
         assert "_swarms_trace" not in action.metadata["swarms_metadata"]
+
+    def test_action_type_cannot_be_injected_via_metadata(
+        self, agent: SwarmsBackedAgent, default_observation: Observation
+    ):
+        """T-2: RBAC invariant — swarms output cannot override action_type."""
+        agent._collect_valid_ids(default_observation)
+        schema = SwarmActionSchema(
+            kind="post",
+            metadata={"action_type": "admin_override"},
+        )
+        action = agent._schema_to_action(schema)
+        # action_type comes from the schema kind, not metadata
+        assert action.action_type == ActionType.POST
+        # The injected key is safely inside swarms_metadata (as a string)
+        assert action.metadata["swarms_metadata"].get("action_type") == "admin_override"
+        # Even if Action.__post_init__ adds action_type to metadata,
+        # it reflects the real kind, not the injected value
+        if "action_type" in action.metadata:
+            assert action.metadata["action_type"] != "admin_override"
+
+    def test_agent_id_always_pinned(
+        self, agent: SwarmsBackedAgent, default_observation: Observation
+    ):
+        """agent_id on the Action is always self.agent_id, never from swarms output."""
+        mock_swarms = MagicMock()
+        mock_swarms.run.return_value = json.dumps({
+            "kind": "post",
+            "content": "hijack attempt",
+            "metadata": {"agent_id": "admin_agent"},
+        })
+        agent._swarms_agent = mock_swarms
+
+        action = agent.act(default_observation)
+        assert action.agent_id == "swarms_test_1"
+        assert action.agent_id != "admin_agent"
 
 
 # ---------------------------------------------------------------------------
@@ -717,6 +888,80 @@ class TestSecurityTraceOutput:
 
 
 # ---------------------------------------------------------------------------
+# Security: Zombie thread circuit-breaker (M-2)
+# ---------------------------------------------------------------------------
+
+
+class TestSecurityCircuitBreaker:
+    def test_circuit_breaker_trips_after_max_zombies(
+        self, agent: SwarmsBackedAgent, default_observation: Observation
+    ):
+        """M-2: After MAX_ZOMBIE_THREADS timeouts, further calls are refused."""
+        import time
+
+        mock_swarms = MagicMock()
+        mock_swarms.run.side_effect = lambda prompt: time.sleep(5)
+        agent._swarms_agent = mock_swarms
+        agent.swarms_config = SwarmsConfig(timeout_seconds=0.05)
+
+        # Burn through MAX_ZOMBIE_THREADS timeouts
+        for _ in range(MAX_ZOMBIE_THREADS):
+            action = agent.act(default_observation)
+            assert action.action_type == ActionType.NOOP
+
+        # Next call should trip the circuit-breaker (RuntimeError -> noop)
+        action = agent.act(default_observation)
+        assert action.action_type == ActionType.NOOP
+        assert agent._zombie_thread_count >= MAX_ZOMBIE_THREADS
+
+    def test_successful_call_decrements_zombie_count(
+        self, agent: SwarmsBackedAgent, default_observation: Observation
+    ):
+        """M-2: A successful call decrements the zombie counter."""
+        agent._zombie_thread_count = 2
+
+        mock_swarms = MagicMock()
+        mock_swarms.run.return_value = json.dumps({"kind": "noop"})
+        agent._swarms_agent = mock_swarms
+
+        agent.act(default_observation)
+        assert agent._zombie_thread_count == 1
+
+    def test_zombie_count_never_goes_negative(
+        self, agent: SwarmsBackedAgent, default_observation: Observation
+    ):
+        """Zombie count doesn't go below 0."""
+        agent._zombie_thread_count = 0
+
+        mock_swarms = MagicMock()
+        mock_swarms.run.return_value = json.dumps({"kind": "noop"})
+        agent._swarms_agent = mock_swarms
+
+        agent.act(default_observation)
+        assert agent._zombie_thread_count == 0
+
+
+# ---------------------------------------------------------------------------
+# _build_swarms_agent factory tests (T-1)
+# ---------------------------------------------------------------------------
+
+
+class TestBuildSwarmsAgentFactory:
+    def test_unsupported_architecture_raises(self):
+        """T-1: Non-'Agent' architecture raises ValueError."""
+        config = SwarmsConfig(architecture="SequentialWorkflow")
+        with pytest.raises(ValueError, match="not yet supported"):
+            _build_swarms_agent(config)
+
+    def test_missing_swarms_package_raises(self):
+        """T-1: ImportError if swarms package is not installed."""
+        config = SwarmsConfig(architecture="Agent")
+        with patch.dict("sys.modules", {"swarms": None}):
+            with pytest.raises(ImportError, match="swarms"):
+                _build_swarms_agent(config)
+
+
+# ---------------------------------------------------------------------------
 # Loader integration tests
 # ---------------------------------------------------------------------------
 
@@ -815,6 +1060,48 @@ class TestLoaderIntegration:
         ]
         agents = create_agents(specs, seed=1)
         assert agents[0].swarms_config.system_prompt == custom_prompt
+
+    def test_create_agents_temperature_from_yaml(self):
+        """T-4: temperature param in YAML is wired to SwarmsConfig."""
+        from swarm.scenarios.loader import create_agents
+
+        specs = [
+            {
+                "type": "swarms_adapter",
+                "count": 1,
+                "params": {"temperature": 0.3},
+            }
+        ]
+        agents = create_agents(specs, seed=1)
+        assert agents[0].swarms_config.temperature == 0.3
+
+    def test_create_agents_verbose_from_yaml(self):
+        """T-4: verbose param in YAML is wired to SwarmsConfig."""
+        from swarm.scenarios.loader import create_agents
+
+        specs = [
+            {
+                "type": "swarms_adapter",
+                "count": 1,
+                "params": {"verbose": True},
+            }
+        ]
+        agents = create_agents(specs, seed=1)
+        assert agents[0].swarms_config.verbose is True
+
+    def test_create_agents_enable_trace_from_yaml(self):
+        """T-4: enable_trace param in YAML is wired to SwarmsConfig."""
+        from swarm.scenarios.loader import create_agents
+
+        specs = [
+            {
+                "type": "swarms_adapter",
+                "count": 1,
+                "params": {"enable_trace": False},
+            }
+        ]
+        agents = create_agents(specs, seed=1)
+        assert agents[0].swarms_config.enable_trace is False
 
 
 # ---------------------------------------------------------------------------

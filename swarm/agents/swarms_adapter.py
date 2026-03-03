@@ -31,8 +31,10 @@ from __future__ import annotations
 import concurrent.futures
 import json
 import logging
+import math
 import random
 import re
+import threading
 from typing import Any, Dict, List, Optional, Set
 
 from pydantic import BaseModel, Field, field_validator
@@ -58,10 +60,14 @@ MAX_CONTENT_LENGTH = 10_000
 MAX_RATIONALE_LENGTH = 2_000
 MAX_ID_LENGTH = 200
 MAX_METADATA_KEYS = 20
+MAX_METADATA_KEY_LENGTH = 200
 MAX_METADATA_VALUE_LENGTH = 1_000
 MAX_RAW_TRACE_LENGTH = 2_000
 MAX_DELIBERATION_MEMORY = 200
+MAX_SYSTEM_PROMPT_LENGTH = 50_000
+MAX_TIMEOUT_SECONDS = 600.0
 DEFAULT_SWARMS_TIMEOUT_SECONDS = 120.0
+MAX_ZOMBIE_THREADS = 5
 
 # ---------------------------------------------------------------------------
 # Action schema (Pydantic) that Swarms outputs must conform to
@@ -120,6 +126,14 @@ class SwarmActionSchema(BaseModel):
         le=1.0,
         description="Agent's confidence in this action [0, 1].",
     )
+
+    @field_validator("confidence")
+    @classmethod
+    def validate_confidence_finite(cls, v: float) -> float:
+        """Reject NaN/Inf which bypass ge/le checks."""
+        if not math.isfinite(v):
+            raise ValueError(f"confidence must be finite, got {v!r}")
+        return v
     rationale: str = Field(
         default="",
         max_length=MAX_RATIONALE_LENGTH,
@@ -171,6 +185,7 @@ class SwarmsConfig(BaseModel):
             "Output exactly one JSON object with the SwarmAction schema. "
             "Do not include any other text."
         ),
+        max_length=MAX_SYSTEM_PROMPT_LENGTH,
         description="System prompt for the Swarms agent.",
     )
     max_loops: int = Field(
@@ -182,15 +197,8 @@ class SwarmsConfig(BaseModel):
     timeout_seconds: float = Field(
         default=DEFAULT_SWARMS_TIMEOUT_SECONDS,
         gt=0.0,
+        le=MAX_TIMEOUT_SECONDS,
         description="Max seconds for a single agent.run() call.",
-    )
-    return_history: bool = Field(
-        default=False,
-        description="Whether to request full history from Swarms agent.",
-    )
-    safe_mode: bool = Field(
-        default=True,
-        description="Enable strict JSON-only output mode.",
     )
     verbose: bool = Field(
         default=False,
@@ -219,19 +227,36 @@ class SwarmsConfig(BaseModel):
 # ---------------------------------------------------------------------------
 
 
+def _sanitize_key(key: str) -> str:
+    """Sanitize a metadata key: truncate and strip non-printable chars."""
+    # Strip non-printable/control characters (keep printable ASCII + unicode)
+    cleaned = re.sub(r"[\x00-\x1f\x7f-\x9f]", "", key)
+    return cleaned[:MAX_METADATA_KEY_LENGTH]
+
+
 def _sanitize_swarms_metadata(raw: Dict[str, Any]) -> Dict[str, Any]:
     """Sanitize Swarms-supplied metadata.
 
     * Limits number of keys to ``MAX_METADATA_KEYS``.
+    * Sanitizes key names (truncation, control char stripping).
     * Only allows str, int, float, bool values.
+    * Rejects non-finite floats (NaN, Inf).
     * Truncates string values to ``MAX_METADATA_VALUE_LENGTH``.
     """
     sanitized: Dict[str, Any] = {}
     for key, value in list(raw.items())[:MAX_METADATA_KEYS]:
+        clean_key = _sanitize_key(str(key))
+        if not clean_key:
+            continue
         if isinstance(value, str):
-            sanitized[key] = value[:MAX_METADATA_VALUE_LENGTH]
-        elif isinstance(value, (int, float, bool)):
-            sanitized[key] = value
+            sanitized[clean_key] = value[:MAX_METADATA_VALUE_LENGTH]
+        elif isinstance(value, bool):
+            # Check bool before int/float since bool is subclass of int
+            sanitized[clean_key] = value
+        elif isinstance(value, (int, float)):
+            if isinstance(value, float) and not math.isfinite(value):
+                continue  # Drop NaN, Inf, -Inf
+            sanitized[clean_key] = value
         # Drop complex/nested values silently
     return sanitized
 
@@ -307,6 +332,9 @@ class SwarmsBackedAgent(BaseAgent):
         self._valid_counterparty_ids: Set[str] = set()
         # Reuse a single thread pool across ticks to avoid per-call overhead.
         self._executor_pool: Optional[concurrent.futures.ThreadPoolExecutor] = None
+        # Track zombie threads from timed-out calls (circuit-breaker).
+        self._zombie_thread_count: int = 0
+        self._zombie_lock = threading.Lock()
 
     # -- lazy Swarms agent construction ------------------------------------
 
@@ -434,16 +462,45 @@ class SwarmsBackedAgent(BaseAgent):
         the simulation is not blocked waiting for the abandoned HTTP call
         to complete.  A fresh pool is created on the next tick.
 
+        Includes a circuit-breaker: if more than ``MAX_ZOMBIE_THREADS``
+        threads from previous timeouts are still alive, the call is
+        refused immediately to prevent unbounded resource consumption.
+
         Raises
         ------
         concurrent.futures.TimeoutError
             If the agent exceeds ``self.swarms_config.timeout_seconds``.
+        RuntimeError
+            If the zombie thread circuit-breaker has tripped.
         """
+        with self._zombie_lock:
+            if self._zombie_thread_count >= MAX_ZOMBIE_THREADS:
+                raise RuntimeError(
+                    f"Circuit-breaker tripped: {self._zombie_thread_count} "
+                    f"zombie threads from prior timeouts (limit "
+                    f"{MAX_ZOMBIE_THREADS}). Refusing new Swarms call for "
+                    f"{self.agent_id}."
+                )
+
         pool = self._get_executor_pool()
         future = pool.submit(agent.run, prompt)
         try:
-            return future.result(timeout=self.swarms_config.timeout_seconds)
+            result = future.result(timeout=self.swarms_config.timeout_seconds)
+            # Successful call — decrement zombie count if any recovered
+            with self._zombie_lock:
+                self._zombie_thread_count = max(
+                    0, self._zombie_thread_count - 1
+                )
+            return result
         except concurrent.futures.TimeoutError:
+            with self._zombie_lock:
+                self._zombie_thread_count += 1
+                logger.warning(
+                    "Zombie thread count for %s: %d/%d",
+                    self.agent_id,
+                    self._zombie_thread_count,
+                    MAX_ZOMBIE_THREADS,
+                )
             future.cancel()
             pool.shutdown(wait=False, cancel_futures=True)
             self._executor_pool = None  # force fresh pool next tick
@@ -669,6 +726,7 @@ def _build_swarms_agent(config: SwarmsConfig):
         system_prompt=config.system_prompt,
         model_name=config.model_name,
         max_loops=config.max_loops,
+        temperature=config.temperature,
         autosave=False,
         verbose=config.verbose,
         interactive=False,

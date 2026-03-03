@@ -1415,7 +1415,6 @@ def create_agents(
                 "max_loops": swarms_params.get("max_loops", 1),
                 "verbose": swarms_params.get("verbose", False),
                 "enable_trace": swarms_params.get("enable_trace", True),
-                "safe_mode": swarms_params.get("safe_mode", True),
             }
             if "system_prompt" in swarms_params:
                 swarms_config_kwargs["system_prompt"] = swarms_params[
