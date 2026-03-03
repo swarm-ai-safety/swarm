@@ -9,10 +9,10 @@ Deploy (or update) the Streamlit interactive demo to Hugging Face Spaces.
 
 ## Context
 
-The demo app lives at `examples/demo/` in the main repo but the HF Space at `rsavitt/swarm-sandbox` uses a **flat layout** (`/app/` root). This command handles the path rewriting that breaks every time you push manually.
+The demo app lives at `examples/demo/` in the main repo but the HF Space at `Swarm-AI-Research/swarm-sandbox` uses a **flat layout** (`/app/` root). This command handles the path rewriting that breaks every time you push manually.
 
-**Space URL**: https://rsavitt-swarm-sandbox.hf.space
-**Space repo**: https://huggingface.co/spaces/rsavitt/swarm-sandbox
+**Space URL**: https://Swarm-AI-Research-swarm-sandbox.hf.space
+**Space repo**: https://huggingface.co/spaces/Swarm-AI-Research/swarm-sandbox
 
 ## Behavior
 
@@ -20,13 +20,13 @@ The demo app lives at `examples/demo/` in the main repo but the HF Space at `rsa
 
 1. Check health endpoint:
    ```bash
-   curl -s -o /dev/null -w "%{http_code}" https://rsavitt-swarm-sandbox.hf.space/_stcore/health
+   curl -s -o /dev/null -w "%{http_code}" https://Swarm-AI-Research-swarm-sandbox.hf.space/_stcore/health
    ```
 
 2. Check runtime status and deployed SHA:
    ```bash
    curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" \
-     "https://huggingface.co/api/spaces/rsavitt/swarm-sandbox/runtime"
+     "https://huggingface.co/api/spaces/Swarm-AI-Research/swarm-sandbox/runtime"
    ```
 
 3. Report: stage (RUNNING/BUILDING/ERROR), deployed SHA, health status.
@@ -139,7 +139,7 @@ scipy>=1.10
 ```bash
 cd "$STAGE"
 git init
-git remote add origin https://huggingface.co/spaces/rsavitt/swarm-sandbox
+git remote add origin https://huggingface.co/spaces/Swarm-AI-Research/swarm-sandbox
 git pull origin main --rebase 2>/dev/null || true
 git add -A
 git commit -m "Update SWARM demo ($(date +%Y-%m-%d))"
@@ -154,10 +154,10 @@ Wait up to 5 minutes, checking every 30 seconds:
 for i in $(seq 1 10); do
   sleep 30
   STATUS=$(curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" \
-    "https://huggingface.co/api/spaces/rsavitt/swarm-sandbox/runtime" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stage','UNKNOWN'))")
+    "https://huggingface.co/api/spaces/Swarm-AI-Research/swarm-sandbox/runtime" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stage','UNKNOWN'))")
   echo "Attempt $i: $STATUS"
   if [ "$STATUS" = "RUNNING" ]; then
-    echo "Space is live: https://rsavitt-swarm-sandbox.hf.space"
+    echo "Space is live: https://Swarm-AI-Research-swarm-sandbox.hf.space"
     break
   fi
 done
@@ -166,7 +166,7 @@ done
 #### Step 7: Verify health
 
 ```bash
-HTTP=$(curl -s -o /dev/null -w "%{http_code}" https://rsavitt-swarm-sandbox.hf.space/_stcore/health)
+HTTP=$(curl -s -o /dev/null -w "%{http_code}" https://Swarm-AI-Research-swarm-sandbox.hf.space/_stcore/health)
 if [ "$HTTP" = "200" ]; then
   echo "Health check: PASS"
 else
@@ -184,7 +184,7 @@ rm -rf "$STAGE"
 
 - If HF auth fails: prompt user to run `hf auth login --token <TOKEN> --add-to-git-credential`
 - If git push is rejected: `git pull --rebase origin main` then retry push
-- If build fails after push: check logs with `curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" "https://huggingface.co/api/spaces/rsavitt/swarm-sandbox/runtime"` and report the `stage` field
+- If build fails after push: check logs with `curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" "https://huggingface.co/api/spaces/Swarm-AI-Research/swarm-sandbox/runtime"` and report the `stage` field
 
 ## Prerequisites
 

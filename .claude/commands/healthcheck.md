@@ -104,24 +104,24 @@ Healthcheck Results
 
 ### `--hf-space` mode
 
-Check the status of the HF Spaces deployment (rsavitt/swarm-sandbox).
+Check the status of the HF Spaces deployment (Swarm-AI-Research/swarm-sandbox).
 
 1. **Health endpoint**:
    ```bash
-   HTTP=$(curl -s -o /dev/null -w "%{http_code}" https://rsavitt-swarm-sandbox.hf.space/_stcore/health)
+   HTTP=$(curl -s -o /dev/null -w "%{http_code}" https://Swarm-AI-Research-swarm-sandbox.hf.space/_stcore/health)
    ```
 
 2. **Runtime status** (requires HF token at `~/.cache/huggingface/token`):
    ```bash
    curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" \
-     "https://huggingface.co/api/spaces/rsavitt/swarm-sandbox/runtime"
+     "https://huggingface.co/api/spaces/Swarm-AI-Research/swarm-sandbox/runtime"
    ```
    Extract `stage` and `sha` fields.
 
 3. **Report**:
    ```
-   HF Space: rsavitt/swarm-sandbox
-     URL:    https://rsavitt-swarm-sandbox.hf.space
+   HF Space: Swarm-AI-Research/swarm-sandbox
+     URL:    https://Swarm-AI-Research-swarm-sandbox.hf.space
      Stage:  RUNNING
      SHA:    8f894e2...
      Health: 200 OK

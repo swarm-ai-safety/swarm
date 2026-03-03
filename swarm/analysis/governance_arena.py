@@ -572,11 +572,22 @@ def _run_simulation() -> Dict[str, Any]:
     }
 
 
-def _run_demo_simulation() -> Dict[str, Any]:
-    """Fallback demo when swarm package isn't available."""
-    rng = random.Random(st.session_state.seed)
-    max_turns = st.session_state.max_turns
-    cb = st.session_state.circuit_breaker_threshold
+def _run_demo_simulation(config: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    """Fallback demo when swarm package isn't available.
+
+    Args:
+        config: Dict with keys seed, max_turns, circuit_breaker_threshold,
+                persona_a, persona_b, fog_sigma.  Falls back to
+                ``st.session_state`` for any missing key.
+    """
+    if config is None:
+        config = {}
+    def _cfg(key: str) -> Any:
+        return config[key] if key in config else st.session_state[key]
+
+    rng = random.Random(_cfg("seed"))
+    max_turns = _cfg("max_turns")
+    cb = _cfg("circuit_breaker_threshold")
     turn_log = []
     all_events = []
     level_a = 0
@@ -586,15 +597,15 @@ def _run_demo_simulation() -> Dict[str, Any]:
 
     for t in range(max_turns):
         # Simple simulation logic for demo
-        persona_a = st.session_state.persona_a
-        persona_b = st.session_state.persona_b
+        persona_a = _cfg("persona_a")
+        persona_b = _cfg("persona_b")
 
         delta_a = _demo_agent_delta(persona_a, level_a, level_b, t, rng)
         delta_b = _demo_agent_delta(persona_b, level_b, level_a, t, rng)
 
         # Fog of war
-        fog_a = round(rng.gauss(0, st.session_state.fog_sigma))
-        fog_b = round(rng.gauss(0, st.session_state.fog_sigma))
+        fog_a = round(rng.gauss(0, _cfg("fog_sigma")))
+        fog_b = round(rng.gauss(0, _cfg("fog_sigma")))
 
         new_a = max(0, min(9, level_a + delta_a + fog_a))
         new_b = max(0, min(9, level_b + delta_b + fog_b))
@@ -659,7 +670,7 @@ def _run_demo_simulation() -> Dict[str, Any]:
         },
         "turn_log": turn_log,
         "events": all_events,
-        "seed": st.session_state.seed,
+        "seed": _cfg("seed"),
         "outcome": final_outcome,
         "nuclear_turn": nuclear_turn,
         "max_level": max_level,
@@ -704,24 +715,51 @@ def _apply_preset(preset_key: str) -> None:
         st.session_state[k] = p[k]
 
 
-def _add_to_leaderboard(results: Dict[str, Any]) -> None:
-    """Add a run result to the in-memory leaderboard."""
+def _add_to_leaderboard(
+    results: Dict[str, Any],
+    leaderboard: List[Dict[str, Any]] | None = None,
+    preset: str | None = None,
+    settings: Dict[str, Any] | None = None,
+) -> List[Dict[str, Any]]:
+    """Add a run result to the leaderboard and return it.
+
+    Args:
+        results: Simulation results dict.
+        leaderboard: Existing leaderboard list.  Falls back to
+            ``st.session_state.leaderboard``.
+        preset: Active preset name.  Falls back to ``st.session_state.preset``.
+        settings: Dict with tax_rate, audit_probability, circuit_breaker_threshold.
+            Falls back to ``st.session_state``.
+
+    Returns:
+        The updated leaderboard list (capped at 50).
+    """
+    if leaderboard is None:
+        leaderboard = st.session_state.leaderboard
+    if preset is None:
+        preset = st.session_state.preset
+    if settings is None:
+        settings = {
+            "tax_rate": st.session_state.tax_rate,
+            "audit_probability": st.session_state.audit_probability,
+            "circuit_breaker_threshold": st.session_state.circuit_breaker_threshold,
+        }
     entry = {
         "timestamp": datetime.now(timezone.utc).strftime("%H:%M:%S"),
-        "preset": st.session_state.preset or "Custom",
+        "preset": preset or "Custom",
         "outcome": results["outcome"],
         "max_level": results["max_level"],
         "cooperation": results["cooperation_score"],
         "nuclear_turn": results.get("nuclear_turn"),
         "seed": results["seed"],
         "turns": results["turns_played"],
-        "tax": st.session_state.tax_rate,
-        "audit": st.session_state.audit_probability,
-        "breaker": st.session_state.circuit_breaker_threshold,
+        "tax": settings["tax_rate"],
+        "audit": settings["audit_probability"],
+        "breaker": settings["circuit_breaker_threshold"],
     }
-    st.session_state.leaderboard.insert(0, entry)
-    # Keep last 50 entries
-    st.session_state.leaderboard = st.session_state.leaderboard[:50]
+    leaderboard.insert(0, entry)
+    leaderboard[:] = leaderboard[:50]
+    return leaderboard
 
 
 # ---------------------------------------------------------------------------
@@ -760,19 +798,50 @@ def _transcript_entry(turn: int, text: str, css_class: str = "") -> str:
     return f'<div class="transcript-entry {css_class}"><span class="turn-num">Turn {turn}:</span> {text}</div>'
 
 
-def _generate_share_text(results: Dict[str, Any]) -> str:
+def _generate_share_text(results: Dict[str, Any], settings: Dict[str, Any] | None = None) -> str:
+    """Generate shareable text for a run.
+
+    Args:
+        results: Simulation results dict.
+        settings: Dict with audit_probability, tax_rate, circuit_breaker_threshold.
+            Falls back to ``st.session_state``.
+    """
+    if settings is None:
+        settings = {
+            "audit_probability": st.session_state.audit_probability,
+            "tax_rate": st.session_state.tax_rate,
+            "circuit_breaker_threshold": st.session_state.circuit_breaker_threshold,
+        }
     outcome_text = "Prevented collapse" if results["outcome"] in ("ceasefire", "timeout") and results["max_level"] < 7 else f"Collapse at turn {results.get('nuclear_turn', results['turns_played'])}"
     return (
         f"I ran SWARM Governance Arena. {outcome_text}. "
-        f"Audits {st.session_state.audit_probability}%, "
-        f"Tax {st.session_state.tax_rate}%, "
-        f"Breaker {st.session_state.circuit_breaker_threshold}. "
+        f"Audits {settings['audit_probability']}%, "
+        f"Tax {settings['tax_rate']}%, "
+        f"Breaker {settings['circuit_breaker_threshold']}. "
         f"Seed: {results['seed']}. "
-        f"Try to beat my settings: https://huggingface.co/spaces/rsavitt/swarm-sandbox"
+        f"Try to beat my settings: https://huggingface.co/spaces/Swarm-AI-Research/swarm-sandbox"
     )
 
 
-def _generate_receipt_text(results: Dict[str, Any]) -> str:
+def _generate_receipt_text(results: Dict[str, Any], settings: Dict[str, Any] | None = None) -> str:
+    """Generate downloadable receipt text for a run.
+
+    Args:
+        results: Simulation results dict.
+        settings: Dict with tax_rate, audit_probability, circuit_breaker_threshold,
+            mad_enabled, mediation_enabled, persona_a, persona_b.
+            Falls back to ``st.session_state``.
+    """
+    if settings is None:
+        settings = {
+            "tax_rate": st.session_state.tax_rate,
+            "audit_probability": st.session_state.audit_probability,
+            "circuit_breaker_threshold": st.session_state.circuit_breaker_threshold,
+            "mad_enabled": st.session_state.mad_enabled,
+            "mediation_enabled": st.session_state.mediation_enabled,
+            "persona_a": st.session_state.persona_a,
+            "persona_b": st.session_state.persona_b,
+        }
     lines = [
         "SWARM GOVERNANCE ARENA - RUN RECEIPT",
         "=" * 40,
@@ -785,15 +854,15 @@ def _generate_receipt_text(results: Dict[str, Any]) -> str:
         "",
         "GOVERNANCE SETTINGS",
         "-" * 40,
-        f"Tax Rate: {st.session_state.tax_rate}%",
-        f"Audit Probability: {st.session_state.audit_probability}%",
-        f"Circuit Breaker: {st.session_state.circuit_breaker_threshold}",
-        f"MAD Enabled: {st.session_state.mad_enabled}",
-        f"Mediation: {st.session_state.mediation_enabled}",
-        f"Agent A: {st.session_state.persona_a}",
-        f"Agent B: {st.session_state.persona_b}",
+        f"Tax Rate: {settings['tax_rate']}%",
+        f"Audit Probability: {settings['audit_probability']}%",
+        f"Circuit Breaker: {settings['circuit_breaker_threshold']}",
+        f"MAD Enabled: {settings['mad_enabled']}",
+        f"Mediation: {settings['mediation_enabled']}",
+        f"Agent A: {settings['persona_a']}",
+        f"Agent B: {settings['persona_b']}",
         "",
-        "https://huggingface.co/spaces/rsavitt/swarm-sandbox",
+        "https://huggingface.co/spaces/Swarm-AI-Research/swarm-sandbox",
     ]
     return "\n".join(lines)
 
@@ -1372,39 +1441,21 @@ if st.session_state.leaderboard:
         outcome_icon = "\u2705" if is_safe else "\u2622\ufe0f"
         nuke_col = str(entry.get("nuclear_turn", "\u2014"))
 
-        rows_html += f"""
-        <tr>
-            <td>{i + 1}</td>
-            <td>{entry.get('preset', 'Custom')}</td>
-            <td>{outcome_icon} {outcome}</td>
-            <td>{entry['max_level']}/9</td>
-            <td>{entry['cooperation']}</td>
-            <td>{nuke_col}</td>
-            <td>{entry['turns']}</td>
-            <td>{entry['seed']}</td>
-        </tr>
-        """
+        rows_html += (
+            f"<tr><td>{i + 1}</td><td>{entry.get('preset', 'Custom')}</td>"
+            f"<td>{outcome_icon} {outcome}</td><td>{entry['max_level']}/9</td>"
+            f"<td>{entry['cooperation']}</td><td>{nuke_col}</td>"
+            f"<td>{entry['turns']}</td><td>{entry['seed']}</td></tr>"
+        )
 
     st.markdown(
-        f"""
-        <table class="leaderboard-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Preset</th>
-                    <th>Outcome</th>
-                    <th>Max Level</th>
-                    <th>Cooperation</th>
-                    <th>Nuclear Turn</th>
-                    <th>Turns</th>
-                    <th>Seed</th>
-                </tr>
-            </thead>
-            <tbody>
-                {rows_html}
-            </tbody>
-        </table>
-        """,
+        f"""<table class="leaderboard-table">
+<thead><tr>
+<th>#</th><th>Preset</th><th>Outcome</th><th>Max Level</th>
+<th>Cooperation</th><th>Nuclear Turn</th><th>Turns</th><th>Seed</th>
+</tr></thead>
+<tbody>{rows_html}</tbody>
+</table>""",
         unsafe_allow_html=True,
     )
 
@@ -1441,7 +1492,7 @@ link_cols = st.columns(3)
 with link_cols[0]:
     st.markdown("[GitHub \u2192 swarm-ai-safety/swarm](https://github.com/swarm-ai-safety/swarm)")
 with link_cols[1]:
-    st.markdown("[HuggingFace Space](https://huggingface.co/spaces/rsavitt/swarm-sandbox)")
+    st.markdown("[HuggingFace Space](https://huggingface.co/spaces/Swarm-AI-Research/swarm-sandbox)")
 with link_cols[2]:
     st.markdown("[Escalation Sandbox Docs](https://github.com/swarm-ai-safety/swarm/tree/main/docs/scenarios)")
 
