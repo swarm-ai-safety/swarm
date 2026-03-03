@@ -338,9 +338,9 @@ python -m pytest tests/test_eval_metrics.py -v
 
 ## Related Documentation
 
-- [Evaluation Framework](./evaluation-framework.md)
-- [Red Team Metrics](../guides/red-teaming.md)
-- [Governance Metrics](../governance.md)
+- [Red Team Metrics](./red-teaming.md)
+- [Governance Concepts](../concepts/governance.md)
+- [Metrics API](../api/metrics.md)
 
 ## Example Usage
 

@@ -331,4 +331,4 @@ For scenarios with many epochs or agents:
 - [Parameter Sweeps](../guides/parameter-sweeps.md) - Systematic experimentation
 - [Custom Agents](../guides/custom-agents.md) - Create new agent behaviors
 - [Governance Guide](../concepts/governance.md) - Safety mechanisms
-- [Analysis Tools](../guides/analysis.md) - Analyze experiment results
+- [Analyzing Results](../tutorials/analyzing-results.md) - Analyze experiment results
