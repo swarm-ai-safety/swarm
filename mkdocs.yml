@@ -81,6 +81,12 @@ plugins:
       enable_creation_date: true
       fallback_to_build_date: true
       enable_git_follow: false
+  - rss:
+      match_path: "blog/.*"
+      date_from_meta:
+        as_creation: date
+      categories:
+        - tags
   - mkdocstrings:
       handlers:
         python:
