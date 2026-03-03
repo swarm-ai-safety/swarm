@@ -84,7 +84,7 @@ function detectReceipt(evt: SwarmEvent): GovernanceReceipt | null {
 
   // High governance cost (tax > 0.5)
   if (evt.event_type === "governance_cost_applied") {
-    const cost = p.cost as number;
+    const cost = (p.cost_a as number) ?? (p.cost_b as number) ?? (p.cost as number);
     if (cost != null && cost > 0.5) {
       return {
         type: "high_tax",
@@ -136,8 +136,10 @@ function formatPayload(evt: SwarmEvent): string {
       const sign = delta >= 0 ? "+" : "";
       return `${evt.agent_id} ${sign}${delta.toFixed(3)}`;
     }
-    case "governance_cost_applied":
-      return `${evt.agent_id} cost=${(evt.payload.cost as number)?.toFixed(2) ?? "?"}`;
+    case "governance_cost_applied": {
+      const govCost = (evt.payload.cost_a as number) ?? (evt.payload.cost_b as number) ?? (evt.payload.cost as number);
+      return `${evt.agent_id} cost=${govCost?.toFixed(2) ?? "?"}`;
+    }
     case "payoff_computed":
       return `${evt.initiator_id} -> ${evt.counterparty_id}`;
     default:
@@ -161,8 +163,11 @@ export function EventFeed() {
     const n: SwarmEvent[] = [];
     for (const evt of events) {
       const receipt = detectReceipt(evt);
-      if (receipt) r.push(receipt);
-      n.push(evt);
+      if (receipt) {
+        r.push(receipt);
+      } else {
+        n.push(evt);
+      }
     }
     return { receipts: r, normalEvents: n };
   }, [events]);
