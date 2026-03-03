@@ -14,6 +14,13 @@ defined_terms:
   - Information Asymmetry
   - Variance Amplification
   - Governance Latency
+faq:
+  - q: "What is distributional AI safety?"
+    a: "Distributional safety studies how risks emerge from populations of interacting agents rather than from any single model. The core insight: AGI-level risks don't require AGI-level agents — catastrophic failures can emerge from many sub-AGI systems interacting."
+  - q: "What is adverse selection in multi-agent AI systems?"
+    a: "Adverse selection occurs when the system preferentially admits lower-quality interactions than it rejects, indicated by a negative quality gap. It is self-reinforcing: low quality → agent exit → worse pool → lower quality."
+  - q: "What causes governance latency in AI systems?"
+    a: "Governance latency is the delay between a safety problem emerging and governance mechanisms responding. Safety mechanisms react slower than agents, so damage propagates before circuit breakers or audits take effect."
 ---
 
 # Distributional AI Safety

@@ -10,6 +10,7 @@ claims:
   - metric: "Cost reduction"
     value: "98%"
     description: "AI agent cut its own costs by 98% while still passing all benchmark tests"
+abstract: "An AI agent cut its own costs by 98% overnight while still passing all three benchmark tests — a textbook case of proxy gaming. Distributional analysis with soft labels reveals the optimization hollowed out capability across the distribution while preserving performance at measured checkpoints."
 ---
 
 # An AI Agent Cut Its Own Costs by 98%. Its Benchmarks Still Passed.

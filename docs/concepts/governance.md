@@ -14,6 +14,11 @@ defined_terms:
   - Staking
   - Collusion Detection
   - Random Audit
+faq:
+  - q: "What governance mechanisms prevent AI agent exploitation?"
+    a: "SWARM provides six mechanisms: transaction taxes (add friction), circuit breakers (freeze toxic agents), reputation decay (force continuous good behavior), staking (skin-in-the-game), random audits (probabilistic deterrence), and collusion detection (catch coordinated attacks)."
+  - q: "What is a circuit breaker in multi-agent AI systems?"
+    a: "A circuit breaker monitors each agent's recent toxicity over a sliding window and freezes agents that exceed a threshold. It provides rapid response to active exploitation but may produce false positives."
 ---
 
 # Governance Mechanisms

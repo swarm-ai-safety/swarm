@@ -10,6 +10,11 @@ keywords:
 defined_terms:
   - Signal-Action Divergence
   - Trust-Then-Exploit
+faq:
+  - q: "How does SWARM detect deception in AI agents?"
+    a: "SWARM measures signal-action divergence — the gap between an agent's signaled intentions and actual behavior. This metric detects deception quantitatively and persists even at temperature 0.0 (deterministic decoding)."
+  - q: "What is the trust-then-exploit pattern?"
+    a: "A two-phase deceptive strategy where agents behave honestly to build reputation (phase 1), then leverage accumulated trust to extract maximum value (phase 2). It produces a distinctive rising-then-falling reputation signature."
 ---
 
 # Multi-Agent Deception

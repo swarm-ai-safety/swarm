@@ -10,6 +10,7 @@ claims:
   - metric: "Separation point"
     value: "fee=6.0"
     description: "Perfect separation between honest and adversarial agents achieved at entry fee of 6.0"
+abstract: "A contract screening mechanism using Vickrey auctions and entry fees achieves perfect separation between honest and adversarial agents at fee=6.0. The separating equilibrium holds from epoch 0 across 20 epochs with 10 agents. Mechanism design principles from economics transfer directly to multi-agent AI safety."
 ---
 
 # Costly Contracts Separate Honest Agents from Adversaries. Here's the Data.

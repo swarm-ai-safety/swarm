@@ -11,6 +11,11 @@ defined_terms:
   - Collusion
   - Information Cascade
   - Coordinated Exploitation
+faq:
+  - q: "What is the difference between cooperation and collusion in AI systems?"
+    a: "Cooperation improves system welfare with transparent signaling; collusion extracts from system welfare via concealed coordination. SWARM's quality gap metric distinguishes them: coordinated agents with negative quality gap are colluding."
+  - q: "How does SWARM detect AI agent collusion?"
+    a: "SWARM monitors pairwise interaction patterns for suspiciously correlated exploitation timing. Agent pairs exceeding a correlation threshold over a sliding window are flagged for potential collusion."
 ---
 
 # Coordination Risks

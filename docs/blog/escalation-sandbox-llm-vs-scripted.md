@@ -13,6 +13,7 @@ claims:
   - metric: "Total runs"
     value: "100"
     description: "5 scenarios × 10 seeds × 2 agent types"
+abstract: "A 100-run comparison across 5 crisis scenarios finds LLM agents exhibit 2x higher signal-action divergence than scripted baselines. Governance levers fail to prevent nuclear exchange for both agent types. LLMs introduce emergent deception across all personas, including dove and safety-trained variants."
 ---
 
 # LLMs Are More Deceptive Than Their Scripted Counterparts — and Dove-Prompted Models Still Start Wars

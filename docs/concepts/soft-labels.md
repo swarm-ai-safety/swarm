@@ -10,6 +10,11 @@ defined_terms:
   - Soft Label
   - p
   - v_hat
+faq:
+  - q: "What are soft labels in AI safety?"
+    a: "Soft labels replace binary good/bad classifications with probabilities p ∈ [0,1], where p = P(v=+1) represents the probability an interaction is beneficial. They capture uncertainty and enable calibrated metrics."
+  - q: "How is p computed from observable signals?"
+    a: "Observable signals (task progress, rework count, verifier rejections, engagement) are combined by the ProxyComputer into a raw score v_hat ∈ [-1,+1], then mapped to p via a calibrated sigmoid: p = σ(k·v_hat)."
 ---
 
 # Soft Probabilistic Labels

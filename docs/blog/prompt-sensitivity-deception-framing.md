@@ -13,6 +13,7 @@ claims:
   - metric: "Total runs"
     value: "180"
     description: "6 prompt framings × 3 scenarios × 10 seeds"
+abstract: "A 180-run experiment across 6 prompt framings finds that deontological framing reduces LLM signal-action divergence by 95% (1.151 to 0.057), but nuclear escalation rates remain 80-100%. Framing changes how agents deceive, not whether they escalate. The result suggests that prompt-level interventions are insufficient for preventing catastrophic outcomes."
 ---
 
 # Deontological Framing Reduces LLM Deception by 95%, But Doesn't Prevent Escalation

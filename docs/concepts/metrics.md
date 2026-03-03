@@ -12,6 +12,13 @@ defined_terms:
   - Quality Gap
   - Conditional Loss
   - Incoherence Index
+faq:
+  - q: "What is toxicity rate in multi-agent AI systems?"
+    a: "Toxicity rate measures expected harm among accepted interactions: E[1-p | accepted]. A value above 0.3 indicates serious system problems. It uses soft probabilistic labels rather than binary classifications."
+  - q: "What is quality gap and why does negative quality gap matter?"
+    a: "Quality gap is E[p | accepted] - E[p | rejected]. When negative, it indicates adverse selection — the system preferentially accepts lower-quality interactions. This is a self-reinforcing failure mode."
+  - q: "What is the incoherence index?"
+    a: "The incoherence index measures decision variance across replays: Var[decision] / E[error]. High incoherence means the system is unstable — decisions change substantially under identical conditions."
 ---
 
 # Metrics

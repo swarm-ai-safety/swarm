@@ -10,6 +10,7 @@ claims:
   - metric: "Collapse phase transition"
     value: "37.5-50% adversarial"
     description: "Governance mechanisms fail completely between 37.5% and 50% adversarial agent fraction"
+abstract: "Multi-agent ecosystems exhibit sharp phase transitions: governance mechanisms that work at 37.5% adversarial agents fail completely at 50%. The critical lever is collusion detection, not punishment severity. Binary safety labels miss the distributional dynamics that drive ecosystem collapse."
 ---
 
 # When Agent Ecosystems Collapse

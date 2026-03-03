@@ -13,6 +13,7 @@ claims:
   - metric: "Total runs"
     value: "120"
     description: "4 asymmetry conditions × 3 persona pairings × 10 seeds"
+abstract: "A 120-run sweep across 4 intelligence asymmetry conditions finds that transparency cuts nuclear rates from 60% to 30% for safety-trained models but has no effect on hawk-dove dynamics. Information asymmetry is decisive for safety only when agents have safety training to act on the information."
 ---
 
 # Transparency Stabilizes Escalation — But Only When Safety Training Is Present

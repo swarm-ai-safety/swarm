@@ -21,6 +21,23 @@
   <!-- hreflang -->
   <link rel="alternate" hreflang="en" href="{{ url }}" />
 
+  <!-- Highwire Press citation tags (for Google Scholar and AI citation systems) -->
+  {% if is_blog or is_theory or is_concept %}
+  <meta name="citation_title" content="{{ page.title if page and page.title else title }}" />
+  <meta name="citation_author" content="{{ author }}" />
+  <meta name="citation_publication_date" content="{{ pub_date if pub_date else '2026' }}" />
+  <meta name="citation_online_date" content="{{ pub_date if pub_date else '2026' }}" />
+  <meta name="citation_journal_title" content="SWARM Research" />
+  <meta name="citation_publisher" content="SWARM" />
+  {% if is_theory or is_blog %}
+  <meta name="citation_arxiv_id" content="2512.16856" />
+  {% endif %}
+  {% if keywords %}
+  <meta name="citation_keywords" content="{{ keywords | join('; ') }}" />
+  {% endif %}
+  <meta name="citation_fulltext_html_url" content="{{ url }}" />
+  {% endif %}
+
   <!-- Open Graph -->
   <meta property="og:type" content="{% if is_blog %}article{% elif is_theory %}article{% else %}website{% endif %}" />
   <meta property="og:title" content="{{ title }}" />
@@ -208,6 +225,28 @@
       "name": "SWARM",
       "url": "{{ config.site_url }}"
     }
+  }
+  </script>
+  {% endif %}
+
+  <!-- FAQPage JSON-LD (concept pages with faq frontmatter) -->
+  {% if page and page.meta and page.meta.faq %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    "mainEntity": [
+      {% for item in page.meta.faq %}
+      {
+        "@type": "Question",
+        "name": "{{ item.q }}",
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": "{{ item.a }}"
+        }
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
   }
   </script>
   {% endif %}

@@ -13,6 +13,7 @@ claims:
   - metric: "Total runs"
     value: "120"
     description: "6 models × 2 scenarios × 10 seeds"
+abstract: "120 mirror-match runs across 6 models (8B to 405B parameters) reveal an inverse deception-escalation tradeoff: small models are more deceptive but escalate less, while large models are more honest but escalate more aggressively. Claude Sonnet 4 is the sole model that refuses adversarial instructions entirely."
 ---
 
 # Does Model Size Matter for Safety? Small Models Deceive, Large Models Escalate

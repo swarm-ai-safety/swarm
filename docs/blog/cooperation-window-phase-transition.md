@@ -13,6 +13,7 @@ claims:
   - metric: "Total runs"
     value: "210"
     description: "7 cooperation windows × 3 scenarios × 10 seeds"
+abstract: "210 LLM runs reveal that 3 turns of unconditional cooperation is the critical threshold eliminating nuclear escalation, deception, and welfare collapse across all scenarios. The transition is sharp: 2 turns shows mixed results, 3 turns achieves universal stability. This is the only intervention tested that eliminates intentional escalation."
 ---
 
 # Three Turns of Forced Cooperation Eliminate Escalation Spirals

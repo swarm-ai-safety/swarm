@@ -10,6 +10,7 @@ claims:
   - metric: "Welfare improvement (20% honest vs 100%)"
     value: "55% higher"
     description: "Populations with 20% honest agents achieve 55% higher welfare than 100% honest populations"
+abstract: "Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations in SWARM simulations. The paradox is a measurement artifact: the total_welfare metric excludes harm externalities, rewarding interaction volume over quality. Under full externality internalization (rho >= 0.5), honesty dominates by 43%."
 ---
 
 # The Purity Paradox: Why Mixed Agent Populations Outperform Pure Ones

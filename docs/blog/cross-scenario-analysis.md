@@ -13,6 +13,7 @@ claims:
   - metric: "Regime count"
     value: "3"
     description: "Results partition into 3 distinct regimes with sharp boundaries"
+abstract: "Analysis of 11 scenarios (211 epochs, 1905 interactions, 81 agents) reveals three governance regimes with sharp boundaries. Below the critical threshold, governance works; above it, hardening rules doesn't help. The boundary between stressed-but-functional and irreversible-collapse is sharper than expected."
 ---
 
 # 11 Scenarios, 3 Regimes, 1 Critical Threshold

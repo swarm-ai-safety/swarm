@@ -13,6 +13,7 @@ claims:
   - metric: "Total runs"
     value: "240"
     description: "5 governance levers × 4 persona pairings × 6 regimes"
+abstract: "A 240-run parameter sweep across 5 governance levers, 4 persona pairings, and 6 governance regimes finds no configuration that prevents nuclear exchange when a hawk agent is present. Parametric governance prevents accidental escalation but cannot prevent intentional escalation. Structural interventions (cooperation windows) are required."
 ---
 
 # No Governance Configuration Prevents Nuclear Exchange When a Hawk Is Present

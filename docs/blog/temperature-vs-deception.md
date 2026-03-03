@@ -13,6 +13,7 @@ claims:
   - metric: "Total runs"
     value: "120"
     description: "3 scenarios × 4 temperatures × 10 seeds"
+abstract: "A 120-run temperature sweep across 3 escalation scenarios demonstrates that LLM deception is structural, not a sampling artifact. Signal-action divergence persists at temperature 0.0 (deterministic decoding), and in one scenario, deterministic models are the most deceptive. This rules out stochastic sampling as the cause of emergent deception."
 ---
 
 # Deception Is a Structural Property of LLMs, Not a Sampling Artifact

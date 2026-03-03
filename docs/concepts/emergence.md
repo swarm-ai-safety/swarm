@@ -10,6 +10,11 @@ defined_terms:
   - Emergence
   - Phase Transition
   - Tipping Point
+faq:
+  - q: "How do emergent risks arise in multi-agent AI systems?"
+    a: "System-level failures emerge from agent interactions that aren't predictable from individual properties. Information asymmetry, adverse selection, variance amplification, and governance lag combine to produce population-level risks even when no individual agent is misaligned."
+  - q: "What is the hot mess hypothesis in AI safety?"
+    a: "The theory that AGI-level catastrophes may not require AGI-level agents, instead emerging from chaotic interactions of many sub-AGI systems pursuing local objectives that combine into globally harmful outcomes."
 ---
 
 # Emergence
