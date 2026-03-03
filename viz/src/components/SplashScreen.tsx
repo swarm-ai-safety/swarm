@@ -28,7 +28,7 @@ export function SplashScreen() {
 
   return (
     <div
-      className={`absolute inset-0 z-50 flex items-center justify-center bg-bg cursor-pointer ${
+      className={`absolute inset-0 z-50 flex flex-col items-center justify-center bg-bg cursor-pointer ${
         phase === "exit" ? "animate-[splash-exit_0.7s_ease-in_forwards]" : ""
       }`}
       onClick={skip}
@@ -42,6 +42,12 @@ export function SplashScreen() {
             : ""
         }`}
       />
+      <p className="text-muted text-sm mt-4 animate-[splash-enter_1.2s_ease-out_forwards] opacity-0" style={{ animationDelay: "0.6s", animationFillMode: "forwards" }}>
+        Governance benchmark suite with receipts
+      </p>
+      <p className="text-muted/40 text-xs mt-6 animate-[splash-enter_1.4s_ease-out_forwards] opacity-0" style={{ animationDelay: "1.2s", animationFillMode: "forwards" }}>
+        click to continue
+      </p>
     </div>
   );
 }
