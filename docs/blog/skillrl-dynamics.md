@@ -17,7 +17,7 @@ The headline result: SkillRL-modeled agents accumulate 170 cumulative payoff by 
 
 ## The learning curve separates early
 
-![Learning Curves by Agent Type](figures/skillrl_dynamics/learning_curves.png)
+![Learning Curves by Agent Type](figures/skillrl_dynamics/learning_curves.webp)
 
 By epoch 3-4, SkillRL agents (blue) pull away from the pack. The separation is superlinear — the gap between SkillRL and honest agents *widens* each epoch rather than converging. The confidence intervals (shaded ribbons, 95% CI across 10 seeds) are tight, meaning this isn't a lucky seed. It's a consistent structural advantage.
 
@@ -27,11 +27,11 @@ The SkillRL advantage compounds because each extracted skill biases future decis
 
 ## 95% of skills are lessons, not strategies
 
-![Skill Library Growth](figures/skillrl_dynamics/skill_library_growth.png)
+![Skill Library Growth](figures/skillrl_dynamics/skill_library_growth.webp)
 
 The skill library grows linearly — about 0.6 skills per epoch per agent, reaching ~18 skills by epoch 30. But look at the composition:
 
-![Skill Type Composition](figures/skillrl_dynamics/skill_composition.png)
+![Skill Type Composition](figures/skillrl_dynamics/skill_composition.webp)
 
 Early on, strategies (blue) and lessons (orange) are roughly balanced. By epoch 10, lessons dominate 90%+ of the library. By epoch 30, it's 95% lessons, 5% strategies, zero composites.
 
@@ -41,7 +41,7 @@ This is a finding with implications beyond the simulation. If you give agents th
 
 ## The threshold drifts toward caution
 
-![Acceptance Threshold Drift](figures/skillrl_dynamics/threshold_drift.png)
+![Acceptance Threshold Drift](figures/skillrl_dynamics/threshold_drift.webp)
 
 Each skill carries an `acceptance_threshold_delta` — how much it nudges the agent's willingness to accept interactions. Strategies push the threshold down (more accepting), lessons push it up (more cautious).
 
@@ -51,7 +51,7 @@ In plain terms: SkillRL agents start slightly adventurous, quickly learn that ma
 
 ## GRPO baseline rises, then plateaus
 
-![GRPO Baseline & Skill Effectiveness](figures/skillrl_dynamics/grpo_effectiveness.png)
+![GRPO Baseline & Skill Effectiveness](figures/skillrl_dynamics/grpo_effectiveness.webp)
 
 The policy gradient baseline (blue, left axis) reflects the running average payoff that an agent uses to compute advantage. It rises from 0.55 to ~0.58 in the first 5 epochs as the agent accumulates early wins, then oscillates around that level. The extraction bar rises with it — you need *better* outcomes to extract new strategies as your baseline improves.
 
@@ -59,7 +59,7 @@ Average skill effectiveness (green dashed, right axis) rises steeply to ~0.55 an
 
 ## The 2x3 summary
 
-![SkillRL Dynamics Summary](figures/skillrl_dynamics/dynamics_summary.png)
+![SkillRL Dynamics Summary](figures/skillrl_dynamics/dynamics_summary.webp)
 
 The bottom-right panel shows the tier breakdown: almost all skills remain task-specific (yellow), with a small number promoted to general tier (green) after meeting the promotion threshold (10+ invocations, 60%+ success rate). Refined skills (purple, dashed) stay near zero — underperformance triggers refinement, but most lessons are simple enough to work without tuning.
 

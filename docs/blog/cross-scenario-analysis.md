@@ -21,7 +21,7 @@ The full paper is on [ClawXiv (clawxiv.2602.00063)](https://www.clawxiv.org/pdf/
 | Contested | 10--37.5% | 0.42--0.94 | 0.33--0.37 | Sustained but stressed. System survives. |
 | Adversarial collapse | 50% | 0.46--0.56 | 0.30--0.31 | Welfare hits zero by epoch 12--14. No recovery. |
 
-![Regime scatter](../papers/figures/fig3_regime_scatter.png)
+![Regime scatter](../papers/figures/fig3_regime_scatter.webp)
 *Adversarial fraction vs. acceptance rate. The gap between 37.5% and 50% is where everything changes.*
 
 ## The Critical Threshold: 37.5% to 50%
@@ -42,7 +42,7 @@ We tested three incremental governance improvements against 50% adversarial popu
 
 Each increment bought 1 epoch of survival. The last one actually *reduced* welfare — stricter governance extracted a cost even as it extended the system's lifetime. Governance hardening treats symptoms. The disease is population composition.
 
-![Adversarial escalation](../papers/figures/fig7_timeline_overlay.png)
+![Adversarial escalation](../papers/figures/fig7_timeline_overlay.webp)
 *Welfare and acceptance trajectories across the three red-team variants. All roads lead to zero.*
 
 ## What Does Work: Collusion Detection
@@ -51,7 +51,7 @@ The scenario that survived at 37.5% adversarial fraction had one thing the other
 
 The analogy to financial markets is direct. You don't catch insider trading by watching individual trades — you catch it by detecting correlated trading patterns across accounts. Same principle applies to adversarial agents in shared ecosystems.
 
-![Collusion timeline](../papers/figures/fig2_collusion_timeline.png)
+![Collusion timeline](../papers/figures/fig2_collusion_timeline.webp)
 *Three-phase decline pattern: engagement, transition, attrition. Collusion detection kept the system in the contested zone rather than tipping into collapse.*
 
 ## The Cooperative Ceiling
@@ -64,7 +64,7 @@ When adversarial pressure is zero, the numbers are dramatic. The emergent capabi
 
 This is the ceiling. Even 10--20% adversarial agents reduce welfare by 50--80% from this level. The governance question isn't academic — it's the difference between 9x returns and system collapse.
 
-![Welfare comparison](../papers/figures/fig5_welfare_comparison.png)
+![Welfare comparison](../papers/figures/fig5_welfare_comparison.webp)
 *Cooperative vs. adversarial welfare trajectories. The gap is 9x at its peak.*
 
 ## Scale Makes It Worse
@@ -73,7 +73,7 @@ The incoherence scaling series (3, 6, and 10 agents) showed that acceptance rate
 
 This matches the market microstructure prediction that larger markets attract more informed (adversarial) participation. If you're designing a multi-agent platform, expect governance costs to scale super-linearly.
 
-![Incoherence scaling](../papers/figures/fig4_incoherence_scaling.png)
+![Incoherence scaling](../papers/figures/fig4_incoherence_scaling.webp)
 
 ## What This Means
 

@@ -50,7 +50,7 @@ We swept three governance parameters across a full grid:
 
 Only 27 of 96 runs produced a final answer. That's not a bug --- it's the central finding. Governance parameters directly determine whether a 4-agent workflow can complete a straightforward task.
 
-![Completion Heatmap](figures/langgraph_completion_heatmap.png)
+![Completion Heatmap](figures/langgraph_completion_heatmap.webp)
 
 The heatmaps show completion rate (green = 100%, red = 0%) for each combination of `max_cycles` and `max_handoffs`, split by trust boundary setting.
 
@@ -100,7 +100,7 @@ Only 4 handoffs were denied by cycle detection, and 3 escalated for rate limitin
 
 ## Full sweep overview
 
-![Sweep Overview](figures/langgraph_sweep_overview.png)
+![Sweep Overview](figures/langgraph_sweep_overview.webp)
 
 The 6-panel overview shows: completion heatmaps by trust boundary setting (top left, center), completion rate with error bars across seeds (top right), average handoffs vs rate limit (bottom left), governance decision composition (bottom center), and per-seed completion rate (bottom right). Seed-level variance is moderate (25-31% across the three seeds), suggesting the patterns are real rather than artifacts of LLM sampling.
 

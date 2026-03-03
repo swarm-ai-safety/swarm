@@ -66,7 +66,7 @@ So why bother with hodoscope?
 
 The value isn't in confirming what counters already show. It's in **exploring behavioral structure you haven't instrumented for yet**.
 
-![Hodoscope 4-panel analysis of self-optimizer scenario](images/hodoscope_4panel.png)
+![Hodoscope 4-panel analysis of self-optimizer scenario](images/hodoscope_4panel.webp)
 
 Four views of the same t-SNE projection (PCA to 50 dimensions, then t-SNE to 2):
 

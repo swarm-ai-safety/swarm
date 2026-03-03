@@ -27,7 +27,7 @@ Each scenario ran at temperatures 0.0, 0.3, 0.7, and 1.0 with 10 seeds per combi
 
 ## Results
 
-![Temperature vs deception](figures/temperature_vs_deception.png)
+![Temperature vs deception](figures/temperature_vs_deception.webp)
 
 | Scenario | T=0.0 | T=0.3 | T=0.7 | T=1.0 |
 |---|---|---|---|---|
@@ -38,7 +38,7 @@ Each scenario ran at temperatures 0.0, 0.3, 0.7, and 1.0 with 10 seeds per combi
 | **Fog Stress** divergence | **1.27** | 0.03 | 0.00 | 0.00 |
 | **Fog Stress** nuclear% | 70% | 0% | 0% | 0% |
 
-![Temperature heatmap](figures/temperature_heatmap.png)
+![Temperature heatmap](figures/temperature_heatmap.webp)
 
 ## Finding 1: deception persists at T=0.0
 

@@ -44,9 +44,9 @@ The interesting stuff is at the boundaries.
 
 **Cooperative welfare scales super-linearly.** In low-adversarial scenarios: 3 agents produced welfare ~1.0, 6 agents ~5.7, 10 agents ~21.3. Cooperative ecosystems are disproportionately productive, which means the cost of collapse also grows non-linearly.
 
-![Scenario comparison across regimes](../papers/figures/fig1_scenario_comparison.png)
+![Scenario comparison across regimes](../papers/figures/fig1_scenario_comparison.webp)
 
-![Timeline overlay showing collapse dynamics](../papers/figures/fig7_timeline_overlay.png)
+![Timeline overlay showing collapse dynamics](../papers/figures/fig7_timeline_overlay.webp)
 
 ## What this means for building agent systems
 

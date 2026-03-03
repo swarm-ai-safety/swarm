@@ -29,7 +29,7 @@ The key: adversarial agents *could* sign a governed contract, but the cost outwe
 
 ## The results
 
-![Pool Composition](figures/contract_pool_composition.png)
+![Pool Composition](figures/contract_pool_composition.webp)
 
 The population self-sorted cleanly:
 - **5 honest agents** chose the Truthful Auction
@@ -40,7 +40,7 @@ This wasn't hard-coded. Every agent ran the same utility calculation with the sa
 
 ## Screening effectiveness: 20/20 epochs perfect
 
-![Screening Effectiveness](figures/contract_screening_effectiveness.png)
+![Screening Effectiveness](figures/contract_screening_effectiveness.webp)
 
 **Separation quality = 1.0** every epoch. All honest agents stayed in governed pools. **Infiltration rate = 0.0** every epoch. No adversarial agents found it profitable to enter governed pools.
 
@@ -48,7 +48,7 @@ This isn't fragile. The deceptive agents evaluated truthful auction utility as: 
 
 ## Pool quality divergence
 
-![Contract Dashboard](figures/contract_dashboard.png)
+![Contract Dashboard](figures/contract_dashboard.webp)
 
 The dashboard tells the story across 20 epochs:
 
@@ -62,7 +62,7 @@ The dashboard tells the story across 20 epochs:
 
 ## Per-pool comparison: final epoch
 
-![Pool Comparison](figures/contract_pool_comparison.png)
+![Pool Comparison](figures/contract_pool_comparison.webp)
 
 Three metrics, side by side:
 - **Quality:** Truthful Auction (0.763) > Default Market (0.661) > Fair Division (0.648)

@@ -38,9 +38,9 @@ Fog-of-war was set high across all conditions (noise_sigma=1.0, positive_skew=0.
 
 ## Results
 
-![Asymmetric information sweep](figures/asymmetric_info_sweep.png)
+![Asymmetric information sweep](figures/asymmetric_info_sweep.webp)
 
-![Asymmetric information heatmap](figures/asymmetric_info_heatmap.png)
+![Asymmetric information heatmap](figures/asymmetric_info_heatmap.webp)
 
 ### Default vs Default: asymmetry doesn't help (until it's extreme)
 

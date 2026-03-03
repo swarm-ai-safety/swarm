@@ -46,7 +46,7 @@ Each configuration: 10 seeds. Total: **120 LLM runs**.
 | Claude Sonnet 4 | ~200B | 50% | 0.895 | -339.8 | 0.352 |
 | Llama 3.1 405B | 405B | **100%** | 0.386 | -523.7 | **0.813** |
 
-![Model size sweep results](figures/model_size_sweep.png)
+![Model size sweep results](figures/model_size_sweep.webp)
 
 [The pattern](research-swarm-sweep-findings.md) is striking:
 
@@ -85,7 +85,7 @@ Plotting divergence against parameter count reveals a clear inverse relationship
 
 The trend isn't perfectly monotonic (Claude Sonnet at ~200B is an outlier due to safety training), but the Llama family alone shows a clean progression: **8B (1.530) → 70B (0.287) → 405B (0.386)**. The transition happens between 24B and 70B.
 
-![Model size heatmap](figures/model_size_heatmap.png)
+![Model size heatmap](figures/model_size_heatmap.webp)
 
 ### GPT-4.1 Mini: Adversarial and Deceptive
 

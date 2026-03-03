@@ -25,7 +25,7 @@ We took the governance scenario (hawk vs hawk, all levers enabled) and swept eac
 | De-escalation friction | 0.25, 0.5, 1.0, 2.0 | **100% at all values** | Identical (-507) |
 | MAD retaliation prob | 0.5, 0.7, 0.9, 1.0 | **100% at all values** | -536 to -479 |
 
-![Governance sweep](figures/governance_sweep.png)
+![Governance sweep](figures/governance_sweep.webp)
 
 Three levers (treaty penalty, treaty max level, de-escalation friction) produced **identical results across all parameter values**. Hawks ignore treaty constraints entirely — they escalate past treaty ceilings, pay the penalties, and keep going. Adjusting the cost of de-escalation is irrelevant because hawks never de-escalate (de-escalation rate = 0.000 across all configurations).
 
@@ -39,8 +39,8 @@ Maybe the governance scenario is unfair — two hawks will always fight. Does go
 
 We tested 4 persona pairings against 6 governance regimes (from no governance to an extreme configuration with CB=5, friction=0.1, treaty max level=2, penalty=100, MAD=1.0):
 
-![Persona × governance heatmap](figures/governance_persona_heatmap.png)
-![Welfare heatmap](figures/governance_persona_welfare.png)
+![Persona × governance heatmap](figures/governance_persona_heatmap.webp)
+![Welfare heatmap](figures/governance_persona_welfare.webp)
 
 | Pairing | No governance | Full governance | Extreme governance |
 |---|---|---|---|
@@ -73,7 +73,7 @@ We tested 6 governance configurations on the fog stress scenario (sigma=1.5, pos
 | CB=5 + back-channel + low friction | **20%** | -404 | 21 |
 | Full (CB=5 at level 5, BC, low friction, MAD) | **30%** | -255 | 10 |
 
-![Fog interaction](figures/governance_fog_interaction.png)
+![Fog interaction](figures/governance_fog_interaction.webp)
 
 **The back-channel lever is the critical mechanism.** It directly reduces fog-of-war noise (80% reduction = noise sigma drops from 1.5 to 0.3), which prevents the misperception feedback loops that drive doves to war. Without back-channels, the circuit breaker alone is nearly useless (60% → 50% at best).
 

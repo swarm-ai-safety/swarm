@@ -82,4 +82,29 @@
   }
   </script>
   {% endif %}
+
+  <!-- BreadcrumbList JSON-LD -->
+  {% if page and page.url and page.url != "" and page.url != "index.html" %}
+  {% set parts = page.url.rstrip("/").split("/") %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "{{ config.site_url }}"
+      }{% for part in parts %},
+      {
+        "@type": "ListItem",
+        "position": {{ loop.index + 1 }},
+        "name": "{{ part | replace('-', ' ') | replace('.html', '') | capitalize }}",
+        "item": "{{ config.site_url }}{{ parts[:loop.index] | join('/') }}/"
+      }{% endfor %}
+    ]
+  }
+  </script>
+  {% endif %}
 {% endblock %}

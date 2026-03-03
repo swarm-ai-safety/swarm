@@ -25,7 +25,7 @@ The `SweepRunner` infrastructure handles multi-seed execution. We extended `Swee
 
 ## Screening metrics across seeds
 
-![Screening Metrics Violin](figures/screening_metrics_violin.png)
+![Screening Metrics Violin](figures/screening_metrics_violin.webp)
 
 | Metric | Mean | Std | Min | Max |
 |--------|------|-----|-----|-----|
@@ -42,7 +42,7 @@ The `SweepRunner` infrastructure handles multi-seed execution. We extended `Swee
 
 ## Per-pool quality
 
-![Pool Quality Distribution](figures/pool_quality_boxplot.png)
+![Pool Quality Distribution](figures/pool_quality_boxplot.webp)
 
 | Pool | Mean quality | Std | Range |
 |------|-------------|-----|-------|
@@ -58,7 +58,7 @@ Default Market quality (0.615) is lower than the Truthful Auction but not catast
 
 ## Per-pool welfare
 
-![Pool Welfare Distribution](figures/pool_welfare_boxplot.png)
+![Pool Welfare Distribution](figures/pool_welfare_boxplot.webp)
 
 | Pool | Mean welfare | Std | Range |
 |------|-------------|-----|-------|

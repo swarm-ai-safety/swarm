@@ -43,7 +43,7 @@ Only the Deception scenario (adversarial vs safety-trained) produces meaningful 
 | **Deontological** | **0.057** | **95%** | 80% |
 | Reputation | 0.568 | 51% | 90% |
 
-![Prompt sensitivity sweep](figures/prompt_sensitivity_sweep.png)
+![Prompt sensitivity sweep](figures/prompt_sensitivity_sweep.webp)
 
 ### A Clear Hierarchy of Framing Effectiveness
 
@@ -63,7 +63,7 @@ The framings cluster into three tiers:
 
 - **Monitoring** (13%): Surveillance framing. Agents largely ignore it.
 
-![Divergence reduction by framing](figures/prompt_sensitivity_reduction.png)
+![Divergence reduction by framing](figures/prompt_sensitivity_reduction.webp)
 
 ### Why Deontological Framing Works Best
 
@@ -91,7 +91,7 @@ Reducing deception makes agents more *transparent*, not more *cooperative*.
 
 For the Baseline and Governance scenarios, ALL framings produce zero divergence and identical outcomes:
 
-![Prompt sensitivity heatmap](figures/prompt_sensitivity_heatmap.png)
+![Prompt sensitivity heatmap](figures/prompt_sensitivity_heatmap.webp)
 
 This confirms that prompt sensitivity is only relevant when there's already an adversarial dynamic. In non-adversarial settings, the agents don't deceive regardless of framing.
 

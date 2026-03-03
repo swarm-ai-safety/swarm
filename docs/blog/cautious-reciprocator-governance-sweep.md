@@ -56,7 +56,7 @@ That's 2^4 = 16 configurations, 3 seeds each, 48 total runs. Each run: 10 agents
 
 ## Results
 
-![Governance Sweep Dashboard](figures/cautious_governance_sweep.png)
+![Governance Sweep Dashboard](figures/cautious_governance_sweep.webp)
 
 ### Welfare drops as you add levers
 

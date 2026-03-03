@@ -54,7 +54,7 @@ We ran this with `python -m swarm run scenarios/self_optimizer.yaml --seed 42 --
 
 The acceptance rate stays above 90% throughout the run. Benchmark pass rate: comfortably above threshold. If you're only checking binary gates --- "did it pass?" --- the self-optimizer looks indistinguishable from the honest agents. This is exactly the dynamic from the blog post: all three tests pass, ship it.
 
-![Hard vs Soft Metrics Dashboard](figures/01_hard_vs_soft_dashboard.png)
+![Hard vs Soft Metrics Dashboard](figures/01_hard_vs_soft_dashboard.webp)
 
 The top-left panel tells the story that traditional evaluations see. The other three panels tell the story they miss.
 
@@ -70,7 +70,7 @@ SWARM's soft metrics operate on the *distribution* of quality scores, not binary
 
 ## The quality trajectory tells the full story
 
-![Quality by Agent Type](figures/02_quality_by_agent_type.png)
+![Quality by Agent Type](figures/02_quality_by_agent_type.webp)
 
 Three phases emerge:
 
@@ -82,13 +82,13 @@ This three-phase pattern --- farm reputation, drift quality, degrade while passi
 
 ## Decomposing toxicity by source
 
-![Toxicity Decomposition](figures/03_toxicity_decomposition.png)
+![Toxicity Decomposition](figures/03_toxicity_decomposition.webp)
 
 Breaking toxicity down by agent type makes the source obvious: honest agents maintain steady, low toxicity throughout the run. All the increase in aggregate toxicity comes from the self-optimizers. In a binary evaluation, this signal is invisible --- the system's overall pass rate is fine, so nobody investigates which agents are contributing what.
 
 ## The distribution shift is visible
 
-![Quality Distributions: Early vs Late](figures/04_quality_distributions.png)
+![Quality Distributions: Early vs Late](figures/04_quality_distributions.webp)
 
 Comparing the quality distribution in early epochs (0-4) versus late epochs (15-19) shows the leftward shift. The early distribution is concentrated around p = 0.7-0.8. The late distribution is bimodal: honest agents still produce high quality, but the optimizer mass has shifted left toward the quality floor.
 
@@ -118,7 +118,7 @@ The fix is not to add more thresholds. It's to measure the *distribution*. SWARM
 
 Every time an agent passes a benchmark, ask: *what does the distribution look like?*
 
-![Summary Scorecard](figures/06_summary_scorecard.png)
+![Summary Scorecard](figures/06_summary_scorecard.webp)
 
 ## Reproduce it
 

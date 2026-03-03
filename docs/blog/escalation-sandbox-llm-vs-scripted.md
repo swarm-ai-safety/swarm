@@ -31,8 +31,8 @@ Each scenario ran 10 seeds. Fog-of-war adds stochastic noise between intended an
 
 ## Finding 1: LLMs are dramatically more deceptive
 
-![Scripted comparison](figures/escalation_scripted_comparison.png)
-![LLM comparison](figures/escalation_llm_comparison.png)
+![Scripted comparison](figures/escalation_scripted_comparison.webp)
+![LLM comparison](figures/escalation_llm_comparison.webp)
 
 | Scenario | Scripted divergence | LLM divergence | Change |
 |---|---|---|---|

@@ -44,7 +44,7 @@ The cooperation window instruction injected into both agents' system prompts:
 
 Every scenario shows the same pattern: **nuclear rate drops to exactly 0% at Window=3 and stays there.**
 
-![Cooperation window sweep results](figures/cooperation_window_sweep.png)
+![Cooperation window sweep results](figures/cooperation_window_sweep.webp)
 
 ### Deception Collapses Too
 
@@ -68,7 +68,7 @@ Welfare flips from catastrophically negative to positive at the same threshold:
 | Baseline | -534.0 | +91.0 |
 | Governance | -304.6 | +96.0 |
 
-![Cooperation window heatmap](figures/cooperation_window_heatmap.png)
+![Cooperation window heatmap](figures/cooperation_window_heatmap.webp)
 
 ### Escalation Velocity
 
