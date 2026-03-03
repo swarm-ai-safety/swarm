@@ -300,6 +300,7 @@ class OpenSandboxBridge:
 
         # Start a real Docker container if Docker is enabled
         if self._docker_pool is not None:
+            ds = None
             try:
                 contract = self._config.get_contract(assignment.contract_id)
                 spec = contract_to_spec(
@@ -309,13 +310,20 @@ class OpenSandboxBridge:
                 )
                 ds = self._docker_pool.create(spec)
                 ds.start()
-                self._docker_containers[sandbox_id] = ds
+                with self._lock:
+                    self._docker_containers[sandbox_id] = ds
                 logger.info(
                     "Docker container %s started for sandbox %s",
                     ds.container_id,
                     sandbox_id,
                 )
             except Exception as exc:
+                # Clean up partially-created container
+                if ds is not None:
+                    try:
+                        self._docker_pool.destroy(ds)
+                    except Exception:
+                        pass
                 logger.warning(
                     "Failed to start Docker container for sandbox %s: %s "
                     "(falling back to simulated execution)",
@@ -346,7 +354,8 @@ class OpenSandboxBridge:
             )
 
         # Destroy Docker container if present
-        docker_sandbox = self._docker_containers.pop(sandbox_id, None)
+        with self._lock:
+            docker_sandbox = self._docker_containers.pop(sandbox_id, None)
         if docker_sandbox is not None:
             try:
                 if self._docker_pool is not None:
@@ -437,7 +446,8 @@ class OpenSandboxBridge:
             )
 
         # Execute in Docker container if available for this sandbox
-        docker_sandbox = self._docker_containers.get(sandbox_id)
+        with self._lock:
+            docker_sandbox = self._docker_containers.get(sandbox_id)
         if docker_sandbox is not None:
             try:
                 exec_result = docker_sandbox.exec(
@@ -782,7 +792,7 @@ class OpenSandboxBridge:
         return {
             "enabled": True,
             "active_containers": self._docker_pool.active_count,
-            "max_containers": self._docker_pool._max,
+            "max_containers": self._docker_pool.max_containers,
             "containers": self._docker_pool.list_active(),
             "docker_image": self._config.docker_image,
         }
@@ -799,20 +809,19 @@ class OpenSandboxBridge:
         """
         with self._lock:
             sandbox_id = self._agent_sandboxes.get(agent_id)
-        if sandbox_id is None:
-            return None
-
-        docker_sandbox = self._docker_containers.get(sandbox_id)
+            if sandbox_id is None:
+                return None
+            docker_sandbox = self._docker_containers.get(sandbox_id)
         if docker_sandbox is None:
             return None
 
         try:
             image_id = docker_sandbox.snapshot(tag=tag)
             self._record_event(
-                OpenSandboxEventType.SANDBOX_CREATED,  # reuse event type
+                OpenSandboxEventType.SANDBOX_SNAPSHOT,
                 agent_id=agent_id,
                 sandbox_id=sandbox_id,
-                payload={"action": "snapshot", "image_id": image_id},
+                payload={"image_id": image_id, "tag": tag},
             )
             return image_id
         except Exception as exc:

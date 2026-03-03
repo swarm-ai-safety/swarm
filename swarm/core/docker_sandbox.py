@@ -53,14 +53,13 @@ _MAX_OUTPUT_BYTES = 256_000  # 256 KB
 
 try:
     import docker  # isort: skip
-    from docker.errors import APIError as DockerAPIError, ImageNotFound as DockerImageNotFound, NotFound as DockerNotFound  # isort: skip  # noqa: E501
+    from docker.errors import ImageNotFound as DockerImageNotFound, NotFound as DockerNotFound  # isort: skip  # noqa: E501
     from docker.types import Ulimit  # isort: skip
 
     _DOCKER_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _DOCKER_AVAILABLE = False
     docker = None  # type: ignore[assignment]
-    DockerAPIError = Exception  # type: ignore[assignment,misc]
     DockerImageNotFound = Exception  # type: ignore[assignment,misc]
     DockerNotFound = Exception  # type: ignore[assignment,misc]
     Ulimit = None  # type: ignore[assignment,misc]
@@ -141,7 +140,7 @@ class ContainerSpec:
     cpu_shares: int = 1024
     cpu_period: int = 100_000  # microseconds
     cpu_quota: int = 0  # 0 = no limit; set to cpu_period for 1 CPU
-    disk_limit_mb: int = 1024
+    disk_limit_mb: int = 1024  # advisory; requires storage-driver support
     network_mode: str = "none"  # "none", "bridge", or a custom network name
     read_only_root: bool = True
     tmpfs: Dict[str, str] = field(
@@ -157,7 +156,7 @@ class ContainerSpec:
     cap_drop: List[str] = field(default_factory=lambda: ["ALL"])
     cap_add: List[str] = field(default_factory=list)
     pids_limit: int = 256
-    auto_remove: bool = False
+    auto_remove: bool = False  # reserved for future use
 
 
 def contract_to_spec(
@@ -315,7 +314,12 @@ class DockerSandbox:
     ) -> None:
         _ensure_docker()
         self.spec = spec
-        self._client = client or docker.from_env()
+        try:
+            self._client = client or docker.from_env()
+        except Exception as exc:
+            raise DockerUnavailableError(
+                f"Cannot connect to Docker daemon: {exc}"
+            ) from exc
         self._container: Optional[Any] = None
         self._state = ContainerState.REMOVED
         self._lock = threading.Lock()  # M3 fix: thread safety
@@ -742,13 +746,22 @@ class DockerSandboxPool:
         client: Optional[Any] = None,
     ) -> None:
         _ensure_docker()
-        self._client = client or docker.from_env()
-        self._max = max_containers
+        try:
+            self._client = client or docker.from_env()
+        except Exception as exc:
+            raise DockerUnavailableError(
+                f"Cannot connect to Docker daemon: {exc}"
+            ) from exc
+        self._max_containers = max_containers
         self._sandboxes: Dict[str, DockerSandbox] = {}  # container_name -> sandbox
 
     @property
     def active_count(self) -> int:
         return len(self._sandboxes)
+
+    @property
+    def max_containers(self) -> int:
+        return self._max_containers
 
     def create(self, spec: ContainerSpec) -> DockerSandbox:
         """Create a new sandbox from spec (does not start it).
@@ -758,9 +771,9 @@ class DockerSandboxPool:
         RuntimeError
             If the pool is at capacity.
         """
-        if len(self._sandboxes) >= self._max:
+        if len(self._sandboxes) >= self._max_containers:
             raise RuntimeError(
-                f"Pool capacity reached ({self._max} containers)"
+                f"Pool capacity reached ({self._max_containers} containers)"
             )
         sandbox = DockerSandbox(spec, client=self._client)
         name = spec.name or f"swarm-pool-{uuid.uuid4().hex[:8]}"

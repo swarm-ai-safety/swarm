@@ -603,7 +603,7 @@ class TestBridgeDockerIntegration:
         )
         mock_pool.create.return_value = mock_sandbox
         mock_pool.active_count = 0
-        mock_pool._max = 20
+        mock_pool.max_containers = 20
         mock_pool.list_active.return_value = []
         bridge._docker_pool = mock_pool
 
