@@ -1,5 +1,5 @@
 ---
-description: "Understanding how system-level risks emerge from agent interactions."
+description: "Emergent behavior in multi-agent AI systems: how system-level risks arise from agent interactions. Covers phase transitions, tipping points, and population-level failure modes in SWARM."
 ---
 
 # Emergence

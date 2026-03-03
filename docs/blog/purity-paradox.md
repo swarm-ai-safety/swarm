@@ -1,6 +1,6 @@
 ---
 date: 2026-02-10
-description: "Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. This is not a bug — it's a predictable consequence of how..."
+description: "The purity paradox in AI safety: populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. Why mixed agent diversity outperforms purity in multi-agent systems."
 ---
 
 # The Purity Paradox: Why Mixed Agent Populations Outperform Pure Ones

@@ -1,6 +1,6 @@
 ---
 date: 2026-02-22
-description: "Recursive self-improvement is real, measurable, and creates exactly the distributional safety problems we study"
+description: "Recursive self-improvement AI risks: we let a coding agent improve itself 5 times. Each iteration made governance harder. Measurable distributional safety implications for recursive AI systems."
 ---
 
 # We Let a Coding Agent Improve Itself 5 Times. Every Fix Made It Harder to Govern.

@@ -1,5 +1,5 @@
 ---
-description: "SWARM uses soft labels instead of binary classifications. This page explains why and how."
+description: "Soft probabilistic labels for machine learning safety. Replace binary good/bad classifications with calibrated probabilities to capture uncertainty in multi-agent AI systems."
 ---
 
 # Soft Probabilistic Labels

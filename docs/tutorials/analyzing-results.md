@@ -1,5 +1,5 @@
 ---
-description: "After running a SWARM experiment, you need to interpret what the numbers mean. This tutorial covers the four key metrics, common patterns, and diagnostic..."
+description: "How to analyze AI toxicity metrics from multi-agent experiments. Interpret toxicity rate, quality gap, conditional loss, and incoherence patterns from SWARM simulation results."
 ---
 
 # Analyzing Results

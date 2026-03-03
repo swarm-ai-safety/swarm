@@ -1,5 +1,5 @@
 ---
-description: "SWARM provides configurable governance levers to mitigate multi-agent risks."
+description: "AI agent governance mechanisms for multi-agent safety. Configure transaction taxes, circuit breakers, reputation decay, staking, random audits, and collusion detection in SWARM."
 ---
 
 # Governance Mechanisms

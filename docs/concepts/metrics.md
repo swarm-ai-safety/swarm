@@ -1,5 +1,5 @@
 ---
-description: "SWARM provides four key metrics for understanding multi-agent system health."
+description: "AI safety metrics for multi-agent systems: toxicity rate, quality gap, conditional loss, and incoherence index. Measure distributional health with SWARM's soft probabilistic metrics framework."
 ---
 
 # Metrics

@@ -1,5 +1,5 @@
 ---
-description: "> Implementation reference: For adaptive adversary internals, full strategy table, governance effectiveness metrics, and evaluation results, see..."
+description: "Red-team your AI agent governance with adversarial stress testing. SWARM's attack library tests 8 standard patterns — deception detection, adversarial agents, and governance bypass strategies."
 ---
 
 # Red Teaming
