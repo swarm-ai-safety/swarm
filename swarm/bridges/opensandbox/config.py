@@ -223,6 +223,17 @@ class OpenSandboxConfig:
     docker_image: str = "python:3.12-slim"
     docker_exec_user: str = "nobody"
 
+    def __post_init__(self) -> None:
+        """Validate security-sensitive configuration."""
+        # I5 fix: prevent exec as root
+        if self.docker_exec_user in ("root", "0"):
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "docker_exec_user=%r is insecure; overriding to 'nobody'",
+                self.docker_exec_user,
+            )
+            object.__setattr__(self, "docker_exec_user", "nobody")
+
     def get_contract(self, contract_id: str) -> GovernanceContract:
         """Look up a contract by ID, falling back to the default."""
         return self.contracts.get(contract_id, self.default_contract)

@@ -197,7 +197,8 @@ class TestContractToSpec:
         assert spec.labels["swarm.tier"] == "restricted"
         assert spec.env["SWARM_AGENT_ID"] == "agent-1"
 
-    def test_allowlist_network(self):
+    def test_allowlist_network_fails_closed(self):
+        """H4 fix: ALLOWLIST falls back to 'none' until enforced."""
         from swarm.bridges.opensandbox.config import GovernanceContract, NetworkPolicy
 
         contract = GovernanceContract(
@@ -206,7 +207,7 @@ class TestContractToSpec:
             network=NetworkPolicy.ALLOWLIST,
         )
         spec = ds_module.contract_to_spec(contract)
-        assert spec.network_mode == "bridge"
+        assert spec.network_mode == "none"  # fail-closed
 
     def test_full_network(self):
         from swarm.bridges.opensandbox.config import GovernanceContract, NetworkPolicy
@@ -468,6 +469,110 @@ class TestUtilities:
                 ds_module._ensure_docker()
         finally:
             ds_module._DOCKER_AVAILABLE = original
+
+
+# ---------------------------------------------------------------------------
+# Tests for security fixes
+# ---------------------------------------------------------------------------
+
+
+class TestSecurityValidation:
+    """Tests for security hardening fixes (C1, C2, H1, H4, M5, L2)."""
+
+    def test_validate_path_blocks_traversal(self):
+        """C2 fix: path traversal is rejected."""
+        with pytest.raises(ValueError, match="traversal"):
+            ds_module._validate_container_path("../../../etc/passwd")
+
+    def test_validate_path_blocks_shell_metachar(self):
+        """C1 fix: shell metacharacters in paths are rejected."""
+        for bad_char in (";", "&", "|", "`", "$", "(", ")"):
+            with pytest.raises(ValueError, match="Invalid character"):
+                ds_module._validate_container_path(f"/workspace/file{bad_char}name")
+
+    def test_validate_path_accepts_normal_paths(self):
+        """Normal paths pass validation."""
+        # Should not raise
+        ds_module._validate_container_path("/workspace/main.py")
+        ds_module._validate_container_path("/tmp/data/output.json")
+        ds_module._validate_container_path("relative/path.txt")
+
+    def test_sanitize_agent_id(self):
+        """L2 fix: agent_id is sanitized for Docker names."""
+        assert ds_module._sanitize_agent_id("agent-1") == "agent-1"
+        assert ds_module._sanitize_agent_id("agent with spaces") == "agent-with-spaces"
+        assert ds_module._sanitize_agent_id("agent;rm -rf /") == "agent-rm--rf--"
+
+    def test_shell_quote(self):
+        """Verify shell quoting handles single quotes."""
+        assert ds_module._shell_quote("hello") == "'hello'"
+        assert ds_module._shell_quote("it's") == "'it'\\''s'"
+
+    def test_contract_to_spec_explicit_security_fields(self):
+        """H3 fix: security fields are explicitly set."""
+        from swarm.bridges.opensandbox.config import GovernanceContract
+
+        contract = GovernanceContract(contract_id="h3-test")
+        spec = ds_module.contract_to_spec(contract)
+        assert spec.cap_drop == ["ALL"]
+        assert "no-new-privileges:true" in spec.security_opt
+        assert spec.cap_add == []
+        assert spec.read_only_root is True
+        assert spec.pids_limit == 256
+        assert spec.cpu_quota == 100_000  # I4 fix: hard CPU limit
+
+    def test_contract_to_spec_blocks_swarm_env_override(self):
+        """M5 fix: extra_env cannot override SWARM_ namespace."""
+        from swarm.bridges.opensandbox.config import GovernanceContract
+
+        contract = GovernanceContract(contract_id="m5-test")
+        spec = ds_module.contract_to_spec(
+            contract,
+            extra_env={"SWARM_TIER": "malicious", "CUSTOM_VAR": "ok"},
+        )
+        # SWARM_TIER should NOT be overridden
+        assert spec.env.get("SWARM_TIER") != "malicious"
+        # Custom var should be set
+        assert spec.env["CUSTOM_VAR"] == "ok"
+
+    def test_allowlist_fails_closed(self):
+        """H4 fix: ALLOWLIST → none (not bridge)."""
+        from swarm.bridges.opensandbox.config import GovernanceContract, NetworkPolicy
+
+        contract = GovernanceContract(
+            contract_id="h4-test",
+            network=NetworkPolicy.ALLOWLIST,
+        )
+        spec = ds_module.contract_to_spec(contract)
+        assert spec.network_mode == "none"
+
+    def test_copy_to_rejects_traversal(self):
+        """C2 fix: copy_to validates container_path."""
+        sandbox = TestDockerSandbox()._make_sandbox()
+        sandbox.start()
+        with pytest.raises(ValueError, match="traversal"):
+            sandbox.copy_to("/tmp/safe_file", "../../../etc/evil")
+
+    def test_copy_from_validates_path(self):
+        """H1 fix: copy_from validates container_path."""
+        sandbox = TestDockerSandbox()._make_sandbox()
+        sandbox.start()
+        with pytest.raises(ValueError, match="Invalid character"):
+            sandbox.copy_from("/workspace/$(malicious)")
+
+    def test_docker_exec_user_root_overridden(self):
+        """I5 fix: docker_exec_user='root' is overridden to 'nobody'."""
+        from swarm.bridges.opensandbox.config import OpenSandboxConfig
+
+        config = OpenSandboxConfig(docker_exec_user="root")
+        assert config.docker_exec_user == "nobody"
+
+    def test_docker_exec_user_zero_overridden(self):
+        """I5 fix: docker_exec_user='0' (root uid) is overridden."""
+        from swarm.bridges.opensandbox.config import OpenSandboxConfig
+
+        config = OpenSandboxConfig(docker_exec_user="0")
+        assert config.docker_exec_user == "nobody"
 
 
 # ---------------------------------------------------------------------------

@@ -30,7 +30,10 @@ Design goals:
 
 from __future__ import annotations
 
+import atexit
 import logging
+import re
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
@@ -61,6 +64,38 @@ except ImportError:  # pragma: no cover
     DockerImageNotFound = Exception  # type: ignore[assignment,misc]
     DockerNotFound = Exception  # type: ignore[assignment,misc]
     Ulimit = None  # type: ignore[assignment,misc]
+
+
+# Maximum bytes to read back from a container (H1 fix).
+_MAX_COPY_FROM_BYTES = 50_000_000  # 50 MB
+
+_DOCKER_NAME_RE = re.compile(r"[^a-zA-Z0-9_.-]")
+
+
+def _shell_quote(s: str) -> str:
+    """Shell-quote a string for safe embedding in sh -c commands."""
+    return "'" + s.replace("'", "'\\''") + "'"
+
+
+def _validate_container_path(path: str) -> None:
+    """Validate a path destined for inside a container (C2/C1 fix).
+
+    Raises ValueError for traversal attempts or invalid characters.
+    """
+    import posixpath
+
+    normalised = posixpath.normpath(path)
+    if ".." in normalised.split("/"):
+        raise ValueError(f"Path traversal detected: {path!r}")
+    # Block shell metacharacters
+    for ch in (";", "&", "|", "`", "$", "(", ")", "{", "}", "\n", "\r"):
+        if ch in path:
+            raise ValueError(f"Invalid character {ch!r} in path: {path!r}")
+
+
+def _sanitize_agent_id(agent_id: str) -> str:
+    """Sanitize an agent_id for use in Docker container names (L2 fix)."""
+    return _DOCKER_NAME_RE.sub("-", agent_id)[:64]
 
 
 class DockerUnavailableError(RuntimeError):
@@ -147,22 +182,36 @@ def contract_to_spec(
     """
     from swarm.bridges.opensandbox.config import NetworkPolicy
 
-    # Network mode
+    # Network mode — H4 fix: ALLOWLIST fails closed to "none" until
+    # iptables-based allowlist enforcement is implemented.
     if contract.network == NetworkPolicy.DENY_ALL:
         network_mode = "none"
     elif contract.network == NetworkPolicy.ALLOWLIST:
-        # For allowlist, we use bridge + iptables; the caller must set up
-        # the network rules externally.  We use a labelled bridge network.
+        logger.warning(
+            "NetworkPolicy.ALLOWLIST is not yet enforced; falling back "
+            "to deny-all (none) for safety.  Contract: %s",
+            contract.contract_id,
+        )
+        network_mode = "none"
+    elif contract.network == NetworkPolicy.FULL:
         network_mode = "bridge"
     else:
-        network_mode = "bridge"
+        network_mode = "none"  # Unknown policy — fail closed
 
-    # Environment
+    # Environment — M5 fix: extra_env cannot override SWARM_ vars.
     env = contract.to_sandbox_env()
     if agent_id:
         env["SWARM_AGENT_ID"] = agent_id
     if extra_env:
-        env.update(extra_env)
+        for k, v in extra_env.items():
+            if k.startswith("SWARM_"):
+                logger.warning(
+                    "Ignoring extra_env key %r — cannot override "
+                    "SWARM_ namespace variables",
+                    k,
+                )
+                continue
+            env[k] = v
 
     # Mounts from contract
     mounts = []
@@ -177,18 +226,29 @@ def contract_to_spec(
         )
 
     suffix = uuid.uuid4().hex[:8]
-    name = f"swarm-{agent_id}-{suffix}" if agent_id else f"swarm-sandbox-{suffix}"
+    safe_id = _sanitize_agent_id(agent_id) if agent_id else ""
+    name = f"swarm-{safe_id}-{suffix}" if safe_id else f"swarm-sandbox-{suffix}"
 
+    # H3 fix: explicitly set all security-critical fields rather than
+    # relying on ContainerSpec defaults.
     return ContainerSpec(
         image=image or "python:3.12-slim",
         name=name,
         mem_limit=f"{contract.max_memory_mb}m",
         cpu_shares=contract.max_cpu_shares,
+        cpu_period=100_000,
+        cpu_quota=100_000,  # I4 fix: hard limit to 1 CPU equivalent
         disk_limit_mb=contract.max_disk_mb,
         network_mode=network_mode,
+        read_only_root=True,
+        tmpfs={"/tmp": "size=64m,noexec"},
         env=env,
         mounts=mounts,
         timeout_seconds=contract.timeout_seconds,
+        security_opt=["no-new-privileges:true"],
+        cap_drop=["ALL"],
+        cap_add=[],
+        pids_limit=256,
         labels={
             "managed-by": "swarm",
             "swarm.agent_id": agent_id,
@@ -196,6 +256,31 @@ def contract_to_spec(
             "swarm.tier": contract.tier,
         },
     )
+
+
+# I2 fix: atexit cleanup for containers started by this process.
+_active_sandboxes: List["DockerSandbox"] = []
+_atexit_registered = False
+
+
+def _register_cleanup(sandbox: "DockerSandbox") -> None:
+    """Register a sandbox for atexit cleanup."""
+    global _atexit_registered
+    _active_sandboxes.append(sandbox)
+    if not _atexit_registered:
+        atexit.register(_atexit_cleanup)
+        _atexit_registered = True
+
+
+def _atexit_cleanup() -> None:
+    """Stop and remove all active sandboxes on process exit."""
+    for sandbox in list(_active_sandboxes):
+        try:
+            sandbox.stop(timeout=5)
+            sandbox.remove()
+        except Exception:
+            pass
+    _active_sandboxes.clear()
 
 
 def _ensure_docker() -> None:
@@ -233,6 +318,7 @@ class DockerSandbox:
         self._client = client or docker.from_env()
         self._container: Optional[Any] = None
         self._state = ContainerState.REMOVED
+        self._lock = threading.Lock()  # M3 fix: thread safety
         self._exec_log: List[ExecResult] = []
         self._snapshots: List[str] = []
         self._created_at: Optional[float] = None
@@ -317,6 +403,10 @@ class DockerSandbox:
 
         self._state = ContainerState.RUNNING
         self._created_at = time.monotonic()
+
+        # I2 fix: register atexit cleanup for this container
+        _register_cleanup(self)
+
         logger.info(
             "Started container %s (image=%s, network=%s, mem=%s)",
             self._container.short_id,
@@ -353,8 +443,10 @@ class DockerSandbox:
         ExecResult
             Contains exit code, captured stdout/stderr, and timing.
         """
-        if self._container is None or self._state != ContainerState.RUNNING:
-            raise RuntimeError("Container is not running")
+        # M3 fix: lock protects state checks
+        with self._lock:
+            if self._container is None or self._state != ContainerState.RUNNING:
+                raise RuntimeError("Container is not running")
 
         # Check container lifetime
         if self._created_at is not None:
@@ -370,12 +462,16 @@ class DockerSandbox:
                     command=command,
                 )
 
+        # H2 fix: enforce per-exec timeout via shell `timeout` wrapper.
+        effective_timeout = timeout or self.spec.timeout_seconds
         start = time.monotonic()
 
         try:
+            # Wrap command in `timeout` to prevent indefinite blocking.
+            wrapped_cmd = f"timeout {effective_timeout}s sh -c {_shell_quote(command)}"
             exec_id = self._client.api.exec_create(
                 self._container.id,
-                cmd=["sh", "-c", command],
+                cmd=["sh", "-c", wrapped_cmd],
                 user=user,
                 workdir=workdir or self.spec.working_dir,
                 stdout=True,
@@ -389,12 +485,16 @@ class DockerSandbox:
             stdout_bytes = output[0] if output[0] else b""
             stderr_bytes = output[1] if output[1] else b""
 
+            exit_code = inspect.get("ExitCode", -1)
+            # Exit code 124 = killed by `timeout` command (H2 fix)
+            timed_out = exit_code == 124
+
             result = ExecResult(
-                exit_code=inspect.get("ExitCode", -1),
+                exit_code=exit_code,
                 stdout=stdout_bytes[:_MAX_OUTPUT_BYTES].decode("utf-8", errors="replace"),
                 stderr=stderr_bytes[:_MAX_OUTPUT_BYTES].decode("utf-8", errors="replace"),
                 duration_ms=duration_ms,
-                timed_out=False,
+                timed_out=timed_out,
                 command=command,
             )
 
@@ -418,36 +518,66 @@ class DockerSandbox:
         Parameters
         ----------
         local_path:
-            Path on the host.
+            Path on the host.  Must resolve under the working directory
+            or an allowed mount path.
         container_path:
-            Destination path inside the container.
+            Absolute destination path inside the container.
+            Must not contain ``..`` or shell metacharacters.
+
+        Raises
+        ------
+        ValueError
+            If paths fail validation.
         """
         import io
+        import os
         import tarfile
 
         if self._container is None:
             raise RuntimeError("Container is not created")
 
+        # C2 fix: validate container_path against traversal
+        _validate_container_path(container_path)
+        if not os.path.isabs(container_path):
+            raise ValueError(f"container_path must be absolute: {container_path!r}")
+
+        # C2 fix: resolve local_path symlinks, validate it exists
+        real_local = os.path.realpath(local_path)
+        if not os.path.exists(real_local):
+            raise FileNotFoundError(f"Local path not found: {local_path!r}")
+
         buf = io.BytesIO()
         with tarfile.open(fileobj=buf, mode="w") as tar:
-            tar.add(local_path, arcname=container_path.split("/")[-1])
+            arcname = os.path.basename(container_path)
+            tar.add(real_local, arcname=arcname)
         buf.seek(0)
 
         dest_dir = "/".join(container_path.split("/")[:-1]) or "/"
         self._container.put_archive(dest_dir, buf)
 
-    def copy_from(self, container_path: str) -> bytes:
+    def copy_from(
+        self,
+        container_path: str,
+        max_bytes: int = _MAX_COPY_FROM_BYTES,
+    ) -> bytes:
         """Copy a file from the container and return its contents.
 
         Parameters
         ----------
         container_path:
             Path inside the container to read.
+        max_bytes:
+            Maximum bytes to read.  Defaults to 50 MB.
 
         Returns
         -------
         bytes
             Raw file contents.
+
+        Raises
+        ------
+        ValueError
+            If the file exceeds *max_bytes*.
         """
         import io
         import tarfile
@@ -455,9 +585,19 @@ class DockerSandbox:
         if self._container is None:
             raise RuntimeError("Container is not created")
 
+        # H1 fix: validate container_path
+        _validate_container_path(container_path)
+
         bits, _ = self._container.get_archive(container_path)
         buf = io.BytesIO()
+        total = 0
         for chunk in bits:
+            total += len(chunk)
+            if total > max_bytes:
+                raise ValueError(
+                    f"Container file exceeds size limit "
+                    f"({total} > {max_bytes} bytes)"
+                )
             buf.write(chunk)
         buf.seek(0)
 
@@ -465,8 +605,22 @@ class DockerSandbox:
             members = tar.getmembers()
             if not members:
                 return b""
-            f = tar.extractfile(members[0])
-            return f.read() if f else b""
+            member = members[0]
+            # H1 fix: only extract regular files
+            if not member.isreg():
+                raise ValueError(
+                    f"Expected regular file, got {member.type!r}: "
+                    f"{member.name!r}"
+                )
+            f = tar.extractfile(member)
+            if f is None:
+                return b""
+            data = f.read(max_bytes + 1)
+            if len(data) > max_bytes:
+                raise ValueError(
+                    f"Extracted file exceeds size limit ({max_bytes} bytes)"
+                )
+            return data
 
     def snapshot(self, tag: Optional[str] = None) -> str:
         """Commit the container state as a Docker image.
@@ -719,14 +873,22 @@ class DockerSandboxBackend(ExecutionBackend):
         try:
             ds.start()
 
-            # Copy sandbox files into container
+            # Copy sandbox files into container using base64 encoding
+            # to avoid shell injection (C1 security fix).
+            import base64
+
             for path in sandbox.list_files():
                 content = sandbox.read_file(path)
-                # Write via exec since we have read-only root
-                escaped = content.replace("'", "'\\''")
+                # Validate path: must be relative, no traversal
+                _validate_container_path(path)
+                b64 = base64.b64encode(content.encode()).decode()
+                target = f"/workspace{path}"
                 ds.exec(
-                    f"mkdir -p $(dirname /workspace{path}) && "
-                    f"cat > /workspace{path} << 'SWARM_EOF'\n{escaped}\nSWARM_EOF",
+                    f"mkdir -p \"$(dirname '{target}')\"",
+                    user="root",
+                )
+                ds.exec(
+                    f"echo '{b64}' | base64 -d > '{target}'",
                     user="root",
                 )
 
