@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+
+{% block extrahead %}
+  {% set desc = page.meta.description if page and page.meta and page.meta.description else config.site_description %}
+  {% set title = page.title ~ " — " ~ config.site_name if page and page.title else config.site_name %}
+  {% set url = page.canonical_url if page and page.canonical_url else config.site_url %}
+  {% set img = config.site_url ~ page.meta.image if page and page.meta and page.meta.image else config.site_url ~ "assets/logo.svg" %}
+  {% set is_blog = page and page.url and "blog/" in page.url %}
+  {% set is_api = page and page.url and "api/" in page.url %}
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="{% if is_blog %}article{% else %}website{% endif %}" />
+  <meta property="og:title" content="{{ title }}" />
+  <meta property="og:description" content="{{ desc }}" />
+  <meta property="og:url" content="{{ url }}" />
+  <meta property="og:site_name" content="{{ config.site_name }}" />
+  <meta property="og:image" content="{{ img }}" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@ResearchSwarmAI" />
+  <meta name="twitter:title" content="{{ title }}" />
+  <meta name="twitter:description" content="{{ desc }}" />
+  <meta name="twitter:image" content="{{ img }}" />
+
+  <!-- JSON-LD Schema -->
+  {% if is_blog %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "{{ title }}",
+    "description": "{{ desc }}",
+    "url": "{{ url }}",
+    "publisher": {
+      "@type": "Organization",
+      "name": "SWARM",
+      "url": "{{ config.site_url }}"
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "{{ url }}"
+    }
+  }
+  </script>
+  {% elif is_api %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "headline": "{{ title }}",
+    "description": "{{ desc }}",
+    "url": "{{ url }}",
+    "publisher": {
+      "@type": "Organization",
+      "name": "SWARM",
+      "url": "{{ config.site_url }}"
+    }
+  }
+  </script>
+  {% else %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    "name": "{{ title }}",
+    "description": "{{ desc }}",
+    "url": "{{ url }}",
+    "isPartOf": {
+      "@type": "WebSite",
+      "name": "SWARM",
+      "url": "{{ config.site_url }}"
+    }
+  }
+  </script>
+  {% endif %}
+{% endblock %}

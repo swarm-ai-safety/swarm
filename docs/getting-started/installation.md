@@ -82,7 +82,9 @@ swarm --help
 - Python 3.10 or higher
 - numpy, pydantic, pandas (installed automatically)
 
-## Next Steps
+## See also
 
-- [Quick Start](quickstart.md) - Run your first simulation
-- [Your First Scenario](first-scenario.md) - Create a custom experiment
+- [Quick Start](quickstart.md) — Run your first multi-agent simulation in 5 minutes
+- [Your First Scenario](first-scenario.md) — Create a custom YAML experiment from scratch
+- [Soft Labels](../concepts/soft-labels.md) — How SWARM uses probabilistic labels instead of binary classifications
+- [Your First Governance Experiment](../tutorials/first-governance-experiment.md) — Step-by-step tutorial for running governance experiments

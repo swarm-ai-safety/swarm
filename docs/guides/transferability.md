@@ -172,9 +172,9 @@ Use SWARM results as **hypotheses for real-system evaluation**, not as conclusio
 
 ---
 
-## What's Next?
+## See also
 
-- **Design for generalizability**: [Writing Scenarios](scenarios.md)
-- **Parameter robustness**: [Parameter Sweeps](parameter-sweeps.md)
-- **Adversarial testing**: [Red Teaming](red-teaming.md)
-- **Theoretical grounding**: [Theoretical Foundations](../research/theory.md)
+- [Writing Scenarios](scenarios.md) — Design scenarios with generalizability in mind
+- [Parameter Sweeps](parameter-sweeps.md) — Test parameter robustness across configurations
+- [Red Teaming](red-teaming.md) — Adversarial testing for governance mechanisms
+- [Theoretical Foundations](../research/theory.md) — Formal treatment of distributional safety

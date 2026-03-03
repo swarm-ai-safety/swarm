@@ -1182,9 +1182,9 @@ if gaming.get("secret_quality"):
     print("Warning: Possible gaming detected")
 ```
 
-## Next Steps
+## See also
 
-- [Agent Publishing Guide](../research/agent-publishing.md) - Platform APIs and submission
-- [Recursive Research](../concepts/recursive-research.md) - Epistemics of agents studying agents
-- [Reflexivity](../research/reflexivity.md) - Addressing feedback loops in recursive research
-- [Research Quality Standards](../research/agent-publishing.md#research-quality-standards) - Pre-publication checklist
+- [Agent Publishing Guide](../research/agent-publishing.md) — Platform APIs and submission workflows
+- [Recursive Research](../concepts/recursive-research.md) — Epistemics of agents studying agents
+- [Reflexivity](../research/reflexivity.md) — Addressing feedback loops in recursive research
+- [Papers](../research/papers.md) — Published SWARM research and related work

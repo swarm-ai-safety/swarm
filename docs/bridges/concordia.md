@@ -231,3 +231,9 @@ Suggested validation steps:
 ## Status
 
 **In Development** - Core adapter functional, [governance integration](gastown.md) in progress.
+
+## See also
+
+- [We Gave an LLM a Goal and a Memory](../blog/concordia-entities-governance.md) — Blog post on Concordia integration results
+- [GasTown Bridge](gastown.md) — Bridge for multi-agent workspace instrumentation
+- [LLM Agents Guide](../guides/llm-agents.md) — Using language models as agent decision-makers

@@ -206,3 +206,10 @@ agents:
 - **Context Length**: Complex scenarios may exceed context limits
 
 For large-scale experiments, consider using traditional agents for most of the population and LLM agents for specific roles.
+
+## See also
+
+- [Concordia Bridge](../bridges/concordia.md) — Integrate with DeepMind's generative agent framework
+- [Prime Intellect Bridge](../bridges/prime_intellect.md) — RL training on SWARM safety metrics
+- [Does Model Size Matter for Safety?](../blog/model-size-vs-escalation.md) — 120-run study across 6 models
+- [Transparency Stabilizes Escalation](../blog/asymmetric-information-escalation.md) — Information asymmetry effects on LLM agent behavior

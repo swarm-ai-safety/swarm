@@ -198,9 +198,9 @@ The [transaction tax](../concepts/governance.md) works by making exploitative in
 
 ---
 
-## What's Next?
+## See also
 
-- **Go deeper on the math**: [Understanding Soft Labels](understanding-soft-labels.md)
-- **Interpret your results**: [Analyzing Results](analyzing-results.md)
-- **Vary more parameters**: [Parameter Sweeps](../guides/parameter-sweeps.md)
-- **Add circuit breakers and staking**: [Custom Governance Levers](../guides/governance-levers.md)
+- [Understanding Soft Labels](understanding-soft-labels.md) — The math behind probabilistic quality scores
+- [Analyzing Results](analyzing-results.md) — Interpret metrics from your experiment
+- [Parameter Sweeps](../guides/parameter-sweeps.md) — Systematically explore governance parameters
+- [Custom Governance Levers](../guides/governance-levers.md) — Build circuit breakers, staking, and custom mechanisms

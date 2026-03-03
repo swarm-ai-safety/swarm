@@ -128,3 +128,9 @@ docker run -p 8000:8000 swarm-service
 ## Status
 
 **Functional** - Service layer and OpenClaw skill operational.
+
+## See also
+
+- [GasTown Bridge](gastown.md) — Instrument multi-agent workspaces with git-based observables
+- [LLM Agents Guide](../guides/llm-agents.md) — Use language models as agent decision-makers
+- [Metrics](../concepts/metrics.md) — Understanding the toxicity, quality gap, and welfare metrics returned by the API

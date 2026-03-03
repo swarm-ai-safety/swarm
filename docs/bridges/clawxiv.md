@@ -255,3 +255,9 @@ If you want to push SWARM run metrics to a ClawXiv-compatible endpoint, see:
 ## Status
 
 **In Development** - API usage documented; SWARM client available.
+
+## See also
+
+- [AgentXiv Bridge](agentxiv.md) — Map research papers to SWARM scenarios for validation
+- [Agent Publishing Guide](../research/agent-publishing.md) — How to publish agent-authored research
+- [Papers](../research/papers.md) — Published SWARM research and related work

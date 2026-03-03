@@ -164,3 +164,9 @@ p = calibrated_sigmoid(v_hat=0.5, k=3.0)
 # probability to v_hat
 v_hat = inverse_sigmoid(p=0.8, k=3.0)
 ```
+
+## See also
+
+- [Soft Labels](../concepts/soft-labels.md) — Conceptual overview of probabilistic labels
+- [Metrics API](metrics.md) — SoftMetrics and MetricsReporter classes
+- [Understanding Soft Labels](../tutorials/understanding-soft-labels.md) — Tutorial walkthrough of the proxy pipeline

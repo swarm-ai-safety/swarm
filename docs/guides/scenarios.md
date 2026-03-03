@@ -204,3 +204,10 @@ See the [scenarios directory](https://github.com/swarm-ai-safety/swarm/tree/main
 - `adverse_selection.yaml` - Demonstrates quality gap emergence
 - `governance_test.yaml` - Tests governance effectiveness
 - `llm_agents.yaml` - LLM-powered agents
+
+## See also
+
+- [Your First Scenario](../getting-started/first-scenario.md) — Beginner walkthrough for creating scenarios
+- [Parameter Sweeps](parameter-sweeps.md) — Run systematic experiments across parameter ranges
+- [Custom Agents](custom-agents.md) — Create new agent behavioral policies
+- [LLM Agents](llm-agents.md) — Use language models as agent decision-makers

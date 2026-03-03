@@ -183,3 +183,10 @@ def test_my_agent_updates():
 
 !!! tip "Use Type Hints"
     Makes debugging and IDE support much better.
+
+## See also
+
+- [Agents API](../api/agents.md) — BaseAgent interface and built-in agent types
+- [LLM Agents](llm-agents.md) — Use language models as agent decision-makers
+- [Writing Scenarios](scenarios.md) — Register custom agents in scenario YAML files
+- [Soft Labels](../concepts/soft-labels.md) — How agent behavior maps to probability scores

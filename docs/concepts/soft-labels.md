@@ -124,7 +124,9 @@ The sigmoid parameter $k$ controls how "sharp" the probability curve is:
 !!! tip "Calibration in Practice"
     The default $k=3.0$ works well for most scenarios. Adjust if you have ground truth labels to calibrate against.
 
-## Next Steps
+## See also
 
-- [Metrics](metrics.md) - See how soft labels enable better metrics
-- [Payoff Engine](../api/core.md) - How payoffs use soft labels
+- [Metrics](metrics.md) — How soft labels enable toxicity, quality gap, and conditional loss
+- [Payoff Engine](../api/core.md) — How the SoftPayoffEngine computes payoffs from p values
+- [Theoretical Foundations](../research/theory.md) — Mathematical basis for distributional labels
+- [Understanding Soft Labels](../tutorials/understanding-soft-labels.md) — Hands-on tutorial with code examples

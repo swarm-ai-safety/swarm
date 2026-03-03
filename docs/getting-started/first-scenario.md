@@ -115,8 +115,10 @@ swarm sweep scenarios/sweep_taxes.yaml --output results/
 !!! tip "Compare Baselines"
     Run scenarios with and without governance to measure intervention effects.
 
-## Next Steps
+## See also
 
-- [Governance Guide](../concepts/governance.md) - Deep dive into safety mechanisms
-- [Parameter Sweeps](../guides/parameter-sweeps.md) - Systematic experimentation
-- [Custom Agents](../guides/custom-agents.md) - Create new agent behaviors
+- [Governance](../concepts/governance.md) — Deep dive into circuit breakers, taxes, and safety mechanisms
+- [Parameter Sweeps](../guides/parameter-sweeps.md) — Systematic experimentation across parameter ranges
+- [Custom Agents](../guides/custom-agents.md) — Create new agent behavioral policies
+- [Writing Scenarios](../guides/scenarios.md) — Advanced scenario configuration and composition
+- [LLM Agents](../guides/llm-agents.md) — Use language models as agent decision-makers

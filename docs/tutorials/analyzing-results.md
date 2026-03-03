@@ -250,9 +250,9 @@ If the standard deviation is larger than the effect size you're measuring, you n
 
 ---
 
-## What's Next?
+## See also
 
-- **Vary parameters systematically**: [Parameter Sweeps](../guides/parameter-sweeps.md)
-- **Advanced [governance levers](../getting-started/first-scenario.md)**: [Custom Governance Levers](../guides/governance-levers.md)
-- **When results generalize**: [Transferability Considerations](../guides/transferability.md)
-- **Full [metrics reference](../guides/eval-metrics.md)**: [Metrics Concept](../concepts/metrics.md)
+- [Parameter Sweeps](../guides/parameter-sweeps.md) — Vary parameters systematically across runs
+- [Custom Governance Levers](../guides/governance-levers.md) — Build and tune governance mechanisms
+- [Transferability Considerations](../guides/transferability.md) — When your results generalize
+- [Metrics Concept](../concepts/metrics.md) — Full reference on toxicity, quality gap, and conditional loss

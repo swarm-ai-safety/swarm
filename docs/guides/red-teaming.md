@@ -224,3 +224,10 @@ jobs:
           pip install swarm-safety[dev]
           swarm redteam scenarios/governed.yaml --threshold 0.8
 ```
+
+## See also
+
+- [Governance](../concepts/governance.md) — The safety mechanisms red teaming aims to stress-test
+- [Parameter Sweeps](parameter-sweeps.md) — Systematic parameter exploration complements red teaming
+- [Red-Teaming the Contract Screening Mechanism](../blog/red-team-contract-screening.md) — Example red team study
+- [Emergence](../concepts/emergence.md) — How system-level failures emerge from agent interactions

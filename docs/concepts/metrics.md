@@ -151,7 +151,10 @@ This feedback loop is why adverse selection is so dangerous—it's self-reinforc
 | Negative quality gap | Transaction taxes, staking |
 | High incoherence | Self-ensemble, friction |
 
-## Next Steps
+## See also
 
-- [Governance](governance.md) - How to respond to metric problems
-- [Soft Labels](soft-labels.md) - How metrics are computed
+- [Governance](governance.md) — Circuit breakers, taxes, and other responses to metric problems
+- [Soft Labels](soft-labels.md) — How probabilistic labels enable these metrics
+- [Theoretical Foundations](../research/theory.md) — Formal treatment of distributional safety metrics
+- [The Purity Paradox](../blog/purity-paradox.md) — When welfare metrics mislead about system health
+- [What Financial Markets Teach Us About AI Safety](../blog/markets-and-safety.md) — Quality gap as the bid-ask spread analogue

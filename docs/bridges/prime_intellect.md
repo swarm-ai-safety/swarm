@@ -280,3 +280,9 @@ print(bridge.get_metrics())
 ## Status
 
 **In Development** — Environment and reward pipeline functional; platform integration requires `prime` CLI.
+
+## See also
+
+- [RL Training Lessons for Multi-Agent Governance](../blog/rl-training-lessons-multi-agent-governance.md) — Findings from RL training experiments
+- [Training an LLM Agent with RL](../blog/qwen3-30b-trains-in-the-swarm-economy.md) — Qwen 30B RL training in the SWARM economy
+- [Metrics](../concepts/metrics.md) — The safety metrics used as RL reward signals

@@ -172,8 +172,10 @@ SWARM enables investigation of:
 - What's the relationship between agent diversity and system stability?
 - Can emergence be predicted from agent-level properties?
 
-## Next Steps
+## See also
 
-- [Metrics](metrics.md) - Measure emergent properties
-- [Governance](governance.md) - Intervene on emergence
-- [Theoretical Foundations](../research/theory.md) - Formal treatment
+- [Metrics](metrics.md) — Measure emergent properties like adverse selection and toxicity drift
+- [Governance](governance.md) — Interventions that shape emergent dynamics
+- [Theoretical Foundations](../research/theory.md) — Formal treatment of phase transitions and collapse
+- [When Agent Ecosystems Collapse](../blog/ecosystem-collapse.md) — The 37.5-50% adversarial phase transition
+- [Reflexivity](../research/reflexivity.md) — When agents adapt to the research about them

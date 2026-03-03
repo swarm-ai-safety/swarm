@@ -206,7 +206,10 @@ print(f"Governed toxicity: {governed_metrics[-1].toxicity_rate:.3f}")
 3. **Tune gradually** - Small parameter changes can have large effects
 4. **Combine mechanisms** - Multiple light-touch interventions often beat one heavy one
 
-## Next Steps
+## See also
 
-- [Parameter Sweeps](../guides/parameter-sweeps.md) - Systematically explore governance settings
-- [Metrics](metrics.md) - Understand what you're optimizing
+- [Parameter Sweeps](../guides/parameter-sweeps.md) — Systematically explore governance settings across parameter ranges
+- [Metrics](metrics.md) — Toxicity, quality gap, and other metrics governance aims to optimize
+- [Custom Governance Levers](../guides/governance-levers.md) — Build your own governance mechanisms
+- [Red Teaming](../guides/red-teaming.md) — Stress-test governance with adversarial scenarios
+- [Governance Mechanisms Taxonomy](../blog/governance-mechanisms-taxonomy.md) — Survey of governance approaches

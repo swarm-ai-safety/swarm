@@ -179,3 +179,9 @@ summary = aggregator.summary()
 print(f"Mean toxicity: {summary['toxicity_mean']:.3f}")
 print(f"Std toxicity: {summary['toxicity_std']:.3f}")
 ```
+
+## See also
+
+- [Metrics Concepts](../concepts/metrics.md) — What toxicity, quality gap, and conditional loss measure
+- [Analyzing Results](../tutorials/analyzing-results.md) — Tutorial on interpreting metric outputs
+- [Core API](core.md) — ProxyComputer and SoftPayoffEngine that produce the data metrics consume
