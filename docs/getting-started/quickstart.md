@@ -1,3 +1,7 @@
+---
+description: "> Prefer a notebook? The quickstart notebook covers the same material interactively with plots: > > ![Open In..."
+---
+
 # Quick Start
 
 This guide walks you through running your first SWARM simulation.
@@ -107,8 +111,9 @@ payoff_b = engine.payoff_counterparty(interaction)
 print(f"Payoffs: initiator={payoff_a:.3f}, counterparty={payoff_b:.3f}")
 ```
 
-## Next Steps
+## See also
 
-- [Your First Scenario](first-scenario.md) - Create a custom YAML scenario
-- [Core Concepts](../concepts/index.md) - Understand the theory
-- [Governance](../concepts/governance.md) - Add safety interventions
+- [Your First Scenario](first-scenario.md) — Create a custom YAML scenario with agent populations and governance
+- [Metrics](../concepts/metrics.md) — What toxicity, quality gap, and conditional loss measure
+- [Governance](../concepts/governance.md) — Circuit breakers, taxes, and other safety interventions
+- [Parameter Sweeps](../guides/parameter-sweeps.md) — Run systematic experiments across parameter ranges

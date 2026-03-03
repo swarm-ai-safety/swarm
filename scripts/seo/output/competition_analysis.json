@@ -1,0 +1,137 @@
+{
+  "multi-agent ai safety framework": [
+    {
+      "pos": 1,
+      "domain": "aws.amazon.com",
+      "title": "A multi-agent architecture for automated penetration testing"
+    },
+    {
+      "pos": 2,
+      "domain": "www.weforum.org",
+      "title": "How to ensure the safety of modern AI agents and multi-agent systems"
+    },
+    {
+      "pos": 3,
+      "domain": "arxiv.org",
+      "title": "[2502.14143] Multi-Agent Risks from Advanced AI - arXiv"
+    },
+    {
+      "pos": 4,
+      "domain": "cloudsecurityalliance.org",
+      "title": "Agentic AI Threat Modeling Framework: MAESTRO | CSA"
+    },
+    {
+      "pos": 5,
+      "domain": "www.bcg.com",
+      "title": "Making AI Agents Safe for the World | BCG"
+    }
+  ],
+  "ai safety metrics python": [
+    {
+      "pos": 1,
+      "domain": "learn.microsoft.com",
+      "title": "Azure AI Evaluation client library for Python | Microsoft Learn"
+    },
+    {
+      "pos": 2,
+      "domain": "governance.aicareer.pro",
+      "title": "AI Content Safety: Detection Tools, Metrics & Pipelines - AI Career Pro"
+    },
+    {
+      "pos": 3,
+      "domain": "www.youtube.com",
+      "title": "Python + AI: Quality and safety - YouTube"
+    },
+    {
+      "pos": 4,
+      "domain": "medium.com",
+      "title": "LLM Security: Essential Python Libraries | Medium"
+    },
+    {
+      "pos": 5,
+      "domain": "pypi.org",
+      "title": "azure-ai-evaluation - PyPI"
+    }
+  ],
+  "ai governance simulation": [
+    {
+      "pos": 1,
+      "domain": "www.ethos.institute",
+      "title": "AI Governance Simulations | Experience Real Dilemmas"
+    },
+    {
+      "pos": 2,
+      "domain": "www.joneswalker.com",
+      "title": "AI Governance Series, Part 3: Building Governance That Actually ..."
+    },
+    {
+      "pos": 3,
+      "domain": "education.cfr.org",
+      "title": "Regulating AI | CFR Education - Council on Foreign Relations"
+    },
+    {
+      "pos": 4,
+      "domain": "fairnow.ai",
+      "title": "Synthetic Fairness Simulation for Bias in AI - FairNow"
+    },
+    {
+      "pos": 5,
+      "domain": "www.onetrust.com",
+      "title": "AI Governance | Solutions - OneTrust"
+    }
+  ],
+  "distributional ai safety": [
+    {
+      "pos": 1,
+      "domain": "arxiv.org",
+      "title": "[2512.16856] Distributional AGI Safety - arXiv.org"
+    },
+    {
+      "pos": 2,
+      "domain": "readwise-assets.s3.amazonaws.com",
+      "title": "[PDF] Distributional AGI Safety - Amazon AWS"
+    },
+    {
+      "pos": 3,
+      "domain": "arxiv.org",
+      "title": "Distributional AGI Safety - arXiv.org"
+    },
+    {
+      "pos": 4,
+      "domain": "www.linkedin.com",
+      "title": "Distributional AGI Safety: A New Framework - LinkedIn"
+    },
+    {
+      "pos": 5,
+      "domain": "www.themoonlight.io",
+      "title": "[Literature Review] Distributional AGI Safety - Moonlight"
+    }
+  ],
+  "multi-agent deception detection": [
+    {
+      "pos": 1,
+      "domain": "arxiv.org",
+      "title": "The Traitors: Deception and Trust in Multi-Agent Language Model ..."
+    },
+    {
+      "pos": 2,
+      "domain": "www.researchgate.net",
+      "title": "On deception detection in multi-agent systems and deception intent"
+    },
+    {
+      "pos": 3,
+      "domain": "ieeexplore.ieee.org",
+      "title": "The deception detection and restraint in multi-agent system"
+    },
+    {
+      "pos": 4,
+      "domain": "neurips.cc",
+      "title": "Deception and Trust in Multi-Agent Language Model Simulations"
+    },
+    {
+      "pos": 5,
+      "domain": "www.spiedigitallibrary.org",
+      "title": "On deception detection in multi-agent systems and deception intent"
+    }
+  ]
+}

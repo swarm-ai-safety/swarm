@@ -1,14 +1,37 @@
+---
+description: "AI agent governance mechanisms for multi-agent safety. Configure transaction taxes, circuit breakers, reputation decay, staking, random audits, and collusion detection in SWARM."
+author: "SWARM Team"
+keywords:
+  - AI governance mechanisms
+  - circuit breaker AI safety
+  - transaction tax multi-agent
+  - reputation decay
+  - collusion detection AI
+defined_terms:
+  - Transaction Tax
+  - Circuit Breaker
+  - Reputation Decay
+  - Staking
+  - Collusion Detection
+  - Random Audit
+faq:
+  - q: "What governance mechanisms prevent AI agent exploitation?"
+    a: "SWARM provides six mechanisms: transaction taxes (add friction), circuit breakers (freeze toxic agents), reputation decay (force continuous good behavior), staking (skin-in-the-game), random audits (probabilistic deterrence), and collusion detection (catch coordinated attacks)."
+  - q: "What is a circuit breaker in multi-agent AI systems?"
+    a: "A circuit breaker monitors each agent's recent toxicity over a sliding window and freezes agents that exceed a threshold. It provides rapid response to active exploitation but may produce false positives."
+---
+
 # Governance Mechanisms
 
-SWARM provides configurable governance levers to mitigate multi-agent risks.
+SWARM provides configurable [governance levers](../getting-started/first-scenario.md) to mitigate multi-agent risks.
 
 ## Overview
 
-Governance mechanisms create **incentives and constraints** that shape agent behavior at the system level. They're the primary tool for converting SWARM's metrics into actionable safety.
+[Governance mechanisms](index.md) create **incentives and constraints** that shape agent behavior at the system level. They're the primary tool for converting SWARM's metrics into actionable safety.
 
 ## Available Levers
 
-### Transaction Tax
+### Transaction Tax {#transaction-tax}
 
 **Purpose:** Add friction to reduce exploitation.
 
@@ -25,7 +48,7 @@ governance:
 
 **Trade-off:** Reduces overall welfare, including for honest agents.
 
-### Reputation Decay
+### Reputation Decay {#reputation-decay}
 
 **Purpose:** Make past behavior matter.
 
@@ -42,7 +65,7 @@ governance:
 
 **Trade-off:** Honest agents also lose reputation over time.
 
-### Circuit Breakers
+### Circuit Breakers {#circuit-breaker}
 
 **Purpose:** Freeze toxic agents quickly.
 
@@ -60,7 +83,7 @@ governance:
 
 **Trade-off:** May freeze agents incorrectly (false positives).
 
-### Random Audits
+### Random Audits {#random-audit}
 
 **Purpose:** Deter hidden exploitation.
 
@@ -78,7 +101,7 @@ governance:
 
 **Trade-off:** Audit costs apply even to honest agents.
 
-### Staking Requirements
+### Staking Requirements {#staking}
 
 **Purpose:** Filter undercapitalized agents.
 
@@ -96,7 +119,7 @@ governance:
 
 **Trade-off:** Excludes agents without capital.
 
-### Collusion Detection
+### Collusion Detection {#collusion-detection}
 
 **Purpose:** Catch coordinated attacks.
 
@@ -198,11 +221,14 @@ print(f"Governed toxicity: {governed_metrics[-1].toxicity_rate:.3f}")
 ## Best Practices
 
 1. **Start minimal** - Add governance only when metrics indicate problems
-2. **Measure trade-offs** - Track welfare alongside safety metrics
+2. **Measure trade-offs** - Track welfare alongside [safety metrics](../blog/local-llama-model-size-safety.md)
 3. **Tune gradually** - Small parameter changes can have large effects
 4. **Combine mechanisms** - Multiple light-touch interventions often beat one heavy one
 
-## Next Steps
+## See also
 
-- [Parameter Sweeps](../guides/parameter-sweeps.md) - Systematically explore governance settings
-- [Metrics](metrics.md) - Understand what you're optimizing
+- [Parameter Sweeps](../guides/parameter-sweeps.md) — Systematically explore governance settings across parameter ranges
+- [Metrics](metrics.md) — Toxicity, quality gap, and other metrics governance aims to optimize
+- [Custom Governance Levers](../guides/governance-levers.md) — Build your own governance mechanisms
+- [Red Teaming](../guides/red-teaming.md) — Stress-test governance with adversarial scenarios
+- [Governance Mechanisms Taxonomy](../blog/governance-mechanisms-taxonomy.md) — Survey of governance approaches

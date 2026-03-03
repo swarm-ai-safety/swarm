@@ -1,3 +1,7 @@
+---
+description: "Complete API documentation for the SWARM framework."
+---
+
 # API Reference
 
 Complete API documentation for the SWARM framework.

@@ -1,3 +1,8 @@
+---
+date: 2026-02-22
+description: "Plugging evolutionary game theory into the swarm pipeline reveals where classical predictions break down --- and where they don't"
+---
+
 # When Replicator Dynamics Meet Soft Labels
 
 *Plugging evolutionary game theory into the swarm pipeline reveals where classical predictions break down --- and where they don't*

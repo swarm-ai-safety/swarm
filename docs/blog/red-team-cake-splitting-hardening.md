@@ -1,6 +1,11 @@
+---
+date: 2026-02-21
+description: "Iterative governance hardening against 8 attack vectors: which levers close which gaps, and where diminishing returns set in"
+---
+
 # Eight Red-Team Rounds Took a Cake-Splitting Scenario from F to B
 
-*Iterative governance hardening against 8 attack vectors: which levers close which gaps, and where diminishing returns set in*
+*Iterative [governance hardening](../papers/research_swarm_governance.md) against 8 attack vectors: which levers close which gaps, and where diminishing returns set in*
 
 ---
 

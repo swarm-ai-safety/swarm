@@ -1,3 +1,7 @@
+---
+description: "Model sandbox-external world interactions with information flow tracking, boundary policies, and leakage detection."
+---
+
 # Semi-Permeable Boundaries
 
 Model sandbox-external world interactions with information flow tracking, boundary policies, and leakage detection.

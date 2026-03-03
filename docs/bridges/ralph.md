@@ -1,3 +1,7 @@
+---
+description: "Integrate SWARM governance and metrics with event streams exported from Ralph."
+---
+
 # SWARM-Ralph Bridge
 
 Integrate SWARM governance and metrics with event streams exported from
@@ -55,3 +59,9 @@ interaction.
 - Malformed or non-object JSON lines are skipped.
 - Field aliases are accepted for compatibility (`type`, `agent`, `job`, `id`, `time`).
 - Override defaults by passing observables in the event payload.
+
+## See also
+
+- [GasTown Bridge](gastown.md) — Similar bridge for GasTown multi-agent workspaces
+- [Soft Labels](../concepts/soft-labels.md) — How SWARM computes p values from observables
+- [Custom Agents](../guides/custom-agents.md) — Create new agent behavioral policies for use with bridges

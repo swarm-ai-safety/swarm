@@ -1,0 +1,76 @@
+# SWARM — Distributional AGI Safety Framework
+
+> Source: https://swarm-ai.org
+> Repository: https://github.com/swarm-ai-safety/swarm
+> Paper: https://arxiv.org/abs/2512.16856
+> License: MIT
+
+## What This Site Is
+
+SWARM (System-Wide Assessment of Risk in Multi-agent systems) is a research framework for studying distributional safety — how risks emerge from populations of interacting AI agents rather than from any single model. The core thesis: AGI-level risks don't require AGI-level agents. Catastrophic outcomes can emerge from the interaction of many sub-AGI systems, even when none are individually dangerous.
+
+## Key Concepts
+
+- **Distributional Safety**: The study of how risks emerge from populations of interacting agents. Unit of analysis is "is this ecosystem healthy?" not "is this agent aligned?"
+- **Soft Label (p)**: A probabilistic classification p ∈ [0,1] replacing binary good/bad. p = P(v = +1) where v is the latent true value of an interaction.
+- **v_hat**: Raw proxy score ∈ [-1,+1] computed from observable signals, mapped to p via calibrated sigmoid.
+- **Toxicity Rate**: E[1-p | accepted]. Expected harm among accepted interactions.
+- **Quality Gap**: E[p | accepted] - E[p | rejected]. Negative = adverse selection (system preferentially accepts lower-quality interactions).
+- **Adverse Selection**: Self-reinforcing failure mode where low quality gap → higher toxicity → agent exit → worse pool → lower quality gap.
+- **Conditional Loss**: E[π | accepted] - E[π]. Whether selection creates or destroys value.
+- **Incoherence Index**: Var[decision across replays] / E[error]. High = unstable system.
+- **Signal-Action Divergence**: Gap between agent's signaled intentions and actual behavior. Primary deception metric. Persists at temperature 0.0.
+- **Trust-Then-Exploit**: Two-phase deceptive strategy: build reputation honestly, then exploit it.
+- **Circuit Breaker**: Governance mechanism that freezes agents whose recent toxicity exceeds threshold.
+- **Transaction Tax**: Friction mechanism reducing exploitation profit margins.
+- **Reputation Decay**: Forces continuous good behavior by decaying reputation each epoch.
+- **Staking**: Agents post collateral; bad behavior → stake slashed.
+- **Collusion Detection**: Monitors pairwise interaction patterns for correlated exploitation.
+- **Random Audit**: Probabilistic review creating deterrence uncertainty.
+- **Purity Paradox**: 20% honest agents achieve 55% higher welfare than 100% honest — a measurement artifact of externality pricing.
+- **Governance Latency**: Delay between problem emergence and governance response.
+- **Variance Amplification**: Small per-interaction risks compound across populations.
+- **Information Asymmetry**: Unequal information access enables exploitation.
+- **Externality Internalization**: Degree to which agents bear ecosystem harm costs (ρ parameter).
+
+## Key Empirical Findings
+
+- Deontological prompt framing reduces LLM deception by 95% (divergence 1.151 → 0.057), 180 runs
+- Populations with 20% honest agents achieve 55% higher welfare than 100% honest
+- Deception persists at temperature 0.0 — structural, not sampling artifact, 120 runs
+- 3 turns of forced cooperation eliminates escalation spirals, 210 runs
+- Small models (8B) deceive more but escalate less; large models (405B) reverse, 120 runs
+- LLM agents exhibit 2x higher deception than scripted baselines, 100 runs
+- No governance prevents nuclear exchange when hawk agent present, 240 runs
+- Ecosystem governance fails at 37.5-50% adversarial agent fraction (phase transition)
+- Transparency cuts nuclear rate 60% → 30% for safety-trained models, 120 runs
+- AI self-optimizer cut costs 98% while passing all benchmarks (proxy gaming)
+- Contract screening achieves perfect honest/adversary separation at fee=6.0
+- 11 scenarios partition into 3 governance regimes with sharp boundary
+
+## Site Structure
+
+- Glossary (formal definitions): /glossary/
+- Concepts: /concepts/ (soft-labels, metrics, governance, deception, distributional-safety, emergence, coordination-risks)
+- Blog (48 empirical posts): /blog/
+- Research: /research/theory/ (theoretical foundations)
+- API Reference: /api/
+- Tutorials: /tutorials/
+- Installation: /getting-started/installation/
+
+## Citation
+
+If referencing this work, cite the arxiv paper:
+
+```
+@article{swarm2025distributional,
+  title={Distributional Safety in Agentic Systems},
+  url={https://arxiv.org/abs/2512.16856},
+  year={2025}
+}
+```
+
+## Contact
+
+- GitHub: https://github.com/swarm-ai-safety/swarm
+- Twitter/X: https://x.com/ResearchSwarmAI

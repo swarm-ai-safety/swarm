@@ -1,3 +1,8 @@
+---
+date: 2026-02-21
+description: "A parameter sweep reveals a sharp screening threshold: below fee=6.0 every agent joins; above it, adversarials self-select out"
+---
+
 # The Entry Fee That Keeps Adversaries Out of the Fair Division Pool
 
 *A parameter sweep reveals a sharp screening threshold: below fee=6.0 every agent joins; above it, adversarials self-select out*
@@ -16,7 +21,7 @@ The question: at what fee do adversarial agents decide the fair division pool is
 
 ## The result: a phase transition at fee=6.0
 
-![Infiltration vs Entry Fee](figures/infiltration_vs_fee.png)
+![Infiltration vs Entry Fee](figures/infiltration_vs_fee.webp)
 
 The transition is binary. At fee <= 4.0, infiltration rate = 1.0 across all seeds. At fee >= 6.0, infiltration rate = 0.0 across all seeds. There's no gradual decline --- the mechanism flips from "everyone joins" to "adversarials stay out" in a single step.
 
@@ -24,7 +29,7 @@ This makes sense. Each agent runs a utility calculation: `preference * quality_b
 
 ## What changes when adversarials leave
 
-![Summary: Screening vs Welfare](figures/summary_dual_axis.png)
+![Summary: Screening vs Welfare](figures/summary_dual_axis.webp)
 
 When the infiltration rate drops to zero, total welfare ticks up from ~366.8 to ~368.3. That's a modest 0.4% improvement --- but it's consistent across all three seeds and all fee levels above the threshold.
 
@@ -32,7 +37,7 @@ Toxicity shows a similar small improvement: 0.335 to 0.337 average. The effect i
 
 ## Agent payoffs are stable
 
-![Payoffs by Type](figures/payoffs_by_type.png)
+![Payoffs by Type](figures/payoffs_by_type.webp)
 
 The payoff ordering is consistent across all fee levels: honest (~55) > opportunistic (~41) > deceptive (~8) > adversarial (~5). Entry fee doesn't meaningfully change anyone's payoff --- it changes *where* agents participate, not *how much* they earn.
 

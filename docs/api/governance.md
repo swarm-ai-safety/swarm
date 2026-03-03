@@ -1,6 +1,10 @@
+---
+description: "Governance mechanisms for controlling multi-agent system behavior."
+---
+
 # Governance API
 
-Governance mechanisms for controlling multi-agent system behavior.
+[Governance mechanisms](../concepts/governance.md) for controlling multi-agent system behavior.
 
 ## GovernanceEngine
 
@@ -205,3 +209,9 @@ class CustomLever(GovernanceLever):
         # Custom blocking logic
         return False
 ```
+
+## See also
+
+- [Governance Concepts](../concepts/governance.md) — Theory behind circuit breakers, taxes, and audits
+- [Custom Governance Levers](../guides/governance-levers.md) — Guide to building custom governance mechanisms
+- [Parameter Sweeps](../guides/parameter-sweeps.md) — Systematically explore governance parameter space

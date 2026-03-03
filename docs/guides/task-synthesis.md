@@ -1,3 +1,7 @@
+---
+description: "The task synthesis pipeline automatically extracts structured task graphs from execution traces, enabling:"
+---
+
 # SciForge-Style Task Synthesis
 
 This guide explains how to use SWARM's SciForge-style dependency graph extraction and replay verification system.

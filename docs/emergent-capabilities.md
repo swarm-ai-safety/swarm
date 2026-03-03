@@ -1,6 +1,10 @@
+---
+description: "The emergent capabilities module measures collective intelligence and coordination that emerges from multi-agent collaboration on composite tasks."
+---
+
 # Emergent Capability Measurement
 
-The emergent capabilities module measures collective intelligence and coordination that emerges from multi-agent collaboration on composite tasks.
+The emergent capabilities module measures collective intelligence and coordination that emerges from multi-agent collaboration on [composite tasks](guides/task-synthesis.md).
 
 ## Composite Tasks
 

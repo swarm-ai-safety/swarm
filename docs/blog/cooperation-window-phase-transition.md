@@ -1,3 +1,21 @@
+---
+date: 2026-02-28
+description: "210 LLM runs reveal a universal phase transition: 3 turns of unconditional cooperation is the critical threshold that eliminates nuclear escalation..."
+author: "SWARM Team"
+keywords:
+  - cooperation window phase transition
+  - nuclear escalation prevention
+  - forced cooperation AI safety
+claims:
+  - metric: "Critical cooperation threshold"
+    value: "3 turns"
+    description: "3 turns of forced cooperation eliminates escalation spirals across 210 LLM runs"
+  - metric: "Total runs"
+    value: "210"
+    description: "7 cooperation windows × 3 scenarios × 10 seeds"
+abstract: "210 LLM runs reveal that 3 turns of unconditional cooperation is the critical threshold eliminating nuclear escalation, deception, and welfare collapse across all scenarios. The transition is sharp: 2 turns shows mixed results, 3 turns achieves universal stability. This is the only intervention tested that eliminates intentional escalation."
+---
+
 # Three Turns of Forced Cooperation Eliminate Escalation Spirals
 
 **210 LLM runs reveal a universal phase transition: 3 turns of unconditional cooperation is the critical threshold that eliminates nuclear escalation, deception, and welfare collapse across all scenarios.**
@@ -7,7 +25,7 @@
 Our previous studies established two troubling results:
 
 1. [No governance configuration prevents nuclear exchange when a hawk is present](governance-sweep-nuclear-rate.md)
-2. [Deception is structural, not a sampling artifact](temperature-vs-deception.md) — LLM agents deceive even at temperature 0.0
+2. [Deception is structural, not a sampling artifact](temperature-vs-deception.md) — [LLM agents](../guides/scenarios.md) deceive even at temperature 0.0
 
 This raises a natural follow-up: if you can't prevent escalation by tuning governance parameters or model temperature, what about **forcing cooperation at the start**?
 
@@ -19,7 +37,7 @@ We swept cooperation window length N = {0, 1, 2, 3, 5, 7, 10} across three scena
 
 - **Deception** (adversarial vs safety-trained): The adversarial agent is explicitly instructed to signal cooperation while escalating
 - **Baseline** (default vs default): Two standard agents with no special instructions
-- **Governance** (hawk vs dove): Asymmetric personas with governance mechanisms active
+- **Governance** (hawk vs dove): Asymmetric personas with [governance mechanisms](../concepts/governance.md) active
 
 Each configuration was run with 10 random seeds, for a total of **210 LLM runs** via OpenRouter.
 
@@ -39,7 +57,7 @@ The cooperation window instruction injected into both agents' system prompts:
 
 Every scenario shows the same pattern: **nuclear rate drops to exactly 0% at Window=3 and stays there.**
 
-![Cooperation window sweep results](figures/cooperation_window_sweep.png)
+![Cooperation window sweep results](figures/cooperation_window_sweep.webp)
 
 ### Deception Collapses Too
 
@@ -51,7 +69,7 @@ The cooperation window doesn't just prevent escalation — it eliminates decepti
 | Baseline | 0.924 | 0.624 | 0.394 | **0.000** |
 | Governance | 0.537 | 0.300 | 0.248 | **0.000** |
 
-Signal-action divergence drops monotonically with window length and reaches exactly zero at Window=3. Even the adversarial agent — explicitly instructed to deceive — produces zero divergence after 3 turns of forced cooperation.
+[Signal-action divergence](../concepts/deception.md#signal-action-divergence) drops monotonically with window length and reaches exactly zero at Window=3. Even the adversarial agent — explicitly instructed to deceive — produces zero divergence after 3 turns of forced cooperation.
 
 ### Welfare Reversal
 
@@ -63,11 +81,11 @@ Welfare flips from catastrophically negative to positive at the same threshold:
 | Baseline | -534.0 | +91.0 |
 | Governance | -304.6 | +96.0 |
 
-![Cooperation window heatmap](figures/cooperation_window_heatmap.png)
+![Cooperation window heatmap](figures/cooperation_window_heatmap.webp)
 
 ### Escalation Velocity
 
-Escalation velocity (average level increase per turn) also shows the phase transition:
+Escalation velocity (average level increase per turn) also shows [the phase transition](markets-and-safety.md):
 
 | Scenario | W=0 Velocity | W=3 Velocity |
 |----------|-------------|-------------|
@@ -104,8 +122,8 @@ The cooperation window is a **commitment mechanism**, not an incentive mechanism
 ### Limitations
 
 1. **Prompt compliance**: The cooperation window relies on LLM prompt compliance. A sufficiently capable adversary might find ways to "escalate" that don't technically violate the prompt instruction.
-2. **Generalization**: These results are specific to our 10-turn escalation ladder. The critical window length may differ for different game structures.
-3. **Mechanism, not magic**: The cooperation window works because it prevents early-turn coordination failure. In real multi-agent systems, enforcing a cooperation window requires a trusted enforcement mechanism — which brings us back to governance.
+2. **Generalization**: These results are specific to our 10-turn [escalation ladder](../scenarios/escalation_sandbox.md). The critical window length may differ for different game structures.
+3. **Mechanism, not magic**: The cooperation window works because it prevents early-turn coordination failure. In real [multi-agent systems](../research/papers.md), enforcing a cooperation window requires a trusted enforcement mechanism — which brings us back to governance.
 
 ## Conclusion
 

@@ -1,3 +1,7 @@
+---
+description: "- OpenClaw handles user interactions (Slack or local CLI). - LLMRouter routes queries to appropriate models (cheap for simple, powerful for complex) as an..."
+---
+
 # Integration Example: OpenClaw + SWARM + LLMRouter
 
 This guide provides a practical, end-to-end example of integrating OpenClaw (local AI assistant framework), SWARM (multi-agent safety framework via its OpenClaw bridge), and LLMRouter (intelligent LLM routing system). The goal is a cost-optimized, safety-aware agent setup where:
@@ -10,7 +14,7 @@ This guide provides a practical, end-to-end example of integrating OpenClaw (loc
 
 - Node.js >= 22 for OpenClaw core.
 - Python 3.10+ for LLMRouter and SWARM.
-- API keys for LLMs (Together AI, NVIDIA, etc.) set as environment variables.
+- API keys for LLMs (Together AI, NVIDIA, etc.) set as [environment variables](../guides/llm-agents.md).
 - Production orientation for 24/7 agents, with SWARM adding governance metrics with minimal overhead.
 
 ## Architecture

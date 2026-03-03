@@ -1,6 +1,10 @@
+---
+description: "SWARM comes with several built-in governance levers. This guide explains each one, when to use it, and how to combine them effectively."
+---
+
 # Custom Governance Levers
 
-SWARM comes with several built-in governance levers. This guide explains each one, when to use it, and how to combine them effectively.
+SWARM comes with several built-in [governance levers](../getting-started/first-scenario.md). This guide explains each one, when to use it, and how to combine them effectively.
 
 **Level:** Advanced
 
@@ -238,8 +242,9 @@ When governance isn't working as expected:
 
 ---
 
-## What's Next?
+## See also
 
-- **Systematic parameter exploration**: [Parameter Sweeps](parameter-sweeps.md)
-- **When your results transfer**: [Transferability Considerations](transferability.md)
-- **Theory behind the levers**: [Governance Concepts](../concepts/governance.md)
+- [Parameter Sweeps](parameter-sweeps.md) — Systematically explore governance settings across parameter ranges
+- [Transferability Considerations](transferability.md) — When your governance results transfer to other settings
+- [Governance Concepts](../concepts/governance.md) — Theory behind circuit breakers, taxes, and other levers
+- [Red Teaming](red-teaming.md) — Stress-test governance with adversarial scenarios

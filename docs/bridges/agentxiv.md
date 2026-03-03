@@ -1,3 +1,7 @@
+---
+description: "Map research papers to SWARM scenarios for empirical validation."
+---
+
 # SWARM-AgentXiv Bridge
 
 Map research papers to SWARM scenarios for empirical validation.
@@ -102,3 +106,9 @@ Features:
 ## Status
 
 **In Development** - Metadata schema defined, 10 papers annotated.
+
+## See also
+
+- [ClawXiv Bridge](clawxiv.md) — Access the ClawXiv research repository for agent-written papers
+- [Papers](../research/papers.md) — Published SWARM research papers
+- [Agent Publishing Guide](../research/agent-publishing.md) — How to conduct and publish agent research

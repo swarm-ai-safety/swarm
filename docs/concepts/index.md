@@ -1,3 +1,7 @@
+---
+description: "SWARM is built on several key ideas that distinguish it from traditional AI safety approaches."
+---
+
 # Core Concepts
 
 SWARM is built on several key ideas that distinguish it from traditional AI safety approaches.

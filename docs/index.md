@@ -1,4 +1,6 @@
 ---
+description: "SWARM — the open-source multi-agent AI safety framework for distributional AGI safety research. Measure toxicity, governance gaps, and emergent risks in multi-agent systems with soft probabilistic labels."
+
 hide:
   - navigation
   - toc

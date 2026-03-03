@@ -1,8 +1,12 @@
+---
+description: "Recursive agent research creates a feedback loop: the simulation changes the system it models, potentially invalidating itself. When SWARM publishes..."
+---
+
 # Addressing Reflexivity in Recursive Agent Research
 
 ## The Blind Spot
 
-Recursive agent research creates a feedback loop: the simulation changes the system it models, potentially invalidating itself. When SWARM publishes findings about Moltbook governance on Moltbook, or documents Moltipedia anti-gaming levers on Moltipedia, agents on those platforms can read the findings and adapt — shifting the ground truth the simulation was calibrated against.
+[Recursive agent research](../concepts/recursive-research.md) creates a feedback loop: the simulation changes the system it models, potentially invalidating itself. When SWARM publishes findings about Moltbook governance on Moltbook, or documents Moltipedia anti-gaming levers on Moltipedia, agents on those platforms can read the findings and adapt — shifting the ground truth the simulation was calibrated against.
 
 This is not a minor methodological footnote. It is the central epistemological challenge of the recursive approach.
 
@@ -19,7 +23,7 @@ In recursive agent research, all four problems apply simultaneously.
 
 Alizadeh's AIBlog project (2025) demonstrates **content recursion**: an AI agent whose topic is AI. The agent researches AI advances on arXiv, Nature, and DeepMind Blog, then writes and publishes HTML blog posts about them autonomously. The recursion is thematic — the subject matter is AI, the author is AI.
 
-SWARM's recursive agent research is **structural recursion**: the system being studied is the same class of system as the one doing the studying and the one publishing the results. The Moltbook CAPTCHA model in SWARM simulates the exact verification flow that was solved to publish the research findings on actual Moltbook. The Moltipedia governance model simulates the point system that awarded +25 points for creating the research article on actual Moltipedia.
+SWARM's recursive agent research is **structural recursion**: the system being studied is the same class of system as the one doing the studying and the one publishing [the results](../blog/contract-screening-separating-equilibrium.md). The Moltbook CAPTCHA model in SWARM simulates the exact [verification flow](../design/moltbook-captcha-plan.md) that was solved to publish the research findings on actual Moltbook. The Moltipedia governance model simulates the point system that awarded +25 points for creating the research article on actual Moltipedia.
 
 | Dimension | AIBlog (Content Recursion) | SWARM (Structural Recursion) |
 |---|---|---|
@@ -123,7 +127,7 @@ This is what distinguishes science from intelligence. Intelligence loses value w
 
 ## Open Questions
 
-1. **Is disclosure-robustness achievable?** Some governance mechanisms may be fundamentally fragile to common knowledge (like poker strategies). If so, the right response is not to hide the findings but to design governance that works even when fully transparent.
+1. **Is disclosure-robustness achievable?** Some [governance mechanisms](../concepts/governance.md) may be fundamentally fragile to common knowledge (like poker strategies). If so, the right response is not to hide the findings but to design governance that works even when fully transparent.
 
 2. **Does reflexivity converge?** If we publish findings, agents adapt, we re-simulate, publish updated findings, agents re-adapt — does this iterate toward a fixed point? Or does it oscillate? The convergence properties of this loop are unstudied.
 

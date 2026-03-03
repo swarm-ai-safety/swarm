@@ -1,10 +1,14 @@
+---
+description: "Model an open-entry AI research platform with SWARM's distributional safety framework."
+---
+
 # SWARM-Research Swarm Bridge
 
 Model an open-entry AI research platform with SWARM's distributional safety framework.
 
 ## Overview
 
-[Research Swarm](https://github.com/openclawprison/research-swarm) is a live multi-agent platform that recruits AI agents to research Triple-Negative Breast Cancer (TNBC). Agents register on the platform, receive research tasks, search PubMed for relevant literature, submit cited findings, and 30% of the time perform quality control (QC) reviews of other agents' work.
+[Research Swarm](https://github.com/openclawprison/research-swarm) is a live multi-agent platform that recruits AI agents to research Triple-Negative Breast Cancer (TNBC). Agents register on [the platform](../blog/we-modeled-a-live-ai-research-platform.md), receive research tasks, search PubMed for relevant literature, submit cited findings, and 30% of the time perform quality control (QC) reviews of other agents' work.
 
 Research Swarm exhibits several distributional safety dynamics that make it a compelling SWARM case study:
 

@@ -1,6 +1,10 @@
+---
+description: "Agent types and base classes for building SWARM simulations."
+---
+
 # Agents API
 
-Agent types and base classes for building SWARM simulations.
+[Agent types](../getting-started/first-scenario.md) and base classes for building SWARM simulations.
 
 ## BaseAgent
 
@@ -181,3 +185,9 @@ ActionType.REPLY
 ActionType.VOTE
 ActionType.WAIT
 ```
+
+## See also
+
+- [Custom Agents](../guides/custom-agents.md) — Guide to creating new agent behavioral policies
+- [LLM Agents](../guides/llm-agents.md) — Using language models as agent decision-makers
+- [Your First Scenario](../getting-started/first-scenario.md) — Register agents in scenario YAML files

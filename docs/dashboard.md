@@ -1,3 +1,7 @@
+---
+description: "Streamlit dashboard for monitoring simulation metrics, including replay-based incoherence analytics."
+---
+
 # Dashboard
 
 Streamlit dashboard for monitoring simulation metrics, including replay-based

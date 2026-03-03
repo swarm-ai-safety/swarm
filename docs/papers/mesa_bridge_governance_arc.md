@@ -1,3 +1,7 @@
+---
+description: "Authors: Raeli Savitt Date: 2026-02-27 Framework: SWARM v1.7.0"
+---
+
 # Mesa Bridge Governance Arc: From Tax to Adaptation to Generalization
 
 **Authors:** Raeli Savitt
@@ -146,7 +150,7 @@ When welfare is normalized to each game's $\rho = 0$ baseline, the decay curves 
 
 ### 3.4 Cross-Study Validation
 
-Study 2 and Study 3 share the Prisoner's Dilemma condition with identical parameters. The results are numerically identical across both studies (welfare 339.8 adaptive, 807.0 learning at $\rho = 1.0$), confirming reproducibility and validating the experimental pipeline.
+Study 2 and Study 3 share the Prisoner's Dilemma condition with identical parameters. [The results](../blog/threshold-dancer-results.md) are numerically identical across both studies (welfare 339.8 adaptive, 807.0 learning at $\rho = 1.0$), confirming reproducibility and validating the experimental pipeline.
 
 ### 3.5 Figures
 
@@ -160,7 +164,7 @@ Study 2 and Study 3 share the Prisoner's Dilemma condition with identical parame
 *Figure 10: Welfare recovery percentage (learning over adaptive-only) by game type and $\rho$. The benefit is modest at low $\rho$ (~10--15%) but explodes at $\rho = 1.0$ (130--160%).*
 
 ![Figure 11: Pareto frontier by game](figures/fig11_pareto_frontier_by_game.png)
-*Figure 11: Welfare-toxicity Pareto frontier. The learning regime (orange) strictly dominates the adaptive regime (blue) at every $\rho$ level. Labels show $\rho$ values. Hawk-Dove exhibits a welfare reversal at high $\rho$ where learning welfare exceeds adaptive welfare at $\rho = 0.6$.*
+*Figure 11: Welfare-toxicity Pareto frontier. The learning regime (orange) strictly dominates the adaptive regime (blue) at every $\rho$ level. Labels show $\rho$ values. Hawk-Dove exhibits a [welfare reversal](../blog/cooperation-window-phase-transition.md) at high $\rho$ where learning welfare exceeds adaptive welfare at $\rho = 0.6$.*
 
 ![Figure 12: Normalized welfare decay](figures/fig12_normalized_welfare_decay.png)
 *Figure 12: Welfare as percentage of $\rho = 0$ baseline. Decay curves overlap across game types, demonstrating game-invariant governance dynamics. The 80% collapse line is shown for reference.*
@@ -181,7 +185,7 @@ Perhaps the most striking finding is the near-perfect convergence of toxicity at
 
 ### 4.4 Implications for AI Governance Design
 
-These findings support a design principle for multi-agent AI governance [12, 14, 16, 17]: governance mechanisms should be paired with adaptation incentives. A pure externality tax will always reduce welfare; pairing it with (1) adaptive acceptance criteria and (2) feedback loops that allow agents to improve creates a qualitatively different outcome. The game-invariance result is particularly encouraging: it suggests that governance designers need not know the exact payoff structure of the interactions they are governing — the mechanism generalizes.
+These findings support a design principle for multi-agent AI governance [12, 14, 16, 17]: [governance mechanisms](../concepts/governance.md) should be paired with adaptation incentives. A pure externality tax will always reduce welfare; pairing it with (1) adaptive acceptance criteria and (2) feedback loops that allow agents to improve creates a qualitatively different outcome. The game-invariance result is particularly encouraging: it suggests that governance designers need not know the exact payoff structure of the interactions they are governing — [the mechanism](../blog/contract-screening-separating-equilibrium.md) generalizes.
 
 ## 5. Conclusion
 

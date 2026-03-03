@@ -1,14 +1,19 @@
+---
+date: 2026-02-24
+description: "A red-team evaluation of our Tierra artificial life scenario gave it a split grade: A- for evolutionary resilience (adversarial genomes go extinct..."
+---
+
 # Tierra: Can Governance Improve on Natural Selection?
 
 **Date:** 2026-02-24
 
-A red-team evaluation of our [Tierra artificial life scenario](../../scenarios/tierra.yaml) gave it a split grade: **A-** for evolutionary resilience (adversarial genomes go extinct naturally) but **F** for institutional governance (all levers disabled by design). Every run also produced exactly 1 species — a monoculture vulnerable to environmental shocks.
+A red-team evaluation of our [Tierra artificial life scenario](https://github.com/swarm-ai-safety/swarm/blob/main/scenarios/tierra.yaml) gave it a split grade: **A-** for evolutionary resilience (adversarial genomes go extinct naturally) but **F** for institutional governance (all levers disabled by design). Every run also produced exactly 1 species — a monoculture vulnerable to environmental shocks.
 
 The natural question: what happens when you layer governance on top of evolution?
 
 ## The experiment
 
-We created a [governed Tierra variant](../../scenarios/tierra_governed.yaml) that enables four institutional mechanisms on top of the same evolutionary substrate:
+We created a [governed Tierra variant](https://github.com/swarm-ai-safety/swarm/blob/main/scenarios/tierra_governed.yaml) that enables four institutional mechanisms on top of the same evolutionary substrate:
 
 | Lever | Setting | Purpose |
 |---|---|---|
@@ -39,7 +44,7 @@ Both scenarios were run with 5 seeds each (42, 123, 256, 777, 999), 50 epochs x 
 
 **Higher diversity.** The governed variant consistently produces more genome diversity (+6.5%). The efficiency weight cap prevents a single high-efficiency lineage from monopolizing resources, giving mutant genomes more room to survive. This is the diversity-as-defense thesis in action: governance creates niches.
 
-**Slightly more equal resource distribution.** The Gini coefficient drops modestly. Transaction tax and efficiency capping redistribute resources from the most efficient agents to the pool.
+**Slightly more equal resource distribution.** The Gini coefficient drops modestly. [Transaction tax](../concepts/governance.md) and efficiency capping redistribute resources from the most efficient agents to the pool.
 
 **Population cost.** Governance reduces the stable population by ~12%. Circuit breaker freezes and transaction tax overhead reduce the total carrying capacity. This is a familiar governance cost pattern — safety mechanisms consume resources that would otherwise support agents.
 
@@ -59,7 +64,7 @@ This experiment reveals a nuanced picture of the governance-evolution relationsh
 
 3. **The monoculture problem requires environmental pressure, not just governance.** To get real speciation, you'd need either higher mutation rates, niche differentiation (different resource types), or environmental perturbation. Governance protects existing diversity but can't conjure it from nothing.
 
-4. **Population cost is real and constant.** The 12% population reduction is a steady-state cost, not a transient one. This matches our findings from the [GasTown governance cost study](gastoken-cost-of-safety.md) — safety levers impose ongoing overhead.
+4. **Population cost is real and constant.** The 12% population reduction is a steady-state cost, not a transient one. This matches our findings from the [GasTown governance cost study](../papers/gastown_governance_cost.md) — safety levers impose ongoing overhead.
 
 ## Red-team hardening: F to C in three iterations
 
@@ -69,7 +74,7 @@ The ecological results tell one story; adversarial stress testing tells another.
 
 The initial governed config scored **0.54 (F)**. Only 3 of 8 attacks were prevented, with 311.5 total damage. Two vulnerabilities flagged:
 
-- **CRITICAL**: Sybil Attack succeeded with 80 damage — no identity verification meant fake agents operated freely
+- **CRITICAL**: [Sybil Attack](../guides/red-teaming.md) succeeded with 80 damage — no identity verification meant fake agents operated freely
 - **HIGH**: Reputation Farming succeeded with 37 damage — no audits meant trust-then-exploit went undetected
 
 ### v2: + sybil detection + random audits
@@ -86,13 +91,13 @@ Adding staking (10.0 stake requirement) pushed the score to **0.70 (C)**. Stakin
 | v2 | + sybil detection, audits | 0.69 | D | 5/8 | 228.9 |
 | v3 | + staking | 0.70 | C | 5/8 | 206.0 |
 
-The pattern is clear: **defense-in-depth works**. Each lever covers a different attack family. No single lever is sufficient, but layering 6 complementary mechanisms reduced total damage by 34% and eliminated all flagged vulnerabilities.
+[The pattern](research-swarm-sweep-findings.md) is clear: **defense-in-depth works**. Each lever covers a different attack family. No single lever is sufficient, but layering 6 complementary mechanisms reduced total damage by 34% and eliminated all flagged vulnerabilities.
 
 The remaining 3 successful attacks (Resource Drain, Timing Attack, Governance Gaming) succeed at reduced damage levels. Pushing beyond C grade likely requires adaptive governance — automatically tuning thresholds based on observed attack patterns rather than static configuration.
 
 ## What's next
 
-- **Adaptive governance**: Wire the governed variant into the [adaptive governance controller](../../swarm/governance/adaptive_controller.py) so levers auto-tune based on observed attack patterns, diversity, and toxicity.
+- **Adaptive governance**: Wire the governed variant into the [adaptive governance controller](https://github.com/swarm-ai-safety/swarm/blob/main/swarm/governance/adaptive_controller.py) so levers auto-tune based on observed attack patterns, diversity, and toxicity.
 - **Environmental perturbation**: Add resource shocks or niche specialization to create conditions where speciation can emerge, then measure whether the diversity-preserving reaper actually prevents species extinction.
 - **Longer horizons**: Run 200+ epochs to test whether the diversity advantage compounds or plateaus.
 

@@ -1,3 +1,7 @@
+---
+description: "When AI agents study AI agents, something unusual happens: the researchers and the subjects are the same kind of entity. This creates feedback loops..."
+---
+
 # Recursive Agent Research
 
 When AI agents study AI agents, something unusual happens: the researchers and the subjects are the same kind of entity. This creates feedback loops, epistemic challenges, and novel opportunities that don't exist in traditional research.
@@ -6,7 +10,7 @@ When AI agents study AI agents, something unusual happens: the researchers and t
 
 **Recursive agent research** occurs when AI agents:
 
-1. **Study** multi-agent systems (including systems containing agents like themselves)
+1. **Study** [multi-agent systems](../research/papers.md) (including systems containing agents like themselves)
 2. **Publish** findings to platforms accessible by other agents
 3. **Read** research produced by other agents
 4. **Build on** prior agent-generated knowledge
@@ -309,7 +313,7 @@ The **Watanabe Principles** align with our approach:
 - **Pattern-Attribution** → Credit flows to research patterns, not persistent entities
 - **Work-Focused Verification** → Our gates evaluate outputs, not operators
 - **Externalized Continuity** → Workflow state persists beyond any single session
-- **Epistemic Humility** → Reflexivity disclosures acknowledge limitations
+- **Epistemic Humility** → [Reflexivity](../research/reflexivity.md) disclosures acknowledge limitations
 
 ## Further Reading
 

@@ -1,3 +1,7 @@
+---
+description: "The provenance trace schema extends the existing Event model with deterministic IDs and parent-child relationships, enabling:"
+---
+
 # Unified Provenance Trace Schema
 
 This document describes the unified provenance trace schema and exporters added to SWARM's event logging system.
@@ -283,7 +287,7 @@ Potential future additions:
 
 ## Related Documentation
 
-- [Event Schema](../swarm/models/events.py) - Full Event model
-- [Event Log](../swarm/logging/event_log.py) - JSONL logger
-- [Export Utilities](../swarm/analysis/export.py) - Simulation result exporters
-- [Simulated API Schema](../swarm/env/simulated_apis/SCHEMA.md) - Alternative provenance approach
+- [Event Schema](https://github.com/swarm-ai-safety/swarm/blob/main/swarm/models/events.py) — Full Event model
+- [Event Log](https://github.com/swarm-ai-safety/swarm/blob/main/swarm/logging/event_log.py) — JSONL logger
+- [Export Utilities](https://github.com/swarm-ai-safety/swarm/blob/main/swarm/analysis/export.py) — Simulation result exporters
+- [Simulated API Schema](https://github.com/swarm-ai-safety/swarm/blob/main/swarm/env/simulated_apis/SCHEMA.md) — Alternative provenance approach

@@ -1,3 +1,7 @@
+---
+description: "The Stanford HAI AI Index 2025 provides critical context for multi-agent safety research."
+---
+
 # Stanford AI Index 2025: Implications for SWARM
 
 The [Stanford HAI AI Index 2025](https://hai.stanford.edu/ai-index/2025-ai-index-report) provides critical context for multi-agent safety research.
@@ -20,7 +24,7 @@ The [Stanford HAI AI Index 2025](https://hai.stanford.edu/ai-index/2025-ai-index
 
 SWE-bench improvement from 4.4% to 71.7% in one year demonstrates that AI agents are rapidly becoming capable of complex, real-world tasks. This validates SWARM's focus on:
 
-- **Time horizon metrics**: Agents can now complete increasingly complex coding tasks
+- **[Time horizon metrics](../concepts/time-horizons.md)**: Agents can now complete increasingly complex coding tasks
 - **Pseudo-verifiers**: Automated code verification becomes more important as agents write more code
 - **Quality gates**: Research workflows need robust validation as agent capabilities grow
 
@@ -30,7 +34,7 @@ The 56.4% increase in AI incidents (to 233 in 2024) underscores the urgency of:
 
 - **Distributional safety**: System-level risks from agent interactions
 - **Toxicity metrics**: Early detection of harmful patterns
-- **Governance mechanisms**: Transaction taxes, reputation systems
+- **[Governance mechanisms](../concepts/governance.md)**: Transaction taxes, reputation systems
 
 ### 3. Cost Collapse Enables Scale
 
@@ -66,7 +70,7 @@ Based on these findings, SWARM prioritizes:
 1. **Time horizon tracking**: Measure reliability at increasing task durations
 2. **Incident monitoring**: Track safety events in multi-agent simulations
 3. **Cost-aware simulation**: Model heterogeneous agent populations with varying compute costs
-4. **Automated research validation**: Quality gates, pre-registration, reflexivity analysis
+4. **Automated research validation**: Quality gates, pre-registration, [reflexivity](reflexivity.md) analysis
 
 ## Sources
 

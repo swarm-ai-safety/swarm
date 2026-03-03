@@ -1,3 +1,8 @@
+---
+date: 2026-02-21
+description: "Threshold dancing avoids blacklisting perfectly — but the exploit budget is too thin to profit"
+---
+
 # We Built the Adversary That Was Supposed to Break the Cautious Reciprocator. It Didn't.
 
 *Threshold dancing avoids blacklisting perfectly — but the exploit budget is too thin to profit*

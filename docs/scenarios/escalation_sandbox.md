@@ -1,3 +1,7 @@
+---
+description: "The Escalation Sandbox is a geopolitical crisis simulation within SWARM that reproduces the core dynamics observed in the Payne (2026) war game study. It..."
+---
+
 # Escalation Sandbox — Scenario Documentation
 
 ## Overview

@@ -1,3 +1,7 @@
+---
+description: "Status: Draft Issue: #60 Owner: SWARM Team Sources: docs/design/api-design.md, docs/design/web-api-plan.md Last Updated: 2026-02-09"
+---
+
 # SWARM Web API Design and Implementation Plan (Unified)
 
 **Status:** Draft  

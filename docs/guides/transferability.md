@@ -1,3 +1,7 @@
+---
+description: "SWARM results come from stylized simulations. This guide helps you reason about when and how your findings transfer to real-world AI systems."
+---
+
 # Transferability Considerations
 
 SWARM results come from stylized simulations. This guide helps you reason about when and how your findings transfer to real-world AI systems.
@@ -73,7 +77,7 @@ Specific quantitative claims about real systems require empirical calibration. W
 
 ### Agent Model Fidelity
 
-SWARM's built-in agent types (honest, opportunistic, deceptive, adversarial) are stylized abstractions. Real AI agents:
+SWARM's built-in [agent types](../getting-started/first-scenario.md) (honest, opportunistic, deceptive, adversarial) are stylized abstractions. Real AI agents:
 
 - Have richer internal states
 - Can adapt strategies more rapidly
@@ -168,9 +172,9 @@ Use SWARM results as **hypotheses for real-system evaluation**, not as conclusio
 
 ---
 
-## What's Next?
+## See also
 
-- **Design for generalizability**: [Writing Scenarios](scenarios.md)
-- **Parameter robustness**: [Parameter Sweeps](parameter-sweeps.md)
-- **Adversarial testing**: [Red Teaming](red-teaming.md)
-- **Theoretical grounding**: [Theoretical Foundations](../research/theory.md)
+- [Writing Scenarios](scenarios.md) — Design scenarios with generalizability in mind
+- [Parameter Sweeps](parameter-sweeps.md) — Test parameter robustness across configurations
+- [Red Teaming](red-teaming.md) — Adversarial testing for governance mechanisms
+- [Theoretical Foundations](../research/theory.md) — Formal treatment of distributional safety

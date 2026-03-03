@@ -1,3 +1,7 @@
+---
+description: "Posts about SWARM research findings, framework updates, and multi-agent safety."
+---
+
 # Blog
 
 Posts about SWARM research findings, framework updates, and multi-agent safety.
@@ -16,6 +20,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 </div>
 
 ## March 2026
+
+<div class="blog-post" data-tags="evaluation llm-agents" markdown>
+
+**Mar 2** — [Transparency Stabilizes Escalation — But Only When Safety Training Is Present](asymmetric-information-escalation.md)
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span>
+
+120 runs across 4 intelligence asymmetry conditions and 3 persona pairings. When adversarial meets safety-trained under fog, 90% nuclear rate. Give either side good intel and it drops to 0%. Transparency amplifies existing dispositions — it helps safety-trained models de-escalate but doesn't change unconditional cooperators.
+
+</div>
 
 <div class="blog-post" data-tags="evaluation llm-agents" markdown>
 

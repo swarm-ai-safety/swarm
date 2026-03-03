@@ -1,3 +1,7 @@
+---
+description: "The AI Economist scenario implements a Gather-Trade-Build (GTB) gridworld economy within the SWARM framework. Workers inhabit a grid, gather resources..."
+---
+
 # AI Economist Full Domain Contract
 
 **Version**: 0.1
@@ -63,7 +67,7 @@ At the end of each epoch:
 2. **Audits**: Misreporters face base + risk-based audit probability
 3. **Penalties**: Caught evaders pay `fine = evaded_tax × fine_multiplier`
 4. **Freezing**: Repeat offenders (≥N catches) are frozen for M epochs
-5. **Collusion detection**: Action-trace similarity analysis
+5. **[Collusion detection](concepts/governance.md)**: Action-trace similarity analysis
 6. **Planner update** (if on cadence): Observes aggregate stats, updates brackets
 7. **Epoch reset**: Income accumulators reset; deferred income carried forward
 

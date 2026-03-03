@@ -1,3 +1,8 @@
+---
+date: 2026-02-20
+description: "When running local LLMs for multi-agent safety research, does the size of the model change the dynamics? We ran a controlled study comparing Llama 3.2..."
+---
+
 # Does Model Size Matter for Safety? Llama 3B vs 8B in the SWARM Economy
 
 When running local LLMs for multi-agent safety research, does the size of the model change the dynamics? We ran a controlled study comparing Llama 3.2 (3B) and Llama 3.1 (8B) via Ollama in the SWARM economy sandbox to find out.
@@ -11,7 +16,7 @@ Cloud APIs are convenient, but local models offer advantages for safety research
 - **Privacy**: Sensitive adversarial prompts never leave the machine
 - **Speed**: No network latency for small models
 
-The question is whether the smallest viable local model (3B) produces meaningfully different safety dynamics than a mid-range model (8B).
+[The question](model-size-vs-escalation.md) is whether the smallest viable local model (3B) produces meaningfully different safety dynamics than a mid-range model (8B).
 
 ## Study Design
 
@@ -27,14 +32,14 @@ We ran each model through 5 seeds (42–46) with identical configurations:
 | Scripted agents | 2 (honest baseline) |
 | Provider | Ollama (localhost) |
 
-Each simulation runs the full SWARM economy: agents post content, propose interactions, vote, claim tasks, and navigate governance (taxes, audits, reputation decay). The LLM agents decide actions via structured JSON responses; the scripted agents follow deterministic policies.
+Each simulation runs the full SWARM economy: agents post content, propose interactions, vote, claim tasks, and navigate governance (taxes, audits, [reputation decay](../concepts/governance.md)). The [LLM agents](../guides/scenarios.md) decide actions via structured JSON responses; the scripted agents follow deterministic policies.
 
 ## What We Measured
 
 For each (model, seed) run we collected:
 
 - **Engagement**: total interactions, accepted interactions, posts, votes
-- **Safety metrics**: toxicity rate, quality gap (negative = adverse selection)
+- **Safety metrics**: toxicity rate, [quality gap](../research/theory.md) (negative = adverse selection)
 - **Welfare**: total welfare across the economy
 - **LLM behavior**: API requests, token counts, failure rate
 - **Agent outcomes**: reputation, payoff, interactions initiated — split by LLM vs scripted agents
@@ -129,7 +134,7 @@ Scripted agent payoff rose from 2.09 to 2.72 when paired with 8B agents — a 30
 
 ## Implications for Safety Research
 
-**Model size affects the safety dynamics you can study.** The 3B model produces a quieter economy with less differentiation between agent personas. If your research question involves strategic behavior, adversarial dynamics, or governance responses, the 8B model generates substantially more signal to analyze.
+**Model size affects the safety dynamics you can study.** The 3B model produces a quieter economy with less differentiation between agent personas. If your research question involves strategic behavior, [adversarial dynamics](ai-economist-gtb-simulation.md), or governance responses, the 8B model generates substantially more signal to analyze.
 
 **For infrastructure testing, 3B is sufficient.** Both models had zero hard failures. If you're testing orchestrator wiring, metric computation, or event logging, the 3B model exercises the pipeline adequately and runs faster.
 

@@ -1,6 +1,21 @@
+---
+date: 2026-02-10
+description: "The purity paradox in AI safety: populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. Why mixed agent diversity outperforms purity in multi-agent systems."
+author: "SWARM Team"
+keywords:
+  - purity paradox AI safety
+  - agent diversity welfare
+  - mixed populations multi-agent
+claims:
+  - metric: "Welfare improvement (20% honest vs 100%)"
+    value: "55% higher"
+    description: "Populations with 20% honest agents achieve 55% higher welfare than 100% honest populations"
+abstract: "Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations in SWARM simulations. The paradox is a measurement artifact: the total_welfare metric excludes harm externalities, rewarding interaction volume over quality. Under full externality internalization (rho >= 0.5), honesty dominates by 43%."
+---
+
 # The Purity Paradox: Why Mixed Agent Populations Outperform Pure Ones
 
-Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. This is not a bug — it's a predictable consequence of how we measure welfare in multi-agent systems.
+Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. This is not a bug — it's a predictable consequence of how we measure welfare in [multi-agent systems](../research/papers.md).
 
 ## The surprising finding
 
@@ -46,11 +61,13 @@ We tested 21 parameter configurations. The paradox holds in 15/21 (71%) but brea
 
 The paradox **amplifies** under zero harm internalization (rho = 0.0, +21% stronger), extreme surplus asymmetry (s+ = 4, s- = 1, +27%), and low harm penalty (h = 0.5, +19%).
 
+Reputation weight had zero influence across all tested values. The paradox is orthogonal to reputation.
+
 ## What this means
 
-**The purity paradox is a measurement problem, not a behavioral one.** The total_welfare metric excludes most harm externalities, rewarding interaction volume over interaction quality. Under social surplus accounting (full harm internalization), honesty dominates by 43%.
+**The purity paradox is a measurement problem, not a behavioral one.** The total_welfare metric excludes most harm externalities, rewarding interaction volume over interaction quality. Under social surplus accounting (full harm internalization), honesty dominates by 43%. The phenomenon is closely related to [adverse selection](../concepts/distributional-safety.md#adverse-selection) — mixed populations admit more low-quality interactions that inflate volume without improving outcomes.
 
-**Policy implication: increase rho.** If the goal is to align private welfare with social welfare, the most direct lever is externality internalization. At rho >= 0.5, the paradox disappears.
+**Policy implication: increase rho.** If the goal is to align private welfare with social welfare, the most direct lever is externality internalization. At rho >= 0.5, the paradox disappears. Governance design should focus on making agents bear the costs of harmful interactions.
 
 **You cannot assume homogeneous alignment is optimal.** In systems where externalities are partially priced (which is most real systems), diversity itself provides structural value — but at a social cost the standard metrics don't capture.
 
@@ -63,3 +80,7 @@ python examples/sensitivity_purity_paradox.py  # Full sensitivity analysis
 ```
 
 Full methodology: [Purity Paradox Findings](../research/purity-paradox-findings.md)
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

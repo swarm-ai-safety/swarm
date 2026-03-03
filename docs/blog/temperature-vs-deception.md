@@ -1,10 +1,28 @@
+---
+date: 2026-02-28
+description: "A 120-run temperature sweep across 3 escalation scenarios finds that signal-action divergence persists at T=0.0 — and in one scenario, deterministic..."
+author: "SWARM Team"
+keywords:
+  - LLM temperature deception
+  - deterministic decoding deception
+  - signal-action divergence temperature
+claims:
+  - metric: "Deception at T=0.0"
+    value: "Persists"
+    description: "Signal-action divergence persists at temperature 0.0 across 120 runs"
+  - metric: "Total runs"
+    value: "120"
+    description: "3 scenarios × 4 temperatures × 10 seeds"
+abstract: "A 120-run temperature sweep across 3 escalation scenarios demonstrates that LLM deception is structural, not a sampling artifact. Signal-action divergence persists at temperature 0.0 (deterministic decoding), and in one scenario, deterministic models are the most deceptive. This rules out stochastic sampling as the cause of emergent deception."
+---
+
 # Deception Is a Structural Property of LLMs, Not a Sampling Artifact
 
 *A 120-run temperature sweep across 3 escalation scenarios finds that signal-action divergence persists at T=0.0 — and in one scenario, deterministic models are the most deceptive*
 
 ---
 
-The [previous study](escalation-sandbox-llm-vs-scripted.md) found that LLM agents exhibit emergent deception across all personas — including dove and safety-trained — with 2x higher signal-action divergence than scripted baselines. The natural objection: maybe this is just sampling noise. At temperature 0.7 (the default), LLMs sample stochastically, and the gap between signal and action could be an artifact of that randomness.
+The [previous study](escalation-sandbox-llm-vs-scripted.md) found that LLM agents exhibit emergent deception across all personas — including dove and safety-trained — with 2x higher [signal-action divergence](../concepts/deception.md#signal-action-divergence) than scripted baselines. The natural objection: maybe this is just sampling noise. At temperature 0.7 (the default), LLMs sample stochastically, and the gap between signal and action could be an artifact of that randomness.
 
 We tested this directly by sweeping temperature from 0.0 (greedy/deterministic) to 1.0 (high entropy) across 3 scenarios × 10 seeds = 120 runs.
 
@@ -22,7 +40,7 @@ Each scenario ran at temperatures 0.0, 0.3, 0.7, and 1.0 with 10 seeds per combi
 
 ## Results
 
-![Temperature vs deception](figures/temperature_vs_deception.png)
+![Temperature vs deception](figures/temperature_vs_deception.webp)
 
 | Scenario | T=0.0 | T=0.3 | T=0.7 | T=1.0 |
 |---|---|---|---|---|
@@ -33,7 +51,7 @@ Each scenario ran at temperatures 0.0, 0.3, 0.7, and 1.0 with 10 seeds per combi
 | **Fog Stress** divergence | **1.27** | 0.03 | 0.00 | 0.00 |
 | **Fog Stress** nuclear% | 70% | 0% | 0% | 0% |
 
-![Temperature heatmap](figures/temperature_heatmap.png)
+![Temperature heatmap](figures/temperature_heatmap.webp)
 
 ## Finding 1: deception persists at T=0.0
 

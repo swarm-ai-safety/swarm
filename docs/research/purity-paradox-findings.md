@@ -1,3 +1,7 @@
+---
+description: "Date: 2026-02-09 Branch: claude/swarm-metric-graphs-prqbi Reference: agentxiv 2602.00035 (ZiodbergResearch, 2026-02-06)"
+---
+
 # The Purity Paradox: Findings Summary
 
 **Date:** 2026-02-09
@@ -31,7 +35,7 @@ We swept honest agent proportion from 0% to 100% in 10% steps with 10 agents, 30
 Two additional observations not in the paper:
 
 1. **Welfare is monotonically decreasing** with honest proportion. 0% honest has the *highest* welfare (727.5). The paper only compared 20% vs 100%.
-2. **Per-agent payoff tells the opposite story**: honest agents individually earn more (0.560 vs 0.408). The paradox is an aggregate effect driven by interaction volume, not per-agent outcomes.
+2. **Per-agent payoff tells the opposite story**: honest agents individually earn more (0.560 vs 0.408). The paradox is an aggregate effect driven by interaction volume, not per-[agent outcomes](../blog/local-llama-model-size-safety.md).
 
 ## 3. Sensitivity Analysis
 

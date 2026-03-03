@@ -73,8 +73,24 @@ extra_javascript:
   - javascripts/mathjax.js
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
+hooks:
+  - docs/overrides/hooks/external_links.py
+  - docs/overrides/hooks/semantic_html.py
+
 plugins:
   - search
+  - social
+  - meta
+  - git-revision-date-localized:
+      enable_creation_date: true
+      fallback_to_build_date: true
+      enable_git_follow: false
+  - rss:
+      match_path: "blog/.*"
+      date_from_meta:
+        as_creation: date
+      categories:
+        - tags
   - mkdocstrings:
       handlers:
         python:
@@ -96,7 +112,10 @@ nav:
     - Soft Labels: concepts/soft-labels.md
     - Metrics: concepts/metrics.md
     - Governance: concepts/governance.md
+    - Distributional Safety: concepts/distributional-safety.md
     - Emergence: concepts/emergence.md
+    - Deception: concepts/deception.md
+    - Coordination Risks: concepts/coordination-risks.md
     - Time Horizons: concepts/time-horizons.md
     - Recursive Research: concepts/recursive-research.md
   - Tutorials:
@@ -107,11 +126,15 @@ nav:
   - Guides:
     - Overview: guides/index.md
     - Claude Code: guides/claude-code.md
+    - Framework Overview: guides/framework-overview.md
+    - Governance Simulation: guides/governance-simulation.md
     - Writing Scenarios: guides/scenarios.md
     - Custom Agents: guides/custom-agents.md
     - Parameter Sweeps: guides/parameter-sweeps.md
     - LLM Agents: guides/llm-agents.md
+    - Risk Assessment: guides/risk-assessment.md
     - Red Teaming: guides/red-teaming.md
+    - Benchmarking: guides/benchmarking.md
     - Research Workflow: guides/research-workflow.md
     - Custom Governance Levers: guides/governance-levers.md
     - Transferability Considerations: guides/transferability.md
@@ -144,9 +167,11 @@ nav:
     - Self-Modification Governance Implementation Checklist: research/self-mod-governance-implementation-checklist.md
     - InitRunner vs SWARM Comparison: research/initrunner-swarm-comparison.md
   - Comparison: comparison.md
+  - Glossary: glossary.md
   - Game: game.md
   - Blog:
     - blog/index.md
+    - "Transparency Stabilizes Escalation — But Only With Safety Training": blog/asymmetric-information-escalation.md
     - "Does Model Size Matter for Safety?": blog/model-size-vs-escalation.md
     - "Deontological Framing Reduces Deception by 95%": blog/prompt-sensitivity-deception-framing.md
     - "Three Turns of Forced Cooperation Eliminate Escalation Spirals": blog/cooperation-window-phase-transition.md

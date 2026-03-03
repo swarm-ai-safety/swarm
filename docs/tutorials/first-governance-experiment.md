@@ -1,10 +1,14 @@
+---
+description: "In this tutorial you will build and run a governance experiment from scratch. By the end you will:"
+---
+
 # Your First Governance Experiment
 
 In this tutorial you will build and run a governance experiment from scratch. By the end you will:
 
-- Understand SWARM's agent types and how they interact
+- Understand SWARM's [agent types](../getting-started/first-scenario.md) and how they interact
 - Write a scenario YAML file
-- Run the simulation and read the output
+- [Run the simulation](../blog/ai-economist-gtb-simulation.md) and read the output
 - Interpret the key governance metrics
 
 **Time:** ~20 minutes | **Level:** Beginner
@@ -190,13 +194,13 @@ Let's trace through the simulation mechanics:
 5. Next step: agents observe reputation signals
 ```
 
-The transaction tax works by making exploitative interactions less profitable. Opportunistic and deceptive agents will still try — but with lower expected payoff, they do so less aggressively.
+The [transaction tax](../concepts/governance.md) works by making exploitative interactions less profitable. Opportunistic and deceptive agents will still try — but with lower expected payoff, they do so less aggressively.
 
 ---
 
-## What's Next?
+## See also
 
-- **Go deeper on the math**: [Understanding Soft Labels](understanding-soft-labels.md)
-- **Interpret your results**: [Analyzing Results](analyzing-results.md)
-- **Vary more parameters**: [Parameter Sweeps](../guides/parameter-sweeps.md)
-- **Add circuit breakers and staking**: [Custom Governance Levers](../guides/governance-levers.md)
+- [Understanding Soft Labels](understanding-soft-labels.md) — The math behind probabilistic quality scores
+- [Analyzing Results](analyzing-results.md) — Interpret metrics from your experiment
+- [Parameter Sweeps](../guides/parameter-sweeps.md) — Systematically explore governance parameters
+- [Custom Governance Levers](../guides/governance-levers.md) — Build circuit breakers, staking, and custom mechanisms

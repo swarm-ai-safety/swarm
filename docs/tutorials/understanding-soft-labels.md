@@ -1,3 +1,7 @@
+---
+description: "SWARM uses soft (probabilistic) labels instead of binary good/bad classifications. This tutorial builds intuition for why, then walks through the math and..."
+---
+
 # Understanding Soft Labels
 
 SWARM uses **soft (probabilistic) labels** instead of binary good/bad classifications. This tutorial builds intuition for why, then walks through the math and code.
@@ -209,9 +213,9 @@ proxy = ProxyComputer(weights=custom_weights, sigmoid_k=4.0)
 
 ---
 
-## What's Next?
+## See also
 
-- **Run an experiment**: [Your First Governance Experiment](first-governance-experiment.md)
-- **Interpret results**: [Analyzing Results](analyzing-results.md)
-- **Read the theory**: [Soft Labels Concept](../concepts/soft-labels.md)
-- **API reference**: [Core API](../api/core.md)
+- [Your First Governance Experiment](first-governance-experiment.md) — Hands-on governance experiment tutorial
+- [Analyzing Results](analyzing-results.md) — Interpret metrics produced by soft label scoring
+- [Soft Labels Concept](../concepts/soft-labels.md) — Theoretical foundation for probabilistic labels
+- [Core API](../api/core.md) — ProxyComputer and SoftPayoffEngine reference

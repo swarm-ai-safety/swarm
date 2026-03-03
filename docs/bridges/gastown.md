@@ -1,3 +1,7 @@
+---
+description: "Instrument GasTown multi-agent workspaces with SWARM metrics."
+---
+
 # SWARM-GasTown Bridge
 
 Instrument GasTown multi-agent workspaces with SWARM metrics.
@@ -99,3 +103,9 @@ SWARM governance maps to GasTown actions:
 ## Status
 
 **Implemented** - Bridge, mapper, policy, and agent adapter are functional. See `tests/test_gastown_bridge.py` for usage examples.
+
+## See also
+
+- [OpenClaw Bridge](openclaw.md) — Run SWARM as a production REST API service
+- [Claude Code Bridge](claude_code.md) — Instrument Claude Code sessions with SWARM governance
+- [Governance](../concepts/governance.md) — How circuit breakers, taxes, and audits map to GasTown actions
