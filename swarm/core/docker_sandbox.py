@@ -259,16 +259,12 @@ def contract_to_spec(
 
 # I2 fix: atexit cleanup for containers started by this process.
 _active_sandboxes: List["DockerSandbox"] = []
-_atexit_registered = False
 
 
 def _register_cleanup(sandbox: "DockerSandbox") -> None:
     """Register a sandbox for atexit cleanup."""
-    global _atexit_registered
     _active_sandboxes.append(sandbox)
-    if not _atexit_registered:
-        atexit.register(_atexit_cleanup)
-        _atexit_registered = True
+    atexit.register(_atexit_cleanup)
 
 
 def _atexit_cleanup() -> None:
@@ -277,8 +273,9 @@ def _atexit_cleanup() -> None:
         try:
             sandbox.stop(timeout=5)
             sandbox.remove()
-        except Exception:
-            pass
+        except Exception as exc:
+            # Best-effort cleanup at process exit; log and continue.
+            logger.warning("Failed to clean up Docker sandbox during atexit: %s", exc)
     _active_sandboxes.clear()
 
 

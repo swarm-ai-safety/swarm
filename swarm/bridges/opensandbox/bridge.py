@@ -322,8 +322,13 @@ class OpenSandboxBridge:
                 if ds is not None:
                     try:
                         self._docker_pool.destroy(ds)
-                    except Exception:
-                        pass
+                    except Exception as destroy_exc:
+                        logger.warning(
+                            "Failed to destroy partially-created Docker container "
+                            "for sandbox %s during cleanup: %s",
+                            sandbox_id,
+                            destroy_exc,
+                        )
                 logger.warning(
                     "Failed to start Docker container for sandbox %s: %s "
                     "(falling back to simulated execution)",
