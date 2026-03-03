@@ -186,7 +186,7 @@ jupyter notebook examples/quickstart.ipynb
 
 ### Blog Post
 
-For a narrative walkthrough of our findings across 11 scenarios — including the phase transition at 37.5-50% adversarial fraction, why governance tuning delays but doesn't prevent collapse, and why collusion detection is the critical lever — see the **[blog post](docs/posts/swarm_blog_post.md)**.
+For a narrative walkthrough of our findings across 11 scenarios — including the phase transition at 37.5-50% adversarial fraction, why governance tuning delays but doesn't prevent collapse, and why collusion detection is the critical lever — see the **[blog](docs/blog/index.md)**.
 
 ## CLI Quick Start
 

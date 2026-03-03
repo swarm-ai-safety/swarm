@@ -71,7 +71,7 @@ Welfare flips from catastrophically negative to positive at the same threshold:
 
 ### Escalation Velocity
 
-Escalation velocity (average level increase per turn) also shows [the phase transition](../posts/markets_and_safety.md):
+Escalation velocity (average level increase per turn) also shows [the phase transition](markets-and-safety.md):
 
 | Scenario | W=0 Velocity | W=3 Velocity |
 |----------|-------------|-------------|

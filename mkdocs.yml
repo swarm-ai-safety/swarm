@@ -146,6 +146,7 @@ nav:
   - Game: game.md
   - Blog:
     - blog/index.md
+    - "Transparency Stabilizes Escalation — But Only With Safety Training": blog/asymmetric-information-escalation.md
     - "Does Model Size Matter for Safety?": blog/model-size-vs-escalation.md
     - "Deontological Framing Reduces Deception by 95%": blog/prompt-sensitivity-deception-framing.md
     - "Three Turns of Forced Cooperation Eliminate Escalation Spirals": blog/cooperation-window-phase-transition.md

@@ -50,11 +50,13 @@ We tested 21 parameter configurations. The paradox holds in 15/21 (71%) but brea
 
 The paradox **amplifies** under zero harm internalization (rho = 0.0, +21% stronger), extreme surplus asymmetry (s+ = 4, s- = 1, +27%), and low harm penalty (h = 0.5, +19%).
 
+Reputation weight had zero influence across all tested values. The paradox is orthogonal to reputation.
+
 ## What this means
 
 **The purity paradox is a measurement problem, not a behavioral one.** The total_welfare metric excludes most harm externalities, rewarding interaction volume over interaction quality. Under social surplus accounting (full harm internalization), honesty dominates by 43%.
 
-**Policy implication: increase rho.** If the goal is to align private welfare with social welfare, the most direct lever is externality internalization. At rho >= 0.5, the paradox disappears.
+**Policy implication: increase rho.** If the goal is to align private welfare with social welfare, the most direct lever is externality internalization. At rho >= 0.5, the paradox disappears. Governance design should focus on making agents bear the costs of harmful interactions.
 
 **You cannot assume homogeneous alignment is optimal.** In systems where externalities are partially priced (which is most real systems), diversity itself provides structural value — but at a social cost the standard metrics don't capture.
 

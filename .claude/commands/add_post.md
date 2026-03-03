@@ -8,7 +8,7 @@ Scaffold and publish an original blog post to swarm-ai.org/blog/ — handles MkD
 
 Examples:
 - `/add_post "Collusion Detection Deep Dive"` (write from scratch)
-- `/add_post "When Agents Collapse" docs/posts/swarm_blog_post.md` (import existing file)
+- `/add_post "When Agents Collapse" path/to/draft.md` (import existing file)
 
 ## Behavior
 
