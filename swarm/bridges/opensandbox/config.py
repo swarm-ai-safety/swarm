@@ -219,6 +219,9 @@ class OpenSandboxConfig:
     snapshot_enabled: bool = False
     observer_interval_seconds: float = 5.0
     risk_threshold: float = 0.7
+    docker_enabled: bool = False
+    docker_image: str = "python:3.12-slim"
+    docker_exec_user: str = "nobody"
 
     def get_contract(self, contract_id: str) -> GovernanceContract:
         """Look up a contract by ID, falling back to the default."""

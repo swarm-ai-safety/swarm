@@ -71,6 +71,9 @@ dashboard = [
 bridges = [
     "swarm-gastown",
 ]
+docker = [
+    "docker>=7.0.0",
+]
 cli = [
     "rich>=13.0",
 ]

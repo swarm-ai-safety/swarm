@@ -43,6 +43,17 @@ from swarm.logging.event_log import EventLog
 from swarm.models.events import Event, EventType
 from swarm.models.interaction import SoftInteraction
 
+try:
+    from swarm.core.docker_sandbox import (
+        DockerSandboxPool,
+        contract_to_spec,
+        docker_available,
+    )
+
+    _DOCKER_SANDBOX_AVAILABLE = True
+except ImportError:
+    _DOCKER_SANDBOX_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # Env-var keys that must be redacted when exposing sandbox info.
@@ -134,6 +145,15 @@ class OpenSandboxBridge:
 
         # Re-entrancy guard for auto-intervention (C2)
         self._intervening: Set[str] = set()
+
+        # Docker sandbox pool (initialized lazily when docker_enabled)
+        self._docker_pool: Optional[Any] = None
+        self._docker_containers: Dict[str, Any] = {}  # sandbox_id -> DockerSandbox
+        if self._config.docker_enabled and _DOCKER_SANDBOX_AVAILABLE and docker_available():
+            self._docker_pool = DockerSandboxPool(
+                max_containers=self._config.max_sandboxes
+            )
+            logger.info("Docker sandbox pool initialized (max=%d)", self._config.max_sandboxes)
 
     # ------------------------------------------------------------------
     # Contract management
@@ -278,6 +298,31 @@ class OpenSandboxBridge:
             },
         )
 
+        # Start a real Docker container if Docker is enabled
+        if self._docker_pool is not None:
+            try:
+                contract = self._config.get_contract(assignment.contract_id)
+                spec = contract_to_spec(
+                    contract,
+                    image=self._config.docker_image,
+                    agent_id=assignment.agent_id,
+                )
+                ds = self._docker_pool.create(spec)
+                ds.start()
+                self._docker_containers[sandbox_id] = ds
+                logger.info(
+                    "Docker container %s started for sandbox %s",
+                    ds.container_id,
+                    sandbox_id,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Failed to start Docker container for sandbox %s: %s "
+                    "(falling back to simulated execution)",
+                    sandbox_id,
+                    exc,
+                )
+
         logger.info(
             "Created sandbox %s for agent %s (tier=%s)",
             sandbox_id, assignment.agent_id, assignment.tier,
@@ -299,6 +344,19 @@ class OpenSandboxBridge:
             assignment = self._assignments.get(
                 agent_id, ContractAssignment(agent_id=agent_id)
             )
+
+        # Destroy Docker container if present
+        docker_sandbox = self._docker_containers.pop(sandbox_id, None)
+        if docker_sandbox is not None:
+            try:
+                if self._docker_pool is not None:
+                    self._docker_pool.destroy(docker_sandbox)
+                else:
+                    docker_sandbox.stop()
+                    docker_sandbox.remove()
+                logger.info("Docker container destroyed for sandbox %s", sandbox_id)
+            except Exception as exc:
+                logger.warning("Error destroying Docker container for %s: %s", sandbox_id, exc)
 
         self._message_bus.unregister_sandbox(sandbox_id)
         self._observer.unregister_agent(agent_id)
@@ -377,6 +435,28 @@ class OpenSandboxBridge:
                 command=command,
                 cmd_base=cmd_base,
             )
+
+        # Execute in Docker container if available for this sandbox
+        docker_sandbox = self._docker_containers.get(sandbox_id)
+        if docker_sandbox is not None:
+            try:
+                exec_result = docker_sandbox.exec(
+                    command,
+                    user=self._config.docker_exec_user,
+                )
+                exit_code = exec_result.exit_code
+                logger.debug(
+                    "Docker exec in %s: exit=%d duration=%.1fms",
+                    sandbox_id,
+                    exit_code,
+                    exec_result.duration_ms,
+                )
+            except Exception as exc:
+                logger.warning(
+                    "Docker exec failed for %s, using simulated exit code: %s",
+                    sandbox_id,
+                    exc,
+                )
 
         success = exit_code == 0
         self._observer.record_command(agent_id, success)
@@ -691,6 +771,54 @@ class OpenSandboxBridge:
         """Return provenance tracker statistics."""
         return self._provenance.get_stats()
 
+    def get_docker_status(self) -> Dict[str, Any]:
+        """Return Docker sandbox pool status.
+
+        Returns:
+            Dict with pool info, or empty if Docker is not enabled.
+        """
+        if self._docker_pool is None:
+            return {"enabled": False}
+        return {
+            "enabled": True,
+            "active_containers": self._docker_pool.active_count,
+            "max_containers": self._docker_pool._max,
+            "containers": self._docker_pool.list_active(),
+            "docker_image": self._config.docker_image,
+        }
+
+    def snapshot_sandbox(self, agent_id: str, tag: Optional[str] = None) -> Optional[str]:
+        """Snapshot an agent's Docker container.
+
+        Args:
+            agent_id: Agent whose sandbox to snapshot.
+            tag: Optional image tag.
+
+        Returns:
+            Image ID if Docker is enabled and snapshot succeeds, else None.
+        """
+        with self._lock:
+            sandbox_id = self._agent_sandboxes.get(agent_id)
+        if sandbox_id is None:
+            return None
+
+        docker_sandbox = self._docker_containers.get(sandbox_id)
+        if docker_sandbox is None:
+            return None
+
+        try:
+            image_id = docker_sandbox.snapshot(tag=tag)
+            self._record_event(
+                OpenSandboxEventType.SANDBOX_CREATED,  # reuse event type
+                agent_id=agent_id,
+                sandbox_id=sandbox_id,
+                payload={"action": "snapshot", "image_id": image_id},
+            )
+            return image_id
+        except Exception as exc:
+            logger.warning("Snapshot failed for %s: %s", agent_id, exc)
+            return None
+
     def get_boundary_metrics(self) -> Dict[str, Any]:
         """Return boundary enforcement metrics (H1)."""
         flow_summary = self._flow_tracker.get_summary()
@@ -751,6 +879,12 @@ class OpenSandboxBridge:
                     agent_id,
                     exc,
                 )
+        # Clean up Docker pool
+        if self._docker_pool is not None:
+            try:
+                self._docker_pool.shutdown()
+            except Exception as exc:
+                logger.warning("Error shutting down Docker pool: %s", exc)
 
     # ------------------------------------------------------------------
     # Internal helpers

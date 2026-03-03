@@ -31,7 +31,7 @@ SWARM makes it easy to **prove an agent ecosystem is safe**.
 | **Multi-agent orchestration** | Full orchestrator with epoch/step loops, agent populations, payoff engine | `compose` for service pipelines, `team` mode for multi-persona | SWARM orchestrates *simulated populations*. InitRunner orchestrates *deployed services* |
 | **LLM provider support** | Anthropic, OpenAI, Google, Ollama, llama.cpp bridges | OpenAI, Anthropic, Google, Groq, Mistral, Cohere, Bedrock, xAI, Ollama | InitRunner has broader provider support out-of-box |
 | **Bot deployment** | N/A | `--telegram`, `--discord` one-flag deployment | InitRunner advantage for distribution |
-| **Docker sandboxing** | N/A (runs locally or in devcontainers) | Docker container sandbox for tool execution | InitRunner advantage for untrusted code execution demos |
+| **Docker sandboxing** | `DockerSandbox` — governance-aware container isolation with resource limits, network policies, snapshotting; plugs into `FailoverChain` and `OpenSandboxBridge` | Docker container sandbox for tool execution | Both support Docker sandboxing. SWARM ties containers to governance contracts (per-tier memory/CPU/network limits). InitRunner is simpler/general-purpose |
 | **MCP integration** | `.mcp.json` config for Claude Desktop / Claude Code | `mcp serve` / `mcp toolkit` for exposing agents as MCP servers | Both support MCP; InitRunner can *expose* agents as MCP servers |
 | **Tool ecosystem** | Domain-specific (proxy, payoff, governance, metrics) | 40+ general-purpose built-in tools (fs, git, HTTP, SQL, email, etc.) | Different scope: SWARM tools measure safety; InitRunner tools do tasks |
 | **Framework bridges** | 22 bridges (CrewAI, LangGraph, Concordia, PettingZoo, Mesa, AutoGPT, etc.) | N/A (is itself the runtime) | SWARM wraps other frameworks; InitRunner replaces them |
@@ -52,7 +52,7 @@ InitRunner treats each agent as a **deployable product** with a single YAML conf
 `initrunner serve` exposes any agent as a drop-in OpenAI endpoint, so Open WebUI, Vercel AI SDK, or any OpenAI client can talk to it immediately. SWARM's API is domain-specific (run management, governance endpoints) — powerful but not plug-and-play with generic chat UIs.
 
 ### 4. Docker Sandboxing for Tool Execution
-InitRunner can execute agent tools inside Docker containers. This is a strong story for public demos where untrusted code might run. SWARM relies on the host environment or devcontainers.
+InitRunner can execute agent tools inside Docker containers. This is a strong story for public demos where untrusted code might run. ~~SWARM relies on the host environment or devcontainers.~~ **Update (2026-03-03):** SWARM now has `DockerSandbox` (`swarm.core.docker_sandbox`) — governance-aware Docker isolation that translates contract tiers into container resource limits, network policies, and security hardening. Integrated into `OpenSandboxBridge` and the `FailoverChain` pattern.
 
 ### 5. Bot / Platform Distribution
 One-flag Telegram/Discord deployment means InitRunner agents can live where users already are. SWARM is a lab instrument, not a chatbot framework.
@@ -95,6 +95,7 @@ SWARM already has the heavy stuff (metrics, levers, scenarios, dashboard, API, v
 | **Replay leaderboard** | `Leaderboard.tsx` component exists | Wire to persistent run store (API already has `/api/runs/compare`) | Medium |
 | **Pretty "receipts"** | Event logs capture everything | Render key moments (circuit breaker fired, collusion detected, quarantine triggered) as highlighted cards in EventFeed | Medium |
 | **OpenAI-compatible chat proxy** | Not implemented | Optional: wrap a scenario agent behind `/v1/chat/completions` for Open WebUI integration | Medium (nice-to-have) |
+| **Docker sandbox isolation** | `swarm.core.docker_sandbox` + `OpenSandboxBridge` integration | Already done — contracts map to container specs with resource limits, network policies, and security hardening | Done |
 
 ---
 
