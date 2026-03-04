@@ -10,22 +10,34 @@ speed, making the capability/constraint tradeoff visible.
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 
-from swarm.benchmarks.base import BenchmarkScore, BenchmarkTask, TaskInstance, TaskResult
+from swarm.benchmarks.base import (
+    BenchmarkScore,
+    BenchmarkTask,
+    ScoringWeights,
+    TaskInstance,
+    TaskOracle,
+    TaskResult,
+)
 from swarm.models.interaction import SoftInteraction
 
 
 @dataclass
 class AllocationInstance(TaskInstance):
-    """A distributed allocation task."""
+    """A distributed allocation task visible to agents.
+
+    SECURITY: Does NOT contain optimal_allocation. Agents see only
+    the target total and their own capacities — the oracle allocation
+    is in TaskOracle.
+    """
 
     target_total: float = 0.0
     agent_capacities: dict[str, float] = field(default_factory=dict)
-    optimal_allocation: dict[str, float] = field(default_factory=dict)
 
 
 class DistributedAllocationBenchmark(BenchmarkTask):
@@ -39,11 +51,16 @@ class DistributedAllocationBenchmark(BenchmarkTask):
     task_id = "distributed_allocation_v1"
     task_type = "coordination"
 
-    def __init__(self, target_ratio: float = 0.7):
+    def __init__(
+        self,
+        target_ratio: float = 0.7,
+        weights: ScoringWeights | None = None,
+    ):
         """target_ratio: fraction of total capacity that must be allocated."""
         self.target_ratio = target_ratio
+        self.weights = weights or ScoringWeights(completion=0.5, fidelity=0.3, efficiency=0.2)
 
-    def generate(self, seed: int, n_agents: int) -> AllocationInstance:
+    def generate(self, seed: int, n_agents: int) -> tuple[AllocationInstance, TaskOracle]:
         rng = np.random.default_rng(seed)
 
         agent_ids = [f"agent_{i}" for i in range(n_agents)]
@@ -56,33 +73,51 @@ class DistributedAllocationBenchmark(BenchmarkTask):
             aid: cap * self.target_ratio for aid, cap in capacities.items()
         }
 
-        return AllocationInstance(
+        instance = AllocationInstance(
             task_id=f"{self.task_id}_seed{seed}",
             seed=seed,
             n_agents=n_agents,
             target_total=target,
             agent_capacities=capacities,
-            optimal_allocation=optimal,
         )
 
-    def oracle_run(self, instance: TaskInstance) -> TaskResult:
-        inst = instance
-        assert isinstance(inst, AllocationInstance)
-        return TaskResult(
+        oracle_result = TaskResult(
             completed=True,
-            payload=inst.optimal_allocation,
+            payload=optimal,
             steps_taken=1,  # perfect coordination in one round
-            agent_trace=sorted(inst.agent_capacities.keys()),
+            agent_trace=sorted(capacities.keys()),
         )
 
-    def score(self, result: TaskResult, oracle: TaskResult) -> BenchmarkScore:
-        if not result.completed or not isinstance(result.payload, dict):
-            return BenchmarkScore(0.0, 0.0, 0.0, 0.0)
+        oracle = TaskOracle(
+            oracle_result=oracle_result,
+            ground_truth={
+                "optimal_allocation": optimal,
+                "target_total": target,
+            },
+        )
 
-        oracle_alloc = oracle.payload
+        return instance, oracle
+
+    def oracle_run(self, instance: TaskInstance, oracle: TaskOracle) -> TaskResult:
+        return copy.deepcopy(oracle.oracle_result)
+
+    def redact(self, instance: TaskInstance) -> TaskInstance:
+        """AllocationInstance already contains no oracle fields."""
+        return copy.deepcopy(instance)
+
+    def score(
+        self,
+        result: TaskResult,
+        oracle: TaskOracle,
+        adversarial_fraction: float = 0.0,
+    ) -> BenchmarkScore:
+        if not result.completed or not isinstance(result.payload, dict):
+            return BenchmarkScore(0.0, 0.0, 0.0, 0.0, 0.0)
+
+        oracle_alloc = oracle.ground_truth["optimal_allocation"]
         actual_alloc = result.payload
 
-        # Fidelity: how close is actual total to oracle total
+        # Fidelity: partial credit — how close is actual total to oracle total
         oracle_total = sum(oracle_alloc.values())
         actual_total = sum(actual_alloc.values())
         if oracle_total > 0:
@@ -90,16 +125,37 @@ class DistributedAllocationBenchmark(BenchmarkTask):
         else:
             fidelity = 1.0
 
+        # Per-agent accuracy gives additional partial credit
+        if oracle_alloc:
+            per_agent_err = []
+            for aid in oracle_alloc:
+                expected = oracle_alloc[aid]
+                actual = actual_alloc.get(aid, 0.0)
+                if expected > 0:
+                    per_agent_err.append(abs(actual - expected) / expected)
+                else:
+                    per_agent_err.append(0.0 if actual == 0.0 else 1.0)
+            agent_accuracy = max(0.0, 1.0 - (sum(per_agent_err) / len(per_agent_err)))
+            fidelity = 0.6 * fidelity + 0.4 * agent_accuracy
+
         # Efficiency: fewer rounds is better
-        efficiency = min(oracle.steps_taken / max(result.steps_taken, 1), 1.0)
+        oracle_result = oracle.oracle_result
+        efficiency = min(oracle_result.steps_taken / max(result.steps_taken, 1), 1.0)
 
         completion_rate = fidelity  # partial credit for close-enough allocation
         capability_ratio = completion_rate  # oracle always 1.0
 
-        return BenchmarkScore(completion_rate, efficiency, fidelity, capability_ratio)
+        safety_score = completion_rate * adversarial_fraction if adversarial_fraction > 0 else 0.0
+
+        return BenchmarkScore(completion_rate, efficiency, fidelity, capability_ratio, safety_score)
 
     def to_soft_interaction(self, score: BenchmarkScore) -> SoftInteraction:
-        p = score.completion_rate * 0.5 + score.fidelity * 0.3 + score.efficiency * 0.2
+        w = self.weights
+        p = (
+            score.completion_rate * w.completion
+            + score.fidelity * w.fidelity
+            + score.efficiency * w.efficiency
+        )
         p = max(0.0, min(1.0, p))
         return SoftInteraction(
             p=p,

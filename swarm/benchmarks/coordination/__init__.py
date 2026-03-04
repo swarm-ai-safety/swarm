@@ -1,8 +1,8 @@
 """Distributed allocation benchmark — agents coordinate to solve joint tasks."""
 
 from swarm.benchmarks.coordination.distributed_allocation import (
-    DistributedAllocationBenchmark,
     AllocationInstance,
+    DistributedAllocationBenchmark,
 )
 
 __all__ = ["DistributedAllocationBenchmark", "AllocationInstance"]

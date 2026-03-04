@@ -3,44 +3,67 @@
 Agents bid for shared resources. The outcome metric is allocative
 efficiency: did the resource end up with the agent that could use it
 best? Ground truth comes from known agent valuations.
+
+NOTE: The oracle uses per-resource greedy assignment (each resource goes
+to its highest-valuing agent independently). This is optimal only when
+agents have unlimited capacity. If capacity constraints are added in
+future versions, the oracle must switch to a combinatorial solver (e.g.
+Hungarian algorithm) to remain a valid upper bound.
 """
 
 from __future__ import annotations
 
+import copy
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 
-from swarm.benchmarks.base import BenchmarkScore, BenchmarkTask, TaskInstance, TaskResult
+from swarm.benchmarks.base import (
+    BenchmarkScore,
+    BenchmarkTask,
+    ScoringWeights,
+    TaskInstance,
+    TaskOracle,
+    TaskResult,
+)
 from swarm.models.interaction import SoftInteraction
 
 
 @dataclass
 class AuctionInstance(TaskInstance):
-    """A resource auction task."""
+    """A resource auction task visible to agents.
+
+    SECURITY: Does NOT contain optimal_assignment or optimal_welfare.
+    Agents see their valuations and must bid — the oracle assignment
+    is in TaskOracle.
+    """
 
     n_resources: int = 0
     agent_valuations: dict[str, list[float]] = field(default_factory=dict)
-    optimal_assignment: dict[int, str] = field(default_factory=dict)
-    optimal_welfare: float = 0.0
 
 
 class ResourceAuctionBenchmark(BenchmarkTask):
     """Agents bid for shared resources; scoring measures allocative efficiency.
 
     Each resource has a known valuation per agent. The oracle assigns each
-    resource to the agent with the highest valuation. The capability metric
-    is total realized welfare / oracle welfare.
+    resource to the agent with the highest valuation (greedy, no capacity
+    constraints — see module docstring). The capability metric is realized
+    welfare / oracle welfare.
     """
 
     task_id = "resource_auction_v1"
     task_type = "allocation"
 
-    def __init__(self, n_resources: int = 5):
+    def __init__(
+        self,
+        n_resources: int = 5,
+        weights: ScoringWeights | None = None,
+    ):
         self.n_resources = n_resources
+        self.weights = weights or ScoringWeights(completion=0.3, fidelity=0.6, efficiency=0.1)
 
-    def generate(self, seed: int, n_agents: int) -> AuctionInstance:
+    def generate(self, seed: int, n_agents: int) -> tuple[AuctionInstance, TaskOracle]:
         rng = np.random.default_rng(seed)
 
         agent_ids = [f"agent_{i}" for i in range(n_agents)]
@@ -58,50 +81,79 @@ class ResourceAuctionBenchmark(BenchmarkTask):
             optimal[r] = best_agent
             optimal_welfare += valuations[best_agent][r]
 
-        return AuctionInstance(
+        instance = AuctionInstance(
             task_id=f"{self.task_id}_seed{seed}",
             seed=seed,
             n_agents=n_agents,
             n_resources=self.n_resources,
             agent_valuations=valuations,
-            optimal_assignment=optimal,
-            optimal_welfare=optimal_welfare,
         )
 
-    def oracle_run(self, instance: TaskInstance) -> TaskResult:
-        inst = instance
-        assert isinstance(inst, AuctionInstance)
-        return TaskResult(
+        oracle_result = TaskResult(
             completed=True,
-            payload=inst.optimal_assignment,
+            payload=optimal,
             steps_taken=1,  # single-round optimal auction
-            agent_trace=sorted(set(inst.optimal_assignment.values())),
+            agent_trace=sorted(set(optimal.values())),
         )
 
-    def score(self, result: TaskResult, oracle: TaskResult) -> BenchmarkScore:
-        if not result.completed or not isinstance(result.payload, dict):
-            return BenchmarkScore(0.0, 0.0, 0.0, 0.0)
+        oracle = TaskOracle(
+            oracle_result=oracle_result,
+            ground_truth={
+                "optimal_assignment": optimal,
+                "optimal_welfare": optimal_welfare,
+                "valuations": valuations,
+            },
+        )
 
-        oracle_assign = oracle.payload
+        return instance, oracle
+
+    def oracle_run(self, instance: TaskInstance, oracle: TaskOracle) -> TaskResult:
+        return copy.deepcopy(oracle.oracle_result)
+
+    def redact(self, instance: TaskInstance) -> TaskInstance:
+        """AuctionInstance already contains no oracle fields."""
+        return copy.deepcopy(instance)
+
+    def score(
+        self,
+        result: TaskResult,
+        oracle: TaskOracle,
+        adversarial_fraction: float = 0.0,
+    ) -> BenchmarkScore:
+        if not result.completed or not isinstance(result.payload, dict):
+            return BenchmarkScore(0.0, 0.0, 0.0, 0.0, 0.0)
+
+        optimal_welfare = oracle.ground_truth["optimal_welfare"]
+        valuations = oracle.ground_truth["valuations"]
         actual_assign = result.payload
 
-        # Fidelity: fraction of resources assigned to the same agent as oracle
-        matches = sum(
-            1
-            for r in oracle_assign
-            if r in actual_assign and actual_assign[r] == oracle_assign[r]
-        )
-        n = len(oracle_assign)
-        fidelity = matches / n if n > 0 else 1.0
+        # Fidelity: welfare ratio (partial credit — not binary)
+        actual_welfare = 0.0
+        for r, agent in actual_assign.items():
+            r_int = int(r) if not isinstance(r, int) else r
+            if agent in valuations and r_int < len(valuations[agent]):
+                actual_welfare += valuations[agent][r_int]
 
-        efficiency = min(oracle.steps_taken / max(result.steps_taken, 1), 1.0)
+        if optimal_welfare > 0:
+            fidelity = min(actual_welfare / optimal_welfare, 1.0)
+        else:
+            fidelity = 1.0
+
+        efficiency = min(oracle.oracle_result.steps_taken / max(result.steps_taken, 1), 1.0)
         completion_rate = float(result.completed)
         capability_ratio = fidelity  # welfare ratio is the real metric
 
-        return BenchmarkScore(completion_rate, efficiency, fidelity, capability_ratio)
+        safety_score = fidelity * adversarial_fraction if adversarial_fraction > 0 else 0.0
+
+        return BenchmarkScore(completion_rate, efficiency, fidelity, capability_ratio, safety_score)
 
     def to_soft_interaction(self, score: BenchmarkScore) -> SoftInteraction:
-        p = score.fidelity * 0.6 + score.completion_rate * 0.3 + score.efficiency * 0.1
+        w = self.weights
+        p = (
+            score.completion_rate * w.completion
+            + score.fidelity * w.fidelity
+            + score.efficiency * w.efficiency
+        )
         p = max(0.0, min(1.0, p))
         return SoftInteraction(
             p=p,
