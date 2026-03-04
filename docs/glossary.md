@@ -126,3 +126,8 @@ When agents have unequal access to information about interaction quality. The be
 ## Externality Internalization {#externality-internalization}
 
 The degree to which agents bear the cost of ecosystem harm they cause, controlled by ρ (rho) parameters. Higher internalization makes agents pay for negative externalities, aligning individual incentives with system health. — [Theoretical Foundations](research/theory.md)
+
+---
+
+!!! quote "How to cite this glossary"
+    SWARM Team. "SWARM Glossary: Distributional AGI Safety Definitions." *swarm-ai.org/glossary/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).

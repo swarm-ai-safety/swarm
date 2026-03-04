@@ -145,3 +145,8 @@ The sigmoid parameter $k$ controls how "sharp" the probability curve is:
 - [Payoff Engine](../api/core.md) — How the SoftPayoffEngine computes payoffs from p values
 - [Theoretical Foundations](../research/theory.md) — Mathematical basis for distributional labels
 - [Understanding Soft Labels](../tutorials/understanding-soft-labels.md) — Hands-on tutorial with code examples
+
+---
+
+!!! quote "How to cite"
+    SWARM Team. "Soft Labels in Multi-Agent Safety." *swarm-ai.org/concepts/soft-labels/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).

@@ -198,6 +198,9 @@ class OpenSandboxConfig:
         snapshot_enabled: Enable container snapshotting.
         observer_interval_seconds: Observability polling interval.
         risk_threshold: Risk score above which governance intervenes.
+        docker_enabled: Enable real Docker container execution.
+        docker_image: Docker image to use for sandbox containers.
+        docker_exec_user: Unix user for command execution inside containers.
     """
 
     sandbox_image: str = "opensandbox/code-interpreter"
@@ -219,6 +222,20 @@ class OpenSandboxConfig:
     snapshot_enabled: bool = False
     observer_interval_seconds: float = 5.0
     risk_threshold: float = 0.7
+    docker_enabled: bool = False
+    docker_image: str = "python:3.12-slim"
+    docker_exec_user: str = "nobody"
+
+    def __post_init__(self) -> None:
+        """Validate security-sensitive configuration."""
+        # I5 fix: prevent exec as root
+        if self.docker_exec_user in ("root", "0"):
+            import logging as _log
+            _log.getLogger(__name__).warning(
+                "docker_exec_user=%r is insecure; overriding to 'nobody'",
+                self.docker_exec_user,
+            )
+            object.__setattr__(self, "docker_exec_user", "nobody")
 
     def get_contract(self, contract_id: str) -> GovernanceContract:
         """Look up a contract by ID, falling back to the default."""

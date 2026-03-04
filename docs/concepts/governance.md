@@ -27,7 +27,13 @@ SWARM provides configurable [governance levers](../getting-started/first-scenari
 
 ## Overview
 
-[Governance mechanisms](index.md) create **incentives and constraints** that shape agent behavior at the system level. They're the primary tool for converting SWARM's metrics into actionable safety.
+[Governance mechanisms](index.md) create **incentives and constraints** that shape agent behavior at the system level. They're the primary tool for converting SWARM's [metrics](metrics.md) into actionable safety. Each mechanism modifies the agent payoff function:
+
+`π = θ · S_soft - τ - c - ρ · E_soft + w_rep · r`
+
+Where `S_soft = p · s+ - (1-p) · s-` is expected surplus, `E_soft = (1-p) · h` is expected harm, `τ` is transfer, `c` is governance cost, `ρ` controls [externality internalization](../glossary.md#externality-internalization), and `r` is reputation. Here `p = P(v = +1) ∈ [0,1]` is the [soft label](soft-labels.md) — the probability an interaction is beneficial.
+
+**Key empirical finding:** In a 40-run factorial sweep, transaction tax explained 32.4% of welfare variance (η² = 0.324, p = 0.004) — the strongest single lever. Circuit breakers showed zero detectable effect (Cohen's d = -0.02). See the full [Governance Taxonomy](governance-mechanisms-taxonomy.md) for all 20 mechanisms.
 
 ## Available Levers
 
@@ -231,4 +237,9 @@ print(f"Governed toxicity: {governed_metrics[-1].toxicity_rate:.3f}")
 - [Metrics](metrics.md) — Toxicity, quality gap, and other metrics governance aims to optimize
 - [Custom Governance Levers](../guides/governance-levers.md) — Build your own governance mechanisms
 - [Red Teaming](../guides/red-teaming.md) — Stress-test governance with adversarial scenarios
-- [Governance Mechanisms Taxonomy](../blog/governance-mechanisms-taxonomy.md) — Survey of governance approaches
+- [Governance Mechanisms Taxonomy](governance-mechanisms-taxonomy.md) — Survey of governance approaches
+
+---
+
+!!! quote "How to cite"
+    SWARM Team. "Governance Mechanisms for Multi-Agent AI." *swarm-ai.org/concepts/governance/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).

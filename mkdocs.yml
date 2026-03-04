@@ -1,4 +1,4 @@
-site_name: SWARM
+site_name: "SWARM — Open-Source Multi-Agent AI Safety Framework"
 site_description: "SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework"
 site_url: https://swarm-ai.org
 repo_url: https://github.com/swarm-ai-safety/swarm
@@ -116,6 +116,7 @@ nav:
     - Emergence: concepts/emergence.md
     - Deception: concepts/deception.md
     - Coordination Risks: concepts/coordination-risks.md
+    - Governance Taxonomy: concepts/governance-mechanisms-taxonomy.md
     - Time Horizons: concepts/time-horizons.md
     - Recursive Research: concepts/recursive-research.md
   - Tutorials:
@@ -199,7 +200,7 @@ nav:
     - "Three Models, One Study — LLM Council Peer-Review": blog/llm-council-three-models-one-study.md
     - "Using LLM Councils for Multi-Agent Evaluation": blog/llm-councils-for-multi-agent-evaluation.md
     - "Two Eval Runs, One Model, 41% Apart": blog/two-eval-runs-one-model-41-percent-apart.md
-    - "Governance Mechanisms Taxonomy": blog/governance-mechanisms-taxonomy.md
+
     - "GPT-4.1 Mini Plays the SWARM Economy": blog/gpt-41-mini-plays-the-swarm-economy.md
     - "RL Training Lessons for Multi-Agent Governance": blog/rl-training-lessons-multi-agent-governance.md
     - "11 Scenarios, 3 Regimes, 1 Critical Threshold": blog/cross-scenario-analysis.md
