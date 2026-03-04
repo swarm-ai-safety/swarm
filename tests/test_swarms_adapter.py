@@ -7,7 +7,6 @@ Security-related tests are grouped under ``TestSecurity*`` classes.
 """
 
 import json
-import math
 import random
 from unittest.mock import MagicMock, patch
 
@@ -947,11 +946,10 @@ class TestSecurityCircuitBreaker:
 
 
 class TestBuildSwarmsAgentFactory:
-    def test_unsupported_architecture_raises(self):
-        """T-1: Non-'Agent' architecture raises ValueError."""
-        config = SwarmsConfig(architecture="SequentialWorkflow")
-        with pytest.raises(ValueError, match="not yet supported"):
-            _build_swarms_agent(config)
+    def test_unsupported_architecture_rejected_by_validator(self):
+        """T-1: Non-'Agent' architecture rejected at config validation."""
+        with pytest.raises(Exception, match="Unknown architecture"):
+            SwarmsConfig(architecture="SequentialWorkflow")
 
     def test_missing_swarms_package_raises(self):
         """T-1: ImportError if swarms package is not installed."""

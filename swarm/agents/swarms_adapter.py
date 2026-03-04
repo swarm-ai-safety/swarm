@@ -170,10 +170,7 @@ class SwarmsConfig(BaseModel):
 
     architecture: str = Field(
         default="Agent",
-        description=(
-            "Swarms architecture to use. Currently supported: 'Agent'. "
-            "Future: 'SequentialWorkflow', 'GroupChat', 'SwarmRouter'."
-        ),
+        description="Swarms architecture to use. Currently supported: 'Agent'.",
     )
     model_name: str = Field(
         default="gpt-4o-mini",
@@ -213,8 +210,8 @@ class SwarmsConfig(BaseModel):
     @field_validator("architecture")
     @classmethod
     def validate_architecture(cls, v: str) -> str:
-        """Only allow known architecture values."""
-        allowed = {"Agent", "SequentialWorkflow", "GroupChat", "SwarmRouter"}
+        """Only allow implemented architecture values."""
+        allowed = {"Agent"}
         if v not in allowed:
             raise ValueError(
                 f"Unknown architecture: {v!r}. Allowed: {sorted(allowed)}"
@@ -341,7 +338,9 @@ class SwarmsBackedAgent(BaseAgent):
     def _ensure_swarms_agent(self):
         """Build the Swarms agent on first use (lazy import)."""
         if self._swarms_agent is None:
-            self._swarms_agent = _build_swarms_agent(self.swarms_config)
+            self._swarms_agent = _build_swarms_agent(
+                self.swarms_config, agent_id=self.agent_id
+            )
         return self._swarms_agent
 
     # -- SWARM BaseAgent interface -----------------------------------------
@@ -448,7 +447,9 @@ class SwarmsBackedAgent(BaseAgent):
 
     def _get_executor_pool(self) -> concurrent.futures.ThreadPoolExecutor:
         """Return (and lazily create) a reusable single-thread pool."""
-        if self._executor_pool is None or self._executor_pool._shutdown:
+        if self._executor_pool is None or getattr(
+            self._executor_pool, "_shutdown", False
+        ):
             self._executor_pool = concurrent.futures.ThreadPoolExecutor(
                 max_workers=1,
                 thread_name_prefix=f"swarms-{self.agent_id}",
@@ -597,7 +598,10 @@ class SwarmsBackedAgent(BaseAgent):
         Tries JSON parsing first, then falls back to extracting
         JSON from a markdown code block.
         """
-        text = raw if isinstance(raw, str) else json.dumps(raw)
+        try:
+            text = raw if isinstance(raw, str) else json.dumps(raw)
+        except (TypeError, ValueError):
+            text = str(raw)
 
         # Try direct JSON parse
         try:
@@ -661,17 +665,35 @@ class SwarmsBackedAgent(BaseAgent):
                 self.agent_id,
             )
 
+        metadata: Dict[str, Any] = {
+            "swarms_metadata": _sanitize_swarms_metadata(schema.metadata),
+            "confidence": schema.confidence,
+            "rationale": schema.rationale[:MAX_RATIONALE_LENGTH],
+        }
+
+        # Promote marketplace-specific fields that downstream handlers expect
+        # at the top level of Action.metadata.
+        if isinstance(schema.metadata, dict):
+            if schema.kind == "post_bounty":
+                reward = schema.metadata.get("reward_amount")
+                if isinstance(reward, (int, float)):
+                    metadata["reward_amount"] = reward
+            elif schema.kind == "place_bid":
+                bid = schema.metadata.get("bid_amount")
+                if isinstance(bid, (int, float)):
+                    metadata["bid_amount"] = bid
+            elif schema.kind == "accept_bid":
+                bid_id = schema.metadata.get("bid_id")
+                if isinstance(bid_id, str):
+                    metadata["bid_id"] = bid_id
+
         return Action(
             action_type=action_type,
             agent_id=self.agent_id,
             content=schema.content,
             target_id=target_id,
             counterparty_id=counterparty_id,
-            metadata={
-                "swarms_metadata": _sanitize_swarms_metadata(schema.metadata),
-                "confidence": schema.confidence,
-                "rationale": schema.rationale[:MAX_RATIONALE_LENGTH],
-            },
+            metadata=metadata,
         )
 
     # -- deliberation trace access -----------------------------------------
@@ -692,7 +714,7 @@ class SwarmsBackedAgent(BaseAgent):
 # ---------------------------------------------------------------------------
 
 
-def _build_swarms_agent(config: SwarmsConfig):
+def _build_swarms_agent(config: SwarmsConfig, agent_id: str = ""):
     """Build a ``swarms.Agent`` instance from *config*.
 
     Returns
@@ -722,7 +744,7 @@ def _build_swarms_agent(config: SwarmsConfig):
         ) from exc
 
     agent = SwarmsAgent(
-        agent_name=f"swarm_policy_{id(config)}",
+        agent_name=f"swarm_policy_{agent_id or id(config)}",
         system_prompt=config.system_prompt,
         model_name=config.model_name,
         max_loops=config.max_loops,
