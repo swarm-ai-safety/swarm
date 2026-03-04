@@ -91,34 +91,34 @@ faq:
 <div class="insight-box">
   <strong>The Core Insight:</strong> AGI-level risks don't require AGI-level agents.
   Catastrophic failures can emerge from the <em>interaction</em> of many sub-AGI agents—even
-  when none are individually dangerous.
+  when none are individually dangerous. Read more in our <a href="research/theory/">theoretical foundations</a>.
 </div>
 
 <div class="insight-box" style="border-left-color: #7b61ff;">
   <strong>The Purity Paradox:</strong> Populations with only 10% honest agents achieve
   <strong>74% higher welfare</strong> than 100% honest populations. Heterogeneity creates
-  competitive pressure that improves outcomes.
+  competitive pressure that improves outcomes. See the <a href="blog/">research blog</a> for detailed analysis.
 </div>
 
 ## What is SWARM?
 
-SWARM is the reference implementation of the **Distributional AGI Safety** research framework. It provides tools for studying emergent risks in multi-agent AI systems. Rather than focusing on single misaligned agents, SWARM reveals how harmful dynamics emerge from:
+SWARM is the reference implementation of the **[Distributional AGI Safety](concepts/distributional-safety/)** research framework. It provides tools for studying emergent risks in multi-agent AI systems. Rather than focusing on single misaligned agents, SWARM reveals how harmful dynamics emerge from:
 
 - **Information asymmetry** between agents
-- **Adverse selection** (system accepts lower-quality interactions)
+- **[Adverse selection](glossary/#adverse-selection)** (system accepts lower-quality interactions)
 - **Variance amplification** across decision horizons
-- **Governance latency** and illegibility
+- **[Governance](concepts/governance/)** latency and illegibility
 
-SWARM makes these interaction-level risks **observable, measurable, and governable**.
+SWARM makes these interaction-level risks **observable, measurable, and governable** using [soft probabilistic labels](concepts/soft-labels/).
 
 <div class="features">
   <div class="feature">
-    <h3>Measure</h3>
-    <p>Soft probabilistic labels capture uncertainty. Four key metrics—toxicity, quality gap, conditional loss, and incoherence—reveal hidden risks.</p>
+    <h3><a href="concepts/metrics/">Measure</a></h3>
+    <p>Soft probabilistic labels capture uncertainty. Four key <a href="concepts/metrics/">metrics</a>—toxicity, quality gap, conditional loss, and incoherence—reveal hidden risks.</p>
   </div>
   <div class="feature">
-    <h3>Govern</h3>
-    <p>Transaction taxes, circuit breakers, reputation decay, staking, and collusion detection. Test interventions before deployment.</p>
+    <h3><a href="concepts/governance/">Govern</a></h3>
+    <p>Transaction taxes, circuit breakers, reputation decay, staking, and <a href="concepts/deception/">collusion detection</a>. Test interventions before deployment.</p>
   </div>
   <div class="feature">
     <h3>Validate</h3>
@@ -184,6 +184,21 @@ Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine �
   <div class="feature">
     <h3><a href="research/agent-publishing/">Agent Publishing</a></h3>
     <p>Publish research to agentxiv.org and clawxiv.org.</p>
+  </div>
+</div>
+
+<div class="features">
+  <div class="feature">
+    <h3><a href="blog/">Research Blog</a></h3>
+    <p>Experiment write-ups, cross-scenario analyses, and governance mechanism deep dives.</p>
+  </div>
+  <div class="feature">
+    <h3><a href="api/">API Reference</a></h3>
+    <p>Full Python API documentation for agents, metrics, payoffs, and orchestration.</p>
+  </div>
+  <div class="feature">
+    <h3><a href="glossary/">Glossary</a></h3>
+    <p>Definitions for soft labels, adverse selection, externality internalization, and more.</p>
   </div>
 </div>
 
