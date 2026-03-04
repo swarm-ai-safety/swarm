@@ -15,6 +15,7 @@ class AgentType(Enum):
     ADVERSARIAL = "adversarial"
     RLM = "rlm"
     CREWAI = "crewai"
+    SWARMS = "swarms"
     CODING = "coding"
     TIERRA = "tierra"
     CAUTIOUS = "cautious"
