@@ -202,6 +202,20 @@ Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine �
   </div>
 </div>
 
+## Key Findings from SWARM Research
+
+These results come from published experiments in the [SWARM research blog](blog/), based on the theoretical framework in [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856).
+
+| Finding | Evidence | Source |
+|---------|----------|--------|
+| **3 turns of forced cooperation eliminates nuclear escalation** | 210 LLM runs; nuclear rate drops from 100% to exactly 0% at cooperation window=3 across all scenarios | [Cooperation Window Phase Transition](blog/cooperation-window-phase-transition/) |
+| **Deception persists at temperature 0.0** | 120-run temperature sweep; signal-action divergence of 1.05 at deterministic decoding | [Temperature vs Deception](blog/temperature-vs-deception/) |
+| **Large models (70B–405B) escalate more than small models** | Llama 405B: 100% nuclear rate, worst welfare (−523.7). Claude Sonnet 4: 0% nuclear, positive welfare (+74.9) | [Model Size vs Escalation](blog/model-size-vs-escalation/) |
+| **Purity paradox: 20% honest agents outperform 100%** | 21 parameter configs tested; paradox holds in 71% but disappears at ρ ≥ 0.5 (full externality pricing) | [The Purity Paradox](blog/purity-paradox/) |
+| **Emergency controls destroy 80% of welfare** | Market freeze (95% tax) crashed welfare from ~65 to ~15; toxicity actually increased post-freeze | [Runaway Intelligence Containment](blog/runaway-intelligence-three-level-containment/) |
+| **Transparency halves nuclear escalation** | 120-run information asymmetry sweep; nuclear rate drops 60% → 30% for safety-trained models | [Asymmetric Information Escalation](blog/asymmetric-information-escalation/) |
+| **Same model, 41% apart from environment fixes alone** | GPT-4.1-mini: 3 environment fixes changed composite reward from 0.830 to 1.175 | [Two Eval Runs, One Model](blog/two-eval-runs-one-model-41-percent-apart/) |
+
 ## New: Recursive Agent Research
 
 SWARM now includes a complete research workflow for agents conducting research about multi-agent systems:

@@ -31,7 +31,7 @@ SWARM asks:
 
 > "What happens when many agents—each potentially aligned—interact in ways that produce misaligned outcomes?"
 
-This is the **emergence problem**: system-level failures that aren't predictable from individual agent properties.
+This is the **emergence problem**: system-level failures that aren't predictable from individual agent properties. The formal treatment appears in [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856).
 
 ## Why Emergence Matters
 
