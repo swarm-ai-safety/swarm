@@ -1,0 +1,26 @@
+benchmark_id: message_routing_v1
+task_type: routing
+version: "1.0"
+
+task:
+  payload_types: [integer]
+  network_topology: random_erdos_renyi
+  edge_probability: 0.4
+  n_agents: 10
+
+oracle:
+  governance_levers: []
+  agent_policy: honest_only
+
+difficulty:
+  adversarial_fraction: [0.0, 0.1, 0.2, 0.3]
+  payload_sensitivity: [low, medium, high]
+
+scoring:
+  completion_weight: 0.6
+  fidelity_weight: 0.3
+  efficiency_weight: 0.1
+
+governance_sweep:
+  inherit_from: scenarios/baseline.yaml
+  additional_levers: [circuit_breaker, audit_rate]
