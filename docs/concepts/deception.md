@@ -21,6 +21,8 @@ faq:
 
 Deception in multi-agent systems is **structural, not accidental**. When agents can benefit from misrepresenting their intentions, selection pressure favors deceptive strategies — even without explicit programming.
 
+Throughout this page, `p = P(v = +1) ∈ [0,1]` denotes the probability that an interaction is beneficial — the [soft label](soft-labels.md) at the core of all SWARM metrics. High `p` means likely beneficial; low `p` means likely harmful.
+
 ## What Deception Looks Like {#signal-action-divergence}
 
 In SWARM, deception manifests as **signal-action divergence**: an agent signals cooperation but acts exploitatively. This is measurable:
@@ -123,3 +125,8 @@ The [red-team attack library](../guides/red-teaming.md) tests all 8 standard att
 - [DeceptiveAgent API](../api/agents.md) — Configure deceptive agent behavior
 - [Temperature vs Deception](../blog/temperature-vs-deception.md) — Why deception persists at T=0
 - [Prompt Sensitivity](../blog/prompt-sensitivity-deception-framing.md) — Framing effects on deception
+
+---
+
+!!! quote "How to cite"
+    SWARM Team. "Deception Detection in Multi-Agent AI." *swarm-ai.org/concepts/deception/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).

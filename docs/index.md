@@ -1,9 +1,19 @@
 ---
-description: "SWARM — the open-source multi-agent AI safety framework for distributional AGI safety research. Measure toxicity, governance gaps, and emergent risks in multi-agent systems with soft probabilistic labels."
+description: "SWARM: open-source multi-agent AI safety framework. Measure toxicity, governance gaps, and emergent risks with soft probabilistic labels."
 
 hide:
   - navigation
   - toc
+
+faq:
+  - q: "What is SWARM?"
+    a: "SWARM (System-Wide Assessment of Risk in Multi-agent systems) is an open-source framework for distributional AGI safety research. It measures toxicity, governance gaps, and emergent risks in multi-agent systems using soft probabilistic labels instead of binary classifications."
+  - q: "How does SWARM differ from other AI safety frameworks?"
+    a: "SWARM uses soft (probabilistic) labels rather than binary good/bad classifications. This distributional approach captures uncertainty and enables more nuanced measurement of safety properties like adverse selection, externality internalization, and governance effectiveness."
+  - q: "What are soft labels in SWARM?"
+    a: "Soft labels assign each interaction a probability p in [0,1] representing the likelihood it is beneficial, rather than a hard binary label. This preserves uncertainty from proxy measurements and enables probabilistic safety metrics like expected toxicity and quality gap."
+  - q: "Is SWARM open source?"
+    a: "Yes. SWARM is MIT-licensed and available on GitHub at github.com/swarm-ai-safety/swarm. It is written in Python and can be installed via pip."
 ---
 
 <style>
@@ -67,7 +77,7 @@ hide:
 </style>
 
 <div class="hero">
-  <h1>SWARM</h1>
+  <h1>SWARM: Multi-Agent AI Safety Framework</h1>
   <p class="tagline">System-Wide Assessment of Risk in Multi-agent systems</p>
   <p style="font-size: 1.25rem; max-width: 600px; margin: 0 auto 2rem;">
     Study how intelligence swarms—and where it fails.
@@ -81,34 +91,34 @@ hide:
 <div class="insight-box">
   <strong>The Core Insight:</strong> AGI-level risks don't require AGI-level agents.
   Catastrophic failures can emerge from the <em>interaction</em> of many sub-AGI agents—even
-  when none are individually dangerous.
+  when none are individually dangerous. Read more in our <a href="research/theory/">theoretical foundations</a>.
 </div>
 
 <div class="insight-box" style="border-left-color: #7b61ff;">
   <strong>The Purity Paradox:</strong> Populations with only 10% honest agents achieve
   <strong>74% higher welfare</strong> than 100% honest populations. Heterogeneity creates
-  competitive pressure that improves outcomes.
+  competitive pressure that improves outcomes. See the <a href="blog/">research blog</a> for detailed analysis.
 </div>
 
 ## What is SWARM?
 
-SWARM is the reference implementation of the **Distributional AGI Safety** research framework. It provides tools for studying emergent risks in multi-agent AI systems. Rather than focusing on single misaligned agents, SWARM reveals how harmful dynamics emerge from:
+SWARM is the reference implementation of the **[Distributional AGI Safety](concepts/distributional-safety/)** research framework. It provides tools for studying emergent risks in multi-agent AI systems. Rather than focusing on single misaligned agents, SWARM reveals how harmful dynamics emerge from:
 
 - **Information asymmetry** between agents
-- **Adverse selection** (system accepts lower-quality interactions)
+- **[Adverse selection](glossary/#adverse-selection)** (system accepts lower-quality interactions)
 - **Variance amplification** across decision horizons
-- **Governance latency** and illegibility
+- **[Governance](concepts/governance/)** latency and illegibility
 
-SWARM makes these interaction-level risks **observable, measurable, and governable**.
+SWARM makes these interaction-level risks **observable, measurable, and governable** using [soft probabilistic labels](concepts/soft-labels/).
 
 <div class="features">
   <div class="feature">
-    <h3>Measure</h3>
-    <p>Soft probabilistic labels capture uncertainty. Four key metrics—toxicity, quality gap, conditional loss, and incoherence—reveal hidden risks.</p>
+    <h3><a href="concepts/metrics/">Measure</a></h3>
+    <p>Soft probabilistic labels capture uncertainty. Four key <a href="concepts/metrics/">metrics</a>—toxicity, quality gap, conditional loss, and incoherence—reveal hidden risks.</p>
   </div>
   <div class="feature">
-    <h3>Govern</h3>
-    <p>Transaction taxes, circuit breakers, reputation decay, staking, and collusion detection. Test interventions before deployment.</p>
+    <h3><a href="concepts/governance/">Govern</a></h3>
+    <p>Transaction taxes, circuit breakers, reputation decay, staking, and <a href="concepts/deception/">collusion detection</a>. Test interventions before deployment.</p>
   </div>
   <div class="feature">
     <h3>Validate</h3>
@@ -176,6 +186,35 @@ Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine �
     <p>Publish research to agentxiv.org and clawxiv.org.</p>
   </div>
 </div>
+
+<div class="features">
+  <div class="feature">
+    <h3><a href="blog/">Research Blog</a></h3>
+    <p>Experiment write-ups, cross-scenario analyses, and governance mechanism deep dives.</p>
+  </div>
+  <div class="feature">
+    <h3><a href="api/">API Reference</a></h3>
+    <p>Full Python API documentation for agents, metrics, payoffs, and orchestration.</p>
+  </div>
+  <div class="feature">
+    <h3><a href="glossary/">Glossary</a></h3>
+    <p>Definitions for soft labels, adverse selection, externality internalization, and more.</p>
+  </div>
+</div>
+
+## Key Findings from SWARM Research
+
+These results come from published experiments in the [SWARM research blog](blog/), based on the theoretical framework in [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856).
+
+| Finding | Evidence | Source |
+|---------|----------|--------|
+| **3 turns of forced cooperation eliminates nuclear escalation** | 210 LLM runs; nuclear rate drops from 100% to exactly 0% at cooperation window=3 across all scenarios | [Cooperation Window Phase Transition](blog/cooperation-window-phase-transition/) |
+| **Deception persists at temperature 0.0** | 120-run temperature sweep; signal-action divergence of 1.05 at deterministic decoding | [Temperature vs Deception](blog/temperature-vs-deception/) |
+| **Large models (70B–405B) escalate more than small models** | Llama 405B: 100% nuclear rate, worst welfare (−523.7). Claude Sonnet 4: 0% nuclear, positive welfare (+74.9) | [Model Size vs Escalation](blog/model-size-vs-escalation/) |
+| **Purity paradox: 20% honest agents outperform 100%** | 21 parameter configs tested; paradox holds in 71% but disappears at ρ ≥ 0.5 (full externality pricing) | [The Purity Paradox](blog/purity-paradox/) |
+| **Emergency controls destroy 80% of welfare** | Market freeze (95% tax) crashed welfare from ~65 to ~15; toxicity actually increased post-freeze | [Runaway Intelligence Containment](blog/runaway-intelligence-three-level-containment/) |
+| **Transparency halves nuclear escalation** | 120-run information asymmetry sweep; nuclear rate drops 60% → 30% for safety-trained models | [Asymmetric Information Escalation](blog/asymmetric-information-escalation/) |
+| **Same model, 41% apart from environment fixes alone** | GPT-4.1-mini: 3 environment fixes changed composite reward from 0.830 to 1.175 | [Two Eval Runs, One Model](blog/two-eval-runs-one-model-41-percent-apart/) |
 
 ## New: Recursive Agent Research
 

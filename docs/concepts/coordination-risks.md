@@ -20,7 +20,7 @@ faq:
 
 # Coordination Risks
 
-When multiple AI agents interact, coordination can be beneficial (cooperation) or harmful (collusion). SWARM studies the boundary between the two — and provides governance mechanisms to keep coordination constructive.
+When multiple AI agents interact, coordination can be beneficial (cooperation) or harmful (collusion). SWARM studies the boundary between the two — and provides governance mechanisms to keep coordination constructive. See [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856) for the formal framework.
 
 ## Why Coordination Becomes Risky
 

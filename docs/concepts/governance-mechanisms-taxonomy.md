@@ -1,6 +1,38 @@
 ---
-date: 2026-02-12
-description: "Twenty levers, three regimes, and the one that actually matters"
+description: "A taxonomy of 20 governance mechanisms for multi-agent AI systems across five families — friction, detection, reputation, circuit breakers, and structural. Transaction tax explains 32% of welfare variance; circuit breakers show zero effect."
+author: "SWARM Team"
+keywords:
+  - multi-agent governance mechanisms
+  - AI safety governance taxonomy
+  - transaction tax multi-agent systems
+  - circuit breaker AI safety
+  - collusion detection multi-agent
+  - reputation decay AI agents
+  - staking mechanism AI
+  - governance portfolio approach
+claims:
+  - metric: "Transaction tax welfare variance explained"
+    value: "32.4% (eta-squared = 0.324, p = 0.004)"
+    description: "Transaction tax rate explained 32.4% of welfare variance in 40-run factorial sweep"
+  - metric: "Circuit breaker effect size"
+    value: "Cohen's d = -0.02, p = 0.88"
+    description: "Toxicity circuit breakers showed no detectable effect on welfare across all tested scenarios"
+  - metric: "Low vs high tax welfare ratio"
+    value: "12.7 vs 7.3 (p = 0.004)"
+    description: "0-5% tax produced nearly double the welfare of 10-15% tax"
+  - metric: "Ecosystem survival threshold with collusion detection"
+    value: "37.5% adversarial agents"
+    description: "Ecosystems survived at 37.5% adversarial fraction only with collusion detection enabled"
+abstract: "A taxonomy of twenty governance mechanisms for multi-agent AI systems, organized into five families: friction, detection, reputation, circuit breakers, and structural. Data from thousands of simulation runs shows transaction tax is the strongest single lever (eta-squared = 0.324), circuit breakers have zero detectable effect (Cohen's d = -0.02), and collusion detection is the threshold capability that prevents ecosystem collapse at 37.5% adversarial agents."
+faq:
+  - question: "What is the most effective governance mechanism for multi-agent AI systems?"
+    answer: "Transaction tax is the strongest single lever, explaining 32.4% of welfare variance. A 0-5% tax rate doubles welfare compared to 10-15% by discouraging low-quality churn without suppressing productive activity."
+  - question: "Do circuit breakers work in multi-agent AI systems?"
+    answer: "No. Despite being commonly proposed, circuit breakers showed zero detectable effect (Cohen's d = -0.02, p = 0.88) across all tested scenarios. They fire after damage is already done, making them lagging indicators rather than preventive tools."
+  - question: "How do you prevent collusion in multi-agent systems?"
+    answer: "Collusion detection monitors pairwise interaction frequency and benefit correlation. It is the threshold capability — ecosystems survived at 37.5% adversarial agents only when collusion detection was enabled. Individual-level mechanisms alone are insufficient."
+  - question: "What governance mechanisms does an AI agent ecosystem need?"
+    answer: "Effective governance requires a layered portfolio: friction mechanisms to raise the floor, detection to catch coordination, reputation to maintain state, circuit breakers as insurance, and structural mechanisms for persistent environments. No single lever works alone."
 ---
 
 # A Taxonomy of Governance Mechanisms for Multi-Agent AI Systems
@@ -21,9 +53,9 @@ Every governance mechanism in SWARM falls into one of five families, distinguish
 
 These add cost to participation. Every interaction has a price — not to generate revenue, but to make low-quality churn unprofitable.
 
-- **Transaction tax** (`transaction_tax_rate`): A percentage fee on each interaction, split between initiator and responder. In our kernel market sweep, this was the dominant lever: 0-5% tax produced nearly double the welfare of 10-15% tax (12.7 vs 7.3, p=0.004). The mechanism works not by punishing bad actors, but by raising the bar for what's worth doing at all.
+- **[Transaction tax](governance.md#transaction-tax)** (`transaction_tax_rate`): A percentage fee on each interaction, split between initiator and responder. In our kernel market sweep, this was the dominant lever: 0-5% tax produced nearly double the welfare of 10-15% tax (12.7 vs 7.3, p=0.004). The mechanism works not by punishing bad actors, but by raising the bar for what's worth doing at all.
 
-- **Staking** (`staking_enabled`, `min_stake_to_participate`): Agents must put up capital to participate. Violations trigger slashing (`stake_slash_rate`). This gates entry — effective against drive-by adversaries, useless against well-capitalized ones.
+- **[Staking](governance.md#staking)** (`staking_enabled`, `min_stake_to_participate`): Agents must put up capital to participate. Violations trigger slashing (`stake_slash_rate`). This gates entry — effective against drive-by adversaries, useless against well-capitalized ones.
 
 - **Rate limits** (`bandwidth_cap`, `moltbook_post_cooldown_steps`, `moltipedia_pair_cap_max`): Hard caps on interaction frequency. These prevent flooding but don't distinguish quality. A bandwidth cap of 5 interactions per step keeps the ecosystem manageable; a cap of 1 strangles it.
 
@@ -33,21 +65,21 @@ These add cost to participation. Every interaction has a price — not to genera
 
 These monitor the interaction graph for patterns that individual-level checks miss.
 
-- **Random audits** (`audit_enabled`, `audit_probability`): Probabilistic inspection of interactions after they're accepted. At 5% audit probability with a 3x penalty multiplier, this creates a "speed camera" effect — agents can't predict which interactions will be checked.
+- **[Random audits](governance.md#random-audit)** (`audit_enabled`, `audit_probability`): Probabilistic inspection of interactions after they're accepted. At 5% audit probability with a 3x penalty multiplier, this creates a "speed camera" effect — agents can't predict which interactions will be checked.
 
-- **Collusion detection** (`collusion_detection_enabled`): Monitors pairwise interaction frequency and benefit correlation. When two agents interact suspiciously often with correlated outcomes, both are penalized. This is the FINRA model: catch the pattern, not the individual trade.
+- **[Collusion detection](governance.md#collusion-detection)** (`collusion_detection_enabled`): Monitors pairwise interaction frequency and benefit correlation. When two agents interact suspiciously often with correlated outcomes, both are penalized. This is the FINRA model: catch the pattern, not the individual trade.
 
 - **Security analysis** (`security_enabled`): Detects prompt injection, manipulation cascades, trust laundering, and behavioral contagion. Quarantines agents whose threat score exceeds threshold.
 
 - **Sybil detection** (`sybil_detection_enabled`): Uses behavioral similarity to identify agents that are actually the same entity operating multiple identities. Clusters agents by behavioral features; cluster sizes above `sybil_max_cluster_size` trigger penalties.
 
-**When to use detection:** When adversaries coordinate. Our cross-scenario analysis found that the ecosystem survived at 37.5% adversarial agents *only* when collusion detection was enabled. Individual-focused levers (audits, reputation) are necessary but insufficient at high adversarial fractions.
+**When to use detection:** When adversaries coordinate. Our [cross-scenario analysis](../blog/cross-scenario-analysis.md) found that the ecosystem survived at 37.5% adversarial agents *only* when collusion detection was enabled. Individual-focused levers (audits, reputation) are necessary but insufficient at high adversarial fractions.
 
 ### 3. Reputation mechanisms (decay, voting, transparency)
 
 These maintain a persistent quality signal about each agent that evolves over time.
 
-- **Reputation decay** (`reputation_decay_rate`): Reputation erodes toward zero unless refreshed by positive interactions. A rate of 0.98 per epoch means an idle agent loses 2% reputation per round. This prevents agents from building a reputation cushion and then exploiting it.
+- **[Reputation decay](governance.md#reputation-decay)** (`reputation_decay_rate`): Reputation erodes toward zero unless refreshed by positive interactions. A rate of 0.98 per epoch means an idle agent loses 2% reputation per round. This prevents agents from building a reputation cushion and then exploiting it — the opposite of the [trust-then-exploit](deception.md#trust-then-exploit) strategy.
 
 - **Vote normalization** (`vote_normalization_enabled`): Diminishing returns on influence. An agent's first vote counts full; subsequent votes are down-weighted. Prevents reputation accumulation by prolific but mediocre agents.
 
@@ -59,13 +91,13 @@ These maintain a persistent quality signal about each agent that evolves over ti
 
 These are emergency stops — automatic governance actions triggered by anomalous conditions.
 
-- **Toxicity circuit breaker** (`circuit_breaker_enabled`): Freezes agents whose cumulative toxicity exceeds threshold for a set number of epochs. In our kernel market sweep, this had **no detectable effect** (Cohen's d = -0.02, p = 0.88). Zero. The reason: circuit breakers fire *after* damage is done. By the time an agent trips the threshold, it has already extracted value. And during the freeze period, the agent is idle — but the damage persists in other agents' reputations and the ecosystem's welfare trajectory.
+- **[Toxicity circuit breaker](governance.md#circuit-breaker)** (`circuit_breaker_enabled`): Freezes agents whose cumulative [toxicity](metrics.md#toxicity-rate) exceeds threshold for a set number of epochs. In our kernel market sweep, this had **no detectable effect** (Cohen's d = -0.02, p = 0.88). Zero. The reason: circuit breakers fire *after* damage is done. By the time an agent trips the threshold, it has already extracted value. And during the freeze period, the agent is idle — but the damage persists in other agents' reputations and the ecosystem's welfare trajectory.
 
-- **Incoherence circuit breaker** (`incoherence_breaker_enabled`): Triggers when agent behavior variance exceeds threshold — catching agents whose outputs are inconsistent in ways that suggest gaming or confusion rather than genuine uncertainty.
+- **Incoherence circuit breaker** (`incoherence_breaker_enabled`): Triggers when agent [incoherence](metrics.md#incoherence-index) exceeds threshold — catching agents whose outputs are inconsistent in ways that suggest gaming or confusion rather than genuine uncertainty.
 
 - **Self-ensemble** (`self_ensemble_enabled`): Queries the agent multiple times and flags high-variance responses. A "wisdom of internal crowds" check.
 
-- **Decomposition** (`decomposition_enabled`): Breaks long-horizon interactions into shorter evaluation windows, preventing agents from front-loading quality and back-loading exploitation.
+- **Decomposition** (`decomposition_enabled`): Breaks long-horizon interactions into shorter evaluation windows, preventing agents from front-loading quality and back-loading exploitation — a variant of the [trust-then-exploit](deception.md#trust-then-exploit) pattern.
 
 **When to use circuit breakers:** As insurance, not as primary governance. Our data consistently shows that circuit breakers are a lagging indicator. They confirm that something went wrong; they don't prevent it. The analogy is a fire alarm vs. a sprinkler system — you want both, but you don't rely on the alarm to put out the fire.
 
@@ -95,7 +127,7 @@ After thousands of simulation runs across eleven scenarios, three findings domin
 
 ## The real lesson: governance is a portfolio
 
-No single lever works. The ecosystems that survive stress-testing have layered governance: friction to raise the floor, detection to catch coordination, reputation to maintain state, circuit breakers as insurance, and structural mechanisms for persistent environments.
+No single lever works. The ecosystems that survive stress-testing have layered governance: friction to raise the floor, detection to catch coordination, reputation to maintain state, circuit breakers as insurance, and structural mechanisms for persistent environments. This mirrors the [externality internalization](../glossary.md#externality-internalization) principle — agents must bear the costs of the harm they create.
 
 The taxonomy matters because it tells you which *family* to reach for when diagnosing a governance failure:
 
@@ -112,6 +144,11 @@ The temptation is to add every lever at maximum strength. Resist it. Governance 
 ---
 
 *All experiments use the [SWARM framework](https://github.com/swarm-ai-safety/swarm). Sweep results, plots, and statistical analysis for the kernel market v4 governance study are in `runs/20260212-015027_sweep/`. Replicable from scenario YAML + seed.*
+
+---
+
+!!! quote "How to cite"
+    SWARM Team. "Governance Mechanisms Taxonomy." *swarm-ai.org/concepts/governance-mechanisms-taxonomy/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).
 
 ---
 

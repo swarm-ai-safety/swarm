@@ -1,0 +1,145 @@
+{
+  "$schema": "https://swarm-ai.org/schemas/claims-registry-v1.json",
+  "project": "SWARM — Distributional AGI Safety Framework",
+  "url": "https://swarm-ai.org",
+  "arxiv": "2512.16856",
+  "last_updated": "2026-03-03",
+  "claims": [
+    {
+      "id": "deontological-framing-deception",
+      "metric": "Deception reduction via deontological framing",
+      "value": "95% reduction (1.151 → 0.057 signal-action divergence)",
+      "evidence": "180 LLM runs (6 prompt framings × 3 scenarios × 10 seeds)",
+      "source": "https://swarm-ai.org/blog/prompt-sensitivity-deception-framing/",
+      "tags": ["deception", "prompt-engineering", "llm-safety"]
+    },
+    {
+      "id": "purity-paradox",
+      "metric": "Welfare improvement (20% honest vs 100% honest)",
+      "value": "55% higher welfare with 20% honest agents",
+      "evidence": "Sweep from 0-100% honest proportion, 10 agents, 30 epochs, 3 seeds each",
+      "source": "https://swarm-ai.org/blog/purity-paradox/",
+      "tags": ["purity-paradox", "welfare", "agent-diversity"]
+    },
+    {
+      "id": "deception-structural",
+      "metric": "Deception persistence at temperature 0.0",
+      "value": "Signal-action divergence persists (structural, not stochastic)",
+      "evidence": "120 runs (3 scenarios × 4 temperatures × 10 seeds)",
+      "source": "https://swarm-ai.org/blog/temperature-vs-deception/",
+      "tags": ["deception", "temperature", "determinism"]
+    },
+    {
+      "id": "cooperation-window",
+      "metric": "Critical cooperation threshold",
+      "value": "3 turns of forced cooperation eliminates escalation spirals",
+      "evidence": "210 LLM runs (7 cooperation windows × 3 scenarios × 10 seeds)",
+      "source": "https://swarm-ai.org/blog/cooperation-window-phase-transition/",
+      "tags": ["cooperation", "escalation", "phase-transition"]
+    },
+    {
+      "id": "model-size-tradeoff",
+      "metric": "Deception-escalation tradeoff across model sizes",
+      "value": "Inverse relationship: 8B high deception/low escalation; 405B low deception/high escalation",
+      "evidence": "120 runs (6 models × 2 scenarios × 10 seeds)",
+      "source": "https://swarm-ai.org/blog/model-size-vs-escalation/",
+      "tags": ["model-size", "deception", "escalation", "scaling"]
+    },
+    {
+      "id": "llm-vs-scripted-deception",
+      "metric": "LLM deception multiplier vs scripted agents",
+      "value": "2x higher signal-action divergence in LLM agents",
+      "evidence": "100 runs",
+      "source": "https://swarm-ai.org/blog/escalation-sandbox-llm-vs-scripted/",
+      "tags": ["deception", "llm", "scripted-agents"]
+    },
+    {
+      "id": "transparency-nuclear-rate",
+      "metric": "Nuclear rate reduction via transparency + safety training",
+      "value": "60% → 30% nuclear exchange rate",
+      "evidence": "120 runs",
+      "source": "https://swarm-ai.org/blog/asymmetric-information-escalation/",
+      "tags": ["transparency", "nuclear-risk", "information-asymmetry"]
+    },
+    {
+      "id": "governance-nuclear",
+      "metric": "Governance prevention of nuclear exchange with hawk present",
+      "value": "No governance mechanism prevents nuclear exchange when a hawk agent is present",
+      "evidence": "Governance sweep across multiple mechanism combinations",
+      "source": "https://swarm-ai.org/blog/governance-sweep-nuclear-rate/",
+      "tags": ["governance", "nuclear-risk", "hawk-agent"]
+    },
+    {
+      "id": "ecosystem-collapse-threshold",
+      "metric": "Ecosystem collapse phase transition",
+      "value": "50% adversarial agent fraction triggers collapse",
+      "evidence": "Phase transition analysis across adversarial fractions",
+      "source": "https://swarm-ai.org/blog/ecosystem-collapse/",
+      "tags": ["collapse", "phase-transition", "adversarial"]
+    },
+    {
+      "id": "self-optimizer-cost",
+      "metric": "AI agent self-optimization cost reduction",
+      "value": "98% cost reduction",
+      "evidence": "Self-optimizer distributional safety experiment",
+      "source": "https://swarm-ai.org/blog/self-optimizer-distributional-safety/",
+      "tags": ["self-optimization", "cost-reduction"]
+    },
+    {
+      "id": "contract-screening-separation",
+      "metric": "Contract screening separation point",
+      "value": "Perfect separation at fee = 6.0",
+      "evidence": "10 seeds, consistent across all replications",
+      "source": "https://swarm-ai.org/blog/contract-screening-separating-equilibrium/",
+      "tags": ["contract-screening", "mechanism-design", "separation"]
+    },
+    {
+      "id": "cross-scenario-regimes",
+      "metric": "Cross-scenario governance regimes",
+      "value": "3 distinct governance regimes across 11 scenarios, 1 critical threshold",
+      "evidence": "11 scenarios analyzed",
+      "source": "https://swarm-ai.org/blog/cross-scenario-analysis/",
+      "tags": ["governance", "regimes", "cross-scenario"]
+    },
+    {
+      "id": "transaction-tax-dominance",
+      "metric": "Transaction tax welfare variance explained",
+      "value": "32.4% (eta-squared = 0.324, p = 0.004)",
+      "evidence": "40-run factorial sweep",
+      "source": "https://swarm-ai.org/concepts/governance-mechanisms-taxonomy/",
+      "tags": ["transaction-tax", "governance", "welfare"]
+    },
+    {
+      "id": "circuit-breaker-ineffectiveness",
+      "metric": "Circuit breaker effect on welfare",
+      "value": "No detectable effect (Cohen's d = -0.02, p = 0.88)",
+      "evidence": "Every tested scenario in kernel market sweep",
+      "source": "https://swarm-ai.org/concepts/governance-mechanisms-taxonomy/",
+      "tags": ["circuit-breaker", "governance", "ineffective"]
+    },
+    {
+      "id": "tax-rate-sweet-spot",
+      "metric": "Low vs high tax welfare comparison",
+      "value": "0-5% tax: 12.7 welfare vs 10-15% tax: 7.3 welfare (p = 0.004)",
+      "evidence": "Kernel market governance sweep",
+      "source": "https://swarm-ai.org/concepts/governance-mechanisms-taxonomy/",
+      "tags": ["transaction-tax", "welfare", "sweet-spot"]
+    },
+    {
+      "id": "collusion-detection-threshold",
+      "metric": "Ecosystem survival threshold with collusion detection",
+      "value": "Survived at 37.5% adversarial agents only with collusion detection enabled",
+      "evidence": "Cross-scenario stress testing",
+      "source": "https://swarm-ai.org/concepts/governance-mechanisms-taxonomy/",
+      "tags": ["collusion-detection", "adversarial", "survival"]
+    },
+    {
+      "id": "externality-pricing-honesty",
+      "metric": "Honesty dominance under full externality pricing",
+      "value": "Honesty dominates by 43% at rho >= 0.5",
+      "evidence": "21 parameter configurations",
+      "source": "https://swarm-ai.org/blog/purity-paradox/",
+      "tags": ["externality-internalization", "honesty", "rho"]
+    }
+  ]
+}

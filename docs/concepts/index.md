@@ -4,7 +4,7 @@ description: "SWARM is built on several key ideas that distinguish it from tradi
 
 # Core Concepts
 
-SWARM is built on several key ideas that distinguish it from traditional AI safety approaches.
+SWARM is built on several key ideas that distinguish it from traditional AI safety approaches. The theoretical foundations are detailed in [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856).
 
 ## The Central Thesis
 

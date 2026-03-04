@@ -4,7 +4,7 @@ description: "Academic foundations and related publications."
 
 # Research
 
-Academic foundations and related publications.
+Academic foundations and related publications. SWARM implements the framework described in [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856) (arXiv:2512.16856).
 
 <div class="grid cards" markdown>
 

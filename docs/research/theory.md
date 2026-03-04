@@ -249,3 +249,8 @@ If you use SWARM in your research, please cite:
 ### AI Safety
 - [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
 - [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
+
+---
+
+!!! quote "How to cite"
+    SWARM Team. "Theoretical Foundations of Distributional Safety." *swarm-ai.org/research/theory/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).
