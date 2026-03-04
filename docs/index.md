@@ -4,6 +4,16 @@ description: "SWARM — the open-source multi-agent AI safety framework for dist
 hide:
   - navigation
   - toc
+
+faq:
+  - q: "What is SWARM?"
+    a: "SWARM (System-Wide Assessment of Risk in Multi-agent systems) is an open-source framework for distributional AGI safety research. It measures toxicity, governance gaps, and emergent risks in multi-agent systems using soft probabilistic labels instead of binary classifications."
+  - q: "How does SWARM differ from other AI safety frameworks?"
+    a: "SWARM uses soft (probabilistic) labels rather than binary good/bad classifications. This distributional approach captures uncertainty and enables more nuanced measurement of safety properties like adverse selection, externality internalization, and governance effectiveness."
+  - q: "What are soft labels in SWARM?"
+    a: "Soft labels assign each interaction a probability p in [0,1] representing the likelihood it is beneficial, rather than a hard binary label. This preserves uncertainty from proxy measurements and enables probabilistic safety metrics like expected toxicity and quality gap."
+  - q: "Is SWARM open source?"
+    a: "Yes. SWARM is MIT-licensed and available on GitHub at github.com/swarm-ai-safety/swarm. It is written in Python and can be installed via pip."
 ---
 
 <style>
@@ -67,7 +77,7 @@ hide:
 </style>
 
 <div class="hero">
-  <h1>SWARM</h1>
+  <h1>SWARM: Multi-Agent AI Safety Framework</h1>
   <p class="tagline">System-Wide Assessment of Risk in Multi-agent systems</p>
   <p style="font-size: 1.25rem; max-width: 600px; margin: 0 auto 2rem;">
     Study how intelligence swarms—and where it fails.

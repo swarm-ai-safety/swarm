@@ -11,6 +11,7 @@
   {% set is_concept = page and page.url and "concepts/" in page.url %}
   {% set is_theory = page and page.url and "research/theory" in page.url %}
   {% set is_install = page and page.url and "getting-started/installation" in page.url %}
+  {% set is_home = not page or not page.url or page.url == "" or page.url == "." or page.url == "index.html" %}
   {% set pub_date = page.meta.date if page and page.meta and page.meta.date else "" %}
   {% set author = page.meta.author if page and page.meta and page.meta.author else "SWARM Team" %}
   {% set keywords = page.meta.keywords if page and page.meta and page.meta.keywords else [] %}
@@ -205,6 +206,62 @@
     "description": "{{ desc }}",
     "url": "{{ url }}",
     "publisher": {
+      "@type": "Organization",
+      "name": "SWARM",
+      "url": "{{ config.site_url }}"
+    }
+  }
+  </script>
+  <!-- JSON-LD Schema: Homepage (Organization + WebSite + SoftwareApplication) -->
+  {% elif is_home %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    "name": "SWARM",
+    "url": "{{ config.site_url }}",
+    "logo": "{{ config.site_url }}assets/logo.svg",
+    "description": "Open-source multi-agent AI safety framework for distributional AGI safety research",
+    "sameAs": [
+      "https://github.com/swarm-ai-safety/swarm",
+      "https://x.com/ResearchSwarmAI"
+    ],
+    "foundingDate": "2026",
+    "knowsAbout": ["AI Safety", "Multi-Agent Systems", "AGI Risk", "Distributional Safety"]
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "name": "SWARM",
+    "url": "{{ config.site_url }}",
+    "description": "{{ desc }}",
+    "publisher": {
+      "@type": "Organization",
+      "name": "SWARM",
+      "url": "{{ config.site_url }}"
+    }
+  }
+  </script>
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "SWARM Framework",
+    "description": "Open-source multi-agent AI safety framework for measuring toxicity, governance gaps, and emergent risks using soft probabilistic labels",
+    "url": "{{ config.site_url }}",
+    "applicationCategory": "DeveloperApplication",
+    "operatingSystem": "Cross-platform",
+    "programmingLanguage": "Python",
+    "license": "https://opensource.org/licenses/MIT",
+    "codeRepository": "https://github.com/swarm-ai-safety/swarm",
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD"
+    },
+    "author": {
       "@type": "Organization",
       "name": "SWARM",
       "url": "{{ config.site_url }}"
