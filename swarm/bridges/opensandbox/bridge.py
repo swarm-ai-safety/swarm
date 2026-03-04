@@ -768,7 +768,8 @@ class OpenSandboxBridge:
 
     def get_sorting_ledger(self) -> Dict[str, List[Dict]]:
         """Return the screening sorting ledger."""
-        return self._screener.get_sorting_ledger()
+        result: Dict[str, List[Dict]] = self._screener.get_sorting_ledger()
+        return result
 
     def get_provenance_chain(self, agent_id: str) -> List[Dict[str, Any]]:
         """Return the full provenance chain for an agent."""
@@ -780,11 +781,13 @@ class OpenSandboxBridge:
 
     def get_message_bus_stats(self) -> Dict[str, Any]:
         """Return message bus statistics."""
-        return self._message_bus.get_stats()
+        stats: Dict[str, Any] = self._message_bus.get_stats()
+        return stats
 
     def get_provenance_stats(self) -> Dict[str, Any]:
         """Return provenance tracker statistics."""
-        return self._provenance.get_stats()
+        stats: Dict[str, Any] = self._provenance.get_stats()
+        return stats
 
     def get_docker_status(self) -> Dict[str, Any]:
         """Return Docker sandbox pool status.
@@ -821,7 +824,7 @@ class OpenSandboxBridge:
             return None
 
         try:
-            image_id = docker_sandbox.snapshot(tag=tag)
+            image_id: str = docker_sandbox.snapshot(tag=tag)
             self._record_event(
                 OpenSandboxEventType.SANDBOX_SNAPSHOT,
                 agent_id=agent_id,

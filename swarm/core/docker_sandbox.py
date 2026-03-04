@@ -329,7 +329,7 @@ class DockerSandbox:
         """Short container ID, or None if not created."""
         if self._container is None:
             return None
-        return self._container.short_id
+        return str(self._container.short_id)
 
     @property
     def state(self) -> ContainerState:
@@ -415,7 +415,7 @@ class DockerSandbox:
             self.spec.network_mode,
             self.spec.mem_limit,
         )
-        return self._container.short_id
+        return str(self._container.short_id)
 
     def exec(
         self,
@@ -643,7 +643,7 @@ class DockerSandbox:
         image = self._container.commit(repository="swarm-snapshots", tag=tag)
         self._snapshots.append(image.id)
         logger.info("Snapshot %s created for container %s", tag, self._container.short_id)
-        return image.id
+        return str(image.id)
 
     def pause(self) -> None:
         """Pause the container (freeze processes without killing)."""
@@ -692,7 +692,8 @@ class DockerSandbox:
         if self._container is None or self._state != ContainerState.RUNNING:
             return {}
         try:
-            return self._container.stats(stream=False)
+            stats: Dict[str, Any] = self._container.stats(stream=False)
+            return stats
         except Exception:
             return {}
 
@@ -701,7 +702,7 @@ class DockerSandbox:
         if self._container is None:
             return ""
         try:
-            return self._container.logs(tail=tail).decode("utf-8", errors="replace")
+            return str(self._container.logs(tail=tail).decode("utf-8", errors="replace"))
         except Exception:
             return ""
 
