@@ -23,7 +23,7 @@ faq:
 
 # Metrics
 
-SWARM provides four [key metrics](../research/theory.md) for understanding multi-agent system health.
+SWARM provides four [key metrics](../research/theory.md) for understanding multi-agent system health. All four metrics are built on **soft labels**: `p = P(v = +1) ∈ [0,1]`, the probability that an interaction is beneficial. `p` is computed from observable signals via a calibrated sigmoid (see [Soft Labels](soft-labels.md)). Payoffs (`π`) include expected surplus, governance costs, reputation effects, and externality costs.
 
 ## The Four Key Metrics
 
@@ -177,3 +177,8 @@ This feedback loop is why adverse selection is so dangerous—it's self-reinforc
 - [Theoretical Foundations](../research/theory.md) — Formal treatment of distributional safety metrics
 - [The Purity Paradox](../blog/purity-paradox.md) — When welfare metrics mislead about system health
 - [What Financial Markets Teach Us About AI Safety](../blog/markets-and-safety.md) — Quality gap as the bid-ask spread analogue
+
+---
+
+!!! quote "How to cite"
+    SWARM Team. "SWARM Metrics for Multi-Agent Systems." *swarm-ai.org/concepts/metrics/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).

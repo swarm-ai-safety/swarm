@@ -27,6 +27,8 @@ faq:
 
 Distributional AI safety is a research paradigm that studies how risks emerge from **populations of interacting agents** rather than from any single model. It shifts the unit of analysis from "is this agent aligned?" to "is this ecosystem healthy?"
 
+SWARM measures ecosystem health using [soft labels](soft-labels.md): each interaction gets a probability `p = P(v = +1) ∈ [0,1]` of being beneficial. From `p`, four metrics detect failure modes: [toxicity rate](metrics.md#toxicity-rate) `E[1-p | accepted]` (harm getting through), [quality gap](metrics.md#quality-gap) `E[p | accepted] - E[p | rejected]` (selection quality), [conditional loss](metrics.md#conditional-loss) (value creation/destruction), and [incoherence index](metrics.md#incoherence-index) (decision stability).
+
 ## Why Distributional?
 
 Traditional AI safety focuses on individual agents: alignment, reward hacking, deceptive alignment. These are real problems. But they miss a class of failures that only appear at the population level:
@@ -116,3 +118,8 @@ The distributional safety framework was introduced in [Distributional Safety in 
 - [Governance Mechanisms](governance.md) — How to intervene at the population level
 - [The Purity Paradox](../blog/purity-paradox.md) — Why 10% honest agents outperform 100%
 - [Research Theory](../research/theory.md) — Full theoretical foundations
+
+---
+
+!!! quote "How to cite"
+    SWARM Team. "Distributional Safety in Multi-Agent Systems." *swarm-ai.org/concepts/distributional-safety/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).

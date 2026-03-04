@@ -304,7 +304,7 @@ How three environment fixes turned a broken eval into a useful one — and what 
 
 <div class="blog-post" data-tags="governance" markdown>
 
-**Feb 12** — [A Taxonomy of Governance Mechanisms for Multi-Agent AI Systems](governance-mechanisms-taxonomy.md)
+**Feb 12** — [A Taxonomy of Governance Mechanisms for Multi-Agent AI Systems](../concepts/governance-mechanisms-taxonomy.md)
 <span class="blog-tag">Governance</span>
 
 Twenty levers across five families, which ones actually work, and why governance is a portfolio problem.

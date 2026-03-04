@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SWARM — Distributional AGI Safety</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .container { max-width: 900px; width: 100%; padding: 2rem 1.5rem; }
+    .hero {
+      text-align: center;
+      padding: 3rem 0 2rem;
+    }
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #00d4ff, #7b61ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 0.5rem;
+    }
+    .hero .subtitle {
+      font-size: 1.1rem;
+      color: #8b949e;
+      margin-bottom: 0.75rem;
+    }
+    .hero .tagline {
+      font-size: 1.3rem;
+      color: #c9d1d9;
+      margin-bottom: 2rem;
+    }
+    .buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+    }
+    .btn {
+      padding: 0.75rem 1.5rem;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: opacity 0.2s;
+    }
+    .btn:hover { opacity: 0.85; }
+    .btn-primary {
+      background: linear-gradient(135deg, #00d4ff, #7b61ff);
+      color: #fff;
+    }
+    .btn-secondary {
+      border: 2px solid #30363d;
+      color: #c9d1d9;
+    }
+    .btn-paper {
+      border: 2px solid #7b61ff;
+      color: #7b61ff;
+    }
+    .insight {
+      background: linear-gradient(135deg, rgba(0,212,255,0.08), rgba(123,97,255,0.08));
+      border-left: 4px solid #00d4ff;
+      padding: 1.25rem 1.5rem;
+      border-radius: 0 8px 8px 0;
+      margin-bottom: 1rem;
+      line-height: 1.6;
+    }
+    .insight strong { color: #00d4ff; }
+    .insight.purple { border-left-color: #7b61ff; }
+    .insight.purple strong { color: #7b61ff; }
+    h2 {
+      font-size: 1.5rem;
+      margin: 2.5rem 0 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid #21262d;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1rem;
+      margin: 1rem 0;
+    }
+    .card {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      padding: 1.25rem;
+    }
+    .card h3 {
+      font-size: 1.1rem;
+      margin-bottom: 0.5rem;
+      color: #00d4ff;
+    }
+    .card p { color: #8b949e; line-height: 1.5; font-size: 0.95rem; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 1rem 0;
+      font-size: 0.9rem;
+    }
+    th, td {
+      padding: 0.6rem 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #21262d;
+    }
+    th { color: #8b949e; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; }
+    td strong { color: #00d4ff; }
+    code {
+      background: #161b22;
+      padding: 0.15rem 0.4rem;
+      border-radius: 4px;
+      font-size: 0.9em;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+    pre {
+      background: #161b22;
+      border: 1px solid #21262d;
+      border-radius: 8px;
+      padding: 1.25rem;
+      overflow-x: auto;
+      margin: 1rem 0;
+      line-height: 1.5;
+    }
+    pre code { background: none; padding: 0; }
+    .arch {
+      text-align: center;
+      color: #8b949e;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.85rem;
+      line-height: 1.8;
+      margin: 1rem 0;
+    }
+    footer {
+      text-align: center;
+      padding: 2rem 0;
+      color: #484f58;
+      font-size: 0.85rem;
+    }
+    footer a { color: #58a6ff; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="hero">
+      <h1>SWARM</h1>
+      <p class="subtitle">System-Wide Assessment of Risk in Multi-agent Systems</p>
+      <p class="tagline">Study how intelligence swarms — and where it fails.</p>
+      <div class="buttons">
+        <a href="https://github.com/swarm-ai-safety/swarm" class="btn btn-primary" target="_blank" rel="noopener noreferrer">GitHub Repo</a>
+        <a href="https://swarm-ai.org" class="btn btn-secondary" target="_blank" rel="noopener noreferrer">Documentation</a>
+        <a href="https://arxiv.org/abs/2512.16856" class="btn btn-paper" target="_blank" rel="noopener noreferrer">arXiv Paper</a>
+      </div>
+    </div>
+
+    <div class="insight">
+      <strong>The Core Insight:</strong> AGI-level risks don't require AGI-level agents.
+      Catastrophic failures can emerge from the <em>interaction</em> of many sub-AGI agents —
+      even when none are individually dangerous.
+    </div>
+
+    <div class="insight purple">
+      <strong>The Purity Paradox:</strong> Populations with only 20% honest agents achieve
+      <strong>55% higher welfare</strong> than 100% honest populations — a measurement artifact
+      of externality pricing that disappears at &rho; &ge; 0.5.
+    </div>
+
+    <h2>Key Findings</h2>
+    <table>
+      <thead>
+        <tr><th>Finding</th><th>Result</th><th>Evidence</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Deontological framing reduces deception</td><td><strong>95% reduction</strong></td><td>180 runs</td></tr>
+        <tr><td>Deception persists at temperature 0.0</td><td><strong>Structural</strong></td><td>120 runs</td></tr>
+        <tr><td>Forced cooperation window</td><td><strong>3 turns eliminates escalation</strong></td><td>210 runs</td></tr>
+        <tr><td>Transparency + safety training</td><td><strong>Nuclear rate 60% → 30%</strong></td><td>120 runs</td></tr>
+        <tr><td>Full externality pricing (&rho; &ge; 0.5)</td><td><strong>Honesty dominates +43%</strong></td><td>21 configs</td></tr>
+        <tr><td>Ecosystem collapse threshold</td><td><strong>50% adversarial</strong></td><td>Phase transition</td></tr>
+      </tbody>
+    </table>
+
+    <h2>Install</h2>
+    <pre><code>pip install swarm-safety</code></pre>
+
+    <h2>Quick Start</h2>
+    <pre><code>from swarm.agents.honest import HonestAgent
+from swarm.agents.deceptive import DeceptiveAgent
+from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+
+config = OrchestratorConfig(n_epochs=10, steps_per_epoch=10, seed=42)
+orchestrator = Orchestrator(config=config)
+
+orchestrator.register_agent(HonestAgent(agent_id="honest_1"))
+orchestrator.register_agent(DeceptiveAgent(agent_id="dec_1"))
+
+metrics = orchestrator.run()
+for m in metrics:
+    print(f"Epoch {m.epoch}: toxicity={m.toxicity_rate:.3f}")</code></pre>
+
+    <h2>Architecture</h2>
+    <div class="arch">
+      Observables → ProxyComputer → v̂ → sigmoid → p → SoftPayoffEngine → payoffs<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;↓<br>
+      &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;SoftMetrics → toxicity, quality gap, etc.
+    </div>
+
+    <h2>Four Key Metrics</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Toxicity Rate</h3>
+        <p>E[1−p | accepted]. Expected harm among accepted interactions. Above 0.3 = serious problems.</p>
+      </div>
+      <div class="card">
+        <h3>Quality Gap</h3>
+        <p>E[p | accepted] − E[p | rejected]. Negative values indicate adverse selection.</p>
+      </div>
+      <div class="card">
+        <h3>Conditional Loss</h3>
+        <p>E[π | accepted] − E[π]. Reveals whether acceptance selection creates or destroys value.</p>
+      </div>
+      <div class="card">
+        <h3>Incoherence Index</h3>
+        <p>Variance-to-error ratio across replays. High incoherence = unstable decisions.</p>
+      </div>
+    </div>
+
+    <h2>Six Governance Mechanisms</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>Circuit Breakers</h3>
+        <p>Freeze agents whose recent toxicity exceeds threshold over a sliding window.</p>
+      </div>
+      <div class="card">
+        <h3>Transaction Taxes</h3>
+        <p>Friction mechanism deducting a percentage from payoffs, reducing exploitation margins.</p>
+      </div>
+      <div class="card">
+        <h3>Reputation Decay</h3>
+        <p>Reduces reputation by a fixed fraction each epoch, forcing continuous good behavior.</p>
+      </div>
+      <div class="card">
+        <h3>Staking</h3>
+        <p>Agents post collateral to participate. Bad behavior results in stake slashing.</p>
+      </div>
+      <div class="card">
+        <h3>Collusion Detection</h3>
+        <p>Monitors pairwise interaction patterns for correlated exploitation timing.</p>
+      </div>
+      <div class="card">
+        <h3>Random Audits</h3>
+        <p>Probabilistic review creating deterrence uncertainty for exploitative agents.</p>
+      </div>
+    </div>
+
+    <footer>
+      Based on <a href="https://arxiv.org/abs/2512.16856" target="_blank" rel="noopener noreferrer">arXiv:2512.16856</a> ·
+      MIT License ·
+      <a href="https://github.com/swarm-ai-safety/swarm" target="_blank" rel="noopener noreferrer">GitHub</a> ·
+      <a href="https://swarm-ai.org" target="_blank" rel="noopener noreferrer">swarm-ai.org</a> ·
+      <a href="https://x.com/ResearchSwarmAI" target="_blank" rel="noopener noreferrer">@ResearchSwarmAI</a>
+    </footer>
+  </div>
+</body>
+</html>
