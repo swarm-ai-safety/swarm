@@ -198,6 +198,9 @@ class OpenSandboxConfig:
         snapshot_enabled: Enable container snapshotting.
         observer_interval_seconds: Observability polling interval.
         risk_threshold: Risk score above which governance intervenes.
+        docker_enabled: Enable real Docker container execution.
+        docker_image: Docker image to use for sandbox containers.
+        docker_exec_user: Unix user for command execution inside containers.
     """
 
     sandbox_image: str = "opensandbox/code-interpreter"

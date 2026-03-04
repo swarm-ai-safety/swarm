@@ -359,7 +359,6 @@ class DockerSandbox:
 
         run_kwargs: Dict[str, Any] = {
             "image": self.spec.image,
-            "name": self.spec.name,
             "command": self.spec.command or "tail -f /dev/null",
             "detach": True,
             "working_dir": self.spec.working_dir,
@@ -376,6 +375,9 @@ class DockerSandbox:
             "stdin_open": False,
             "tty": False,
         }
+
+        if self.spec.name:
+            run_kwargs["name"] = self.spec.name
 
         if self.spec.cap_add:
             run_kwargs["cap_add"] = self.spec.cap_add
@@ -671,8 +673,8 @@ class DockerSandbox:
             try:
                 self._container.kill()
                 self._state = ContainerState.STOPPED
-            except Exception:
-                pass
+            except Exception as kill_exc:
+                logger.warning("Error force-killing container during stop: %s", kill_exc)
 
     def remove(self, force: bool = True) -> None:
         """Remove the container."""
@@ -978,11 +980,11 @@ def cleanup_swarm_containers(client: Optional[Any] = None) -> int:
     for c in containers:
         try:
             c.stop(timeout=5)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to stop SWARM container %s: %s", c.short_id, exc)
         try:
             c.remove(force=True)
             count += 1
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to remove SWARM container %s: %s", c.short_id, exc)
     return count
