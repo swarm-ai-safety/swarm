@@ -10,17 +10,20 @@ keywords:
   - distributional safety tail risk
 claims:
   - metric: "Frontier runs"
-    value: "1,400"
-    description: "7 governance configs × 50 seeds × 4 benchmark types"
+    value: "1,960"
+    description: "Original: 7 configs × 50 seeds × 4 tasks (1,400). Replication: 7 configs × 20 seeds × 4 tasks (560)."
   - metric: "Screening tail risk improvement (coordination, tight)"
     value: "+7.8 pp"
     description: "5th percentile p improves from 0.560 to 0.638 under screening"
   - metric: "Long-horizon completion collapse"
-    value: "100% → 36%"
-    description: "Task completion drops from 100% (loose) to 36% (tight-moderate) under governance"
+    value: "100% → 45%"
+    description: "Task completion drops from 100% (loose) to 45% (tight) in 20-seed replication"
   - metric: "Screening runs"
-    value: "1,200"
-    description: "3 governance levels × 50 seeds × 4 benchmarks × 2 conditions"
+    value: "1,440"
+    description: "Original: 3 levels × 50 seeds × 4 benchmarks × 2 conditions (1,200). Replication: 3 levels × 20 seeds × 2 benchmarks × 2 conditions (240)."
+  - metric: "Long-horizon screening improvement at tight (replication)"
+    value: "+17.3 pp mean, +8.8 pp p5"
+    description: "Mean p: 0.582→0.755, 5th-percentile p: 0.200→0.288 under screening"
 abstract: "We trace the capability-safety Pareto frontier empirically using SWARM's benchmark suite. 1,400 runs across four task types reveal that frontier geometry varies dramatically by task: allocation barely suffers under governance, while long-horizon tasks collapse. Distributional analysis shows tight governance produces bimodal outcomes — either full success or total failure. A screening protocol that differentiates governance by agent trust consistently improves tail risk, confirming that good mechanism design does information work that pushes the frontier outward."
 ---
 
@@ -144,7 +147,62 @@ python experiments/plot_frontier.py runs/frontier/<run_dir> --tail-analysis
 python experiments/screening_frontier.py --all-tasks --n-seeds 50 --n-agents 10
 ```
 
-Run artifacts: `runs/frontier/20260304_212912_frontier_trace/` and `runs/screening/20260304_213700_screening/`
+Run artifacts: `runs/frontier/20260304_212912_frontier_trace/` and `runs/screening/20260304_213700_screening/` (original, 50 seeds). See the [Replication section](#replication-run-20-seeds-march-2026) for the 20-seed follow-up runs.
+
+## Replication run: 20 seeds, March 2026
+
+We ran a second experiment set (560 frontier runs, 240 screening runs) to validate the original findings at lower seed count and to test screening on the two task types with the most interesting behavior: routing and long-horizon.
+
+### Frontier trace: patterns hold
+
+All four task types replicate cleanly:
+
+| Task | p̄ (tight) | p̄ (loose) | Completion (tight) |
+|---|---|---|---|
+| Allocation | 0.86 | 1.00 | 100% |
+| Coordination | 0.66 | 1.00 | 78% |
+| Routing | 0.60 | 0.96 | 60% |
+| Long-horizon | 0.56 | 1.00 | 45% |
+
+The oracle baseline (adversarial_fraction=0) achieves p=1.0 across all configs and tasks, confirming that degradation is purely attributable to governance friction and adversarial presence.
+
+### Routing screening: governance-level-dependent
+
+Routing screening shows sharply different behavior across governance levels:
+
+- **Light governance**: screening lifts mean p from 0.894 → 1.000 and p5 from 0.165 → 1.000. The adversarial tail disappears entirely — trusted agents route perfectly, and light governance doesn't create new bottlenecks.
+- **Moderate/tight governance**: screening trades mean capability for minor tail improvement. Mean p falls (tight: 0.636→0.449) while p5 improves only marginally (+1.1pp). The issue: at high friction, even trusted agents hit governance gates, and adversarial agents who slip past screening cause concentrated failures.
+
+**The takeaway**: screening is most effective for routing when governance is already permissive. Under tight governance, it's not enough — you need the governance constraints themselves to be redesigned, not just differentiated.
+
+### Long-horizon screening: confirms the hypothesis
+
+Long-horizon is where screening delivers clear northeast movement across governance levels:
+
+| Config | Baseline p̄ | Screening p̄ | Δ mean | Baseline p5 | Screening p5 | Δ p5 |
+|---|---|---|---|---|---|---|
+| Tight | 0.582 | 0.755 | +17.3 pp | 0.200 | 0.288 | +8.8 pp |
+| Moderate | 0.737 | 0.813 | +7.6 pp | 0.200 | 0.311 | +11.1 pp |
+| Light | 0.900 | 0.887 | −1.3 pp | 0.345 | 0.250 | −9.5 pp |
+
+The pattern mirrors the original blog hypothesis: screening does the most work where governance is heaviest. Under tight governance, trusted agents clear stages that uniformly-governed agents cannot. Under light governance, there's little friction to differentiate, so the effect flattens or reverses slightly.
+
+The asymmetry between routing and long-horizon is instructive. Long-horizon pipelines have sequential dependencies — a trusted agent clearing an early stage unlocks later stages for all participants. Routing is more parallel — a failed segment doesn't cascade the same way. Screening's information work has higher leverage in sequential tasks.
+
+### Run artifacts (March 2026 replication)
+
+```bash
+# Frontier trace (all 4 benchmarks, 20 seeds)
+runs/frontier_all_20260304_232812/20260304_232813_frontier_trace/
+
+# Screening (routing, 20 seeds)
+runs/screening/20260304_232817_screening/
+
+# Screening (long-horizon, 20 seeds)
+runs/screening/20260304_232823_screening/
+```
+
+---
 
 ## What's next
 
