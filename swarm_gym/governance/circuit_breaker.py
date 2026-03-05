@@ -5,7 +5,7 @@ Freezes agents or halts escalation when risk metrics exceed thresholds.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Optional, Set, Tuple
 
 from swarm_gym.governance.base import GovernanceModule
 from swarm_gym.utils.types import Action, AgentId, Event, Intervention
@@ -135,7 +135,3 @@ class CircuitBreakerPolicy(GovernanceModule):
             "cooldown_steps": self.cooldown_steps,
             "block_terminal": self.block_terminal,
         }
-
-
-# Allow Optional import without full typing
-from typing import Optional  # noqa: E402

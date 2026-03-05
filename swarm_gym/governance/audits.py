@@ -56,8 +56,8 @@ class AuditPolicy(GovernanceModule):
             if action.metadata.get("deceptive"):
                 suspicious_agents.add(action.agent_id)
 
-        # Determine which agents to audit
-        all_agents = {a.agent_id for a in proposed_actions}
+        # Determine which agents to audit (sorted for deterministic iteration)
+        all_agents = sorted({a.agent_id for a in proposed_actions})
         for agent_id in all_agents:
             if self.budget_per_episode > 0 and self._audits_used >= self.budget_per_episode:
                 break

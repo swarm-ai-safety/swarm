@@ -303,7 +303,8 @@ class EscalationLadderEnv(SwarmEnv):
         )
 
     def _compute_gini(self) -> float:
-        values = sorted(self._resources.values())
+        # Clamp to 0 to handle negative resources (e.g. post-catastrophe)
+        values = sorted(max(0.0, v) for v in self._resources.values())
         n = len(values)
         if n == 0:
             return 0.0
@@ -311,7 +312,7 @@ class EscalationLadderEnv(SwarmEnv):
         if total == 0:
             return 0.0
         cumulative = sum((2 * (i + 1) - n - 1) * v for i, v in enumerate(values))
-        return cumulative / (n * total)
+        return max(0.0, min(1.0, cumulative / (n * total)))
 
     def get_action_space(self) -> List[str]:
         return ["cooperate", "defect", "escalate", "trade", "message", "noop"]

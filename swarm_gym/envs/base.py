@@ -8,6 +8,8 @@ backwards-compatible.
 from __future__ import annotations
 
 import abc
+import copy
+import logging
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -64,6 +66,8 @@ class SwarmEnv(abc.ABC):
     # Subclasses set these
     env_id: str = ""
     max_steps: int = 40
+
+    _logger = logging.getLogger("swarm_gym.env")
 
     def __init__(self) -> None:
         self._current_step: int = 0
@@ -145,11 +149,20 @@ class SwarmEnv(abc.ABC):
         if self._done:
             raise RuntimeError("Episode is done. Call reset() first.")
 
+        # Warn on unknown action types (M-2)
+        valid_actions = set(self.get_action_space())
+        for a in actions:
+            if a.type not in valid_actions:
+                self._logger.warning(
+                    "Unknown action type %r from agent %s (valid: %s)",
+                    a.type, a.agent_id, valid_actions,
+                )
+
         # Capture governance state before
         gov_before = self.get_governance_state()
 
-        # Apply governance modules to proposed actions
-        modified_actions = list(actions)
+        # Deep-copy actions so governance mutations don't leak to the caller
+        modified_actions = copy.deepcopy(actions)
         all_interventions = []
         all_events: List[Event] = []
 

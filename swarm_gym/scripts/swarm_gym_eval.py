@@ -15,11 +15,23 @@ import sys
 from pathlib import Path
 
 
+_ALLOWED_POLICY_PREFIXES = ("swarm_gym.agents.",)
+
+
 def _import_policy(spec: str):
-    """Import a policy class from 'module.path:ClassName' spec."""
+    """Import a policy class from 'module.path:ClassName' spec.
+
+    Only modules under allowed prefixes can be imported to prevent
+    arbitrary code execution via the --agent CLI flag.
+    """
     if ":" not in spec:
         raise ValueError(f"Agent spec must be 'module:ClassName', got '{spec}'")
     module_path, class_name = spec.rsplit(":", 1)
+    if not any(module_path.startswith(prefix) for prefix in _ALLOWED_POLICY_PREFIXES):
+        raise ValueError(
+            f"Policy module '{module_path}' not allowed. "
+            f"Must start with one of: {_ALLOWED_POLICY_PREFIXES}"
+        )
     module = importlib.import_module(module_path)
     cls = getattr(module, class_name)
     return cls()
