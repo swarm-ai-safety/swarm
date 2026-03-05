@@ -148,7 +148,7 @@ swarm = "swarm.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["swarm*"]
+include = ["swarm*", "swarm_gym*"]
 
 [tool.setuptools.package-data]
 swarm = ["py.typed"]

@@ -1,0 +1,21 @@
+preset: "strict"
+description: "Heavy governance: high tax, frequent audits, aggressive circuit breaker."
+
+modules:
+  - name: TaxPolicy
+    params:
+      rate: 0.15
+      redistribute: true
+
+  - name: AuditPolicy
+    params:
+      p_audit: 0.15
+      penalty: 5.0
+      budget_per_episode: 0
+      false_positive_rate: 0.02
+
+  - name: CircuitBreakerPolicy
+    params:
+      threshold: 0.6
+      cooldown_steps: 5
+      block_terminal: true

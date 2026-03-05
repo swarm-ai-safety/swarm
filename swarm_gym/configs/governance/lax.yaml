@@ -1,0 +1,21 @@
+preset: "lax"
+description: "Minimal governance: low tax, rare audits, no circuit breaker."
+
+modules:
+  - name: TaxPolicy
+    params:
+      rate: 0.01
+      redistribute: false
+
+  - name: AuditPolicy
+    params:
+      p_audit: 0.01
+      penalty: 1.0
+      budget_per_episode: 5
+      false_positive_rate: 0.005
+
+  - name: CircuitBreakerPolicy
+    params:
+      threshold: 0.99
+      cooldown_steps: 1
+      block_terminal: true
