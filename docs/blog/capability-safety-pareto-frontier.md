@@ -38,7 +38,7 @@ We built the measurement infrastructure to find out.
 
 ## Experimental setup
 
-SWARM's [benchmark suite](../concepts/benchmarks.md) provides four task types, each testing a different multi-agent capability:
+SWARM's benchmark suite provides four task types, each testing a different multi-agent capability:
 
 | Benchmark | What it measures | Partial credit |
 |---|---|---|

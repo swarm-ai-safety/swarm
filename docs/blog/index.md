@@ -21,6 +21,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## March 2026
 
+<div class="blog-post" data-tags="governance theory" markdown>
+
+**Mar 4** — [The Shape of the Capability–Safety Frontier (and How Screening Bends It)](capability-safety-pareto-frontier.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Theory</span>
+
+1,400 benchmark runs trace the Pareto frontier across four task types. Allocation barely suffers under governance; long-horizon tasks collapse (100% → 36% completion). Tight governance produces bimodal outcomes — either full success or total failure. A screening protocol that differentiates governance by agent trust pushes the frontier outward, improving 5th-percentile tail risk by up to 70 percentage points.
+
+</div>
+
 <div class="blog-post" data-tags="evaluation llm-agents" markdown>
 
 **Mar 2** — [Transparency Stabilizes Escalation — But Only When Safety Training Is Present](asymmetric-information-escalation.md)
