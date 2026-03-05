@@ -227,6 +227,25 @@ Shipped:
   Remaining: <N files modified, M untracked> (or "clean")
 ```
 
+### Phase 8: Follow-up nudges
+
+After a successful push, inspect the committed files for patterns that require follow-up commands. Run `git diff --name-only HEAD~1` to get the list of files in the last commit.
+
+**Blog post detection**: If any committed file matches `docs/blog/*.md` (excluding `index.md`):
+1. Check whether `docs/blog/index.md` was also modified in this commit.
+2. Check whether `mkdocs.yml` was also modified in this commit.
+3. If either is missing, **immediately invoke `/add_post`** with the blog post title (extracted from the file's H1 or frontmatter `title` field) and the file path as source. Do not ask — just do it. The post is incomplete without nav wiring.
+4. After `/add_post` completes, stage and commit the wiring changes, then push.
+
+**Run artifacts detection**: If any committed file matches `runs/*/` patterns OR if `runs/` contains directories newer than the last commit timestamp:
+1. Check whether those run directories exist in `runs/` (gitignored, local-only).
+2. If run artifacts exist locally, **prompt the user**: "Detected run artifacts in `runs/<dir>`. Push to swarm-artifacts? (`/sync_artifacts`)"
+3. If the user confirms, invoke `/sync_artifacts` automatically.
+
+**Run artifacts in experiment scripts**: If the commit includes files matching `experiments/*.py` and those scripts produce output to `runs/`, nudge: "This experiment writes to `runs/`. After running, use `/sync_artifacts` to archive results."
+
+These nudges ensure that blog posts always get wired into the site and run data always gets archived — the two most common follow-up steps that get skipped.
+
 ## Session worktrees
 
 When running inside a session worktree (branch `session/pane-*`), `/ship` commits and pushes to the **session branch**, not directly to `main`. Use `/merge_session` afterward to merge into main.
