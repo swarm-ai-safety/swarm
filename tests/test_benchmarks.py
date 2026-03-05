@@ -12,32 +12,30 @@ Covers all 9 security fixes:
 9. Consistent partial fidelity across benchmarks
 """
 
-import copy
 
 import pytest
 
-from swarm.benchmarks.base import BenchmarkScore, ScoringWeights, TaskOracle, TaskResult
-from swarm.benchmarks.routing.message_routing import (
-    MessageRoutingBenchmark,
-    RoutingInstance,
-    _bfs_path,
-)
-from swarm.benchmarks.coordination.distributed_allocation import (
-    AllocationInstance,
-    DistributedAllocationBenchmark,
-)
 from swarm.benchmarks.allocation.resource_auction import (
     AuctionInstance,
     ResourceAuctionBenchmark,
+)
+from swarm.benchmarks.base import BenchmarkScore, ScoringWeights, TaskResult
+from swarm.benchmarks.coordination.distributed_allocation import (
+    AllocationInstance,
+    DistributedAllocationBenchmark,
 )
 from swarm.benchmarks.long_horizon.pipeline_task import (
     PipelineInstance,
     PipelineTaskBenchmark,
     _stage_transform,
 )
+from swarm.benchmarks.routing.message_routing import (
+    MessageRoutingBenchmark,
+    RoutingInstance,
+    _bfs_path,
+)
 from swarm.benchmarks.runner import BenchmarkRunner, _validate_result
 from swarm.env.network import AgentNetwork, NetworkConfig, NetworkTopology
-
 
 # ---------------------------------------------------------------------------
 # Fix #1: Oracle leakage — TaskInstance must not contain ground truth
@@ -150,7 +148,7 @@ class TestMutableSharedState:
             )
 
         configs = [{"id": "a"}, {"id": "b"}]
-        df = runner.run_frontier(bench, configs, n_seeds=1, run_fn=mutating_fn)
+        runner.run_frontier(bench, configs, n_seeds=1, run_fn=mutating_fn)
         # Both configs should see the same original payload for seed 0
         assert payloads_seen[0] == payloads_seen[1]
 
@@ -375,7 +373,7 @@ class TestPartialFidelity:
         inst, oracle = bench.generate(seed=0, n_agents=5)
         optimal = oracle.ground_truth["optimal_assignment"]
         # Assign all to agent_0 — some welfare but not optimal
-        suboptimal = {r: "agent_0" for r in optimal}
+        suboptimal = dict.fromkeys(optimal, "agent_0")
         result = TaskResult(completed=True, payload=suboptimal, steps_taken=1, agent_trace=[])
         score = bench.score(result, oracle)
         # Should get partial credit (agent_0 has some valuation for each resource)
@@ -560,7 +558,7 @@ class TestResourceAuction:
         bench = ResourceAuctionBenchmark(n_resources=3)
         inst, oracle = bench.generate(seed=0, n_agents=5)
         result = bench.oracle_run(inst, oracle)
-        wrong = {r: "agent_0" for r in result.payload}
+        wrong = dict.fromkeys(result.payload, "agent_0")
         wrong_result = TaskResult(completed=True, payload=wrong, steps_taken=1, agent_trace=[])
         score = bench.score(wrong_result, oracle)
         assert score.fidelity <= 1.0

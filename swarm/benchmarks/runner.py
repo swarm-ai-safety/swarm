@@ -20,7 +20,6 @@ from typing import Any, Callable
 import pandas as pd
 
 from swarm.benchmarks.base import (
-    BenchmarkScore,
     BenchmarkTask,
     TaskInstance,
     TaskOracle,

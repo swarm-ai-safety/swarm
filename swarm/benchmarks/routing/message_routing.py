@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import copy
 from collections import deque
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -27,7 +27,6 @@ from swarm.benchmarks.base import (
 )
 from swarm.env.network import AgentNetwork, NetworkConfig, NetworkTopology
 from swarm.models.interaction import SoftInteraction
-
 
 # Maximum number of (source, target) retries before falling back
 _MAX_PAIR_RETRIES = 20

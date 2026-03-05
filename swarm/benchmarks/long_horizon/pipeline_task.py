@@ -16,7 +16,6 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from typing import Any
 
 import numpy as np
 
@@ -29,7 +28,6 @@ from swarm.benchmarks.base import (
     TaskResult,
 )
 from swarm.models.interaction import SoftInteraction
-
 
 # Hash-chain constants (chosen for good mixing, deterministic)
 _HASH_PRIME = 6364136223846793005
