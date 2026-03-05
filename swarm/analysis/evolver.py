@@ -203,6 +203,7 @@ class SimulationFailureCase(EvaluationFailureCase):
 
     model_config = ConfigDict(frozen=True)
 
+    data_point_id: str = ""
     epoch: int = 0
     epoch_metrics: Dict[str, float] = {}
     active_params: Dict[str, Any] = {}
@@ -405,8 +406,8 @@ class GovernanceEvaluator(
 
         return GovernanceEvaluationResult(
             score=fitness,
-            trainable_failure_cases=trainable_failures,
-            holdout_failure_cases=holdout_failures,
+            trainable_failure_cases=trainable_failures,  # type: ignore[arg-type]
+            holdout_failure_cases=holdout_failures,  # type: ignore[arg-type]
             is_viable=is_viable,
             avg_toxicity=sweep_result.avg_toxicity,
             avg_welfare=sweep_result.welfare_per_epoch,
@@ -523,7 +524,7 @@ class LLMGovernanceMutator(Mutator[GovernanceOrganism, SimulationFailureCase]):
             messages=[{"role": "user", "content": prompt}],
         )
 
-        text = response.content[0].text
+        text = response.content[0].text  # type: ignore[union-attr]
         return self._parse_response(organism, text)
 
     def _build_prompt(
@@ -752,8 +753,8 @@ def run_evolution(config: EvolverConfig) -> EvolutionResult:
             )
 
             # Track best
-            best_organism = org
-            best_result = result
+            best_organism = org  # type: ignore[assignment]
+            best_result = result  # type: ignore[assignment]
 
             # Write snapshot
             snapshot_path = snapshots_dir / f"iter_{iteration:03d}.pkl"

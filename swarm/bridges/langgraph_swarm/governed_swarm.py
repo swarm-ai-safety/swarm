@@ -54,13 +54,13 @@ except ImportError:
 
     # Provide type stubs so the pure-Python governance/provenance classes
     # can be imported and used without langgraph installed.
-    AnyMessage = Any  # type: ignore[misc]
-    AIMessage = Any  # type: ignore[misc]
-    ToolMessage = Any  # type: ignore[misc]
-    BaseTool = Any  # type: ignore[misc]
-    StateGraph = Any  # type: ignore[misc]
-    Pregel = Any  # type: ignore[misc]
-    Command = Any  # type: ignore[misc]
+    AnyMessage = Any  # type: ignore[misc,assignment]
+    AIMessage = Any  # type: ignore[misc,assignment]
+    ToolMessage = Any  # type: ignore[misc,assignment]
+    BaseTool = Any  # type: ignore[misc,assignment]
+    StateGraph = Any  # type: ignore[misc,assignment]
+    Pregel = Any  # type: ignore[misc,assignment]
+    Command = Any  # type: ignore[misc,assignment]
 
     def add_messages(left: list, right: list) -> list:  # type: ignore[misc]
         return left + right
@@ -935,7 +935,7 @@ def create_governed_swarm(
         )
 
     # Build the state graph
-    builder = StateGraph(state_schema)
+    builder: Any = StateGraph(state_schema)
 
     # Extract handoff destinations from each agent's tools
     for agent in agents:
@@ -948,8 +948,8 @@ def create_governed_swarm(
     def route_to_active_agent(state: dict) -> str:
         return state.get("active_agent") or default_active_agent
 
-    path_map = {name: name for name in agent_names}
-    builder.add_conditional_edges(START, route_to_active_agent, path_map)
+    path_map: dict[str, str] = {name: name for name in agent_names}
+    builder.add_conditional_edges(START, route_to_active_agent, path_map)  # type: ignore[arg-type]
 
     return builder, provenance_logger
 

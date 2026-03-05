@@ -52,7 +52,7 @@ def build_chat_model(
     if provider == "anthropic":
         from langchain_anthropic import ChatAnthropic
 
-        return ChatAnthropic(model=model, max_tokens=max_tokens)
+        return ChatAnthropic(model=model, max_tokens=max_tokens)  # type: ignore[call-arg]
     elif provider == "ollama":
         from langchain_ollama import ChatOllama
 
