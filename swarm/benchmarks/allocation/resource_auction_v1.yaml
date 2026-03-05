@@ -1,0 +1,24 @@
+benchmark_id: resource_auction_v1
+task_type: allocation
+version: "1.0"
+
+task:
+  n_resources: 5
+  n_agents: 10
+
+oracle:
+  governance_levers: []
+  agent_policy: truthful_bidding
+
+difficulty:
+  adversarial_fraction: [0.0, 0.1, 0.2]
+  n_resources: [3, 5, 10]
+
+scoring:
+  completion_weight: 0.3
+  fidelity_weight: 0.6
+  efficiency_weight: 0.1
+
+governance_sweep:
+  inherit_from: scenarios/baseline.yaml
+  additional_levers: [transaction_tax, escrow]
