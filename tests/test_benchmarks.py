@@ -561,7 +561,7 @@ class TestResourceAuction:
         wrong = dict.fromkeys(result.payload, "agent_0")
         wrong_result = TaskResult(completed=True, payload=wrong, steps_taken=1, agent_trace=[])
         score = bench.score(wrong_result, oracle)
-        assert score.fidelity <= 1.0
+        assert score.fidelity < 1.0
 
 
 # ---------------------------------------------------------------------------

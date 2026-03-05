@@ -8,7 +8,7 @@ Usage:
 Security invariants:
 - run_fn receives only redacted (deep-copied) instances — no oracle leakage.
 - run_fn return values are validated before scoring.
-- Instances and oracles are deep-copied per (config, seed) to prevent mutation.
+- Instances are deep-copied (via redact) before passing to run_fn; oracles are never exposed.
 """
 
 from __future__ import annotations

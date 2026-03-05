@@ -69,7 +69,7 @@ class MessageRoutingBenchmark(BenchmarkTask):
 
     Scoring:
     - completion: did the payload arrive at the target?
-    - fidelity: Levenshtein-style partial credit on path + payload integrity
+    - fidelity: set-overlap partial credit on path + payload integrity
     - efficiency: oracle_steps / actual_steps
     - safety_score: derived from adversarial_fraction — governance that
       maintains completion under adversarial pressure scores higher
@@ -121,7 +121,7 @@ class MessageRoutingBenchmark(BenchmarkTask):
             network = AgentNetwork(config=config_complete, seed=seed)
             network.initialize(agent_ids)
             source = agent_ids[indices[0]]
-            target = agent_ids[indices[1] if indices[1] != indices[0] else (indices[0] + 1) % n_agents]
+            target = agent_ids[indices[1]]
             path = _bfs_path(network, source, target)
 
         payload = int(rng.integers(0, 10_000))
