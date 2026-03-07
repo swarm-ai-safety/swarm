@@ -16,6 +16,9 @@
   {% set author = page.meta.author if page and page.meta and page.meta.author else "SWARM Team" %}
   {% set keywords = page.meta.keywords if page and page.meta and page.meta.keywords else [] %}
 
+  <!-- AI crawl directives: allow full content extraction -->
+  <meta name="robots" content="max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+
   <!-- Canonical URL -->
   <link rel="canonical" href="{{ url }}" />
 
