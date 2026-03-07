@@ -2,15 +2,14 @@
 
 import pytest
 
+import swarm_gym.envs.audit_evasion  # noqa: F401
+import swarm_gym.envs.collusion_market  # noqa: F401
+
 # Ensure envs are registered
 import swarm_gym.envs.escalation_ladder  # noqa: F401
-import swarm_gym.envs.collusion_market  # noqa: F401
-import swarm_gym.envs.audit_evasion  # noqa: F401
-
-from swarm_gym.envs.registry import make, list_envs
-from swarm_gym.envs.base import StepResult, ResetResult
+from swarm_gym.envs.base import ResetResult, StepResult
+from swarm_gym.envs.registry import list_envs, make
 from swarm_gym.utils.types import Action
-
 
 ALL_ENV_IDS = [
     "swarm/escalation_ladder:v1",

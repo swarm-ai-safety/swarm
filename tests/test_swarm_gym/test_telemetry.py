@@ -4,8 +4,8 @@ import json
 import tempfile
 from pathlib import Path
 
-from swarm_gym.telemetry.trace import Trace, TraceSpan
 from swarm_gym.telemetry.sinks import FileSink
+from swarm_gym.telemetry.trace import Trace, TraceSpan
 
 
 class TestTrace:

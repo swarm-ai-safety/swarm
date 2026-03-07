@@ -2,9 +2,9 @@
 
 import pytest
 
-from swarm_gym.governance.tax import TaxPolicy
 from swarm_gym.governance.audits import AuditPolicy
 from swarm_gym.governance.circuit_breaker import CircuitBreakerPolicy
+from swarm_gym.governance.tax import TaxPolicy
 from swarm_gym.utils.types import Action
 
 

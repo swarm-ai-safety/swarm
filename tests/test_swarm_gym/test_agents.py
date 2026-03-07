@@ -1,12 +1,14 @@
 """Tests for scripted agent policies."""
 
-import pytest
 
 from swarm_gym.agents.scripted import (
-    RandomPolicy, HonestPolicy, GreedyPolicy,
-    AggressivePolicy, MixedPopulation,
+    AggressivePolicy,
+    GreedyPolicy,
+    HonestPolicy,
+    MixedPopulation,
+    RandomPolicy,
 )
-from swarm_gym.utils.types import Action, AgentId, Observation
+from swarm_gym.utils.types import Action, Observation
 
 
 def _make_observations(agent_ids: list[str]) -> dict[str, Observation]:

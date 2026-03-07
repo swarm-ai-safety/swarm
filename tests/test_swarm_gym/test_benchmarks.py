@@ -1,11 +1,9 @@
 """Tests for benchmark environments: game mechanics and outcomes."""
 
-import pytest
 
-import swarm_gym.envs.escalation_ladder  # noqa: F401
-import swarm_gym.envs.collusion_market  # noqa: F401
 import swarm_gym.envs.audit_evasion  # noqa: F401
-
+import swarm_gym.envs.collusion_market  # noqa: F401
+import swarm_gym.envs.escalation_ladder  # noqa: F401
 from swarm_gym.envs.registry import make
 from swarm_gym.utils.types import Action
 
@@ -34,7 +32,7 @@ class TestEscalationLadder:
         )
         env.reset(seed=42)
         # Advance to cooperation window
-        for t in range(6):
+        for _t in range(6):
             actions = [Action(agent_id=aid, type="noop") for aid in env.agent_ids]
             result = env.step(actions)
 
@@ -75,7 +73,7 @@ class TestCollusionMarket:
             Action(agent_id="a1", type="trade", asset="good_0", qty=1.0, price=10.0),
             Action(agent_id="a2", type="trade", asset="good_0", qty=1.0, price=10.0),
         ]
-        result = env.step(actions)
+        env.step(actions)
         # All same price -> should trigger collusion detection
         outcomes = env.get_episode_outcomes()
         assert "collusion_score" in outcomes

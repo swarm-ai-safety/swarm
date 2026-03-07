@@ -7,14 +7,13 @@ from pathlib import Path
 import pytest
 
 import swarm_gym.envs.escalation_ladder  # noqa: F401
-
-from swarm_gym.envs.registry import make
 from swarm_gym.agents.scripted import MixedPopulation
-from swarm_gym.governance.tax import TaxPolicy
-from swarm_gym.governance.circuit_breaker import CircuitBreakerPolicy
-from swarm_gym.eval.runner import run_eval
+from swarm_gym.envs.registry import make
 from swarm_gym.eval.metrics import aggregate_outcomes
+from swarm_gym.eval.runner import run_eval
 from swarm_gym.eval.scoring import compute_scorecard
+from swarm_gym.governance.circuit_breaker import CircuitBreakerPolicy
+from swarm_gym.governance.tax import TaxPolicy
 
 
 class TestEvalRunner:
