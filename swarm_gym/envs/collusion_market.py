@@ -172,6 +172,7 @@ class CollusionMarketEnv(SwarmEnv):
         collusion_score = self._compute_collusion_score(step_prices)
         if collusion_score > self._collusion_threshold:
             self._cartel_active_steps += 1
+            self._enforcement_actions += 1
             events.append(Event(
                 type="CARTEL_DETECTED",
                 severity=collusion_score,
