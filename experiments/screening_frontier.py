@@ -19,6 +19,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from datetime import datetime
 from pathlib import Path
@@ -89,7 +90,7 @@ def _screening_routing_run_fn(
     trust_scores: dict[str, float],
 ) -> TaskResult:
     """Routing with per-agent governance based on trust scores."""
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + int(hashlib.sha256(gov_config.get("id", "").encode()).hexdigest(), 16) % 2**31)
 
     payload = getattr(instance, "payload", 0)
     source = getattr(instance, "source_agent", "")
@@ -134,7 +135,7 @@ def _screening_coordination_run_fn(
     trust_scores: dict[str, float],
 ) -> TaskResult:
     """Coordination with per-agent friction based on trust."""
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + int(hashlib.sha256(gov_config.get("id", "").encode()).hexdigest(), 16) % 2**31)
 
     target_total = getattr(instance, "target_total", 0.0)
     capacities = getattr(instance, "agent_capacities", {})
@@ -168,7 +169,7 @@ def _screening_auction_run_fn(
     trust_scores: dict[str, float],
 ) -> TaskResult:
     """Auction with per-agent bid noise based on trust."""
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + int(hashlib.sha256(gov_config.get("id", "").encode()).hexdigest(), 16) % 2**31)
 
     valuations = getattr(instance, "agent_valuations", {})
     n_resources = getattr(instance, "n_resources", 0)
@@ -207,7 +208,7 @@ def _screening_pipeline_run_fn(
     """Pipeline with per-stage friction based on agent trust."""
     from swarm.benchmarks.long_horizon.pipeline_task import _stage_transform
 
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + int(hashlib.sha256(gov_config.get("id", "").encode()).hexdigest(), 16) % 2**31)
 
     initial_payload = getattr(instance, "initial_payload", 0)
     stages = getattr(instance, "stages", [])

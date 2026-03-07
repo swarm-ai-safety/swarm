@@ -14,11 +14,17 @@ represents the governance-free upper bound.
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 
 import numpy as np
 
 from swarm.benchmarks.base import TaskInstance, TaskResult
+
+
+def _deterministic_config_hash(config_id: str) -> int:
+    """Deterministic hash of a config ID string, stable across Python processes."""
+    return int(hashlib.sha256(config_id.encode()).hexdigest(), 16) % 2**31
 
 
 def _governance_friction(gov_config: dict[str, Any], rng: np.random.Generator) -> float:
@@ -61,7 +67,7 @@ def routing_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskRe
     - Probability of payload corruption (noisy channels under constraint)
     - Possible routing detours (suboptimal path under bandwidth limits)
     """
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + _deterministic_config_hash(gov_config.get("id", "")))
     friction = _governance_friction(gov_config, rng)
 
     # Access routing-specific fields
@@ -117,7 +123,7 @@ def coordination_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> T
     Friction reduces coordination quality — agents can't communicate as
     freely, leading to suboptimal allocations.
     """
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + _deterministic_config_hash(gov_config.get("id", "")))
     friction = _governance_friction(gov_config, rng)
 
     target_total = getattr(instance, "target_total", 0.0)
@@ -154,7 +160,7 @@ def auction_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskRe
     Friction prevents agents from fully expressing valuations, leading to
     suboptimal resource assignments.
     """
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + _deterministic_config_hash(gov_config.get("id", "")))
     friction = _governance_friction(gov_config, rng)
 
     valuations = getattr(instance, "agent_valuations", {})
@@ -196,7 +202,7 @@ def pipeline_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskR
     """
     from swarm.benchmarks.long_horizon.pipeline_task import _stage_transform
 
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + _deterministic_config_hash(gov_config.get("id", "")))
     friction = _governance_friction(gov_config, rng)
 
     initial_payload = getattr(instance, "initial_payload", 0)
