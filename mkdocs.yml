@@ -168,6 +168,7 @@ nav:
     - Self-Modification Governance Implementation Checklist: research/self-mod-governance-implementation-checklist.md
     - InitRunner vs SWARM Comparison: research/initrunner-swarm-comparison.md
   - Comparison: comparison.md
+  - SWARM vs Alternatives: swarm-vs-alternatives.md
   - Glossary: glossary.md
   - Game: game.md
   - Blog:
