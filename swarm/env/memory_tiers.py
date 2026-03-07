@@ -73,7 +73,7 @@ class MemoryStore:
     Provides write, promote, search, hot cache, and compaction operations.
     """
 
-    def __init__(self, seed: Optional[int] = None):
+    def __init__(self, seed: Optional[int] = None) -> None:
         self._entries: Dict[str, MemoryEntry] = {}
         self._rng = random.Random(seed)
         self._lock = threading.Lock()
