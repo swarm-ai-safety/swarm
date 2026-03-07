@@ -5,7 +5,7 @@ Freezes agents or halts escalation when risk metrics exceed thresholds.
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Optional, Set, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from swarm_gym.governance.base import GovernanceModule
 from swarm_gym.utils.types import Action, AgentId, Event, Intervention

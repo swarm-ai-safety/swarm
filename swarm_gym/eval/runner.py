@@ -8,6 +8,7 @@ from __future__ import annotations
 import hashlib
 import json
 import platform
+import re
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -32,6 +33,11 @@ def _get_git_commit() -> str:
         return result.stdout.strip() if result.returncode == 0 else "unknown"
     except Exception:
         return "unknown"
+
+
+def _safe_filename(name: str) -> str:
+    """Sanitize a string for use as a filename (prevent path traversal)."""
+    return re.sub(r'[^a-zA-Z0-9_=\-.]', '_', name)
 
 
 def _sha256_file(path: Path) -> str:
@@ -125,7 +131,7 @@ def run_eval(
                 all_outcomes.append(outcomes)
 
                 # Write trace
-                trace_ref = f"traces/{episode_id}.json"
+                trace_ref = f"traces/{_safe_filename(episode_id)}.json"
                 trace_path = out_dir / trace_ref
                 sink = FileSink(trace_path)
                 sink.write(trace.to_dict())
@@ -143,7 +149,7 @@ def run_eval(
                     "outcomes": outcomes,
                     "governance": {
                         "preset": governance_preset,
-                        "modules": [m.to_report_dict() for m in env._governance_modules],
+                        "modules": [m.to_report_dict() for m in env.get_governance_modules()],
                     },
                     "agent_population": {
                         "policy": policy.policy_name,

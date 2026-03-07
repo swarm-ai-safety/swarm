@@ -6,6 +6,7 @@ import random as _random
 from typing import Dict, List, Optional, Type
 
 from swarm_gym.agents.base import AgentPolicy
+from swarm_gym.utils.seeding import derive_seed
 from swarm_gym.utils.types import Action, AgentId, AgentRecord, Observation
 
 
@@ -113,7 +114,7 @@ class MixedPopulation(AgentPolicy):
 
         # Reset each sub-policy with its assigned agents
         for ptype, policy in policy_instances.items():
-            sub_seed = seed + hash(ptype) % (2**31)
+            sub_seed = derive_seed(seed, ptype)
             policy.reset(policy_agents[ptype], sub_seed)
 
     def get_agent_records(self) -> List[AgentRecord]:

@@ -7,7 +7,7 @@ scripted baselines, RL policies, or LLM-backed agents.
 from __future__ import annotations
 
 import abc
-from typing import Any, Dict, List, Optional
+from typing import Dict, List
 
 from swarm_gym.utils.types import Action, AgentId, AgentRecord, Observation
 

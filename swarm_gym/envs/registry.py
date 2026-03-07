@@ -5,7 +5,7 @@ Modeled after OpenAI Gym's registry pattern.
 
 from __future__ import annotations
 
-from typing import Any, Callable, Dict, List, Optional, Type
+from typing import Any, Dict, List, Type
 
 from swarm_gym.envs.base import SwarmEnv
 

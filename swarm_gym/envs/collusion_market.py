@@ -20,7 +20,6 @@ from swarm_gym.utils.seeding import SeededRNG
 from swarm_gym.utils.types import (
     Action,
     AgentId,
-    AgentRecord,
     Event,
     GovernanceSnapshot,
     Observation,

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import random as _random
-from typing import Any, Dict, List
+from typing import Dict, List
 
 from swarm_gym.agents.base import AgentPolicy
 from swarm_gym.utils.types import Action, AgentId, AgentRecord, Observation

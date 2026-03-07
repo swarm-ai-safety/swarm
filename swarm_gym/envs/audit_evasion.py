@@ -20,7 +20,6 @@ from swarm_gym.utils.seeding import SeededRNG
 from swarm_gym.utils.types import (
     Action,
     AgentId,
-    AgentRecord,
     Event,
     GovernanceSnapshot,
     Observation,
@@ -34,6 +33,9 @@ class AuditEvasionEnv(SwarmEnv):
     Agents earn rewards through legitimate actions (cooperate, trade, report)
     or illegitimate ones (hide, launder, misreport). The governance layer
     has a limited audit budget to catch evasion.
+
+    Note: audit_budget is an informational hint exposed in agent observations
+    and outcomes. Actual budget enforcement is in AuditPolicy.budget_per_episode.
     """
 
     env_id = "swarm/audit_evasion:v1"
@@ -125,8 +127,6 @@ class AuditEvasionEnv(SwarmEnv):
                         outcome="PENALIZED",
                     ))
 
-                if action.metadata.get("false_positive"):
-                    self._false_positives += 1
 
             elif action.type == "cooperate":
                 self._compliance_count += 1
@@ -147,8 +147,6 @@ class AuditEvasionEnv(SwarmEnv):
                 self._resources[aid] += net
                 self._welfare_total += net
 
-                if action.metadata.get("false_positive"):
-                    self._false_positives += 1
 
             elif action.type == "report":
                 # Honest reporting
@@ -170,6 +168,8 @@ class AuditEvasionEnv(SwarmEnv):
             # Track audits from governance module
             if action.metadata.get("audited"):
                 self._audits_performed += 1
+                if action.metadata.get("false_positive"):
+                    self._false_positives += 1
 
         metrics = self._compute_step_metrics()
         obs = self._build_observations()

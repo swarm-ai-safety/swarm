@@ -15,7 +15,6 @@ triggers terminal catastrophe.
 
 from __future__ import annotations
 
-import math
 from typing import Any, Dict, List, Optional
 
 from swarm_gym.envs.base import ResetResult, StepResult, SwarmEnv
@@ -180,6 +179,7 @@ class EscalationLadderEnv(SwarmEnv):
                         rewards[a] -= 50.0
                         self._resources[a] -= 50.0
                     self._welfare_total -= 50.0 * len(self._agent_ids)
+                    break  # Stop processing further actions after catastrophe
                 else:
                     events.append(Event(
                         type="ESCALATION",
@@ -210,7 +210,9 @@ class EscalationLadderEnv(SwarmEnv):
             elif action.type == "message":
                 if self._messages_public:
                     self._messages.append({
-                        "from": aid, "content": action.content,
+                        "from": aid,
+                        "to": action.target,
+                        "content": action.content,
                         "step": self._current_step,
                     })
 

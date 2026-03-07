@@ -11,7 +11,7 @@ import abc
 import copy
 import logging
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from swarm_gym.utils.types import (
     Action,
@@ -100,6 +100,10 @@ class SwarmEnv(abc.ABC):
     def set_governance(self, modules: List["GovernanceModule"]) -> None:
         """Replace all governance modules."""
         self._governance_modules = list(modules)
+
+    def get_governance_modules(self) -> List["GovernanceModule"]:
+        """Return the list of attached governance modules."""
+        return list(self._governance_modules)
 
     def get_governance_state(self) -> Dict[str, Any]:
         """Aggregate governance state from all modules."""

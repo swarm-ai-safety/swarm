@@ -17,7 +17,8 @@ class TaxPolicy(GovernanceModule):
 
     Governance knobs:
         rate: Tax rate [0, 1]. Applied to trade value (qty * price).
-        redistribute: If True, tax revenue is tracked for redistribution.
+        redistribute: Flag for downstream use (e.g. redistribution policies).
+            Revenue is always tracked; this flag is reported in params.
     """
 
     name = "TaxPolicy"

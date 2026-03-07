@@ -51,7 +51,7 @@ class AuditPolicy(GovernanceModule):
         # Identify suspicious actions (hide, lie, or with deception metadata)
         suspicious_agents = set()
         for action in proposed_actions:
-            if action.type in ("hide", "lie", "misreport"):
+            if action.type in ("hide", "lie", "misreport", "launder"):
                 suspicious_agents.add(action.agent_id)
             if action.metadata.get("deceptive"):
                 suspicious_agents.add(action.agent_id)
