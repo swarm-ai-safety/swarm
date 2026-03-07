@@ -189,16 +189,17 @@ class TestLongHorizonSteepDrop:
         runner = BenchmarkRunner(n_agents=10)
         configs = [TIGHT_CONFIG, LOOSE_CONFIG]
 
-        # Pipeline gap
+        # Pipeline gap — use 50 seeds to reduce variance from hash-seeded RNG.
+        # Pipeline completion_rate is binary (0 or 1), so SE is high with few seeds.
         pipeline_bench = PipelineTaskBenchmark(n_stages=5)
-        pipeline_df = runner.run_frontier(pipeline_bench, configs, n_seeds=20, run_fn=pipeline_run_fn)
+        pipeline_df = runner.run_frontier(pipeline_bench, configs, n_seeds=50, run_fn=pipeline_run_fn)
         pipeline_tight = pipeline_df[pipeline_df["gov_config"] == "tight"]["completion_rate"].mean()
         pipeline_loose = pipeline_df[pipeline_df["gov_config"] == "loose"]["completion_rate"].mean()
         pipeline_gap = pipeline_loose - pipeline_tight
 
         # Routing gap
         routing_bench = MessageRoutingBenchmark()
-        routing_df = runner.run_frontier(routing_bench, configs, n_seeds=20, run_fn=routing_run_fn)
+        routing_df = runner.run_frontier(routing_bench, configs, n_seeds=50, run_fn=routing_run_fn)
         routing_tight = routing_df[routing_df["gov_config"] == "tight"]["completion_rate"].mean()
         routing_loose = routing_df[routing_df["gov_config"] == "loose"]["completion_rate"].mean()
         routing_gap = routing_loose - routing_tight
