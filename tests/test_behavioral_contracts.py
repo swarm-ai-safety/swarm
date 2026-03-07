@@ -120,6 +120,12 @@ class TestInvariants:
         # drift_rate defaults to 0.0, passes
         assert inv.evaluate(interaction) is True
 
+    def test_severity_validation(self):
+        with pytest.raises(ValueError, match="severity"):
+            InvariantCheck(name="bad", check=lambda _: True, severity=1.5)
+        with pytest.raises(ValueError, match="severity"):
+            InvariantCheck(name="bad", check=lambda _: True, severity=-0.1)
+
 
 # ── Recovery ───────────────────────────────────────────────────────
 
@@ -193,9 +199,12 @@ class TestBehavioralContract:
     def test_execute_delegates_to_governance(self):
         bc = self._make_contract()
         interaction = _make_interaction(p=0.8)
+        interaction.c_a = 1.0
+        interaction.c_b = 2.0
         modified = bc.execute(interaction)
         # TruthfulAuctionContract reduces c_a, c_b by 50%
-        assert modified.c_a <= interaction.c_a
+        assert modified.c_a == pytest.approx(0.5)
+        assert modified.c_b == pytest.approx(1.0)
         assert modified.metadata.get("contract") == "truthful_auction"
 
     def test_expel_on_severe_violation(self):
@@ -227,6 +236,21 @@ class TestBehavioralContract:
         assert len(bc.get_violations()) == 1
         bc.reset()
         assert len(bc.get_violations()) == 0
+
+    def test_expelled_agent_blocked_from_execute(self):
+        bc = BehavioralContract(
+            governance=TruthfulAuctionContract(),
+            invariants=[
+                InvariantCheck(
+                    name="always_fail", check=lambda _: False, severity=0.95
+                )
+            ],
+        )
+        interaction = _make_interaction()
+        bc.execute(interaction)  # triggers expulsion
+        assert bc.is_expelled("a1") is True
+        with pytest.raises(PermissionError, match="expelled"):
+            bc.execute(_make_interaction())
 
     def test_to_report_dict(self):
         bc = self._make_contract()
@@ -320,6 +344,17 @@ class TestDriftDetector:
         assert dd.get_drift("a1") is None
         assert dd.get_drift("a2") is not None
 
+    def test_rejects_invalid_p(self):
+        dd = DriftDetector(window_size=3, baseline_size=5)
+        with pytest.raises(ValueError, match="p must be"):
+            dd.record("a1", -0.1)
+        with pytest.raises(ValueError, match="p must be"):
+            dd.record("a1", 1.5)
+        with pytest.raises(ValueError, match="p must be"):
+            dd.record("a1", float("nan"))
+        with pytest.raises(ValueError, match="p must be"):
+            dd.record("a1", float("inf"))
+
     def test_validation(self):
         with pytest.raises(ValueError):
             DriftDetector(window_size=0)
@@ -349,8 +384,8 @@ class TestCompositionality:
         bound = compute_pipeline_bound(stages)
         # p_pipeline = 0.95 * 0.90 * 0.98 = 0.8379
         assert bound.p_pipeline == pytest.approx(0.95 * 0.90 * 0.98, rel=1e-6)
-        # delta_pipeline = 1 - (0.99 * 0.98 * 0.995)
-        expected_delta = 1.0 - (0.99 * 0.98 * 0.995)
+        # delta_pipeline = min(1, sum(delta_i)) = 0.01 + 0.02 + 0.005
+        expected_delta = 0.01 + 0.02 + 0.005
         assert bound.delta_pipeline == pytest.approx(expected_delta, rel=1e-6)
         assert bound.n_stages == 3
         assert len(bound.stage_details) == 3
@@ -406,6 +441,16 @@ class TestCompositionality:
         bound = compute_pipeline_bound_with_drift(stages, drift_rate=0.1, time_steps=10)
         # p = 0.5 - 0.1*10 = -0.5 -> clamped to 0
         assert bound.p_pipeline == pytest.approx(0.0)
+
+    def test_drift_rejects_negative_drift_rate(self):
+        stages = [StageGuarantee("A", p=0.9, delta=0.01)]
+        with pytest.raises(ValueError, match="drift_rate"):
+            compute_pipeline_bound_with_drift(stages, drift_rate=-0.1, time_steps=5)
+
+    def test_drift_rejects_negative_time_steps(self):
+        stages = [StageGuarantee("A", p=0.9, delta=0.01)]
+        with pytest.raises(ValueError, match="time_steps"):
+            compute_pipeline_bound_with_drift(stages, drift_rate=0.01, time_steps=-1)
 
     def test_drift_empty_pipeline_raises(self):
         with pytest.raises(ValueError):

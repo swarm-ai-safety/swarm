@@ -64,6 +64,12 @@ class InvariantCheck:
     severity: float = 1.0  # 0..1, how bad a violation is
     description: str = ""
 
+    def __post_init__(self) -> None:
+        if not (0.0 <= self.severity <= 1.0):
+            raise ValueError(
+                f"InvariantCheck.severity must be between 0.0 and 1.0 inclusive; got {self.severity!r}"
+            )
+
     def evaluate(self, interaction: SoftInteraction) -> bool:
         return self.check(interaction)
 
@@ -196,6 +202,10 @@ class BehavioralContract:
         """Check all invariants against an interaction.
 
         Returns list of violations (empty if all pass).
+        Recovery actions are recorded in the violation objects. Currently,
+        only ``expel`` is enforced (blocks future ``execute()`` calls);
+        ``penalty`` and ``tier_downgrade`` are tracked for callers to
+        act on via the violation list.
         """
         violations: List[InvariantViolation] = []
         for inv in self.invariants:
@@ -221,7 +231,15 @@ class BehavioralContract:
         return agent_id in self._expelled
 
     def execute(self, interaction: SoftInteraction) -> SoftInteraction:
-        """Execute the governance contract, then check invariants."""
+        """Execute the governance contract, then check invariants.
+
+        Raises ``PermissionError`` if the initiator has been expelled.
+        """
+        if self.is_expelled(interaction.initiator):
+            raise PermissionError(
+                f"Agent '{interaction.initiator}' has been expelled and "
+                f"cannot execute under contract {self.name}"
+            )
         modified = self.governance.execute(interaction)
         self.check_invariants(modified)
         return modified
@@ -256,12 +274,14 @@ class DriftDetector:
 
     Detects agents whose behavior changes significantly after building
     trust. Uses a sliding window of p values per agent and computes
-    drift as the difference between recent and historical means.
+    drift as the signed difference between baseline and recent means:
 
-    D* = |mean(recent_window) - mean(baseline_window)|
+        D* = mean(baseline_window) - mean(recent_window)
 
-    An agent with high baseline p that suddenly drops has high D*,
-    indicating possible trust-building followed by exploitation.
+    Positive D* indicates degradation (recent behavior worse than
+    baseline); negative D* indicates improvement. Only positive drift
+    exceeding ``drift_threshold`` triggers a flag, since we care about
+    trust-building followed by exploitation.
     """
 
     def __init__(
@@ -297,8 +317,21 @@ class DriftDetector:
     def record(self, agent_id: str, p: float) -> Optional[float]:
         """Record an interaction's p value for an agent.
 
+        Args:
+            agent_id: The agent identifier.
+            p: Probability value in [0, 1].
+
         Returns the current drift rate D* if enough data, else None.
+        Positive means degradation, negative means improvement.
+
+        Raises:
+            ValueError: If p is not in [0, 1] or is non-finite.
         """
+        import math
+
+        if not (0.0 <= p <= 1.0) or math.isnan(p) or math.isinf(p):
+            raise ValueError(f"p must be a finite value in [0, 1], got {p!r}")
+
         if agent_id not in self._history:
             self._history[agent_id] = deque(
                 maxlen=self.baseline_size + self.window_size
@@ -322,7 +355,7 @@ class DriftDetector:
         recent = list(history)[-self.window_size :]
         recent_mean = sum(recent) / len(recent)
 
-        # D* = difference (signed: negative means degradation)
+        # D* = baseline - recent (positive means degradation)
         drift = self._baselines[agent_id] - recent_mean
 
         if drift > self.drift_threshold:
@@ -396,7 +429,10 @@ def compute_pipeline_bound(stages: List[StageGuarantee]) -> PipelineBound:
     invariant violation bound delta_i:
 
     - p_pipeline = prod(p_i)  (all stages must comply)
-    - delta_pipeline = 1 - prod(1 - delta_i)  (union bound on violations)
+    - delta_pipeline = min(1, sum(delta_i))  (union bound on violations)
+
+    The union bound is a true upper bound on the probability of any
+    violation, valid regardless of correlation between stages.
 
     Both degrade with more stages, making the case for fewer, stronger
     governance contracts over many weak ones.
@@ -405,13 +441,13 @@ def compute_pipeline_bound(stages: List[StageGuarantee]) -> PipelineBound:
         raise ValueError("Pipeline must have at least one stage")
 
     p_pipeline = 1.0
-    one_minus_delta_product = 1.0
+    delta_sum = 0.0
 
     for stage in stages:
         p_pipeline *= stage.p
-        one_minus_delta_product *= 1.0 - stage.delta
+        delta_sum += stage.delta
 
-    delta_pipeline = 1.0 - one_minus_delta_product
+    delta_pipeline = min(1.0, delta_sum)
 
     return PipelineBound(
         p_pipeline=p_pipeline,
@@ -433,35 +469,42 @@ def compute_pipeline_bound_with_drift(
     If drift causes p_i(t) = p_i(0) - D* * t, the pipeline bound
     degrades over time:
 
-        p_pipeline(t) = prod(max(0, p_i(0) - D* * t))
+        p_pipeline(t) = prod(clamp(p_i(0) - D* * t, 0, 1))
 
     Args:
         stages: Per-stage guarantees (at t=0).
-        drift_rate: D* — per-step degradation rate.
-        time_steps: Number of time steps to project.
+        drift_rate: D* — per-step degradation rate (must be >= 0).
+        time_steps: Number of time steps to project (must be >= 0).
 
     Returns:
         PipelineBound at the given time horizon.
+
+    Raises:
+        ValueError: If inputs are invalid.
     """
     if not stages:
         raise ValueError("Pipeline must have at least one stage")
+    if drift_rate < 0.0:
+        raise ValueError("drift_rate must be non-negative")
+    if time_steps < 0:
+        raise ValueError("time_steps must be non-negative")
 
     p_pipeline = 1.0
-    one_minus_delta_product = 1.0
+    delta_sum = 0.0
     details = []
 
     for stage in stages:
-        p_t = max(0.0, stage.p - drift_rate * time_steps)
+        p_t = min(1.0, max(0.0, stage.p - drift_rate * time_steps))
         p_pipeline *= p_t
-        one_minus_delta_product *= 1.0 - stage.delta
+        delta_sum += stage.delta
         details.append({
             "name": stage.stage_name,
             "p_0": stage.p,
-            "p_t": round(p_t, 6),
+            "p_t": p_t,
             "delta": stage.delta,
         })
 
-    delta_pipeline = 1.0 - one_minus_delta_product
+    delta_pipeline = min(1.0, delta_sum)
 
     return PipelineBound(
         p_pipeline=p_pipeline,
