@@ -289,6 +289,33 @@
   </script>
   {% endif %}
 
+  <!-- ItemList JSON-LD (comparison pages with comparison_items frontmatter) -->
+  {% if page and page.meta and page.meta.comparison_items %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    "name": "{{ title }}",
+    "description": "{{ desc }}",
+    "numberOfItems": {{ page.meta.comparison_items | length }},
+    "itemListElement": [
+      {% for item in page.meta.comparison_items %}
+      {
+        "@type": "ListItem",
+        "position": {{ loop.index }},
+        "item": {
+          "@type": "{{ item.type | default('Thing') }}",
+          "name": "{{ item.name }}"{% if item.description %},
+          "description": "{{ item.description }}"{% endif %}{% if item.category %},
+          "applicationCategory": "{{ item.category }}"{% endif %}
+        }
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+  </script>
+  {% endif %}
+
   <!-- FAQPage JSON-LD (concept pages with faq frontmatter) -->
   {% if page and page.meta and page.meta.faq %}
   <script type="application/ld+json">

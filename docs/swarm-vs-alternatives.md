@@ -1,70 +1,26 @@
 ---
-description: "Compare SWARM with CooperativeAI, Knostic, Lumenova AI, and Gravitee for multi-agent AI safety. See how SWARM's open-source, soft-label approach differs from enterprise governance platforms."
+description: "Compare SWARM with Cooperative AI Foundation, Knostic, Lumenova AI, and Gravitee for multi-agent AI safety. See how SWARM's open-source, soft-label approach differs from enterprise governance platforms."
+comparison_items:
+  - name: "SWARM"
+    type: "SoftwareApplication"
+    description: "Open-source multi-agent AI safety simulation framework with soft probabilistic labels and governance mechanisms"
+    category: "AI Safety Research"
+  - name: "Cooperative AI Foundation"
+    type: "Organization"
+    description: "Research foundation supporting cooperative intelligence in advanced AI systems"
+  - name: "Knostic"
+    type: "SoftwareApplication"
+    description: "Enterprise AI security platform with need-to-know access controls for LLMs"
+    category: "AI Security"
+  - name: "Lumenova AI"
+    type: "SoftwareApplication"
+    description: "Enterprise AI governance, risk, and compliance platform"
+    category: "AI Governance"
+  - name: "Gravitee"
+    type: "SoftwareApplication"
+    description: "API management platform with AI agent governance capabilities"
+    category: "API Management"
 ---
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "ItemList",
-  "name": "Multi-Agent AI Safety Tools Comparison",
-  "description": "Comparison of SWARM with other tools in the multi-agent AI safety space",
-  "numberOfItems": 5,
-  "itemListElement": [
-    {
-      "@type": "ListItem",
-      "position": 1,
-      "item": {
-        "@type": "SoftwareApplication",
-        "name": "SWARM",
-        "description": "Open-source multi-agent AI safety simulation framework with soft probabilistic labels and governance mechanisms",
-        "applicationCategory": "AI Safety Research",
-        "operatingSystem": "Cross-platform",
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
-        "license": "https://opensource.org/licenses/MIT"
-      }
-    },
-    {
-      "@type": "ListItem",
-      "position": 2,
-      "item": {
-        "@type": "Organization",
-        "name": "Cooperative AI Foundation",
-        "description": "Research foundation supporting cooperative intelligence in advanced AI systems"
-      }
-    },
-    {
-      "@type": "ListItem",
-      "position": 3,
-      "item": {
-        "@type": "SoftwareApplication",
-        "name": "Knostic",
-        "description": "Enterprise AI security platform with need-to-know access controls for LLMs",
-        "applicationCategory": "AI Security"
-      }
-    },
-    {
-      "@type": "ListItem",
-      "position": 4,
-      "item": {
-        "@type": "SoftwareApplication",
-        "name": "Lumenova AI",
-        "description": "Enterprise AI governance, risk, and compliance platform",
-        "applicationCategory": "AI Governance"
-      }
-    },
-    {
-      "@type": "ListItem",
-      "position": 5,
-      "item": {
-        "@type": "SoftwareApplication",
-        "name": "Gravitee",
-        "description": "API management platform with AI agent governance capabilities",
-        "applicationCategory": "API Management"
-      }
-    }
-  ]
-}
-</script>
 
 # SWARM vs Alternatives
 
@@ -84,7 +40,7 @@ Several tools and organizations work on aspects of multi-agent AI safety. Each o
 | **Adverse selection detection** | Yes (toxicity, quality gap) | Theoretical framework | No | No | No |
 | **Red-teaming** | 8 built-in attack vectors | N/A | Prompt injection testing | No | Prompt injection prevention |
 | **LLM agent support** | Anthropic, OpenAI, Ollama | N/A | Microsoft 365, enterprise LLMs | Traditional ML + GenAI | Multi-LLM gateway |
-| **Regulatory compliance** | Research-oriented | N/A | HIPAA, GDPR, SEC | EU AI Act, ISO 42001, NIST | API governance standards |
+| **Compliance positioning** | Research-oriented | N/A | Enterprise compliance | AI governance & compliance | API governance |
 | **Price** | Free | N/A (grants-funded) | Enterprise pricing | Enterprise pricing | Freemium / enterprise |
 
 ## SWARM vs Cooperative AI Foundation
@@ -135,7 +91,7 @@ The [Cooperative AI Foundation](https://www.cooperativeai.com/) (CAIF) is a UK-r
 
 ## SWARM vs Gravitee
 
-[Gravitee](https://www.gravitee.io/) is an API management platform recognized as a Leader in the 2025 Gartner Magic Quadrant for API Management. Their AI Agent Management product (formerly Agent Mesh) extends API governance to AI agents using A2A and MCP protocols.
+[Gravitee](https://www.gravitee.io/) is an API management platform. Their AI Agent Management product (formerly Agent Mesh) extends API governance to AI agents using A2A and MCP protocols.
 
 **Where they overlap:** Both address governance of AI agent interactions. Both recognize that unmanaged agent-to-agent communication creates risks.
 
