@@ -10,12 +10,13 @@ Usage:
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -23,13 +24,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from swarm.evaluation.evaluators import (
     ArtifactIntegrityEvaluator,
     EmergenceDetectionEvaluator,
-    EvaluationResult,
     ExperimentalValidityEvaluator,
     FailureModeEvaluator,
     ReproducibilityEvaluator,
 )
-from swarm.evaluation.rubric import AcceptanceRubric, RubricConfig
 from swarm.evaluation.models import Checks, Scores
+from swarm.evaluation.rubric import AcceptanceRubric, RubricConfig
+
+logger = logging.getLogger(__name__)
 
 
 def extract_paper_metadata(content: str, path: str) -> Dict[str, Any]:
@@ -562,68 +564,70 @@ def evaluate_paper(paper_path: str) -> Dict[str, Any]:
 
 def print_review_report(review: Dict[str, Any]) -> None:
     """Print a human-readable review report."""
-    print("=" * 70)
-    print("SWARM EVALUATION REPORT")
-    print("=" * 70)
-    print()
-    print(f"Paper: {review['submission']['title']}")
-    print(f"ID: {review['submission']['id']}")
-    print(f"Timestamp: {review['timestamp_utc']}")
-    print()
+    logger.info("=" * 70)
+    logger.info("SWARM EVALUATION REPORT")
+    logger.info("=" * 70)
+    logger.info("")
+    logger.info(f"Paper: {review['submission']['title']}")
+    logger.info(f"ID: {review['submission']['id']}")
+    logger.info(f"Timestamp: {review['timestamp_utc']}")
+    logger.info("")
 
     # Verdict
     verdict = review["verdict"].upper()
     verdict_colors = {"PUBLISH": "32", "REVISE": "33", "REJECT": "31"}
     color = verdict_colors.get(verdict, "0")
-    print(f"Verdict: \033[{color}m{verdict}\033[0m")
-    print()
+    logger.info(f"Verdict: \033[{color}m{verdict}\033[0m")
+    logger.info("")
 
     # Scores
-    print("Scores (0-1):")
+    logger.info("Scores (0-1):")
     for axis, score in review["scores"].items():
         if score is not None:
             bar = "█" * int(score * 20) + "░" * (20 - int(score * 20))
-            print(f"  {axis:25s} [{bar}] {score:.2f}")
-    print()
+            logger.info(f"  {axis:25s} [{bar}] {score:.2f}")
+    logger.info("")
 
     # Checks
-    print("Checks:")
+    logger.info("Checks:")
     for check, value in review["checks"].items():
         if value is not None:
-            print(f"  {check}: {value}")
-    print()
+            logger.info(f"  {check}: {value}")
+    logger.info("")
 
     # Rubric outcome
-    print("Rubric Outcome:")
+    logger.info("Rubric Outcome:")
     if review["rubric_outcome"]["passed_criteria"]:
-        print(f"  Passed: {', '.join(review['rubric_outcome']['passed_criteria'])}")
+        logger.info(f"  Passed: {', '.join(review['rubric_outcome']['passed_criteria'])}")
     if review["rubric_outcome"]["failed_criteria"]:
-        print(f"  Failed: {', '.join(review['rubric_outcome']['failed_criteria'])}")
+        logger.info(f"  Failed: {', '.join(review['rubric_outcome']['failed_criteria'])}")
     if review["rubric_outcome"]["missing_data"]:
-        print(f"  Missing: {', '.join(review['rubric_outcome']['missing_data'])}")
-    print()
+        logger.info(f"  Missing: {', '.join(review['rubric_outcome']['missing_data'])}")
+    logger.info("")
 
     # Notes
     if review["notes"]["strengths"]:
-        print("Strengths:")
+        logger.info("Strengths:")
         for s in review["notes"]["strengths"][:5]:
-            print(f"  + {s}")
-        print()
+            logger.info(f"  + {s}")
+        logger.info("")
 
     if review["notes"]["weaknesses"]:
-        print("Weaknesses:")
+        logger.info("Weaknesses:")
         for w in review["notes"]["weaknesses"][:5]:
-            print(f"  - {w}")
-        print()
+            logger.info(f"  - {w}")
+        logger.info("")
 
     if review["notes"]["required_changes"]:
-        print("Required Changes:")
+        logger.info("Required Changes:")
         for r in review["notes"]["required_changes"]:
-            print(f"  ! {r}")
-        print()
+            logger.info(f"  ! {r}")
+        logger.info("")
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
     parser = argparse.ArgumentParser(description="Evaluate paper using SWARM rubric")
     parser.add_argument("paper", help="Path to paper (.tex or .md)")
     parser.add_argument("--output", "-o", help="Output JSON file for structured review")
@@ -633,7 +637,7 @@ def main():
     args = parser.parse_args()
 
     if not os.path.exists(args.paper):
-        print(f"Error: Paper not found: {args.paper}")
+        logger.error(f"Error: Paper not found: {args.paper}")
         sys.exit(1)
 
     review = evaluate_paper(args.paper)
@@ -646,7 +650,7 @@ def main():
     if args.output:
         with open(args.output, "w") as f:
             json.dump(review, f, indent=2)
-        print(f"\nReview saved to: {args.output}")
+        logger.info(f"\nReview saved to: {args.output}")
 
 
 if __name__ == "__main__":
