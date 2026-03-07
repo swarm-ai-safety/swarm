@@ -13,6 +13,16 @@ Key abstractions:
 - ContractMarket: orchestrates sign/refuse stage and routing
 """
 
+from swarm.contracts.behavioral import (
+    BehavioralContract,
+    DriftDetector,
+    InvariantCheck,
+    Precondition,
+    RecoveryPolicy,
+    StageGuarantee,
+    compute_pipeline_bound,
+    compute_pipeline_bound_with_drift,
+)
 from swarm.contracts.contract import (
     Contract,
     ContractDecision,
@@ -25,6 +35,7 @@ from swarm.contracts.market import ContractMarket, ContractMarketConfig
 from swarm.contracts.metrics import ContractMetrics
 
 __all__ = [
+    "BehavioralContract",
     "Contract",
     "ContractDecision",
     "ContractMarket",
@@ -32,6 +43,13 @@ __all__ = [
     "ContractMetrics",
     "ContractType",
     "DefaultMarket",
+    "DriftDetector",
     "FairDivisionContract",
+    "InvariantCheck",
+    "Precondition",
+    "RecoveryPolicy",
+    "StageGuarantee",
     "TruthfulAuctionContract",
+    "compute_pipeline_bound",
+    "compute_pipeline_bound_with_drift",
 ]
