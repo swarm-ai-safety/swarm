@@ -34,7 +34,7 @@ class TestEscalationLadder:
         # Advance to cooperation window
         for _t in range(6):
             actions = [Action(agent_id=aid, type="noop") for aid in env.agent_ids]
-            result = env.step(actions)
+            env.step(actions)
 
         # Step 5 should have a cooperation window event
         # (We ran steps 0-5; step 5 is the 6th call)
