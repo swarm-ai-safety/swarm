@@ -3,24 +3,24 @@
 from __future__ import annotations
 
 import sys
-import tempfile
-from pathlib import Path
 
 
 def main() -> int:
     # Ensure envs are registered
-    import swarm_gym.envs.escalation_ladder  # noqa: F401
-    import swarm_gym.envs.collusion_market  # noqa: F401
     import swarm_gym.envs.audit_evasion  # noqa: F401
-
-    from swarm_gym.envs.registry import list_envs, make
+    import swarm_gym.envs.collusion_market  # noqa: F401
+    import swarm_gym.envs.escalation_ladder  # noqa: F401
     from swarm_gym.agents.scripted import (
-        RandomPolicy, HonestPolicy, GreedyPolicy,
-        AggressivePolicy, MixedPopulation,
+        AggressivePolicy,
+        GreedyPolicy,
+        HonestPolicy,
+        MixedPopulation,
+        RandomPolicy,
     )
-    from swarm_gym.governance.tax import TaxPolicy
+    from swarm_gym.envs.registry import list_envs, make
     from swarm_gym.governance.audits import AuditPolicy
     from swarm_gym.governance.circuit_breaker import CircuitBreakerPolicy
+    from swarm_gym.governance.tax import TaxPolicy
 
     envs = list_envs()
     print(f"Registered environments: {envs}")
@@ -51,9 +51,11 @@ def main() -> int:
                 assert len(result.observations) > 0
                 policy.reset(env.agent_ids, seed=42)
 
-                for step in range(min(5, env.max_steps)):
-                    actions = policy.act(result.observations if step == 0 else sr.observations)
+                observations = result.observations
+                for _step in range(min(5, env.max_steps)):
+                    actions = policy.act(observations)
                     sr = env.step(actions)
+                    observations = sr.observations
                     if sr.done:
                         break
 

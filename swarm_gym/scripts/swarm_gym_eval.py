@@ -11,9 +11,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
-import sys
 from pathlib import Path
-
 
 _ALLOWED_POLICY_PREFIXES = ("swarm_gym.agents.",)
 
@@ -72,7 +70,7 @@ def main(argv: list[str] | None = None) -> None:
 
     out_dir = Path(args.out)
 
-    print(f"SWARM-Gym Eval")
+    print("SWARM-Gym Eval")
     print(f"  Benchmark: {benchmark_path.name}")
     print(f"  Environment: {env.env_id}")
     print(f"  Agent: {policy.policy_name}")
@@ -94,7 +92,7 @@ def main(argv: list[str] | None = None) -> None:
     )
 
     print(f"Completed {summary['episodes']} episodes")
-    print(f"Scorecard:")
+    print("Scorecard:")
     for k, v in summary["scorecard"].items():
         print(f"  {k}: {v:.4f}")
     print(f"\nResults written to {out_dir}/")

@@ -10,7 +10,6 @@ import json
 import platform
 import re
 import subprocess
-import sys
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -20,8 +19,8 @@ from swarm_gym.agents.base import AgentPolicy
 from swarm_gym.envs.base import SwarmEnv
 from swarm_gym.eval.metrics import aggregate_outcomes
 from swarm_gym.eval.scoring import compute_scorecard
-from swarm_gym.telemetry.trace import Trace, TraceSpan
 from swarm_gym.telemetry.sinks import FileSink
+from swarm_gym.telemetry.trace import Trace, TraceSpan
 
 
 def _get_git_commit() -> str:
@@ -96,11 +95,11 @@ def run_eval(
 
                 # Run episode
                 step = 0
+                observations = reset_result.observations
                 while not env.done:
-                    observations = reset_result.observations if step == 0 else result.observations
-
                     actions = policy.act(observations)
                     result = env.step(actions)
+                    observations = result.observations
 
                     # Record trace span
                     span = TraceSpan(
