@@ -212,6 +212,7 @@ class CustomLever(GovernanceLever):
 
 ## See also
 
+- [Contracts API](contracts.md) — Contract screening, ABC behavioral contracts, drift detection, and pipeline compositionality
 - [Governance Concepts](../concepts/governance.md) — Theory behind circuit breakers, taxes, and audits
 - [Custom Governance Levers](../guides/governance-levers.md) — Guide to building custom governance mechanisms
 - [Parameter Sweeps](../guides/parameter-sweeps.md) — Systematically explore governance parameter space

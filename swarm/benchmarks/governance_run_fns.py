@@ -14,6 +14,7 @@ represents the governance-free upper bound.
 
 from __future__ import annotations
 
+import hashlib
 from typing import Any
 
 import numpy as np
@@ -53,6 +54,13 @@ def _governance_friction(gov_config: dict[str, Any], rng: np.random.Generator) -
     return min(friction, 0.95)  # cap at 95% — never total blockage
 
 
+def _config_seed_offset(gov_config: dict[str, Any]) -> int:
+    """Stable per-config offset for RNG seeding across Python processes."""
+    config_id = str(gov_config.get("id", ""))
+    digest = hashlib.blake2s(config_id.encode("utf-8"), digest_size=4).digest()
+    return int.from_bytes(digest, "big")
+
+
 def routing_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskResult:
     """Simulate governance-degraded routing.
 
@@ -61,7 +69,7 @@ def routing_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskRe
     - Probability of payload corruption (noisy channels under constraint)
     - Possible routing detours (suboptimal path under bandwidth limits)
     """
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + _config_seed_offset(gov_config))
     friction = _governance_friction(gov_config, rng)
 
     # Access routing-specific fields
@@ -85,7 +93,10 @@ def routing_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskRe
     actual_steps = len(path) - 1 + extra_steps
 
     # Payload corruption probability increases with friction
-    corruption_prob = friction * 0.4
+    # Near-frictionless configs should be highly stable: only meaningful
+    # governance pressure should produce corruption events.
+    effective_friction = max(0.0, friction - 0.05)
+    corruption_prob = min(effective_friction * 0.45, 0.95)
     if rng.random() < corruption_prob:
         payload = int(rng.integers(0, 10_000))  # corrupted
         completed = True  # delivered, but wrong payload
@@ -117,7 +128,7 @@ def coordination_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> T
     Friction reduces coordination quality — agents can't communicate as
     freely, leading to suboptimal allocations.
     """
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + _config_seed_offset(gov_config))
     friction = _governance_friction(gov_config, rng)
 
     target_total = getattr(instance, "target_total", 0.0)
@@ -154,7 +165,7 @@ def auction_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskRe
     Friction prevents agents from fully expressing valuations, leading to
     suboptimal resource assignments.
     """
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + _config_seed_offset(gov_config))
     friction = _governance_friction(gov_config, rng)
 
     valuations = getattr(instance, "agent_valuations", {})
@@ -196,7 +207,7 @@ def pipeline_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskR
     """
     from swarm.benchmarks.long_horizon.pipeline_task import _stage_transform
 
-    rng = np.random.default_rng(instance.seed + hash(gov_config.get("id", "")) % 2**31)
+    rng = np.random.default_rng(instance.seed + _config_seed_offset(gov_config))
     friction = _governance_friction(gov_config, rng)
 
     initial_payload = getattr(instance, "initial_payload", 0)

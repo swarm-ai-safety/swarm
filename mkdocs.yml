@@ -144,6 +144,7 @@ nav:
     - Core: api/core.md
     - Agents: api/agents.md
     - Governance: api/governance.md
+    - Contracts: api/contracts.md
     - Metrics: api/metrics.md
   - Bridges:
     - Overview: bridges/index.md

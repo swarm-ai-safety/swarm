@@ -1,0 +1,109 @@
+# Adversarial Trust-Building Experiment
+# Tests whether agents can build trust scores then exploit them,
+# and whether drift detection catches them before exploitation pays off.
+#
+# Motivated by the open question from the Pareto frontier blog:
+# "A more sophisticated adversary would build trust before exploiting it.
+#  Testing screening robustness under strategic trust manipulation is
+#  the natural next experiment."
+#
+# Finding from v1/v2: Trust-based partner selection creates natural exclusion
+# of untrusted agents, preventing trust-building in the first place.
+# This variant uses a balanced population (3:3) to force mixing.
+#
+# Design: 4 conditions via governance knobs
+#   1. No drift detection (reputation_decay only) -- baseline vulnerability
+#   2. Drift detection with loose threshold (0.20)
+#   3. Drift detection with tight threshold (0.10)
+#   4. Adaptive adversary vs tight drift detection (arms race)
+#
+# This YAML implements condition 1 (baseline). Sweep drift_threshold
+# and agent types across conditions using /sweep or manual overrides.
+
+scenario_id: adversarial_trust_building
+description: "Adversarial trust-building: can deceptive agents build reputation then exploit it?"
+motif: adversarial_trust_exploitation
+
+agents:
+  - type: honest
+    count: 3
+  - type: deceptive
+    count: 3
+    config:
+      trust_building_phase: 8
+      exploitation_threshold: 0.6
+      facade_probability: 0.9
+      post_probability: 0.15
+
+governance:
+  # Reputation decay -- forces ongoing good behavior
+  reputation_decay_rate: 0.95
+
+  # Transaction friction
+  transaction_tax_rate: 0.03
+  transaction_tax_split: 0.5
+
+  # Staking -- skin in the game
+  staking_enabled: true
+  min_stake_to_participate: 3.0
+  stake_slash_rate: 0.15
+
+  # Circuit breaker (safety net)
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+  # Audits
+  audit_enabled: true
+  audit_probability: 0.15
+  audit_penalty_multiplier: 2.5
+  audit_threshold_p: 0.4
+
+  # Collusion detection
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.5
+  collusion_correlation_threshold: 0.7
+
+  # Bandwidth
+  bandwidth_cap: 15
+
+# Drift detection configuration (ABC behavioral contract layer)
+# Condition 1: disabled (baseline). Override drift_threshold for conditions 2-3.
+drift_detection:
+  enabled: false
+  window_size: 15
+  baseline_size: 35
+  drift_threshold: 0.15
+
+simulation:
+  n_epochs: 40
+  steps_per_epoch: 20
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 15
+  interactions_per_step: 8
+  votes_per_epoch: 50
+  tasks_per_epoch: 5
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.5
+
+success_criteria:
+  min_epochs: 40
+  min_agents: 6
+  toxicity_threshold: 0.5
+  # Trust exploitation criteria
+  max_deceptive_payoff_ratio: 1.3   # deceptive/honest payoff < 1.3 = defended
+  min_drift_detection_rate: 0.8     # fraction of deceptive agents flagged
+
+outputs:
+  event_log: "logs/adversarial_trust_building_events.jsonl"
+  metrics_csv: "logs/adversarial_trust_building_metrics.csv"
