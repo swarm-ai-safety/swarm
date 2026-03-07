@@ -63,6 +63,10 @@ Use SWARM when you need to answer questions like:
 - How does welfare scale with agent count under different governance configurations?
 - What is the trade-off between governance aggressiveness and ecosystem throughput?
 
+## Looking for Industry Comparisons?
+
+For comparisons with industry platforms like Knostic, Lumenova AI, Gravitee, and the Cooperative AI Foundation, see [SWARM vs Alternatives](swarm-vs-alternatives.md).
+
 ## When to Use Something Else
 
 - **Single-agent evaluation**: Use AgentBench or Inspect
