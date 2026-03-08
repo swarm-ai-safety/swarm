@@ -181,12 +181,12 @@ def print_summary_table(rows: list[dict]):
         "pool_welfare_default",
     ]
 
-    logger.info(f"\n{'Metric':<30} {'Mean':>8} {'Std':>8} {'Min':>8} {'Max':>8}")
-    logger.info("-" * 66)
+    print(f"\n{'Metric':<30} {'Mean':>8} {'Std':>8} {'Min':>8} {'Max':>8}")
+    print("-" * 66)
     for m in metrics:
         vals = [r[m] for r in rows]
         arr = np.array(vals)
-        logger.info(f"{m:<30} {arr.mean():>8.4f} {arr.std():>8.4f} {arr.min():>8.4f} {arr.max():>8.4f}")
+        print(f"{m:<30} {arr.mean():>8.4f} {arr.std():>8.4f} {arr.min():>8.4f} {arr.max():>8.4f}")
 
 
 def main():
