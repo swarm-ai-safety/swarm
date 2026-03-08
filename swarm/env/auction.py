@@ -138,7 +138,7 @@ class DworkinAuction:
     mechanism to the quality signal pipeline.
     """
 
-    def __init__(self, config: Optional[AuctionConfig] = None):
+    def __init__(self, config: Optional[AuctionConfig] = None) -> None:
         """Initialize the auction engine."""
         self.config = config or AuctionConfig()
         self.config.validate()
