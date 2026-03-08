@@ -49,6 +49,9 @@ promo/
 research/
 docs/papers/
 
+# Company-role agents (run as independent sessions, not committed)
+agents/
+
 # Relocated directories (prevent re-creation at root)
 submissions/
 /bridges/
