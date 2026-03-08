@@ -97,6 +97,7 @@ def memory_limit(max_mb: int):
                     try:
                         resource.setrlimit(resource.RLIMIT_AS, (soft, hard))
                     except (ValueError, OSError):
+                        # Reset failure is non-fatal for test cleanup on some platforms.
                         pass
 
         return wrapper
