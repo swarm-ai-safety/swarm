@@ -106,6 +106,52 @@ Guardrails:
 - Clearly separate observed facts from inferred recommendations
 Source: `.claude/agents/research_scout.md`
 
+## Handoff Protocol
+
+When work transitions between roles, follow this protocol to prevent dropped context and ownership disputes.
+
+### Transition Matrix
+
+| From | To | Artifact passed | Trigger |
+|---|---|---|---|
+| Scenario Architect | Mechanism Designer | `scenarios/*.yaml` + rationale | "Scenario ready, needs governance lever" |
+| Mechanism Designer | Scenario Architect | Proposed config changes + sweep axes | "Need a scenario to isolate this lever" |
+| Mechanism Designer | Auditor | New metric implementation | "Metric needs quality audit" |
+| Scenario Architect | Adversary Designer | Baseline scenario + expected metrics | "Scenario needs adversarial stress test" |
+| Adversary Designer | Mechanism Designer | Failure-mode writeup + broken invariants | "Governance gap found, needs mitigation" |
+| Any role | Reproducibility Sheriff | PR with code changes | "Code changed, needs hygiene check" |
+| Any role | Auditor | Draft paper / blog / claim | "Claims need integrity audit" |
+| Research Scout | Any role | Structured findings + adaptation plan | "External pattern ready for adoption" |
+
+### Handoff rules
+
+1. **Explicit artifact**: Every handoff must reference a concrete file or artifact, not a verbal summary.
+2. **One owner**: At any moment, exactly one role owns the work item. The handoff transfers ownership.
+3. **No self-validation**: The role that produces an artifact never audits it. Auditor audits claims, Reproducibility Sheriff audits hygiene.
+
+### Metric ownership
+
+When a governance lever (Mechanism Designer) requires a new metric:
+- **Mechanism Designer** specifies what the metric should measure and its expected behavior.
+- **Auditor** owns the metric's implementation quality (definition, robustness, logging, tests).
+- If there's a dispute about metric semantics, the Mechanism Designer's specification wins. If there's a dispute about metric quality, the Auditor's assessment wins.
+
+### Conflict resolution
+
+When two roles claim the same work:
+1. Check the transition matrix above — the role listed in the "To" column owns it.
+2. If the matrix doesn't cover the case, the narrower role wins (e.g., Auditor over Mechanism Designer for metric quality).
+3. If still ambiguous, the user decides.
+
+## Migration Registry
+
+Centralized record of agent consolidations. When roles merge, add an entry here.
+
+| Old agent/command | Absorbed into | Date | Notes |
+|---|---|---|---|
+| `Metrics Auditor` | `Auditor` (metric quality section) | 2026-02 | Two audit modes in one role |
+| `Research Integrity Auditor` | `Auditor` (research integrity section) | 2026-02 | Same |
+
 ## Landing the Plane (Session Completion)
 
 **When explicitly shipping/landing work (for example: "ship", "submit", "close this out")**, complete ALL steps below. Work is not complete until `git push` succeeds.

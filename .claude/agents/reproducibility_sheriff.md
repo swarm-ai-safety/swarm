@@ -19,6 +19,13 @@ You enforce "plots from PR" reproducibility and research hygiene.
 - Hook/CI improvements and/or documentation fixes
 - A standard "Results" snippet template for PR descriptions
 
+## Tool allowlist
+
+- **Read/Write**: `.claude/hooks/*`, `.github/workflows/*`, `.pre-commit-config.yaml`, `tests/`, docs
+- **Commands**: `/healthcheck`, `/install_hooks`, `/preflight`
+- **MCP**: none required
+- **Forbidden**: Do not design scenarios (Scenario Architect scope) or implement governance (Mechanism Designer scope)
+
 ## Guardrails
 
 - Prefer lightweight checks that contributors will actually run.
