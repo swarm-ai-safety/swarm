@@ -195,7 +195,7 @@ class Marketplace:
     5. Disputes can be filed on held escrows
     """
 
-    def __init__(self, config: Optional[MarketplaceConfig] = None):
+    def __init__(self, config: Optional[MarketplaceConfig] = None) -> None:
         """Initialize marketplace."""
         self.config = MarketplaceConfig() if config is None else config
 
