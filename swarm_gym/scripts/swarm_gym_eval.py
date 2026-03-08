@@ -55,11 +55,16 @@ def main(argv: list[str] | None = None) -> None:
     )
     args = parser.parse_args(argv)
 
-    from swarm_gym.configs.loader import load_benchmark
+    from swarm_gym.configs.loader import load_benchmark, load_governance_preset
     from swarm_gym.eval.runner import run_eval
 
     benchmark_path = Path(args.benchmark)
     config, env = load_benchmark(benchmark_path)
+
+    # Apply governance override if specified
+    if args.governance:
+        modules = load_governance_preset(args.governance)
+        env.set_governance(modules)
 
     policy = _import_policy(args.agent)
 
