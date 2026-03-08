@@ -4247,7 +4247,7 @@ class TestOrchestratorWiring:
             try:
                 await asyncio.sleep(3600)
             except asyncio.CancelledError:
-                pass
+                return
 
         with patch.object(sim_mod, "_execute_simulation", _fake_execute):
             sim_id, _agent_ids, _api_keys, creator_key = self._full_setup(
