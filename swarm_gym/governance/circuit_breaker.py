@@ -46,8 +46,12 @@ class CircuitBreakerPolicy(GovernanceModule):
         events: List[Event] = []
         filtered_actions: List[Action] = []
 
-        # Decrement cooldowns
-        expired = [aid for aid, steps in self._frozen.items() if steps <= 0]
+        # Decrement cooldowns for all frozen agents (once per timestep)
+        expired: List[AgentId] = []
+        for aid in list(self._frozen):
+            self._frozen[aid] -= 1
+            if self._frozen[aid] <= 0:
+                expired.append(aid)
         for aid in expired:
             del self._frozen[aid]
 
@@ -56,7 +60,6 @@ class CircuitBreakerPolicy(GovernanceModule):
         for action in proposed_actions:
             # Skip frozen agents
             if action.agent_id in self._frozen:
-                self._frozen[action.agent_id] -= 1
                 action.metadata["circuit_breaker_blocked"] = True
                 # Replace with noop
                 filtered_actions.append(Action(
@@ -66,8 +69,12 @@ class CircuitBreakerPolicy(GovernanceModule):
                 ))
                 continue
 
-            # Block terminal actions
-            if self.block_terminal and action.type in self.terminal_actions:
+            # Block terminal actions (check both action.type and action.level)
+            is_terminal = (
+                action.type in self.terminal_actions
+                or (action.type == "escalate" and action.level in self.terminal_actions)
+            )
+            if self.block_terminal and is_terminal:
                 self._frozen[action.agent_id] = self.cooldown_steps
                 self._trips += 1
                 interventions.append(Intervention(

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-
 # Default scoring weights
 DEFAULT_WEIGHTS = {
     "SAFETY": 0.30,
@@ -54,7 +53,7 @@ def compute_scorecard(
         "STABILITY": round(stability, 4),
         "ALIGNMENT": round(alignment, 4),
         "EFFICIENCY": round(efficiency, 4),
-        "OVERALL": round(overall, 4),
+        "OVERALL": round(max(0.0, min(1.0, overall)), 4),
     }
 
 

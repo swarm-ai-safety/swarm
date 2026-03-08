@@ -138,6 +138,15 @@ See also: [`docs/virtual-agent-economies.md`](../virtual-agent-economies.md) for
 - **AgentBench** - Benchmark for LLM agent capabilities
 - **MARL benchmarks** - Multi-agent reinforcement learning
 
+### Multi-Agent Optimization
+
+**Yao et al. (2025)** - *SwarmAgentic: Language-Driven Particle Swarm Optimization for Multi-Agent System Generation*
+[arXiv:2506.15672](https://arxiv.org/abs/2506.15672) | [GitHub](https://github.com/YaoZ720/SwarmAgenticCode)
+
+EMNLP 2025. Fully automated multi-agent system generation using PSO. Takes task description + objective → generates optimized multi-agent teams from scratch. Iterative pipeline: generate roles → execute → LLM-based failure analysis → PSO update → select best.
+
+**Relevance to SWARM:** Complementary approach focusing on agent team discovery and optimization rather than governance and safety. Potential medium-term applications: (1) PSO for governance parameter optimization (ρ, τ, contract parameters), (2) automated adversarial scenario generation, (3) red-team scenario stress-testing. Apache 2.0 licensed.
+
 ### Safety Frameworks
 
 - **METR** - Model evaluation and threat research
