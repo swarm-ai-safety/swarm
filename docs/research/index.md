@@ -32,6 +32,12 @@ Academic foundations and related publications. SWARM implements the framework de
 
     Addressing feedback loops in recursive agent research
 
+-   :material-cog-outline: **[Agent System Patterns](agent-system-patterns.md)**
+
+    ---
+
+    Architectural patterns from production agent systems and their SWARM translations
+
 </div>
 
 ## Core Research Questions

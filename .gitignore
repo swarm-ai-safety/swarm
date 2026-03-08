@@ -118,6 +118,9 @@ docs/game-app/
 # Session-local docs reminder queue (cleared each commit)
 .claude/docs_reminders.log
 
+# Hook bypass audit trail (local-only, see THREAT_MODEL.md §3)
+.claude/hook_bypass.log
+
 # Allow provenance audit log (matched by *.jsonl above)
 !.claude/provenance.jsonl
 
