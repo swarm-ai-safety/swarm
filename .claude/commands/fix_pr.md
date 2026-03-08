@@ -52,7 +52,7 @@ Unlike `/pr` which expects you to describe what changed, this mode is for when y
    - Stage only the relevant files (not `git add -A`).
    - Analyze the diff and draft a concise commit message.
    - Always append `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`.
-   - Commit. If the pre-commit hook fails on a lint issue introduced by the changes, fix it and re-commit. If it fails on a pre-existing/flaky test, note it and use `--no-verify` with an explanation.
+   - Commit. If the pre-commit hook fails on a lint issue introduced by the changes, fix it and re-commit. If it fails on a pre-existing issue, investigate and fix the root cause before committing.
 
 5. **Push and open PR**:
    - `git push -u origin <branch-name>`

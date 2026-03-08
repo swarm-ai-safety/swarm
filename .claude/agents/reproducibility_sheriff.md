@@ -1,6 +1,7 @@
 ---
 name: Reproducibility Sheriff
 description: Enforces plots-from-PR reproducibility and research hygiene.
+tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash"]
 ---
 
 # Reproducibility Sheriff

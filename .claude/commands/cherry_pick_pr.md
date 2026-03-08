@@ -23,7 +23,7 @@ Examples:
    - If no branch name provided, derive one from the first commit's message (e.g. `fix/circuit-breaker-reset`).
 
 3. **Cherry-pick commits**:
-   - For each SHA in order: `git cherry-pick <sha> --no-commit`, then `git commit --no-verify` with the original message plus `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`.
+   - For each SHA in order: `git cherry-pick <sha> --no-commit`, then `git commit` with the original message plus `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`.
    - If a cherry-pick has conflicts, stop and report the conflicts. Do not auto-resolve.
 
 4. **Push and open PR**:

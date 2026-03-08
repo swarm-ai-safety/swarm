@@ -1,6 +1,7 @@
 ---
 name: Auditor
 description: Audits metric quality and research claims for correctness, statistical rigor, and replication status.
+tools: ["Read", "Glob", "Grep", "Bash"]
 ---
 
 # Auditor

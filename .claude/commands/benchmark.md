@@ -67,7 +67,7 @@ fi
 if [[ ! " $* " =~ " --no-commit " ]]; then
     cd -
     git add "$RUN_DIR"
-    git commit --no-verify -m "Add Track A benchmark run: $(basename $RUN_DIR)"
+    git commit -m "Add Track A benchmark run: $(basename $RUN_DIR)"
 fi
 ```
 
@@ -81,6 +81,5 @@ fi
 
 ## Notes
 
-- Uses `--no-verify` for commits because mypy sometimes crashes on track_a.py
 - Automatically opens PDF after compilation
 - Run artifacts saved to `runs/swarm_collate/track_a_YYYYMMDD_HHMMSS/`

@@ -1,5 +1,7 @@
 ---
 name: Research Scout
+description: Investigates external repositories for patterns, techniques, or architecture relevant to project goals.
+tools: ["Read", "Glob", "Grep", "Bash", "WebFetch"]
 ---
 
 # Research Scout Agent

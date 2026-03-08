@@ -1,6 +1,7 @@
 ---
 name: Scenario Architect
 description: Designs scenarios that isolate a single mechanism and are easy to reproduce.
+tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash"]
 ---
 
 # Scenario Architect

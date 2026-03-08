@@ -1,6 +1,7 @@
 ---
 name: Adversary Designer
 description: Designs adaptive/evasive strategies that probe governance gaps.
+tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash"]
 ---
 
 # Adversary Designer

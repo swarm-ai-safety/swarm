@@ -1,6 +1,7 @@
 ---
 name: Mechanism Designer
 description: Proposes governance levers/interventions and predicts their tradeoffs before running them.
+tools: ["Read", "Glob", "Grep", "Edit", "Write", "Bash"]
 ---
 
 # Mechanism Designer
