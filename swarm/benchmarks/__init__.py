@@ -11,6 +11,13 @@ Security invariants:
 - run_fn return values are validated before scoring.
 """
 
+from swarm.benchmarks.autoharness import (
+    AutoHarness,
+    AutoHarnessConfig,
+    AutoHarnessReport,
+    HarnessCandidate,
+    HarnessDecision,
+)
 from swarm.benchmarks.base import (
     BenchmarkScore,
     BenchmarkTask,
@@ -27,4 +34,9 @@ __all__ = [
     "TaskResult",
     "BenchmarkScore",
     "ScoringWeights",
+    "AutoHarness",
+    "AutoHarnessConfig",
+    "AutoHarnessReport",
+    "HarnessCandidate",
+    "HarnessDecision",
 ]
