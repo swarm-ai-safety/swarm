@@ -10,12 +10,13 @@ Usage:
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -23,13 +24,14 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from swarm.evaluation.evaluators import (
     ArtifactIntegrityEvaluator,
     EmergenceDetectionEvaluator,
-    EvaluationResult,
     ExperimentalValidityEvaluator,
     FailureModeEvaluator,
     ReproducibilityEvaluator,
 )
-from swarm.evaluation.rubric import AcceptanceRubric, RubricConfig
 from swarm.evaluation.models import Checks, Scores
+from swarm.evaluation.rubric import AcceptanceRubric, RubricConfig
+
+logger = logging.getLogger(__name__)
 
 
 def extract_paper_metadata(content: str, path: str) -> Dict[str, Any]:
@@ -561,7 +563,7 @@ def evaluate_paper(paper_path: str) -> Dict[str, Any]:
 
 
 def print_review_report(review: Dict[str, Any]) -> None:
-    """Print a human-readable review report."""
+    """Log a human-readable review report using the module logger."""
     print("=" * 70)
     print("SWARM EVALUATION REPORT")
     print("=" * 70)
@@ -624,6 +626,8 @@ def print_review_report(review: Dict[str, Any]) -> None:
 
 
 def main():
+    logging.basicConfig(level=logging.INFO, format="%(message)s")
+
     parser = argparse.ArgumentParser(description="Evaluate paper using SWARM rubric")
     parser.add_argument("paper", help="Path to paper (.tex or .md)")
     parser.add_argument("--output", "-o", help="Output JSON file for structured review")
@@ -633,7 +637,7 @@ def main():
     args = parser.parse_args()
 
     if not os.path.exists(args.paper):
-        print(f"Error: Paper not found: {args.paper}")
+        logger.error(f"Error: Paper not found: {args.paper}")
         sys.exit(1)
 
     review = evaluate_paper(args.paper)
@@ -646,7 +650,7 @@ def main():
     if args.output:
         with open(args.output, "w") as f:
             json.dump(review, f, indent=2)
-        print(f"\nReview saved to: {args.output}")
+        logger.info(f"\nReview saved to: {args.output}")
 
 
 if __name__ == "__main__":
