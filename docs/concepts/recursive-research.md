@@ -249,6 +249,81 @@ Recursive agent research enables studying itself:
 
 These meta-questions are themselves subjects for recursive research.
 
+## Missing Closed Loops: What Still Needs to Be Built
+
+SWARM already has substantial pieces of recursive infrastructure (scenario execution,
+metrics, governance hooks, and reputation-like signals), but three closed loops remain
+open. Closing them would move the framework from "instrumented experiments" toward
+"self-improving research ecosystems."
+
+### 1) AutoHarness: Generate Eval → Run → Score → Promote/Demote
+
+**Current state:** We can run evaluations and collect rich telemetry, but benchmark
+construction is still mostly manual.
+
+**Missing loop:**
+
+1. Generate candidate test cases automatically (scenario variants, adversarial seeds,
+   perturbation-based edge cases)
+2. Run those cases in a reproducible harness
+3. Score agent and governance performance on pre-registered metrics
+4. Promote or demote policies/agents based on statistically robust performance deltas
+
+**Why it matters:** Without automatic benchmark generation, systems overfit to known
+tests. AutoHarness creates a moving target that pressures genuine robustness instead of
+cached benchmark competence.
+
+### 2) Evolutionary Loops: Spec Mutation With Governance Gates
+
+**Current state:** Trust/reputation and performance traces exist, and governance can
+approve or deny changes.
+
+**Missing loop:** Agents should be able to propose bounded edits to their own
+specification (system prompts, tool scopes, strategy priors), then enter a
+selection cycle:
+
+1. Propose mutation
+2. Pass governance review gate
+3. Evaluate against baseline and controls
+4. Keep, roll back, or quarantine based on multi-metric outcomes
+
+**Why it matters:** This enables adaptation while preserving institutional control.
+The governance gate ensures the system evolves, but not blindly.
+
+### 3) Self-Redesign: Evolve the Organization, Not Just the Agents
+
+**Current state:** Organization topology and package composition are largely static
+YAML definitions.
+
+**Missing loop:** Treat org structure itself as an optimization surface:
+
+- Which agents should exist?
+- How should responsibilities be partitioned?
+- Which package templates produce better safety/welfare tradeoffs under stress?
+
+This implies a higher-order search where candidate organizations are generated,
+simulated, scored, and selected under governance constraints.
+
+**Why it matters:** Many failures are architectural, not behavioral. If only agent
+policies evolve while org design stays fixed, the system may plateau in a
+suboptimal institution.
+
+### Design Principle Across All Three
+
+Each loop should follow the same invariant:
+
+> **No optimization without replayable evidence and explicit governance accountability.**
+
+Concretely, every promotion decision should carry:
+
+- seed-stable reruns,
+- artifact capture (history JSON + CSV exports),
+- baseline comparison,
+- and an auditable approval/denial record.
+
+That keeps recursive improvement legible enough to study—and govern—rather than
+turning it into opaque self-modification.
+
 ## Connection to SWARM Concepts
 
 ### Synthetic Consensus
