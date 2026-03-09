@@ -111,6 +111,10 @@ If you care about AGI safety research, SWARM gives you a practical way to:
 - Which governance settings improve safety with the smallest welfare cost?
 - How robust are conclusions under delayed/noisy labels and task shifts?
 
+## New: Autoresearch-style SWARM loops
+
+If you want to run an automated "objective -> edit -> run -> evaluate -> commit" research cycle in this repo, see the implementation plan in `docs/plans/autoresearch-loop.md`.
+
 ## Installation
 
 ```bash
