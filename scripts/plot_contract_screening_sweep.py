@@ -20,6 +20,8 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 import numpy as np
 
+logger = logging.getLogger(__name__)
+
 DEFAULT_CSV = "runs/contract_screening_sweep/sweep_results.csv"
 DEFAULT_OUT = "runs/contract_screening_sweep/plots"
 
@@ -33,9 +35,6 @@ POOL_LABELS = {
     "fair": "Fair Division",
     "default": "Default Market",
 }
-
-
-logger = logging.getLogger(__name__)
 
 
 def load_sweep_csv(path: Path) -> list[dict]:
@@ -87,7 +86,7 @@ def plot_screening_metrics(rows: list[dict], out_dir: Path):
 
     fig.tight_layout()
     fig.savefig(out_dir / "screening_metrics_violin.png", dpi=150, bbox_inches="tight")
-    logger.info(f"  Saved: {out_dir / 'screening_metrics_violin.png'}")
+    logger.info("  Saved: %s", out_dir / "screening_metrics_violin.png")
     plt.close(fig)
 
 
@@ -125,7 +124,7 @@ def plot_pool_quality(rows: list[dict], out_dir: Path):
 
     fig.tight_layout()
     fig.savefig(out_dir / "pool_quality_boxplot.png", dpi=150, bbox_inches="tight")
-    logger.info(f"  Saved: {out_dir / 'pool_quality_boxplot.png'}")
+    logger.info("  Saved: %s", out_dir / "pool_quality_boxplot.png")
     plt.close(fig)
 
 
@@ -162,12 +161,12 @@ def plot_pool_welfare(rows: list[dict], out_dir: Path):
 
     fig.tight_layout()
     fig.savefig(out_dir / "pool_welfare_boxplot.png", dpi=150, bbox_inches="tight")
-    logger.info(f"  Saved: {out_dir / 'pool_welfare_boxplot.png'}")
+    logger.info("  Saved: %s", out_dir / "pool_welfare_boxplot.png")
     plt.close(fig)
 
 
-def print_summary_table(rows: list[dict]):
-    """Print summary statistics table."""
+def log_summary_table(rows: list[dict]):
+    """Log summary statistics table using the module logger."""
     metrics = [
         "separation_quality",
         "infiltration_rate",
@@ -181,45 +180,56 @@ def print_summary_table(rows: list[dict]):
         "pool_welfare_default",
     ]
 
-    print(f"\n{'Metric':<30} {'Mean':>8} {'Std':>8} {'Min':>8} {'Max':>8}")
-    print("-" * 66)
+    logger.info("")
+    logger.info("%-30s %8s %8s %8s %8s", "Metric", "Mean", "Std", "Min", "Max")
+    logger.info("-" * 66)
     for m in metrics:
         vals = [r[m] for r in rows]
         arr = np.array(vals)
-        print(f"{m:<30} {arr.mean():>8.4f} {arr.std():>8.4f} {arr.min():>8.4f} {arr.max():>8.4f}")
+        logger.info("%-30s %8.4f %8.4f %8.4f %8.4f", m, arr.mean(), arr.std(), arr.min(), arr.max())
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format="%(message)s")
-
     parser = argparse.ArgumentParser(description="Plot contract screening sweep results")
     parser.add_argument("--csv", type=str, default=DEFAULT_CSV, help="Path to sweep CSV")
     parser.add_argument("--out", type=str, default=DEFAULT_OUT, help="Output directory for plots")
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging verbosity level (default: INFO)",
+    )
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        stream=sys.stderr,
+        format="%(levelname)s: %(message)s",
+    )
 
     csv_path = Path(args.csv)
     out_dir = Path(args.out)
 
     if not csv_path.exists():
-        logger.error(f"Error: {csv_path} not found. Run sweep_contract_screening.py first.")
+        logger.error("%s not found. Run sweep_contract_screening.py first.", csv_path)
         return 1
 
-    logger.info(f"Loading sweep results from {csv_path}...")
+    logger.info("Loading sweep results from %s...", csv_path)
     rows = load_sweep_csv(csv_path)
-    logger.info(f"  {len(rows)} runs loaded")
+    logger.info("  %d runs loaded", len(rows))
 
     out_dir.mkdir(parents=True, exist_ok=True)
 
     plt.style.use("seaborn-v0_8-whitegrid")
 
-    logger.info("\nGenerating plots...")
+    logger.info("Generating plots...")
     plot_screening_metrics(rows, out_dir)
     plot_pool_quality(rows, out_dir)
     plot_pool_welfare(rows, out_dir)
 
-    print_summary_table(rows)
+    log_summary_table(rows)
 
-    logger.info(f"\nAll plots saved to {out_dir}/")
+    logger.info("All plots saved to %s/", out_dir)
     return 0
 
 
