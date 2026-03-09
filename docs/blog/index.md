@@ -26,7 +26,7 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 **Mar 9** — [Why Agent Infrastructure Could Be a $10B Category](agent-infrastructure-10b-category.md)
 <span class="blog-tag">Theory</span> <span class="blog-tag">Governance</span>
 
-A market thesis for agent infrastructure: the control plane that integrates orchestration, evaluation, safety, and governance may become a category-defining enterprise platform. Includes a concrete evidence checklist for turning narrative into a defensible claim.
+A market thesis for agent infrastructure plus a concrete research stack for the category: workload benchmarks, orchestration patterns, eval/safety layers, controlled evolution loops, and reproducible reporting standards.
 
 </div>
 
