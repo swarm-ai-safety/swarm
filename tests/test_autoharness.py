@@ -4,7 +4,13 @@ from dataclasses import dataclass
 from typing import Any
 
 from swarm.benchmarks.autoharness import AutoHarness, AutoHarnessConfig
-from swarm.benchmarks.base import BenchmarkScore, BenchmarkTask, TaskInstance, TaskOracle, TaskResult
+from swarm.benchmarks.base import (
+    BenchmarkScore,
+    BenchmarkTask,
+    TaskInstance,
+    TaskOracle,
+    TaskResult,
+)
 from swarm.benchmarks.runner import BenchmarkRunner
 from swarm.models.interaction import SoftInteraction
 
