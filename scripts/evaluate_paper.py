@@ -563,7 +563,7 @@ def evaluate_paper(paper_path: str) -> Dict[str, Any]:
 
 
 def print_review_report(review: Dict[str, Any]) -> None:
-    """Print a human-readable review report."""
+    """Log a human-readable review report using the module logger."""
     print("=" * 70)
     print("SWARM EVALUATION REPORT")
     print("=" * 70)
