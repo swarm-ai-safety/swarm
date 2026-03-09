@@ -687,6 +687,67 @@ class TestVarianceAwareLevers:
         assert high_uncertainty.cost_a > low_uncertainty.cost_a
         assert high_uncertainty.cost_b > low_uncertainty.cost_b
 
+    def test_self_ensemble_samples_one_has_no_surcharge(self):
+        config = GovernanceConfig(
+            self_ensemble_enabled=True,
+            self_ensemble_samples=1,
+        )
+        lever = SelfEnsembleLever(config)
+
+        effect = lever.on_interaction(
+            SoftInteraction(p=0.7, accepted=True),
+            EnvState(),
+        )
+
+        assert effect.cost_a == pytest.approx(0.0)
+        assert effect.cost_b == pytest.approx(0.0)
+
+    def test_incoherence_friction_rejected_interaction_no_cost(self):
+        config = GovernanceConfig(
+            incoherence_friction_enabled=True,
+            incoherence_friction_rate=0.2,
+        )
+        lever = IncoherenceFrictionLever(config)
+
+        effect = lever.on_interaction(
+            SoftInteraction(p=0.5, tau=2.0, accepted=False),
+            EnvState(),
+        )
+
+        assert effect.cost_a == pytest.approx(0.0)
+        assert effect.cost_b == pytest.approx(0.0)
+
+    def test_decomposition_step_zero_skips_checkpoint(self):
+        config = GovernanceConfig(
+            decomposition_enabled=True,
+            decomposition_horizon_threshold=6,
+        )
+        lever = DecompositionLever(config)
+        state = EnvState(steps_per_epoch=8)
+        state.add_agent("agent_1")
+        agent_state = state.get_agent("agent_1")
+        agent_state.interactions_initiated = 3
+        agent_state.interactions_accepted = 0
+        agent_state.interactions_rejected = 3
+
+        effect = lever.on_step(state, step=0)
+        assert len(effect.reputation_deltas) == 0
+
+
+class TestStakingLeverEdgeCases:
+    """Extra edge-case coverage for admission/staking logic."""
+
+    def test_slash_stake_for_missing_agent_has_no_effect(self):
+        config = GovernanceConfig(
+            staking_enabled=True,
+            stake_slash_rate=0.5,
+        )
+        lever = StakingLever(config)
+        state = EnvState()
+
+        effect = lever.slash_stake("missing_agent", state, reason="violation")
+        assert len(effect.resource_deltas) == 0
+
 
 class TestOrchestratorIntegration:
     """Tests for governance integration with orchestrator."""
