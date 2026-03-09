@@ -167,8 +167,16 @@ class PaymentMetrics:
         )
 
     @property
-    def worst_severity(self) -> FailureSeverity:
-        """Return the worst failure severity observed."""
+    def total_failures(self) -> int:
+        """Total failure count across all severities."""
+        return (
+            self.soft_failures + self.medium_failures
+            + self.hard_failures + self.critical_failures
+        )
+
+    @property
+    def worst_severity(self) -> FailureSeverity | None:
+        """Return the worst failure severity observed, or None if no failures."""
         if self.critical_failures > 0:
             return FailureSeverity.CRITICAL
         if self.hard_failures > 0:
@@ -177,4 +185,4 @@ class PaymentMetrics:
             return FailureSeverity.MEDIUM
         if self.soft_failures > 0:
             return FailureSeverity.SOFT
-        return FailureSeverity.SOFT  # no failures = soft (best case)
+        return None

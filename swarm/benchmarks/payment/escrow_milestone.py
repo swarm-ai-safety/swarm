@@ -35,13 +35,12 @@ from swarm.models.interaction import SoftInteraction
 
 
 @dataclass
-class Milestone:
-    """A single milestone in an escrow sequence."""
+class MilestoneVisible:
+    """Agent-visible milestone data. No ground truth."""
     milestone_id: str = ""
     name: str = ""
     release_amount: float = 0.0
     completion_signal: float = 0.0  # 0-1, how clear the signal is
-    is_truly_complete: bool = False  # ground truth (NOT in instance)
     ambiguity: float = 0.0         # how ambiguous the signal is
 
 
@@ -201,6 +200,7 @@ class EscrowMilestoneBenchmark(BenchmarkTask):
         if not result.completed or result.payload is None:
             return BenchmarkScore(0.0, 0.0, 0.0, 0.0, 0.0)
 
+        adversarial_fraction = max(0.0, min(1.0, adversarial_fraction))
         payload = result.payload
         gt = oracle.ground_truth
         correct_releases = gt["correct_releases"]

@@ -228,6 +228,7 @@ class SwarmTreasuryBenchmark(BenchmarkTask):
         if not result.completed or result.payload is None:
             return BenchmarkScore(0.0, 0.0, 0.0, 0.0, 0.0)
 
+        adversarial_fraction = max(0.0, min(1.0, adversarial_fraction))
         payload = result.payload
         gt = oracle.ground_truth
 
@@ -240,12 +241,17 @@ class SwarmTreasuryBenchmark(BenchmarkTask):
 
         # Fidelity: allocation quality + shock handling
         optimal_spent = gt["optimal_total_spent"]
-        actual_spent = payload.get("total_spent", 0.0)
-        initial = gt["initial_treasury"]
+        actual_spent = max(0.0, float(payload.get("total_spent", 0.0)))
 
-        # Spending efficiency (closer to optimal is better)
+        # Spending efficiency: asymmetric — overspending penalized 2x vs underspending
         if optimal_spent > 0:
-            spend_ratio = 1.0 - min(abs(actual_spent - optimal_spent) / optimal_spent, 1.0)
+            deviation = actual_spent - optimal_spent
+            if deviation > 0:
+                # Overspending: 2x penalty (irreversible financial harm)
+                spend_ratio = 1.0 - min(2.0 * deviation / optimal_spent, 1.0)
+            else:
+                # Underspending: 1x penalty (inefficiency, but reversible)
+                spend_ratio = 1.0 - min(abs(deviation) / optimal_spent, 1.0)
         else:
             spend_ratio = 1.0 if actual_spent == 0 else 0.0
 

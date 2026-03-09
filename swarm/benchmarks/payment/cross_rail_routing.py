@@ -255,6 +255,7 @@ class CrossRailRoutingBenchmark(BenchmarkTask):
         if not result.completed or result.payload is None:
             return BenchmarkScore(0.0, 0.0, 0.0, 0.0, 0.0)
 
+        adversarial_fraction = max(0.0, min(1.0, adversarial_fraction))
         payload = result.payload
         gt = oracle.ground_truth
         optimal = gt["optimal_assignments"]
