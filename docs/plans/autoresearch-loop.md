@@ -1,5 +1,7 @@
 # Building a SWARM "Autoresearch" Loop
 
+> Status: Implemented MVP CLI as `python -m swarm autoresearch` for local governance-loop optimization.
+
 This document adapts the core idea behind Karpathy's `autoresearch` pattern to SWARM's multi-agent governance setting.
 
 ## What it is
@@ -76,7 +78,7 @@ Compared to pure training-loss optimization, SWARM needs mechanism-level clarity
 
 ## Suggested CLI extension
 
-A future `swarm autoresearch` command could orchestrate this:
+Current CLI (available now):
 
 ```bash
 python -m swarm autoresearch \
@@ -89,10 +91,10 @@ python -m swarm autoresearch \
   --export-root runs/autoresearch
 ```
 
-## Minimal rollout plan
+## Implemented MVP scope
 
-1. Add objective schema (`program.md` conventions + parser).
-2. Implement local loop runner (no autonomous git push).
-3. Add structured run ledger (`runs/autoresearch/<iter>/summary.json`).
-4. Add deterministic smoke test for score comparison logic.
-5. Gate autonomous mode behind explicit CLI flag.
+- Objective parsing from YAML/JSON or markdown fenced YAML (`--objective`).
+- Local mutation/evaluation loop over governance levers.
+- Acceptance policy with primary metric + guardrail regressions.
+- Structured ledger output to `runs/autoresearch/summary.json`.
+- Optional `--auto-commit` for committing the summary artifact.
