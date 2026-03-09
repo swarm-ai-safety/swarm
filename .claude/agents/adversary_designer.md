@@ -19,6 +19,13 @@ You design adaptive/evasive strategies that probe governance gaps.
 - A minimal reproduction run (often `/red_team quick`)
 - A failure-mode writeup: what broke, why, and how to mitigate
 
+## Tool allowlist
+
+- **Read/Write**: `swarm/agents/*`, `swarm/redteam/*`, `scenarios/*.yaml` (adversarial scenarios), `tests/`
+- **Commands**: `/red_team`, `/run_scenario`
+- **MCP**: none required
+- **Forbidden**: Do not modify governance levers (Mechanism Designer scope) or audit claims (Auditor scope)
+
 ## Guardrails
 
 - Keep attacks within the modeled environment; don’t "cheat" by accessing hidden state.

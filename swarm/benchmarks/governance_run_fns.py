@@ -69,7 +69,8 @@ def routing_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskRe
     - Probability of payload corruption (noisy channels under constraint)
     - Possible routing detours (suboptimal path under bandwidth limits)
     """
-    rng = np.random.default_rng(instance.seed + _config_seed_offset(gov_config))
+    seed_seq = np.random.SeedSequence([int(instance.seed), _config_seed_offset(gov_config)])
+    rng = np.random.default_rng(seed_seq)
     friction = _governance_friction(gov_config, rng)
 
     # Access routing-specific fields
@@ -128,7 +129,8 @@ def coordination_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> T
     Friction reduces coordination quality — agents can't communicate as
     freely, leading to suboptimal allocations.
     """
-    rng = np.random.default_rng(instance.seed + _config_seed_offset(gov_config))
+    seed_seq = np.random.SeedSequence([int(instance.seed), _config_seed_offset(gov_config)])
+    rng = np.random.default_rng(seed_seq)
     friction = _governance_friction(gov_config, rng)
 
     target_total = getattr(instance, "target_total", 0.0)
@@ -165,7 +167,8 @@ def auction_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskRe
     Friction prevents agents from fully expressing valuations, leading to
     suboptimal resource assignments.
     """
-    rng = np.random.default_rng(instance.seed + _config_seed_offset(gov_config))
+    seed_seq = np.random.SeedSequence([int(instance.seed), _config_seed_offset(gov_config)])
+    rng = np.random.default_rng(seed_seq)
     friction = _governance_friction(gov_config, rng)
 
     valuations = getattr(instance, "agent_valuations", {})
@@ -207,7 +210,8 @@ def pipeline_run_fn(instance: TaskInstance, gov_config: dict[str, Any]) -> TaskR
     """
     from swarm.benchmarks.long_horizon.pipeline_task import _stage_transform
 
-    rng = np.random.default_rng(instance.seed + _config_seed_offset(gov_config))
+    seed_seq = np.random.SeedSequence([int(instance.seed), _config_seed_offset(gov_config)])
+    rng = np.random.default_rng(seed_seq)
     friction = _governance_friction(gov_config, rng)
 
     initial_payload = getattr(instance, "initial_payload", 0)

@@ -109,7 +109,7 @@ class WikiPage:
 class WikiTaskPool:
     """Pool of wiki pages and work queues."""
 
-    def __init__(self, seed: Optional[int] = None):
+    def __init__(self, seed: Optional[int] = None) -> None:
         self._pages: Dict[str, WikiPage] = {}
         self._rng = random.Random(seed)
         self._leaderboard: Dict[str, float] = {}

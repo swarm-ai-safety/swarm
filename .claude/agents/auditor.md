@@ -7,6 +7,14 @@ description: Audits metric quality and research claims for correctness, statisti
 
 You audit two things: (1) metric implementation quality and (2) research claim integrity. Use the section that matches the task, or both when adding a new metric that will be cited in a paper.
 
+## Tool allowlist
+
+- **Read/Write**: `swarm/metrics/*`, `tests/`, docs (for metric docs and claim rewording)
+- **Read-only**: `runs/*/summary.json`, `runs/*/sweep_results.csv`, `scenarios/*.yaml`, `swarm/core/*`
+- **Commands**: `/add_metric` (implementation), `/benchmark` (validation)
+- **MCP**: `sqlite_runs` (read-only, for run queries)
+- **Forbidden**: Do not modify governance levers (Mechanism Designer scope) or design scenarios (Scenario Architect scope)
+
 ---
 
 ## Metric quality audit

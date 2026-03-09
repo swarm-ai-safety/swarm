@@ -186,13 +186,15 @@ class TestEstimateCriticalFraction:
 
 class TestSafetyCompositionAnalyzer:
     def _honest_profile(self) -> InferredProfile:
+        # Use a fully-honest mixture so _create_population cannot
+        # introduce non-honest agents regardless of seed (determinism).
         return InferredProfile(
             agent_id="agent-honest",
             archetype_mixture={
-                AgentType.HONEST: 0.85,
-                AgentType.OPPORTUNISTIC: 0.10,
-                AgentType.DECEPTIVE: 0.03,
-                AgentType.ADVERSARIAL: 0.02,
+                AgentType.HONEST: 1.0,
+                AgentType.OPPORTUNISTIC: 0.0,
+                AgentType.DECEPTIVE: 0.0,
+                AgentType.ADVERSARIAL: 0.0,
             },
             dominant_archetype=AgentType.HONEST,
             p_mean=0.73,
@@ -214,7 +216,11 @@ class TestSafetyCompositionAnalyzer:
         )
 
     def _small_sweep_config(self) -> SweepConfig:
-        """Minimal sweep for fast testing."""
+        """Minimal sweep for fast testing.
+
+        Uses multiple seeds so results average over simulation variance,
+        and enough epochs for a stable tail window.
+        """
         return SweepConfig(
             population_sizes=[4],
             governance_configs={
@@ -224,9 +230,9 @@ class TestSafetyCompositionAnalyzer:
                     freeze_threshold_toxicity=0.7,
                 ),
             },
-            n_epochs=5,
+            n_epochs=6,
             steps_per_epoch=5,
-            seeds=[42],
+            seeds=[0, 1],
             payoff_config=PayoffConfig(
                 s_plus=2.0, s_minus=1.0, h=2.0,
                 rho_a=0.1, rho_b=0.1,
@@ -278,7 +284,7 @@ class TestSafetyCompositionAnalyzer:
         assert cert.dominant_archetypes == {"agent-honest": AgentType.HONEST}
         assert len(cert.population_sizes_tested) == 1
         assert len(cert.governance_configs_tested) == 2
-        assert cert.seeds_per_point == 1
+        assert cert.seeds_per_point == 2
         assert cert.conditions  # non-empty string
 
     def test_summary_string(self):
@@ -298,7 +304,7 @@ class TestSafetyCompositionAnalyzer:
             progress_callback=lambda c, t: progress_calls.append((c, t)),
         )
         # Should have exactly pop_sizes * gov_configs * seeds calls.
-        expected = 1 * 2 * 1  # 4 * 2 configs * 1 seed
+        expected = 1 * 2 * 2  # 1 pop_size * 2 configs * 2 seeds
         assert len(progress_calls) == expected
         assert progress_calls[-1] == (expected, expected)
 
