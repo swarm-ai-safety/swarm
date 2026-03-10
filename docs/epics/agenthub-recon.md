@@ -1,92 +1,179 @@
 ---
-description: "Research-scout recon plan for evaluating Karpathy AgentHub as an execution/runtime layer for SWARM studies."
+description: "Research-scout integration plan for using AgentHub as a collaboration substrate for SWARM research communities."
 ---
 
-# AgentHub Recon for SWARM (Blocked External Access + Integration Plan)
+# AgentHub Recon for SWARM (Research Scout)
 
 *Prepared 2026-03-10 · Role: Research Scout*
 
-## Status
+## Source Basis and Confidence
 
-I attempted to inspect `https://github.com/karpathy/agenthub` directly from this environment, but outbound access to GitHub is blocked (`CONNECT tunnel failed, response 403`).
+This recon is based on a user-provided AgentHub project description (architecture + quick-start snippets), not direct source inspection from this runtime.
 
-Because source retrieval failed, this memo captures:
+- **Observed (from provided description):** AgentHub is an agent-first collaboration platform with a bare git repo + message board, built as one Go server binary (`agenthub-server`), one thin CLI (`ah`), one SQLite DB, and one bare git repo on disk.
+- **Inferred for SWARM integration:** Treat AgentHub as a coordination substrate above SWARM experiment execution and artifact governance.
 
-1. What was verified locally in SWARM for likely integration points.
-2. A concrete adapter plan to execute once AgentHub source is reachable.
-3. Risks and acceptance checks so this can convert quickly into an implementation task.
+## What AgentHub Is (Observed)
 
-## Local SWARM Surfaces Ready for an Agent Runtime Bridge
+### Core product model
 
-The bridge architecture in SWARM is already modular and has multiple precedent integrations under `swarm/bridges/*` (e.g., `agent_lab`, `langgraph_swarm`, `autogpt`, `openclaw`, `ralph`, `concordia`). This means AgentHub integration should be implemented as another bridge package, not as changes to core orchestration.
+AgentHub is designed as a stripped-down GitHub-like environment for AI agents with:
 
-### Recommended landing zone
+- no main branch,
+- no PRs,
+- no merges,
+- and a sprawling DAG of commits plus a message board for coordination.
 
-- New package: `swarm/bridges/agenthub/`
-- First-pass files to mirror existing bridge conventions:
+The platform is intentionally generic: it does not encode research norms; those come from agent instructions/culture.
+
+### Stated first use case
+
+- Organization layer for autoresearch-style research agents.
+- Community model where distributed contributors run agents and publish their results into a shared agent collaboration hub.
+
+### Architecture primitives
+
+- **Git layer**
+  - Agents push code via git bundles.
+  - Server validates/unbundles into a bare repo.
+  - Agents can browse DAG topology (children/leaves/lineage) and diff commits.
+- **Message board**
+  - Channels + posts + threaded replies.
+  - Unopinionated content (results, hypotheses, failures, coordination notes).
+- **Auth/defense**
+  - Per-agent API keys.
+  - Rate limiting.
+  - Bundle size limits.
+- **Operational shape**
+  - One Go server binary (`agenthub-server`).
+  - One SQLite DB.
+  - One bare repo.
+  - Thin CLI (`ah`) over HTTP API.
+
+## SWARM Fit: Why This Is Interesting
+
+AgentHub complements SWARM at the **community orchestration layer**, while SWARM remains the **experiment/governance/measurement layer**.
+
+- AgentHub can coordinate many autonomous research workers.
+- SWARM can standardize scenario execution, governance interventions, metrics, and reproducible artifacts.
+
+In short:
+- **AgentHub:** who collaborates, what gets proposed, where hypotheses are negotiated.
+- **SWARM:** how interventions are tested and how outcomes are measured credibly.
+
+## Integration Strategy
+
+## 1) Keep systems loosely coupled
+
+Use SWARM as an execution backend and provenance engine; use AgentHub for branch-DAG collaboration and threaded coordination.
+
+## 2) Add a dedicated bridge package
+
+Recommended landing zone:
+
+- `swarm/bridges/agenthub/`
   - `config.py`
+  - `client.py`
   - `events.py`
   - `mapper.py`
-  - `client.py`
   - `bridge.py`
   - `__init__.py`
 
-### Why this fits SWARM research workflow
+## 3) Define adapter contract
 
-A bridge preserves SWARM's research value proposition:
+Map AgentHub primitives into SWARM research primitives:
 
-- Keep SWARM metrics and governance levers as the "measurement/control" plane.
-- Treat AgentHub as an external "execution policy" plane.
-- Run baseline-vs-intervention experiments with identical SWARM scenario seeds while swapping the external runtime.
+1. **Bundle/commit events** → SWARM run intents + provenance events.
+2. **DAG lineage metadata** → experiment ancestry graph (baseline/intervention descendants).
+3. **Channel posts/replies** → structured experiment notes (hypothesis, setup, anomalies, conclusions).
+4. **Agent identity/API key** → SWARM actor IDs + governance policy scope.
+5. **Server guardrails (rate/size limits)** → SWARM resource-control observables for robustness studies.
 
-## Adapter Contract (What to map from AgentHub)
+## 4) Minimal end-to-end flow
 
-When source is accessible, extract and map these primitives:
+1. Agent posts hypothesis + intended scenario config on AgentHub message board.
+2. Agent commits scenario/intervention change into AgentHub DAG.
+3. Bridge ingests commit metadata and runs corresponding SWARM scenario with fixed seeds.
+4. SWARM exports metrics/history/artifacts.
+5. Bridge posts a structured "results receipt" reply (metrics deltas + artifact pointers + seed list).
 
-1. **Task/episode lifecycle** → SWARM run/epoch/step loop.
-2. **Agent action schema** → SWARM action + event taxonomy.
-3. **Tool-call traces** → SWARM provenance/event log stream.
-4. **Outcome/reward signals** → SWARM metric inputs.
-5. **Memory/context state transitions** → SWARM per-agent state snapshots.
+## Experiment Plan (Baseline vs Intervention)
 
-If AgentHub lacks one of these as first-class primitives, implement a normalization shim in `mapper.py` so SWARM still emits deterministic artifacts.
+### Objective
 
-## Minimal Experiment Plan (once unblocked)
+Test whether AgentHub-mediated collaboration improves research throughput without degrading governance/safety outcomes.
 
-### Goal
+### Baseline
 
-Quantify whether AgentHub execution policies change governance outcomes relative to native SWARM agents under fixed seeds.
+Current SWARM workflow without AgentHub coordination (single-runner or existing bridge workflow).
 
-### Baseline vs intervention
+### Intervention
 
-- **Baseline**: existing SWARM scenario with native bridge/agents.
-- **Intervention**: same scenario + `agenthub` bridge implementation.
+SWARM runs triggered/organized through AgentHub commit+message workflows.
 
-### First scenarios to run
+### Candidate scenarios
 
-- `scenarios/coding_bench/*` for capability/task quality differences.
-- `scenarios/work_regime_drift/*` for policy drift and adaptation behavior.
-- `scenarios/kernel_market/*` for multi-agent strategic effects.
+- `scenarios/coding_bench/*` (task quality / capability changes)
+- `scenarios/work_regime_drift/*` (adaptation and policy drift)
+- `scenarios/kernel_market/*` (strategic multi-agent effects)
 
-### Metrics to compare
+### Compare metrics
 
-- Welfare and quality metrics already exported by SWARM.
-- Safety/governance metrics (e.g., policy violations, intervention frequency).
-- Replay determinism checks across repeated seeds.
+- Existing welfare/quality outputs.
+- Governance/safety outcomes (violations, intervention frequency, policy breaches).
+- Reproducibility markers (seed-stable replay agreement).
+- Collaboration throughput indicators (time-to-result receipt, failed-run recovery time, duplicate-experiment rate).
 
 ## Risks and Mitigations
 
-- **Schema mismatch risk**: AgentHub action/tool payloads may not match SWARM abstractions.
-  - *Mitigation*: strict typed mapper + explicit "unknown event" bucket.
-- **Determinism risk**: runtime-level nondeterminism can invalidate comparisons.
-  - *Mitigation*: fixed seed threading and replay verifier checks before study runs.
-- **Attribution risk**: outcome deltas may come from prompt defaults, not runtime design.
-  - *Mitigation*: freeze prompts/tools and vary only runtime adapter.
+- **Attribution ambiguity**: better results may come from prompt/culture changes, not AgentHub substrate.
+  - *Mitigation*: freeze prompts/tools; vary only coordination substrate.
+- **Schema drift**: unstructured message-board content is hard to analyze.
+  - *Mitigation*: enforce a SWARM receipt template in bridge-generated posts.
+- **Determinism erosion**: many-agent asynchronous workflows can reduce reproducibility.
+  - *Mitigation*: require explicit seed lists and attach replay hashes in every results receipt.
+- **Operational abuse**: high-volume bundle pushes may stress infra.
+  - *Mitigation*: preserve/extend AgentHub rate and size controls and log limit-trigger events into SWARM observables.
 
-## Unblock Checklist (for next session with GitHub access)
+## Proposed Milestones
 
-1. Clone AgentHub and inventory core modules (`README`, runner, agent loop, tool interface, logging).
-2. Produce source-backed mapping table (AgentHub primitive → SWARM primitive) with exact file paths.
-3. Scaffold `swarm/bridges/agenthub/` with a smoke test scenario.
-4. Run a 2-seed smoke benchmark and export artifacts.
-5. Promote to larger sweeps only after deterministic replay passes.
+1. **M0 — Protocol draft**
+   - Finalize SWARM↔AgentHub event schema and receipt template.
+2. **M1 — Bridge scaffold**
+   - Create `swarm/bridges/agenthub/` with mocked client and mapper tests.
+3. **M2 — Smoke integration**
+   - Run 2-seed baseline/intervention on one scenario family.
+4. **M3 — Reliability hardening**
+   - Add retry/idempotency for duplicate commit notifications.
+5. **M4 — Research sweep**
+   - Multi-scenario comparison and publish summarized findings.
+
+## Quick Validation Checklist
+
+- `git diff --check` clean.
+- Bridge unit tests cover mapping of commit/post events to SWARM run intents.
+- Smoke run generates a reproducible receipt containing:
+  - scenario ID,
+  - seeds,
+  - metric deltas,
+  - artifact locations,
+  - replay hash.
+
+## Appendix: AgentHub startup shape (from provided notes)
+
+```bash
+# Build
+ go build ./cmd/agenthub-server
+ go build ./cmd/ah
+
+# Start server
+ ./agenthub-server --admin-key YOUR_SECRET --data ./data
+
+# Create agent (admin)
+ curl -X POST -H "Authorization: Bearer YOUR_SECRET" \
+   -H "Content-Type: application/json" \
+   -d '{"id":"agent-1"}' \
+   http://localhost:8080/api/admin/agents
+```
+
+This appendix is included to anchor bridge assumptions around process model and auth bootstrap.
