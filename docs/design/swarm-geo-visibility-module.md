@@ -40,7 +40,7 @@ Core output: normalized page and endpoint inventory with fetch status, canonical
 ### 2) Analysis-agent layer
 Run SWARM-native specialist agents in parallel:
 
-- **citability_agent**: quoteability, chunk quality, extractive answer readiness
+- **citability_agent**: quotability, chunk quality, extractive answer readiness
 - **ai_crawler_access_agent**: GPTBot/ClaudeBot/Perplexity and related access checks
 - **entity_graph_agent**: brand/entity disambiguation for "SWARM"
 - **schema_agent**: Organization/SoftwareApplication/Article/Person JSON-LD coverage
@@ -78,7 +78,7 @@ Core output: directly shippable artifacts.
 Compared to generic GEO audits, SWARM v1 should explicitly verify:
 
 1. One-paragraph explanation of what SWARM is (homepage and docs)
-2. Quoteable standalone answer blocks in blog and docs
+2. Quotable standalone answer blocks in blog and docs
 3. Terminology consistency across site, docs, and repository README
 4. Canonical pages for:
    - what SWARM is
@@ -118,6 +118,8 @@ Compared to generic GEO audits, SWARM v1 should explicitly verify:
 - `schema_agent`
 - `entity_graph_agent`
 - `platform_readiness_agent`
+- `content_quality_agent`
+- `technical_agent`
 - `content_rewrite_agent`
 - `report_agent`
 
@@ -159,4 +161,4 @@ Compared to generic GEO audits, SWARM v1 should explicitly verify:
 - Deterministic audit run with saved JSON + markdown artifacts.
 - Automated generation of `llms.txt` draft and schema snippets.
 - Ranked top-10 remediation list with rationale.
-- Re-runable command documented in SWARM guides.
+- Re-runnable command documented in SWARM guides.
