@@ -8,6 +8,7 @@ This directory tracks large multi-milestone initiatives (epics) in the SWARM pro
 
 ## Active Epics
 
+- [**AgentHub Recon**](agenthub-recon.md) - Research-scout integration plan for using AgentHub as a SWARM collaboration substrate (Status: Scoping, Est: 1-2d for M0-M1)
 - [**SciAgentGym Integration**](sciagentagym-integration.md) - Integration with SciAgentGym benchmarking framework (Status: Planning, Est: 0.5d)
 
 ## Epic Format
