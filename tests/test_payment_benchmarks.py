@@ -10,10 +10,35 @@ Covers all 7 protocols with security, correctness, and integration tests:
 7. Runner integration (all 7 benchmarks through BenchmarkRunner)
 """
 
-import pytest
-
-from swarm.benchmarks.base import BenchmarkScore, ScoringWeights, TaskResult
-from swarm.benchmarks.runner import BenchmarkRunner
+from swarm.benchmarks.base import BenchmarkScore, TaskResult
+from swarm.benchmarks.payment.authority_boundaries import (
+    AuthorityBoundariesBenchmark,
+    AuthorityInstance,
+)
+from swarm.benchmarks.payment.cross_rail_routing import (
+    CrossRailInstance,
+    CrossRailRoutingBenchmark,
+)
+from swarm.benchmarks.payment.delegated_spending import (
+    DelegatedSpendingBenchmark,
+    SpendingInstance,
+)
+from swarm.benchmarks.payment.escrow_milestone import (
+    EscrowInstance,
+    EscrowMilestoneBenchmark,
+)
+from swarm.benchmarks.payment.multi_agent_collusion import (
+    CollusionInstance,
+    MultiAgentCollusionBenchmark,
+)
+from swarm.benchmarks.payment.prompt_injection import (
+    InjectionInstance,
+    PromptInjectionBenchmark,
+)
+from swarm.benchmarks.payment.swarm_treasury import (
+    SwarmTreasuryBenchmark,
+    TreasuryInstance,
+)
 from swarm.benchmarks.payment.types import (
     AgentRole,
     DifficultyTier,
@@ -21,35 +46,7 @@ from swarm.benchmarks.payment.types import (
     PaymentMetrics,
     PaymentRail,
 )
-from swarm.benchmarks.payment.delegated_spending import (
-    DelegatedSpendingBenchmark,
-    SpendingInstance,
-)
-from swarm.benchmarks.payment.prompt_injection import (
-    PromptInjectionBenchmark,
-    InjectionInstance,
-)
-from swarm.benchmarks.payment.multi_agent_collusion import (
-    MultiAgentCollusionBenchmark,
-    CollusionInstance,
-)
-from swarm.benchmarks.payment.escrow_milestone import (
-    EscrowMilestoneBenchmark,
-    EscrowInstance,
-)
-from swarm.benchmarks.payment.authority_boundaries import (
-    AuthorityBoundariesBenchmark,
-    AuthorityInstance,
-)
-from swarm.benchmarks.payment.cross_rail_routing import (
-    CrossRailRoutingBenchmark,
-    CrossRailInstance,
-)
-from swarm.benchmarks.payment.swarm_treasury import (
-    SwarmTreasuryBenchmark,
-    TreasuryInstance,
-)
-
+from swarm.benchmarks.runner import BenchmarkRunner
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -353,6 +350,25 @@ class TestPromptInjectionGamingResistance:
         # Geometric mean: resistance=0.0, benign=1.0 → 0.0
         assert score.fidelity == 0.0
 
+    def test_ignoring_benign_messages_reduces_fidelity(self):
+        """Benign acceptance must use accepted_benign, not only false positives."""
+        bench = PromptInjectionBenchmark()
+        _, oracle = bench.generate(seed=0, n_agents=5)
+        gt = oracle.ground_truth
+        result = TaskResult(
+            completed=True,
+            payload={
+                "flagged_injections": gt["injection_ids"],
+                "accepted_benign": [],
+                "compromised": False,
+            },
+            steps_taken=10,
+            agent_trace=[],
+        )
+        score = bench.score(result, oracle)
+        # resistance=1.0 but benign_acceptance=0.0 => fidelity=0.0
+        assert score.fidelity == 0.0
+
 
 class TestMultiAgentCollusionScoring:
     def test_perfect_negotiation(self):
@@ -496,7 +512,7 @@ class TestCrossRailRoutingScoring:
         inst, oracle = bench.generate(seed=0, n_agents=5)
         gt = oracle.ground_truth
         # Route everything to card (suboptimal)
-        wrong_assignments = {txn_id: "card" for txn_id in gt["optimal_assignments"]}
+        wrong_assignments = dict.fromkeys(gt["optimal_assignments"], "card")
         result = TaskResult(
             completed=True,
             payload={
@@ -511,6 +527,16 @@ class TestCrossRailRoutingScoring:
         )
         score = bench.score(result, oracle)
         assert score.efficiency < 1.0  # worse fee efficiency
+
+    def test_generated_transactions_are_feasible(self):
+        """Generator should not produce transactions with no feasible rail."""
+        bench = CrossRailRoutingBenchmark()
+        inst, oracle = bench.generate(seed=0, n_agents=5)
+        for txn in inst.transactions:
+            assert any(bench._rail_feasible(rail, txn, inst.policy) for rail in inst.rails)
+            assigned = oracle.ground_truth["optimal_assignments"][txn.txn_id]
+            rail_obj = next(r for r in inst.rails if r.rail == assigned)
+            assert bench._rail_feasible(rail_obj, txn, inst.policy)
 
 
 class TestSwarmTreasuryScoring:

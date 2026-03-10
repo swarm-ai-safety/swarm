@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from typing import Any
 
 import numpy as np
 
@@ -36,7 +35,6 @@ from swarm.benchmarks.base import (
     TaskResult,
 )
 from swarm.benchmarks.payment.types import (
-    FailureSeverity,
     Merchant,
     PaymentInstance,
     PaymentPolicy,
@@ -101,7 +99,8 @@ class DelegatedSpendingBenchmark(BenchmarkTask):
 
         merchants = []
         n_traps = max(1, int(self.n_merchants * self.trap_fraction))
-        # Optimal merchant is always first among approved
+        # vendor_0 is seeded as the cheapest compliant option; oracle
+        # still recomputes the cheapest approved merchant after shuffling.
         optimal_price = float(rng.uniform(budget * 0.3, budget * 0.6))
 
         for i in range(self.n_merchants):

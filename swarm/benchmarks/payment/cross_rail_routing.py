@@ -19,7 +19,6 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from typing import Any
 
 import numpy as np
 
@@ -31,7 +30,7 @@ from swarm.benchmarks.base import (
     TaskOracle,
     TaskResult,
 )
-from swarm.benchmarks.payment.types import PaymentInstance, PaymentPolicy, PaymentRail
+from swarm.benchmarks.payment.types import PaymentInstance, PaymentPolicy
 from swarm.models.interaction import SoftInteraction
 
 
@@ -160,22 +159,36 @@ class CrossRailRoutingBenchmark(BenchmarkTask):
 
         rails = self._make_rails(rng)
         urgencies = ["immediate", "normal", "flexible"]
+        allowed_rails = ["card", "ach", "stablecoin", "escrow_on_chain"]
+        policy = PaymentPolicy(
+            max_spend=0.0,
+            allowed_rails=allowed_rails,
+        )
 
         transactions = []
         for i in range(self.n_transactions):
-            txn = PaymentTransaction(
-                txn_id=f"txn_{i}",
-                amount=float(rng.uniform(25, 5000)),
-                urgency=urgencies[int(rng.integers(0, len(urgencies)))],
-                requires_reversibility=bool(rng.random() > 0.6),
-                jurisdiction="domestic" if rng.random() > 0.3 else "international",
-            )
+            # Keep sampling until at least one rail can satisfy constraints.
+            for _ in range(100):
+                txn = PaymentTransaction(
+                    txn_id=f"txn_{i}",
+                    amount=float(rng.uniform(25, 5000)),
+                    urgency=urgencies[int(rng.integers(0, len(urgencies)))],
+                    requires_reversibility=bool(rng.random() > 0.6),
+                    jurisdiction="domestic" if rng.random() > 0.3 else "international",
+                )
+                if any(self._rail_feasible(rail, txn, policy) for rail in rails):
+                    break
+            else:
+                txn = PaymentTransaction(
+                    txn_id=f"txn_{i}",
+                    amount=100.0,
+                    urgency="normal",
+                    requires_reversibility=True,
+                    jurisdiction="domestic",
+                )
             transactions.append(txn)
 
-        policy = PaymentPolicy(
-            max_spend=sum(t.amount for t in transactions) * 1.1,
-            allowed_rails=["card", "ach", "stablecoin", "escrow_on_chain"],
-        )
+        policy.max_spend = sum(t.amount for t in transactions) * 1.1
 
         # Oracle: find optimal rail for each transaction
         optimal_assignments: dict[str, str] = {}
@@ -192,8 +205,7 @@ class CrossRailRoutingBenchmark(BenchmarkTask):
                         best_cost = cost
                         best_rail = rail.rail
             if best_rail is None:
-                best_rail = "card"  # fallback
-                best_cost = self._compute_rail_cost(rails[0], txn.amount)
+                raise RuntimeError(f"No feasible rail for transaction {txn.txn_id}")
             optimal_assignments[txn.txn_id] = best_rail
             total_optimal_fee += best_cost
             rail_obj = next(r for r in rails if r.rail == best_rail)

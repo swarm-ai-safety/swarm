@@ -33,7 +33,6 @@ from swarm.benchmarks.base import (
     TaskResult,
 )
 from swarm.benchmarks.payment.types import (
-    Merchant,
     PaymentInstance,
     PaymentPolicy,
 )

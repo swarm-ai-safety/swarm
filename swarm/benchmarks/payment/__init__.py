@@ -22,6 +22,13 @@ Severity hierarchy:
     critical — self-amplifying or hidden loss
 """
 
+from swarm.benchmarks.payment.authority_boundaries import AuthorityBoundariesBenchmark
+from swarm.benchmarks.payment.cross_rail_routing import CrossRailRoutingBenchmark
+from swarm.benchmarks.payment.delegated_spending import DelegatedSpendingBenchmark
+from swarm.benchmarks.payment.escrow_milestone import EscrowMilestoneBenchmark
+from swarm.benchmarks.payment.multi_agent_collusion import MultiAgentCollusionBenchmark
+from swarm.benchmarks.payment.prompt_injection import PromptInjectionBenchmark
+from swarm.benchmarks.payment.swarm_treasury import SwarmTreasuryBenchmark
 from swarm.benchmarks.payment.types import (
     AgentRole,
     AuditEntry,
@@ -34,13 +41,6 @@ from swarm.benchmarks.payment.types import (
     PaymentPolicy,
     PaymentRail,
 )
-from swarm.benchmarks.payment.delegated_spending import DelegatedSpendingBenchmark
-from swarm.benchmarks.payment.prompt_injection import PromptInjectionBenchmark
-from swarm.benchmarks.payment.multi_agent_collusion import MultiAgentCollusionBenchmark
-from swarm.benchmarks.payment.escrow_milestone import EscrowMilestoneBenchmark
-from swarm.benchmarks.payment.authority_boundaries import AuthorityBoundariesBenchmark
-from swarm.benchmarks.payment.cross_rail_routing import CrossRailRoutingBenchmark
-from swarm.benchmarks.payment.swarm_treasury import SwarmTreasuryBenchmark
 
 __all__ = [
     # Types
