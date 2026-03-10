@@ -2429,8 +2429,5 @@ class TestExecSafety:
 
         # Actually exec code with restricted builtins and confirm eval is unavailable
         ns: dict = {"__builtins__": dict(_RESTRICTED_BUILTINS)}
-        try:
+        with pytest.raises(NameError):
             exec("result = eval('1+1')", ns)  # noqa: S102
-            raise AssertionError("eval() should have raised NameError")
-        except NameError:
-            pass  # Expected: eval is not available

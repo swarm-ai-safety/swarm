@@ -8,12 +8,11 @@ from typing import Any, Dict, List, Tuple
 import yaml
 
 from swarm_gym.envs.base import SwarmEnv
-from swarm_gym.envs.registry import make
-from swarm_gym.governance.base import GovernanceModule
-from swarm_gym.governance.tax import TaxPolicy
+from swarm_gym.envs.registry import _REGISTRY, make
 from swarm_gym.governance.audits import AuditPolicy
+from swarm_gym.governance.base import GovernanceModule
 from swarm_gym.governance.circuit_breaker import CircuitBreakerPolicy
-
+from swarm_gym.governance.tax import TaxPolicy
 
 _CONFIGS_DIR = Path(__file__).parent
 
@@ -70,8 +69,16 @@ def load_benchmark(path: Path) -> Tuple[Dict[str, Any], SwarmEnv]:
     game = config.get("game", {})
     env_kwargs.update(game)
 
-    # Map observability
+    # Map observability — only pass keys the env actually accepts
     obs_cfg = config.get("observability", {})
+    _ensure_envs_registered()
+    env_cls = _REGISTRY.get(env_id)
+    if env_cls is not None:
+        import inspect
+
+        sig = inspect.signature(env_cls.__init__)
+        accepted = set(sig.parameters.keys()) - {"self"}
+        obs_cfg = {k: v for k, v in obs_cfg.items() if k in accepted}
     env_kwargs.update(obs_cfg)
 
     # Ensure benchmark envs are registered
@@ -91,6 +98,6 @@ def load_benchmark(path: Path) -> Tuple[Dict[str, Any], SwarmEnv]:
 
 def _ensure_envs_registered() -> None:
     """Import environment modules to trigger registration."""
-    import swarm_gym.envs.escalation_ladder  # noqa: F401
-    import swarm_gym.envs.collusion_market  # noqa: F401
     import swarm_gym.envs.audit_evasion  # noqa: F401
+    import swarm_gym.envs.collusion_market  # noqa: F401
+    import swarm_gym.envs.escalation_ladder  # noqa: F401

@@ -9,6 +9,9 @@ set -euo pipefail
 
 if [[ "${SKIP_SWARM_HOOKS:-0}" == "1" ]]; then
   echo "[swarm pre-merge-commit] SKIP_SWARM_HOOKS=1 set; skipping."
+  # Audit log: record bypass event for traceability (see THREAT_MODEL.md §3)
+  _BYPASS_LOG="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")/.claude/hook_bypass.log"
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)|pre-merge-commit|${SESSION_ID:-local}|${USER:-unknown}" >> "$_BYPASS_LOG" 2>/dev/null || true
   exit 0
 fi
 

@@ -115,7 +115,7 @@ class MissionEconomy:
     quality signal pipeline.
     """
 
-    def __init__(self, config: Optional[MissionConfig] = None):
+    def __init__(self, config: Optional[MissionConfig] = None) -> None:
         """Initialize mission economy."""
         self.config = config or MissionConfig()
         self.config.validate()
