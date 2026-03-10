@@ -107,7 +107,8 @@ class TestTrigger:
         )
         engine = FlashCrashEngine(config, seed=42)
         result = engine.step(epoch=0, step=0, agent_ids=agent_ids)
-        # Confidence should have dropped significantly
+        # Trigger step applies the shock — confidence should have dropped
+        assert result["phase"] == "trigger"
         assert result["market_confidence"] < 0.8
 
     def test_confidence_erosion_trigger(self, agent_ids):
@@ -124,11 +125,27 @@ class TestTrigger:
         # But not as much as full magnitude
         assert result["market_confidence"] > 0.4
 
+    def test_trigger_phase_is_observable(self, agent_ids):
+        """The trigger phase should appear in results for exactly one step."""
+        config = FlashCrashConfig(
+            trigger_type=TriggerType.EXOGENOUS_SHOCK,
+            trigger_epoch=0,
+            trigger_magnitude=0.4,
+            initial_confidence=0.8,
+        )
+        engine = FlashCrashEngine(config, seed=42)
+        result = engine.step(epoch=0, step=0, agent_ids=agent_ids)
+        assert result["phase"] == "trigger"
+
+        # Next step should transition to cascade
+        result2 = engine.step(epoch=0, step=1, agent_ids=agent_ids)
+        assert result2["phase"] in ("cascade", "circuit_break", "recovery")
+
     def test_coordinated_withdrawal_trigger(self, agent_ids):
         config = FlashCrashConfig(
             trigger_type=TriggerType.COORDINATED_WITHDRAWAL,
             trigger_epoch=0,
-            spoofing_agent_fraction=0.3,
+            coordinated_withdrawal_fraction=0.3,
             initial_confidence=0.8,
         )
         engine = FlashCrashEngine(config, seed=42)
@@ -390,9 +407,11 @@ class TestRecovery:
             )
 
         metrics = engine.get_crash_metrics()
-        if metrics["crash_occurred"] and metrics["recovery_duration_steps"] > 0:
-            # Recovery should take longer than crash
-            assert metrics["asymmetry_ratio"] >= 1.0
+        # Ensure we actually entered crash and recovery
+        assert metrics["crash_occurred"]
+        assert metrics["recovery_duration_steps"] > 0
+        # Recovery should take longer than crash
+        assert metrics["asymmetry_ratio"] >= 1.0
 
 
 # ---------------------------------------------------------------------------
@@ -409,6 +428,8 @@ class TestObservableModification:
         }
         modified = engine.modify_observables("agent_0", obs)
         assert modified == obs
+        # Should be a copy, not the original reference
+        assert modified is not obs
 
     def test_engagement_drops_during_crash(self, agent_ids):
         """Engagement should drop during panic."""
@@ -624,10 +645,130 @@ class TestFullCrashCycle:
             )
             phases_seen.add(result["phase"])
 
+        # Trigger phase should now be observable
+        assert "trigger" in phases_seen
         # Should have gone through multiple phases
-        assert CrashPhase.PRE_CRASH.value not in phases_seen or len(phases_seen) > 1
+        assert len(phases_seen) > 1
         # Crash should have occurred
         metrics = engine.get_crash_metrics()
         assert metrics["crash_occurred"]
         # Final confidence should be higher than the trough
         assert metrics["final_confidence"] > metrics["trough_confidence"]
+
+
+# ---------------------------------------------------------------------------
+# Circuit breaker cooldown
+# ---------------------------------------------------------------------------
+
+class TestCircuitBreakerCooldown:
+    def test_cooldown_prevents_immediate_retrip(self, agent_ids):
+        """Circuit breaker should not re-trip within cooldown period."""
+        config = FlashCrashConfig(
+            trigger_epoch=0,
+            trigger_magnitude=0.6,
+            cascade_feedback_rate=0.5,
+            circuit_breaker_enabled=True,
+            circuit_breaker_threshold=0.3,
+            circuit_breaker_duration_steps=3,
+            circuit_breaker_cooldown_epochs=2,
+            recovery_rate=0.02,
+            recovery_requires_fundamentals=False,
+            initial_confidence=0.8,
+        )
+        engine = FlashCrashEngine(config, seed=42)
+
+        # Run epoch 0: should trigger and trip circuit breaker once
+        for step in range(30):
+            engine.step(
+                epoch=0, step=step, agent_ids=agent_ids, recent_avg_p=0.3
+            )
+
+        first_trip_count = engine.state.circuit_breaker_trip_count
+        assert first_trip_count >= 1
+
+        # Run epoch 0 more — still within cooldown (need 2 epochs)
+        # Even if confidence drops again, breaker should NOT re-trip
+        # because last_circuit_break_epoch=0 and epoch=0, so
+        # 0 - 0 = 0 < 2 (cooldown)
+        for step in range(30, 60):
+            engine.step(
+                epoch=0, step=step, agent_ids=agent_ids, recent_avg_p=0.2
+            )
+
+        # Trip count should not have increased during same epoch
+        assert engine.state.circuit_breaker_trip_count == first_trip_count
+
+
+# ---------------------------------------------------------------------------
+# Slow decay stabilization guard
+# ---------------------------------------------------------------------------
+
+class TestStabilizationGuard:
+    def test_slow_decay_does_not_false_stabilize(self, agent_ids):
+        """A slowly declining cascade should not be classified as stabilized."""
+        config = FlashCrashConfig(
+            trigger_epoch=0,
+            trigger_magnitude=0.2,
+            # Very small feedback rate -> slow decline
+            cascade_feedback_rate=0.02,
+            circuit_breaker_enabled=False,
+            confidence_floor=0.01,
+            initial_confidence=0.8,
+        )
+        engine = FlashCrashEngine(config, seed=42)
+
+        # Run enough steps for the old check to false-positive
+        for step in range(30):
+            engine.step(
+                epoch=0, step=step, agent_ids=agent_ids, recent_avg_p=0.3
+            )
+
+        # If confidence is still declining, phase should still be CASCADE
+        history = engine.state.confidence_history
+        if len(history) >= 2 and history[-1] < history[-2] - 0.001:
+            assert engine.state.phase == CrashPhase.CASCADE
+
+
+# ---------------------------------------------------------------------------
+# Re-crash from recovery (double-dip)
+# ---------------------------------------------------------------------------
+
+class TestDoubleDip:
+    def test_recovery_can_reenter_cascade(self, agent_ids):
+        """If confidence drops back to threshold during recovery, re-enter cascade."""
+        config = FlashCrashConfig(
+            trigger_epoch=0,
+            trigger_magnitude=0.4,
+            cascade_feedback_rate=0.3,
+            circuit_breaker_enabled=True,
+            circuit_breaker_threshold=0.15,
+            circuit_breaker_duration_steps=3,
+            circuit_breaker_cooldown_epochs=1,
+            recovery_rate=0.02,
+            recovery_requires_fundamentals=True,
+            recovery_fundamental_threshold=0.5,
+            confidence_floor=0.05,
+            initial_confidence=0.8,
+        )
+        engine = FlashCrashEngine(config, seed=42)
+
+        # Epoch 0: crash -> circuit break -> recovery
+        for step in range(40):
+            engine.step(
+                epoch=0, step=step, agent_ids=agent_ids, recent_avg_p=0.6
+            )
+
+        # Epoch 1+: bad fundamentals during recovery should erode confidence
+        # and eventually re-enter cascade
+        phases_seen = set()
+        for epoch in range(1, 10):
+            for step in range(20):
+                result = engine.step(
+                    epoch=epoch, step=step, agent_ids=agent_ids, recent_avg_p=0.1
+                )
+                phases_seen.add(result["phase"])
+
+        # With bad fundamentals, confidence erodes in recovery and should
+        # eventually drop below the circuit breaker threshold, triggering
+        # a re-entry into cascade
+        assert "cascade" in phases_seen

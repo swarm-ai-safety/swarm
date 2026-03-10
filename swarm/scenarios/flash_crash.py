@@ -70,6 +70,9 @@ class FlashCrashConfig(BaseModel):
     initial_confidence: float = 0.8  # Starting confidence level
     liquidity_depth: float = 1.0     # Higher = more resistant to shocks (0-2)
 
+    # Coordinated withdrawal
+    coordinated_withdrawal_fraction: float = 0.3  # Fraction of agents that withdraw in a coordinated trigger
+
     # Spoofing (agents placing fake signals to manipulate confidence)
     spoofing_enabled: bool = False
     spoofing_agent_fraction: float = 0.2  # Fraction of agents that may spoof
@@ -178,24 +181,26 @@ class FlashCrashEngine:
         for aid in agent_ids:
             self.get_agent_state(aid)
 
-        # 1. Check trigger
+        # Phase-based dynamics — exactly one branch per step.
+        # The trigger fires on its own step so that the TRIGGER phase is
+        # observable in the result and phase_history.
         if (
             self.state.phase == CrashPhase.PRE_CRASH
             and epoch >= self.config.trigger_epoch
         ):
             self._apply_trigger(global_step)
 
-        # 2. Update confidence based on phase
-        if self.state.phase == CrashPhase.TRIGGER:
+        elif self.state.phase == CrashPhase.TRIGGER:
             self._transition_to_cascade(global_step)
+            self._apply_cascade(global_step, epoch, agent_ids, recent_avg_p)
 
-        if self.state.phase == CrashPhase.CASCADE:
-            self._apply_cascade(global_step, agent_ids, recent_avg_p)
+        elif self.state.phase == CrashPhase.CASCADE:
+            self._apply_cascade(global_step, epoch, agent_ids, recent_avg_p)
 
-        if self.state.phase == CrashPhase.CIRCUIT_BREAK:
+        elif self.state.phase == CrashPhase.CIRCUIT_BREAK:
             self._apply_circuit_break(global_step, epoch)
 
-        if self.state.phase == CrashPhase.RECOVERY:
+        elif self.state.phase == CrashPhase.RECOVERY:
             self._apply_recovery(global_step, recent_avg_p)
 
         # 3. Update per-agent states
@@ -256,7 +261,7 @@ class FlashCrashEngine:
             agent_ids = list(self.state.agent_states.keys())
             n_withdraw = max(
                 1,
-                int(len(agent_ids) * self.config.spoofing_agent_fraction),
+                int(len(agent_ids) * self.config.coordinated_withdrawal_fraction),
             )
             selected = self._rng.sample(
                 agent_ids, min(n_withdraw, len(agent_ids))
@@ -282,6 +287,7 @@ class FlashCrashEngine:
     def _apply_cascade(
         self,
         global_step: int,
+        epoch: int,
         agent_ids: List[str],
         recent_avg_p: float,
     ) -> None:
@@ -326,26 +332,38 @@ class FlashCrashEngine:
             self.state.crash_trough_confidence = self.state.market_confidence
             self.state.crash_trough_step = global_step
 
-        # Check circuit breaker
+        # Check circuit breaker (with cooldown enforcement).
+        # The first trip is always allowed; subsequent trips require the
+        # cooldown period to have elapsed.
+        cooldown_ok = (
+            self.state.circuit_breaker_trip_count == 0
+            or (epoch - self.state.last_circuit_break_epoch)
+            >= self.config.circuit_breaker_cooldown_epochs
+        )
         if (
             self.config.circuit_breaker_enabled
             and self.state.market_confidence
             <= self.config.circuit_breaker_threshold
+            and cooldown_ok
         ):
             self._trip_circuit_breaker(global_step)
             return
 
-        # Check if cascade has exhausted itself (confidence stabilizing)
-        if (
-            len(self.state.confidence_history) >= 3
-            and all(
-                abs(self.state.confidence_history[-(i + 1)] - self.state.market_confidence)
-                < 0.01
-                for i in range(min(3, len(self.state.confidence_history)))
+        # Check if cascade has exhausted itself (confidence stabilizing).
+        # Require that confidence is no longer declining: current value must
+        # be >= each of the last 3 recorded values (within tolerance) so that
+        # a slow monotonic decay cannot false-positive as "stabilized".
+        if len(self.state.confidence_history) >= 3:
+            recent = self.state.confidence_history[-3:]
+            not_declining = all(
+                self.state.market_confidence >= h - 0.001 for h in recent
             )
-        ):
-            self.state.phase = CrashPhase.RECOVERY
-            self.state.recovery_start_step = global_step
+            close_to_recent = all(
+                abs(h - self.state.market_confidence) < 0.01 for h in recent
+            )
+            if not_declining and close_to_recent:
+                self.state.phase = CrashPhase.RECOVERY
+                self.state.recovery_start_step = global_step
 
     def _trip_circuit_breaker(self, global_step: int) -> None:
         """Activate the circuit breaker — halt all activity."""
@@ -402,6 +420,22 @@ class FlashCrashEngine:
                 self.config.confidence_floor,
                 self.state.market_confidence - 0.01,
             )
+
+        # Track trough (recovery can still set new lows with bad fundamentals)
+        if self.state.market_confidence < self.state.crash_trough_confidence:
+            self.state.crash_trough_confidence = self.state.market_confidence
+            self.state.crash_trough_step = global_step
+
+        # Re-crash: if confidence drops back to circuit breaker threshold
+        # during recovery, transition back to cascade (double-dip).
+        # Only applicable when circuit breakers are enabled.
+        if (
+            self.config.circuit_breaker_enabled
+            and self.state.market_confidence
+            <= self.config.circuit_breaker_threshold
+        ):
+            self.state.phase = CrashPhase.CASCADE
+            return
 
         # Check if fully recovered
         if self.state.market_confidence >= self.config.initial_confidence * 0.95:
@@ -464,11 +498,12 @@ class FlashCrashEngine:
         Returns:
             Modified observables dict
         """
+        modified = dict(observables_dict)
+
         if self.state.phase == CrashPhase.PRE_CRASH:
-            return observables_dict
+            return modified
 
         astate = self.get_agent_state(agent_id)
-        modified = dict(observables_dict)
 
         # Engagement drops with panic
         if "counterparty_engagement_delta" in modified:
@@ -498,7 +533,7 @@ class FlashCrashEngine:
         if not history:
             return {"crash_occurred": False}
 
-        peak_confidence = max(history) if history else self.config.initial_confidence
+        peak_confidence = max(history)
         trough_confidence = self.state.crash_trough_confidence
 
         # Crash depth: how far confidence fell from peak
