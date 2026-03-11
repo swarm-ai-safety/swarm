@@ -644,7 +644,7 @@ def main():
     logging.basicConfig(
         level=getattr(logging, args.log_level),
         stream=sys.stderr,
-        format="%(levelname)s: %(message)s",
+        format="%(message)s",
     )
 
     if not os.path.exists(args.paper):

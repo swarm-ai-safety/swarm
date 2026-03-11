@@ -204,7 +204,7 @@ def main():
     logging.basicConfig(
         level=getattr(logging, args.log_level),
         stream=sys.stderr,
-        format="%(levelname)s: %(message)s",
+        format="%(message)s",
     )
 
     csv_path = Path(args.csv)
