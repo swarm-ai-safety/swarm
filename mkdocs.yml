@@ -119,6 +119,11 @@ nav:
     - Governance Taxonomy: concepts/governance-mechanisms-taxonomy.md
     - Time Horizons: concepts/time-horizons.md
     - Recursive Research: concepts/recursive-research.md
+  - Topics:
+    - Overview: topics/index.md
+    - Multi-Agent Governance: topics/multi-agent-governance.md
+    - AI Safety Metrics: topics/ai-safety-metrics.md
+    - Emergent Risk Detection: topics/emergent-risk-detection.md
   - Tutorials:
     - Overview: tutorials/index.md
     - Your First Governance Experiment: tutorials/first-governance-experiment.md

@@ -6,6 +6,12 @@ description: "Academic foundations and related publications."
 
 Academic foundations and related publications. SWARM implements the framework described in [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856) (arXiv:2512.16856).
 
+## Research Topic Clusters
+
+- [Multi-Agent Governance research cluster](../topics/multi-agent-governance.md)
+- [AI Safety Metrics research cluster](../topics/ai-safety-metrics.md)
+- [Emergent Risk Detection research cluster](../topics/emergent-risk-detection.md)
+
 <div class="grid cards" markdown>
 
 -   :material-book-open-variant: **[Theoretical Foundations](theory.md)**

@@ -111,6 +111,14 @@ SWARM is the reference implementation of the **[Distributional AGI Safety](conce
 
 SWARM makes these interaction-level risks **observable, measurable, and governable** using [soft probabilistic labels](concepts/soft-labels/).
 
+## Topic Clusters
+
+Explore content by topic to move from foundations to implementation and evidence:
+
+- [Multi-Agent Governance topic hub](topics/multi-agent-governance.md)
+- [AI Safety Metrics topic hub](topics/ai-safety-metrics.md)
+- [Emergent Risk Detection topic hub](topics/emergent-risk-detection.md)
+
 <div class="features">
   <div class="feature">
     <h3><a href="concepts/metrics/">Measure</a></h3>

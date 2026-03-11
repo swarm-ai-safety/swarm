@@ -338,6 +338,28 @@
   </script>
   {% endif %}
 
+  <!-- HowTo JSON-LD (pages with howto frontmatter) -->
+  {% if page and page.meta and page.meta.howto and page.meta.howto.steps %}
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "HowTo",
+    "name": "{{ page.meta.howto.name if page.meta.howto.name else page.title }}",
+    "description": "{{ desc }}",
+    "url": "{{ url }}",
+    "step": [
+      {% for step in page.meta.howto.steps %}
+      {
+        "@type": "HowToStep",
+        "position": {{ loop.index }},
+        "text": "{{ step }}"
+      }{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ]
+  }
+  </script>
+  {% endif %}
+
   <!-- BreadcrumbList JSON-LD -->
   {% if page and page.url and page.url != "" and page.url != "index.html" %}
   {% set parts = page.url.rstrip("/").split("/") %}

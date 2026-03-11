@@ -6,6 +6,14 @@ description: "Practical guides for using SWARM effectively."
 
 Practical guides for using SWARM effectively.
 
+## Topic Clusters
+
+Implementation guides grouped by core topic:
+
+- [Multi-Agent Governance implementation cluster](../topics/multi-agent-governance.md)
+- [AI Safety Metrics implementation cluster](../topics/ai-safety-metrics.md)
+- [Emergent Risk Detection implementation cluster](../topics/emergent-risk-detection.md)
+
 <div class="grid cards" markdown>
 
 -   :material-file-cog: **[Writing Scenarios](scenarios.md)**

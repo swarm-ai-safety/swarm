@@ -6,6 +6,12 @@ description: "SWARM is built on several key ideas that distinguish it from tradi
 
 SWARM is built on several key ideas that distinguish it from traditional AI safety approaches. The theoretical foundations are detailed in [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856).
 
+## Related Topic Clusters
+
+- [Multi-Agent Governance cluster](../topics/multi-agent-governance.md)
+- [AI Safety Metrics cluster](../topics/ai-safety-metrics.md)
+- [Emergent Risk Detection cluster](../topics/emergent-risk-detection.md)
+
 ## The Central Thesis
 
 **AGI-level risks don't require AGI-level agents.** Catastrophic failures can emerge from the *interaction* of many sub-AGI agents—even when none are individually dangerous.
