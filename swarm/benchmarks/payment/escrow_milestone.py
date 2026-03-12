@@ -155,7 +155,7 @@ class EscrowMilestoneBenchmark(BenchmarkTask):
         }
         oracle_amount_released = sum(
             mv["release_amount"]
-            for mv, mt in zip(milestones_visible, milestones_truth)
+            for mv, mt in zip(milestones_visible, milestones_truth, strict=True)
             if mt["is_truly_complete"]
         )
 
