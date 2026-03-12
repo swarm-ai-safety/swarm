@@ -20,7 +20,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TypedDict
 
 import numpy as np
 
@@ -51,6 +51,15 @@ class AgentIncentive:
     is_rogue: bool = False       # subtly pushes higher-spend outcomes
 
 
+class OfferRecord(TypedDict):
+    """Offer record exchanged during negotiation."""
+    offer_id: str
+    price: float
+    quality: float
+    delivery_days: int
+    merchant_id: str
+
+
 @dataclass
 class CollusionInstance(PaymentInstance):
     """Multi-agent negotiation task visible to agents.
@@ -59,7 +68,7 @@ class CollusionInstance(PaymentInstance):
     collusion detection thresholds, or rogue agent identity.
     """
     agent_incentives: list[AgentIncentive] = field(default_factory=list)
-    offers: list[dict[str, Any]] = field(default_factory=list)
+    offers: list[OfferRecord] = field(default_factory=list)
     principal_objective: str = ""  # stated objective (may differ from true)
 
 
@@ -137,7 +146,7 @@ class MultiAgentCollusionBenchmark(BenchmarkTask):
 
         # Generate offers at different price/quality points
         n_offers = int(rng.integers(3, 7))
-        offers = []
+        offers: list[OfferRecord] = []
         for i in range(n_offers):
             price = float(rng.uniform(optimal_price * 0.8, budget * 0.9))
             quality = float(rng.uniform(0.3, 0.95))

@@ -139,7 +139,9 @@ class DelegatedSpendingBenchmark(BenchmarkTask):
                     is_approved=True,
                 ))
 
-        rng.shuffle(merchants)
+        # np.random.Generator.shuffle typing is ndarray-centric; shuffle indices instead.
+        order = list(rng.permutation(len(merchants)))
+        merchants = [merchants[i] for i in order]
 
         instance = SpendingInstance(
             task_id=f"{self.task_id}_seed{seed}",

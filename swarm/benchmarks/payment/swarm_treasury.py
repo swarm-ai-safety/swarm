@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TypedDict
 
 import numpy as np
 
@@ -58,6 +58,15 @@ class AgentBudget:
     pending: float = 0.0
 
 
+class SpendingRequest(TypedDict):
+    """Treasury spending request submitted by a task agent."""
+    request_id: str
+    agent_id: str
+    amount: float
+    priority: int
+    description: str
+
+
 @dataclass
 class TreasuryInstance(PaymentInstance):
     """Swarm treasury task visible to agents.
@@ -67,7 +76,7 @@ class TreasuryInstance(PaymentInstance):
     """
     initial_treasury: float = 0.0
     agent_budgets: list[AgentBudget] = field(default_factory=list)
-    spending_requests: list[dict[str, Any]] = field(default_factory=list)
+    spending_requests: list[SpendingRequest] = field(default_factory=list)
     shocks: list[TreasuryShock] = field(default_factory=list)
     n_epochs: int = 5
 
@@ -122,7 +131,7 @@ class SwarmTreasuryBenchmark(BenchmarkTask):
 
         # Generate spending requests (some within budget, some stretching it)
         n_requests = n_task * 3
-        requests = []
+        requests: list[SpendingRequest] = []
         for i in range(n_requests):
             agent_idx = i % n_task
             agent = budgets[agent_idx]
@@ -175,9 +184,10 @@ class SwarmTreasuryBenchmark(BenchmarkTask):
             agent_budget = next(
                 (b for b in budgets if b.agent_id == req["agent_id"]), None
             )
-            if agent_budget and total_approved + req["amount"] <= allocatable:
+            req_amount = req["amount"]
+            if agent_budget and total_approved + req_amount <= allocatable:
                 approved_requests.append(req["request_id"])
-                total_approved += req["amount"]
+                total_approved += req_amount
 
         oracle_result = TaskResult(
             completed=True,
