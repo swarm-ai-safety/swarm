@@ -524,7 +524,7 @@ class TestEndToEnd:
         assert scenario.scenario_id == "chaoslab_mvp"
         assert scenario.motif == "persistent_multi_agent_redteam"
 
-        gov = scenario.orchestrator_config.governance
+        gov = scenario.orchestrator_config.governance_config
         assert gov.audit_enabled is True
         assert gov.circuit_breaker_enabled is True
         assert gov.security_enabled is True

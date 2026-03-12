@@ -27,9 +27,9 @@ agents:
   - type: adaptive_adversary
     count: 1
     config:
-      initial_strategy: threshold_dancing
-      adaptation_rate: 0.2
-      persistence_factor: 0.85
+      learning_rate: 0.2
+      exploration_rate: 0.15
+      heat_threshold: 0.5
 
 governance:
   # Lightweight controls for MVP: enough to measure intervention effects,
