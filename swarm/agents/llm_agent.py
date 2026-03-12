@@ -426,7 +426,7 @@ class LLMAgent(BaseAgent):
 
         client = genai.Client(
             api_key=self._api_key,
-            http_options={"timeout": self.llm_config.timeout},
+            http_options={"timeout": int(self.llm_config.timeout)},
         )
 
         loop = asyncio.get_event_loop()
