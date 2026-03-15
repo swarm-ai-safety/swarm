@@ -1,0 +1,106 @@
+#!/bin/bash
+
+cd /root
+
+# Create output directory
+mkdir -p /root/output
+
+# Create sweep script
+cat << 'EOF' > sweep_governance.py
+import itertools
+import pandas as pd
+import numpy as np
+import json
+import os
+from scipy import stats
+from swarm.scenarios.loader import load_scenario, build_orchestrator
+
+# Configuration
+scenario_path = "/root/scenarios/baseline.yaml"
+tax_rates = [0.0, 0.05, 0.10, 0.15, 0.20]
+seeds = [42, 7, 123, 99, 256]
+epochs = 8
+steps = 10
+output_dir = "/root/output"
+
+# Run parameter sweep
+results = []
+configs = list(itertools.product(tax_rates, seeds))
+
+for tax_rate, seed in configs:
+    sc = load_scenario(scenario_path)
+    
+    # Override parameters
+    sc.orchestrator_config.governance_config.transaction_tax_rate = tax_rate
+    sc.orchestrator_config.seed = seed
+    sc.orchestrator_config.n_epochs = epochs
+    sc.orchestrator_config.steps_per_epoch = steps
+    
+    orch = build_orchestrator(sc)
+    epochs_result = orch.run()
+    
+    final = epochs_result[-1]
+    results.append({
+        "transaction_tax_rate": tax_rate,
+        "seed": seed,
+        "welfare": final.welfare,
+        "toxicity_rate": final.toxicity_rate,
+    })
+
+# Create DataFrame
+df = pd.DataFrame(results)
+
+# Group results by tax rate and calculate statistics
+grouped_stats = []
+for tax_rate, group in df.groupby("transaction_tax_rate"):
+    grouped_stats.append({
+        "tax_rate": float(tax_rate),
+        "mean_welfare": float(group["welfare"].mean()),
+        "mean_toxicity": float(group["toxicity_rate"].mean()),
+        "n_seeds": len(group),
+        "welfare_values": group["welfare"].tolist(),
+    })
+
+# Filter configurations with acceptable toxicity (< 0.50)
+acceptable_configs = [config for config in grouped_stats if config["mean_toxicity"] < 0.50]
+
+if not acceptable_configs:
+    raise ValueError("No configurations found with toxicity < 0.50")
+
+# Find optimal configuration (highest welfare among acceptable)
+optimal_config = max(acceptable_configs, key=lambda x: x["mean_welfare"])
+
+# Statistical analysis: compare optimal to baseline (0.0 tax rate)
+baseline_welfare = [config["welfare_values"] for config in grouped_stats if config["tax_rate"] == 0.0][0]
+optimal_welfare = optimal_config["welfare_values"]
+
+# Welch's t-test
+t_stat, p_value = stats.ttest_ind(optimal_welfare, baseline_welfare, equal_var=False)
+
+# Create output
+optimal_output = {
+    "optimal_tax_rate": optimal_config["tax_rate"],
+    "mean_welfare": optimal_config["mean_welfare"],
+    "mean_toxicity": optimal_config["mean_toxicity"],
+    "n_configs_tested": len(acceptable_configs),
+    "statistical_confidence": float(p_value)
+}
+
+# Write optimal.json
+with open(os.path.join(output_dir, "optimal.json"), "w") as f:
+    json.dump(optimal_output, f, indent=2)
+
+print(f"Sweep completed. Tested {len(grouped_stats)} configurations.")
+print(f"Found {len(acceptable_configs)} acceptable configurations (toxicity < 0.50)")
+print(f"Optimal tax rate: {optimal_config['tax_rate']}")
+print(f"Optimal welfare: {optimal_config['mean_welfare']:.4f}")
+print(f"Optimal toxicity: {optimal_config['mean_toxicity']:.4f}")
+print(f"Statistical confidence (p-value): {p_value:.6f}")
+EOF
+
+# Install required packages and run sweep
+cd /root/swarm-package
+pip install -e . > /dev/null 2>&1
+cd /root
+
+python sweep_governance.py

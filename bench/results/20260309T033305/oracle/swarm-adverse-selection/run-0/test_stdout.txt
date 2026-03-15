@@ -1,0 +1,15 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 7 items
+
+tests/test_outputs.py::test_json_exists PASSED                           [ 14%]
+tests/test_outputs.py::test_required_keys PASSED                         [ 28%]
+tests/test_outputs.py::test_quality_gap_is_float PASSED                  [ 42%]
+tests/test_outputs.py::test_adverse_selection_matches_gap_sign PASSED    [ 57%]
+tests/test_outputs.py::test_mean_p_in_range PASSED                       [ 71%]
+tests/test_outputs.py::test_quality_gap_is_nonzero PASSED                [ 85%]
+tests/test_outputs.py::test_recommendation_non_empty PASSED              [100%]
+
+============================== 7 passed in 0.01s ===============================

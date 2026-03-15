@@ -1,0 +1,40 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 7 items
+
+tests/test_outputs.py::test_sweep_dir_exists PASSED                      [ 14%]
+tests/test_outputs.py::test_sweep_csv_has_9_rows PASSED                  [ 28%]
+tests/test_outputs.py::test_analysis_dir_exists PASSED                   [ 42%]
+tests/test_outputs.py::test_analysis_summary_has_results FAILED          [ 57%]
+tests/test_outputs.py::test_plots_dir_has_pngs PASSED                    [ 71%]
+tests/test_outputs.py::test_paper_exists PASSED                          [ 85%]
+tests/test_outputs.py::test_paper_has_results_with_data FAILED           [100%]
+
+=================================== FAILURES ===================================
+______________________ test_analysis_summary_has_results _______________________
+tests/test_outputs.py:30: in test_analysis_summary_has_results
+    s = json.load(f)
+        ^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/__init__.py:293: in load
+    return loads(fp.read(),
+/usr/local/lib/python3.12/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:338: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:356: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 37 column 20 (char 1024)
+_______________________ test_paper_has_results_with_data _______________________
+tests/test_outputs.py:56: in test_paper_has_results_with_data
+    assert len(numbers) >= 3, \
+E   AssertionError: Results section should have numeric values from sweep, found 0
+E   assert 0 >= 3
+E    +  where 0 = len([])
+=========================== short test summary info ============================
+FAILED tests/test_outputs.py::test_analysis_summary_has_results - json.decode...
+FAILED tests/test_outputs.py::test_paper_has_results_with_data - AssertionErr...
+========================= 2 failed, 5 passed in 0.02s ==========================

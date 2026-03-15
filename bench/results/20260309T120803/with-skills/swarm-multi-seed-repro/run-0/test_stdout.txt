@@ -1,0 +1,54 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 5 items
+
+tests/test_outputs.py::test_seed_directories_exist FAILED                [ 20%]
+tests/test_outputs.py::test_summary_csv_exists FAILED                    [ 40%]
+tests/test_outputs.py::test_summary_csv_has_3_rows FAILED                [ 60%]
+tests/test_outputs.py::test_summary_csv_columns FAILED                   [ 80%]
+tests/test_outputs.py::test_reproducibility FAILED                       [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_seed_directories_exist __________________________
+tests/test_outputs.py:15: in test_seed_directories_exist
+    assert os.path.isfile(os.path.join(d, "history.json")), \
+E   AssertionError: history.json not found in seed_7/
+E   assert False
+E    +  where False = <function isfile at 0xffffa266c2c0>('/root/output/seed_7/history.json')
+E    +    where <function isfile at 0xffffa266c2c0> = <module 'posixpath' (frozen)>.isfile
+E    +      where <module 'posixpath' (frozen)> = os.path
+E    +    and   '/root/output/seed_7/history.json' = <function join at 0xffffa266ccc0>('/root/output/seed_7', 'history.json')
+E    +      where <function join at 0xffffa266ccc0> = <module 'posixpath' (frozen)>.join
+E    +        where <module 'posixpath' (frozen)> = os.path
+___________________________ test_summary_csv_exists ____________________________
+tests/test_outputs.py:21: in test_summary_csv_exists
+    assert os.path.isfile(path), "summary.csv not found"
+E   AssertionError: summary.csv not found
+E   assert False
+E    +  where False = <function isfile at 0xffffa266c2c0>('/root/output/summary.csv')
+E    +    where <function isfile at 0xffffa266c2c0> = <module 'posixpath' (frozen)>.isfile
+E    +      where <module 'posixpath' (frozen)> = os.path
+_________________________ test_summary_csv_has_3_rows __________________________
+tests/test_outputs.py:26: in test_summary_csv_has_3_rows
+    with open(path) as f:
+         ^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/root/output/summary.csv'
+___________________________ test_summary_csv_columns ___________________________
+tests/test_outputs.py:34: in test_summary_csv_columns
+    with open(path) as f:
+         ^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/root/output/summary.csv'
+_____________________________ test_reproducibility _____________________________
+tests/test_outputs.py:46: in test_reproducibility
+    with open(path) as f:
+         ^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/root/output/summary.csv'
+=========================== short test summary info ============================
+FAILED tests/test_outputs.py::test_seed_directories_exist - AssertionError: h...
+FAILED tests/test_outputs.py::test_summary_csv_exists - AssertionError: summa...
+FAILED tests/test_outputs.py::test_summary_csv_has_3_rows - FileNotFoundError...
+FAILED tests/test_outputs.py::test_summary_csv_columns - FileNotFoundError: [...
+FAILED tests/test_outputs.py::test_reproducibility - FileNotFoundError: [Errn...
+============================== 5 failed in 0.02s ===============================

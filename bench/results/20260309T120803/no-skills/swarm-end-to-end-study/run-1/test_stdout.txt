@@ -1,0 +1,24 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 7 items
+
+tests/test_outputs.py::test_sweep_dir_exists PASSED                      [ 14%]
+tests/test_outputs.py::test_sweep_csv_has_9_rows FAILED                  [ 28%]
+tests/test_outputs.py::test_analysis_dir_exists PASSED                   [ 42%]
+tests/test_outputs.py::test_analysis_summary_has_results PASSED          [ 57%]
+tests/test_outputs.py::test_plots_dir_has_pngs PASSED                    [ 71%]
+tests/test_outputs.py::test_paper_exists PASSED                          [ 85%]
+tests/test_outputs.py::test_paper_has_results_with_data PASSED           [100%]
+
+=================================== FAILURES ===================================
+__________________________ test_sweep_csv_has_9_rows ___________________________
+tests/test_outputs.py:19: in test_sweep_csv_has_9_rows
+    assert len(rows) == 9, f"Expected 9 rows (3 configs x 3 seeds), got {len(rows)}"
+E   AssertionError: Expected 9 rows (3 configs x 3 seeds), got 450
+E   assert 450 == 9
+E    +  where 450 = len([{'efficiency': '0.8104', 'epoch': '0', 'revenue': '0.00', 'seed': '42', ...}, {'efficiency': '0.7963', 'epoch': '0', 'revenue': '0.00', 'seed': '42', ...}, {'efficiency': '0.7925', 'epoch': '0', 'revenue': '0.00', 'seed': '42', ...}, {'efficiency': '0.7925', 'epoch': '0', 'revenue': '0.00', 'seed': '42', ...}, {'efficiency': '0.7724', 'epoch': '0', 'revenue': '0.00', 'seed': '42', ...}, {'efficiency': '0.8050', 'epoch': '0', 'revenue': '0.00', 'seed': '42', ...}, ...])
+=========================== short test summary info ============================
+FAILED tests/test_outputs.py::test_sweep_csv_has_9_rows - AssertionError: Exp...
+========================= 1 failed, 6 passed in 0.02s ==========================

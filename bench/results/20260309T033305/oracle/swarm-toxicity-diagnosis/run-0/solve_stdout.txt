@@ -1,0 +1,2 @@
+Worst: tax=0.0 (tox=0.3484)
+Best:  tax=0.2 (tox=0.1606)

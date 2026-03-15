@@ -1,0 +1,5 @@
+Using parameter column: transaction_tax_rate
+Generated plots:
+- welfare_boxplot.png: 28780 bytes
+- welfare_by_config.png: 31752 bytes
+- agent_payoff_comparison.png: 40960 bytes

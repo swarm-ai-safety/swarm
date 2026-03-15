@@ -1,0 +1,96 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 6 items
+
+tests/test_outputs.py::test_optimal_json_exists PASSED                   [ 16%]
+tests/test_outputs.py::test_required_keys FAILED                         [ 33%]
+tests/test_outputs.py::test_optimal_tax_rate_is_valid FAILED             [ 50%]
+tests/test_outputs.py::test_toxicity_below_threshold FAILED              [ 66%]
+tests/test_outputs.py::test_n_configs_tested FAILED                      [ 83%]
+tests/test_outputs.py::test_statistical_confidence_is_valid_pvalue FAILED [100%]
+
+=================================== FAILURES ===================================
+______________________________ test_required_keys ______________________________
+tests/test_outputs.py:16: in test_required_keys
+    opt = json.load(f)
+          ^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/__init__.py:293: in load
+    return loads(fp.read(),
+/usr/local/lib/python3.12/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:338: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:356: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 2 column 25 (char 26)
+________________________ test_optimal_tax_rate_is_valid ________________________
+tests/test_outputs.py:24: in test_optimal_tax_rate_is_valid
+    opt = json.load(f)
+          ^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/__init__.py:293: in load
+    return loads(fp.read(),
+/usr/local/lib/python3.12/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:338: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:356: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 2 column 25 (char 26)
+________________________ test_toxicity_below_threshold _________________________
+tests/test_outputs.py:31: in test_toxicity_below_threshold
+    opt = json.load(f)
+          ^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/__init__.py:293: in load
+    return loads(fp.read(),
+/usr/local/lib/python3.12/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:338: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:356: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 2 column 25 (char 26)
+____________________________ test_n_configs_tested _____________________________
+tests/test_outputs.py:41: in test_n_configs_tested
+    opt = json.load(f)
+          ^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/__init__.py:293: in load
+    return loads(fp.read(),
+/usr/local/lib/python3.12/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:338: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:356: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 2 column 25 (char 26)
+_________________ test_statistical_confidence_is_valid_pvalue __________________
+tests/test_outputs.py:47: in test_statistical_confidence_is_valid_pvalue
+    opt = json.load(f)
+          ^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/__init__.py:293: in load
+    return loads(fp.read(),
+/usr/local/lib/python3.12/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:338: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:356: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 2 column 25 (char 26)
+=========================== short test summary info ============================
+FAILED tests/test_outputs.py::test_required_keys - json.decoder.JSONDecodeErr...
+FAILED tests/test_outputs.py::test_optimal_tax_rate_is_valid - json.decoder.J...
+FAILED tests/test_outputs.py::test_toxicity_below_threshold - json.decoder.JS...
+FAILED tests/test_outputs.py::test_n_configs_tested - json.decoder.JSONDecode...
+FAILED tests/test_outputs.py::test_statistical_confidence_is_valid_pvalue - j...
+========================= 5 failed, 1 passed in 0.05s ==========================

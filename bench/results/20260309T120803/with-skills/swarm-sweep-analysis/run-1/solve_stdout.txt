@@ -1,0 +1,1 @@
+Running config: governance.transaction_tax_rate=0.0, seed=42

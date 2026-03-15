@@ -1,0 +1,2 @@
+End-to-end study completed successfully!
+Results available in /root/output/ with subdirectories: sweep/, analysis/, plots/, paper/

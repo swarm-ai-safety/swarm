@@ -1,0 +1,12 @@
+Generating plots from data with columns: ['transaction_tax_rate', 'seed', 'agent_type', 'welfare', 'toxicity_rate', 'quality_gap', 'mean_payoff_honest', 'mean_payoff_opportunistic', 'mean_payoff_deceptive']
+Using parameter column: transaction_tax_rate
+Data shape: (80, 9)
+Generated welfare bar chart
+Generated welfare box plot
+Generated agent payoff comparison
+Generated toxicity rate plot
+All plots saved to /root/output/plots/
+welfare_boxplot.png: 36504 bytes
+welfare_by_config.png: 46288 bytes
+toxicity_by_config.png: 48009 bytes
+agent_payoff_comparison.png: 69830 bytes

@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "<stdin>", line 2, in <module>
+  File "/usr/local/lib/python3.12/site-packages/swarm/scenarios/__init__.py", line 3, in <module>
+    from swarm.scenarios.loader import (
+  File "/usr/local/lib/python3.12/site-packages/swarm/scenarios/loader.py", line 9, in <module>
+    import yaml
+ModuleNotFoundError: No module named 'yaml'

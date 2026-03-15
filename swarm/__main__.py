@@ -356,6 +356,13 @@ def cmd_evolve(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_autoresearch(args: argparse.Namespace) -> int:
+    """Run an automated objective -> mutate -> evaluate loop."""
+    from swarm.analysis.autoresearch import cmd_autoresearch as _run_autoresearch
+
+    return _run_autoresearch(args)
+
+
 def cmd_list(args: argparse.Namespace) -> int:
     """List available scenario files."""
     scenarios_dir = Path(args.dir)
@@ -656,6 +663,21 @@ def main() -> int:
     arxiv_status = arxiv_subparsers.add_parser("status", help="Check AgentRxiv server status")
     arxiv_status.add_argument("--url", help="AgentRxiv server URL (default: http://127.0.0.1:5000)")
 
+    # autoresearch
+    autoresearch_parser = subparsers.add_parser("autoresearch", help="Run autoresearch governance loop")
+    autoresearch_parser.add_argument("--objective", required=True, help="Path to objective file (yaml/json/markdown)")
+    autoresearch_parser.add_argument("--scenario", required=True, help="Path to YAML scenario file")
+    autoresearch_parser.add_argument("--iterations", type=int, default=10, help="Number of loop iterations")
+    autoresearch_parser.add_argument("--eval-epochs", type=int, default=3, help="Epochs per candidate evaluation")
+    autoresearch_parser.add_argument("--eval-steps", type=int, default=5, help="Steps per epoch in candidate evaluation")
+    autoresearch_parser.add_argument("--seeds", default="7,11,19", help="Comma-separated seed panel")
+    autoresearch_parser.add_argument("--random-seed", type=int, default=42, help="RNG seed for mutation proposals")
+    autoresearch_parser.add_argument("--export-root", default="runs/autoresearch", help="Directory for autoresearch outputs")
+    autoresearch_parser.add_argument("--auto-commit", action="store_true", help="Commit summary artifact at end of run")
+    autoresearch_parser.add_argument("--no-lessons", action="store_true", help="Disable lesson store (no cross-session memory)")
+    autoresearch_parser.add_argument("--bp-window", type=int, default=5, help="Backpressure window size (default: 5)")
+    autoresearch_parser.add_argument("--bp-min-accepts", type=int, default=1, help="Min accepts in window before halt (default: 1)")
+
     # evolve
     evolve_parser = subparsers.add_parser("evolve", help="Evolve governance configurations")
     evolve_parser.add_argument("scenario", help="Path to YAML scenario file")
@@ -693,12 +715,32 @@ def main() -> int:
         "--parents", type=int, default=3, help="Parents per iteration (default: 3)"
     )
 
+    # family-optimize
+    family_parser = subparsers.add_parser("family-optimize", help="Run cross-scenario family governance optimization")
+    family_parser.add_argument("--objective", required=True, help="Path to objective file (yaml/json/markdown)")
+    family_parser.add_argument("--scenarios", required=True, help="Comma-separated paths to scenario YAML files")
+    family_parser.add_argument("--family-name", default=None, help="Name for this scenario family (default: derived from filenames)")
+    family_parser.add_argument("--iterations", type=int, default=10, help="Number of loop iterations")
+    family_parser.add_argument("--eval-epochs", type=int, default=3, help="Epochs per candidate evaluation")
+    family_parser.add_argument("--eval-steps", type=int, default=5, help="Steps per epoch in candidate evaluation")
+    family_parser.add_argument("--seeds", default="7,11,19", help="Comma-separated seed panel")
+    family_parser.add_argument("--random-seed", type=int, default=42, help="RNG seed for mutation proposals")
+    family_parser.add_argument("--export-root", default="runs/family_optimize", help="Directory for outputs")
+    family_parser.add_argument("--no-lessons", action="store_true", help="Disable lesson store")
+    family_parser.add_argument("--bp-window", type=int, default=5, help="Backpressure window size")
+    family_parser.add_argument("--bp-min-accepts", type=int, default=1, help="Min accepts in window before halt")
+
     args = parser.parse_args()
 
     if args.command == "run":
         return cmd_run(args)
     elif args.command == "evolve":
         return cmd_evolve(args)
+    elif args.command == "autoresearch":
+        return cmd_autoresearch(args)
+    elif args.command == "family-optimize":
+        from swarm.analysis.family_optimization import cmd_family_optimize
+        return cmd_family_optimize(args)
     elif args.command == "list":
         return cmd_list(args)
     elif args.command == "sandbox":

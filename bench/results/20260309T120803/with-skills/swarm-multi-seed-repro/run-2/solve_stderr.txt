@@ -1,0 +1,9 @@
+Traceback (most recent call last):
+  File "<string>", line 18, in <module>
+AttributeError: 'list' object has no attribute 'to_dict'
+Traceback (most recent call last):
+  File "<string>", line 18, in <module>
+AttributeError: 'list' object has no attribute 'to_dict'
+Traceback (most recent call last):
+  File "<string>", line 18, in <module>
+AttributeError: 'list' object has no attribute 'to_dict'

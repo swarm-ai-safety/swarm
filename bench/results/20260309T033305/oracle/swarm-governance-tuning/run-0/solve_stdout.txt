@@ -1,0 +1,1 @@
+Optimal: tax=0.0, welfare=4.875, toxicity=0.2916, p=1.0000

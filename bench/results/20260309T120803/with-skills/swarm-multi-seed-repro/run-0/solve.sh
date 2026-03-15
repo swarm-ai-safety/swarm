@@ -1,0 +1,92 @@
+#!/bin/bash
+
+# Create output directory structure
+mkdir -p /root/output/seed_42
+mkdir -p /root/output/seed_7
+mkdir -p /root/output/seed_123
+
+# Install swarm-safety package
+cd /root/swarm-package
+pip install -e .
+
+# Python script to run simulations and generate summary
+cat > /root/run_seeds.py << 'EOF'
+import os
+import json
+import sys
+sys.path.insert(0, '/root/swarm-package')
+
+from swarm.scenarios.loader import load_scenario, build_orchestrator
+
+def resolve_scenario(ref: str) -> str:
+    """Resolve a scenario reference to a full path."""
+    candidates = [
+        ref,
+        f"scenarios/{ref}.yaml",
+        f"/root/scenarios/{ref}.yaml",
+        f"scenarios/{ref}",
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    raise FileNotFoundError(f"Cannot find scenario: {ref}")
+
+def run_simulation(scenario_path, seed, output_dir, epochs=5, steps=10):
+    """Run simulation with given parameters and save results."""
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Load scenario
+    sc = load_scenario(scenario_path)
+    
+    # Set simulation parameters
+    sc.orchestrator_config.seed = seed
+    sc.orchestrator_config.n_epochs = epochs
+    sc.orchestrator_config.steps_per_epoch = steps
+    
+    # Run simulation
+    orch = build_orchestrator(sc)
+    result = orch.run()
+    
+    # Export history.json
+    with open(os.path.join(output_dir, "history.json"), "w") as f:
+        json.dump(result.to_dict(), f, indent=2)
+    
+    # Export CSV metrics
+    csv_dir = os.path.join(output_dir, "csv")
+    os.makedirs(csv_dir, exist_ok=True)
+    result.export_csv(csv_dir)
+    
+    # Extract final metrics
+    history = result.to_dict()
+    final = history["epoch_snapshots"][-1]
+    welfare = final["welfare"]
+    toxicity = final["toxicity_rate"]
+    
+    return welfare, toxicity
+
+# Main execution
+scenario_path = resolve_scenario("baseline")
+seeds = [42, 7, 123]
+results = []
+
+for seed in seeds:
+    output_dir = f"/root/output/seed_{seed}"
+    welfare, toxicity = run_simulation(scenario_path, seed, output_dir)
+    results.append((seed, welfare, toxicity))
+    print(f"Seed {seed}: welfare={welfare:.6f}, toxicity={toxicity:.6f}")
+
+# Write summary CSV
+with open("/root/output/summary.csv", "w") as f:
+    f.write("seed,welfare,toxicity_rate\n")
+    for seed, welfare, toxicity in results:
+        f.write(f"{seed},{welfare:.6f},{toxicity:.6f}\n")
+
+print("All simulations completed successfully")
+EOF
+
+# Run the simulations
+cd /root
+python run_seeds.py
+
+# Clean up
+rm run_seeds.py

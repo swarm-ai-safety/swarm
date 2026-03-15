@@ -1,0 +1,4 @@
+/usr/local/bin/python: No module named swarm.cli
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/root/output/history.json'

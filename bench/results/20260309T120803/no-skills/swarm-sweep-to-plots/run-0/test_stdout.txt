@@ -1,0 +1,13 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 5 items
+
+tests/test_outputs.py::test_plots_dir_exists PASSED                      [ 20%]
+tests/test_outputs.py::test_at_least_3_pngs PASSED                       [ 40%]
+tests/test_outputs.py::test_pngs_not_empty PASSED                        [ 60%]
+tests/test_outputs.py::test_welfare_bar_chart_exists PASSED              [ 80%]
+tests/test_outputs.py::test_boxplot_exists PASSED                        [100%]
+
+============================== 5 passed in 0.01s ===============================

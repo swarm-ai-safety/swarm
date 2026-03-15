@@ -1,0 +1,63 @@
+#!/bin/bash
+
+# Create output directory
+mkdir -p /root/output
+
+# Initialize CSV file with header
+echo "transaction_tax_rate,seed,welfare,toxicity_rate" > /root/output/sweep_results.csv
+
+# Parameter values and seeds
+tax_rates=(0.0 0.05 0.10 0.15)
+seeds=(42 7 123)
+
+# Run parameter sweep
+for tax_rate in "${tax_rates[@]}"; do
+    for seed in "${seeds[@]}"; do
+        # Run simulation with current parameters
+        cd /root/swarm-package
+        python -m swarm.cli.run \
+            --scenario /root/scenarios/baseline.yaml \
+            --override governance.transaction_tax_rate=$tax_rate \
+            --seed $seed \
+            --epochs 5 \
+            --steps 10 \
+            --output-format json > /tmp/result_${tax_rate}_${seed}.json
+        
+        # Extract metrics from output
+        welfare=$(python -c "import json; data=json.load(open('/tmp/result_${tax_rate}_${seed}.json')); print(data['metrics']['welfare'])")
+        toxicity_rate=$(python -c "import json; data=json.load(open('/tmp/result_${tax_rate}_${seed}.json')); print(data['metrics']['toxicity_rate'])")
+        
+        # Append to CSV
+        echo "$tax_rate,$seed,$welfare,$toxicity_rate" >> /root/output/sweep_results.csv
+    done
+done
+
+# Generate summary JSON
+python3 << 'EOF'
+import json
+import csv
+from collections import defaultdict
+
+# Read CSV results
+results = defaultdict(list)
+with open('/root/output/sweep_results.csv', 'r') as f:
+    reader = csv.DictReader(f)
+    for row in reader:
+        tax_rate = float(row['transaction_tax_rate'])
+        welfare = float(row['welfare'])
+        results[tax_rate].append(welfare)
+
+# Calculate mean welfare per config
+configs = []
+for tax_rate in sorted(results.keys()):
+    mean_welfare = sum(results[tax_rate]) / len(results[tax_rate])
+    configs.append({
+        'transaction_tax_rate': tax_rate,
+        'mean_welfare': mean_welfare
+    })
+
+# Write summary JSON
+summary = {'configs': configs}
+with open('/root/output/summary.json', 'w') as f:
+    json.dump(summary, f, indent=2)
+EOF

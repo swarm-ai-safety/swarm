@@ -1,0 +1,15 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 7 items
+
+tests/test_outputs.py::test_paper_exists PASSED                          [ 14%]
+tests/test_outputs.py::test_has_abstract PASSED                          [ 28%]
+tests/test_outputs.py::test_has_experimental_setup PASSED                [ 42%]
+tests/test_outputs.py::test_has_results PASSED                           [ 57%]
+tests/test_outputs.py::test_has_conclusion PASSED                        [ 71%]
+tests/test_outputs.py::test_scenarios_table_has_5_rows PASSED            [ 85%]
+tests/test_outputs.py::test_results_table_has_numeric_values PASSED      [100%]
+
+============================== 7 passed in 0.01s ===============================

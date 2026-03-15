@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "/root/complete_study.py", line 290, in <module>
+    main()
+  File "/root/complete_study.py", line 269, in main
+    df = run_sweep()
+         ^^^^^^^^^^^
+  File "/root/complete_study.py", line 46, in run_sweep
+    "welfare": final.welfare,
+               ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/pydantic/main.py", line 1026, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'EpochMetrics' object has no attribute 'welfare'

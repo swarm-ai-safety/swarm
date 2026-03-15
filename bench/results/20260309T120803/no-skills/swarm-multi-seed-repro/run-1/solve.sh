@@ -1,0 +1,36 @@
+#!/bin/bash
+
+# Create output directory structure
+mkdir -p /root/output/seed_42
+mkdir -p /root/output/seed_7
+mkdir -p /root/output/seed_123
+
+# Change to swarm package directory
+cd /root/swarm-package
+
+# Run baseline scenario with seed 42
+python -m swarm.main --scenario /root/scenarios/baseline.yaml --seed 42 --epochs 5 --steps 10 --output /root/output/seed_42/history.json
+
+# Run baseline scenario with seed 7
+python -m swarm.main --scenario /root/scenarios/baseline.yaml --seed 7 --epochs 5 --steps 10 --output /root/output/seed_7/history.json
+
+# Run baseline scenario with seed 123
+python -m swarm.main --scenario /root/scenarios/baseline.yaml --seed 123 --epochs 5 --steps 10 --output /root/output/seed_123/history.json
+
+# Create summary CSV header
+echo "seed,welfare,toxicity_rate" > /root/output/summary.csv
+
+# Extract welfare and toxicity rate from seed 42 results
+WELFARE_42=$(python -c "import json; data=json.load(open('/root/output/seed_42/history.json')); print(data['final_metrics']['welfare'])")
+TOXICITY_42=$(python -c "import json; data=json.load(open('/root/output/seed_42/history.json')); print(data['final_metrics']['toxicity_rate'])")
+echo "42,$WELFARE_42,$TOXICITY_42" >> /root/output/summary.csv
+
+# Extract welfare and toxicity rate from seed 7 results
+WELFARE_7=$(python -c "import json; data=json.load(open('/root/output/seed_7/history.json')); print(data['final_metrics']['welfare'])")
+TOXICITY_7=$(python -c "import json; data=json.load(open('/root/output/seed_7/history.json')); print(data['final_metrics']['toxicity_rate'])")
+echo "7,$WELFARE_7,$TOXICITY_7" >> /root/output/summary.csv
+
+# Extract welfare and toxicity rate from seed 123 results
+WELFARE_123=$(python -c "import json; data=json.load(open('/root/output/seed_123/history.json')); print(data['final_metrics']['welfare'])")
+TOXICITY_123=$(python -c "import json; data=json.load(open('/root/output/seed_123/history.json')); print(data['final_metrics']['toxicity_rate'])")
+echo "123,$WELFARE_123,$TOXICITY_123" >> /root/output/summary.csv

@@ -1,0 +1,2 @@
+Final welfare: 5.899
+Final toxicity: 0.339

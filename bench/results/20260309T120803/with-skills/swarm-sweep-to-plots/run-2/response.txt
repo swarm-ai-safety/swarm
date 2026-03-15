@@ -1,0 +1,117 @@
+```bash
+#!/bin/bash
+
+# Create output directory
+mkdir -p /root/output/plots/
+
+# Create Python script for plotting
+cat > plot_generator.py << 'EOF'
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+
+# Load data
+df = pd.read_csv('/root/data/sweep_results.csv')
+
+# Create output directory
+output_dir = '/root/output/plots/'
+os.makedirs(output_dir, exist_ok=True)
+
+# Identify parameter column (non-standard columns)
+standard_cols = ["seed", "welfare", "toxicity_rate", "quality_gap",
+                "mean_payoff_honest", "mean_payoff_opportunistic", 
+                "mean_payoff_deceptive", "epoch"]
+param_cols = [c for c in df.columns if c not in standard_cols]
+param_col = param_cols[0] if param_cols else 'tax_rate'
+
+# If no param column found, check for tax_rate specifically
+if 'tax_rate' in df.columns:
+    param_col = 'tax_rate'
+
+print(f"Using parameter column: {param_col}")
+
+# Plot 1: Grouped bar chart of welfare by parameter
+def plot_welfare_bars():
+    summary = df.groupby(param_col)["welfare"].agg(["mean", "std"]).reset_index()
+    
+    fig, ax = plt.subplots(figsize=(8, 5))
+    x = np.arange(len(summary))
+    ax.bar(x, summary["mean"], yerr=summary["std"], capsize=5, 
+           color="steelblue", edgecolor="black", alpha=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{v:.2f}" for v in summary[param_col]])
+    ax.set_xlabel(param_col.replace("_", " ").title())
+    ax.set_ylabel("Welfare (mean ± SD)")
+    ax.set_title("Welfare by Tax Rate Configuration")
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, "welfare_by_config.png"), dpi=150)
+    plt.close()
+
+# Plot 2: Box plot of welfare distribution
+def plot_welfare_boxplot():
+    fig, ax = plt.subplots(figsize=(8, 5))
+    groups = sorted(df[param_col].unique())
+    data = [df[df[param_col] == g]["welfare"].values for g in groups]
+    bp = ax.boxplot(data, labels=[f"{g:.2f}" for g in groups], patch_artist=True)
+    for patch in bp["boxes"]:
+        patch.set_facecolor("lightblue")
+    ax.set_xlabel(param_col.replace("_", " ").title())
+    ax.set_ylabel("Welfare")
+    ax.set_title("Welfare Distribution by Configuration")
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, "welfare_boxplot.png"), dpi=150)
+    plt.close()
+
+# Plot 3: Agent payoff comparison
+def plot_agent_payoffs():
+    payoff_cols = [c for c in df.columns if c.startswith("mean_payoff_")]
+    if not payoff_cols:
+        # Create a fallback plot if no payoff columns exist
+        fig, ax = plt.subplots(figsize=(8, 5))
+        ax.scatter(df[param_col], df["welfare"], alpha=0.6)
+        ax.set_xlabel(param_col.replace("_", " ").title())
+        ax.set_ylabel("Welfare")
+        ax.set_title("Welfare vs Configuration")
+        plt.tight_layout()
+        plt.savefig(os.path.join(output_dir, "agent_payoff_comparison.png"), dpi=150)
+        plt.close()
+        return
+    
+    summary = df.groupby(param_col)[payoff_cols].mean().reset_index()
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    x = np.arange(len(summary))
+    width = 0.25
+    
+    colors = ['steelblue', 'orange', 'green']
+    for i, col in enumerate(payoff_cols):
+        label = col.replace("mean_payoff_", "").title()
+        color = colors[i % len(colors)]
+        ax.bar(x + i * width, summary[col], width, label=label, alpha=0.8, color=color)
+    
+    ax.set_xticks(x + width)
+    ax.set_xticklabels([f"{v:.2f}" for v in summary[param_col]])
+    ax.set_xlabel(param_col.replace("_", " ").title())
+    ax.set_ylabel("Mean Payoff")
+    ax.set_title("Agent Payoff Comparison by Configuration")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, "agent_payoff_comparison.png"), dpi=150)
+    plt.close()
+
+# Generate all plots
+plot_welfare_bars()
+plot_welfare_boxplot()
+plot_agent_payoffs()
+
+print("Generated plots:")
+for f in os.listdir(output_dir):
+    if f.endswith('.png'):
+        size = os.path.getsize(os.path.join(output_dir, f))
+        print(f"- {f}: {size} bytes")
+EOF
+
+# Run the plotting script
+python plot_generator.py
+```

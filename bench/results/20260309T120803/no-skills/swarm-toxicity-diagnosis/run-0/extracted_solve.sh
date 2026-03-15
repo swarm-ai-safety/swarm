@@ -1,0 +1,39 @@
+#!/bin/bash
+
+python3 << 'EOF'
+import pandas as pd
+import json
+import os
+
+# Read the sweep results CSV
+df = pd.read_csv('/root/data/sweep_results.csv')
+
+# Group by transaction_tax_rate and calculate mean toxicity
+toxicity_by_rate = df.groupby('transaction_tax_rate')['toxicity'].mean()
+
+# Find worst and best configurations
+worst_rate = toxicity_by_rate.idxmax()
+best_rate = toxicity_by_rate.idxmin()
+worst_toxicity = toxicity_by_rate.max()
+best_toxicity = toxicity_by_rate.min()
+
+# Generate recommendation
+recommendation = f"Set transaction tax rate to {best_rate} to minimize toxicity. This configuration reduces mean toxicity from {worst_toxicity:.4f} to {best_toxicity:.4f}, representing a {((worst_toxicity - best_toxicity) / worst_toxicity * 100):.1f}% improvement."
+
+# Prepare output
+result = {
+    "worst_config": float(worst_rate),
+    "best_config": float(best_rate),
+    "worst_toxicity": float(worst_toxicity),
+    "best_toxicity": float(best_toxicity),
+    "recommendation": recommendation
+}
+
+# Create output directory if it doesn't exist
+os.makedirs('/root/output', exist_ok=True)
+
+# Write to JSON file
+with open('/root/output/diagnosis.json', 'w') as f:
+    json.dump(result, f, indent=2)
+
+EOF

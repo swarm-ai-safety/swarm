@@ -1,0 +1,16 @@
+Running config 1: tax_rate=0.0, seed=42
+Running config 2: tax_rate=0.0, seed=7
+Running config 3: tax_rate=0.0, seed=123
+Running config 4: tax_rate=0.10, seed=42
+Running config 5: tax_rate=0.10, seed=7
+Running config 6: tax_rate=0.10, seed=123
+Running config 7: tax_rate=0.20, seed=42
+Running config 8: tax_rate=0.20, seed=7
+Running config 9: tax_rate=0.20, seed=123
+Plots generated
+End-to-end study completed successfully!
+Results available in:
+- /root/output/sweep/sweep_results.csv
+- /root/output/analysis/summary.json
+- /root/output/plots/*.png
+- /root/output/paper/paper.md

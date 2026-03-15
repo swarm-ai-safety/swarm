@@ -1,0 +1,21 @@
+/usr/local/bin/python: No module named swarm.run
+/usr/local/bin/python: No module named swarm.run
+/usr/local/bin/python: No module named swarm.run
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/root/output/seed_42/history.json'
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/root/output/seed_42/history.json'
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/root/output/seed_7/history.json'
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/root/output/seed_7/history.json'
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/root/output/seed_123/history.json'
+Traceback (most recent call last):
+  File "<string>", line 1, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/root/output/seed_123/history.json'

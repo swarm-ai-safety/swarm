@@ -1,0 +1,10 @@
+Requirement already satisfied: pandas in /usr/local/lib/python3.12/site-packages (3.0.1)
+Requirement already satisfied: numpy in /usr/local/lib/python3.12/site-packages (2.4.2)
+Collecting scipy
+  Downloading scipy-1.17.1-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl.metadata (62 kB)
+Requirement already satisfied: python-dateutil>=2.8.2 in /usr/local/lib/python3.12/site-packages (from pandas) (2.9.0.post0)
+Requirement already satisfied: six>=1.5 in /usr/local/lib/python3.12/site-packages (from python-dateutil>=2.8.2->pandas) (1.17.0)
+Downloading scipy-1.17.1-cp312-cp312-manylinux_2_27_aarch64.manylinux_2_28_aarch64.whl (32.9 MB)
+   ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ 32.9/32.9 MB 55.0 MB/s eta 0:00:00
+Installing collected packages: scipy
+Successfully installed scipy-1.17.1

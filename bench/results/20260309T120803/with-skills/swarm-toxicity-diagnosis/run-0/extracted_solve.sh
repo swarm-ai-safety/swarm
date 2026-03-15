@@ -1,0 +1,78 @@
+#!/bin/bash
+
+python3 << 'EOF'
+import pandas as pd
+import numpy as np
+import json
+import os
+
+# Load the data
+df = pd.read_csv('/root/data/sweep_results.csv')
+
+# Normalize column aliases
+alias_map = {
+    "tax_rate": "transaction_tax_rate",
+    "tax": "transaction_tax_rate",
+    "tox": "toxicity_rate",
+    "toxicity": "toxicity_rate",
+}
+df.rename(columns={k: v for k, v in alias_map.items() if k in df.columns}, inplace=True)
+
+# Determine the toxicity column - try common variations
+toxicity_col = None
+for col in ['toxicity_rate', 'toxicity', 'tox']:
+    if col in df.columns:
+        toxicity_col = col
+        break
+
+if toxicity_col is None:
+    # If no exact match, look for columns containing 'toxic'
+    for col in df.columns:
+        if 'toxic' in col.lower():
+            toxicity_col = col
+            break
+
+if toxicity_col is None:
+    raise ValueError("Could not find toxicity column in data")
+
+# Group by transaction_tax_rate and calculate mean toxicity
+grouped = df.groupby('transaction_tax_rate')[toxicity_col].agg(['mean', 'count']).reset_index()
+
+# Find worst (highest) and best (lowest) configurations
+worst_idx = grouped['mean'].idxmax()
+best_idx = grouped['mean'].idxmin()
+
+worst_config = float(grouped.loc[worst_idx, 'transaction_tax_rate'])
+best_config = float(grouped.loc[best_idx, 'transaction_tax_rate'])
+worst_toxicity = float(grouped.loc[worst_idx, 'mean'])
+best_toxicity = float(grouped.loc[best_idx, 'mean'])
+
+# Generate recommendation
+toxicity_range = worst_toxicity - best_toxicity
+if toxicity_range > 0.1:  # Significant difference
+    if best_config > worst_config:
+        recommendation = f"Increase transaction tax rate to {best_config} to reduce toxicity by {toxicity_range:.3f}. Higher tax rates appear to discourage toxic behavior."
+    else:
+        recommendation = f"Decrease transaction tax rate to {best_config} to reduce toxicity by {toxicity_range:.3f}. Lower tax rates appear to reduce toxic interactions."
+else:
+    recommendation = f"Transaction tax rate has minimal impact on toxicity (difference: {toxicity_range:.3f}). Consider other governance mechanisms."
+
+# Create output directory
+os.makedirs('/root/output', exist_ok=True)
+
+# Prepare output
+diagnosis = {
+    "worst_config": worst_config,
+    "best_config": best_config,
+    "worst_toxicity": worst_toxicity,
+    "best_toxicity": best_toxicity,
+    "recommendation": recommendation
+}
+
+# Write to JSON file
+with open('/root/output/diagnosis.json', 'w') as f:
+    json.dump(diagnosis, f, indent=2)
+
+print(f"Analysis complete. Worst config: {worst_config} (toxicity: {worst_toxicity:.4f}), Best config: {best_config} (toxicity: {best_toxicity:.4f})")
+
+EOF

@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Create output directories
+mkdir -p /root/output/csv
+
+# Change to swarm package directory
+cd /root/swarm-package/
+
+# Run the baseline scenario with specified parameters
+python -m swarm.cli run \
+    --scenario /root/scenarios/baseline.yaml \
+    --seed 42 \
+    --epochs 10 \
+    --steps 10 \
+    --export-history /root/output/history.json \
+    --export-csv /root/output/csv/
+
+# Extract and print final welfare and toxicity values from history.json
+python3 -c "
+import json
+with open('/root/output/history.json', 'r') as f:
+    data = json.load(f)
+    
+# Get the last epoch's data
+last_epoch = data['epochs'][-1]
+final_welfare = last_epoch['metrics']['welfare']
+final_toxicity = last_epoch['metrics']['toxicity']
+
+print(f'Final welfare: {final_welfare}')
+print(f'Final toxicity: {final_toxicity}')
+"

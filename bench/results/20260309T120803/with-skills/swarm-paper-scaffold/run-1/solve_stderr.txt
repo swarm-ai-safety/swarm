@@ -1,0 +1,2 @@
+/tmp/generate_paper.py:94: SyntaxWarning: invalid escape sequence '\|'
+  # Load data

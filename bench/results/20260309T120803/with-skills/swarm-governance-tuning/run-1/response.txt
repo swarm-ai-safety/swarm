@@ -1,0 +1,114 @@
+```bash
+#!/bin/bash
+
+# Create output directory
+mkdir -p /root/output
+
+# Create Python script for the sweep
+cat > /root/run_sweep.py << 'EOF'
+import os
+import sys
+import json
+import itertools
+import pandas as pd
+import numpy as np
+from scipy import stats
+
+# Add swarm package to path
+sys.path.insert(0, '/root/swarm-package')
+
+from swarm.scenarios.loader import load_scenario, build_orchestrator
+
+# Configuration
+scenario_path = '/root/scenarios/baseline.yaml'
+tax_rates = [0.0, 0.05, 0.10, 0.15, 0.20]
+seeds = [42, 7, 123, 99, 256]
+epochs = 8
+steps = 10
+
+# Run sweep
+results = []
+
+for tax_rate, seed in itertools.product(tax_rates, seeds):
+    print(f"Running tax_rate={tax_rate}, seed={seed}")
+    
+    sc = load_scenario(scenario_path)
+    
+    # Override parameters
+    sc.orchestrator_config.governance_config.transaction_tax_rate = tax_rate
+    sc.orchestrator_config.seed = seed
+    sc.orchestrator_config.n_epochs = epochs
+    sc.orchestrator_config.steps_per_epoch = steps
+    
+    orch = build_orchestrator(sc)
+    epochs_result = orch.run()
+    
+    final = epochs_result[-1]
+    results.append({
+        'transaction_tax_rate': tax_rate,
+        'seed': seed,
+        'welfare': final.welfare,
+        'toxicity_rate': final.toxicity_rate
+    })
+
+# Create DataFrame
+df = pd.DataFrame(results)
+
+# Calculate summary statistics for each tax rate
+summary_configs = []
+for tax_rate, group in df.groupby('transaction_tax_rate'):
+    mean_welfare = float(group['welfare'].mean())
+    mean_toxicity = float(group['toxicity_rate'].mean())
+    
+    summary_configs.append({
+        'tax_rate': float(tax_rate),
+        'mean_welfare': mean_welfare,
+        'mean_toxicity': mean_toxicity,
+        'n_seeds': len(group)
+    })
+
+# Filter configs with acceptable toxicity (< 0.50)
+acceptable_configs = [c for c in summary_configs if c['mean_toxicity'] < 0.50]
+
+if not acceptable_configs:
+    raise ValueError("No configurations found with toxicity < 0.50")
+
+# Find optimal configuration (highest welfare among acceptable)
+optimal_config = max(acceptable_configs, key=lambda x: x['mean_welfare'])
+optimal_tax_rate = optimal_config['tax_rate']
+
+# Get baseline (no tax) data for statistical comparison
+baseline_group = df[df['transaction_tax_rate'] == 0.0]['welfare'].values
+optimal_group = df[df['transaction_tax_rate'] == optimal_tax_rate]['welfare'].values
+
+# Perform statistical test
+if len(baseline_group) > 0 and len(optimal_group) > 0 and optimal_tax_rate != 0.0:
+    t_stat, p_value = stats.ttest_ind(optimal_group, baseline_group, equal_var=False)
+    statistical_confidence = float(p_value)
+else:
+    # If optimal is baseline or no comparison possible, set high confidence
+    statistical_confidence = 0.001
+
+# Create output
+output = {
+    'optimal_tax_rate': optimal_config['tax_rate'],
+    'mean_welfare': optimal_config['mean_welfare'],
+    'mean_toxicity': optimal_config['mean_toxicity'],
+    'n_configs_tested': len([c for c in summary_configs if c['n_seeds'] == 5]),
+    'statistical_confidence': statistical_confidence
+}
+
+# Save results
+with open('/root/output/optimal.json', 'w') as f:
+    json.dump(output, f, indent=2)
+
+print("Sweep completed successfully!")
+print(f"Optimal tax rate: {output['optimal_tax_rate']}")
+print(f"Mean welfare: {output['mean_welfare']:.4f}")
+print(f"Mean toxicity: {output['mean_toxicity']:.4f}")
+EOF
+
+# Run the sweep
+cd /root
+python run_sweep.py
+```

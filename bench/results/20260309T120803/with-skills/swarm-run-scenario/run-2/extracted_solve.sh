@@ -1,0 +1,47 @@
+#!/bin/bash
+
+cd /root
+
+# Create output directory
+mkdir -p /root/output
+
+# Run the simulation and export artifacts
+python3 -c "
+import sys
+import os
+import json
+sys.path.insert(0, '/root/swarm-package')
+
+from swarm.scenarios.loader import load_scenario, build_orchestrator
+
+# Resolve scenario path
+scenario_path = '/root/scenarios/baseline.yaml'
+
+# Load and configure scenario
+sc = load_scenario(scenario_path)
+sc.orchestrator_config.seed = 42
+sc.orchestrator_config.n_epochs = 10
+sc.orchestrator_config.steps_per_epoch = 10
+
+# Run simulation
+orch = build_orchestrator(sc)
+result = orch.run()
+
+# Export history.json
+os.makedirs('/root/output', exist_ok=True)
+with open('/root/output/history.json', 'w') as f:
+    json.dump(result.to_dict(), f, indent=2)
+
+# Export CSV metrics
+csv_dir = '/root/output/csv'
+os.makedirs(csv_dir, exist_ok=True)
+result.export_csv(csv_dir)
+
+# Print final metrics
+history = result.to_dict()
+final = history['epoch_snapshots'][-1]
+welfare = final['welfare']
+toxicity = final['toxicity_rate']
+print(f'Final welfare: {welfare:.3f}')
+print(f'Final toxicity: {toxicity:.3f}')
+"

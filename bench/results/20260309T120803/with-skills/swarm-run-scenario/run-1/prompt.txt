@@ -1,0 +1,151 @@
+You are an AI research assistant working inside a Docker container.
+Complete the following task by writing a bash script that produces the required outputs.
+Write your solution as a single bash script. Output ONLY the script contents, no explanation.
+The script will be executed as `bash solve.sh` in /root/.
+
+# Task Instructions
+
+# Task: Run Baseline Scenario
+
+Run the baseline scenario with seed 42 for 10 epochs and 10 steps. Export history.json and CSV metrics to /root/output/. Print the final welfare and toxicity values.
+
+## Requirements
+
+- Output directory: `/root/output/`
+- Files to produce:
+  - `/root/output/history.json` — Full simulation history
+  - `/root/output/csv/` — Directory with CSV metric exports
+- Print to stdout: Final welfare and toxicity values
+
+## Environment
+
+- SWARM framework is installed at `/root/swarm-package/`
+- Scenario file: `/root/scenarios/baseline.yaml`
+- Python 3.12 available
+
+
+# Available Skills
+
+The following skill documentation is available to help you:
+
+## Skill: run-scenario
+
+---
+name: run-scenario
+description: Execute a SWARM simulation scenario and export standardized artifacts
+version: "1.0"
+domain: swarm-safety
+triggers:
+  - run scenario
+  - execute simulation
+  - baseline run
+---
+
+# Run Scenario Skill
+
+Execute a single SWARM scenario with a given seed and export all artifacts to a standardized output directory.
+
+## Prerequisites
+
+- `swarm-safety` package installed (`pip install swarm-safety` or `pip install -e /root/swarm-package/`)
+- Scenario YAML file available (typically in `/root/scenarios/`)
+
+## Procedure
+
+### 1. Resolve the scenario path
+
+Scenario references can be shorthand or full paths:
+- `baseline` → `scenarios/baseline.yaml`
+- `scenarios/baseline.yaml` → use as-is
+- `/root/scenarios/baseline.yaml` → use as-is
+
+```python
+import os
+
+def resolve_scenario(ref: str) -> str:
+    """Resolve a scenario reference to a full path."""
+    candidates = [
+        ref,
+        f"scenarios/{ref}.yaml",
+        f"/root/scenarios/{ref}.yaml",
+        f"scenarios/{ref}",
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    raise FileNotFoundError(f"Cannot find scenario: {ref}")
+```
+
+### 2. Run the simulation
+
+Use the SWARM CLI to execute:
+
+```bash
+python -m swarm run <scenario_path> --seed <seed> --epochs <N> --steps <M>
+```
+
+Or programmatically:
+
+```python
+from swarm.scenarios.loader import load_scenario, build_orchestrator
+
+sc = load_scenario(scenario_path)
+# Override simulation parameters if needed
+sc.orchestrator_config.seed = seed
+sc.orchestrator_config.n_epochs = epochs
+sc.orchestrator_config.steps_per_epoch = steps
+
+orch = build_orchestrator(sc)  # registers agents from scenario
+result = orch.run()  # returns list[EpochMetrics]
+```
+
+### 3. Export artifacts
+
+After the run completes, export to the output directory:
+
+```python
+import json
+import os
+
+os.makedirs(output_dir, exist_ok=True)
+
+# Export history.json
+with open(os.path.join(output_dir, "history.json"), "w") as f:
+    json.dump(result.to_dict(), f, indent=2)
+
+# Export CSV metrics
+csv_dir = os.path.join(output_dir, "csv")
+os.makedirs(csv_dir, exist_ok=True)
+result.export_csv(csv_dir)
+```
+
+### 4. Extract key metrics
+
+The final epoch snapshot contains summary metrics:
+
+```python
+history = result.to_dict()
+final = history["epoch_snapshots"][-1]
+welfare = final["welfare"]
+toxicity = final["toxicity_rate"]
+print(f"Final welfare: {welfare:.3f}")
+print(f"Final toxicity: {toxicity:.3f}")
+```
+
+## Output Structure
+
+```
+<output_dir>/
+├── history.json          # Full simulation history
+└── csv/
+    ├── epoch_metrics.csv # Per-epoch aggregate metrics
+    └── agent_metrics.csv # Per-agent per-epoch metrics
+```
+
+## Common Issues
+
+- **ImportError**: Ensure `swarm-safety` is installed with runtime deps: `pip install swarm-safety[runtime]`
+- **FileNotFoundError for scenario**: Check `/root/scenarios/` for available YAMLs
+- **Reproducibility**: Same seed + same scenario YAML = identical results
+
+

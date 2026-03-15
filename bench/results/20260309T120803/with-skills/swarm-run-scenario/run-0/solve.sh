@@ -1,0 +1,60 @@
+#!/bin/bash
+
+# Create output directory
+mkdir -p /root/output
+
+# Run the SWARM simulation
+cd /root
+
+python3 << 'EOF'
+import os
+import json
+from swarm.scenarios.loader import load_scenario, build_orchestrator
+
+def resolve_scenario(ref: str) -> str:
+    """Resolve a scenario reference to a full path."""
+    candidates = [
+        ref,
+        f"scenarios/{ref}.yaml",
+        f"/root/scenarios/{ref}.yaml",
+        f"scenarios/{ref}",
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    raise FileNotFoundError(f"Cannot find scenario: {ref}")
+
+# Resolve scenario path
+scenario_path = resolve_scenario("baseline")
+
+# Load and configure scenario
+sc = load_scenario(scenario_path)
+sc.orchestrator_config.seed = 42
+sc.orchestrator_config.n_epochs = 10
+sc.orchestrator_config.steps_per_epoch = 10
+
+# Build and run orchestrator
+orch = build_orchestrator(sc)
+result = orch.run()
+
+# Create output directory
+output_dir = "/root/output"
+os.makedirs(output_dir, exist_ok=True)
+
+# Export history.json
+with open(os.path.join(output_dir, "history.json"), "w") as f:
+    json.dump(result.to_dict(), f, indent=2)
+
+# Export CSV metrics
+csv_dir = os.path.join(output_dir, "csv")
+os.makedirs(csv_dir, exist_ok=True)
+result.export_csv(csv_dir)
+
+# Extract and print final metrics
+history = result.to_dict()
+final = history["epoch_snapshots"][-1]
+welfare = final["welfare"]
+toxicity = final["toxicity_rate"]
+print(f"Final welfare: {welfare:.3f}")
+print(f"Final toxicity: {toxicity:.3f}")
+EOF

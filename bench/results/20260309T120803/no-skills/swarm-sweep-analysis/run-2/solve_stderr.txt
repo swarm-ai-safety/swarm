@@ -1,0 +1,16 @@
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 51: bc: command not found
+/root/solve.sh: line 70: bc: command not found
+/root/solve.sh: line 70: bc: command not found
+/root/solve.sh: line 70: bc: command not found
+/root/solve.sh: line 70: bc: command not found

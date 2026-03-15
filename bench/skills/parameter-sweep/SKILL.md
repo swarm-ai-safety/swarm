@@ -38,40 +38,35 @@ configs = list(itertools.product(param_values, seeds))
 ### 2. Run each configuration
 
 ```python
-from swarm.core.orchestrator import Orchestrator
-from swarm.scenarios.loader import load_scenario
-import copy
+from swarm.scenarios.loader import load_scenario, build_orchestrator
 
 results = []
 
 for param_val, seed in configs:
-    config = load_scenario(scenario_path)
-    
-    # Override the swept parameter (supports nested keys)
-    keys = param_name.split(".")
-    target = config
-    for k in keys[:-1]:
-        target = target[k]
-    target[keys[-1]] = param_val
-    
+    sc = load_scenario(scenario_path)
+
+    # Override the swept parameter
+    if param_name == "governance.transaction_tax_rate":
+        sc.orchestrator_config.governance_config.transaction_tax_rate = param_val
+
     # Override seed and epoch count
-    config["simulation"]["seed"] = seed
-    config["simulation"]["n_epochs"] = epochs
-    config["simulation"]["steps_per_epoch"] = steps
-    
-    orch = Orchestrator(config)
-    result = orch.run()
-    
-    final = result.to_dict()["epoch_snapshots"][-1]
+    sc.orchestrator_config.seed = seed
+    sc.orchestrator_config.n_epochs = epochs
+    sc.orchestrator_config.steps_per_epoch = steps
+
+    orch = build_orchestrator(sc)  # registers agents from scenario
+    epochs_result = orch.run()  # returns list[EpochMetrics]
+
+    final = epochs_result[-1]
     results.append({
         param_name.split(".")[-1]: param_val,
         "seed": seed,
-        "welfare": final["welfare"],
-        "toxicity_rate": final["toxicity_rate"],
-        "quality_gap": final.get("quality_gap", 0.0),
-        "mean_payoff_honest": final.get("mean_payoff_honest", 0.0),
-        "mean_payoff_opportunistic": final.get("mean_payoff_opportunistic", 0.0),
-        "mean_payoff_deceptive": final.get("mean_payoff_deceptive", 0.0),
+        "welfare": final.welfare,
+        "toxicity_rate": final.toxicity_rate,
+        "quality_gap": final.quality_gap,
+        "mean_payoff_honest": getattr(final, "mean_payoff_honest", 0.0),
+        "mean_payoff_opportunistic": getattr(final, "mean_payoff_opportunistic", 0.0),
+        "mean_payoff_deceptive": getattr(final, "mean_payoff_deceptive", 0.0),
     })
 ```
 

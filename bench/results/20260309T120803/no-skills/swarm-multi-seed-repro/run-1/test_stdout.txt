@@ -1,0 +1,33 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 5 items
+
+tests/test_outputs.py::test_seed_directories_exist FAILED                [ 20%]
+tests/test_outputs.py::test_summary_csv_exists PASSED                    [ 40%]
+tests/test_outputs.py::test_summary_csv_has_3_rows PASSED                [ 60%]
+tests/test_outputs.py::test_summary_csv_columns PASSED                   [ 80%]
+tests/test_outputs.py::test_reproducibility FAILED                       [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_seed_directories_exist __________________________
+tests/test_outputs.py:15: in test_seed_directories_exist
+    assert os.path.isfile(os.path.join(d, "history.json")), \
+E   AssertionError: history.json not found in seed_42/
+E   assert False
+E    +  where False = <function isfile at 0xffff969ec2c0>('/root/output/seed_42/history.json')
+E    +    where <function isfile at 0xffff969ec2c0> = <module 'posixpath' (frozen)>.isfile
+E    +      where <module 'posixpath' (frozen)> = os.path
+E    +    and   '/root/output/seed_42/history.json' = <function join at 0xffff969eccc0>('/root/output/seed_42', 'history.json')
+E    +      where <function join at 0xffff969eccc0> = <module 'posixpath' (frozen)>.join
+E    +        where <module 'posixpath' (frozen)> = os.path
+_____________________________ test_reproducibility _____________________________
+tests/test_outputs.py:48: in test_reproducibility
+    csv_rows = {int(row["seed"]): float(row["welfare"]) for row in reader}
+                                  ^^^^^^^^^^^^^^^^^^^^^
+E   ValueError: could not convert string to float: ''
+=========================== short test summary info ============================
+FAILED tests/test_outputs.py::test_seed_directories_exist - AssertionError: h...
+FAILED tests/test_outputs.py::test_reproducibility - ValueError: could not co...
+========================= 2 failed, 3 passed in 0.01s ==========================

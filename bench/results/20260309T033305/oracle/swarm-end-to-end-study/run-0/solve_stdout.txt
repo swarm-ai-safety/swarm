@@ -1,0 +1,5 @@
+Step 1: Sweep complete (9 rows)
+Step 2: Analysis complete (3 comparisons)
+Step 3: Plots complete
+Step 4: Paper complete
+All steps done!

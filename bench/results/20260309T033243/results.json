@@ -1,0 +1,21 @@
+{
+  "timestamp": "20260309T033243",
+  "runs_per_condition": 1,
+  "conditions": [
+    "oracle"
+  ],
+  "results": [
+    {
+      "task": "swarm-run-scenario",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 5,
+      "tests_passed": 5,
+      "tests_failed": 0,
+      "duration_s": 2.491732120513916,
+      "error": null,
+      "agent_response_tokens": 0
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "/root/sweep_governance.py", line 37, in <module>
+    "welfare": final.welfare,
+               ^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/pydantic/main.py", line 1026, in __getattr__
+    raise AttributeError(f'{type(self).__name__!r} object has no attribute {item!r}')
+AttributeError: 'EpochMetrics' object has no attribute 'welfare'

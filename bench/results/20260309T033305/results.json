@@ -1,0 +1,129 @@
+{
+  "timestamp": "20260309T033305",
+  "runs_per_condition": 1,
+  "conditions": [
+    "oracle"
+  ],
+  "results": [
+    {
+      "task": "swarm-adverse-selection",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 7,
+      "tests_passed": 7,
+      "tests_failed": 0,
+      "duration_s": 2.7590909004211426,
+      "error": null,
+      "agent_response_tokens": 0
+    },
+    {
+      "task": "swarm-end-to-end-study",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 7,
+      "tests_passed": 7,
+      "tests_failed": 0,
+      "duration_s": 3.583386182785034,
+      "error": null,
+      "agent_response_tokens": 0
+    },
+    {
+      "task": "swarm-governance-tuning",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 6,
+      "tests_passed": 6,
+      "tests_failed": 0,
+      "duration_s": 3.7946338653564453,
+      "error": null,
+      "agent_response_tokens": 0
+    },
+    {
+      "task": "swarm-multi-seed-repro",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 5,
+      "tests_passed": 5,
+      "tests_failed": 0,
+      "duration_s": 2.4230871200561523,
+      "error": null,
+      "agent_response_tokens": 0
+    },
+    {
+      "task": "swarm-paper-scaffold",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 7,
+      "tests_passed": 7,
+      "tests_failed": 0,
+      "duration_s": 2.1270198822021484,
+      "error": null,
+      "agent_response_tokens": 0
+    },
+    {
+      "task": "swarm-run-scenario",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 5,
+      "tests_passed": 5,
+      "tests_failed": 0,
+      "duration_s": 2.334160089492798,
+      "error": null,
+      "agent_response_tokens": 0
+    },
+    {
+      "task": "swarm-statistical-rigor",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 7,
+      "tests_passed": 7,
+      "tests_failed": 0,
+      "duration_s": 2.553474187850952,
+      "error": null,
+      "agent_response_tokens": 0
+    },
+    {
+      "task": "swarm-sweep-analysis",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 6,
+      "tests_passed": 6,
+      "tests_failed": 0,
+      "duration_s": 2.7941038608551025,
+      "error": null,
+      "agent_response_tokens": 0
+    },
+    {
+      "task": "swarm-sweep-to-plots",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 5,
+      "tests_passed": 5,
+      "tests_failed": 0,
+      "duration_s": 2.574272871017456,
+      "error": null,
+      "agent_response_tokens": 0
+    },
+    {
+      "task": "swarm-toxicity-diagnosis",
+      "condition": "oracle",
+      "run_id": 0,
+      "passed": true,
+      "tests_total": 5,
+      "tests_passed": 5,
+      "tests_failed": 0,
+      "duration_s": 2.509307861328125,
+      "error": null,
+      "agent_response_tokens": 0
+    }
+  ]
+}

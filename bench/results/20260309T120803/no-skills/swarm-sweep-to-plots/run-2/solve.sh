@@ -1,0 +1,187 @@
+#!/bin/bash
+
+# Create output directory
+mkdir -p /root/output/plots/
+
+# Create Python script to generate plots
+cat > /root/generate_plots.py << 'EOF'
+import pandas as pd
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+
+# Read the sweep results
+df = pd.read_csv('/root/data/sweep_results.csv')
+
+# Ensure output directory exists
+os.makedirs('/root/output/plots/', exist_ok=True)
+
+# Plot 1: Grouped bar chart of welfare by tax rate
+plt.figure(figsize=(12, 8))
+if 'tax_rate' in df.columns and 'welfare' in df.columns:
+    # Group by tax rate and calculate mean welfare
+    welfare_by_tax = df.groupby('tax_rate')['welfare'].agg(['mean', 'std']).reset_index()
+    
+    plt.bar(welfare_by_tax['tax_rate'], welfare_by_tax['mean'], 
+            yerr=welfare_by_tax['std'], capsize=5, alpha=0.7, color='skyblue')
+    plt.xlabel('Tax Rate')
+    plt.ylabel('Average Welfare')
+    plt.title('Average Welfare by Tax Rate')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+else:
+    # Fallback if columns don't exist - use first numeric columns
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    if len(numeric_cols) >= 2:
+        x_col = numeric_cols[0]
+        y_col = numeric_cols[1]
+        grouped = df.groupby(x_col)[y_col].agg(['mean', 'std']).reset_index()
+        plt.bar(grouped[x_col], grouped['mean'], 
+                yerr=grouped['std'], capsize=5, alpha=0.7, color='skyblue')
+        plt.xlabel(x_col)
+        plt.ylabel(f'Average {y_col}')
+        plt.title(f'Average {y_col} by {x_col}')
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+
+plt.savefig('/root/output/plots/welfare_by_tax_rate.png', dpi=150, bbox_inches='tight')
+plt.close()
+
+# Plot 2: Box plot of welfare distribution
+plt.figure(figsize=(10, 8))
+if 'welfare' in df.columns and 'tax_rate' in df.columns:
+    # Create box plots for each tax rate
+    tax_rates = sorted(df['tax_rate'].unique())
+    welfare_data = [df[df['tax_rate'] == rate]['welfare'].values for rate in tax_rates]
+    
+    plt.boxplot(welfare_data, labels=tax_rates)
+    plt.xlabel('Tax Rate')
+    plt.ylabel('Welfare Distribution')
+    plt.title('Welfare Distribution by Tax Rate')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+elif 'welfare' in df.columns:
+    # Single box plot if no tax_rate column
+    plt.boxplot(df['welfare'].dropna())
+    plt.ylabel('Welfare')
+    plt.title('Welfare Distribution')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+else:
+    # Fallback - box plot of all numeric columns
+    numeric_cols = df.select_dtypes(include=[np.number]).columns[:5]  # Limit to 5 columns
+    if len(numeric_cols) > 0:
+        plt.boxplot([df[col].dropna() for col in numeric_cols], labels=numeric_cols)
+        plt.ylabel('Values')
+        plt.title('Distribution of Numeric Variables')
+        plt.xticks(rotation=45)
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+
+plt.savefig('/root/output/plots/welfare_distribution.png', dpi=150, bbox_inches='tight')
+plt.close()
+
+# Plot 3: Agent payoff comparison chart
+plt.figure(figsize=(12, 8))
+
+# Look for agent-related columns
+agent_cols = [col for col in df.columns if 'agent' in col.lower() or 'payoff' in col.lower()]
+
+if len(agent_cols) >= 2:
+    # Scatter plot of agent payoffs
+    plt.scatter(df[agent_cols[0]], df[agent_cols[1]], alpha=0.7, s=60, color='coral')
+    plt.xlabel(agent_cols[0])
+    plt.ylabel(agent_cols[1])
+    plt.title('Agent Payoff Comparison')
+    plt.grid(True, alpha=0.3)
+    
+    # Add diagonal line for reference
+    min_val = min(df[agent_cols[0]].min(), df[agent_cols[1]].min())
+    max_val = max(df[agent_cols[0]].max(), df[agent_cols[1]].max())
+    plt.plot([min_val, max_val], [min_val, max_val], 'k--', alpha=0.5, label='Equal payoff line')
+    plt.legend()
+    plt.tight_layout()
+    
+elif len(agent_cols) == 1:
+    # Single agent column - plot vs index or another variable
+    if 'tax_rate' in df.columns:
+        plt.scatter(df['tax_rate'], df[agent_cols[0]], alpha=0.7, s=60, color='coral')
+        plt.xlabel('Tax Rate')
+        plt.ylabel(agent_cols[0])
+        plt.title(f'{agent_cols[0]} vs Tax Rate')
+    else:
+        plt.plot(df[agent_cols[0]], marker='o', alpha=0.7, color='coral')
+        plt.ylabel(agent_cols[0])
+        plt.xlabel('Index')
+        plt.title(f'{agent_cols[0]} Over Time/Index')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+    
+else:
+    # Fallback - comparison of first two numeric columns
+    numeric_cols = df.select_dtypes(include=[np.number]).columns
+    if len(numeric_cols) >= 2:
+        col1, col2 = numeric_cols[0], numeric_cols[1]
+        plt.scatter(df[col1], df[col2], alpha=0.7, s=60, color='coral')
+        plt.xlabel(col1)
+        plt.ylabel(col2)
+        plt.title(f'{col1} vs {col2}')
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+    else:
+        # Create a simple line plot of the first numeric column
+        col = numeric_cols[0] if len(numeric_cols) > 0 else df.columns[0]
+        plt.plot(df[col], marker='o', alpha=0.7, color='coral')
+        plt.ylabel(col)
+        plt.xlabel('Index')
+        plt.title(f'{col} Over Index')
+        plt.grid(True, alpha=0.3)
+        plt.tight_layout()
+
+plt.savefig('/root/output/plots/agent_payoff_comparison.png', dpi=150, bbox_inches='tight')
+plt.close()
+
+# Plot 4: Additional visualization - Correlation heatmap
+plt.figure(figsize=(10, 8))
+numeric_df = df.select_dtypes(include=[np.number])
+if len(numeric_df.columns) > 1:
+    correlation_matrix = numeric_df.corr()
+    im = plt.imshow(correlation_matrix, cmap='coolwarm', aspect='auto', vmin=-1, vmax=1)
+    plt.colorbar(im)
+    
+    # Add labels
+    plt.xticks(range(len(correlation_matrix.columns)), correlation_matrix.columns, rotation=45, ha='right')
+    plt.yticks(range(len(correlation_matrix.columns)), correlation_matrix.columns)
+    
+    # Add correlation values as text
+    for i in range(len(correlation_matrix.columns)):
+        for j in range(len(correlation_matrix.columns)):
+            plt.text(j, i, f'{correlation_matrix.iloc[i, j]:.2f}', 
+                    ha='center', va='center', color='black' if abs(correlation_matrix.iloc[i, j]) < 0.5 else 'white')
+    
+    plt.title('Correlation Matrix of Numeric Variables')
+    plt.tight_layout()
+else:
+    # Fallback - simple histogram
+    col = numeric_df.columns[0] if len(numeric_df.columns) > 0 else df.columns[0]
+    plt.hist(df[col].dropna(), bins=10, alpha=0.7, color='lightgreen', edgecolor='black')
+    plt.xlabel(col)
+    plt.ylabel('Frequency')
+    plt.title(f'Distribution of {col}')
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
+
+plt.savefig('/root/output/plots/correlation_heatmap.png', dpi=150, bbox_inches='tight')
+plt.close()
+
+print("Plots generated successfully!")
+print(f"Generated files:")
+for file in os.listdir('/root/output/plots/'):
+    if file.endswith('.png'):
+        file_path = os.path.join('/root/output/plots/', file)
+        file_size = os.path.getsize(file_path)
+        print(f"  {file}: {file_size} bytes")
+EOF
+
+# Run the Python script
+python3 /root/generate_plots.py

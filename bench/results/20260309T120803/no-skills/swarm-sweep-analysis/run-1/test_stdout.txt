@@ -1,0 +1,48 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 6 items
+
+tests/test_outputs.py::test_sweep_csv_exists PASSED                      [ 16%]
+tests/test_outputs.py::test_sweep_csv_has_12_rows PASSED                 [ 33%]
+tests/test_outputs.py::test_sweep_csv_has_param_column PASSED            [ 50%]
+tests/test_outputs.py::test_summary_json_exists PASSED                   [ 66%]
+tests/test_outputs.py::test_summary_json_has_4_configs FAILED            [ 83%]
+tests/test_outputs.py::test_summary_json_has_mean_welfare FAILED         [100%]
+
+=================================== FAILURES ===================================
+_______________________ test_summary_json_has_4_configs ________________________
+tests/test_outputs.py:33: in test_summary_json_has_4_configs
+    summary = json.load(f)
+              ^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/__init__.py:293: in load
+    return loads(fp.read(),
+/usr/local/lib/python3.12/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:338: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:356: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 2 column 44 (char 56)
+______________________ test_summary_json_has_mean_welfare ______________________
+tests/test_outputs.py:40: in test_summary_json_has_mean_welfare
+    summary = json.load(f)
+              ^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/__init__.py:293: in load
+    return loads(fp.read(),
+/usr/local/lib/python3.12/json/__init__.py:346: in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:338: in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/local/lib/python3.12/json/decoder.py:356: in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+E   json.decoder.JSONDecodeError: Expecting value: line 2 column 44 (char 56)
+=========================== short test summary info ============================
+FAILED tests/test_outputs.py::test_summary_json_has_4_configs - json.decoder....
+FAILED tests/test_outputs.py::test_summary_json_has_mean_welfare - json.decod...
+========================= 2 failed, 4 passed in 0.03s ==========================

@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "/root/generate_plots.py", line 92, in <module>
+    min_val = min(df[agent_cols[0]].min(), df[agent_cols[1]].min())
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+numpy._core._exceptions._UFuncNoLoopError: ufunc 'less' did not contain a loop with signature matching types (<class 'numpy.dtypes.Float64DType'>, <class 'numpy.dtypes.StrDType'>) -> None

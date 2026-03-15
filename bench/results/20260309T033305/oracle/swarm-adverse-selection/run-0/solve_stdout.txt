@@ -1,0 +1,2 @@
+Quality gap: 0.1850 (8 epochs with rejections)
+Adverse selection: False

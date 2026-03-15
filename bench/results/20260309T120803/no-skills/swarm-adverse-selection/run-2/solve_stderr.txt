@@ -1,0 +1,4 @@
+/usr/local/bin/python: No module named swarm.run
+Traceback (most recent call last):
+  File "<stdin>", line 6, in <module>
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/swarm_output/results.json'

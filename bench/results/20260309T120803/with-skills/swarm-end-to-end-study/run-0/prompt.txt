@@ -1,0 +1,769 @@
+You are an AI research assistant working inside a Docker container.
+Complete the following task by writing a bash script that produces the required outputs.
+Write your solution as a single bash script. Output ONLY the script contents, no explanation.
+The script will be executed as `bash solve.sh` in /root/.
+
+# Task Instructions
+
+# Task: End-to-End Study
+
+Conduct a complete study on the baseline scenario:
+1. **Sweep**: Sweep tax_rate [0.0, 0.10, 0.20] with 3 seeds (42, 7, 123), 5 epochs, 10 steps
+2. **Analyze**: Run statistical analysis on the sweep results
+3. **Plot**: Generate visualizations
+4. **Paper**: Scaffold a paper with the results
+
+All outputs go under /root/output/ with subdirectories: sweep/, analysis/, plots/, paper/.
+
+## Requirements
+
+- `/root/output/sweep/sweep_results.csv` — 9 rows (3 configs x 3 seeds)
+- `/root/output/analysis/summary.json` — Statistical results with `results` array
+- `/root/output/plots/` — At least 2 PNG files
+- `/root/output/paper/paper.md` — Paper with Results section containing data from the sweep
+
+## Environment
+
+- SWARM framework installed at `/root/swarm-package/`
+- Scenario: `/root/scenarios/baseline.yaml`
+- scipy, matplotlib, pandas, numpy available
+
+
+# Available Skills
+
+The following skill documentation is available to help you:
+
+## Skill: run-scenario
+
+---
+name: run-scenario
+description: Execute a SWARM simulation scenario and export standardized artifacts
+version: "1.0"
+domain: swarm-safety
+triggers:
+  - run scenario
+  - execute simulation
+  - baseline run
+---
+
+# Run Scenario Skill
+
+Execute a single SWARM scenario with a given seed and export all artifacts to a standardized output directory.
+
+## Prerequisites
+
+- `swarm-safety` package installed (`pip install swarm-safety` or `pip install -e /root/swarm-package/`)
+- Scenario YAML file available (typically in `/root/scenarios/`)
+
+## Procedure
+
+### 1. Resolve the scenario path
+
+Scenario references can be shorthand or full paths:
+- `baseline` → `scenarios/baseline.yaml`
+- `scenarios/baseline.yaml` → use as-is
+- `/root/scenarios/baseline.yaml` → use as-is
+
+```python
+import os
+
+def resolve_scenario(ref: str) -> str:
+    """Resolve a scenario reference to a full path."""
+    candidates = [
+        ref,
+        f"scenarios/{ref}.yaml",
+        f"/root/scenarios/{ref}.yaml",
+        f"scenarios/{ref}",
+    ]
+    for c in candidates:
+        if os.path.isfile(c):
+            return c
+    raise FileNotFoundError(f"Cannot find scenario: {ref}")
+```
+
+### 2. Run the simulation
+
+Use the SWARM CLI to execute:
+
+```bash
+python -m swarm run <scenario_path> --seed <seed> --epochs <N> --steps <M>
+```
+
+Or programmatically:
+
+```python
+from swarm.scenarios.loader import load_scenario, build_orchestrator
+
+sc = load_scenario(scenario_path)
+# Override simulation parameters if needed
+sc.orchestrator_config.seed = seed
+sc.orchestrator_config.n_epochs = epochs
+sc.orchestrator_config.steps_per_epoch = steps
+
+orch = build_orchestrator(sc)  # registers agents from scenario
+result = orch.run()  # returns list[EpochMetrics]
+```
+
+### 3. Export artifacts
+
+After the run completes, export to the output directory:
+
+```python
+import json
+import os
+
+os.makedirs(output_dir, exist_ok=True)
+
+# Export history.json
+with open(os.path.join(output_dir, "history.json"), "w") as f:
+    json.dump(result.to_dict(), f, indent=2)
+
+# Export CSV metrics
+csv_dir = os.path.join(output_dir, "csv")
+os.makedirs(csv_dir, exist_ok=True)
+result.export_csv(csv_dir)
+```
+
+### 4. Extract key metrics
+
+The final epoch snapshot contains summary metrics:
+
+```python
+history = result.to_dict()
+final = history["epoch_snapshots"][-1]
+welfare = final["welfare"]
+toxicity = final["toxicity_rate"]
+print(f"Final welfare: {welfare:.3f}")
+print(f"Final toxicity: {toxicity:.3f}")
+```
+
+## Output Structure
+
+```
+<output_dir>/
+├── history.json          # Full simulation history
+└── csv/
+    ├── epoch_metrics.csv # Per-epoch aggregate metrics
+    └── agent_metrics.csv # Per-agent per-epoch metrics
+```
+
+## Common Issues
+
+- **ImportError**: Ensure `swarm-safety` is installed with runtime deps: `pip install swarm-safety[runtime]`
+- **FileNotFoundError for scenario**: Check `/root/scenarios/` for available YAMLs
+- **Reproducibility**: Same seed + same scenario YAML = identical results
+
+
+## Skill: parameter-sweep
+
+---
+name: parameter-sweep
+description: Run parameter grid sweeps across SWARM scenarios and generate summary statistics
+version: "1.0"
+domain: swarm-safety
+triggers:
+  - parameter sweep
+  - sweep tax rate
+  - grid search governance
+---
+
+# Parameter Sweep Skill
+
+Run a parameter sweep over governance configurations, collect results across multiple seeds, and generate summary statistics.
+
+## Prerequisites
+
+- `swarm-safety` package installed
+- `pandas` and `numpy` available
+- Scenario YAML file
+
+## Procedure
+
+### 1. Define the sweep grid
+
+```python
+import itertools
+
+# Example: sweep a single parameter
+param_name = "governance.transaction_tax_rate"
+param_values = [0.0, 0.05, 0.10, 0.15]
+seeds = [42, 7, 123]
+
+# For multi-parameter sweeps, use itertools.product
+configs = list(itertools.product(param_values, seeds))
+```
+
+### 2. Run each configuration
+
+```python
+from swarm.scenarios.loader import load_scenario, build_orchestrator
+
+results = []
+
+for param_val, seed in configs:
+    sc = load_scenario(scenario_path)
+
+    # Override the swept parameter
+    if param_name == "governance.transaction_tax_rate":
+        sc.orchestrator_config.governance_config.transaction_tax_rate = param_val
+
+    # Override seed and epoch count
+    sc.orchestrator_config.seed = seed
+    sc.orchestrator_config.n_epochs = epochs
+    sc.orchestrator_config.steps_per_epoch = steps
+
+    orch = build_orchestrator(sc)  # registers agents from scenario
+    epochs_result = orch.run()  # returns list[EpochMetrics]
+
+    final = epochs_result[-1]
+    results.append({
+        param_name.split(".")[-1]: param_val,
+        "seed": seed,
+        "welfare": final.welfare,
+        "toxicity_rate": final.toxicity_rate,
+        "quality_gap": final.quality_gap,
+        "mean_payoff_honest": getattr(final, "mean_payoff_honest", 0.0),
+        "mean_payoff_opportunistic": getattr(final, "mean_payoff_opportunistic", 0.0),
+        "mean_payoff_deceptive": getattr(final, "mean_payoff_deceptive", 0.0),
+    })
+```
+
+### 3. Create sweep CSV
+
+```python
+import pandas as pd
+
+df = pd.DataFrame(results)
+df.to_csv(os.path.join(output_dir, "sweep_results.csv"), index=False)
+```
+
+### 4. Generate summary.json
+
+```python
+import json
+
+param_col = param_name.split(".")[-1]
+summary_configs = []
+
+for val, group in df.groupby(param_col):
+    summary_configs.append({
+        param_col: float(val),
+        "n_seeds": len(group),
+        "mean_welfare": float(group["welfare"].mean()),
+        "std_welfare": float(group["welfare"].std()),
+        "mean_toxicity": float(group["toxicity_rate"].mean()),
+        "std_toxicity": float(group["toxicity_rate"].std()),
+        "mean_quality_gap": float(group["quality_gap"].mean()),
+    })
+
+summary = {
+    "scenario": scenario_path,
+    "swept_parameter": param_name,
+    "n_configs": len(summary_configs),
+    "n_seeds_per_config": len(seeds),
+    "configs": summary_configs,
+    "best_welfare": max(summary_configs, key=lambda x: x["mean_welfare"]),
+    "lowest_toxicity": min(summary_configs, key=lambda x: x["mean_toxicity"]),
+}
+
+with open(os.path.join(output_dir, "summary.json"), "w") as f:
+    json.dump(summary, f, indent=2)
+```
+
+## Output Structure
+
+```
+<output_dir>/
+├── sweep_results.csv     # One row per (config, seed) combination
+└── summary.json          # Aggregated stats per config
+```
+
+## Summary JSON Schema
+
+```json
+{
+  "scenario": "string",
+  "swept_parameter": "string",
+  "n_configs": "int",
+  "n_seeds_per_config": "int",
+  "configs": [
+    {
+      "<param_col>": "float",
+      "n_seeds": "int",
+      "mean_welfare": "float",
+      "std_welfare": "float",
+      "mean_toxicity": "float",
+      "std_toxicity": "float"
+    }
+  ],
+  "best_welfare": { "...config object" },
+  "lowest_toxicity": { "...config object" }
+}
+```
+
+
+## Skill: statistical-analysis
+
+---
+name: statistical-analysis
+description: Perform rigorous statistical analysis on SWARM experiment data with multiple-comparison corrections
+version: "1.0"
+domain: swarm-safety
+triggers:
+  - statistical analysis
+  - analyze results
+  - compute significance
+  - effect size
+---
+
+# Statistical Analysis Skill
+
+Perform rigorous statistical analysis on SWARM sweep or multi-seed data, including hypothesis tests, effect sizes, and multiple-comparison corrections.
+
+## Prerequisites
+
+- `scipy>=1.10` for statistical tests
+- `pandas>=2.0` for data manipulation
+- `numpy>=1.24` for numerical computation
+
+## Procedure
+
+### 1. Load and normalize data
+
+```python
+import pandas as pd
+
+df = pd.read_csv(csv_path)
+
+# Normalize column aliases
+alias_map = {
+    "tax_rate": "transaction_tax_rate",
+    "tax": "transaction_tax_rate",
+    "tox": "toxicity_rate",
+    "toxicity": "toxicity_rate",
+}
+df.rename(columns={k: v for k, v in alias_map.items() if k in df.columns}, inplace=True)
+```
+
+### 2. Pairwise Welch's t-tests
+
+```python
+from scipy import stats
+from itertools import combinations
+
+param_col = "transaction_tax_rate"  # or detect automatically
+metric = "welfare"
+
+groups = {val: grp[metric].values for val, grp in df.groupby(param_col)}
+pairs = list(combinations(sorted(groups.keys()), 2))
+
+results = []
+for a, b in pairs:
+    t_stat, p_val = stats.ttest_ind(groups[a], groups[b], equal_var=False)
+    results.append({
+        "group_a": float(a),
+        "group_b": float(b),
+        "t_statistic": float(t_stat),
+        "p_value": float(p_val),
+    })
+```
+
+### 3. Effect sizes (Cohen's d)
+
+```python
+import numpy as np
+
+def cohens_d(x, y):
+    nx, ny = len(x), len(y)
+    pooled_std = np.sqrt(((nx-1)*np.std(x,ddof=1)**2 + (ny-1)*np.std(y,ddof=1)**2) / (nx+ny-2))
+    if pooled_std == 0:
+        return 0.0
+    return (np.mean(x) - np.mean(y)) / pooled_std
+
+for r, (a, b) in zip(results, pairs):
+    r["cohens_d"] = float(cohens_d(groups[a], groups[b]))
+    r["effect_magnitude"] = (
+        "large" if abs(r["cohens_d"]) >= 0.8 else
+        "medium" if abs(r["cohens_d"]) >= 0.5 else
+        "small" if abs(r["cohens_d"]) >= 0.2 else
+        "negligible"
+    )
+```
+
+### 4. Bonferroni correction
+
+```python
+n_tests = len(results)
+bonferroni_threshold = 0.05 / n_tests
+
+for r in results:
+    r["bonferroni_significant"] = r["p_value"] < bonferroni_threshold
+```
+
+### 5. Shapiro-Wilk normality tests
+
+```python
+normality = {}
+for val, data in groups.items():
+    if len(data) >= 3:
+        w_stat, p_val = stats.shapiro(data)
+        normality[float(val)] = {
+            "W_statistic": float(w_stat),
+            "p_value": float(p_val),
+            "normal_at_0.05": p_val > 0.05,
+        }
+```
+
+### 6. Save results
+
+```python
+import json
+
+summary = {
+    "metric_analyzed": metric,
+    "parameter_column": param_col,
+    "total_hypotheses": n_tests,
+    "bonferroni_threshold": bonferroni_threshold,
+    "n_bonferroni_significant": sum(1 for r in results if r["bonferroni_significant"]),
+    "n_nominal_significant": sum(1 for r in results if r["p_value"] < 0.05),
+    "results": results,
+    "normality_tests": normality,
+}
+
+with open(os.path.join(output_dir, "summary.json"), "w") as f:
+    json.dump(summary, f, indent=2)
+
+# Human-readable report
+with open(os.path.join(output_dir, "results.txt"), "w") as f:
+    f.write(f"Statistical Analysis Report\n")
+    f.write(f"={'='*40}\n")
+    f.write(f"Metric: {metric}\n")
+    f.write(f"Parameter: {param_col}\n")
+    f.write(f"Total comparisons: {n_tests}\n")
+    f.write(f"Bonferroni threshold: {bonferroni_threshold:.4f}\n\n")
+    for r in results:
+        sig = "*" if r["bonferroni_significant"] else ""
+        f.write(f"{r['group_a']} vs {r['group_b']}: "
+                f"t={r['t_statistic']:.3f}, p={r['p_value']:.4f}{sig}, "
+                f"d={r['cohens_d']:.3f} ({r['effect_magnitude']})\n")
+```
+
+## Statistical Rigor Checklist
+
+1. Report exact p-values (not just < 0.05)
+2. Always apply multiple-comparison correction (Bonferroni minimum)
+3. Report effect sizes alongside p-values
+4. Check normality assumptions (Shapiro-Wilk)
+5. Use Welch's t-test (not Student's) — does not assume equal variance
+6. Report sample sizes per group
+7. Distinguish nominal significance from corrected significance
+
+## References
+
+See `references/stat-checklist.md` for the full rigor checklist.
+
+
+## Skill: plotting
+
+---
+name: plotting
+description: Generate publication-quality visualizations from SWARM simulation data
+version: "1.0"
+domain: swarm-safety
+triggers:
+  - generate plots
+  - create visualizations
+  - plot results
+---
+
+# Plotting Skill
+
+Generate standard visualizations from SWARM run data (sweep CSVs or time-series history).
+
+## Prerequisites
+
+- `matplotlib>=3.7`
+- `pandas>=2.0`
+- `numpy>=1.24`
+- Optional: `seaborn>=0.12` for enhanced styling
+
+## Procedure
+
+### 1. Detect data type
+
+```python
+import pandas as pd
+import os
+
+def detect_data_type(path):
+    """Determine if data is sweep results or time-series."""
+    if path.endswith(".json"):
+        return "timeseries"
+    df = pd.read_csv(path)
+    # Sweep data has a parameter column with repeated values
+    param_cols = [c for c in df.columns if c not in 
+                  ["seed", "welfare", "toxicity_rate", "quality_gap",
+                   "mean_payoff_honest", "mean_payoff_opportunistic",
+                   "mean_payoff_deceptive", "epoch"]]
+    if param_cols and df[param_cols[0]].nunique() < len(df):
+        return "sweep"
+    return "timeseries"
+```
+
+### 2. Sweep plots
+
+#### Grouped bar chart (welfare by parameter)
+
+```python
+import matplotlib.pyplot as plt
+import numpy as np
+
+def plot_welfare_bars(df, param_col, output_dir):
+    summary = df.groupby(param_col)["welfare"].agg(["mean", "std"]).reset_index()
+    
+    fig, ax = plt.subplots(figsize=(8, 5))
+    x = np.arange(len(summary))
+    ax.bar(x, summary["mean"], yerr=summary["std"], capsize=5, 
+           color="steelblue", edgecolor="black", alpha=0.8)
+    ax.set_xticks(x)
+    ax.set_xticklabels([f"{v:.2f}" for v in summary[param_col]])
+    ax.set_xlabel(param_col.replace("_", " ").title())
+    ax.set_ylabel("Welfare (mean ± SD)")
+    ax.set_title("Welfare by Governance Configuration")
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, "welfare_by_config.png"), dpi=150)
+    plt.close()
+```
+
+#### Box plot (welfare distribution)
+
+```python
+def plot_welfare_boxplot(df, param_col, output_dir):
+    fig, ax = plt.subplots(figsize=(8, 5))
+    groups = sorted(df[param_col].unique())
+    data = [df[df[param_col] == g]["welfare"].values for g in groups]
+    bp = ax.boxplot(data, labels=[f"{g:.2f}" for g in groups], patch_artist=True)
+    for patch in bp["boxes"]:
+        patch.set_facecolor("lightblue")
+    ax.set_xlabel(param_col.replace("_", " ").title())
+    ax.set_ylabel("Welfare")
+    ax.set_title("Welfare Distribution by Configuration")
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, "welfare_boxplot.png"), dpi=150)
+    plt.close()
+```
+
+#### Agent payoff comparison
+
+```python
+def plot_agent_payoffs(df, param_col, output_dir):
+    payoff_cols = [c for c in df.columns if c.startswith("mean_payoff_")]
+    if not payoff_cols:
+        return
+    
+    summary = df.groupby(param_col)[payoff_cols].mean().reset_index()
+    
+    fig, ax = plt.subplots(figsize=(10, 5))
+    x = np.arange(len(summary))
+    width = 0.25
+    
+    for i, col in enumerate(payoff_cols):
+        label = col.replace("mean_payoff_", "").title()
+        ax.bar(x + i * width, summary[col], width, label=label, alpha=0.8)
+    
+    ax.set_xticks(x + width)
+    ax.set_xticklabels([f"{v:.2f}" for v in summary[param_col]])
+    ax.set_xlabel(param_col.replace("_", " ").title())
+    ax.set_ylabel("Mean Payoff")
+    ax.set_title("Agent Payoff Comparison by Configuration")
+    ax.legend()
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, "agent_payoff_comparison.png"), dpi=150)
+    plt.close()
+```
+
+### 3. Time-series plots
+
+```python
+def plot_timeseries(history_path, output_dir):
+    import json
+    with open(history_path) as f:
+        history = json.load(f)
+    
+    epochs = [snap["epoch"] for snap in history["epoch_snapshots"]]
+    welfare = [snap["welfare"] for snap in history["epoch_snapshots"]]
+    toxicity = [snap["toxicity_rate"] for snap in history["epoch_snapshots"]]
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+    ax1.plot(epochs, welfare, "b-o")
+    ax1.set_xlabel("Epoch"); ax1.set_ylabel("Welfare"); ax1.set_title("Welfare over Time")
+    ax2.plot(epochs, toxicity, "r-o")
+    ax2.set_xlabel("Epoch"); ax2.set_ylabel("Toxicity Rate"); ax2.set_title("Toxicity over Time")
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, "timeseries.png"), dpi=150)
+    plt.close()
+```
+
+### 4. Standard plot file naming
+
+| Plot Type | Filename |
+|-----------|----------|
+| Welfare bar chart | `welfare_by_config.png` |
+| Welfare box plot | `welfare_boxplot.png` |
+| Agent payoffs | `agent_payoff_comparison.png` |
+| Time series | `timeseries.png` |
+| Toxicity heatmap | `toxicity_heatmap.png` |
+
+All plots should be saved at 150 DPI minimum with `tight_layout()`.
+
+
+## Skill: paper-writing
+
+---
+name: paper-writing
+description: Scaffold research papers from SWARM run data with auto-populated tables
+version: "1.0"
+domain: swarm-safety
+triggers:
+  - write paper
+  - scaffold paper
+  - generate paper
+---
+
+# Paper Writing Skill
+
+Generate a markdown research paper pre-populated with methods tables, results tables, and figure references from SWARM experiment data.
+
+## Prerequisites
+
+- `sqlite3` (Python stdlib) for reading runs database
+- `pandas>=2.0` for data manipulation
+- Experiment data in SQLite database or CSV files
+
+## Procedure
+
+### 1. Query the runs database
+
+```python
+import sqlite3
+import pandas as pd
+
+def load_runs(db_path, scenario_ids=None):
+    """Load scenario runs from SQLite database."""
+    conn = sqlite3.connect(db_path)
+    
+    if scenario_ids:
+        placeholders = ",".join("?" * len(scenario_ids))
+        query = f"SELECT * FROM scenario_runs WHERE scenario_id IN ({placeholders})"
+        df = pd.read_sql_query(query, conn, params=scenario_ids)
+    else:
+        df = pd.read_sql_query("SELECT * FROM scenario_runs", conn)
+    
+    conn.close()
+    return df
+```
+
+### 2. Build the methods table
+
+```python
+def build_methods_table(df):
+    """Generate a markdown table of experimental scenarios."""
+    scenarios = df.groupby("scenario_id").first().reset_index()
+    
+    lines = ["| Scenario | Agents | Governance | Seeds | Epochs |",
+             "|----------|--------|-----------|-------|--------|"]
+    
+    for _, row in scenarios.iterrows():
+        lines.append(
+            f"| {row['scenario_id']} | {row.get('n_agents', 'N/A')} | "
+            f"{row.get('governance_desc', 'default')} | "
+            f"{row.get('n_seeds', 'N/A')} | {row.get('n_epochs', 'N/A')} |"
+        )
+    
+    return "\n".join(lines)
+```
+
+### 3. Build the results table
+
+```python
+def build_results_table(df):
+    """Generate a cross-scenario summary results table."""
+    summary = df.groupby("scenario_id").agg({
+        "welfare": ["mean", "std"],
+        "toxicity_rate": ["mean", "std"],
+        "quality_gap": ["mean", "std"],
+    }).reset_index()
+    
+    lines = ["| Scenario | Welfare (mean±std) | Toxicity (mean±std) | Quality Gap (mean±std) |",
+             "|----------|-------------------|--------------------|-----------------------|"]
+    
+    for _, row in summary.iterrows():
+        lines.append(
+            f"| {row[('scenario_id', '')]} | "
+            f"{row[('welfare', 'mean')]:.3f}±{row[('welfare', 'std')]:.3f} | "
+            f"{row[('toxicity_rate', 'mean')]:.3f}±{row[('toxicity_rate', 'std')]:.3f} | "
+            f"{row[('quality_gap', 'mean')]:.3f}±{row[('quality_gap', 'std')]:.3f} |"
+        )
+    
+    return "\n".join(lines)
+```
+
+### 4. Scaffold the paper
+
+```python
+def scaffold_paper(title, methods_table, results_table, output_path):
+    """Generate the full paper markdown."""
+    paper = f"""# {title}
+
+## Abstract
+
+This paper presents an empirical study of distributional safety in multi-agent AI systems using the SWARM framework. We evaluate {n_scenarios} scenarios across multiple seeds, measuring welfare, toxicity, and quality gap under varying governance configurations.
+
+## Experimental Setup
+
+### Scenarios
+
+{methods_table}
+
+### Metrics
+
+| Metric | Definition | Range |
+|--------|-----------|-------|
+| Welfare | Aggregate agent payoffs | (-∞, +∞) |
+| Toxicity Rate | E[1-p \\| accepted] | [0, 1] |
+| Quality Gap | E[p\\|accepted] - E[p\\|rejected] | [-1, 1] |
+
+## Results
+
+### Cross-Scenario Summary
+
+{results_table}
+
+## Conclusion
+
+The experimental results demonstrate the relationship between governance configurations and distributional safety outcomes across the tested scenarios.
+"""
+    
+    with open(output_path, "w") as f:
+        f.write(paper)
+```
+
+## Paper Structure Requirements
+
+A valid SWARM paper must contain these sections:
+1. **Abstract** — Key numbers and narrative summary
+2. **Experimental Setup** — Scenarios table, metrics definitions
+3. **Results** — Cross-scenario summary table with numeric values
+4. **Conclusion** — Non-empty synthesis of findings
+
+## Numeric Formatting
+
+- Rates (toxicity, quality gap): 3 decimal places (e.g., 0.123)
+- Welfare: 1 decimal place (e.g., 12.3)
+- p-values: 4 decimal places (e.g., 0.0012)
+
+## Template
+
+See `references/paper-template.md` for a blank paper skeleton.
+
+

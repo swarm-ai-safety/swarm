@@ -1,0 +1,132 @@
+```bash
+#!/bin/bash
+
+python3 << 'EOF'
+import pandas as pd
+import numpy as np
+from scipy import stats
+from itertools import combinations
+import json
+import os
+
+# Create output directory
+os.makedirs('/root/output', exist_ok=True)
+
+# Load data
+df = pd.read_csv('/root/data/sweep_results.csv')
+
+# Check if agent_type column exists and aggregate if needed
+if 'agent_type' in df.columns:
+    # Aggregate by (transaction_tax_rate, seed) taking mean welfare
+    df = df.groupby(['transaction_tax_rate', 'seed'])['welfare'].mean().reset_index()
+
+# Group by transaction_tax_rate
+grouped = df.groupby('transaction_tax_rate')['welfare'].apply(list).to_dict()
+tax_rates = sorted(grouped.keys())
+
+# Perform pairwise Welch's t-tests and calculate Cohen's d
+results = []
+for group_a, group_b in combinations(tax_rates, 2):
+    welfare_a = np.array(grouped[group_a])
+    welfare_b = np.array(grouped[group_b])
+    
+    # Welch's t-test
+    t_stat, p_value = stats.ttest_ind(welfare_a, welfare_b, equal_var=False)
+    
+    # Cohen's d effect size
+    pooled_std = np.sqrt(((len(welfare_a) - 1) * np.var(welfare_a, ddof=1) + 
+                         (len(welfare_b) - 1) * np.var(welfare_b, ddof=1)) / 
+                        (len(welfare_a) + len(welfare_b) - 2))
+    cohens_d = (np.mean(welfare_a) - np.mean(welfare_b)) / pooled_std
+    
+    results.append({
+        'group_a': float(group_a),
+        'group_b': float(group_b),
+        'p_value': float(p_value),
+        'cohens_d': float(cohens_d)
+    })
+
+# Bonferroni correction
+total_hypotheses = len(results)
+bonferroni_threshold = 0.05 / total_hypotheses
+n_bonferroni_significant = 0
+
+for result in results:
+    result['bonferroni_significant'] = result['p_value'] < bonferroni_threshold
+    if result['bonferroni_significant']:
+        n_bonferroni_significant += 1
+
+# Shapiro-Wilk normality tests
+normality_tests = {}
+for tax_rate in tax_rates:
+    welfare_data = np.array(grouped[tax_rate])
+    stat, p_value = stats.shapiro(welfare_data)
+    normality_tests[str(float(tax_rate))] = {
+        'statistic': float(stat),
+        'p_value': float(p_value),
+        'is_normal': float(p_value) > 0.05
+    }
+
+# Create summary JSON
+summary = {
+    'total_hypotheses': total_hypotheses,
+    'bonferroni_threshold': bonferroni_threshold,
+    'n_bonferroni_significant': n_bonferroni_significant,
+    'results': results,
+    'normality_tests': normality_tests
+}
+
+# Save summary.json
+with open('/root/output/summary.json', 'w') as f:
+    json.dump(summary, f, indent=2)
+
+# Create human-readable report
+report = []
+report.append("FULL STATISTICAL ANALYSIS REPORT")
+report.append("=" * 50)
+report.append("")
+
+report.append(f"Dataset Summary:")
+report.append(f"- Total groups (tax rates): {len(tax_rates)}")
+report.append(f"- Tax rates analyzed: {tax_rates}")
+report.append(f"- Sample size per group: {len(grouped[tax_rates[0]])}")
+report.append("")
+
+report.append("Normality Tests (Shapiro-Wilk):")
+report.append("-" * 30)
+for tax_rate, test_result in normality_tests.items():
+    status = "Normal" if test_result['is_normal'] else "Non-normal"
+    report.append(f"Tax rate {tax_rate}: p = {test_result['p_value']:.6f} ({status})")
+report.append("")
+
+report.append("Pairwise Comparisons (Welch's t-tests):")
+report.append("-" * 40)
+report.append(f"Total comparisons: {total_hypotheses}")
+report.append(f"Bonferroni threshold: {bonferroni_threshold:.6f}")
+report.append(f"Significant after correction: {n_bonferroni_significant}")
+report.append("")
+
+for result in results:
+    sig_marker = "***" if result['bonferroni_significant'] else ""
+    report.append(f"Tax {result['group_a']} vs {result['group_b']}:")
+    report.append(f"  p-value: {result['p_value']:.6f} {sig_marker}")
+    report.append(f"  Cohen's d: {result['cohens_d']:.4f}")
+    report.append("")
+
+if n_bonferroni_significant > 0:
+    report.append("Significant Differences (after Bonferroni correction):")
+    report.append("-" * 50)
+    for result in results:
+        if result['bonferroni_significant']:
+            effect_size = "small" if abs(result['cohens_d']) < 0.5 else "medium" if abs(result['cohens_d']) < 0.8 else "large"
+            report.append(f"Tax {result['group_a']} vs {result['group_b']}: p = {result['p_value']:.6f}, d = {result['cohens_d']:.4f} ({effect_size} effect)")
+else:
+    report.append("No statistically significant differences found after Bonferroni correction.")
+
+# Save results.txt
+with open('/root/output/results.txt', 'w') as f:
+    f.write('\n'.join(report))
+
+print("Statistical analysis completed successfully!")
+EOF
+```

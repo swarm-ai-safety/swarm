@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "<stdin>", line 9, in <module>
+  File "/usr/local/lib/python3.12/site-packages/pandas/core/groupby/generic.py", line 2938, in __getitem__
+    return super().__getitem__(key)
+           ^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/pandas/core/base.py", line 228, in __getitem__
+    raise KeyError(f"Column not found: {key}")
+KeyError: 'Column not found: toxicity'

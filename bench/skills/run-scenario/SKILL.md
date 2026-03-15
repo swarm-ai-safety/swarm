@@ -55,17 +55,16 @@ python -m swarm run <scenario_path> --seed <seed> --epochs <N> --steps <M>
 Or programmatically:
 
 ```python
-from swarm.core.orchestrator import Orchestrator
-from swarm.scenarios.loader import load_scenario
+from swarm.scenarios.loader import load_scenario, build_orchestrator
 
-config = load_scenario(scenario_path)
+sc = load_scenario(scenario_path)
 # Override simulation parameters if needed
-config["simulation"]["seed"] = seed
-config["simulation"]["n_epochs"] = epochs
-config["simulation"]["steps_per_epoch"] = steps
+sc.orchestrator_config.seed = seed
+sc.orchestrator_config.n_epochs = epochs
+sc.orchestrator_config.steps_per_epoch = steps
 
-orch = Orchestrator(config)
-result = orch.run()
+orch = build_orchestrator(sc)  # registers agents from scenario
+result = orch.run()  # returns list[EpochMetrics]
 ```
 
 ### 3. Export artifacts

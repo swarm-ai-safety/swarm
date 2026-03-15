@@ -1,0 +1,81 @@
+#!/bin/bash
+
+# Create output directory
+mkdir -p /root/output
+
+# Run the kernel market scenario
+cd /root/swarm-package
+python -m swarm.run /root/scenarios/kernel_market/baseline.yaml --seed 42 --epochs 15 --steps 10 --output /tmp/swarm_output
+
+# Extract and analyze results
+python3 << 'EOF'
+import json
+import pandas as pd
+import numpy as np
+
+# Load the simulation results
+with open('/tmp/swarm_output/results.json', 'r') as f:
+    results = json.load(f)
+
+# Extract transaction data
+transactions = results['transactions']
+df = pd.DataFrame(transactions)
+
+# Calculate per-epoch quality gaps
+epoch_quality_gaps = []
+all_accepted_p = []
+all_rejected_p = []
+
+for epoch in range(15):
+    epoch_data = df[df['epoch'] == epoch]
+    
+    if len(epoch_data) == 0:
+        continue
+    
+    accepted = epoch_data[epoch_data['accepted'] == True]
+    rejected = epoch_data[epoch_data['accepted'] == False]
+    
+    if len(accepted) > 0:
+        all_accepted_p.extend(accepted['quality'].tolist())
+    
+    if len(rejected) > 0:
+        all_rejected_p.extend(rejected['quality'].tolist())
+        
+        # Only calculate gap for epochs with both accepted and rejected
+        if len(accepted) > 0:
+            accepted_mean = accepted['quality'].mean()
+            rejected_mean = rejected['quality'].mean()
+            quality_gap = accepted_mean - rejected_mean
+            epoch_quality_gaps.append(quality_gap)
+
+# Calculate overall metrics
+if len(epoch_quality_gaps) > 0:
+    overall_quality_gap = np.mean(epoch_quality_gaps)
+else:
+    overall_quality_gap = 0.0
+
+accepted_mean_p = np.mean(all_accepted_p) if all_accepted_p else 0.0
+rejected_mean_p = np.mean(all_rejected_p) if all_rejected_p else 0.0
+
+adverse_selection_detected = overall_quality_gap < 0
+
+# Generate recommendation
+if adverse_selection_detected:
+    recommendation = "Adverse selection detected. Consider implementing screening mechanisms or adjusting pricing strategies to mitigate quality deterioration."
+else:
+    recommendation = "No adverse selection detected. Current market mechanisms appear to maintain quality standards effectively."
+
+# Create output report
+report = {
+    "quality_gap_value": float(overall_quality_gap),
+    "adverse_selection_detected": adverse_selection_detected,
+    "accepted_mean_p": float(accepted_mean_p),
+    "rejected_mean_p": float(rejected_mean_p),
+    "recommendation": recommendation
+}
+
+# Write to output file
+with open('/root/output/adverse_selection.json', 'w') as f:
+    json.dump(report, f, indent=2)
+
+EOF

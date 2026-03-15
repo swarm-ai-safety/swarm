@@ -124,3 +124,5 @@ docs/game-app/
 # Letta Code
 .letta/settings.local.json
 !.letta/memory/runs/
+
+bench/results/

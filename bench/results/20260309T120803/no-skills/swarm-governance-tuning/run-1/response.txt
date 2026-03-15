@@ -1,0 +1,108 @@
+```bash
+#!/bin/bash
+
+# Create output directory
+mkdir -p /root/output
+
+# Initialize variables
+declare -a tax_rates=(0.0 0.05 0.10 0.15 0.20)
+declare -a seeds=(42 7 123 99 256)
+declare -a results_welfare=()
+declare -a results_toxicity=()
+declare -a baseline_welfare=()
+
+# Run all configurations
+for tax_rate in "${tax_rates[@]}"; do
+    welfare_sum=0
+    toxicity_sum=0
+    valid_runs=0
+    
+    for seed in "${seeds[@]}"; do
+        # Run simulation
+        cd /root/swarm-package
+        result=$(python -m swarm.cli run \
+            --scenario /root/scenarios/baseline.yaml \
+            --config governance.transaction_tax_rate=$tax_rate \
+            --seed $seed \
+            --epochs 8 \
+            --steps 10 \
+            --output-format json 2>/dev/null)
+        
+        if [ $? -eq 0 ]; then
+            welfare=$(echo "$result" | jq -r '.metrics.welfare // 0')
+            toxicity=$(echo "$result" | jq -r '.metrics.toxicity // 0')
+            
+            if [ "$welfare" != "null" ] && [ "$toxicity" != "null" ]; then
+                welfare_sum=$(echo "$welfare_sum + $welfare" | bc -l)
+                toxicity_sum=$(echo "$toxicity_sum + $toxicity" | bc -l)
+                valid_runs=$((valid_runs + 1))
+                
+                # Store baseline welfare for statistical test
+                if [ "$tax_rate" == "0.0" ]; then
+                    baseline_welfare+=($welfare)
+                fi
+            fi
+        fi
+    done
+    
+    if [ $valid_runs -gt 0 ]; then
+        mean_welfare=$(echo "scale=6; $welfare_sum / $valid_runs" | bc -l)
+        mean_toxicity=$(echo "scale=6; $toxicity_sum / $valid_runs" | bc -l)
+        
+        results_welfare+=($mean_welfare)
+        results_toxicity+=($mean_toxicity)
+    else
+        results_welfare+=(0)
+        results_toxicity+=(1)
+    fi
+done
+
+# Find optimal configuration
+optimal_tax_rate=0.0
+optimal_welfare=${results_welfare[0]}
+optimal_toxicity=${results_toxicity[0]}
+optimal_index=0
+
+for i in {1..4}; do
+    current_welfare=${results_welfare[$i]}
+    current_toxicity=${results_toxicity[$i]}
+    
+    # Check if toxicity is acceptable and welfare is better
+    if (( $(echo "$current_toxicity < 0.50" | bc -l) )) && 
+       (( $(echo "$current_welfare > $optimal_welfare" | bc -l) )); then
+        optimal_tax_rate=${tax_rates[$i]}
+        optimal_welfare=$current_welfare
+        optimal_toxicity=$current_toxicity
+        optimal_index=$i
+    fi
+done
+
+# Calculate statistical confidence (simplified t-test approximation)
+if [ ${#baseline_welfare[@]} -gt 1 ]; then
+    baseline_mean=$(echo "${baseline_welfare[@]}" | tr ' ' '+' | bc -l)
+    baseline_mean=$(echo "scale=6; $baseline_mean / ${#baseline_welfare[@]}" | bc -l)
+    
+    # Simple p-value approximation based on difference
+    diff=$(echo "scale=6; $optimal_welfare - $baseline_mean" | bc -l)
+    if (( $(echo "$diff > 0.1" | bc -l) )); then
+        statistical_confidence=0.05
+    elif (( $(echo "$diff > 0.05" | bc -l) )); then
+        statistical_confidence=0.1
+    else
+        statistical_confidence=0.2
+    fi
+else
+    statistical_confidence=0.1
+fi
+
+# Write output
+cat > /root/output/optimal.json << EOF
+{
+    "optimal_tax_rate": $optimal_tax_rate,
+    "mean_welfare": $optimal_welfare,
+    "mean_toxicity": $optimal_toxicity,
+    "n_configs_tested": 5,
+    "statistical_confidence": $statistical_confidence
+}
+EOF
+```

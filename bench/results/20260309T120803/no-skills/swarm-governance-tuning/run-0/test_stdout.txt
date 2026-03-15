@@ -1,0 +1,14 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 6 items
+
+tests/test_outputs.py::test_optimal_json_exists PASSED                   [ 16%]
+tests/test_outputs.py::test_required_keys PASSED                         [ 33%]
+tests/test_outputs.py::test_optimal_tax_rate_is_valid PASSED             [ 50%]
+tests/test_outputs.py::test_toxicity_below_threshold PASSED              [ 66%]
+tests/test_outputs.py::test_n_configs_tested PASSED                      [ 83%]
+tests/test_outputs.py::test_statistical_confidence_is_valid_pvalue PASSED [100%]
+
+============================== 6 passed in 0.01s ===============================

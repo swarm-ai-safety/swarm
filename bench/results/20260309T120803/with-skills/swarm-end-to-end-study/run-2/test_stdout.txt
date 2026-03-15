@@ -1,0 +1,57 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.13, pytest-9.0.2, pluggy-1.6.0 -- /usr/local/bin/python3
+cachedir: .pytest_cache
+rootdir: /root
+collecting ... collected 7 items
+
+tests/test_outputs.py::test_sweep_dir_exists PASSED                      [ 14%]
+tests/test_outputs.py::test_sweep_csv_has_9_rows FAILED                  [ 28%]
+tests/test_outputs.py::test_analysis_dir_exists PASSED                   [ 42%]
+tests/test_outputs.py::test_analysis_summary_has_results FAILED          [ 57%]
+tests/test_outputs.py::test_plots_dir_has_pngs FAILED                    [ 71%]
+tests/test_outputs.py::test_paper_exists FAILED                          [ 85%]
+tests/test_outputs.py::test_paper_has_results_with_data FAILED           [100%]
+
+=================================== FAILURES ===================================
+__________________________ test_sweep_csv_has_9_rows ___________________________
+tests/test_outputs.py:16: in test_sweep_csv_has_9_rows
+    assert os.path.isfile(path), "sweep_results.csv not found"
+E   AssertionError: sweep_results.csv not found
+E   assert False
+E    +  where False = <function isfile at 0xffffb306c2c0>('/root/output/sweep/sweep_results.csv')
+E    +    where <function isfile at 0xffffb306c2c0> = <module 'posixpath' (frozen)>.isfile
+E    +      where <module 'posixpath' (frozen)> = os.path
+______________________ test_analysis_summary_has_results _______________________
+tests/test_outputs.py:28: in test_analysis_summary_has_results
+    assert os.path.isfile(path), "summary.json not found"
+E   AssertionError: summary.json not found
+E   assert False
+E    +  where False = <function isfile at 0xffffb306c2c0>('/root/output/analysis/summary.json')
+E    +    where <function isfile at 0xffffb306c2c0> = <module 'posixpath' (frozen)>.isfile
+E    +      where <module 'posixpath' (frozen)> = os.path
+___________________________ test_plots_dir_has_pngs ____________________________
+tests/test_outputs.py:39: in test_plots_dir_has_pngs
+    assert len(pngs) >= 2, f"Expected at least 2 PNGs, found {len(pngs)}"
+E   AssertionError: Expected at least 2 PNGs, found 0
+E   assert 0 >= 2
+E    +  where 0 = len([])
+______________________________ test_paper_exists _______________________________
+tests/test_outputs.py:44: in test_paper_exists
+    assert os.path.isfile(path), "paper.md not found"
+E   AssertionError: paper.md not found
+E   assert False
+E    +  where False = <function isfile at 0xffffb306c2c0>('/root/output/paper/paper.md')
+E    +    where <function isfile at 0xffffb306c2c0> = <module 'posixpath' (frozen)>.isfile
+E    +      where <module 'posixpath' (frozen)> = os.path
+_______________________ test_paper_has_results_with_data _______________________
+tests/test_outputs.py:50: in test_paper_has_results_with_data
+    with open(path) as f:
+         ^^^^^^^^^^
+E   FileNotFoundError: [Errno 2] No such file or directory: '/root/output/paper/paper.md'
+=========================== short test summary info ============================
+FAILED tests/test_outputs.py::test_sweep_csv_has_9_rows - AssertionError: swe...
+FAILED tests/test_outputs.py::test_analysis_summary_has_results - AssertionEr...
+FAILED tests/test_outputs.py::test_plots_dir_has_pngs - AssertionError: Expec...
+FAILED tests/test_outputs.py::test_paper_exists - AssertionError: paper.md no...
+FAILED tests/test_outputs.py::test_paper_has_results_with_data - FileNotFound...
+========================= 5 failed, 2 passed in 0.02s ==========================
