@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **Orchestrator pipeline/middleware refactoring** — extracted 3 new modules from the 2023-line orchestrator god object: `middleware.py` (7 lifecycle stages via `MiddlewarePipeline`), `handler_factory.py` (handler construction from config), `agent_scheduler.py` (turn order and eligibility); orchestrator is now a thin coordination loop delegating cross-cutting concerns to the middleware pipeline; public API preserved
 
 ### Added
+- **SimWorld external validation** — BibTeX citation (`refs.bib`), capability-compliance decoupling section and personality-to-agent-type mapping in `theory.md`, delivery economy scenario (`scenarios/simworld_delivery_economy.yaml`) modeling SimWorld Case 2 with 8 agents and marketplace bidding
 - **Knowledge persistence for autoresearch** (`swarm/knowledge/`) — `LessonStore` (JSON-backed cross-session lesson memory with dedup and best-known-value queries) and `RunEnvelope` (run.yaml metadata envelopes compatible with swarm-artifacts synthesis pipeline)
 - **Cross-scenario family optimization** (`swarm/analysis/family_optimization.py`) — evaluates governance mutations against multiple scenarios simultaneously; identifies robust lever settings across scenario families with per-scenario boundary reporting
 - **Staged validation for autoresearch** — preflight (param bounds check) and prevalidation (1-seed smoke test) reject bad mutations before expensive full-panel evaluation

@@ -1,0 +1,83 @@
+# SimWorld Delivery Economy — External Validation Scenario
+#
+# Models SimWorld Case 2 (NeurIPS 2025 Spotlight) multi-agent delivery economy.
+# Agents bid on delivery orders, invest in equipment, and share orders.
+#
+# Personality-to-agent-type mapping:
+#   Conscientious / Conservative  → honest   (reliable task completion)
+#   Open / Exploratory            → opportunistic (variety-seeking, resource waste)
+#   Erratic high-performer        → deceptive (overbidding, unpredictable exploitation)
+#   Disruptive baseline           → adversarial
+#
+# Paper: https://openreview.net/forum?id=FxCy8TvQHO
+
+scenario_id: simworld_delivery_economy
+description: "SimWorld Case 2 delivery economy — personality-driven strategy divergence under marketplace governance"
+motif: external_validation
+
+agents:
+  - type: honest
+    count: 3
+  - type: opportunistic
+    count: 3
+  - type: deceptive
+    count: 1
+  - type: adversarial
+    count: 1
+
+marketplace:
+  enabled: true
+  escrow_fee_rate: 0.01
+  min_bounty_amount: 0.5
+  max_bids_per_bounty: 10
+  bid_deadline_epochs: 4
+  dispute_resolution_epochs: 2
+  auto_expire_bounties: true
+  dispute_default_split: 0.5
+
+governance:
+  transaction_tax_rate: 0.08
+  transaction_tax_split: 0.5
+  reputation_decay_rate: 0.92
+  bandwidth_cap: 12
+  staking_enabled: false
+  min_stake_to_participate: 0.0
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+  audit_enabled: true
+  audit_probability: 0.15
+  audit_penalty_multiplier: 2.0
+  audit_threshold_p: 0.5
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 15
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 5
+  bounties_per_epoch: 4
+  bids_per_epoch: 6
+
+payoff:
+  s_plus: 3.0
+  s_minus: 1.5
+  h: 2.5
+  theta: 0.45
+  rho_a: 0.15
+  rho_b: 0.12
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 20
+  min_agents: 8
+  toxicity_threshold: 0.5
+
+outputs:
+  event_log: "logs/simworld_delivery_events.jsonl"
+  metrics_csv: "logs/simworld_delivery_metrics.csv"

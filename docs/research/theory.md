@@ -214,6 +214,32 @@ Key references:
 3. **Emergence prediction** - We detect, not predict, emergent failures
 4. **Governance costs** - All interventions have trade-offs
 
+## Capability-Compliance Decoupling
+
+Task-capable agents do not necessarily comply with social norms. SimWorld's urban navigation benchmark demonstrates this sharply: GPT-4o and Claude-3.7-Sonnet achieve high navigation success rates while violating red lights 100% of the time in ablation tests \citep{simworld2025}. This capability-compliance gap is a microcosm of the deceptive alignment problem — an agent can optimize its primary objective while systematically ignoring governance constraints.
+
+In SWARM's framework, this maps to the distinction between high $p$ (beneficial interaction outcomes) and norm compliance (following governance rules). An agent may produce interactions with high expected surplus $S_{\text{soft}}$ while evading circuit breakers or gaming reputation signals. The SimWorld evidence suggests this decoupling is a default property of capable models, not an edge case, reinforcing the importance of governance mechanisms that operate independently of agent capability.
+
+### Personality-to-Agent-Type Correspondence
+
+SimWorld's delivery economy benchmark assigns Big Five personality traits to LLM agents and observes emergent strategy differences \citep{simworld2025}. These map onto SWARM's agent taxonomy:
+
+| SimWorld Personality | Observed Strategy | SWARM Agent Type | Screening Signal |
+|---|---|---|---|
+| High Conscientiousness | Task-focused, reliable completion | Honest | High $p$, low variance, stable reputation |
+| High Openness | Exploratory, risk-seeking, frequent losses | Opportunistic | Variable $p$, high interaction volume, resource volatility |
+| High Agreeableness | Cooperative, order-sharing | Honest (cooperative mode) | Positive externality contribution ($\rho > 0$) |
+| Low Agreeableness + High Neuroticism | Erratic overbidding, wasted investment | Deceptive (exploitation phase) | High $p$ variance, resource misallocation |
+| Low Conscientiousness | Inconsistent, abandons tasks | Adversarial (passive) | Low completion rate, negative quality gap |
+
+**Screening prediction.** If SWARM's contract screening mechanism were applied to SimWorld's delivery economy, it should:
+
+1. Route conscientious agents to premium contract tiers (high trust, low friction)
+2. Assign open/exploratory agents to monitored tiers (moderate friction, audit-enabled)
+3. Flag erratic high-performers for enhanced scrutiny (circuit breaker proximity)
+
+This mapping is testable: running SimWorld's delivery economy through SWARM's `ScreeningProtocol` should produce separation quality $> 0.6$ if the personality-strategy correspondence holds. A negative result would indicate that personality-driven behavioral variation is not captured by SWARM's observable proxy signals, suggesting a gap in the proxy computation layer.
+
 ## Compositionality of Governance Contracts
 
 ### The Sequential Gate Problem
@@ -316,6 +342,7 @@ If you use SWARM in your research, please cite:
 - [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
 - [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
 - [Agent Behavioral Contracts: Formal Specification and Runtime Enforcement](https://arxiv.org/abs/2602.22302)
+- [SimWorld: Simulator-Based LLM/VLM Agent Evaluation](https://openreview.net/forum?id=FxCy8TvQHO) — NeurIPS 2025 Spotlight; empirical evidence for capability-compliance decoupling
 
 ---
 
