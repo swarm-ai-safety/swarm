@@ -162,7 +162,7 @@ class AttestationClient:
         adverse_selection: bool,
         interaction_count: int,
         *,
-        gas_limit: int = 200_000,
+        gas_limit: int = 300_000,
     ) -> str:
         """Submit an attestation on-chain. Returns the transaction hash."""
         if not self._account:
