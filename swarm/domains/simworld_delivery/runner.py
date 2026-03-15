@@ -16,7 +16,7 @@ import logging
 import random
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Type
 
 from swarm.domains.simworld_delivery.agents import (
     AggressivePolicy,
@@ -35,7 +35,7 @@ from swarm.domains.simworld_delivery.metrics import (
 
 logger = logging.getLogger(__name__)
 
-_POLICY_MAP = {
+_POLICY_MAP: Dict[str, Type[DeliveryPolicy]] = {
     "conscientious": ConscientiousPolicy,
     "aggressive": AggressivePolicy,
     "cautious": CautiousPolicy,
@@ -61,7 +61,8 @@ def _create_policy(
     if ptype == "aggressive":
         kwargs["scooter_priority"] = agent_spec.get("scooter_priority", True)
 
-    return policy_cls(**kwargs)
+    result: DeliveryPolicy = policy_cls(**kwargs)
+    return result
 
 
 class DeliveryScenarioRunner:
