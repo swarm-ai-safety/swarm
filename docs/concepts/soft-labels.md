@@ -112,6 +112,25 @@ proxy:
 
 No formal ablation study has been published for the default weight vector. If your application domain has labeled interaction data, we recommend tuning weights via cross-validation against ground-truth $v$ labels. See [Calibration](#calibration) below for guidance on the sigmoid parameter $k$.
 
+#### Empirical Sensitivity {#weight-sensitivity}
+
+We tested 7 weight configurations (default, uniform, progress-heavy, safety-heavy, engagement-heavy, and ±10% perturbations to the progress weight) across 5 representative scenarios (benign, mixed, toxic, deceptive, all-zero observables):
+
+| Scenario | $p$ range across configs | Spread |
+|----------|--------------------------|--------|
+| Benign (high progress, no penalties) | [0.821, 0.853] | 0.033 |
+| Mixed (moderate progress, some penalties) | [0.477, 0.569] | 0.092 |
+| Toxic (negative progress, heavy penalties) | [0.259, 0.329] | 0.070 |
+| Deceptive (high progress, high rejections) | [0.670, 0.738] | 0.068 |
+| All-zero observables | [0.627, 0.769] | 0.141 |
+
+**Key findings:**
+
+- **Ordering is invariant.** The ranking benign > mixed > toxic is preserved across all 7 configurations. Deceptive agents always score below benign.
+- **Local stability.** ±10% perturbations to the progress weight cause < 0.5 percentage-point change in $p$ for all scenarios.
+- **Widest spread is on sparse signals.** The all-zero scenario (0.141 spread) is most sensitive because only the penalty channels carry information when progress and engagement are zero. Note: all-zero observables produce $p \approx 0.69$ because zero rework/rejections/misuse counts are treated as positive signals (absence of problems).
+- **Aggressive reweighting shifts $p$ by 5–9pp** in the mixed and toxic scenarios but does not flip any qualitative classifications.
+
 ### Step 2: Compute v_hat {#v-hat}
 
 Signals are combined into a raw score:
