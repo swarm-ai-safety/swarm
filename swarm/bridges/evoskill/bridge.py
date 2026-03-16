@@ -23,13 +23,12 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from swarm.bridges.evoskill.config import EvoSkillConfig
-from swarm.bridges.evoskill.frontier import FrontierComparator, FrontierEntry
+from swarm.bridges.evoskill.frontier import FrontierComparator
 from swarm.bridges.evoskill.governed_eval import EvalResult, GovernedEvalLoop
 from swarm.bridges.evoskill.translator import SkillTranslator
 from swarm.bridges.opensandbox.provenance import ProvenanceTracker
-from swarm.contracts.contract import ContractType
-from swarm.skills.governance import SkillGovernanceEngine, SkillGovernanceConfig
-from swarm.skills.library import SkillLibrary, SkillLibraryConfig, SharingMode
+from swarm.skills.governance import SkillGovernanceConfig, SkillGovernanceEngine
+from swarm.skills.library import SharingMode, SkillLibrary, SkillLibraryConfig
 from swarm.skills.model import Skill
 
 logger = logging.getLogger(__name__)

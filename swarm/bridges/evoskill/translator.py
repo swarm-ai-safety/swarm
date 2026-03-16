@@ -17,7 +17,6 @@ from __future__ import annotations
 
 import hashlib
 import re
-import uuid
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 
@@ -29,7 +28,6 @@ from swarm.skills.model import (
     validate_condition,
     validate_effect,
 )
-
 
 # Heuristic keyword → SkillDomain mapping for auto-classification.
 _DOMAIN_KEYWORDS: Dict[SkillDomain, List[str]] = {

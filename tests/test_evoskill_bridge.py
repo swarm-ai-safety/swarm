@@ -2,14 +2,13 @@
 
 import pytest
 
-from swarm.bridges.evoskill.config import EvoSkillConfig, EvolutionMode
-from swarm.bridges.evoskill.translator import SkillTranslator
-from swarm.bridges.evoskill.governed_eval import GovernedEvalLoop, EvalResult
-from swarm.bridges.evoskill.frontier import FrontierComparator, FrontierEntry
 from swarm.bridges.evoskill.bridge import EvoSkillBridge
+from swarm.bridges.evoskill.config import EvoSkillConfig
+from swarm.bridges.evoskill.frontier import FrontierComparator
+from swarm.bridges.evoskill.governed_eval import EvalResult, GovernedEvalLoop
+from swarm.bridges.evoskill.translator import SkillTranslator
 from swarm.contracts.contract import ContractType
-from swarm.skills.model import Skill, SkillDomain, SkillType, SkillTier
-
+from swarm.skills.model import Skill, SkillDomain, SkillType
 
 # ---------------------------------------------------------------
 # Fixtures
@@ -351,7 +350,7 @@ class TestEvoSkillBridge:
             iteration=0,
         )
         assert len(results) == 3
-        for regime, result in results.items():
+        for _regime, result in results.items():
             assert isinstance(result, EvalResult)
             assert 0.0 <= result.composite_score <= 1.0
 

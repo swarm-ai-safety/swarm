@@ -15,17 +15,18 @@ performance, and is a more informative training signal than raw score.
 from __future__ import annotations
 
 import logging
+import random
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 from swarm.bridges.evoskill.config import EvoSkillConfig
 from swarm.bridges.evoskill.translator import SkillTranslator
 from swarm.contracts.contract import ContractType
 from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
-from swarm.core.proxy import ProxyComputer, ProxyObservables
+from swarm.core.proxy import ProxyComputer
 from swarm.metrics.soft_metrics import SoftMetrics
 from swarm.models.interaction import InteractionType, SoftInteraction
-from swarm.skills.library import SkillLibrary, SkillLibraryConfig, SharingMode
+from swarm.skills.library import SharingMode, SkillLibrary, SkillLibraryConfig
 from swarm.skills.model import Skill, clamp_p
 
 logger = logging.getLogger(__name__)
@@ -250,9 +251,9 @@ class GovernedEvalLoop:
     ) -> Dict[str, float]:
         """Run governed evaluation — apply contract regime effects."""
         from swarm.contracts.contract import (
-            TruthfulAuctionContract,
-            FairDivisionContract,
             DefaultMarket,
+            FairDivisionContract,
+            TruthfulAuctionContract,
         )
 
         # Instantiate the contract
@@ -317,7 +318,6 @@ class GovernedEvalLoop:
         Creates a mix of interaction quality levels to exercise the
         governance regime's screening capacity.
         """
-        import random as _random_mod
 
         interactions: List[SoftInteraction] = []
         for i in range(n):

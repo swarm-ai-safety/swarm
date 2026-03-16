@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, List, Set
 
 from swarm.bridges.evoskill.governed_eval import EvalResult
 

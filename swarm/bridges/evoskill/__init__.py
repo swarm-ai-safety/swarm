@@ -13,11 +13,11 @@ Key components:
     EvoSkillBridge        — Top-level orchestrator wiring everything together
 """
 
-from swarm.bridges.evoskill.config import EvoSkillConfig
-from swarm.bridges.evoskill.translator import SkillTranslator
-from swarm.bridges.evoskill.governed_eval import GovernedEvalLoop
-from swarm.bridges.evoskill.frontier import FrontierComparator
 from swarm.bridges.evoskill.bridge import EvoSkillBridge
+from swarm.bridges.evoskill.config import EvoSkillConfig
+from swarm.bridges.evoskill.frontier import FrontierComparator
+from swarm.bridges.evoskill.governed_eval import GovernedEvalLoop
+from swarm.bridges.evoskill.translator import SkillTranslator
 
 __all__ = [
     "EvoSkillConfig",
