@@ -61,12 +61,56 @@ Soft labels are computed from observable signals:
 
 The `ProxyComputer` takes four signals:
 
-| Signal | Range | Weight | Meaning |
-|--------|-------|--------|---------|
+| Signal | Range | Default Weight | Meaning |
+|--------|-------|----------------|---------|
 | `task_progress_delta` | [-1, 1] | 0.4 | Forward progress on task |
 | `rework_count` | [0, ∞) | 0.2 | Quality signal (penalty) |
 | `verifier_rejections` | [0, ∞) | 0.2 | Safety signal (penalty) |
 | `engagement_delta` | [-1, 1] | 0.2 | Counterparty response |
+
+#### Weight Rationale {#weight-rationale}
+
+The default weights ($w_1 = 0.4$, $w_2 = w_3 = w_4 = 0.2$) reflect a deliberate design choice:
+
+- **Task progress gets double weight (0.4)** because it is the only directly measured outcome signal. The other three signals are indirect proxies—rework and rejections are penalizing signals that indicate something went wrong, while engagement is a noisy social signal. Giving progress twice the weight of any single penalty/social signal means that a genuinely productive interaction is not overwhelmed by a single noisy penalty channel.
+
+- **Equal weight across penalty and social signals (0.2 each)** avoids privileging any one failure mode over another. In the absence of domain-specific calibration data, uniform weighting across the three non-primary channels is the least-assuming default.
+
+- **All weights sum to 1.0** after normalization. This is enforced by `ProxyWeights.normalize()`, so custom weights that don't sum to 1.0 are automatically rescaled.
+
+!!! warning "These weights propagate into every downstream metric"
+    Because $\hat{v}$ is the input to the sigmoid that produces $p$, and $p$ feeds into toxicity, quality gap, payoffs, and governance decisions, the weight vector shapes all published metrics. When comparing results across studies, verify that the same weights were used, or document any differences.
+
+#### Sensitivity and Configurability
+
+The weights are fully configurable via `ProxyWeights`:
+
+```python
+from swarm.core.proxy import ProxyComputer, ProxyWeights
+
+# Emphasize safety signals over progress
+safety_focused = ProxyWeights(
+    task_progress=0.2,
+    rework_penalty=0.3,
+    verifier_penalty=0.3,
+    engagement_signal=0.2,
+)
+
+proxy = ProxyComputer(weights=safety_focused)
+```
+
+Weights can also be set in YAML scenario files under the `proxy` key:
+
+```yaml
+proxy:
+  weights:
+    task_progress: 0.2
+    rework_penalty: 0.3
+    verifier_penalty: 0.3
+    engagement_signal: 0.2
+```
+
+No formal ablation study has been published for the default weight vector. If your application domain has labeled interaction data, we recommend tuning weights via cross-validation against ground-truth $v$ labels. See [Calibration](#calibration) below for guidance on the sigmoid parameter $k$.
 
 ### Step 2: Compute v_hat {#v-hat}
 
