@@ -17,7 +17,7 @@ class ProxyWeights(BaseModel):
     Default values:
     - task_progress: 0.4 (primary signal — the only directly measured outcome)
     - rework_penalty: 0.2 (quality signal — indirect, from rework cycles)
-    - verifier_penalty: 0.2 (safety signal — indirect, from verifier rejections)
+    - verifier_penalty: 0.2 (safety signal — indirect, averages verifier rejections and tool misuse)
     - engagement_signal: 0.2 (social signal — indirect, from counterparty response)
 
     Design rationale: task_progress receives double weight (0.4 vs 0.2) because
