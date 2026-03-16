@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ## [Unreleased]
 
 ### Added
+- **GEPA optimize_anything integration** — `swarm.analysis.gepa_optimizer` module that uses GEPA's LLM-guided Pareto-efficient search to optimize governance/payoff parameters against soft safety metrics; YAML-based candidate serialization with diagnostic ASI feedback; CLI entry point via `python -m swarm.analysis.gepa_optimizer`
 - **SwarmGym on-chain safety auditor** — CLI tool (`swarm_gym_cli.py`) with `generate`, `audit`, `attest`, and `verify` subcommands; auditor API endpoint (`POST /api/v1/audits/compute`); SafetyAttestation Solidity contract for Base (^0.8.24); Python web3.py client (`swarm/chain/attestation.py`); deployment script (`scripts/deploy_attestation.py`) supporting Base Sepolia and Mainnet; QUICKSTART documentation
 
 ### Changed
