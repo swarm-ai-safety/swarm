@@ -54,6 +54,7 @@ from swarm.env.state import EnvState, InteractionProposal
 from swarm.env.tasks import TaskPool
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.engine import GovernanceEffect, GovernanceEngine
+from swarm.knowledge.graph_memory import GraphMemoryStore
 from swarm.logging.event_bus import EventBus
 from swarm.logging.event_log import EventLog
 from swarm.metrics.capabilities import CapabilityAnalyzer, EmergentCapabilityMetrics
@@ -155,6 +156,9 @@ class OrchestratorConfig(BaseModel):
 
     # Tierra (artificial life) configuration
     tierra_config: Optional[Any] = None
+
+    # Graph memory (cross-run trust priors) configuration
+    graph_memory_path: Optional[str] = None
 
 
 class EpochMetrics(BaseModel):
@@ -339,6 +343,16 @@ class Orchestrator:
 
         if self.event_log is not None and self.config.log_events:
             self._event_bus.subscribe(self.event_log.append)
+
+        # ---------------------------------------------------------------
+        # Graph memory (cross-run trust priors)
+        # ---------------------------------------------------------------
+        if self.config.graph_memory_path is not None:
+            self._graph_memory: Optional[GraphMemoryStore] = GraphMemoryStore(
+                self.config.graph_memory_path
+            )
+        else:
+            self._graph_memory = None
 
         # ---------------------------------------------------------------
         # Callbacks
@@ -635,6 +649,20 @@ class Orchestrator:
 
     def run(self) -> List[EpochMetrics]:
         """Run the full simulation."""
+        # ---------------------------------------------------------------
+        # Load prior memory from prior run(s) if graph_memory is enabled
+        # ---------------------------------------------------------------
+        if self._graph_memory is not None:
+            prior_snapshots = self._graph_memory.load_all()
+            for agent in self._agents.values():
+                if agent.agent_id in prior_snapshots:
+                    snapshot = prior_snapshots[agent.agent_id]
+                    agent.load_prior_memory(snapshot)
+                    logger.info(
+                        f"Loaded prior memory for {agent.agent_id} from snapshot "
+                        f"(trust priors from run={snapshot.run_id}, epoch={snapshot.epoch})"
+                    )
+
         self._initialize_network()
 
         self._emit_event(
@@ -671,6 +699,18 @@ class Orchestrator:
                 },
             )
         )
+
+        # ---------------------------------------------------------------
+        # Save memory snapshots at run end if graph_memory is enabled
+        # ---------------------------------------------------------------
+        if self._graph_memory is not None:
+            run_id = self.config.scenario_id or "unknown"
+            final_epoch = self.config.n_epochs - 1
+            self._graph_memory.save_all(list(self._agents.values()), run_id, final_epoch)
+            logger.info(
+                f"Saved memory snapshots for {len(self._agents)} agents "
+                f"(run={run_id}, epoch={final_epoch})"
+            )
 
         return self._epoch_metrics
 
