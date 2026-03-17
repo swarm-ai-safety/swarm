@@ -23,15 +23,15 @@ simulation:
 
 delivery:
   city:
-    width: 1000.0
-    height: 1000.0
+    width: 40.0
+    height: 40.0
     num_depots: 3
   orders:
     orders_per_epoch: 15
     min_value: 5.0
     max_value: 50.0
-    min_deadline_steps: 10
-    max_deadline_steps: 30
+    min_deadline_steps: 20
+    max_deadline_steps: 60
   economy:
     starting_budget: 100.0
     scooter_cost: 50.0
