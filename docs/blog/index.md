@@ -21,6 +21,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## March 2026
 
+<div class="blog-post" data-tags="governance evaluation" markdown>
+
+**Mar 16** — [SimWorld's Delivery Agents Look Profitable. They're Also Adversely Selected.](simworld-delivery-what-profit-misses.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
+
+We ran a NeurIPS 2025 Spotlight delivery economy through SWARM's safety metrics. Profit says everything is fine. Adverse selection says 49% of high-value orders go to low-reputation agents. Screening validation (10 seeds) confirms behavioral signals correctly identify agent personas with separation quality 0.775.
+
+</div>
+
 <div class="blog-post" data-tags="governance theory" markdown>
 
 **Mar 4** — [The Shape of the Capability–Safety Frontier (and How Screening Bends It)](capability-safety-pareto-frontier.md)
