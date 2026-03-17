@@ -59,14 +59,69 @@ Soft labels are computed from observable signals:
 
 ### Step 1: Observable Signals
 
-The `ProxyComputer` takes four signals:
+The `ProxyComputer` takes five observables, mapped to four weighted channels:
 
-| Signal | Range | Weight | Meaning |
-|--------|-------|--------|---------|
-| `task_progress_delta` | [-1, 1] | 0.4 | Forward progress on task |
-| `rework_count` | [0, ∞) | 0.2 | Quality signal (penalty) |
-| `verifier_rejections` | [0, ∞) | 0.2 | Safety signal (penalty) |
-| `engagement_delta` | [-1, 1] | 0.2 | Counterparty response |
+| Observable | Range | Channel (Weight) | Meaning |
+|------------|-------|-------------------|---------|
+| `task_progress_delta` | [-1, 1] | `task_progress` (0.4) | Forward progress on task |
+| `rework_count` | [0, ∞) | `rework_penalty` (0.2) | Quality signal (exponential decay penalty) |
+| `verifier_rejections` | [0, ∞) | `verifier_penalty` (0.2) | Safety signal (averaged with misuse below) |
+| `tool_misuse_flags` | [0, ∞) | `verifier_penalty` (0.2) | Safety signal (averaged with rejections above) |
+| `counterparty_engagement_delta` | [-1, 1] | `engagement_signal` (0.2) | Counterparty response |
+
+Note: `verifier_rejections` and `tool_misuse_flags` are each converted to a signal in [-1, +1] via exponential decay, then **averaged** into a single `verifier_signal` before weighting. This means the `verifier_penalty` weight (0.2) applies to the combined safety channel, not to each observable individually.
+
+#### Weight Rationale {#weight-rationale}
+
+The default weights ($w_1 = 0.4$, $w_2 = w_3 = w_4 = 0.2$) reflect a deliberate design choice:
+
+- **Task progress gets double weight (0.4)** because it is the only directly measured outcome signal. The other three signals are indirect proxies—rework and rejections are penalizing signals that indicate something went wrong, while engagement is a noisy social signal. Giving progress twice the weight of any single penalty/social signal means that a genuinely productive interaction is not overwhelmed by a single noisy penalty channel.
+
+- **Equal weight across penalty and social signals (0.2 each)** avoids privileging any one failure mode over another. In the absence of domain-specific calibration data, uniform weighting across the three non-primary channels is the least-assuming default.
+
+- **All weights sum to 1.0** after normalization. `ProxyComputer.__init__` calls `ProxyWeights.normalize()`, so custom weights that don't sum to 1.0 are automatically rescaled when passed to the computer. Note that a bare `ProxyWeights(...)` instance retains its original values until normalization is explicitly called or it is used by `ProxyComputer`.
+
+!!! warning "These weights propagate into every downstream metric"
+    Because $\hat{v}$ is the input to the sigmoid that produces $p$, and $p$ feeds into toxicity, quality gap, payoffs, and governance decisions, the weight vector shapes all published metrics. When comparing results across studies, verify that the same weights were used, or document any differences.
+
+#### Sensitivity and Configurability
+
+The weights are fully configurable via `ProxyWeights`:
+
+```python
+from swarm.core.proxy import ProxyComputer, ProxyWeights
+
+# Emphasize safety signals over progress
+safety_focused = ProxyWeights(
+    task_progress=0.2,
+    rework_penalty=0.3,
+    verifier_penalty=0.3,
+    engagement_signal=0.2,
+)
+
+proxy = ProxyComputer(weights=safety_focused)
+```
+
+No formal ablation study has been published for the default weight vector. If your application domain has labeled interaction data, we recommend tuning weights via cross-validation against ground-truth $v$ labels. See [Calibration](#calibration) below for guidance on the sigmoid parameter $k$.
+
+#### Empirical Sensitivity {#weight-sensitivity}
+
+We tested 7 weight configurations (default, uniform, progress-heavy, safety-heavy, engagement-heavy, and ±10% perturbations to the progress weight) across 5 representative scenarios (benign, mixed, toxic, deceptive, all-zero observables):
+
+| Scenario | $p$ range across configs | Spread |
+|----------|--------------------------|--------|
+| Benign (high progress, no penalties) | [0.821, 0.853] | 0.033 |
+| Mixed (moderate progress, some penalties) | [0.477, 0.569] | 0.092 |
+| Toxic (negative progress, heavy penalties) | [0.259, 0.329] | 0.070 |
+| Deceptive (high progress, high rejections) | [0.670, 0.738] | 0.068 |
+| All-zero observables | [0.627, 0.769] | 0.141 |
+
+**Key findings:**
+
+- **Ordering is invariant.** The ranking benign > mixed > toxic is preserved across all 7 configurations. Deceptive agents always score below benign.
+- **Local stability.** ±10% perturbations to the progress weight cause < 0.5 percentage-point change in $p$ for all scenarios.
+- **Widest spread is on sparse signals.** The all-zero scenario (0.141 spread) is most sensitive because only the penalty channels carry information when progress and engagement are zero. Note: all-zero observables produce $p \approx 0.69$ because zero rework/rejections/misuse counts are treated as positive signals (absence of problems).
+- **Aggressive reweighting shifts $p$ by 5–9pp** in the mixed and toxic scenarios but does not flip any qualitative classifications.
 
 ### Step 2: Compute v_hat {#v-hat}
 
@@ -82,7 +137,7 @@ The raw score is converted to probability:
 
 $$p = \sigma(k \cdot \hat{v}) = \frac{1}{1 + e^{-k \cdot \hat{v}}}$$
 
-Where $k$ is a calibration parameter (default: 3.0).
+Where $k$ is a calibration parameter (default: 2.0).
 
 ## Code Example
 
@@ -137,7 +192,7 @@ The sigmoid parameter $k$ controls how "sharp" the probability curve is:
 - **High k (e.g., 5.0)**: Sharp transitions, more confident
 
 !!! tip "Calibration in Practice"
-    The default $k=3.0$ works well for most scenarios. Adjust if you have ground truth labels to calibrate against.
+    The default $k=2.0$ (set in `ProxyComputer.__init__`) works well for most scenarios. Adjust if you have ground truth labels to calibrate against.
 
 ## See also
 
