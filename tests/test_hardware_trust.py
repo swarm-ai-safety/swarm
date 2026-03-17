@@ -6,10 +6,9 @@ from swarm.env.state import EnvState
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.engine import GovernanceEngine
 from swarm.governance.hardware_trust import (
-    AgentRecoveryState,
+    IRREVERSIBLE_ACTIONS,
     HaltReason,
     HardwareTrustLever,
-    IRREVERSIBLE_ACTIONS,
     RecoveryMode,
 )
 
@@ -44,26 +43,32 @@ class TestHardwareTrustLever:
     def test_lever_name(self, lever):
         assert lever.name == "hardware_trust"
 
-    def test_receive_halt_freezes_source_agent(self, lever, state):
+    def test_receive_halt_constrains_source_agent(self, lever, state):
         effect = lever.receive_halt(
             halt_id="halt-1",
             reason=HaltReason.INTEGRITY_VIOLATION,
             state=state,
             source_agent_id="agent-1",
         )
-        assert "agent-1" in effect.agents_to_freeze
+        # Constrained agents are NOT in agents_to_freeze (they can still
+        # act with action-level filtering).  State-level freeze is reserved
+        # for FROZEN mode escalation.
+        assert len(effect.agents_to_freeze) == 0
+        assert "agent-1" in lever.get_constrained_agents()
         assert lever.is_halted
         assert lever.get_active_halt() is not None
         assert lever.get_active_halt().halt_id == "halt-1"
 
     def test_receive_halt_global_when_no_source(self, lever, state):
-        """When no source agent specified, halt freezes all agents."""
+        """When no source agent specified, halt constrains all agents."""
         effect = lever.receive_halt(
             halt_id="halt-1",
             reason=HaltReason.TAMPER_DETECTED,
             state=state,
         )
-        assert effect.agents_to_freeze == {"agent-1", "agent-2", "agent-3"}
+        # All agents constrained, not state-level frozen
+        assert len(effect.agents_to_freeze) == 0
+        assert lever.get_constrained_agents() == {"agent-1", "agent-2", "agent-3"}
 
     def test_halt_records_causal_trace(self, lever, state):
         causal = ["event-a", "event-b", "event-c"]
@@ -213,29 +218,29 @@ class TestStopTokenPropagation:
         lever.register_dependency("agent-1", "agent-2")
         lever.register_dependency("agent-2", "agent-3")
 
-        effect = lever.receive_halt(
+        lever.receive_halt(
             halt_id="halt-1",
             reason=HaltReason.INTEGRITY_VIOLATION,
             state=state,
             source_agent_id="agent-1",
         )
-        # All three should be frozen (agent-1 -> agent-2 -> agent-3)
-        assert effect.agents_to_freeze == {"agent-1", "agent-2", "agent-3"}
+        # All three should be constrained (agent-1 -> agent-2 -> agent-3)
+        assert lever.get_constrained_agents() == {"agent-1", "agent-2", "agent-3"}
 
     def test_propagation_respects_state_agents(self, lever, state):
         """Only propagate to agents that exist in state."""
         lever.register_dependency("agent-1", "agent-2")
         lever.register_dependency("agent-1", "phantom-agent")
 
-        effect = lever.receive_halt(
+        lever.receive_halt(
             halt_id="halt-1",
             reason=HaltReason.INTEGRITY_VIOLATION,
             state=state,
             source_agent_id="agent-1",
         )
-        assert "agent-1" in effect.agents_to_freeze
-        assert "agent-2" in effect.agents_to_freeze
-        assert "phantom-agent" not in effect.agents_to_freeze
+        assert "agent-1" in lever.get_constrained_agents()
+        assert "agent-2" in lever.get_constrained_agents()
+        assert "phantom-agent" not in lever.get_constrained_agents()
 
     def test_propagation_disabled(self, state):
         config = GovernanceConfig(
@@ -245,26 +250,26 @@ class TestStopTokenPropagation:
         lever = HardwareTrustLever(config)
         lever.register_dependency("agent-1", "agent-2")
 
-        effect = lever.receive_halt(
+        lever.receive_halt(
             halt_id="halt-1",
             reason=HaltReason.INTEGRITY_VIOLATION,
             state=state,
             source_agent_id="agent-1",
         )
         # Only source agent, no propagation
-        assert effect.agents_to_freeze == {"agent-1"}
+        assert lever.get_constrained_agents() == {"agent-1"}
 
     def test_set_dependency_graph(self, lever, state):
         lever.set_dependency_graph({
             "agent-1": {"agent-2", "agent-3"},
         })
-        effect = lever.receive_halt(
+        lever.receive_halt(
             halt_id="halt-1",
             reason=HaltReason.INTEGRITY_VIOLATION,
             state=state,
             source_agent_id="agent-1",
         )
-        assert effect.agents_to_freeze == {"agent-1", "agent-2", "agent-3"}
+        assert lever.get_constrained_agents() == {"agent-1", "agent-2", "agent-3"}
 
 
 class TestTaskStatePreservation:
@@ -327,6 +332,57 @@ class TestQueryInterface:
         records = lever.get_all_halt_records()
         assert len(records) == 2
 
+    def test_multiple_halts_tracked_independently(self, lever, state):
+        """Clearing one halt does not affect another active halt."""
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        lever.receive_halt(
+            halt_id="halt-2",
+            reason=HaltReason.TAMPER_DETECTED,
+            state=state,
+            source_agent_id="agent-2",
+        )
+        assert lever.is_halted
+        assert len(lever.get_active_halts()) == 2
+
+        # Clear halt-2; halt-1 remains active
+        lever.clear_halt("halt-2", state)
+        assert lever.is_halted
+        active = lever.get_active_halts()
+        assert len(active) == 1
+        assert active[0].halt_id == "halt-1"
+
+    def test_repeated_halt_does_not_overwrite_recovery(self, lever, state):
+        """A second halt on the same agent preserves the first recovery entry."""
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        # Simulate some recovery steps
+        lever.on_step(state, 0)
+        lever.on_step(state, 1)
+        recovery_before = lever.get_recovery_state("agent-1")
+        assert recovery_before.recovery_steps_taken == 2
+        assert recovery_before.halt_id == "halt-1"
+
+        # Second halt targeting same agent
+        lever.receive_halt(
+            halt_id="halt-2",
+            reason=HaltReason.TAMPER_DETECTED,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        # Recovery state should NOT be overwritten
+        recovery_after = lever.get_recovery_state("agent-1")
+        assert recovery_after.halt_id == "halt-1"
+        assert recovery_after.recovery_steps_taken == 2
+
 
 class TestGovernanceEngineIntegration:
     """Test that the lever integrates properly with GovernanceEngine."""
@@ -360,6 +416,26 @@ class TestGovernanceEngineIntegration:
         # Escalate to frozen
         lever._recovery_states["agent-1"].mode = RecoveryMode.FROZEN
         assert not engine.can_agent_act("agent-1", state)
+
+    def test_engine_is_action_allowed(self):
+        config = GovernanceConfig(hardware_trust_enabled=True)
+        engine = GovernanceEngine(config)
+        state = EnvState()
+        state.add_agent("agent-1")
+
+        lever = engine.get_hardware_trust_lever()
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        # Irreversible actions blocked
+        assert not engine.is_action_allowed("agent-1", "propose_interaction")
+        # Safe actions allowed
+        assert engine.is_action_allowed("agent-1", "noop")
+        # Unaffected agents unrestricted
+        assert engine.is_action_allowed("agent-2", "propose_interaction")
 
     def test_engine_step_tracks_recovery(self):
         config = GovernanceConfig(

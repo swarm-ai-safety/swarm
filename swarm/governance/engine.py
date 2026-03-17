@@ -10,11 +10,11 @@ from swarm.governance.circuit_breaker import CircuitBreakerLever
 from swarm.governance.collusion import CollusionPenaltyLever
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.council_lever import CouncilGovernanceLever
-from swarm.governance.hardware_trust import HardwareTrustLever
 from swarm.governance.decomposition import DecompositionLever
 from swarm.governance.diversity import DiversityDefenseLever
 from swarm.governance.dynamic_friction import IncoherenceFrictionLever
 from swarm.governance.ensemble import SelfEnsembleLever
+from swarm.governance.hardware_trust import HardwareTrustLever
 from swarm.governance.identity_lever import SybilDetectionLever
 from swarm.governance.incoherence_breaker import IncoherenceCircuitBreakerLever
 from swarm.governance.levers import GovernanceLever, LeverEffect
@@ -535,6 +535,16 @@ class GovernanceEngine:
         if self._resample_lever is None:
             return None
         return self._resample_lever.get_report()
+    def is_action_allowed(self, agent_id: str, action_type: str) -> bool:
+        """Check if a specific action is allowed for an agent.
+
+        Delegates to the hardware trust lever for constrained-mode filtering.
+        Returns True if no hardware trust lever is registered.
+        """
+        if self._hardware_trust_lever is not None:
+            return self._hardware_trust_lever.is_action_allowed(agent_id, action_type)
+        return True
+
     def get_hardware_trust_lever(self) -> Optional[HardwareTrustLever]:
         """Return the hardware trust lever if registered."""
         return self._hardware_trust_lever

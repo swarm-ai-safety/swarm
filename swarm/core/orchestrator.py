@@ -1063,6 +1063,12 @@ class Orchestrator:
         if not isinstance(action.action_type, ActionType):
             return False
 
+        # Check hardware-trust constrained-mode action filtering
+        if self.governance_engine is not None:
+            action_name = action.action_type.value if hasattr(action.action_type, "value") else str(action.action_type)
+            if not self.governance_engine.is_action_allowed(action.agent_id, action_name):
+                return False
+
         handler = self._handler_registry.get_handler(action.action_type)
         if handler is None:
             return False

@@ -14,6 +14,7 @@ treats it as a first-class governance signal.  The orchestration layer:
    verified checkpoint.
 """
 
+from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -98,7 +99,7 @@ class HardwareTrustLever(GovernanceLever):
         super().__init__(config)
         self._halt_records: Dict[str, HaltRecord] = {}
         self._recovery_states: Dict[str, AgentRecoveryState] = {}
-        self._active_halt_id: Optional[str] = None
+        self._active_halt_ids: Set[str] = set()
         self._dependency_graph: Dict[str, Set[str]] = {}  # agent -> dependents
 
     @property
@@ -179,10 +180,21 @@ class HardwareTrustLever(GovernanceLever):
             metadata=metadata or {},
         )
         self._halt_records[halt_id] = record
-        self._active_halt_id = halt_id
+        self._active_halt_ids.add(halt_id)
 
-        # Set up recovery state for each affected agent
+        # Set up recovery state for each affected agent.
+        # Don't overwrite existing recovery entries — keep the more
+        # restrictive state if an agent is already tracked by a prior halt.
         for agent_id in agents_to_freeze:
+            existing = self._recovery_states.get(agent_id)
+            if existing is not None and existing.mode in (
+                RecoveryMode.CONSTRAINED,
+                RecoveryMode.FROZEN,
+            ):
+                # Already under a halt — keep existing (more restrictive) state.
+                # Record this halt in the affected_agents of the new record,
+                # but don't reset the agent's recovery progress.
+                continue
             self._recovery_states[agent_id] = AgentRecoveryState(
                 mode=RecoveryMode.CONSTRAINED,
                 halt_id=halt_id,
@@ -191,8 +203,11 @@ class HardwareTrustLever(GovernanceLever):
                 recovery_steps_taken=0,
             )
 
+        # Constrained agents are NOT returned in agents_to_freeze —
+        # they can still act (with action-level filtering via
+        # is_action_allowed). The state-level freeze is reserved for
+        # agents that escalate to FROZEN mode.
         return LeverEffect(
-            agents_to_freeze=agents_to_freeze,
             lever_name=self.name,
             details={
                 "halt_id": halt_id,
@@ -248,8 +263,7 @@ class HardwareTrustLever(GovernanceLever):
                 recovery.mode = RecoveryMode.NORMAL
                 recovery.halt_id = None
 
-        if self._active_halt_id == halt_id:
-            self._active_halt_id = None
+        self._active_halt_ids.discard(halt_id)
 
         return LeverEffect(
             agents_to_unfreeze=agents_to_unfreeze,
@@ -270,7 +284,7 @@ class HardwareTrustLever(GovernanceLever):
         """Track recovery steps for constrained agents."""
         if not self.config.hardware_trust_enabled:
             return LeverEffect(lever_name=self.name)
-        if self._active_halt_id is None:
+        if not self._active_halt_ids:
             return LeverEffect(lever_name=self.name)
 
         agents_to_freeze: Set[str] = set()
@@ -344,9 +358,9 @@ class HardwareTrustLever(GovernanceLever):
     ) -> Set[str]:
         """BFS over the dependency graph to find all transitive dependents."""
         visited: Set[str] = set(initial)
-        queue = list(initial)
+        queue: deque[str] = deque(initial)
         while queue:
-            agent_id = queue.pop(0)
+            agent_id = queue.popleft()
             for dep in self._dependency_graph.get(agent_id, set()):
                 if dep not in visited and dep in state.agents:
                     visited.add(dep)
@@ -359,14 +373,30 @@ class HardwareTrustLever(GovernanceLever):
 
     @property
     def is_halted(self) -> bool:
-        """Return True if there is an active (uncleared) halt."""
-        return self._active_halt_id is not None
+        """Return True if there is at least one active (uncleared) halt."""
+        return len(self._active_halt_ids) > 0
 
     def get_active_halt(self) -> Optional[HaltRecord]:
-        """Return the active halt record, if any."""
-        if self._active_halt_id is None:
+        """Return the most recent active halt record, if any."""
+        if not self._active_halt_ids:
             return None
-        return self._halt_records.get(self._active_halt_id)
+        # Return the latest active halt (by insertion order preserved in set;
+        # fall back to iterating halt records for the most recent timestamp).
+        latest: Optional[HaltRecord] = None
+        for halt_id in self._active_halt_ids:
+            record = self._halt_records.get(halt_id)
+            if record is not None:
+                if latest is None or record.timestamp > latest.timestamp:
+                    latest = record
+        return latest
+
+    def get_active_halts(self) -> List[HaltRecord]:
+        """Return all active (uncleared) halt records."""
+        return [
+            self._halt_records[hid]
+            for hid in self._active_halt_ids
+            if hid in self._halt_records
+        ]
 
     def get_recovery_state(self, agent_id: str) -> Optional[AgentRecoveryState]:
         """Get the recovery state for an agent."""
