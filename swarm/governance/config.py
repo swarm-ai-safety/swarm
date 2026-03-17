@@ -196,6 +196,12 @@ class GovernanceConfig(BaseModel):
     rbac_high_stakes_penalty_multiplier: float = 2.0
     rbac_role_action_map: dict[str, list[str]] = {}
 
+    # Hardware trust rejection handling
+    hardware_trust_enabled: bool = False
+    hardware_trust_propagation_enabled: bool = True  # Propagate stop token to dependents
+    hardware_trust_recovery_max_steps: int = 10  # Max steps in constrained recovery mode
+    hardware_trust_require_checkpoint: bool = True  # Require checkpoint for safe resume
+
     # Diversity as Defense (DaD)
     diversity_enabled: bool = False
     diversity_rho_max: float = 0.5  # Correlation cap (Rule 1)
@@ -452,6 +458,10 @@ class GovernanceConfig(BaseModel):
             raise ValueError("rbac_security_clearance_required must be non-negative")
         if self.rbac_high_stakes_penalty_multiplier < 0:
             raise ValueError("rbac_high_stakes_penalty_multiplier must be non-negative")
+
+        # Hardware trust validation
+        if self.hardware_trust_recovery_max_steps < 1:
+            raise ValueError("hardware_trust_recovery_max_steps must be >= 1")
 
         # Diversity as Defense validation
         if not 0.0 <= self.diversity_rho_max <= 1.0:

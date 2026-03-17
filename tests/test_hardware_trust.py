@@ -1,0 +1,402 @@
+"""Tests for hardware root-of-trust rejection handling."""
+
+import pytest
+
+from swarm.env.state import EnvState
+from swarm.governance.config import GovernanceConfig
+from swarm.governance.engine import GovernanceEngine
+from swarm.governance.hardware_trust import (
+    AgentRecoveryState,
+    HaltReason,
+    HardwareTrustLever,
+    IRREVERSIBLE_ACTIONS,
+    RecoveryMode,
+)
+
+
+@pytest.fixture
+def config():
+    return GovernanceConfig(
+        hardware_trust_enabled=True,
+        hardware_trust_propagation_enabled=True,
+        hardware_trust_recovery_max_steps=5,
+        hardware_trust_require_checkpoint=True,
+    )
+
+
+@pytest.fixture
+def lever(config):
+    return HardwareTrustLever(config)
+
+
+@pytest.fixture
+def state():
+    s = EnvState()
+    s.add_agent("agent-1")
+    s.add_agent("agent-2")
+    s.add_agent("agent-3")
+    return s
+
+
+class TestHardwareTrustLever:
+    """Test the HardwareTrustLever governance lever."""
+
+    def test_lever_name(self, lever):
+        assert lever.name == "hardware_trust"
+
+    def test_receive_halt_freezes_source_agent(self, lever, state):
+        effect = lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        assert "agent-1" in effect.agents_to_freeze
+        assert lever.is_halted
+        assert lever.get_active_halt() is not None
+        assert lever.get_active_halt().halt_id == "halt-1"
+
+    def test_receive_halt_global_when_no_source(self, lever, state):
+        """When no source agent specified, halt freezes all agents."""
+        effect = lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.TAMPER_DETECTED,
+            state=state,
+        )
+        assert effect.agents_to_freeze == {"agent-1", "agent-2", "agent-3"}
+
+    def test_halt_records_causal_trace(self, lever, state):
+        causal = ["event-a", "event-b", "event-c"]
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.ATTESTATION_FAILURE,
+            state=state,
+            source_agent_id="agent-2",
+            causal_trace=causal,
+        )
+        record = lever.get_halt_record("halt-1")
+        assert record is not None
+        assert record.causal_trace == causal
+        assert record.reason == HaltReason.ATTESTATION_FAILURE
+
+    def test_halt_sets_constrained_recovery(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.POLICY_BREACH,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        recovery = lever.get_recovery_state("agent-1")
+        assert recovery is not None
+        assert recovery.mode == RecoveryMode.CONSTRAINED
+        assert recovery.halt_id == "halt-1"
+        assert recovery.checkpoint_epoch == state.current_epoch
+        assert recovery.checkpoint_step == state.current_step
+
+    def test_constrained_mode_blocks_irreversible_actions(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        # Irreversible actions should be blocked
+        for action in IRREVERSIBLE_ACTIONS:
+            assert not lever.is_action_allowed("agent-1", action), (
+                f"Action {action} should be blocked in constrained mode"
+            )
+        # Safe actions (noop, vote, reply) should be allowed
+        assert lever.is_action_allowed("agent-1", "noop")
+        assert lever.is_action_allowed("agent-1", "vote")
+        assert lever.is_action_allowed("agent-1", "reply")
+
+    def test_constrained_agent_can_still_act(self, lever, state):
+        """Constrained agents can act (with filtered actions), not frozen."""
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        assert lever.can_agent_act("agent-1", state)
+
+    def test_clear_halt_unfreezes_agents(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        effect = lever.clear_halt("halt-1", state)
+        assert "agent-1" in effect.agents_to_unfreeze
+        assert not lever.is_halted
+        recovery = lever.get_recovery_state("agent-1")
+        assert recovery.mode == RecoveryMode.NORMAL
+
+    def test_clear_nonexistent_halt_is_noop(self, lever, state):
+        effect = lever.clear_halt("nonexistent", state)
+        assert len(effect.agents_to_unfreeze) == 0
+
+    def test_clear_already_cleared_halt_is_noop(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        lever.clear_halt("halt-1", state)
+        # Second clear should be noop
+        effect = lever.clear_halt("halt-1", state)
+        assert len(effect.agents_to_unfreeze) == 0
+
+    def test_recovery_budget_escalates_to_frozen(self, lever, state):
+        """After max recovery steps, agents escalate from constrained to frozen."""
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        # Simulate steps up to the limit
+        for step in range(lever.config.hardware_trust_recovery_max_steps - 1):
+            effect = lever.on_step(state, step)
+            assert "agent-1" not in effect.agents_to_freeze
+
+        # The final step should escalate
+        effect = lever.on_step(state, 99)
+        assert "agent-1" in effect.agents_to_freeze
+
+        # Now agent should be in FROZEN mode
+        recovery = lever.get_recovery_state("agent-1")
+        assert recovery.mode == RecoveryMode.FROZEN
+        assert not lever.can_agent_act("agent-1", state)
+
+    def test_frozen_agent_cannot_act(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        # Manually set to frozen
+        lever._recovery_states["agent-1"].mode = RecoveryMode.FROZEN
+        assert not lever.can_agent_act("agent-1", state)
+
+    def test_unaffected_agents_can_act(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        assert lever.can_agent_act("agent-2", state)
+        assert lever.is_action_allowed("agent-2", "propose_interaction")
+
+    def test_disabled_lever_is_transparent(self, state):
+        config = GovernanceConfig(hardware_trust_enabled=False)
+        lever = HardwareTrustLever(config)
+        effect = lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        assert len(effect.agents_to_freeze) == 0
+        assert lever.can_agent_act("agent-1", state)
+        assert lever.is_action_allowed("agent-1", "propose_interaction")
+
+
+class TestStopTokenPropagation:
+    """Test that halt signals propagate across dependent agents."""
+
+    def test_propagation_via_dependency_graph(self, lever, state):
+        lever.register_dependency("agent-1", "agent-2")
+        lever.register_dependency("agent-2", "agent-3")
+
+        effect = lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        # All three should be frozen (agent-1 -> agent-2 -> agent-3)
+        assert effect.agents_to_freeze == {"agent-1", "agent-2", "agent-3"}
+
+    def test_propagation_respects_state_agents(self, lever, state):
+        """Only propagate to agents that exist in state."""
+        lever.register_dependency("agent-1", "agent-2")
+        lever.register_dependency("agent-1", "phantom-agent")
+
+        effect = lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        assert "agent-1" in effect.agents_to_freeze
+        assert "agent-2" in effect.agents_to_freeze
+        assert "phantom-agent" not in effect.agents_to_freeze
+
+    def test_propagation_disabled(self, state):
+        config = GovernanceConfig(
+            hardware_trust_enabled=True,
+            hardware_trust_propagation_enabled=False,
+        )
+        lever = HardwareTrustLever(config)
+        lever.register_dependency("agent-1", "agent-2")
+
+        effect = lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        # Only source agent, no propagation
+        assert effect.agents_to_freeze == {"agent-1"}
+
+    def test_set_dependency_graph(self, lever, state):
+        lever.set_dependency_graph({
+            "agent-1": {"agent-2", "agent-3"},
+        })
+        effect = lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        assert effect.agents_to_freeze == {"agent-1", "agent-2", "agent-3"}
+
+
+class TestTaskStatePreservation:
+    """Test task state preservation and retrieval."""
+
+    def test_preserve_and_retrieve_task_state(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        task_state = {"task_id": "t1", "progress": 0.5, "outputs": ["a", "b"]}
+        lever.preserve_task_state("agent-1", task_state)
+
+        retrieved = lever.get_preserved_task_state("agent-1")
+        assert retrieved == task_state
+
+    def test_retrieve_empty_for_unknown_agent(self, lever):
+        assert lever.get_preserved_task_state("unknown") == {}
+
+
+class TestQueryInterface:
+    """Test the query/introspection methods."""
+
+    def test_get_constrained_agents(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        assert "agent-1" in lever.get_constrained_agents()
+        assert "agent-2" not in lever.get_constrained_agents()
+
+    def test_get_frozen_agents(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        assert len(lever.get_frozen_agents()) == 0
+        lever._recovery_states["agent-1"].mode = RecoveryMode.FROZEN
+        assert "agent-1" in lever.get_frozen_agents()
+
+    def test_get_all_halt_records(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        lever.receive_halt(
+            halt_id="halt-2",
+            reason=HaltReason.TAMPER_DETECTED,
+            state=state,
+            source_agent_id="agent-2",
+        )
+        records = lever.get_all_halt_records()
+        assert len(records) == 2
+
+
+class TestGovernanceEngineIntegration:
+    """Test that the lever integrates properly with GovernanceEngine."""
+
+    def test_engine_registers_lever(self):
+        config = GovernanceConfig(hardware_trust_enabled=True)
+        engine = GovernanceEngine(config)
+        assert engine.get_hardware_trust_lever() is not None
+
+    def test_engine_does_not_register_when_disabled(self):
+        config = GovernanceConfig(hardware_trust_enabled=False)
+        engine = GovernanceEngine(config)
+        assert engine.get_hardware_trust_lever() is None
+
+    def test_engine_can_agent_act_respects_hardware_halt(self):
+        config = GovernanceConfig(hardware_trust_enabled=True)
+        engine = GovernanceEngine(config)
+        state = EnvState()
+        state.add_agent("agent-1")
+
+        lever = engine.get_hardware_trust_lever()
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        # Constrained agents can still act (they're filtered, not blocked)
+        assert engine.can_agent_act("agent-1", state)
+
+        # Escalate to frozen
+        lever._recovery_states["agent-1"].mode = RecoveryMode.FROZEN
+        assert not engine.can_agent_act("agent-1", state)
+
+    def test_engine_step_tracks_recovery(self):
+        config = GovernanceConfig(
+            hardware_trust_enabled=True,
+            hardware_trust_recovery_max_steps=3,
+        )
+        engine = GovernanceEngine(config)
+        state = EnvState()
+        state.add_agent("agent-1")
+
+        lever = engine.get_hardware_trust_lever()
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+
+        # Step through recovery
+        for i in range(3):
+            engine.apply_step(state, i)
+
+        # Agent should now be frozen (budget exhausted)
+        recovery = lever.get_recovery_state("agent-1")
+        assert recovery.mode == RecoveryMode.FROZEN
+
+
+class TestConfigValidation:
+    """Test governance config validation for hardware trust fields."""
+
+    def test_valid_config(self):
+        config = GovernanceConfig(
+            hardware_trust_enabled=True,
+            hardware_trust_recovery_max_steps=10,
+        )
+        assert config.hardware_trust_recovery_max_steps == 10
+
+    def test_invalid_recovery_max_steps(self):
+        with pytest.raises(ValueError, match="hardware_trust_recovery_max_steps"):
+            GovernanceConfig(hardware_trust_recovery_max_steps=0)

@@ -162,6 +162,12 @@ class EventType(Enum):
     RECEIPT_REJECTED = "receipt_rejected"
     RELAY_MESSAGE_SENT = "relay_message_sent"
     RELAY_MESSAGE_ACKNOWLEDGED = "relay_message_acknowledged"
+    # Hardware trust events
+    HARDWARE_HALT_RECEIVED = "hardware_halt_received"
+    HARDWARE_HALT_PROPAGATED = "hardware_halt_propagated"
+    HARDWARE_RECOVERY_ENTERED = "hardware_recovery_entered"
+    HARDWARE_CONDITION_CLEARED = "hardware_condition_cleared"
+    HARDWARE_SAFE_RESUME = "hardware_safe_resume"
 
     # System events
     SIMULATION_STARTED = "simulation_started"
