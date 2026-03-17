@@ -2,6 +2,7 @@
 
 from swarm.api.routers import (
     agents,
+    attestation,
     governance,
     health,
     metrics,
@@ -13,6 +14,7 @@ from swarm.api.routers import (
 
 __all__ = [
     "agents",
+    "attestation",
     "governance",
     "health",
     "metrics",

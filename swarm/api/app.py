@@ -11,6 +11,7 @@ from swarm.api.middleware.error_handler import install_error_handlers
 from swarm.api.middleware.trace import TraceIDMiddleware
 from swarm.api.routers import (
     agents,
+    attestation,
     governance,
     health,
     metrics,
@@ -100,6 +101,13 @@ def create_app(config: APIConfig | None = None) -> FastAPI:
     # Agent API routers (v1-namespaced for compatibility with existing routes)
     app.include_router(runs.router, prefix="/api/runs", tags=["runs"])
     app.include_router(posts.router, prefix="/api/posts", tags=["posts"])
+
+    # Attestation & Relational Messaging API
+    app.include_router(
+        attestation.router,
+        prefix="/api/v1/attestation",
+        tags=["attestation"],
+    )
 
     # Structured error handlers (must be installed after routers)
     install_error_handlers(app)
