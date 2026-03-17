@@ -14,6 +14,7 @@ treats it as a first-class governance signal.  The orchestration layer:
    verified checkpoint.
 """
 
+import copy
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -436,11 +437,11 @@ class HardwareTrustLever(GovernanceLever):
         """
         recovery = self._recovery_states.get(agent_id)
         if recovery is not None:
-            recovery.task_state_preserved = dict(task_state)
+            recovery.task_state_preserved = copy.deepcopy(task_state)
 
     def get_preserved_task_state(self, agent_id: str) -> Dict[str, Any]:
         """Retrieve preserved task state for safe-resume."""
         recovery = self._recovery_states.get(agent_id)
         if recovery is None:
             return {}
-        return dict(recovery.task_state_preserved)
+        return copy.deepcopy(recovery.task_state_preserved)
