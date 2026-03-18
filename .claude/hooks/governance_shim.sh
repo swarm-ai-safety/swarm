@@ -1,0 +1,259 @@
+#!/usr/bin/env bash
+# ──────────────────────────────────────────────────────────────
+# governance_shim.sh — Governance observation layer for Claude Code hooks
+#
+# Emits structured JSONL events to a SWARM-readable sink, providing
+# a governance instrumentation surface without modifying Superpowers
+# or any Claude Code internals.
+#
+# Hook events handled:
+#   SessionStart   → session init with governance regime config
+#   PreToolUse     → tool invocation logging + Byline provenance
+#   PostToolUse    → outcome logging + plan deviation detection
+#   SubagentStop   → task completion checkpoint + review verdict
+#
+# Sink: $GOVERNANCE_SHIM_SINK (default: runs/governance_shim.jsonl)
+# All events are append-only JSONL, compatible with swarm.logging.event_log
+#
+# Usage in settings.json:
+#   "SessionStart": [{ "hooks": [{ "command": "bash .claude/hooks/governance_shim.sh session_start" }] }]
+#   "PreToolUse":   [{ "hooks": [{ "command": "bash .claude/hooks/governance_shim.sh pre_tool_use" }] }]
+#   "PostToolUse":  [{ "hooks": [{ "command": "bash .claude/hooks/governance_shim.sh post_tool_use" }] }]
+#   "SubagentStop": [{ "hooks": [{ "command": "bash .claude/hooks/governance_shim.sh subagent_stop" }] }]
+# ──────────────────────────────────────────────────────────────
+
+set -euo pipefail
+
+# ── Configuration ──
+REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")"
+SINK="${GOVERNANCE_SHIM_SINK:-${REPO_ROOT}/runs/governance_shim.jsonl}"
+HOOK_EVENT="${1:-unknown}"
+SESSION="${SESSION_ID:-${AO_SESSION:-anonymous}}"
+WORKTREE="${WORKTREE_ID:-}"
+BRANCH="${SESSION_BRANCH:-$(git branch --show-current 2>/dev/null || echo "unknown")}"
+
+# Ensure sink directory exists
+mkdir -p "$(dirname "$SINK")"
+
+# ── Helpers ──
+
+timestamp() {
+  date -u +"%Y-%m-%dT%H:%M:%S.%3NZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+# Deterministic event ID: sha256 of (hook_event + session + timestamp) truncated to 12 hex chars
+make_event_id() {
+  local ts="$1"
+  echo -n "${HOOK_EVENT}:${SESSION}:${ts}" | sha256sum | cut -c1-12
+}
+
+# Read stdin once and cache (hooks receive context JSON on stdin)
+read_stdin() {
+  if [ -z "${_STDIN_CACHE+x}" ]; then
+    _STDIN_CACHE="$(cat)"
+  fi
+  echo "$_STDIN_CACHE"
+}
+
+# Safe jq extraction with fallback for environments without jq
+jq_or_fallback() {
+  local json="$1"
+  local path="$2"
+  local default="${3:-}"
+
+  if command -v jq &>/dev/null; then
+    echo "$json" | jq -r "$path // empty" 2>/dev/null || echo "$default"
+  else
+    echo "$default"
+  fi
+}
+
+# Emit a single JSONL event to the sink
+emit_event() {
+  local event_type="$1"
+  local payload="$2"
+  local ts
+  ts="$(timestamp)"
+  local event_id
+  event_id="$(make_event_id "$ts")"
+
+  local event
+  if command -v jq &>/dev/null; then
+    event=$(jq -nc \
+      --arg eid "$event_id" \
+      --arg ts "$ts" \
+      --arg etype "$event_type" \
+      --arg sid "$SESSION" \
+      --arg wt "$WORKTREE" \
+      --arg br "$BRANCH" \
+      --argjson payload "$payload" \
+      '{
+        event_id: $eid,
+        timestamp: $ts,
+        event_type: $etype,
+        agent_id: $sid,
+        payload: ($payload + {session_id: $sid, worktree_id: $wt, branch: $br})
+      }')
+  else
+    # Fallback: manual JSON construction (no jq)
+    event="{\"event_id\":\"${event_id}\",\"timestamp\":\"${ts}\",\"event_type\":\"${event_type}\",\"agent_id\":\"${SESSION}\",\"payload\":${payload}}"
+  fi
+
+  echo "$event" >> "$SINK"
+}
+
+# ── Hook Handlers ──
+
+handle_session_start() {
+  # Load governance regime from scenario config or env
+  local regime="${GOVERNANCE_REGIME:-default}"
+  local knobs_file="${REPO_ROOT}/.letta/memory/project/governance-knobs.md"
+  local knobs_summary="none"
+
+  if [ -f "$knobs_file" ]; then
+    # Extract knob names for the event payload
+    knobs_summary=$(grep -E '^## ' "$knobs_file" | sed 's/^## //' | tr '\n' ',' | sed 's/,$//' || echo "none")
+  fi
+
+  emit_event "governance.session_init" "$(jq_build_or_raw \
+    "regime" "$regime" \
+    "governance_knobs" "$knobs_summary" \
+    "hook_version" "1.0.0")"
+
+  # Return empty JSON (no override)
+  echo '{}'
+}
+
+handle_pre_tool_use() {
+  local input
+  input="$(read_stdin)"
+
+  local tool_name
+  tool_name="$(jq_or_fallback "$input" '.tool_name' 'unknown')"
+  local tool_input
+  tool_input="$(jq_or_fallback "$input" '.tool_input | tostring' '{}')"
+
+  # Tag with Byline provenance frame if available
+  local byline="${BYLINE_AGENT:-${SESSION}}"
+
+  emit_event "governance.tool_invocation" "$(jq_build_or_raw \
+    "tool_name" "$tool_name" \
+    "byline_agent" "$byline" \
+    "phase" "pre")"
+
+  # Return empty JSON — no approve/block decision by default.
+  # To enable blocking, set GOVERNANCE_SHIM_ENFORCE=1 and
+  # add policy logic here that returns {"decision": "block", "reason": "..."}.
+  echo '{}'
+}
+
+handle_post_tool_use() {
+  local input
+  input="$(read_stdin)"
+
+  local tool_name
+  tool_name="$(jq_or_fallback "$input" '.tool_name' 'unknown')"
+  local exit_code
+  exit_code="$(jq_or_fallback "$input" '.exit_code' '0')"
+  local tool_response_preview
+  tool_response_preview="$(jq_or_fallback "$input" '.tool_response | tostring | .[0:200]' '')"
+
+  # Plan deviation detection: compare tool usage against expected task spec
+  local deviation="none"
+  local task_spec="${GOVERNANCE_TASK_SPEC:-}"
+  if [ -n "$task_spec" ] && [ "$tool_name" = "Bash" ]; then
+    local command
+    command="$(jq_or_fallback "$input" '.tool_input.command' '')"
+    # Flag destructive operations as potential deviations
+    case "$command" in
+      *"rm -rf"*|*"git reset --hard"*|*"git push --force"*|*"DROP TABLE"*)
+        deviation="destructive_operation"
+        ;;
+    esac
+  fi
+
+  emit_event "governance.tool_outcome" "$(jq_build_or_raw \
+    "tool_name" "$tool_name" \
+    "exit_code" "$exit_code" \
+    "deviation" "$deviation" \
+    "phase" "post")"
+
+  echo '{}'
+}
+
+handle_subagent_stop() {
+  local input
+  input="$(read_stdin)"
+
+  local subagent_id
+  subagent_id="$(jq_or_fallback "$input" '.agent_id // .subagent_id' 'unknown')"
+  local reason
+  reason="$(jq_or_fallback "$input" '.reason // .stop_reason' 'completed')"
+
+  # Review verdict: did the subagent complete its task?
+  local verdict="pass"
+  if [ "$reason" = "error" ] || [ "$reason" = "timeout" ]; then
+    verdict="fail"
+  fi
+
+  emit_event "governance.task_checkpoint" "$(jq_build_or_raw \
+    "subagent_id" "$subagent_id" \
+    "stop_reason" "$reason" \
+    "review_verdict" "$verdict" \
+    "phase" "subagent_stop")"
+
+  echo '{}'
+}
+
+# ── JSON builder helper ──
+# Builds a JSON object from key-value pairs (requires jq, falls back to raw)
+jq_build_or_raw() {
+  if command -v jq &>/dev/null; then
+    local args=()
+    local filter="{"
+    local first=true
+    while [ $# -ge 2 ]; do
+      local key="$1"
+      local val="$2"
+      shift 2
+      args+=(--arg "$key" "$val")
+      if [ "$first" = true ]; then
+        filter+="$key: \$$key"
+        first=false
+      else
+        filter+=", $key: \$$key"
+      fi
+    done
+    filter+="}"
+    jq -nc "${args[@]}" "$filter" 2>/dev/null || echo '{}'
+  else
+    # Manual fallback
+    local result="{"
+    local first=true
+    while [ $# -ge 2 ]; do
+      local key="$1"
+      local val="$2"
+      shift 2
+      if [ "$first" = true ]; then
+        result+="\"$key\":\"$val\""
+        first=false
+      else
+        result+=",\"$key\":\"$val\""
+      fi
+    done
+    result+="}"
+    echo "$result"
+  fi
+}
+
+# ── Dispatch ──
+case "$HOOK_EVENT" in
+  session_start)   handle_session_start ;;
+  pre_tool_use)    handle_pre_tool_use ;;
+  post_tool_use)   handle_post_tool_use ;;
+  subagent_stop)   handle_subagent_stop ;;
+  *)
+    echo '{}' >&2
+    exit 0
+    ;;
+esac
