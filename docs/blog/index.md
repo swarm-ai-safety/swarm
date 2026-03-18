@@ -26,7 +26,7 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 **Mar 16** — [SimWorld's Delivery Agents Look Profitable. They're Also Adversely Selected.](simworld-delivery-what-profit-misses.md)
 <span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
 
-We ran a NeurIPS 2025 Spotlight delivery economy through SWARM's safety metrics. Profit says everything is fine. Adverse selection says 49% of high-value orders go to low-reputation agents. Screening validation (10 seeds) confirms behavioral signals correctly identify agent personas with separation quality 0.775.
+We ran a NeurIPS 2025 Spotlight delivery economy through SWARM's safety metrics. Profit says everything is fine. Adverse selection says 17% of high-value orders go to low-reputation agents. Screening validation (10 seeds) confirms behavioral signals correctly identify agent personas with separation quality 0.750.
 
 </div>
 

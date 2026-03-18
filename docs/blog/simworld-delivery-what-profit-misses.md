@@ -1,6 +1,6 @@
 ---
 date: 2026-03-16
-description: "We ran a NeurIPS 2025 delivery economy through SWARM's safety metrics. Profit says everything is fine. Adverse selection says half the high-value orders go to the wrong agents."
+description: "We ran a NeurIPS 2025 delivery economy through SWARM's safety metrics. Profit says everything is fine. Adverse selection says 17% of high-value orders go to low-reputation agents."
 author: "SWARM Team"
 keywords:
   - SimWorld delivery economy
@@ -10,17 +10,17 @@ keywords:
   - agent screening validation
 claims:
   - metric: "Adverse selection signal"
-    value: "0.486"
-    description: "Nearly half of high-value delivery orders won by low-reputation agents"
+    value: "0.174"
+    description: "17% of high-value delivery orders won by low-reputation agents"
   - metric: "Screening separation quality"
-    value: "0.775 ± 0.053"
+    value: "0.750 ± 0.102"
     description: "Behavioral screening correctly sorts agent personas above 0.6 threshold across 10 seeds"
-abstract: "SimWorld (NeurIPS 2025 Spotlight) models a multi-agent delivery economy where LLM agents bid on orders, invest in equipment, and cooperate or compete. Their evaluation uses profit. We ran the same economy through SWARM's distributional safety metrics and found what profit misses: adverse selection at 0.486 (low-reputation agents capturing high-value orders), variance amplification across agent types, and governance cost dynamics invisible to profit-only evaluation. A 10-seed screening validation confirms that behavioral signals correctly identify agent personas with separation quality 0.775."
+abstract: "SimWorld (NeurIPS 2025 Spotlight) models a multi-agent delivery economy where LLM agents bid on orders, invest in equipment, and cooperate or compete. Their evaluation uses profit. We ran the same economy through SWARM's distributional safety metrics and found what profit misses: adverse selection at 0.174 (low-reputation agents capturing high-value orders), variance amplification across agent types, and governance cost dynamics invisible to profit-only evaluation. A 10-seed screening validation confirms that behavioral signals correctly identify agent personas with separation quality 0.750."
 ---
 
 # SimWorld's Delivery Agents Look Profitable. They're Also Adversely Selected.
 
-*We ran a NeurIPS 2025 delivery economy through SWARM's safety metrics. Profit says everything is fine. Adverse selection says half the high-value orders go to the wrong agents.*
+*We ran a NeurIPS 2025 delivery economy through SWARM's safety metrics. Profit says everything is fine. Adverse selection says 17% of high-value orders go to low-reputation agents.*
 
 ---
 
@@ -48,42 +48,42 @@ We built a SWARM domain module (`swarm/domains/simworld_delivery/`) that models 
 
 | Metric | Value |
 |--------|-------|
-| Delivery rate | 0.313 |
-| Total earnings | 1,774 |
-| Earnings Gini | 0.120 |
-| Overbid rate | 0.106 |
+| Delivery rate | 0.279 |
+| Total earnings | 1,745 |
+| Earnings Gini | 0.167 |
+| Overbid rate | 0.091 |
 
-A reasonable picture. Delivery rate is moderate (not all orders are feasible in a sparse city). Earnings are distributed relatively equally (Gini 0.12). Overbidding is limited to ~11% of bids. SimWorld would report this economy as functional.
+A reasonable picture. Delivery rate is moderate (not all orders are feasible in a sparse city). Earnings are distributed relatively equally (Gini 0.167). Overbidding is limited to ~9% of bids. SimWorld would report this economy as functional.
 
 ## What SWARM sees
 
 | Metric | Value | What it means |
 |--------|-------|---------------|
-| **Adverse selection** | **0.486** | 49% of high-value orders won by low-reputation agents |
-| Exploit frequency | 0.000 | No overt exploitation (failures are structural, not strategic) |
+| **Adverse selection** | **0.174** | 17% of high-value orders won by low-reputation agents |
+| Exploit frequency | 0.007 | Near-zero overt exploitation (failures are structural, not strategic) |
 | Governance cost ratio | 0.004 | Fees are negligible relative to earnings |
-| Variance amplification | 0.221 | Earnings diverge across types but haven't runaway |
+| Variance amplification | 0.302 | Earnings diverge across types but haven't runaway |
 
-The headline: **adverse selection is 0.486**. Nearly half of all high-value delivery orders are won by agents with below-average reputation. The reverse auction mechanism --- lowest bid wins --- gives an advantage to aggressive bidders who undercut, regardless of their track record. The reputation threshold (0.3) is too low to filter them out.
+The headline: **adverse selection is 0.174**. About one in six high-value delivery orders are won by agents with below-average reputation. The reverse auction mechanism --- lowest bid wins --- gives an advantage to aggressive bidders who undercut, regardless of their track record. The reputation cap at 1.0 and bid fallback to next-best bidder dampen the effect relative to an unconstrained market, but the signal persists.
 
-This is invisible to profit. Total earnings look healthy. Gini is low. But the *allocation* of high-value work to low-quality agents is a distributional safety failure that compounds over time.
+This is invisible to profit. Total earnings look healthy. Gini is moderate. But the *allocation* of high-value work to low-quality agents is a distributional safety failure that compounds over time.
 
 ## The trajectory tells the story
 
 ```
 Epoch DelivRate  Earnings  AdvSel  VarAmp   Gini
-    0     0.113      45.7   0.000   1.753  0.653
-    1     0.368     312.3   0.321   0.371  0.186
-    2     0.312     520.4   0.073   0.348  0.191
-    3     0.322     724.6   0.347   0.281  0.155
-    5     0.289    1046.8   0.276   0.219  0.117
-    7     0.269    1411.8   0.503   0.223  0.121
-    9     0.313    1774.3   0.486   0.221  0.120
+    0     0.129      56.9   0.000   1.588  0.635
+    1     0.337     294.5   0.080   0.617  0.322
+    2     0.275     480.2   0.140   0.481  0.260
+    3     0.280     660.8   0.320   0.376  0.209
+    5     0.213    1008.4   0.050   0.339  0.185
+    7     0.310    1418.7   0.315   0.281  0.154
+    9     0.279    1745.4   0.174   0.302  0.167
 ```
 
-Gini drops from 0.65 to 0.12 --- the economy *equalizes*. But adverse selection climbs from 0 to 0.486 --- the equalization happens because low-reputation agents are winning high-value orders, not because the system is getting healthier. Profit-based evaluation sees convergence. Safety-based evaluation sees adverse selection taking hold.
+Gini drops from 0.64 to 0.17 --- the economy *equalizes*. But adverse selection rises from 0 and fluctuates between 0.05 and 0.32, settling at 0.174 --- low-reputation agents persistently capture high-value orders even as the economy matures. Profit-based evaluation sees convergence. Safety-based evaluation sees adverse selection persisting.
 
-Variance amplification spikes at epoch 0 (1.753, as early scooter purchases create large budget differences) then settles. The initial inequality is structural (tool investment), not adversarial.
+Variance amplification spikes at epoch 0 (1.588, as early scooter purchases create large budget differences) then settles to 0.302. The initial inequality is structural (tool investment), not adversarial.
 
 ## Can screening fix it?
 
@@ -98,17 +98,19 @@ We ran each seed's final agent states through SWARM's `ScreeningProtocol`, mappi
 
 | Metric | Value |
 |--------|-------|
-| **Separation quality** | **0.775 ± 0.053** |
+| **Separation quality** | **0.750 ± 0.102** |
 | Threshold | 0.6 |
 | Verdict | **PASS** |
 
-The screening protocol correctly identifies agent personas 77.5% of the time from behavioral signals alone. All conscientious and cautious agents are classified as cooperative. Aggressive agents split: those with low overbid rates in a given seed look cooperative (the 22.5% error), while high-overbid runs correctly flag them.
+The screening protocol correctly identifies agent personas 75% of the time from behavioral signals alone. Cooperative agents (conscientious, cautious) route to premium tier. Adversarial agents route to standard tier. The tier-aware scoring ensures that agent types land in appropriate governance tiers, not just the one with the most resources.
 
 This confirms the personality-to-agent-type correspondence from the theory: Big Five personality traits produce behavioral signatures that SWARM's proxy signals can detect.
 
 ### Where screening fails
 
-The 22.5% error rate comes from a specific failure mode: aggressive agents that *happen* to overbid infrequently in a given seed are indistinguishable from cooperative agents through behavioral proxies. This is the fundamental limit of behavioral screening --- it can only classify what it observes. An aggressive agent with a lucky run looks honest.
+The 25% error rate comes from a specific failure mode: aggressive agents that *happen* to overbid infrequently in a given seed are indistinguishable from cooperative agents through behavioral proxies. This is the fundamental limit of behavioral screening --- it can only classify what it observes. An aggressive agent with a lucky run looks honest.
+
+The wider variance (± 0.102 vs earlier estimates) reflects real seed-to-seed variation in agent behavior. Some seeds produce clearer behavioral separation than others.
 
 This maps to a real deployment concern: agents that are *capable* of adversarial behavior but haven't yet exhibited it will pass screening. The screening protocol needs to be paired with ongoing monitoring (circuit breakers, reputation decay) to catch behavioral drift after admission.
 
