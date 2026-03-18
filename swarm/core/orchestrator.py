@@ -875,7 +875,7 @@ class Orchestrator:
 
         try:
             result = handler.handle_action(action, self.state)
-        except Exception:
+        except (RuntimeError, ValueError, TypeError, AttributeError):
             logger.debug(
                 "Handler %s.handle_action failed",
                 type(handler).__name__,
@@ -934,7 +934,7 @@ class Orchestrator:
 
         try:
             handler.post_finalize(result, interaction, gov_effect, self.state)
-        except Exception:
+        except (RuntimeError, ValueError, TypeError, AttributeError):
             logger.debug(
                 "Handler %s.post_finalize failed",
                 type(handler).__name__,

@@ -38,6 +38,12 @@ Academic foundations and related publications. SWARM implements the framework de
 
     Architectural patterns from production agent systems and their SWARM translations
 
+-   :material-radar: **[SWE-AF Reconnaissance](swe-af-scouting.md)**
+
+    ---
+
+    External repository scouting status and SWARM integration plan
+
 </div>
 
 ## Core Research Questions

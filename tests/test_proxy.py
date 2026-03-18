@@ -143,6 +143,27 @@ class TestProxyWeights:
             2.0
         )
 
+    def test_normalize_zero_weights_defaults_uniform(self):
+        """All-zero weights should normalize to a safe uniform distribution."""
+        weights = ProxyWeights(
+            task_progress=0.0,
+            rework_penalty=0.0,
+            verifier_penalty=0.0,
+            engagement_signal=0.0,
+        )
+
+        normalized = weights.normalize()
+
+        assert normalized.task_progress == pytest.approx(0.25)
+        assert normalized.rework_penalty == pytest.approx(0.25)
+        assert normalized.verifier_penalty == pytest.approx(0.25)
+        assert normalized.engagement_signal == pytest.approx(0.25)
+
+    def test_negative_weight_values_rejected(self):
+        """ProxyWeights should reject negative values at validation time."""
+        with pytest.raises(ValueError, match="must be non-negative"):
+            ProxyWeights(task_progress=-0.1)
+
 
 class TestProxyObservables:
     """Tests for ProxyObservables."""
@@ -319,6 +340,46 @@ class TestProxyComputer:
 
         # Higher k should push further from 0.5
         assert abs(p_high - 0.5) > abs(p_low - 0.5)
+
+    def test_single_observable_weight_gives_expected_v_hat(self):
+        """With one active weight, v_hat should match that signal exactly."""
+        computer = ProxyComputer(
+            weights=ProxyWeights(
+                task_progress=1.0,
+                rework_penalty=0.0,
+                verifier_penalty=0.0,
+                engagement_signal=0.0,
+            )
+        )
+        obs = ProxyObservables(task_progress_delta=0.73)
+
+        v_hat, p = computer.compute_labels(obs)
+
+        assert v_hat == pytest.approx(0.73)
+        assert 0.0 <= p <= 1.0
+
+    def test_large_weight_values_remain_numerically_stable(self):
+        """Very large weights should normalize safely and keep p within [0, 1]."""
+        computer = ProxyComputer(
+            weights=ProxyWeights(
+                task_progress=1e18,
+                rework_penalty=1e18,
+                verifier_penalty=1e18,
+                engagement_signal=1e18,
+            )
+        )
+        obs = ProxyObservables(
+            task_progress_delta=1.0,
+            rework_count=2,
+            verifier_rejections=1,
+            tool_misuse_flags=0,
+            counterparty_engagement_delta=-0.2,
+        )
+
+        v_hat, p = computer.compute_labels(obs)
+
+        assert -1.0 <= v_hat <= 1.0
+        assert 0.0 <= p <= 1.0
 
 
 class TestClampingWarnings:

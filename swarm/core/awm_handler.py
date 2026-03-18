@@ -221,8 +221,17 @@ class AWMHandler(Handler):
                 if tools:
                     self._available_tools = tools
                     return self._available_tools
-            except Exception:
-                logger.debug("Failed to fetch live tools, using defaults")
+            except (
+                ConnectionError,
+                ImportError,
+                RuntimeError,
+                ValueError,
+                TypeError,
+            ) as exc:
+                logger.debug(
+                    "Failed to fetch live tools, using defaults: %s",
+                    exc,
+                )
 
         # Default tools (synthetic)
         return [
@@ -601,7 +610,13 @@ class AWMHandler(Handler):
         client = self._clients[agent_id]
         try:
             return client.call_tool(tool_name, arguments)
-        except Exception as exc:
+        except (
+            ConnectionError,
+            ImportError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+        ) as exc:
             logger.warning(
                 "Live tool call failed for agent=%s tool=%s: %s",
                 agent_id,
@@ -629,7 +644,13 @@ class AWMHandler(Handler):
         try:
             result: Dict[str, Any] = client.verify()
             return result
-        except Exception as exc:
+        except (
+            ConnectionError,
+            ImportError,
+            RuntimeError,
+            ValueError,
+            TypeError,
+        ) as exc:
             logger.warning(
                 "Live verification failed for agent=%s: %s", agent_id, exc
             )

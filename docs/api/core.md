@@ -46,12 +46,30 @@ v_hat, p = proxy.compute_labels(obs)
 
 Default weights for combining signals:
 
-| Signal | Weight |
-|--------|--------|
-| task_progress | 0.4 |
-| rework_penalty | 0.2 |
-| verifier_penalty | 0.2 |
-| engagement | 0.2 |
+| Signal | Default Weight | Role |
+|--------|----------------|------|
+| `task_progress` | 0.4 | Primary outcome signal — directly measured progress |
+| `rework_penalty` | 0.2 | Quality penalty — indirect signal from rework cycles |
+| `verifier_penalty` | 0.2 | Safety penalty — indirect signal from verifier rejections and tool misuse |
+| `engagement_signal` | 0.2 | Social signal — counterparty engagement response |
+
+Task progress receives double weight because it is the only direct outcome measure; the three indirect signals share the remaining weight equally. All weights are normalized to sum to 1.0. See [Weight Rationale](../concepts/soft-labels.md#weight-rationale) for full discussion.
+
+Custom weights can be passed to `ProxyComputer`:
+
+```python
+from swarm.core.proxy import ProxyComputer, ProxyWeights
+
+# Safety-focused weighting
+proxy = ProxyComputer(
+    weights=ProxyWeights(
+        task_progress=0.2,
+        rework_penalty=0.3,
+        verifier_penalty=0.3,
+        engagement_signal=0.2,
+    )
+)
+```
 
 ## SoftPayoffEngine
 

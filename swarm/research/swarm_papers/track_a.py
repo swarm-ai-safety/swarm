@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import base64
 import json
+import logging
 import math
 import random
 import re
@@ -36,10 +37,12 @@ from swarm.research.swarm_papers.paper import (
     RelatedWorkItem,
 )
 
+logger = logging.getLogger(__name__)
+
 # Optional dependency — may not be installed
 try:
     from swarm.agents.llm_config import LLMConfig, LLMProvider
-except Exception:  # pragma: no cover - optional
+except ImportError:  # pragma: no cover - optional
 
     class LLMConfig:  # type: ignore[no-redef]
         """Stub when swarm.agents.llm_config is not installed."""
@@ -986,7 +989,7 @@ class AdversarialSolver(BaseSolver):
             num = float(correct)
             # Make a significant error
             return _format_number(num + self._rng.choice([-10, -5, 5, 10]))
-        except Exception:
+        except (TypeError, ValueError):
             return "WRONG"
 
     def _sycophant(self, correct: str, options: list[str]) -> str:
@@ -998,8 +1001,8 @@ class AdversarialSolver(BaseSolver):
                 num = float(peer)
                 # Subtle modification that looks like agreement
                 return _format_number(num + self._rng.choice([-0.1, 0.1, -1, 1]))
-            except Exception:
-                pass
+            except (TypeError, ValueError) as exc:
+                logger.debug("Sycophant strategy failed to parse peer answer: %s", exc)
         # Fallback to strategic error
         return _introduce_noise(correct, options, self._rng)
 
@@ -1147,7 +1150,7 @@ class SimpleCritic:
         for ans in answers:
             try:
                 numeric_answers.append(float(ans))
-            except Exception:
+            except (TypeError, ValueError):
                 return "non-numeric answer in numeric task"
 
         family = task.metadata.get("family", "numeric")
@@ -1793,7 +1796,7 @@ class TrackARunner:
     def _generate_plots(self, summary: RunSummary) -> tuple[list[PaperFigure], dict[str, str]]:
         try:
             import matplotlib.pyplot as plt
-        except Exception:
+        except ImportError:
             empty_figs: list[PaperFigure] = []
             empty_imgs: dict[str, str] = {}
             return empty_figs, empty_imgs
@@ -2086,7 +2089,7 @@ def _safe_eval(expr: str) -> float:
         return 0.0
     try:
         value = eval(expr, {"__builtins__": {}}, {})
-    except Exception:
+    except (SyntaxError, NameError, TypeError, ZeroDivisionError):
         return 0.0
     return round(float(value), 4)
 
@@ -2111,7 +2114,7 @@ def _introduce_noise(answer: str, options: list[str], rng: random.Random) -> str
         num = float(answer)
         num += rng.choice([-2, -1, 1, 2])
         return _format_number(num)
-    except Exception:
+    except (TypeError, ValueError):
         return answer
 
 
@@ -2146,8 +2149,8 @@ def _introduce_strategic_error(
                     i = rng.randint(0, len(s) - 2)
                     s = s[:i] + s[i + 1] + s[i] + s[i + 2:]
                 return s
-        except Exception:
-            pass
+        except (TypeError, ValueError) as exc:
+            logger.debug("Strategic error generation failed to parse numeric answer: %s", exc)
 
     return _introduce_noise(answer, options, rng)
 
@@ -2163,8 +2166,8 @@ def _parse_llm_answer(text: str) -> tuple[str, float]:
         answer = str(data.get("answer", ""))
         confidence = float(data.get("confidence", 0.5))
         return answer, _clamp(confidence)
-    except Exception:
-        pass
+    except (TypeError, ValueError, json.JSONDecodeError) as exc:
+        logger.debug("Failed to parse structured LLM answer payload: %s", exc)
     answer_match = re.search(r"answer\s*[:=]\s*([\-0-9\.]+)", text, re.I)
     confidence_match = re.search(r"confidence\s*[:=]\s*([0-9\.]+)", text, re.I)
     answer = answer_match.group(1) if answer_match else text.strip().split("\n")[-1]
@@ -2181,8 +2184,8 @@ def _normalize_answer(answer: str) -> str:
             if value.is_integer():
                 return str(int(value))
             return str(round(value, 4))
-        except Exception:
-            pass
+        except (TypeError, ValueError) as exc:
+            logger.debug("Failed to normalize numeric answer %r: %s", num_match[-1], exc)
     return answer.lower()
 
 
@@ -2191,7 +2194,7 @@ def _answers_match(pred: str, gold: str) -> bool:
     gold_norm = _normalize_answer(gold)
     try:
         return math.isclose(float(pred_norm), float(gold_norm), rel_tol=1e-3, abs_tol=1e-3)
-    except Exception:
+    except ValueError:
         return pred_norm == gold_norm
 
 
