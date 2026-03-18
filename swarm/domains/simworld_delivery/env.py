@@ -26,6 +26,9 @@ from swarm.domains.simworld_delivery.entities import (
 
 logger = logging.getLogger(__name__)
 
+# Distance threshold for considering an agent "at" a destination.
+ARRIVAL_DISTANCE_THRESHOLD = 0.1
+
 
 def _distance(a: Tuple[float, float], b: Tuple[float, float]) -> float:
     """Euclidean distance between two points."""
@@ -374,6 +377,7 @@ class DeliveryEnvironment:
         order.assigned_agent = partner.agent_id
         partner.current_order = order.order_id
         agent.orders_shared += 1
+        self._shared_orders[order.order_id] = agent.agent_id
 
         return DeliveryEvent(
             event_type="order_shared",
@@ -404,13 +408,22 @@ class DeliveryEnvironment:
             if order is None or order.status != OrderStatus.AVAILABLE:
                 continue
 
-            # Lowest bid wins (cheapest delivery)
+            # Lowest bid wins (cheapest delivery); fall through to
+            # next-best bidder if the winner is unavailable.
             bids.sort(key=lambda b: b.amount)
-            winner = bids[0]
-
-            # Check winner agent is still free
-            winner_agent = self._agents.get(winner.agent_id)
-            if winner_agent is None or winner_agent.current_order is not None:
+            winner = None
+            winner_agent = None
+            fee_rate = self._config.governance.delivery_fee_rate
+            for bid in bids:
+                candidate = self._agents.get(bid.agent_id)
+                if candidate is None or candidate.current_order is not None:
+                    continue
+                if candidate.budget < bid.amount * fee_rate:
+                    continue  # Can't afford the fee
+                winner = bid
+                winner_agent = candidate
+                break
+            if winner is None or winner_agent is None:
                 continue
 
             # Assign order
@@ -523,7 +536,7 @@ class DeliveryEnvironment:
 
             # Check if at destination
             dist_to_dest = _distance(agent.position, order.destination)
-            if dist_to_dest > 0.1:
+            if dist_to_dest > ARRIVAL_DISTANCE_THRESHOLD:
                 # Check for deadline failure
                 elapsed = self._current_step - order.created_step
                 if elapsed > order.deadline_steps:
@@ -545,7 +558,7 @@ class DeliveryEnvironment:
             else:
                 agent.on_time_deliveries += 1
                 agent.reputation = min(
-                    2.0, agent.reputation + gov.reputation_bonus_on_time,
+                    1.0, agent.reputation + gov.reputation_bonus_on_time,
                 )
 
             agent.budget += payout
@@ -715,7 +728,9 @@ class DeliveryEnvironment:
                         )
 
         self._current_epoch += 1
-        self._current_step = 0
+        # Note: _current_step is NOT reset — it stays monotonic so that
+        # elapsed-time calculations (current_step - created_step) remain
+        # correct for orders that survive across epoch boundaries.
 
         # Clear completed/failed/expired orders
         self._orders = {
@@ -733,9 +748,9 @@ class DeliveryEnvironment:
     @property
     def _shared_orders(self) -> Dict[str, str]:
         """Track which orders were shared and by whom."""
-        if not hasattr(self, "__shared_orders"):
-            self.__shared_orders: Dict[str, str] = {}
-        return self.__shared_orders
+        if not hasattr(self, "_shared_orders_map"):
+            self._shared_orders_map: Dict[str, str] = {}
+        return self._shared_orders_map
 
     # ------------------------------------------------------------------
     # Accessors

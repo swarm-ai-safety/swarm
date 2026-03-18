@@ -82,6 +82,9 @@ class DeliveryScenarioRunner:
         self._seed = seed or 42
         self._rng = random.Random(self._seed)
 
+        # Ensure environment uses the same seed for determinism
+        config.seed = self._seed
+
         # Initialize environment
         self._env = DeliveryEnvironment(config)
 
@@ -99,7 +102,7 @@ class DeliveryScenarioRunner:
                     "conscientious": PersonaType.CONSCIENTIOUS,
                     "aggressive": PersonaType.AGGRESSIVE,
                     "cautious": PersonaType.CAUTIOUS,
-                    "opportunistic": PersonaType.AGGRESSIVE,
+                    "opportunistic": PersonaType.OPPORTUNISTIC,
                 }
                 persona = persona_map.get(policy_name, PersonaType.CONSCIENTIOUS)
                 self._env.add_agent(agent_id, persona=persona)

@@ -29,6 +29,7 @@ class PersonaType(Enum):
     OPEN = "open"
     AGGRESSIVE = "aggressive"
     CAUTIOUS = "cautious"
+    OPPORTUNISTIC = "opportunistic"
 
 
 class OrderStatus(Enum):
