@@ -221,7 +221,8 @@ def compute_delivery_metrics(
     exploit_freq = len(exploit_events) / total_events
 
     # Governance cost ratio (fees / total earnings)
-    governance_cost = total_fees / max(total_earnings, 1e-9)
+    # Guard: if no meaningful earnings yet (e.g. epoch 0), ratio is 0.
+    governance_cost = total_fees / total_earnings if total_earnings > 1.0 else 0.0
 
     # Variance amplification
     if mean_earnings > 0:
