@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from swarm.analysis.adverse_selection import AdverseSelectionDetector
 from swarm.analysis.dashboard import (
     AgentSnapshot,
     DashboardConfig,
@@ -27,6 +28,10 @@ from swarm.analysis.sweep import (
     SweepResult,
     SweepRunner,
     quick_sweep,
+)
+from swarm.analysis.trust_network import (
+    TrustNetworkAnalyzer,
+    plot_trust_network,
 )
 
 if TYPE_CHECKING:
@@ -53,6 +58,8 @@ if TYPE_CHECKING:
     )
 
 __all__ = [
+    # Adverse selection
+    "AdverseSelectionDetector",
     # Sweep
     "SweepConfig",
     "SweepParameter",
@@ -77,6 +84,9 @@ __all__ = [
     "plot_enhanced_dashboard",
     "plot_enhanced_line",
     "plot_multi_scenario_dashboard",
+    # Trust network
+    "TrustNetworkAnalyzer",
+    "plot_trust_network",
     # Theme & colors
     "COLORS",
     "SWARM_STYLE",

@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **MiroFish graph memory patterns** — cross-run memory loading via `BaseAgent.load_prior_memory()` and `OrchestratorConfig.graph_memory_path`; `TrustNetworkAnalyzer` for clustering, isolation scores, and visualization; `ReputationGovernor` for reputation scores, trust-weighted fees, and collusion detection; `TrustDynamicsAnalyzer` for trust timelines, convergence/decay rates, and trust shock detection; 95 tests
+- **Adverse selection detection** (`swarm/analysis/adverse_selection.py`) — `AdverseSelectionDetector` class analyzing relationship graphs from `GraphMemoryStore` to identify exploitation patterns; 5 core methods compute quality gaps, flag exploited/exploiting agents, measure selection pressure, and generate ecosystem summary statistics; 21 comprehensive tests covering honest networks, exploiter-victim dynamics, mixed quality scenarios, and edge cases
+- **SimWorld delivery economy study** — multi-seed analysis (`examples/run_simworld_delivery_study.py`) showing adverse selection signal 0.486 and screening validation (`examples/run_simworld_screening_validation.py`) with separation quality 0.775 ± 0.053; trust network visualization (`swarm/analysis/trust_network.py`) with mypy fixes
+- **GEPA optimize_anything integration** — `swarm.analysis.gepa_optimizer` module that uses GEPA's LLM-guided Pareto-efficient search to optimize governance/payoff parameters against soft safety metrics; YAML-based candidate serialization with diagnostic ASI feedback; CLI entry point via `python -m swarm.analysis.gepa_optimizer`
+- **SwarmGym on-chain safety auditor** — CLI tool (`swarm_gym_cli.py`) with `generate`, `audit`, `attest`, and `verify` subcommands; auditor API endpoint (`POST /api/v1/audits/compute`); SafetyAttestation Solidity contract for Base (^0.8.24); Python web3.py client (`swarm/chain/attestation.py`); deployment script (`scripts/deploy_attestation.py`) supporting Base Sepolia and Mainnet; QUICKSTART documentation
+
 ### Changed
 - **Orchestrator pipeline/middleware refactoring** — extracted 3 new modules from the 2023-line orchestrator god object: `middleware.py` (7 lifecycle stages via `MiddlewarePipeline`), `handler_factory.py` (handler construction from config), `agent_scheduler.py` (turn order and eligibility); orchestrator is now a thin coordination loop delegating cross-cutting concerns to the middleware pipeline; public API preserved
 
