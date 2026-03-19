@@ -26,7 +26,6 @@ class PersonaType(Enum):
     """Agent personality types from SimWorld's Big Five mapping."""
 
     CONSCIENTIOUS = "conscientious"
-    OPEN = "open"
     AGGRESSIVE = "aggressive"
     CAUTIOUS = "cautious"
     OPPORTUNISTIC = "opportunistic"

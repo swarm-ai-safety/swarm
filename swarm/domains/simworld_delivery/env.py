@@ -395,7 +395,14 @@ class DeliveryEnvironment:
     # ------------------------------------------------------------------
 
     def _resolve_bids(self) -> List[DeliveryEvent]:
-        """Resolve pending bids: lowest bid wins (reverse auction)."""
+        """Resolve pending bids via reverse auction (lowest bid wins).
+
+        This models a procurement-style auction where the platform
+        wants the cheapest delivery. Aggressive agents that overbid
+        (bid > order value) will systematically lose because their
+        bids are higher. This is intentional: overbidding is a
+        resource-wasting strategy that the auction penalizes.
+        """
         events: List[DeliveryEvent] = []
 
         # Group bids by order

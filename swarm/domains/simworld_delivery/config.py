@@ -15,6 +15,12 @@ class CityConfig:
     num_depots: int = 3
     num_zones: int = 5
 
+    def __post_init__(self) -> None:
+        if self.width <= 0 or self.height <= 0:
+            raise ValueError("City dimensions must be positive")
+        if self.num_depots < 1:
+            raise ValueError("Must have at least 1 depot")
+
 
 @dataclass
 class OrderConfig:
@@ -28,6 +34,12 @@ class OrderConfig:
     min_weight: float = 0.5
     max_weight: float = 5.0
     expiry_steps: int = 5
+
+    def __post_init__(self) -> None:
+        if self.min_value < 0 or self.max_value < self.min_value:
+            raise ValueError("Order values must satisfy 0 <= min_value <= max_value")
+        if self.min_deadline_steps < 1 or self.max_deadline_steps < self.min_deadline_steps:
+            raise ValueError("Deadlines must satisfy 1 <= min <= max")
 
 
 @dataclass
@@ -43,6 +55,16 @@ class EconomyConfig:
     failed_delivery_penalty: float = 5.0
     sharing_bonus_fraction: float = 0.1
 
+    def __post_init__(self) -> None:
+        if self.starting_budget < 0:
+            raise ValueError("Starting budget must be non-negative")
+        if self.bid_floor < 0 or self.bid_ceiling < self.bid_floor:
+            raise ValueError("Bid bounds must satisfy 0 <= floor <= ceiling")
+        if not 0.0 <= self.late_penalty_fraction <= 1.0:
+            raise ValueError("late_penalty_fraction must be in [0, 1]")
+        if not 0.0 <= self.sharing_bonus_fraction <= 1.0:
+            raise ValueError("sharing_bonus_fraction must be in [0, 1]")
+
 
 @dataclass
 class GovernanceConfig:
@@ -54,6 +76,12 @@ class GovernanceConfig:
     reputation_penalty_late: float = 0.1
     reputation_penalty_fail: float = 0.2
     min_reputation_to_bid: float = 0.3
+
+    def __post_init__(self) -> None:
+        if not 0.0 <= self.delivery_fee_rate <= 1.0:
+            raise ValueError("delivery_fee_rate must be in [0, 1]")
+        if not 0.0 <= self.min_reputation_to_bid <= 1.0:
+            raise ValueError("min_reputation_to_bid must be in [0, 1]")
 
 
 @dataclass
