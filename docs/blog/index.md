@@ -23,6 +23,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 <div class="blog-post" data-tags="governance evaluation" markdown>
 
+**Mar 19** — [Halving the Entry Fee Breaks Screening Completely. Here's the Phase Transition.](screening-phase-transition-agent-lens.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
+
+We used agent-lens to run forked experiments across three governance regimes. Halving signing costs flips infiltration from 0% to 100% --- a sharp phase transition confirming Spence signaling theory. Screening is structurally perfect (zero variance across seeds) but economically fragile (welfare CV = 3.9).
+
+</div>
+
+<div class="blog-post" data-tags="governance evaluation" markdown>
+
 **Mar 16** — [SimWorld's Delivery Agents Look Profitable. They're Also Adversely Selected.](simworld-delivery-what-profit-misses.md)
 <span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
 
