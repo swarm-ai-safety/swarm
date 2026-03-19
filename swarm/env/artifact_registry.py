@@ -168,7 +168,7 @@ class ArtifactRegistry:
         (for wiring ``causal_parents``), or ``None`` if the artifact
         is not found.
         """
-        art = self._artifacts.get(artifact_id)
+        art: Artifact | None = self._artifacts.get(artifact_id)
         if art is None:
             return None
         art.consumed_by.append(interaction_id)

@@ -19,6 +19,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **Hyperagent self-modification scenario** (`scenarios/hyperagent_self_mod.yaml`, `swarm/agents/hyperagent_self_mod.py`) — agents modify own proxy weights and acceptance thresholds over time, creating growing governance gap; tracks weight shift toward gameable signals, quality decay, and local governance-gap estimate; 11 tests; ref: Zhang et al. Hyperagents (arXiv:2603.19461)
 - **SwarmGym on-chain safety auditor** — CLI tool (`swarm_gym_cli.py`) with `generate`, `audit`, `attest`, and `verify` subcommands; auditor API endpoint (`POST /api/v1/audits/compute`); SafetyAttestation Solidity contract for Base (^0.8.24); Python web3.py client (`swarm/chain/attestation.py`); deployment script (`scripts/deploy_attestation.py`) supporting Base Sepolia and Mainnet; QUICKSTART documentation
 
+### Fixed
+- **Missing `swarm/models/artifact.py`** — artifact model was referenced by handler, registry, and tests but never committed; fixes `ModuleNotFoundError` in CI (168 test failures + memory tests); also fixes `no-any-return` mypy error in `artifact_registry.py`
+
 ### Changed
 - **Orchestrator pipeline/middleware refactoring** — extracted 3 new modules from the 2023-line orchestrator god object: `middleware.py` (7 lifecycle stages via `MiddlewarePipeline`), `handler_factory.py` (handler construction from config), `agent_scheduler.py` (turn order and eligibility); orchestrator is now a thin coordination loop delegating cross-cutting concerns to the middleware pipeline; public API preserved
 
