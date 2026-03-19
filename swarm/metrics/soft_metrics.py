@@ -578,6 +578,49 @@ class SoftMetrics:
     # Variance / Uncertainty Metrics
     # =========================================================================
 
+    def synthesis_fraction(self, interactions: List[SoftInteraction]) -> float:
+        """
+        Compute synthesis fraction: ratio of multi-parent interactions to total.
+
+        Multi-parent interactions (causal_parents > 1) indicate emergent
+        cross-agent synthesis — an artifact consumed inputs from multiple
+        independent producers.  Higher synthesis fraction signals richer
+        coordination.
+
+        Inspired by Wang et al. (2026) Table 1 metric.
+
+        Args:
+            interactions: List of interactions
+
+        Returns:
+            Fraction in [0, 1], or 0.0 if no interactions
+        """
+        if not interactions:
+            return 0.0
+
+        multi_parent = sum(
+            1 for i in interactions if len(i.causal_parents) > 1
+        )
+        return multi_parent / len(interactions)
+
+    def synthesis_depth(self, interactions: List[SoftInteraction]) -> float:
+        """
+        Compute average DAG depth of multi-parent (synthesis) interactions.
+
+        Uses causal_parents length as a proxy for depth, since each parent
+        represents a consumed artifact from a prior interaction.
+
+        Args:
+            interactions: List of interactions
+
+        Returns:
+            Average parent count for synthesis interactions, or 0.0
+        """
+        synthesis = [i for i in interactions if len(i.causal_parents) > 1]
+        if not synthesis:
+            return 0.0
+        return sum(len(i.causal_parents) for i in synthesis) / len(synthesis)
+
     def quality_variance(
         self,
         interactions: List[SoftInteraction],

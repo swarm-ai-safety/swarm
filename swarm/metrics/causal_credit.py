@@ -68,6 +68,10 @@ class CausalCreditEngine:
             for pid in parents:
                 self._children[pid].append(iid)
 
+    def get_interaction(self, interaction_id: str) -> Optional[SoftInteraction]:
+        """Look up an indexed interaction by ID."""
+        return self._interactions.get(interaction_id)
+
     # ------------------------------------------------------------------
     # Traversal
     # ------------------------------------------------------------------

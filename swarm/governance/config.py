@@ -231,6 +231,13 @@ class GovernanceConfig(BaseModel):
     resample_compute_cost: float = 0.01  # per-sample compute surcharge
     resample_evidence_decay: float = 0.9  # per-epoch evidence decay factor
     resample_evidence_rep_weight: float = 0.5  # reputation penalty per evidence unit
+    # Cascade risk lever (artifact chain governance)
+    cascade_risk_enabled: bool = False
+    cascade_risk_threshold: float = 0.5  # Min cascade risk to trigger penalty
+    cascade_risk_penalty_scale: float = 1.0  # Cost multiplier
+    cascade_risk_reputation_scale: float = 0.5  # Reputation penalty multiplier
+    cascade_risk_p_threshold: float = 0.3  # Descendants below this p are "bad"
+    cascade_risk_window: int = 200  # Rolling interaction window for DAG analysis
 
     @model_validator(mode="after")
     def _run_validation(self) -> "GovernanceConfig":
@@ -497,3 +504,14 @@ class GovernanceConfig(BaseModel):
             raise ValueError("resample_evidence_decay must be in [0, 1]")
         if self.resample_evidence_rep_weight < 0:
             raise ValueError("resample_evidence_rep_weight must be non-negative")
+        # Cascade risk validation
+        if not 0.0 <= self.cascade_risk_threshold <= 1.0:
+            raise ValueError("cascade_risk_threshold must be in [0, 1]")
+        if self.cascade_risk_penalty_scale < 0:
+            raise ValueError("cascade_risk_penalty_scale must be non-negative")
+        if self.cascade_risk_reputation_scale < 0:
+            raise ValueError("cascade_risk_reputation_scale must be non-negative")
+        if not 0.0 <= self.cascade_risk_p_threshold <= 1.0:
+            raise ValueError("cascade_risk_p_threshold must be in [0, 1]")
+        if self.cascade_risk_window < 1:
+            raise ValueError("cascade_risk_window must be >= 1")
