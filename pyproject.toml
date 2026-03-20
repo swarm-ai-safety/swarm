@@ -118,6 +118,9 @@ langgraph = [
 evolve = [
     "darwinian-evolver @ git+https://github.com/imbue-ai/darwinian_evolver.git",
 ]
+gepa = [
+    "gepa>=0.1.0",
+]
 prime_intellect = [
     "prime>=0.1.0",
     "verifiers>=0.1.0",
