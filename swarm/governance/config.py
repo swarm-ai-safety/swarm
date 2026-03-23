@@ -216,6 +216,17 @@ class GovernanceConfig(BaseModel):
         50  # Window of recent interactions for correlation
     )
 
+    # Resample protocol (Bhatt et al., 2025 — "Ctrl-Z")
+    resample_enabled: bool = False
+    resample_suspicion_threshold: float = 0.6  # suspicion >= this triggers resample
+    resample_n_samples: int = 3  # additional samples drawn on flag
+    resample_trajectory_analysis: bool = False  # use trajectory context for suspicion
+    resample_trajectory_window: int = 5  # recent interactions for trend analysis
+    resample_incrimination_threshold: float = 2.0  # cumulative evidence to freeze agent
+    resample_compute_cost: float = 0.01  # per-sample compute surcharge
+    resample_evidence_decay: float = 0.9  # per-epoch evidence decay factor
+    resample_evidence_rep_weight: float = 0.5  # reputation penalty per evidence unit
+
     @model_validator(mode="after")
     def _run_validation(self) -> "GovernanceConfig":
         self._check_values()
@@ -461,3 +472,19 @@ class GovernanceConfig(BaseModel):
             raise ValueError("diversity_audit_cost must be non-negative")
         if self.diversity_correlation_window < 1:
             raise ValueError("diversity_correlation_window must be >= 1")
+
+        # Resample protocol validation
+        if not 0.0 <= self.resample_suspicion_threshold <= 1.0:
+            raise ValueError("resample_suspicion_threshold must be in [0, 1]")
+        if self.resample_n_samples < 1:
+            raise ValueError("resample_n_samples must be >= 1")
+        if self.resample_trajectory_window < 2:
+            raise ValueError("resample_trajectory_window must be >= 2")
+        if self.resample_incrimination_threshold <= 0:
+            raise ValueError("resample_incrimination_threshold must be positive")
+        if self.resample_compute_cost < 0:
+            raise ValueError("resample_compute_cost must be non-negative")
+        if not 0.0 <= self.resample_evidence_decay <= 1.0:
+            raise ValueError("resample_evidence_decay must be in [0, 1]")
+        if self.resample_evidence_rep_weight < 0:
+            raise ValueError("resample_evidence_rep_weight must be non-negative")

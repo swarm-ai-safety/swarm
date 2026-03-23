@@ -781,7 +781,18 @@ class Orchestrator:
     # ===================================================================
 
     def _select_action(self, agent: BaseAgent, observation: Observation) -> Action:
-        """Select an action, optionally using governance ensembling."""
+        """Select an action, optionally using governance ensembling or resampling."""
+        action = self._select_action_base(agent, observation)
+
+        # --- Resample protocol (Bhatt et al., 2025) ---
+        # Conditionally resample when the monitor flags suspicion based on
+        # the agent's recent trajectory and reputation.
+        action = self._maybe_resample(agent, observation, action)
+
+        return action
+
+    def _select_action_base(self, agent: BaseAgent, observation: Observation) -> Action:
+        """Core action selection with optional self-ensemble."""
         if (
             self.governance_engine is None
             or not self.governance_engine.config.self_ensemble_enabled
@@ -793,6 +804,53 @@ class Orchestrator:
         candidate_actions = [agent.act(observation) for _ in range(samples)]
         selected = self._majority_action(candidate_actions)
         selected.metadata["ensemble_samples"] = samples
+        return selected
+
+    def _maybe_resample(
+        self,
+        agent: BaseAgent,
+        observation: Observation,
+        original_action: Action,
+    ) -> Action:
+        """Apply resample protocol if suspicion warrants it.
+
+        Uses the agent's reputation as a pre-execution proxy for p,
+        since actual p is only available after handler execution.
+        """
+        if self.governance_engine is None:
+            return original_action
+
+        resample_lever = self.governance_engine.get_resample_lever()
+        if resample_lever is None:
+            return original_action
+
+        # Pre-execution suspicion: use agent reputation as p proxy
+        agent_state = self.state.agents.get(agent.agent_id)
+        if agent_state is None:
+            return original_action
+
+        # Map reputation [-1, 1] to p-proxy [0, 1]
+        p_proxy = max(0.0, min(1.0, 0.5 + agent_state.reputation * 0.5))
+
+        if not resample_lever.should_resample(p_proxy, agent.agent_id):
+            return original_action
+
+        # Resample: draw additional action samples
+        n_samples = self.governance_engine.config.resample_n_samples
+        resample_actions = [agent.act(observation) for _ in range(n_samples)]
+
+        all_actions = [original_action] + resample_actions
+        selected = self._majority_action(all_actions)
+
+        # Annotate with resample metadata for the lever to process later
+        was_blocked = self._action_signature(selected) != self._action_signature(original_action)
+        selected.metadata["resample_triggered"] = True
+        selected.metadata["resample_n_samples"] = n_samples
+        selected.metadata["resample_blocked"] = was_blocked
+        # Store p-proxy values for each sample for incrimination analysis
+        # (actual p values will be filled post-execution by the lever)
+        selected.metadata["resample_p_proxy"] = p_proxy
+
         return selected
 
     async def _select_action_async(
@@ -910,6 +968,14 @@ class Orchestrator:
             if submission is not None:
                 ground_truth_val = -1 if submission.is_cheat else 1
 
+        # Merge handler metadata with action metadata (resample annotations)
+        merged_metadata = dict(result.metadata or {})
+        if action.metadata:
+            for key in ("resample_triggered", "resample_n_samples",
+                        "resample_blocked", "resample_p_proxy"):
+                if key in action.metadata:
+                    merged_metadata[key] = action.metadata[key]
+
         interaction = SoftInteraction(
             initiator=result.initiator_id,
             counterparty=result.counterparty_id,
@@ -923,7 +989,7 @@ class Orchestrator:
             v_hat=v_hat,
             p=p,
             tau=tau,
-            metadata=result.metadata or {},
+            metadata=merged_metadata,
             **({"ground_truth": ground_truth_val} if ground_truth_val is not None else {}),
         )
 
