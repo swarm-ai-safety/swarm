@@ -35,6 +35,23 @@ guardrails:
     assert spec.guardrails[0].metric == "toxicity_rate"
 
 
+def test_parse_objective_max_decrease_guardrail(tmp_path: Path) -> None:
+    """max_decrease-only guardrails should default max_regression to inf."""
+    f = tmp_path / "obj.yaml"
+    f.write_text(
+        "primary_metric: quality_gap\n"
+        "guardrails:\n"
+        "  - metric: total_welfare\n"
+        "    max_decrease: 5.0\n",
+        encoding="utf-8",
+    )
+    spec = parse_objective(f)
+    assert len(spec.guardrails) == 1
+    g = spec.guardrails[0]
+    assert g.max_decrease == 5.0
+    assert g.max_regression == float("inf")
+
+
 def test_is_better_for_minimize_and_maximize() -> None:
     assert _is_better(candidate=0.2, baseline=0.3, direction="minimize", min_improvement=0.05)
     assert not _is_better(candidate=0.27, baseline=0.3, direction="minimize", min_improvement=0.05)
@@ -51,3 +68,29 @@ def test_guardrail_regression_detection() -> None:
     )
     assert not ok
     assert errors
+
+
+def test_guardrail_max_decrease_rejects_welfare_drop() -> None:
+    """max_decrease catches metrics that should not go down (e.g. total_welfare)."""
+    baseline = EvalSummary(primary_metric="quality_gap", metrics={"total_welfare": 100.0})
+    candidate = EvalSummary(primary_metric="quality_gap", metrics={"total_welfare": 90.0})
+    ok, errors = _guardrails_ok(
+        baseline,
+        candidate,
+        [Guardrail(metric="total_welfare", max_decrease=5.0)],
+    )
+    assert not ok
+    assert "decreased by" in errors[0]
+
+
+def test_guardrail_max_decrease_accepts_welfare_increase() -> None:
+    """max_decrease should not reject welfare increases."""
+    baseline = EvalSummary(primary_metric="quality_gap", metrics={"total_welfare": 100.0})
+    candidate = EvalSummary(primary_metric="quality_gap", metrics={"total_welfare": 110.0})
+    ok, errors = _guardrails_ok(
+        baseline,
+        candidate,
+        [Guardrail(metric="total_welfare", max_regression=float("inf"), max_decrease=0.0)],
+    )
+    assert ok
+    assert not errors

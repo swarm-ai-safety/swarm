@@ -25,10 +25,16 @@ from swarm.scenarios.loader import build_orchestrator, load_scenario
 
 @dataclass
 class Guardrail:
-    """Constraint on metric regression relative to baseline."""
+    """Constraint on metric regression relative to baseline.
+
+    Use ``max_regression`` for metrics where higher is worse (e.g. toxicity_rate).
+    Use ``max_decrease`` for metrics where lower is worse (e.g. total_welfare).
+    If both are set, both constraints are enforced.
+    """
 
     metric: str
-    max_regression: float
+    max_regression: float = 0.0
+    max_decrease: float = float("inf")
 
 
 @dataclass
@@ -101,8 +107,21 @@ def parse_objective(path: str | Path) -> ObjectiveSpec:
             metric = str(item.get("metric", "")).strip()
             if not metric:
                 continue
+            has_max_regression = "max_regression" in item
+            has_max_decrease = "max_decrease" in item
+            # Default max_regression to inf when only max_decrease is specified
+            # (and vice-versa) so users don't get unexpected rejections.
+            if has_max_decrease and not has_max_regression:
+                mr = float("inf")
+            else:
+                mr = float(item.get("max_regression", 0.0))
+            md = float(item.get("max_decrease", float("inf")))
             guardrails.append(
-                Guardrail(metric=metric, max_regression=float(item.get("max_regression", 0.0)))
+                Guardrail(
+                    metric=metric,
+                    max_regression=mr,
+                    max_decrease=md,
+                )
             )
 
     return ObjectiveSpec(
@@ -199,10 +218,15 @@ def _guardrails_ok(baseline: EvalSummary, candidate: EvalSummary, guardrails: li
     for g in guardrails:
         base = baseline.metrics.get(g.metric, 0.0)
         cand = candidate.metrics.get(g.metric, 0.0)
-        regression = cand - base
-        if regression > g.max_regression:
+        increase = cand - base
+        if increase > g.max_regression:
             errors.append(
-                f"{g.metric} regressed by {regression:.4f} > allowed {g.max_regression:.4f}"
+                f"{g.metric} increased by {increase:.4f} > allowed {g.max_regression:.4f}"
+            )
+        decrease = base - cand
+        if decrease > g.max_decrease:
+            errors.append(
+                f"{g.metric} decreased by {decrease:.4f} > allowed {g.max_decrease:.4f}"
             )
     return (len(errors) == 0, errors)
 

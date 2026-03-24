@@ -8,7 +8,7 @@ guardrails:
   - metric: toxicity_rate
     max_regression: 0.01
   - metric: total_welfare
-    max_regression: 0.0
+    max_decrease: 0.0
 ```
 
 Use with:
