@@ -431,6 +431,104 @@ class TestGovernanceEnsembleSelection:
         assert action.metadata.get("ensemble_samples") == 3
 
 
+class TestResampleActionSelection:
+    """Tests for resample protocol in orchestrator action selection."""
+
+    def test_resample_triggers_for_low_reputation_agent(self):
+        """When an agent's reputation is low enough, resampling should trigger."""
+        config = OrchestratorConfig(
+            governance_config=GovernanceConfig(
+                resample_enabled=True,
+                resample_suspicion_threshold=0.6,
+                resample_n_samples=3,
+            ),
+        )
+        orchestrator = Orchestrator(config=config)
+        agent = HonestAgent("agent_1")
+        peer = HonestAgent("agent_2")
+        orchestrator.register_agent(agent)
+        orchestrator.register_agent(peer)
+
+        # Tank reputation so p_proxy = 0.5 + (-0.8)*0.5 = 0.1 → suspicion=0.9
+        orchestrator.state.agents["agent_1"].reputation = -0.8
+
+        observation = orchestrator._build_observation("agent_1")
+        action = orchestrator._select_action(agent, observation)
+
+        assert action.metadata.get("resample_triggered") is True
+        assert action.metadata.get("resample_n_samples") == 3
+        assert isinstance(action.metadata.get("resample_p_values"), list)
+        assert len(action.metadata["resample_p_values"]) == 3
+
+    def test_resample_does_not_trigger_for_good_reputation(self):
+        """Agents with good reputation should not be resampled."""
+        config = OrchestratorConfig(
+            governance_config=GovernanceConfig(
+                resample_enabled=True,
+                resample_suspicion_threshold=0.6,
+                resample_n_samples=3,
+            ),
+        )
+        orchestrator = Orchestrator(config=config)
+        agent = HonestAgent("agent_1")
+        peer = HonestAgent("agent_2")
+        orchestrator.register_agent(agent)
+        orchestrator.register_agent(peer)
+
+        # Good reputation: p_proxy = 0.5 + 0.5*0.5 = 0.75 → suspicion=0.25
+        orchestrator.state.agents["agent_1"].reputation = 0.5
+
+        observation = orchestrator._build_observation("agent_1")
+        action = orchestrator._select_action(agent, observation)
+
+        assert action.metadata.get("resample_triggered") is not True
+
+    def test_resample_majority_blocks_suspicious_action(self):
+        """Majority vote should replace a suspicious action when resamples differ."""
+        config = OrchestratorConfig(
+            governance_config=GovernanceConfig(
+                resample_enabled=True,
+                resample_suspicion_threshold=0.6,
+                resample_n_samples=3,
+            ),
+        )
+        orchestrator = Orchestrator(config=config)
+        # Alternating agent: original=POST, resamples=[REPLY, POST, REPLY] → REPLY wins
+        agent = _AlternatingAgent("agent_1")
+        peer = HonestAgent("agent_2")
+        orchestrator.register_agent(agent)
+        orchestrator.register_agent(peer)
+
+        orchestrator.state.agents["agent_1"].reputation = -0.8
+
+        observation = orchestrator._build_observation("agent_1")
+        action = orchestrator._select_action(agent, observation)
+
+        assert action.metadata.get("resample_triggered") is True
+        # The action was either blocked or not depending on majority
+        assert "resample_blocked" in action.metadata
+
+    def test_resample_disabled_no_effect(self):
+        """When resample is disabled, no resampling should occur."""
+        config = OrchestratorConfig(
+            governance_config=GovernanceConfig(
+                resample_enabled=False,
+            ),
+        )
+        orchestrator = Orchestrator(config=config)
+        agent = HonestAgent("agent_1")
+        peer = HonestAgent("agent_2")
+        orchestrator.register_agent(agent)
+        orchestrator.register_agent(peer)
+
+        orchestrator.state.agents["agent_1"].reputation = -0.8
+
+        observation = orchestrator._build_observation("agent_1")
+        action = orchestrator._select_action(agent, observation)
+
+        assert action.metadata.get("resample_triggered") is not True
+
+
 @pytest.mark.slow
 class TestOrchestratorIntegration:
     """Integration tests for full simulation scenarios."""

@@ -182,11 +182,11 @@ class ResampleLever(GovernanceLever):
             cost_a = self.config.resample_compute_cost * resample_count
 
             # Process incrimination from resample data.
-            # resample_p_values may be set explicitly (e.g. in tests),
-            # otherwise use the pre-execution p_proxy as evidence.
+            # The orchestrator populates resample_p_values with per-sample
+            # reputation proxies at action-selection time.  Fall back to
+            # the scalar p_proxy (or interaction.p) only for legacy data.
             resample_p_values = interaction.metadata.get("resample_p_values", [])
             if not resample_p_values:
-                # Use p_proxy from the pre-execution reputation signal
                 p_proxy = interaction.metadata.get("resample_p_proxy", interaction.p)
                 resample_p_values = [p_proxy] * resample_count
 

@@ -452,6 +452,18 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
             "rbac_high_stakes_penalty_multiplier", 2.0
         ),
         rbac_role_action_map=data.get("rbac_role_action_map", {}),
+        # Resample protocol (Bhatt et al., 2025 — "Ctrl-Z")
+        resample_enabled=data.get("resample_enabled", False),
+        resample_suspicion_threshold=data.get("resample_suspicion_threshold", 0.6),
+        resample_n_samples=data.get("resample_n_samples", 3),
+        resample_trajectory_analysis=data.get("resample_trajectory_analysis", False),
+        resample_trajectory_window=data.get("resample_trajectory_window", 5),
+        resample_incrimination_threshold=data.get(
+            "resample_incrimination_threshold", 2.0
+        ),
+        resample_compute_cost=data.get("resample_compute_cost", 0.01),
+        resample_evidence_decay=data.get("resample_evidence_decay", 0.9),
+        resample_evidence_rep_weight=data.get("resample_evidence_rep_weight", 0.5),
     )
     # Pydantic auto-validates
     return config

@@ -847,24 +847,29 @@ class Orchestrator:
         selected.metadata["resample_triggered"] = True
         selected.metadata["resample_n_samples"] = n_samples
         selected.metadata["resample_blocked"] = was_blocked
-        # Store p-proxy values for each sample for incrimination analysis
-        # (actual p values will be filled post-execution by the lever)
+        # Store per-sample p-proxy values for incrimination analysis.
+        # Pre-execution, we only have the reputation-based proxy; each
+        # resampled action inherits this same proxy since true p is
+        # unavailable until after handler execution.
         selected.metadata["resample_p_proxy"] = p_proxy
+        selected.metadata["resample_p_values"] = [p_proxy] * n_samples
 
         return selected
 
     async def _select_action_async(
         self, agent: BaseAgent, observation: Observation
     ) -> Action:
-        """Async action selection with optional governance ensembling."""
+        """Async action selection with optional governance ensembling and resampling."""
         if (
             self.governance_engine is None
             or not self.governance_engine.config.self_ensemble_enabled
             or self.governance_engine.config.self_ensemble_samples <= 1
         ):
             if self._is_llm_agent(agent):
-                return await agent.act_async(observation)  # type: ignore[attr-defined, no-any-return]
-            return agent.act(observation)  # type: ignore[no-any-return]
+                action = await agent.act_async(observation)  # type: ignore[attr-defined, no-any-return]
+            else:
+                action = agent.act(observation)  # type: ignore[no-any-return]
+            return await self._maybe_resample_async(agent, observation, action)
 
         samples = self.governance_engine.config.self_ensemble_samples
         candidate_actions: List[Action] = []
@@ -876,6 +881,49 @@ class Orchestrator:
 
         selected = self._majority_action(candidate_actions)
         selected.metadata["ensemble_samples"] = samples
+        return await self._maybe_resample_async(agent, observation, selected)
+
+    async def _maybe_resample_async(
+        self,
+        agent: BaseAgent,
+        observation: Observation,
+        original_action: Action,
+    ) -> Action:
+        """Async version of :meth:`_maybe_resample`."""
+        if self.governance_engine is None:
+            return original_action
+
+        resample_lever = self.governance_engine.get_resample_lever()
+        if resample_lever is None:
+            return original_action
+
+        agent_state = self.state.agents.get(agent.agent_id)
+        if agent_state is None:
+            return original_action
+
+        p_proxy = max(0.0, min(1.0, 0.5 + agent_state.reputation * 0.5))
+
+        if not resample_lever.should_resample(p_proxy, agent.agent_id):
+            return original_action
+
+        n_samples = self.governance_engine.config.resample_n_samples
+        resample_actions: List[Action] = []
+        for _ in range(n_samples):
+            if self._is_llm_agent(agent):
+                resample_actions.append(await agent.act_async(observation))  # type: ignore[attr-defined]
+            else:
+                resample_actions.append(agent.act(observation))
+
+        all_actions = [original_action] + resample_actions
+        selected = self._majority_action(all_actions)
+
+        was_blocked = self._action_signature(selected) != self._action_signature(original_action)
+        selected.metadata["resample_triggered"] = True
+        selected.metadata["resample_n_samples"] = n_samples
+        selected.metadata["resample_blocked"] = was_blocked
+        selected.metadata["resample_p_proxy"] = p_proxy
+        selected.metadata["resample_p_values"] = [p_proxy] * n_samples
+
         return selected
 
     def _majority_action(self, actions: List[Action]) -> Action:
