@@ -37,8 +37,8 @@ from swarm.governance.moltipedia import (
 )
 from swarm.governance.rbac import RBACLever
 from swarm.governance.refinery import RefineryLever
-from swarm.governance.resample import ResampleLever
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever
+from swarm.governance.resample import ResampleLever
 from swarm.governance.security import SecurityLever
 from swarm.governance.self_modification import SelfModificationLever
 from swarm.governance.taxes import TransactionTaxLever
