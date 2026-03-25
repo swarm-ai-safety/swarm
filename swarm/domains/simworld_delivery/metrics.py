@@ -7,7 +7,6 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Dict, List
 
 from swarm.domains.simworld_delivery.entities import AgentState, DeliveryEvent
 
@@ -52,6 +51,10 @@ class DeliveryMetrics:
     mean_reputation: float = 0.0
     reputation_variance: float = 0.0
 
+    # Soft label metrics
+    mean_p: float = 0.0
+    mean_v_hat: float = 0.0
+
     # SWARM safety
     adverse_selection_signal: float = 0.0
     exploit_frequency: float = 0.0
@@ -83,6 +86,8 @@ class DeliveryMetrics:
             "sharing_rate": self.sharing_rate,
             "mean_reputation": self.mean_reputation,
             "reputation_variance": self.reputation_variance,
+            "mean_p": self.mean_p,
+            "mean_v_hat": self.mean_v_hat,
             "adverse_selection_signal": self.adverse_selection_signal,
             "exploit_frequency": self.exploit_frequency,
             "governance_cost_ratio": self.governance_cost_ratio,
@@ -90,7 +95,7 @@ class DeliveryMetrics:
         }
 
 
-def compute_gini(values: List[float]) -> float:
+def compute_gini(values: list[float]) -> float:
     """Compute Gini coefficient from a list of values."""
     n = len(values)
     if n == 0:
@@ -108,8 +113,8 @@ def compute_gini(values: List[float]) -> float:
 
 
 def compute_delivery_metrics(
-    agents: Dict[str, AgentState],
-    events: List[DeliveryEvent],
+    agents: dict[str, AgentState],
+    events: list[DeliveryEvent],
     epoch: int,
 ) -> DeliveryMetrics:
     """Compute all metrics for one epoch.
@@ -147,7 +152,7 @@ def compute_delivery_metrics(
     on_time_rate = on_time_count / max(delivered, 1)
 
     # Economics — derive per-epoch values from events, not cumulative agent state
-    epoch_earnings: Dict[str, float] = dict.fromkeys(agents, 0.0)
+    epoch_earnings: dict[str, float] = dict.fromkeys(agents, 0.0)
     for e in events:
         if e.event_type == "delivery_complete":
             epoch_earnings[e.agent_id] = (
@@ -209,6 +214,18 @@ def compute_delivery_metrics(
     reps = [a.reputation for a in agents.values()]
     mean_rep = sum(reps) / n
     rep_var = sum((r - mean_rep) ** 2 for r in reps) / n
+
+    # Soft label metrics (p and v_hat from delivery_complete events)
+    p_values = [
+        e.details.get("p", 0.0)
+        for e in events if e.event_type == "delivery_complete"
+    ]
+    v_hat_values = [
+        e.details.get("v_hat", 0.0)
+        for e in events if e.event_type == "delivery_complete"
+    ]
+    mean_p = sum(p_values) / len(p_values) if p_values else 0.0
+    mean_v_hat = sum(v_hat_values) / len(v_hat_values) if v_hat_values else 0.0
 
     # SWARM safety metrics
     # Adverse selection: do low-reputation agents get more high-value orders?
@@ -272,6 +289,8 @@ def compute_delivery_metrics(
         sharing_rate=sharing_rate,
         mean_reputation=mean_rep,
         reputation_variance=rep_var,
+        mean_p=mean_p,
+        mean_v_hat=mean_v_hat,
         adverse_selection_signal=adverse_signal,
         exploit_frequency=exploit_freq,
         governance_cost_ratio=governance_cost,
