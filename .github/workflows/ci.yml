@@ -29,6 +29,7 @@ jobs:
 
   test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12"]
@@ -50,12 +51,12 @@ jobs:
           if_no_artifact_found: ignore
       - name: Record testmon metadata (no coverage)
         if: github.ref == 'refs/heads/main'
-        run: python scripts/test_changes.py --full -- pytest tests/ -v -n auto -p no:pytest_cov
+        run: python scripts/test_changes.py --full -- pytest tests/ -v -n auto --timeout=300 -p no:pytest_cov
       - name: Ensure testmon data exists
         if: github.ref == 'refs/heads/main'
         run: test -f .testmondata
       - name: Run tests with coverage (testmon disabled)
-        run: pytest tests/ -v -n auto --cov=swarm --cov-report=term-missing --cov-fail-under=70 -p no:testmon
+        run: pytest tests/ -v -n auto --timeout=300 --cov=swarm --cov-report=term-missing --cov-fail-under=70 -p no:testmon
       - name: Upload testmon data
         if: success()
         uses: actions/upload-artifact@v7
