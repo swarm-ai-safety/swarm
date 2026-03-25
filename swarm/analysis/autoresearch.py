@@ -16,7 +16,7 @@ import textwrap
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, cast
+from typing import Any
 
 import yaml
 
@@ -115,9 +115,14 @@ def parse_objective(path: str | Path) -> ObjectiveSpec:
 
 def _parse_structured_text(text: str, suffix: str) -> dict[str, Any]:
     if suffix == ".json":
-        return cast(dict[str, Any], json.loads(text))
-    parsed: Any = yaml.safe_load(text)
-    return cast(dict[str, Any], parsed if isinstance(parsed, dict) else {})
+        result = json.loads(text)
+        if not isinstance(result, dict):
+            raise ObjectiveParseError("JSON content must decode to a mapping")
+        return result
+    parsed = yaml.safe_load(text)
+    if not isinstance(parsed, dict):
+        return {}
+    return parsed
 
 
 def _parse_markdown_objective(text: str) -> dict[str, Any]:
@@ -149,7 +154,7 @@ def _parse_markdown_objective(text: str) -> dict[str, Any]:
 
 
 def evaluate_candidate(
-    scenario,
+    scenario: Any,
     seeds: list[int],
     eval_epochs: int,
     eval_steps: int,
@@ -207,7 +212,7 @@ def _guardrails_ok(baseline: EvalSummary, candidate: EvalSummary, guardrails: li
     return (len(errors) == 0, errors)
 
 
-def _mutate_governance(scenario, rng: random.Random) -> tuple[str, Any, Any]:
+def _mutate_governance(scenario: Any, rng: random.Random) -> tuple[str, Any, Any]:
     """Apply a single random governance mutation and return mutation details."""
     gov = scenario.orchestrator_config.governance_config
     if rng.random() < 0.7:
