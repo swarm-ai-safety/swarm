@@ -2,22 +2,23 @@
 
 from __future__ import annotations
 
+import threading
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 
 import pytest
 
+from swarm.attestation.middleware import AttestationMiddleware
 from swarm.attestation.receipt import (
     AdmissibilityReceipt,
     ExecutionBounds,
     PolicyCompliance,
+    PolicySeverity,
     ReceiptStatus,
 )
-from swarm.attestation.signer import ReceiptSigner, ReceiptVerifier
-from swarm.attestation.middleware import AttestationMiddleware
 from swarm.attestation.relay import ReceiptRelay, RelayMessage
+from swarm.attestation.signer import ReceiptSigner, ReceiptVerifier
 from swarm.models.events import Event, EventType
-
 
 # ------------------------------------------------------------------ #
 # Fixtures
@@ -53,17 +54,15 @@ def sample_payload():
 
 def _make_pending_receipt(agent_id="agent-1", payload=None):
     payload = payload or {"key": "value"}
-    now = datetime.utcnow()
     payload_hash = AdmissibilityReceipt.hash_payload(payload)
     receipt_id = AdmissibilityReceipt.generate_receipt_id(
         agent_id=agent_id,
         action_type="interaction_completed",
         payload_hash=payload_hash,
-        timestamp=now,
     )
     return AdmissibilityReceipt(
         receipt_id=receipt_id,
-        timestamp=now,
+        timestamp=datetime(2025, 6, 1, 12, 0, 0),
         agent_id=agent_id,
         action_type="interaction_completed",
         payload_hash=payload_hash,
@@ -83,11 +82,26 @@ class TestAdmissibilityReceipt:
         assert h1 == h2
 
     def test_generate_receipt_id_deterministic(self):
-        ts = datetime(2025, 1, 1, 0, 0, 0)
-        id1 = AdmissibilityReceipt.generate_receipt_id("a", "t", "h", ts)
-        id2 = AdmissibilityReceipt.generate_receipt_id("a", "t", "h", ts)
+        """Receipt IDs are reproducible — same inputs always yield the same ID."""
+        id1 = AdmissibilityReceipt.generate_receipt_id("a", "t", "h")
+        id2 = AdmissibilityReceipt.generate_receipt_id("a", "t", "h")
         assert id1 == id2
         assert len(id1) == 24
+
+    def test_generate_receipt_id_no_timestamp_dependency(self):
+        """Receipt ID must not depend on wall-clock time (reproducibility)."""
+        id1 = AdmissibilityReceipt.generate_receipt_id("a", "t", "h")
+        # Call again at a different moment — should still be identical
+        id2 = AdmissibilityReceipt.generate_receipt_id("a", "t", "h")
+        assert id1 == id2
+
+    def test_generate_receipt_id_includes_parents(self):
+        """Different parent_receipt_ids produce different receipt IDs."""
+        id_no_parents = AdmissibilityReceipt.generate_receipt_id("a", "t", "h")
+        id_with_parents = AdmissibilityReceipt.generate_receipt_id(
+            "a", "t", "h", parent_receipt_ids=["parent-1"]
+        )
+        assert id_no_parents != id_with_parents
 
     def test_is_admissible_pending(self):
         r = _make_pending_receipt()
@@ -110,6 +124,13 @@ class TestAdmissibilityReceipt:
         sealed = signer.seal(r)
         assert not sealed.is_admissible()
 
+    def test_is_admissible_revoked(self, signer):
+        """REVOKED receipts are never admissible."""
+        r = _make_pending_receipt()
+        sealed = signer.seal(r)
+        revoked = sealed.model_copy(update={"status": ReceiptStatus.REVOKED})
+        assert not revoked.is_admissible()
+
     def test_canonical_bytes_excludes_signature(self):
         r = _make_pending_receipt()
         b1 = r.canonical_bytes()
@@ -127,6 +148,31 @@ class TestAdmissibilityReceipt:
             ExecutionBounds(max_resource_spend=-1.0)
         with pytest.raises(ValueError, match="non-negative"):
             ExecutionBounds(max_delegation_depth=-1)
+
+    def test_confidence_validation(self):
+        """confidence must be in [0, 1]."""
+        r = _make_pending_receipt()
+        r_with_conf = r.model_copy(update={"confidence": 0.8})
+        assert r_with_conf.confidence == 0.8
+
+        with pytest.raises(ValueError, match="confidence must be in"):
+            AdmissibilityReceipt(
+                receipt_id="test",
+                agent_id="a",
+                action_type="t",
+                payload_hash="h",
+                confidence=1.5,
+            )
+
+    def test_policy_severity_default(self):
+        pc = PolicyCompliance(policy_id="p1", passed=True)
+        assert pc.severity == PolicySeverity.ERROR
+
+    def test_policy_severity_custom(self):
+        pc = PolicyCompliance(
+            policy_id="p1", passed=False, severity=PolicySeverity.WARNING
+        )
+        assert pc.severity == PolicySeverity.WARNING
 
 
 # ------------------------------------------------------------------ #
@@ -219,6 +265,7 @@ class TestAttestationMiddleware:
             return PolicyCompliance(
                 policy_id="strict-policy",
                 passed=False,
+                severity=PolicySeverity.CRITICAL,
                 details={"reason": "test failure"},
             )
 
@@ -249,6 +296,17 @@ class TestAttestationMiddleware:
         found = mw.get_receipts_for_event(sample_event.event_id)
         assert len(found) == 1
         assert found[0].receipt_id == receipt.receipt_id
+
+    def test_event_callback_fires(self, signer, sample_event, sample_payload):
+        """Middleware emits RECEIPT_SEALED events via the callback."""
+        emitted = []
+        mw = AttestationMiddleware(
+            signer=signer, event_callback=lambda e: emitted.append(e)
+        )
+        mw.attest(sample_event, sample_payload)
+        assert len(emitted) == 1
+        assert emitted[0].event_type == EventType.RECEIPT_SEALED
+        assert "receipt_id" in emitted[0].payload
 
 
 # ------------------------------------------------------------------ #
@@ -397,6 +455,68 @@ class TestRelayMessaging:
 
 
 # ------------------------------------------------------------------ #
+# Concurrency tests
+# ------------------------------------------------------------------ #
+
+
+class TestConcurrency:
+    def test_concurrent_attest(self, signer):
+        """Multiple threads can attest simultaneously without data loss."""
+        mw = AttestationMiddleware(signer=signer)
+        n_threads = 8
+        n_per_thread = 10
+        errors: list = []
+
+        def worker(thread_id: int) -> None:
+            try:
+                for i in range(n_per_thread):
+                    e = Event(
+                        event_type=EventType.PAYOFF_COMPUTED,
+                        agent_id=f"agent-{thread_id}",
+                        payload={"i": i, "t": thread_id},
+                    )
+                    mw.attest(e, {"i": i, "t": thread_id})
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker, args=(t,)) for t in range(n_threads)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors, f"Concurrent attest raised: {errors}"
+        assert mw.receipt_count == n_threads * n_per_thread
+
+    def test_concurrent_relay_ingest(self, signer, verifier):
+        """Multiple threads can ingest receipts into the relay simultaneously."""
+        relay = ReceiptRelay(verifier=verifier)
+        n_threads = 8
+        n_per_thread = 10
+        errors: list = []
+
+        def worker(thread_id: int) -> None:
+            try:
+                for i in range(n_per_thread):
+                    r = _make_pending_receipt(
+                        f"agent-{thread_id}", {"i": i, "t": thread_id}
+                    )
+                    sealed = signer.seal(r)
+                    relay.ingest(sealed)
+            except Exception as exc:
+                errors.append(exc)
+
+        threads = [threading.Thread(target=worker, args=(t,)) for t in range(n_threads)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors, f"Concurrent ingest raised: {errors}"
+        assert relay.receipt_count == n_threads * n_per_thread
+
+
+# ------------------------------------------------------------------ #
 # API router tests
 # ------------------------------------------------------------------ #
 
@@ -405,12 +525,11 @@ class TestAttestationAPI:
     @pytest.fixture
     def client(self):
         from fastapi.testclient import TestClient
+
         from swarm.api.routers import attestation as att_module
 
-        # Reset module-level singletons for test isolation
-        att_module._signer = None
-        att_module._middleware = None
-        att_module._relay = None
+        # Clear the lru_cache to get fresh state per test
+        att_module._get_state.cache_clear()
 
         from fastapi import FastAPI
 
@@ -520,3 +639,5 @@ class TestAttestationAPI:
             },
         )
         assert resp.status_code == 422
+        # Verify the error identifies the bad receipt ID
+        assert "nonexistent" in resp.json()["detail"]

@@ -7,20 +7,22 @@ so downstream agents can condition behaviour only on admissible,
 hardware-verified state.
 """
 
+from swarm.attestation.middleware import AttestationMiddleware
 from swarm.attestation.receipt import (
     AdmissibilityReceipt,
     ExecutionBounds,
     PolicyCompliance,
+    PolicySeverity,
     ReceiptStatus,
 )
-from swarm.attestation.signer import ReceiptSigner, ReceiptVerifier
-from swarm.attestation.middleware import AttestationMiddleware
 from swarm.attestation.relay import ReceiptRelay
+from swarm.attestation.signer import ReceiptSigner, ReceiptVerifier
 
 __all__ = [
     "AdmissibilityReceipt",
     "ExecutionBounds",
     "PolicyCompliance",
+    "PolicySeverity",
     "ReceiptStatus",
     "ReceiptSigner",
     "ReceiptVerifier",

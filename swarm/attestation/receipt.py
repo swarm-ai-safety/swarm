@@ -25,11 +25,24 @@ class ReceiptStatus(str, Enum):
     REVOKED = "revoked"
 
 
+class PolicySeverity(str, Enum):
+    """Severity level for policy evaluation results."""
+
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+    CRITICAL = "critical"
+
+
 class PolicyCompliance(BaseModel):
     """Policy compliance attestation embedded in a receipt."""
 
     policy_id: str = Field(..., description="Identifier of the evaluated policy")
     passed: bool = Field(..., description="Whether the action satisfied the policy")
+    severity: PolicySeverity = Field(
+        default=PolicySeverity.ERROR,
+        description="Severity level when the policy fails",
+    )
     details: Dict[str, Any] = Field(
         default_factory=dict,
         description="Policy-specific evaluation details",
@@ -111,14 +124,21 @@ class AdmissibilityReceipt(BaseModel):
         description="Results of policy evaluations at seal time",
     )
     bounds: ExecutionBounds = Field(
-        default_factory=ExecutionBounds,
+        default_factory=ExecutionBounds,  # type: ignore[arg-type]
         description="Execution envelope the action must respect",
     )
 
-    # Cryptographic seal
+    # Soft-label integration
+    confidence: Optional[float] = Field(
+        None,
+        description="Soft-label confidence p ∈ [0, 1] for the attested action",
+    )
+
+    # Cryptographic seal (HMAC-SHA256 — symmetric; suitable only for trusted
+    # single-signer environments where signer and verifier share a secret key)
     signature: Optional[str] = Field(
         None,
-        description="Hex-encoded HMAC-SHA256 (or Ed25519) signature over the canonical receipt",
+        description="Hex-encoded HMAC-SHA256 signature over the canonical receipt",
     )
     signer_id: Optional[str] = Field(
         None, description="Identity of the signer (key ID or agent ID)"
@@ -157,27 +177,43 @@ class AdmissibilityReceipt(BaseModel):
         canonical = json.dumps(payload, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(canonical.encode()).hexdigest()
 
+    @field_validator("confidence")
+    @classmethod
+    def _confidence_in_unit_interval(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and not (0.0 <= v <= 1.0):
+            raise ValueError("confidence must be in [0, 1]")
+        return v
+
     @staticmethod
     def generate_receipt_id(
         agent_id: str,
         action_type: str,
         payload_hash: str,
-        timestamp: datetime,
+        parent_receipt_ids: Optional[List[str]] = None,
     ) -> str:
-        """Deterministic receipt ID from core attributes."""
+        """Deterministic receipt ID from core attributes.
+
+        Uses only content-derived fields (no timestamps) so that the same
+        action always produces the same receipt ID — required for
+        reproducibility (see CLAUDE.md invariants).
+        """
         components = json.dumps(
             {
                 "agent_id": agent_id,
                 "action_type": action_type,
+                "parent_receipt_ids": sorted(parent_receipt_ids or []),
                 "payload_hash": payload_hash,
-                "timestamp": timestamp.isoformat(),
             },
             sort_keys=True,
         )
         return hashlib.sha256(components.encode()).hexdigest()[:24]
 
     def is_admissible(self) -> bool:
-        """Return True if the receipt is sealed and all policies passed."""
+        """Return True if the receipt is sealed/verified and all policies passed.
+
+        A REVOKED receipt is never admissible, even if it was previously
+        sealed or verified.
+        """
         if self.status not in (ReceiptStatus.SEALED, ReceiptStatus.VERIFIED):
             return False
         return all(pr.passed for pr in self.policy_results)

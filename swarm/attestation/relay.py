@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
-from swarm.attestation.receipt import AdmissibilityReceipt, ReceiptStatus
+from swarm.attestation.receipt import AdmissibilityReceipt
 from swarm.attestation.signer import ReceiptVerifier
 
 
@@ -163,11 +163,14 @@ class ReceiptRelay:
         return msgs
 
     def acknowledge(self, message_id: str) -> bool:
-        """Mark a message as acknowledged."""
+        """Mark a message as acknowledged.
+
+        Uses ``model_copy`` to avoid mutating the Pydantic model in place.
+        """
         with self._lock:
-            for m in self._messages:
+            for i, m in enumerate(self._messages):
                 if m.message_id == message_id:
-                    m.acknowledged = True
+                    self._messages[i] = m.model_copy(update={"acknowledged": True})
                     return True
         return False
 

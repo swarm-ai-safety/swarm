@@ -12,6 +12,7 @@ from swarm.api.middleware.trace import TraceIDMiddleware
 from swarm.api.routers import (
     agents,
     attestation,
+    auditor,
     governance,
     health,
     metrics,
@@ -97,6 +98,9 @@ def create_app(config: APIConfig | None = None) -> FastAPI:
         governance.router, prefix="/api/v1/governance", tags=["governance"]
     )
     app.include_router(metrics.router, prefix="/api/v1/metrics", tags=["metrics"])
+
+    # SwarmGym safety auditor
+    app.include_router(auditor.router, prefix="/api/v1/audits", tags=["audits"])
 
     # Agent API routers (v1-namespaced for compatibility with existing routes)
     app.include_router(runs.router, prefix="/api/runs", tags=["runs"])

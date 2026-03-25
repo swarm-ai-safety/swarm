@@ -19,8 +19,7 @@ from swarm.attestation.receipt import (
     ReceiptStatus,
 )
 from swarm.attestation.signer import ReceiptSigner
-from swarm.models.events import Event
-
+from swarm.models.events import Event, EventType
 
 # Type alias for pluggable policy evaluators.
 # A policy evaluator receives the event and returns a PolicyCompliance.
@@ -48,12 +47,14 @@ class AttestationMiddleware:
         signer: ReceiptSigner,
         policy_evaluators: Optional[List[PolicyEvaluator]] = None,
         default_bounds: Optional[ExecutionBounds] = None,
+        event_callback: Optional[Callable[[Event], None]] = None,
     ) -> None:
         self._signer = signer
         self._evaluators: List[PolicyEvaluator] = policy_evaluators or []
-        self._default_bounds = default_bounds or ExecutionBounds()
+        self._default_bounds = default_bounds or ExecutionBounds()  # type: ignore[call-arg]
         self._receipts: Dict[str, AdmissibilityReceipt] = {}
         self._lock = threading.Lock()
+        self._event_callback = event_callback
 
     # ------------------------------------------------------------------ #
     # Public API
@@ -94,7 +95,7 @@ class AttestationMiddleware:
             agent_id=event.agent_id or "system",
             action_type=event.event_type.value,
             payload_hash=payload_hash,
-            timestamp=now,
+            parent_receipt_ids=parent_receipt_ids,
         )
 
         # Run policy evaluators
@@ -102,7 +103,7 @@ class AttestationMiddleware:
         for evaluator in self._evaluators:
             policy_results.append(evaluator(event))
 
-        receipt = AdmissibilityReceipt(
+        receipt = AdmissibilityReceipt(  # type: ignore[call-arg]
             receipt_id=receipt_id,
             timestamp=now,
             status=ReceiptStatus.PENDING,
@@ -122,6 +123,24 @@ class AttestationMiddleware:
 
         with self._lock:
             self._receipts[sealed.receipt_id] = sealed
+
+        # Emit JSONL event for replay
+        if self._event_callback:
+            self._event_callback(
+                Event(
+                    event_type=EventType.RECEIPT_SEALED,
+                    agent_id=sealed.agent_id,
+                    scenario_id=sealed.scenario_id,
+                    epoch=sealed.epoch,
+                    step=sealed.step,
+                    payload={
+                        "receipt_id": sealed.receipt_id,
+                        "action_type": sealed.action_type,
+                        "payload_hash": sealed.payload_hash,
+                        "admissible": sealed.is_admissible(),
+                    },
+                )
+            )
 
         return sealed
 

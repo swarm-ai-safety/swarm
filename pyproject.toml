@@ -37,6 +37,7 @@ dev = [
     "hypothesis>=6.0",
     "pytest-testmon>=2.0",
     "pytest-xdist>=3.0",
+    "pytest-timeout>=2.0",
     "pytest-socket>=0.7",
     "mypy",
     "types-PyYAML",
@@ -117,6 +118,9 @@ langgraph = [
 ]
 evolve = [
     "darwinian-evolver @ git+https://github.com/imbue-ai/darwinian_evolver.git",
+]
+gepa = [
+    "gepa>=0.1.0",
 ]
 prime_intellect = [
     "prime>=0.1.0",

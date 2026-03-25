@@ -14,6 +14,7 @@ from swarm.models.interaction import InteractionType, SoftInteraction
 
 if TYPE_CHECKING:
     from swarm.agents.memory_config import MemoryConfig
+    from swarm.knowledge.graph_memory import AgentMemorySnapshot
 
 # ----- Memory bounds (prevent unbounded growth in long runs) -----
 MAX_MEMORY_SIZE: int = 1000
@@ -530,6 +531,27 @@ class BaseAgent(ABC):
         self._counterparty_memory[counterparty_id] = (
             current * (1 - alpha) + new_p * alpha
         )
+
+    def load_prior_memory(self, snapshot: "AgentMemorySnapshot") -> None:
+        """
+        Load trust priors from a prior run's snapshot.
+
+        Sets _counterparty_memory from snapshot.counterparty_trust.
+        Does NOT overwrite interaction_history (ephemeral per-run).
+
+        Args:
+            snapshot: AgentMemorySnapshot from a prior run
+        """
+        from swarm.knowledge.graph_memory import AgentMemorySnapshot
+
+        if not isinstance(snapshot, AgentMemorySnapshot):
+            raise TypeError(f"Expected AgentMemorySnapshot, got {type(snapshot)}")
+
+        # Validate before loading
+        snapshot.validate()
+
+        # Load trust priors (counterparty_memory)
+        self._counterparty_memory = snapshot.counterparty_trust.copy()
 
     def should_post(self, observation: Observation) -> bool:
         """Determine if agent should create a post."""

@@ -30,6 +30,7 @@ class ReceiptResponse(BaseModel):
     bounds: Dict[str, Any] = Field(default_factory=dict)
     signature: Optional[str] = None
     signer_id: Optional[str] = None
+    confidence: Optional[float] = None
     admissible: bool = False
 
 
