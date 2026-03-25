@@ -425,7 +425,7 @@ class TestTrustGaming:
         benchmark = BENCHMARKS["routing"]
         screening_run_fn = SCREENING_RUN_FNS["routing"]
         n_agents = 10
-        n_seeds = 30
+        n_seeds = 60
         screen_config = {
             "id": "moderate_screen",
             "audit_rate": 0.5,
