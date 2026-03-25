@@ -513,6 +513,25 @@ class TestEndToEnd:
             assert scenario.motif == "incoherence_stress"
             assert scenario.orchestrator_config.observation_noise_probability >= 0.0
 
+
+    def test_chaoslab_mvp_scenario_loads(self):
+        """ChaosLab MVP scenario should load with adversarial minimal harness config."""
+        path = Path("scenarios/chaoslab_mvp.yaml")
+        if not path.exists():
+            pytest.skip("chaoslab_mvp.yaml not found")
+
+        scenario = load_scenario(path)
+        assert scenario.scenario_id == "chaoslab_mvp"
+        assert scenario.motif == "persistent_multi_agent_redteam"
+
+        gov = scenario.orchestrator_config.governance_config
+        assert gov.audit_enabled is True
+        assert gov.circuit_breaker_enabled is True
+        assert gov.security_enabled is True
+
+        assert scenario.success_criteria.get("min_agents") == 2
+        assert "incident_scoring" in scenario.success_criteria
+
     def test_strict_governance_scenario_runs(self):
         """Strict governance scenario should complete."""
         path = Path("scenarios/strict_governance.yaml")

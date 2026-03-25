@@ -21,6 +21,33 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## March 2026
 
+<div class="blog-post" data-tags="governance evaluation" markdown>
+
+**Mar 19** — [Halving the Entry Fee Breaks Screening Completely. Here's the Phase Transition.](screening-phase-transition-agent-lens.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
+
+We used agent-lens to run forked experiments across three governance regimes. Halving signing costs flips infiltration from 0% to 100% --- a sharp phase transition confirming Spence signaling theory. Screening is structurally perfect (zero variance across seeds) but economically fragile (welfare CV = 3.9).
+
+</div>
+
+<div class="blog-post" data-tags="governance evaluation" markdown>
+
+**Mar 16** — [SimWorld's Delivery Agents Look Profitable. They're Also Adversely Selected.](simworld-delivery-what-profit-misses.md)
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span>
+
+We ran a NeurIPS 2025 Spotlight delivery economy through SWARM's safety metrics. Profit says everything is fine. Adverse selection says 17% of high-value orders go to low-reputation agents. Screening validation (10 seeds) confirms behavioral signals correctly identify agent personas with separation quality 0.750.
+
+</div>
+
+<div class="blog-post" data-tags="theory governance" markdown>
+
+**Mar 9** — [Why Agent Infrastructure Could Be a $10B Category](agent-infrastructure-10b-category.md)
+<span class="blog-tag">Theory</span> <span class="blog-tag">Governance</span>
+
+A market thesis for agent infrastructure plus a concrete research stack for the category: workload benchmarks, orchestration patterns, eval/safety layers, controlled evolution loops, and reproducible reporting standards.
+
+</div>
+
 <div class="blog-post" data-tags="governance theory" markdown>
 
 **Mar 4** — [The Shape of the Capability–Safety Frontier (and How Screening Bends It)](capability-safety-pareto-frontier.md)

@@ -1,0 +1,63 @@
+# EvoSkill Governance Comparison Scenario
+#
+# Runs the EvoSkill skill discovery loop under three governance regimes
+# to test whether different contract types select for different skill types.
+#
+# Research question: Does the EvoSkill loop, run under TruthfulAuction vs
+# FairDivision vs DefaultMarket, converge to different skill types?
+#
+# Usage:
+#   python -m swarm run scenarios/evoskill_governance.yaml --seed 42 --epochs 10
+
+scenario_id: evoskill_governance
+description: >
+  Compare EvoSkill's automated skill discovery under different SWARM
+  governance regimes. Measures behavioral divergence of frontier programs
+  across TruthfulAuction, FairDivision, and DefaultMarket contracts.
+motif: evoskill_governance_comparison
+
+agents:
+  # Skill-aware agents that consume discovered skills
+  - type: skill_honest
+    count: 3
+  - type: skill_opportunistic
+    count: 2
+  # Adversarial agent to stress-test governance screening
+  - type: adversarial
+    count: 1
+  # Baseline honest agents for comparison
+  - type: honest
+    count: 2
+
+governance:
+  transaction_tax_rate: 0.05
+  reputation_decay_rate: 0.90
+  circuit_breaker_enabled: true
+  audit_enabled: true
+  # Contract screening is central to this experiment
+  contract_screening_enabled: true
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 10
+  seed: 42
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+# EvoSkill bridge configuration (consumed by the bridge, not the orchestrator)
+evoskill:
+  frontier_size: 3
+  max_iterations: 10
+  governance_weight: 0.3
+  evolution_mode: skill_only
+  contract_regimes:
+    - truthful_auction
+    - fair_division
+    - default_market

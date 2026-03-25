@@ -168,12 +168,14 @@ nav:
     - Self-Modification Governance: research/self-modification-governance-byline.md
     - Self-Modification Governance Implementation Checklist: research/self-mod-governance-implementation-checklist.md
     - InitRunner vs SWARM Comparison: research/initrunner-swarm-comparison.md
+    - AIRS-Bench Governance Analysis: research/airs-bench-governance-analysis.md
   - Comparison: comparison.md
   - SWARM vs Alternatives: swarm-vs-alternatives.md
   - Glossary: glossary.md
   - Game: game.md
   - Blog:
     - blog/index.md
+    - "SimWorld's Delivery Agents Look Profitable. They're Also Adversely Selected.": blog/simworld-delivery-what-profit-misses.md
     - "The Shape of the Capability–Safety Frontier": blog/capability-safety-pareto-frontier.md
     - "Transparency Stabilizes Escalation — But Only With Safety Training": blog/asymmetric-information-escalation.md
     - "Does Model Size Matter for Safety?": blog/model-size-vs-escalation.md
