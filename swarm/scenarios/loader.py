@@ -492,6 +492,13 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         ),
         self_modification_window_days=data.get(
             "self_modification_window_days", 14
+        # Hardware trust rejection handling
+        hardware_trust_enabled=data.get("hardware_trust_enabled", False),
+        hardware_trust_propagation_enabled=data.get(
+            "hardware_trust_propagation_enabled", True
+        ),
+        hardware_trust_recovery_max_steps=data.get(
+            "hardware_trust_recovery_max_steps", 10
         ),
     )
     # Pydantic auto-validates

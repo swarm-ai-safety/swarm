@@ -19,7 +19,6 @@ def config():
         hardware_trust_enabled=True,
         hardware_trust_propagation_enabled=True,
         hardware_trust_recovery_max_steps=5,
-        hardware_trust_require_checkpoint=True,
     )
 
 

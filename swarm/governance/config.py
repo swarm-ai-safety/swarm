@@ -200,7 +200,6 @@ class GovernanceConfig(BaseModel):
     hardware_trust_enabled: bool = False
     hardware_trust_propagation_enabled: bool = True  # Propagate stop token to dependents
     hardware_trust_recovery_max_steps: int = 10  # Max steps in constrained recovery mode
-    hardware_trust_require_checkpoint: bool = True  # Require checkpoint for safe resume
 
     # Diversity as Defense (DaD)
     diversity_enabled: bool = False
