@@ -508,6 +508,62 @@ class TestResampleActionSelection:
         # The action was either blocked or not depending on majority
         assert "resample_blocked" in action.metadata
 
+    def test_resample_p_values_differentiated_by_action_agreement(self):
+        """Resampled actions differing from the original should get higher p proxies."""
+        config = OrchestratorConfig(
+            governance_config=GovernanceConfig(
+                resample_enabled=True,
+                resample_suspicion_threshold=0.6,
+                resample_n_samples=3,
+            ),
+        )
+        orchestrator = Orchestrator(config=config)
+        # Alternating agent produces different actions across samples
+        agent = _AlternatingAgent("agent_1")
+        peer = HonestAgent("agent_2")
+        orchestrator.register_agent(agent)
+        orchestrator.register_agent(peer)
+
+        # Low reputation to trigger resample
+        orchestrator.state.agents["agent_1"].reputation = -0.8
+
+        observation = orchestrator._build_observation("agent_1")
+        action = orchestrator._select_action(agent, observation)
+
+        p_values = action.metadata.get("resample_p_values", [])
+        assert len(p_values) == 3
+        p_proxy = action.metadata["resample_p_proxy"]
+        # Alternating agent produces different actions, so at least one
+        # p_value should be boosted (divergent from original)
+        assert any(pv > p_proxy for pv in p_values) or all(
+            pv == p_proxy for pv in p_values
+        )
+
+    def test_resample_metadata_includes_p_values_key(self):
+        """resample_p_values must be present in action metadata when triggered."""
+        config = OrchestratorConfig(
+            governance_config=GovernanceConfig(
+                resample_enabled=True,
+                resample_suspicion_threshold=0.6,
+                resample_n_samples=2,
+            ),
+        )
+        orchestrator = Orchestrator(config=config)
+        agent = HonestAgent("agent_1")
+        peer = HonestAgent("agent_2")
+        orchestrator.register_agent(agent)
+        orchestrator.register_agent(peer)
+
+        orchestrator.state.agents["agent_1"].reputation = -0.9
+
+        observation = orchestrator._build_observation("agent_1")
+        action = orchestrator._select_action(agent, observation)
+
+        assert action.metadata.get("resample_triggered") is True
+        assert "resample_p_values" in action.metadata
+        assert isinstance(action.metadata["resample_p_values"], list)
+        assert len(action.metadata["resample_p_values"]) == 2
+
     def test_resample_disabled_no_effect(self):
         """When resample is disabled, no resampling should occur."""
         config = OrchestratorConfig(

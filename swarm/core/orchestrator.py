@@ -848,11 +848,22 @@ class Orchestrator:
         selected.metadata["resample_n_samples"] = n_samples
         selected.metadata["resample_blocked"] = was_blocked
         # Store per-sample p-proxy values for incrimination analysis.
-        # Pre-execution, we only have the reputation-based proxy; each
-        # resampled action inherits this same proxy since true p is
-        # unavailable until after handler execution.
+        # True p is only available after handler execution, so we
+        # differentiate pre-execution proxies based on action agreement:
+        # resampled actions that DIFFER from the original suspicious action
+        # suggest the agent is capable of benign behavior (higher p proxy),
+        # while actions matching the original confirm suspicion (lower p).
         selected.metadata["resample_p_proxy"] = p_proxy
-        selected.metadata["resample_p_values"] = [p_proxy] * n_samples
+        original_sig = self._action_signature(original_action)
+        per_sample_p = []
+        for ra in resample_actions:
+            if self._action_signature(ra) != original_sig:
+                # Divergent action → exonerating evidence
+                per_sample_p.append(min(1.0, p_proxy + 0.3))
+            else:
+                # Matching action → confirming suspicion
+                per_sample_p.append(p_proxy)
+        selected.metadata["resample_p_values"] = per_sample_p
 
         return selected
 
@@ -922,7 +933,14 @@ class Orchestrator:
         selected.metadata["resample_n_samples"] = n_samples
         selected.metadata["resample_blocked"] = was_blocked
         selected.metadata["resample_p_proxy"] = p_proxy
-        selected.metadata["resample_p_values"] = [p_proxy] * n_samples
+        original_sig = self._action_signature(original_action)
+        per_sample_p = []
+        for ra in resample_actions:
+            if self._action_signature(ra) != original_sig:
+                per_sample_p.append(min(1.0, p_proxy + 0.3))
+            else:
+                per_sample_p.append(p_proxy)
+        selected.metadata["resample_p_values"] = per_sample_p
 
         return selected
 
@@ -1020,7 +1038,8 @@ class Orchestrator:
         merged_metadata = dict(result.metadata or {})
         if action.metadata:
             for key in ("resample_triggered", "resample_n_samples",
-                        "resample_blocked", "resample_p_proxy"):
+                        "resample_blocked", "resample_p_proxy",
+                        "resample_p_values"):
                 if key in action.metadata:
                     merged_metadata[key] = action.metadata[key]
 
