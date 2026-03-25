@@ -286,7 +286,6 @@ class GovernedEvalLoop:
             "quality_gap": quality_gap,
             "avg_welfare": avg_welfare,
             "n_interactions": len(governed_interactions),
-            "contract": contract_type.value,
         }
 
     @staticmethod
