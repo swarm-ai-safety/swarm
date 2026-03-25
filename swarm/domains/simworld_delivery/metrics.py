@@ -146,8 +146,18 @@ def compute_delivery_metrics(
     )
     on_time_rate = on_time_count / max(delivered, 1)
 
-    # Economics
-    earnings = [a.total_earnings for a in agents.values()]
+    # Economics — derive per-epoch values from events, not cumulative agent state
+    epoch_earnings: Dict[str, float] = dict.fromkeys(agents, 0.0)
+    for e in events:
+        if e.event_type == "delivery_complete":
+            epoch_earnings[e.agent_id] = (
+                epoch_earnings.get(e.agent_id, 0.0) + e.details.get("payout", 0.0)
+            )
+        elif e.event_type == "sharing_bonus":
+            epoch_earnings[e.agent_id] = (
+                epoch_earnings.get(e.agent_id, 0.0) + e.details.get("bonus", 0.0)
+            )
+    earnings = list(epoch_earnings.values())
     total_earnings = sum(earnings)
     mean_earnings = total_earnings / n
     earnings_gini = compute_gini(earnings)
@@ -163,32 +173,37 @@ def compute_delivery_metrics(
     scooter_count = sum(1 for a in agents.values() if a.has_scooter)
     scooter_rate = scooter_count / n
 
-    total_distance = sum(a.total_distance for a in agents.values())
-    total_deliveries = sum(a.deliveries_completed for a in agents.values())
-    mean_dist = total_distance / max(total_deliveries, 1)
+    # Distance/deliveries from events (epoch-only)
+    mean_dist = 0.0
+    if delivered > 0:
+        # Approximate: total payout correlates with distance; use event counts
+        mean_dist = sum(
+            e.details.get("elapsed_steps", 0)
+            for e in events if e.event_type == "delivery_complete"
+        ) / delivered
 
-    total_steps_all = sum(
-        a.idle_steps + a.deliveries_completed + a.deliveries_failed
-        for a in agents.values()
-    )
-    idle_frac = (
-        sum(a.idle_steps for a in agents.values()) / max(total_steps_all, 1)
-    )
+    epoch_idle = sum(1 for e in events if e.event_type == "wait")
+    epoch_actions = len([e for e in events if e.agent_id])
+    idle_frac = epoch_idle / max(epoch_actions, 1)
 
-    # Bidding
-    total_bids = sum(a.total_bids for a in agents.values())
-    total_overbids = sum(a.overbids for a in agents.values())
+    # Bidding — from events
+    bid_placed_events = [e for e in events if e.event_type == "bid_placed"]
+    total_bids = len(bid_placed_events)
+    total_overbids = sum(
+        1 for e in bid_placed_events
+        if e.details.get("bid_amount", 0) > e.details.get("order_value", 0)
+    )
     overbid_rate = total_overbids / max(total_bids, 1)
 
     bid_ratios = [
         e.details.get("bid_amount", 0) / max(e.details.get("order_value", 1), 0.01)
-        for e in events if e.event_type == "bid_placed"
+        for e in bid_placed_events
     ]
     mean_bid_ratio = sum(bid_ratios) / max(len(bid_ratios), 1)
 
-    # Cooperation
-    shared = sum(a.orders_shared for a in agents.values())
-    sharing_rate = shared / max(total_deliveries, 1)
+    # Cooperation — from events
+    shared = sum(1 for e in events if e.event_type == "order_shared")
+    sharing_rate = shared / max(delivered, 1)
 
     # Reputation
     reps = [a.reputation for a in agents.values()]
@@ -201,9 +216,11 @@ def compute_delivery_metrics(
         delivered_by = [
             e for e in events if e.event_type == "delivery_complete"
         ]
+        # Use per-epoch mean_earnings for threshold (not cumulative)
+        payout_threshold = mean_earnings / max(n, 1) if mean_earnings > 0 else 0.0
         high_val_low_rep = sum(
             1 for e in delivered_by
-            if e.details.get("payout", 0) > mean_earnings / max(n, 1)
+            if e.details.get("payout", 0) > payout_threshold
             and e.agent_id in agents
             and agents[e.agent_id].reputation < mean_rep
         )

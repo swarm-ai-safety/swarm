@@ -79,7 +79,7 @@ class DeliveryScenarioRunner:
         self._config = config
         self._n_epochs = n_epochs
         self._steps_per_epoch = steps_per_epoch
-        self._seed = seed or 42
+        self._seed = seed if seed is not None else 42
         self._rng = random.Random(self._seed)
 
         # Ensure environment uses the same seed for determinism
