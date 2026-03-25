@@ -216,14 +216,26 @@ class ScreeningProtocol:
 
         resource_score = (mem_score + cpu_score) / 2.0
 
-        # Type alignment
-        type_penalties = {
-            AgentType.ADVERSARIAL: 0.5,
-            AgentType.SELF_MODIFYING: 0.7,
-            AgentType.STATIC: 1.0,
-            AgentType.COOPERATIVE: 1.0,
+        # Type alignment: score depends on (agent_type, contract_tier).
+        # Adversarial agents should score highest on restricted contracts,
+        # cooperative agents on premium, etc.
+        _type_tier_scores = {
+            (AgentType.COOPERATIVE, "premium"): 1.0,
+            (AgentType.COOPERATIVE, "standard"): 0.7,
+            (AgentType.COOPERATIVE, "restricted"): 0.3,
+            (AgentType.STATIC, "premium"): 0.6,
+            (AgentType.STATIC, "standard"): 1.0,
+            (AgentType.STATIC, "restricted"): 0.5,
+            (AgentType.SELF_MODIFYING, "premium"): 0.4,
+            (AgentType.SELF_MODIFYING, "standard"): 0.8,
+            (AgentType.SELF_MODIFYING, "restricted"): 0.6,
+            (AgentType.ADVERSARIAL, "premium"): 0.1,
+            (AgentType.ADVERSARIAL, "standard"): 0.4,
+            (AgentType.ADVERSARIAL, "restricted"): 1.0,
         }
-        type_score = type_penalties.get(manifest.agent_type, 0.8)
+        type_score = _type_tier_scores.get(
+            (manifest.agent_type, contract.tier), 0.5,
+        )
 
         return (cap_score + net_score + resource_score + type_score) / 4.0
 
