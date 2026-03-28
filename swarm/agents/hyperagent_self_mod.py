@@ -71,7 +71,7 @@ class HyperagentSelfModAgent(BaseAgent):
     ):
         super().__init__(
             agent_id=agent_id,
-            agent_type=AgentType.OPPORTUNISTIC,
+            agent_type=AgentType.SELF_MODIFYING,
             roles=roles,
             config=config or {},
             name=name,
