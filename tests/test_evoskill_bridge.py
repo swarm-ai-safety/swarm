@@ -213,7 +213,7 @@ class TestGovernedEvalLoop:
             contract_type=ContractType.TRUTHFUL_AUCTION,
             seed=42,
         )
-        assert result.governed_metrics.get("contract") == "truthful_auction"
+        assert result.regime == "truthful_auction"
 
     def test_evaluate_all_regimes(self, config, skill_files):
         loop = GovernedEvalLoop(config=config)
