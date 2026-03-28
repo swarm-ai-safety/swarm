@@ -1135,6 +1135,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         contracts_config=contracts_config,
         evo_game_config=evo_game_config,
         tierra_config=tierra_config,
+        dynamic_toxicity=data.get("dynamic_toxicity"),
         graph_memory_path=outputs_data.get("graph_memory_path"),
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")
