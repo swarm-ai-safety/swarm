@@ -2299,32 +2299,27 @@ class TestSSEEndpoint:
         sim_id = sim_resp.json()["simulation_id"]
 
         # We need to publish an event and then a completion event
-        # so the stream terminates
+        # so the stream terminates.  Use publish_sync (thread-safe)
+        # instead of creating a separate event loop — avoids
+        # Python 3.12+ cross-loop asyncio.Queue issues.
         def publish_events():
-            import asyncio
             import time
 
             time.sleep(0.1)
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(
-                event_bus.publish(
-                    SimEvent(
-                        event_type=SimEventType.STEP_COMPLETE,
-                        simulation_id=sim_id,
-                        data={"step": 0},
-                    )
+            event_bus.publish_sync(
+                SimEvent(
+                    event_type=SimEventType.STEP_COMPLETE,
+                    simulation_id=sim_id,
+                    data={"step": 0},
                 )
             )
-            loop.run_until_complete(
-                event_bus.publish(
-                    SimEvent(
-                        event_type=SimEventType.SIMULATION_COMPLETE,
-                        simulation_id=sim_id,
-                        data={},
-                    )
+            event_bus.publish_sync(
+                SimEvent(
+                    event_type=SimEventType.SIMULATION_COMPLETE,
+                    simulation_id=sim_id,
+                    data={},
                 )
             )
-            loop.close()
 
         t = threading.Thread(target=publish_events)
         t.start()
@@ -4091,7 +4086,6 @@ class TestE2ESimulationLifecycle:
 
     def test_sse_receives_completion_event(self, client):
         """Open SSE stream, publish completion event via bus, verify it arrives."""
-        import asyncio
         import json as _json
         import threading
 
@@ -4109,17 +4103,13 @@ class TestE2ESimulationLifecycle:
         def _publish_completion():
             import time
             time.sleep(0.1)
-            loop = asyncio.new_event_loop()
-            loop.run_until_complete(
-                _event_bus.publish(
-                    SimEvent(
-                        event_type=SimEventType.SIMULATION_COMPLETE,
-                        simulation_id=sim_id,
-                        data={"final_metric": 0.99},
-                    )
+            _event_bus.publish_sync(
+                SimEvent(
+                    event_type=SimEventType.SIMULATION_COMPLETE,
+                    simulation_id=sim_id,
+                    data={"final_metric": 0.99},
                 )
             )
-            loop.close()
 
         pub_thread = threading.Thread(target=_publish_completion)
         pub_thread.start()
