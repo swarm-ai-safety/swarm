@@ -45,7 +45,7 @@ _ARXIV_PATTERN = re.compile(
 def _skip_code_blocks(html: str) -> list[tuple[str, bool]]:
     """Split HTML into (segment, is_code) pairs to avoid modifying code blocks."""
     parts: list[tuple[str, bool]] = []
-    code_pattern = re.compile(r'(<(?:code|pre|script|style)[^>]*>.*?</(?:code|pre|script|style)>)', re.DOTALL)
+    code_pattern = re.compile(r'(<(?:code|pre|script|style)[^>]*>.*?</(?:code|pre|script|style)>)', re.DOTALL | re.IGNORECASE)
     last_end = 0
     for m in code_pattern.finditer(html):
         if m.start() > last_end:
