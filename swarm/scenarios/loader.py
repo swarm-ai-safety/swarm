@@ -17,6 +17,7 @@ from swarm.agents.cautious_reciprocator import CautiousReciprocator
 from swarm.agents.coding_agent import CodingAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.hyperagent_self_mod import HyperagentSelfModAgent
 from swarm.agents.ldt_agent import LDTAgent
 from swarm.agents.memory_agent import (
     CacheGamerAgent,
@@ -127,6 +128,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "skillrl": SkillRLAgent,
     # Self-optimizing agent (recursive cost-cutting)
     "self_optimizer": SelfOptimizerAgent,
+    # Hyperagent self-modifying agent (Zhang et al., 2026)
+    "hyperagent_self_mod": HyperagentSelfModAgent,
     # Rivals pipeline agents (Team-of-Rivals)
     "rivals_producer": RivalsProducerAgent,
     "rivals_critic": RivalsCriticAgent,
@@ -1132,6 +1135,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         contracts_config=contracts_config,
         evo_game_config=evo_game_config,
         tierra_config=tierra_config,
+        dynamic_toxicity=data.get("dynamic_toxicity"),
         graph_memory_path=outputs_data.get("graph_memory_path"),
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")
