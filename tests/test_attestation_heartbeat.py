@@ -142,6 +142,47 @@ class TestAttestationHeartbeatLever:
         effect = lever.on_step(state, step=3)
         assert "a1" not in effect.reputation_deltas
 
+    def test_penalty_only_on_newly_lapsed(self):
+        """Penalty applies once on lapse, not every step afterward."""
+        lever = self._make_lever(interval=2, penalty=-0.2)
+        lever.register_agent("a1", initial_step=0)
+        state = _make_state("a1")
+
+        # First step past deadline — penalty applied
+        effect = lever.on_step(state, step=3)
+        assert effect.reputation_deltas.get("a1") == -0.2
+
+        # Next step — still frozen but no repeated penalty
+        effect = lever.on_step(state, step=4)
+        assert "a1" in effect.agents_to_freeze
+        assert "a1" not in effect.reputation_deltas
+
+    def test_auto_registration_via_on_step(self):
+        """Agents in state.agents are auto-tracked on first on_step."""
+        lever = self._make_lever(interval=3)
+        state = _make_state("a1", "a2")
+
+        # No explicit register_agent — on_step auto-registers from state
+        effect = lever.on_step(state, step=0)
+        assert "a1" not in effect.agents_to_freeze
+        assert "a2" not in effect.agents_to_freeze
+
+        # After interval, both should lapse
+        effect = lever.on_step(state, step=4)
+        assert "a1" in effect.agents_to_freeze
+        assert "a2" in effect.agents_to_freeze
+
+    def test_auto_registration_via_can_agent_act(self):
+        """Untracked agent is auto-registered on can_agent_act."""
+        lever = self._make_lever(interval=3)
+        state = _make_state("a1")
+
+        # Auto-registers and allows (first interval starts now)
+        assert lever.can_agent_act("a1", state) is True
+        # Agent is now tracked
+        status = lever.get_status("a1")
+        assert status["is_lapsed"] is False
+
     def test_epoch_reset_clears_lapsed(self):
         config = GovernanceConfig(
             attestation_heartbeat_enabled=True,

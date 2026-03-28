@@ -96,13 +96,23 @@ class AttestationHeartbeatLever(GovernanceLever):
         state: EnvState,
         step: int,
     ) -> LeverEffect:
-        """Check all tracked agents for missed heartbeats."""
+        """Check all tracked agents for missed heartbeats.
+
+        Auto-registers any agents present in ``state.agents`` that are
+        not yet tracked, so the lever enforces heartbeats even without
+        explicit ``register_agent`` calls from the orchestrator.
+        """
         if not self.config.attestation_heartbeat_enabled:
             return LeverEffect(lever_name=self.name)
 
+        # Auto-register untracked agents so the lever is never a no-op.
+        for agent_id in state.agents:
+            if agent_id not in self._trackers:
+                self.register_agent(agent_id, initial_step=step)
+
         interval = self.config.attestation_heartbeat_interval
         agents_to_freeze: Set[str] = set()
-        lapsed_details: list[dict[str, object]] = []
+        newly_lapsed: list[dict[str, object]] = []
 
         for agent_id, tracker in self._trackers.items():
             if tracker.is_lapsed:
@@ -110,33 +120,39 @@ class AttestationHeartbeatLever(GovernanceLever):
                 agents_to_freeze.add(agent_id)
                 continue
 
-            # An agent that has never attested gets a grace period of
-            # one full interval from step 0.
-            deadline = tracker.last_attestation_step + interval
+            # Normalize sentinel -1 to 0 so agents that have never
+            # attested (or were reset at epoch boundary) get one full
+            # interval from step 0, matching the documented behaviour.
+            base_step = 0 if tracker.last_attestation_step < 0 else tracker.last_attestation_step
+            deadline = base_step + interval
             if step > deadline:
                 tracker.is_lapsed = True
                 tracker.missed_count += 1
                 agents_to_freeze.add(agent_id)
-                lapsed_details.append({
+                newly_lapsed.append({
                     "agent_id": agent_id,
                     "last_attestation_step": tracker.last_attestation_step,
                     "deadline": deadline,
                     "missed_count": tracker.missed_count,
                 })
 
+        # Penalise only agents that *just* lapsed this step, not those
+        # already lapsed from prior steps (avoids recurring per-step
+        # penalty drain).
         reputation_deltas: Dict[str, float] = {}
         penalty = self.config.attestation_heartbeat_reputation_penalty
-        for agent_id in agents_to_freeze:
-            if penalty != 0.0:
-                reputation_deltas[agent_id] = penalty
+        if penalty != 0.0:
+            for detail in newly_lapsed:
+                reputation_deltas[str(detail["agent_id"])] = penalty
 
         return LeverEffect(
             agents_to_freeze=agents_to_freeze,
             reputation_deltas=reputation_deltas,
             lever_name=self.name,
             details={
-                "lapsed_count": len(lapsed_details),
-                "lapsed_agents": lapsed_details,
+                "newly_lapsed_count": len(newly_lapsed),
+                "newly_lapsed_agents": newly_lapsed,
+                "total_lapsed_count": len(agents_to_freeze),
             },
         )
 
@@ -159,10 +175,12 @@ class AttestationHeartbeatLever(GovernanceLever):
         if self.config.attestation_heartbeat_reset_on_epoch:
             for agent_id, tracker in self._trackers.items():
                 if tracker.is_lapsed:
-                    tracker.is_lapsed = False
-                    # Reset deadline relative to epoch start (step 0)
-                    tracker.last_attestation_step = -1
                     agents_to_unfreeze.add(agent_id)
+                # Reset ALL agents' baselines so non-lapsed agents
+                # don't carry stale deadlines across epoch boundaries
+                # (current_step resets to 0 each epoch).
+                tracker.is_lapsed = False
+                tracker.last_attestation_step = -1
 
         return LeverEffect(
             agents_to_unfreeze=agents_to_unfreeze,
@@ -178,14 +196,18 @@ class AttestationHeartbeatLever(GovernanceLever):
         agent_id: str,
         state: EnvState,
     ) -> bool:
-        """Block agents whose attestation has lapsed."""
+        """Block agents whose attestation has lapsed.
+
+        Untracked agents are auto-registered with a deadline starting
+        from the current step, so the lever cannot be bypassed by
+        skipping explicit registration.
+        """
         if not self.config.attestation_heartbeat_enabled:
             return True
 
-        # Agents not yet tracked are allowed (they'll be added on
-        # first interaction or explicit registration).
         if agent_id not in self._trackers:
-            return True
+            self.register_agent(agent_id, initial_step=state.current_step)
+            return True  # just registered — first interval starts now
 
         return not self._trackers[agent_id].is_lapsed
 
