@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Dict, Optional
+from typing import Any
 
 
 @dataclass
@@ -92,10 +92,10 @@ class DeliveryConfig:
     orders: OrderConfig = field(default_factory=OrderConfig)
     economy: EconomyConfig = field(default_factory=EconomyConfig)
     governance: GovernanceConfig = field(default_factory=GovernanceConfig)
-    seed: Optional[int] = None
+    seed: int | None = None
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> "DeliveryConfig":
+    def from_dict(cls, data: dict[str, Any]) -> "DeliveryConfig":
         """Parse a DeliveryConfig from a YAML-sourced dict."""
         if not data:
             return cls()

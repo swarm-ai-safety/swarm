@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Any, Dict, Optional, Tuple
+from typing import Any
 
 
 class DeliveryActionType(Enum):
@@ -47,15 +47,15 @@ class DeliveryOrder:
     """A delivery order in the economy."""
 
     order_id: str
-    origin: Tuple[float, float] = (0.0, 0.0)
-    destination: Tuple[float, float] = (0.0, 0.0)
+    origin: tuple[float, float] = (0.0, 0.0)
+    destination: tuple[float, float] = (0.0, 0.0)
     value: float = 10.0
     deadline_steps: int = 20
     weight: float = 1.0
     status: OrderStatus = OrderStatus.AVAILABLE
-    assigned_agent: Optional[str] = None
+    assigned_agent: str | None = None
     created_step: int = 0
-    delivered_step: Optional[int] = None
+    delivered_step: int | None = None
 
 
 @dataclass
@@ -64,14 +64,14 @@ class AgentState:
 
     agent_id: str
     persona: PersonaType = PersonaType.CONSCIENTIOUS
-    position: Tuple[float, float] = (0.0, 0.0)
+    position: tuple[float, float] = (0.0, 0.0)
     budget: float = 100.0
     speed: float = 1.0
     has_scooter: bool = False
     scooter_cost: float = 50.0
 
     # Current delivery
-    current_order: Optional[str] = None
+    current_order: str | None = None
     carrying: bool = False
 
     # Performance tracking
@@ -120,4 +120,4 @@ class DeliveryEvent:
     step: int = 0
     epoch: int = 0
     agent_id: str = ""
-    details: Dict[str, Any] = field(default_factory=dict)
+    details: dict[str, Any] = field(default_factory=dict)

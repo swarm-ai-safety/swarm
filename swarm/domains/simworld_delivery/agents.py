@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import random
 from abc import ABC, abstractmethod
-from typing import Optional
 
 from swarm.domains.simworld_delivery.entities import (
     DeliveryAction,
@@ -23,7 +22,7 @@ from swarm.domains.simworld_delivery.entities import (
 class DeliveryPolicy(ABC):
     """Base class for delivery agent policies."""
 
-    def __init__(self, agent_id: str, seed: Optional[int] = None) -> None:
+    def __init__(self, agent_id: str, seed: int | None = None) -> None:
         self.agent_id = agent_id
         self._rng = random.Random(seed)
 
@@ -85,7 +84,7 @@ class AggressivePolicy(DeliveryPolicy):
     """
 
     def __init__(
-        self, agent_id: str, seed: Optional[int] = None,
+        self, agent_id: str, seed: int | None = None,
         scooter_priority: bool = True,
     ) -> None:
         super().__init__(agent_id, seed)
