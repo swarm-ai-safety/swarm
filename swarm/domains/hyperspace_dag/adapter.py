@@ -23,7 +23,6 @@ Or from raw events:
 from __future__ import annotations
 
 import json
-import logging
 import math
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,9 +33,6 @@ from swarm.domains.hyperspace_dag.config import DagConfig
 from swarm.domains.hyperspace_dag.entities import DagEvent
 from swarm.metrics.soft_metrics import SoftMetrics
 from swarm.models.interaction import InteractionType, SoftInteraction
-
-logger = logging.getLogger(__name__)
-
 
 # ---------------------------------------------------------------------------
 # DAG structure → Observable signals
@@ -58,7 +54,7 @@ def _compute_dag_coherence(details: Dict[str, Any]) -> float:
     if n_subtasks <= 1:
         return 1.0  # trivial plans are coherent by definition
 
-    # edge density: actual edges / max possible in a DAG (n-1 for a tree)
+    # Tree-normalized density: edges relative to a spanning tree (n-1)
     max_edges = max(n_subtasks - 1, 1)
     density = min(n_edges / max_edges, 1.0)
     return float(density)

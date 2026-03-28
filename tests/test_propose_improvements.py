@@ -55,7 +55,9 @@ class TestLoadTrackerEvents:
             path.unlink()
 
     def test_malformed_lines_skipped(self):
-        path = Path(tempfile.mktemp(suffix=".jsonl"))
+        f_tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".jsonl", delete=False)
+        f_tmp.close()
+        path = Path(f_tmp.name)
         with open(path, "w") as f:
             json.dump(_make_event("heartbeat"), f)
             f.write("\n")

@@ -10,11 +10,14 @@ track their own metrics enable trend detection and regression avoidance.
 """
 
 import json
+import logging
 import threading
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
+
+logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
 # Event types
@@ -157,14 +160,20 @@ class PerformanceTracker:
     # -- Replay / read -------------------------------------------------------
 
     def replay(self) -> Iterator[PerformanceEvent]:
-        """Yield all events from the log file."""
+        """Yield all events from the log file, skipping corrupted lines."""
         if not self.log_path.exists():
             return
         with open(self.log_path) as f:
-            for line in f:
+            for lineno, line in enumerate(f, 1):
                 line = line.strip()
-                if line:
+                if not line:
+                    continue
+                try:
                     yield PerformanceEvent.from_dict(json.loads(line))
+                except (json.JSONDecodeError, KeyError) as exc:
+                    logger.warning(
+                        "%s:%d: skipping malformed line: %s", self.log_path, lineno, exc,
+                    )
 
     def events_for_agent(
         self, agent_id: Optional[str] = None,
@@ -247,7 +256,7 @@ class PerformanceTracker:
         )
         with self._lock:
             with open(self.log_path, "a") as f:
-                f.write(json.dumps(event.to_dict()) + "\n")
+                f.write(json.dumps(event.to_dict(), default=str) + "\n")
         return event
 
     def _ensure_parent(self) -> None:
