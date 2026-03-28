@@ -187,9 +187,8 @@ class PerformanceTracker:
     def summarize(
         self, agent_id: Optional[str] = None,
     ) -> PerformanceSummary:
-        """Compute a summary from the log for the given agent."""
+        """Compute a summary by streaming the log (O(1) memory)."""
         target = agent_id or self.agent_id
-        events = self.events_for_agent(target)
 
         summary = PerformanceSummary(agent_id=target)
 
@@ -197,7 +196,9 @@ class PerformanceTracker:
         start_times: Dict[str, str] = {}  # task_id -> iso timestamp
         close_durations: List[float] = []
 
-        for ev in events:
+        for ev in self.replay():
+            if ev.agent_id != target:
+                continue
             if ev.event_type == TrackerEventType.TASK_STARTED:
                 summary.total_tasks_started += 1
                 tid = ev.metadata.get("task_id", "")
