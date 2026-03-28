@@ -121,8 +121,8 @@ else
 fi
 
 # ── Test 4: post_tool_use (destructive — deviation detection) ──
+# Destructive operations are now always flagged, no GOVERNANCE_TASK_SPEC needed
 echo "--- Test: post_tool_use (destructive) ---"
-export GOVERNANCE_TASK_SPEC="implement feature X"
 stdout=$(echo '{"tool_name": "Bash", "tool_input": {"command": "rm -rf /"}, "exit_code": 0, "tool_response": ""}' | bash "$SHIM" post_tool_use)
 assert_jsonl_line "post_tool_use detects destructive op" 4 "governance.tool_outcome"
 
@@ -135,7 +135,6 @@ else
   echo "FAIL: destructive command deviation=$deviation, expected destructive_operation"
   FAIL=$((FAIL + 1))
 fi
-unset GOVERNANCE_TASK_SPEC
 
 # ── Test 5: subagent_stop ──
 echo "--- Test: subagent_stop ---"

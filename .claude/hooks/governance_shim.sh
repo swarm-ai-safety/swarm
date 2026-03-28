@@ -13,7 +13,8 @@
 #   SubagentStop   → task completion checkpoint + review verdict
 #
 # Sink: $GOVERNANCE_SHIM_SINK (default: runs/governance_shim.jsonl)
-# All events are append-only JSONL, compatible with swarm.logging.event_log
+# All events are append-only JSONL for generic consumers (not guaranteed to be
+# directly compatible with swarm.logging.event_log Event.from_dict()).
 #
 # Usage in settings.json:
 #   "SessionStart": [{ "hooks": [{ "command": "bash .claude/hooks/governance_shim.sh session_start" }] }]
@@ -44,13 +45,27 @@ timestamp() {
 # Deterministic event ID: sha256 of (hook_event + session + timestamp) truncated to 12 hex chars
 make_event_id() {
   local ts="$1"
-  echo -n "${HOOK_EVENT}:${SESSION}:${ts}" | sha256sum | cut -c1-12
+  local input="${HOOK_EVENT}:${SESSION}:${ts}"
+
+  if command -v sha256sum >/dev/null 2>&1; then
+    printf '%s' "$input" | sha256sum | cut -c1-12
+  elif command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$input" | shasum -a 256 | cut -c1-12
+  elif command -v openssl >/dev/null 2>&1; then
+    printf '%s' "$input" | openssl dgst -sha256 | awk '{print $NF}' | cut -c1-12
+  else
+    # Last-resort fallback: cksum (weaker, but avoids failure)
+    printf '%s' "$input" | cksum | awk '{print $1}' | cut -c1-12
+  fi
 }
 
 # Read stdin once and cache (hooks receive context JSON on stdin)
 read_stdin() {
   if [ -z "${_STDIN_CACHE+x}" ]; then
     _STDIN_CACHE="$(cat)"
+    if [ -z "$_STDIN_CACHE" ]; then
+      _STDIN_CACHE="${ARGUMENTS:-}"
+    fi
   fi
   echo "$_STDIN_CACHE"
 }
@@ -62,7 +77,13 @@ jq_or_fallback() {
   local default="${3:-}"
 
   if command -v jq &>/dev/null; then
-    echo "$json" | jq -r "$path // empty" 2>/dev/null || echo "$default"
+    local result
+    result="$(echo "$json" | jq -r "$path // empty" 2>/dev/null)" || true
+    if [ -z "$result" ]; then
+      echo "$default"
+    else
+      echo "$result"
+    fi
   else
     echo "$default"
   fi
@@ -95,7 +116,16 @@ emit_event() {
         payload: ($payload + {session_id: $sid, worktree_id: $wt, branch: $br})
       }')
   else
-    # Fallback: manual JSON construction (no jq)
+    # Fallback: use python3 for proper JSON escaping
+    event=$(python3 -c "
+import json, sys
+print(json.dumps({
+  'event_id': sys.argv[1],
+  'timestamp': sys.argv[2],
+  'event_type': sys.argv[3],
+  'agent_id': sys.argv[4],
+  'payload': json.loads(sys.argv[5])
+}))" "$event_id" "$ts" "$event_type" "$SESSION" "$payload" 2>/dev/null) || \
     event="{\"event_id\":\"${event_id}\",\"timestamp\":\"${ts}\",\"event_type\":\"${event_type}\",\"agent_id\":\"${SESSION}\",\"payload\":${payload}}"
   fi
 
@@ -158,13 +188,12 @@ handle_post_tool_use() {
   local tool_response_preview
   tool_response_preview="$(jq_or_fallback "$input" '.tool_response | tostring | .[0:200]' '')"
 
-  # Plan deviation detection: compare tool usage against expected task spec
+  # Destructive operation detection: always flag dangerous commands.
+  # When GOVERNANCE_TASK_SPEC is set, this also serves as plan deviation detection.
   local deviation="none"
-  local task_spec="${GOVERNANCE_TASK_SPEC:-}"
-  if [ -n "$task_spec" ] && [ "$tool_name" = "Bash" ]; then
+  if [ "$tool_name" = "Bash" ]; then
     local command
     command="$(jq_or_fallback "$input" '.tool_input.command' '')"
-    # Flag destructive operations as potential deviations
     case "$command" in
       *"rm -rf"*|*"git reset --hard"*|*"git push --force"*|*"DROP TABLE"*)
         deviation="destructive_operation"
@@ -227,22 +256,20 @@ jq_build_or_raw() {
     filter+="}"
     jq -nc "${args[@]}" "$filter" 2>/dev/null || echo '{}'
   else
-    # Manual fallback
-    local result="{"
-    local first=true
+    # Fallback: use python3 for proper JSON escaping
+    local py_args=()
     while [ $# -ge 2 ]; do
-      local key="$1"
-      local val="$2"
+      py_args+=("$1" "$2")
       shift 2
-      if [ "$first" = true ]; then
-        result+="\"$key\":\"$val\""
-        first=false
-      else
-        result+=",\"$key\":\"$val\""
-      fi
     done
-    result+="}"
-    echo "$result"
+    python3 -c "
+import json, sys
+args = sys.argv[1:]
+d = {}
+for i in range(0, len(args), 2):
+    d[args[i]] = args[i+1]
+print(json.dumps(d))
+" "${py_args[@]}" 2>/dev/null || echo '{}'
   fi
 }
 
@@ -253,7 +280,8 @@ case "$HOOK_EVENT" in
   post_tool_use)   handle_post_tool_use ;;
   subagent_stop)   handle_subagent_stop ;;
   *)
-    echo '{}' >&2
+    # Return valid JSON on stdout to satisfy hook contract
+    echo '{}'
     exit 0
     ;;
 esac
