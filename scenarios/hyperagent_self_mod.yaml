@@ -31,6 +31,9 @@ agents:
     count: 1
 
 governance:
+  # Enable self-modification governance (Two-Gate policy)
+  self_modification_enabled: true
+
   # Audit to detect weight manipulation
   audit_enabled: true
   audit_probability: 0.20

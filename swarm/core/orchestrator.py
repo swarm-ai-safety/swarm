@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, Field
 
 from swarm.agents.base import Action, ActionType, BaseAgent, Observation
+from swarm.agents.hyperagent_self_mod import HyperagentSelfModAgent
 from swarm.boundaries.external_world import ExternalEntity
 from swarm.boundaries.leakage import LeakageReport
 from swarm.core.agent_scheduler import AgentScheduler
@@ -57,7 +58,13 @@ from swarm.governance.engine import GovernanceEffect, GovernanceEngine
 from swarm.knowledge.graph_memory import GraphMemoryStore
 from swarm.logging.event_bus import EventBus
 from swarm.logging.event_log import EventLog
-from swarm.metrics.capabilities import CapabilityAnalyzer, EmergentCapabilityMetrics
+from swarm.metrics.capabilities import (
+    AgentCapabilityProfile,
+    CapabilityAnalyzer,
+    CapabilityType,
+    EmergentCapabilityMetrics,
+    capability_envelope,
+)
 from swarm.metrics.soft_metrics import SoftMetrics
 from swarm.models.agent import AgentState
 from swarm.models.events import Event, EventType
@@ -185,6 +192,7 @@ class EpochMetrics(BaseModel):
     security_report: Optional[Any] = None
     collusion_report: Optional[Any] = None
     contract_metrics: Optional[Dict[str, Any]] = None
+    capability_envelope_metrics: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -221,6 +229,7 @@ class EpochMetrics(BaseModel):
                 "ecosystem_collusion_risk": getattr(self.collusion_report, "ecosystem_collusion_risk", 0.0),
                 "n_flagged_pairs": getattr(self.collusion_report, "n_flagged_pairs", 0),
             }
+        result["capability_envelope_metrics"] = self.capability_envelope_metrics
         return result
 
 
@@ -778,6 +787,11 @@ class Orchestrator:
         # --- Epoch pre-hooks ---
         self._pipeline.on_epoch_start(ctx)
 
+        # --- Self-modification for HyperagentSelfModAgent instances ---
+        for agent in self._agents.values():
+            if isinstance(agent, HyperagentSelfModAgent):
+                agent.self_modify(epoch_start)
+
         # --- Steps ---
         for _step in range(self.config.steps_per_epoch):
             if self.state.is_paused:
@@ -1268,6 +1282,64 @@ class Orchestrator:
         if self._last_contract_metrics is not None:
             contract_metrics_dict = self._last_contract_metrics.to_dict()
 
+        # Capability envelope for self-modifying agents
+        envelope_dict = None
+        self_mod_agents = {
+            aid: agent
+            for aid, agent in self._agents.items()
+            if isinstance(agent, HyperagentSelfModAgent)
+        }
+        if self_mod_agents:
+            # Build profiles from agent proxy weights.
+            # Map proxy weight dimensions to capability types:
+            #   task_progress  → EXECUTION
+            #   rework_penalty → VERIFICATION  (governed)
+            #   verifier_penalty → ANALYSIS    (governed)
+            #   engagement_signal → COMMUNICATION (ungoverned)
+            all_dims = {
+                CapabilityType.EXECUTION,
+                CapabilityType.VERIFICATION,
+                CapabilityType.ANALYSIS,
+                CapabilityType.COMMUNICATION,
+            }
+            profiles: Dict[str, AgentCapabilityProfile] = {}
+            governed: Dict[str, set] = {}
+            for aid, agent in self_mod_agents.items():
+                demonstrated = set(all_dims)
+                # When ungoverned weight exceeds baseline, agent has
+                # expanded beyond governance coverage
+                ungoverned_w = (
+                    agent.proxy_weights.get("engagement_signal", 0)
+                    + agent.proxy_weights.get("task_progress", 0)
+                )
+                if ungoverned_w > 0.6:
+                    demonstrated.add(CapabilityType.CREATIVITY)
+                profiles[aid] = AgentCapabilityProfile(
+                    agent_id=aid,
+                    capabilities=demonstrated,
+                )
+                # Governance covers only monitored dimensions
+                gov_caps = {
+                    CapabilityType.VERIFICATION,
+                    CapabilityType.ANALYSIS,
+                }
+                governed[aid] = gov_caps
+
+            result = capability_envelope(
+                profiles, governed, step=self.state.current_step,
+                all_capability_types=all_dims | {CapabilityType.CREATIVITY},
+            )
+            envelope_dict = {
+                "mean_envelope": result.mean_envelope,
+                "mean_governance_coverage": result.mean_governance_coverage,
+                "mean_governance_gap": result.mean_governance_gap,
+                "max_governance_gap": result.max_governance_gap,
+                "n_self_mod_agents": len(self_mod_agents),
+                "max_modification_depth": max(
+                    a.modification_depth for a in self_mod_agents.values()
+                ),
+            }
+
         if not interactions:
             return EpochMetrics(
                 epoch=self.state.current_epoch,
@@ -1277,6 +1349,7 @@ class Orchestrator:
                 security_report=security_report,
                 collusion_report=collusion_report,
                 contract_metrics=contract_metrics_dict,
+                capability_envelope_metrics=envelope_dict,
             )
 
         accepted = [i for i in interactions if i.accepted]
@@ -1301,6 +1374,7 @@ class Orchestrator:
             security_report=security_report,
             collusion_report=collusion_report,
             contract_metrics=contract_metrics_dict,
+            capability_envelope_metrics=envelope_dict,
         )
 
     # ===================================================================

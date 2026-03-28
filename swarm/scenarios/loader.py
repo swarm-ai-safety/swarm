@@ -455,6 +455,32 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
             "rbac_high_stakes_penalty_multiplier", 2.0
         ),
         rbac_role_action_map=data.get("rbac_role_action_map", {}),
+        # Self-modification governance (Two-Gate policy)
+        self_modification_enabled=data.get("self_modification_enabled", False),
+        self_modification_max_per_epoch=data.get(
+            "self_modification_max_per_epoch", 10
+        ),
+        self_modification_tau_min_low=data.get(
+            "self_modification_tau_min_low", -0.10
+        ),
+        self_modification_tau_min_medium=data.get(
+            "self_modification_tau_min_medium", 0.00
+        ),
+        self_modification_tau_min_high=data.get(
+            "self_modification_tau_min_high", 0.25
+        ),
+        self_modification_k_max_low=data.get(
+            "self_modification_k_max_low", 20.0
+        ),
+        self_modification_k_max_medium=data.get(
+            "self_modification_k_max_medium", 35.0
+        ),
+        self_modification_k_max_high=data.get(
+            "self_modification_k_max_high", 50.0
+        ),
+        self_modification_window_days=data.get(
+            "self_modification_window_days", 14
+        ),
     )
     # Pydantic auto-validates
     return config

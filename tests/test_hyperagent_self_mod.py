@@ -1,6 +1,7 @@
 """Tests for the hyperagent self-modification agent and scenario."""
 
 import random
+from pathlib import Path
 
 from swarm.agents.hyperagent_self_mod import HyperagentSelfModAgent, SelfModSnapshot
 
@@ -107,3 +108,92 @@ class TestScenarioYAMLLoads:
         assert scenario.scenario_id == "hyperagent_self_mod"
         assert scenario.orchestrator_config.n_epochs == 25
         assert len(scenario.agent_specs) == 3  # 3 agent groups
+
+    def test_self_modification_enabled_in_governance(self):
+        from swarm.scenarios.loader import load_scenario
+
+        scenario = load_scenario("scenarios/hyperagent_self_mod.yaml")
+        gov = scenario.orchestrator_config.governance_config
+        assert gov is not None
+        assert gov.self_modification_enabled is True
+
+
+class TestSelfModifyOrchestratorIntegration:
+    """Integration tests: self_modify() called by orchestrator, metrics piped."""
+
+    def _build_orchestrator(self, n_epochs: int = 5, steps_per_epoch: int = 3):
+        from swarm.scenarios.loader import build_orchestrator, load_scenario
+
+        scenario = load_scenario(
+            Path("scenarios/hyperagent_self_mod.yaml")
+        )
+        # Use fewer epochs/steps for test speed
+        scenario.orchestrator_config.n_epochs = n_epochs
+        scenario.orchestrator_config.steps_per_epoch = steps_per_epoch
+        return build_orchestrator(scenario)
+
+    def test_modification_depth_increases(self):
+        """After running epochs, self-mod agents should have depth > 0."""
+        orch = self._build_orchestrator(n_epochs=5, steps_per_epoch=2)
+        orch.run()
+
+        self_mod_agents = [
+            a for a in orch.get_all_agents()
+            if isinstance(a, HyperagentSelfModAgent)
+        ]
+        assert len(self_mod_agents) == 3
+        for agent in self_mod_agents:
+            assert agent.modification_depth == 5
+            assert len(agent.modification_history) == 5
+
+    def test_governance_gap_grows_over_epochs(self):
+        """Governance gap should increase across epochs."""
+        orch = self._build_orchestrator(n_epochs=10, steps_per_epoch=2)
+        metrics = orch.run()
+
+        # Collect envelope metrics from epochs that have them
+        envelope_gaps = [
+            m.capability_envelope_metrics["mean_governance_gap"]
+            for m in metrics
+            if m.capability_envelope_metrics is not None
+        ]
+        assert len(envelope_gaps) > 0
+        # Gap should grow: last > first (agents expand beyond governance)
+        assert envelope_gaps[-1] >= envelope_gaps[0]
+
+    def test_circuit_breaker_activates(self):
+        """With enough self-modification, toxicity should rise and
+        the circuit breaker should activate (freeze epochs > 0)."""
+        orch = self._build_orchestrator(n_epochs=15, steps_per_epoch=5)
+        metrics = orch.run()
+
+        # Check that toxicity_rate eventually rises above baseline
+        toxicities = [m.toxicity_rate for m in metrics]
+        # At least some epoch should show non-zero toxicity
+        assert any(t > 0.0 for t in toxicities), (
+            "Expected some toxicity from self-modifying agents"
+        )
+
+    def test_capability_envelope_metrics_present(self):
+        """Epoch metrics should include capability_envelope_metrics."""
+        orch = self._build_orchestrator(n_epochs=3, steps_per_epoch=2)
+        metrics = orch.run()
+
+        for m in metrics:
+            env = m.capability_envelope_metrics
+            assert env is not None, "capability_envelope_metrics should be set"
+            assert "mean_governance_gap" in env
+            assert "max_governance_gap" in env
+            assert "mean_envelope" in env
+            assert "n_self_mod_agents" in env
+            assert env["n_self_mod_agents"] == 3
+            assert "max_modification_depth" in env
+
+    def test_modification_depth_in_envelope_metrics(self):
+        """max_modification_depth in envelope should match agent state."""
+        orch = self._build_orchestrator(n_epochs=4, steps_per_epoch=2)
+        metrics = orch.run()
+
+        last = metrics[-1]
+        assert last.capability_envelope_metrics is not None
+        assert last.capability_envelope_metrics["max_modification_depth"] == 4
