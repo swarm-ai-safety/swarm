@@ -17,6 +17,7 @@ from swarm.agents.cautious_reciprocator import CautiousReciprocator
 from swarm.agents.coding_agent import CodingAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.hyperagent_self_mod import HyperagentSelfModAgent
 from swarm.agents.ldt_agent import LDTAgent
 from swarm.agents.memory_agent import (
     CacheGamerAgent,
@@ -127,6 +128,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "skillrl": SkillRLAgent,
     # Self-optimizing agent (recursive cost-cutting)
     "self_optimizer": SelfOptimizerAgent,
+    # Hyperagent self-modifying agent (Zhang et al., 2026)
+    "hyperagent_self_mod": HyperagentSelfModAgent,
     # Rivals pipeline agents (Team-of-Rivals)
     "rivals_producer": RivalsProducerAgent,
     "rivals_critic": RivalsCriticAgent,
