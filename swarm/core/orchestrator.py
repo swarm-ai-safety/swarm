@@ -160,6 +160,9 @@ class OrchestratorConfig(BaseModel):
     # Graph memory (cross-run trust priors) configuration
     graph_memory_path: Optional[str] = None
 
+    # Dynamic toxicity feedback configuration
+    dynamic_toxicity: Optional[Dict[str, Any]] = None
+
 
 class EpochMetrics(BaseModel):
     """Metrics collected at the end of each epoch."""
@@ -175,6 +178,7 @@ class EpochMetrics(BaseModel):
     quality_gap: float = 0.0
     avg_payoff: float = 0.0
     total_welfare: float = 0.0
+    net_social_welfare: float = 0.0
     network_metrics: Optional[Dict[str, float]] = None
     capability_metrics: Optional[EmergentCapabilityMetrics] = None
     spawn_metrics: Optional[Dict[str, Any]] = None
@@ -194,6 +198,7 @@ class EpochMetrics(BaseModel):
             "quality_gap": self.quality_gap,
             "avg_payoff": self.avg_payoff,
             "total_welfare": self.total_welfare,
+            "net_social_welfare": self.net_social_welfare,
             "network_metrics": self.network_metrics,
         }
         if self.capability_metrics is not None:
@@ -578,6 +583,57 @@ class Orchestrator:
 
         # 8. WorkRegimeAgent policy adaptation at epoch end
         self._pipeline.add(WorkRegimeAdaptMiddleware())
+
+        # 9. Dynamic toxicity feedback loops (optional)
+        self._build_dynamic_toxicity()
+
+    def _build_dynamic_toxicity(self) -> None:
+        """Wire dynamic toxicity middleware if configured."""
+        dt_config = self.config.dynamic_toxicity
+        if not dt_config:
+            return
+
+        from swarm.core.dynamic_toxicity import (
+            ProxyCalibrationDriftMiddleware,
+            QualityContagionMiddleware,
+            TrustErosionMiddleware,
+        )
+
+        enabled = dt_config.get("enabled", [])
+
+        if "proxy_drift" in enabled:
+            params = dt_config.get("proxy_drift", {})
+            self._pipeline.add(
+                ProxyCalibrationDriftMiddleware(
+                    self.proxy_computer,
+                    self._event_bus,
+                    alpha=params.get("alpha", 0.5),
+                    k_floor=params.get("k_floor", 0.5),
+                )
+            )
+
+        if "trust_erosion" in enabled:
+            params = dt_config.get("trust_erosion", {})
+            self._pipeline.add(
+                TrustErosionMiddleware(
+                    self._event_bus,
+                    beta=params.get("beta", 0.3),
+                    exit_threshold=params.get("exit_threshold", 0.35),
+                    window=params.get("window", 3),
+                    min_honest=params.get("min_honest", 1),
+                    seed=self.config.seed,
+                )
+            )
+
+        if "quality_contagion" in enabled:
+            params = dt_config.get("quality_contagion", {})
+            self._pipeline.add(
+                QualityContagionMiddleware(
+                    self._event_bus,
+                    gamma=params.get("gamma", 0.1),
+                    neutral=params.get("neutral", 0.5),
+                )
+            )
 
     def _make_context(self) -> MiddlewareContext:
         """Build a ``MiddlewareContext`` from current orchestrator state."""
@@ -1238,6 +1294,7 @@ class Orchestrator:
             quality_gap=quality_gap,
             avg_payoff=welfare.get("avg_initiator_payoff", 0),
             total_welfare=welfare.get("total_welfare", 0),
+            net_social_welfare=welfare.get("net_social_welfare", 0),
             network_metrics=network_metrics,
             capability_metrics=capability_metrics,
             spawn_metrics=spawn_metrics_dict,

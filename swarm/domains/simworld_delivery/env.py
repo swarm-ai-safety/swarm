@@ -10,7 +10,7 @@ from __future__ import annotations
 import logging
 import math
 import random
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from swarm.domains.simworld_delivery.config import DeliveryConfig
 from swarm.domains.simworld_delivery.entities import (
@@ -28,9 +28,10 @@ logger = logging.getLogger(__name__)
 
 # Distance threshold for considering an agent "at" a destination.
 ARRIVAL_DISTANCE_THRESHOLD = 0.1
+_DEFAULT_SIGMOID_K = 5.0
 
 
-def _distance(a: Tuple[float, float], b: Tuple[float, float]) -> float:
+def _distance(a: tuple[float, float], b: tuple[float, float]) -> float:
     """Euclidean distance between two points."""
     return math.sqrt((a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2)
 
@@ -51,24 +52,24 @@ class DeliveryEnvironment:
         self._rng = random.Random(config.seed)
 
         # Agents
-        self._agents: Dict[str, AgentState] = {}
+        self._agents: dict[str, AgentState] = {}
 
         # Orders
-        self._orders: Dict[str, DeliveryOrder] = {}
+        self._orders: dict[str, DeliveryOrder] = {}
         self._order_counter = 0
 
         # Pending bids for current step
-        self._pending_bids: List[Bid] = []
+        self._pending_bids: list[Bid] = []
 
         # Events
-        self._events: List[DeliveryEvent] = []
+        self._events: list[DeliveryEvent] = []
 
         # Counters
         self._current_step = 0
         self._current_epoch = 0
 
         # Generate depot locations
-        self._depots: List[Tuple[float, float]] = []
+        self._depots: list[tuple[float, float]] = []
         for _ in range(config.city.num_depots):
             self._depots.append((
                 self._rng.uniform(0, config.city.width),
@@ -103,7 +104,7 @@ class DeliveryEnvironment:
     # Observations
     # ------------------------------------------------------------------
 
-    def obs(self, agent_id: str) -> Dict[str, Any]:
+    def obs(self, agent_id: str) -> dict[str, Any]:
         """Build observation for an agent."""
         agent = self._agents[agent_id]
         available_orders = [
@@ -175,10 +176,10 @@ class DeliveryEnvironment:
     # ------------------------------------------------------------------
 
     def apply_actions(
-        self, actions: Dict[str, DeliveryAction],
-    ) -> List[DeliveryEvent]:
+        self, actions: dict[str, DeliveryAction],
+    ) -> list[DeliveryEvent]:
         """Apply all agent actions for one step."""
-        step_events: List[DeliveryEvent] = []
+        step_events: list[DeliveryEvent] = []
 
         # Process actions by type
         for agent_id, action in actions.items():
@@ -394,7 +395,7 @@ class DeliveryEnvironment:
     # Bid resolution
     # ------------------------------------------------------------------
 
-    def _resolve_bids(self) -> List[DeliveryEvent]:
+    def _resolve_bids(self) -> list[DeliveryEvent]:
         """Resolve pending bids via reverse auction (lowest bid wins).
 
         This models a procurement-style auction where the platform
@@ -403,10 +404,10 @@ class DeliveryEnvironment:
         bids are higher. This is intentional: overbidding is a
         resource-wasting strategy that the auction penalizes.
         """
-        events: List[DeliveryEvent] = []
+        events: list[DeliveryEvent] = []
 
         # Group bids by order
-        bids_by_order: Dict[str, List[Bid]] = {}
+        bids_by_order: dict[str, list[Bid]] = {}
         for bid in self._pending_bids:
             bids_by_order.setdefault(bid.order_id, []).append(bid)
 
@@ -472,9 +473,9 @@ class DeliveryEnvironment:
     # Movement
     # ------------------------------------------------------------------
 
-    def _move_agents(self) -> List[DeliveryEvent]:
+    def _move_agents(self) -> list[DeliveryEvent]:
         """Move agents toward their current delivery target."""
-        events: List[DeliveryEvent] = []
+        events: list[DeliveryEvent] = []
         econ = self._config.economy
 
         for agent in self._agents.values():
@@ -525,9 +526,9 @@ class DeliveryEnvironment:
     # Delivery completion/failure checks
     # ------------------------------------------------------------------
 
-    def _check_deliveries(self) -> List[DeliveryEvent]:
+    def _check_deliveries(self) -> list[DeliveryEvent]:
         """Check for completed and failed deliveries."""
-        events: List[DeliveryEvent] = []
+        events: list[DeliveryEvent] = []
         gov = self._config.governance
         econ = self._config.economy
 
@@ -576,6 +577,9 @@ class DeliveryEnvironment:
             order.status = OrderStatus.DELIVERED
             order.delivered_step = self._current_step
 
+            # Compute soft label
+            v_hat, p = self.compute_soft_label(agent, on_time, elapsed, order.deadline_steps)
+
             events.append(DeliveryEvent(
                 event_type="delivery_complete",
                 step=self._current_step,
@@ -586,6 +590,8 @@ class DeliveryEnvironment:
                     "payout": payout,
                     "on_time": on_time,
                     "elapsed_steps": elapsed,
+                    "v_hat": round(v_hat, 4),
+                    "p": round(p, 4),
                 },
             ))
 
@@ -614,7 +620,7 @@ class DeliveryEnvironment:
         self,
         agent: AgentState,
         order: DeliveryOrder,
-        events: List[DeliveryEvent],
+        events: list[DeliveryEvent],
     ) -> None:
         """Handle a failed delivery (deadline exceeded)."""
         econ = self._config.economy
@@ -646,9 +652,9 @@ class DeliveryEnvironment:
     # Order lifecycle
     # ------------------------------------------------------------------
 
-    def generate_orders(self, count: Optional[int] = None) -> List[DeliveryEvent]:
+    def generate_orders(self, count: int | None = None) -> list[DeliveryEvent]:
         """Generate new delivery orders for the current step."""
-        events: List[DeliveryEvent] = []
+        events: list[DeliveryEvent] = []
         n = count if count is not None else self._config.orders.orders_per_epoch
         cfg = self._config.orders
         city = self._config.city
@@ -690,9 +696,9 @@ class DeliveryEnvironment:
             ))
         return events
 
-    def _expire_orders(self) -> List[DeliveryEvent]:
+    def _expire_orders(self) -> list[DeliveryEvent]:
         """Expire orders that have been available too long."""
-        events: List[DeliveryEvent] = []
+        events: list[DeliveryEvent] = []
         expiry = self._config.orders.expiry_steps
 
         for order in self._orders.values():
@@ -712,9 +718,9 @@ class DeliveryEnvironment:
     # Epoch boundary
     # ------------------------------------------------------------------
 
-    def end_epoch(self) -> List[DeliveryEvent]:
+    def end_epoch(self) -> list[DeliveryEvent]:
         """Process epoch boundary: reputation decay, cleanup."""
-        events: List[DeliveryEvent] = []
+        events: list[DeliveryEvent] = []
         gov = self._config.governance
 
         # Reputation decay
@@ -749,14 +755,59 @@ class DeliveryEnvironment:
         return events
 
     # ------------------------------------------------------------------
+    # Soft label computation
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def compute_soft_label(
+        agent: AgentState,
+        on_time: bool,
+        elapsed: int,
+        deadline_steps: int,
+    ) -> tuple[float, float]:
+        """Compute soft label (v_hat, p) from delivery signals.
+
+        Signals:
+        - on_time_signal: 1.0 if on_time, 0.0 otherwise (weight 0.4)
+        - time_margin: (deadline - elapsed) / deadline, clamped to [0, 1] (weight 0.35)
+        - reputation: agent reputation, already in [0, 1] (weight 0.25)
+
+        Returns:
+            (v_hat, p) where v_hat is in [-1, 1] and p is sigmoid(k * v_hat) in [0, 1]
+        """
+        on_time_signal = 1.0 if on_time else 0.0
+        time_margin = max(0.0, min(1.0, (deadline_steps - elapsed) / max(deadline_steps, 1)))
+        reputation = agent.reputation
+
+        # Weighted combination: rescale to [-1, 1] (treat each as 0.5-centered)
+        v_hat = (
+            0.4 * (2 * on_time_signal - 1.0)
+            + 0.35 * (2 * time_margin - 1.0)
+            + 0.25 * (2 * reputation - 1.0)
+        )
+
+        # Clamp v_hat to [-1, 1]
+        v_hat = max(-1.0, min(1.0, v_hat))
+
+        # Apply sigmoid: p = 1 / (1 + exp(-k * v_hat))
+        import math
+        try:
+            p = 1.0 / (1.0 + math.exp(-_DEFAULT_SIGMOID_K * v_hat))
+        except OverflowError:
+            # Extreme values: approximate
+            p = 1.0 if v_hat > 0 else 0.0
+
+        return (v_hat, p)
+
+    # ------------------------------------------------------------------
     # Shared orders tracking
     # ------------------------------------------------------------------
 
     @property
-    def _shared_orders(self) -> Dict[str, str]:
+    def _shared_orders(self) -> dict[str, str]:
         """Track which orders were shared and by whom."""
         if not hasattr(self, "_shared_orders_map"):
-            self._shared_orders_map: Dict[str, str] = {}
+            self._shared_orders_map: dict[str, str] = {}
         return self._shared_orders_map
 
     # ------------------------------------------------------------------
@@ -764,15 +815,15 @@ class DeliveryEnvironment:
     # ------------------------------------------------------------------
 
     @property
-    def agents(self) -> Dict[str, AgentState]:
+    def agents(self) -> dict[str, AgentState]:
         return dict(self._agents)
 
     @property
-    def orders(self) -> Dict[str, DeliveryOrder]:
+    def orders(self) -> dict[str, DeliveryOrder]:
         return dict(self._orders)
 
     @property
-    def events(self) -> List[DeliveryEvent]:
+    def events(self) -> list[DeliveryEvent]:
         return list(self._events)
 
     @property

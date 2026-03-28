@@ -320,6 +320,7 @@ class SoftMetrics:
             return {
                 "total_welfare": 0.0,
                 "total_social_surplus": 0.0,
+                "net_social_welfare": 0.0,
                 "avg_initiator_payoff": 0.0,
                 "avg_counterparty_payoff": 0.0,
             }
@@ -341,9 +342,20 @@ class SoftMetrics:
             else 0.0
         )
 
+        # Net social welfare: private surplus minus externalities.
+        # social_surplus = S_soft - E_soft = p*s+ - (1-p)*(s- + h)
+        # This is what an economist would call welfare: the sum of all
+        # gains and losses including unpriced harm to the ecosystem.
+        net_social_welfare = (
+            sum(self.payoff_engine.social_surplus(i) for i in accepted)
+            if accepted
+            else 0.0
+        )
+
         return {
             "total_welfare": total_welfare,
             "total_social_surplus": total_social,
+            "net_social_welfare": net_social_welfare,
             "avg_initiator_payoff": avg_init,
             "avg_counterparty_payoff": avg_counter,
         }

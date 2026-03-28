@@ -1,5 +1,10 @@
 """Metrics system for soft label analysis."""
 
+from swarm.metrics.capabilities import (
+    CapabilityEnvelopeResult,
+    CapabilityEnvelopeSnapshot,
+    capability_envelope,
+)
 from swarm.metrics.causal_credit import (
     CausalCreditEngine,
     CausalSnapshot,
@@ -136,6 +141,10 @@ __all__ = [
     "IssueSpace",
     "DistanceMetric",
     "WeightAggregation",
+    # Capability envelope (Zhang et al. Hyperagents)
+    "CapabilityEnvelopeResult",
+    "CapabilityEnvelopeSnapshot",
+    "capability_envelope",
     # Rivals (Team-of-Rivals) metrics (lazy import to avoid circular dependency)
     # Use: from swarm.metrics.rivals_metrics import compute_rivals_metrics, RivalsMetrics
 ]

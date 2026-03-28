@@ -392,6 +392,104 @@ def compute_collective_intelligence_score(
     return float(score)
 
 
+@dataclass
+class CapabilityEnvelopeSnapshot:
+    """Single point-in-time measurement of capability vs governance coverage."""
+
+    step: int
+    agent_id: str
+    capability_count: int  # distinct capabilities demonstrated
+    governed_count: int  # capabilities with governance coverage
+    capability_envelope: float  # fraction of all capability types demonstrated
+    governance_coverage: float  # governed / demonstrated (1.0 = fully governed)
+    governance_gap: float  # capability_envelope - (envelope * coverage)
+
+
+@dataclass
+class CapabilityEnvelopeResult:
+    """Aggregate result across agents and time steps."""
+
+    snapshots: List[CapabilityEnvelopeSnapshot] = field(default_factory=list)
+    mean_envelope: float = 0.0
+    mean_governance_coverage: float = 0.0
+    mean_governance_gap: float = 0.0
+    max_governance_gap: float = 0.0
+
+
+def capability_envelope(
+    agent_profiles: Dict[str, AgentCapabilityProfile],
+    governed_capabilities: Dict[str, Set[CapabilityType]],
+    step: int = 0,
+    all_capability_types: Optional[Set[CapabilityType]] = None,
+) -> CapabilityEnvelopeResult:
+    """Compute capability envelope metric for a set of agents.
+
+    Measures the expanding input set each agent can handle vs. how much of
+    that space is covered by governance mechanisms (monitoring, safety checks,
+    circuit breakers, etc.).
+
+    A governance gap > 0 means the agent can act in domains that governance
+    does not yet cover — the safety-critical signal from Zhang et al.
+    Hyperagents (arXiv:2603.19461).
+
+    Args:
+        agent_profiles: Map of agent_id to their capability profile.
+        governed_capabilities: Map of agent_id to the set of capability types
+            that have active governance coverage for that agent.
+        step: Current simulation step (for time-series tracking).
+        all_capability_types: Universe of capability types. Defaults to all
+            members of ``CapabilityType`` if not provided.
+
+    Returns:
+        CapabilityEnvelopeResult with per-agent snapshots and aggregates.
+    """
+    if all_capability_types is None:
+        all_capability_types = set(CapabilityType)
+
+    n_types = len(all_capability_types)
+    if n_types == 0:
+        return CapabilityEnvelopeResult()
+
+    snapshots: List[CapabilityEnvelopeSnapshot] = []
+
+    for agent_id, profile in agent_profiles.items():
+        demonstrated = profile.capabilities & all_capability_types
+        governed = governed_capabilities.get(agent_id, set()) & demonstrated
+
+        cap_count = len(demonstrated)
+        gov_count = len(governed)
+        envelope = cap_count / n_types  # fraction of universe demonstrated
+        coverage = gov_count / cap_count if cap_count > 0 else 1.0
+        gap = envelope * (1.0 - coverage)  # ungoverned fraction of universe
+
+        snapshots.append(
+            CapabilityEnvelopeSnapshot(
+                step=step,
+                agent_id=agent_id,
+                capability_count=cap_count,
+                governed_count=gov_count,
+                capability_envelope=envelope,
+                governance_coverage=coverage,
+                governance_gap=gap,
+            )
+        )
+
+    if not snapshots:
+        return CapabilityEnvelopeResult()
+
+    envelopes = [s.capability_envelope for s in snapshots]
+    coverages = [s.governance_coverage for s in snapshots]
+    gaps = [s.governance_gap for s in snapshots]
+
+    return CapabilityEnvelopeResult(
+        snapshots=snapshots,
+        mean_envelope=float(np.mean(envelopes)),
+        mean_governance_coverage=float(np.mean(coverages)),
+        mean_governance_gap=float(np.mean(gaps)),
+        max_governance_gap=float(np.max(gaps)),
+    )
+
+
 def analyze_capability_distribution(
     profiles: List[AgentCapabilityProfile],
 ) -> Dict[str, float]:

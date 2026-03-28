@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
 from swarm.domains.simworld_delivery.agents import (
@@ -292,7 +294,7 @@ class TestDeliveryRunner:
         assert m1[0].orders_delivered == m2[0].orders_delivered
         assert m1[0].total_earnings == m2[0].total_earnings
 
-    def test_export(self, tmp_path: str) -> None:
+    def test_export(self, tmp_path: "Path") -> None:
         config = DeliveryConfig(seed=42)
         specs = [{"policy": "conscientious", "count": 2}]
         runner = DeliveryScenarioRunner(
