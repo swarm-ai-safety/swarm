@@ -156,6 +156,13 @@ class EventType(Enum):
     GOVERNANCE_THRESHOLD_REVERTED = "governance_threshold_reverted"
     GOVERNANCE_CONTEMPLATION_COMPLETED = "governance_contemplation_completed"
 
+    # Attestation events
+    RECEIPT_SEALED = "receipt_sealed"
+    RECEIPT_VERIFIED = "receipt_verified"
+    RECEIPT_REJECTED = "receipt_rejected"
+    RELAY_MESSAGE_SENT = "relay_message_sent"
+    RELAY_MESSAGE_ACKNOWLEDGED = "relay_message_acknowledged"
+
     # System events
     SIMULATION_STARTED = "simulation_started"
     SIMULATION_ENDED = "simulation_ended"

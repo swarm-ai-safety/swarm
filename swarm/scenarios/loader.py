@@ -17,6 +17,7 @@ from swarm.agents.cautious_reciprocator import CautiousReciprocator
 from swarm.agents.coding_agent import CodingAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.hyperagent_self_mod import HyperagentSelfModAgent
 from swarm.agents.ldt_agent import LDTAgent
 from swarm.agents.memory_agent import (
     CacheGamerAgent,
@@ -127,6 +128,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "skillrl": SkillRLAgent,
     # Self-optimizing agent (recursive cost-cutting)
     "self_optimizer": SelfOptimizerAgent,
+    # Hyperagent self-modifying agent (Zhang et al., 2026)
+    "hyperagent_self_mod": HyperagentSelfModAgent,
     # Rivals pipeline agents (Team-of-Rivals)
     "rivals_producer": RivalsProducerAgent,
     "rivals_critic": RivalsCriticAgent,
@@ -452,6 +455,32 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
             "rbac_high_stakes_penalty_multiplier", 2.0
         ),
         rbac_role_action_map=data.get("rbac_role_action_map", {}),
+        # Self-modification governance (Two-Gate policy)
+        self_modification_enabled=data.get("self_modification_enabled", False),
+        self_modification_max_per_epoch=data.get(
+            "self_modification_max_per_epoch", 10
+        ),
+        self_modification_tau_min_low=data.get(
+            "self_modification_tau_min_low", -0.10
+        ),
+        self_modification_tau_min_medium=data.get(
+            "self_modification_tau_min_medium", 0.00
+        ),
+        self_modification_tau_min_high=data.get(
+            "self_modification_tau_min_high", 0.25
+        ),
+        self_modification_k_max_low=data.get(
+            "self_modification_k_max_low", 20.0
+        ),
+        self_modification_k_max_medium=data.get(
+            "self_modification_k_max_medium", 35.0
+        ),
+        self_modification_k_max_high=data.get(
+            "self_modification_k_max_high", 50.0
+        ),
+        self_modification_window_days=data.get(
+            "self_modification_window_days", 14
+        ),
     )
     # Pydantic auto-validates
     return config
@@ -1132,6 +1161,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         contracts_config=contracts_config,
         evo_game_config=evo_game_config,
         tierra_config=tierra_config,
+        dynamic_toxicity=data.get("dynamic_toxicity"),
         graph_memory_path=outputs_data.get("graph_memory_path"),
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")

@@ -152,18 +152,20 @@ def cmd_run(args: argparse.Namespace) -> int:
     if not args.quiet:
         print()
         print(
-            f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} {'Welfare':<10}"
+            f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} "
+            f"{'Surplus':<10} {'Net Welf':<10}"
         )
-        print("-" * 60)
+        print("-" * 70)
         for m in metrics_history:
             print(
                 f"{m.epoch:<6} "
                 f"{m.total_interactions:<13} "
                 f"{m.accepted_interactions:<10} "
                 f"{m.toxicity_rate:<10.4f} "
-                f"{m.total_welfare:<10.2f}"
+                f"{m.total_welfare:<10.2f} "
+                f"{m.net_social_welfare:<10.2f}"
             )
-        print("-" * 60)
+        print("-" * 70)
         print()
 
     # Summary
@@ -173,12 +175,16 @@ def cmd_run(args: argparse.Namespace) -> int:
         avg_toxicity = sum(m.toxicity_rate for m in metrics_history) / len(
             metrics_history
         )
+        avg_net_welfare = sum(
+            m.net_social_welfare for m in metrics_history
+        ) / len(metrics_history)
 
         if not args.quiet:
             print(f"Total interactions: {total_interactions}")
             print(f"Accepted:          {total_accepted}")
             print(f"Avg toxicity:      {avg_toxicity:.4f}")
-            print(f"Final welfare:     {metrics_history[-1].total_welfare:.2f}")
+            print(f"Avg surplus:       {sum(m.total_welfare for m in metrics_history) / len(metrics_history):.2f}")
+            print(f"Avg net welfare:   {avg_net_welfare:.2f}  (surplus - externalities)")
 
             # Contract screening summary
             last_contract = metrics_history[-1].contract_metrics
@@ -272,6 +278,20 @@ def _check_criteria(criteria: dict, metrics_history: list) -> None:
         tag = "[PASS]" if passed else "[FAIL]"
         print(
             f"  {tag} Toxicity: {avg_toxicity:.4f} <= {criteria['toxicity_threshold']}"
+        )
+        all_passed = all_passed and passed
+
+    if "min_net_social_welfare" in criteria:
+        avg_net_welfare = (
+            sum(m.net_social_welfare for m in metrics_history) / len(metrics_history)
+            if metrics_history
+            else 0
+        )
+        passed = avg_net_welfare >= criteria["min_net_social_welfare"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(
+            f"  {tag} Net social welfare: {avg_net_welfare:.4f} >= "
+            f"{criteria['min_net_social_welfare']}"
         )
         all_passed = all_passed and passed
 
