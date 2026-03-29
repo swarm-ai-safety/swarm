@@ -74,9 +74,9 @@ This measures the "poison in the system"—how much harm is getting through.
 
 Difference in quality between accepted and rejected:
 
-$$\text{[Quality Gap](../papers/kernel_market_governance_comparison.md)} = E[p \mid \text{accepted}] - E[p \mid \text{rejected}]$$
+$$\text{Quality Gap} = E[p \mid \text{accepted}] - E[p \mid \text{rejected}]$$
 
-A negative quality gap indicates **adverse selection**: the system preferentially accepts lower-quality interactions.
+A negative [quality gap](../papers/kernel_market_governance_comparison.md) indicates **adverse selection**: the system preferentially accepts lower-quality interactions.
 
 ### Incoherence
 

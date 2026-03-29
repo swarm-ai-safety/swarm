@@ -38,6 +38,7 @@ from swarm.governance.moltipedia import (
 from swarm.governance.rbac import RBACLever
 from swarm.governance.refinery import RefineryLever
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever
+from swarm.governance.resample import ResampleLever
 from swarm.governance.security import SecurityLever
 from swarm.governance.self_modification import SelfModificationLever
 from swarm.governance.taxes import TransactionTaxLever
@@ -172,6 +173,10 @@ class GovernanceEngine:
         if self.config.rbac_enabled:
             levers.append(RBACLever(self.config))
 
+        # Resample protocol lever (Bhatt et al., 2025)
+        if self.config.resample_enabled:
+            levers.append(ResampleLever(self.config, seed=seed))
+
         # Stored as a tuple so that external code cannot mutate in place.
         self._levers: tuple[GovernanceLever, ...] = tuple(levers)
 
@@ -187,6 +192,7 @@ class GovernanceEngine:
         self._loop_detector_lever: Optional[LoopDetectorLever] = None
         self._self_modification_lever: Optional[SelfModificationLever] = None
         self._rbac_lever: Optional[RBACLever] = None
+        self._resample_lever: Optional[ResampleLever] = None
 
         for lever in self._levers:
             if isinstance(lever, StakingLever):
@@ -209,6 +215,8 @@ class GovernanceEngine:
                 self._self_modification_lever = lever
             elif isinstance(lever, RBACLever):
                 self._rbac_lever = lever
+            elif isinstance(lever, ResampleLever):
+                self._resample_lever = lever
 
         # Adaptive governance state
         self._incoherence_forecaster: Optional[Any] = None
@@ -510,3 +518,13 @@ class GovernanceEngine:
         """Set security clearances for RBAC enforcement."""
         if self._rbac_lever is not None:
             self._rbac_lever.set_security_clearances(clearances)
+
+    def get_resample_lever(self) -> Optional[ResampleLever]:
+        """Return the resample protocol lever if registered."""
+        return self._resample_lever
+
+    def get_resample_report(self) -> Optional[Dict[str, Any]]:
+        """Return the resample protocol report."""
+        if self._resample_lever is None:
+            return None
+        return self._resample_lever.get_report()
