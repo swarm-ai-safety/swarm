@@ -11,12 +11,12 @@ Provides an end-to-end runner that:
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import logging
-import random
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Type
+from typing import Any
 
 from swarm.domains.simworld_delivery.agents import (
     AggressivePolicy,
@@ -35,7 +35,7 @@ from swarm.domains.simworld_delivery.metrics import (
 
 logger = logging.getLogger(__name__)
 
-_POLICY_MAP: Dict[str, Type[DeliveryPolicy]] = {
+_POLICY_MAP: dict[str, type[DeliveryPolicy]] = {
     "conscientious": ConscientiousPolicy,
     "aggressive": AggressivePolicy,
     "cautious": CautiousPolicy,
@@ -44,7 +44,7 @@ _POLICY_MAP: Dict[str, Type[DeliveryPolicy]] = {
 
 
 def _create_policy(
-    agent_spec: Dict[str, Any],
+    agent_spec: dict[str, Any],
     agent_id: str,
     seed: int,
 ) -> DeliveryPolicy:
@@ -57,7 +57,7 @@ def _create_policy(
         )
         policy_cls = ConscientiousPolicy
 
-    kwargs: Dict[str, Any] = {"agent_id": agent_id, "seed": seed}
+    kwargs: dict[str, Any] = {"agent_id": agent_id, "seed": seed}
     if ptype == "aggressive":
         kwargs["scooter_priority"] = agent_spec.get("scooter_priority", True)
 
@@ -71,16 +71,15 @@ class DeliveryScenarioRunner:
     def __init__(
         self,
         config: DeliveryConfig,
-        agent_specs: List[Dict[str, Any]],
+        agent_specs: list[dict[str, Any]],
         n_epochs: int = 10,
         steps_per_epoch: int = 20,
-        seed: Optional[int] = None,
+        seed: int | None = None,
     ) -> None:
         self._config = config
         self._n_epochs = n_epochs
         self._steps_per_epoch = steps_per_epoch
-        self._seed = seed or 42
-        self._rng = random.Random(self._seed)
+        self._seed = seed if seed is not None else 42
 
         # Ensure environment uses the same seed for determinism
         config.seed = self._seed
@@ -89,13 +88,13 @@ class DeliveryScenarioRunner:
         self._env = DeliveryEnvironment(config)
 
         # Initialize agents
-        self._policies: Dict[str, DeliveryPolicy] = {}
+        self._policies: dict[str, DeliveryPolicy] = {}
         for i, spec in enumerate(agent_specs):
             count = spec.get("count", 1)
             policy_name = spec.get("policy", "conscientious")
             for j in range(count):
                 agent_id = f"driver_{policy_name}_{i}_{j}"
-                agent_seed = self._rng.randint(0, 2**31)
+                agent_seed = int(hashlib.sha256(f"{self._seed}:{agent_id}".encode()).hexdigest()[:8], 16)
 
                 # Map policy name to persona
                 persona_map = {
@@ -110,15 +109,36 @@ class DeliveryScenarioRunner:
                 self._policies[agent_id] = policy
 
         # Metrics storage
-        self._epoch_metrics: List[DeliveryMetrics] = []
-        self._all_events: List[dict] = []
+        self._epoch_metrics: list[DeliveryMetrics] = []
+        self._event_log_path: Path | None = None
+        self._event_count = 0
 
-    def run(self) -> List[DeliveryMetrics]:
+    def _append_events_jsonl(self, events: list[dict]) -> None:
+        """Append events to JSONL file if logging is configured."""
+        if self._event_log_path is None:
+            return
+        with open(self._event_log_path, "a") as f:
+            for evt in events:
+                f.write(json.dumps(evt) + "\n")
+                self._event_count += 1
+
+    def run(self, log_dir: str | None = None) -> list[DeliveryMetrics]:
         """Run the full scenario.
+
+        Args:
+            log_dir: Optional directory for streaming event log (JSONL).
 
         Returns:
             List of per-epoch DeliveryMetrics.
         """
+        # Set up event logging if requested
+        if log_dir is not None:
+            log_path = Path(log_dir)
+            log_path.mkdir(parents=True, exist_ok=True)
+            self._event_log_path = log_path / "event_log.jsonl"
+            # Clear if it exists
+            self._event_log_path.write_text("")
+
         logger.info(
             "Starting delivery scenario: %d epochs, %d steps/epoch, %d agents",
             self._n_epochs, self._steps_per_epoch, len(self._policies),
@@ -133,7 +153,7 @@ class DeliveryScenarioRunner:
 
             # Run steps within epoch
             for _step in range(self._steps_per_epoch):
-                actions: Dict[str, DeliveryAction] = {}
+                actions: dict[str, DeliveryAction] = {}
                 for agent_id, policy in self._policies.items():
                     obs = self._env.obs(agent_id)
                     actions[agent_id] = policy.decide(obs)
@@ -160,15 +180,18 @@ class DeliveryScenarioRunner:
             )
             self._epoch_metrics.append(metrics)
 
-            # Store events
-            for evt in epoch_events:
-                self._all_events.append({
+            # Stream events to JSONL if logging
+            event_dicts = [
+                {
                     "event_type": evt.event_type,
                     "epoch": evt.epoch,
                     "step": evt.step,
                     "agent_id": evt.agent_id,
                     "details": evt.details,
-                })
+                }
+                for evt in epoch_events
+            ]
+            self._append_events_jsonl(event_dicts)
 
             logger.info(
                 "Epoch %d: delivered=%d failed=%d rate=%.2f "
@@ -181,7 +204,7 @@ class DeliveryScenarioRunner:
 
         return self._epoch_metrics
 
-    def export(self, output_dir: Optional[str] = None) -> Path:
+    def export(self, output_dir: str | None = None) -> Path:
         """Export results to a run directory.
 
         Args:
@@ -210,10 +233,22 @@ class DeliveryScenarioRunner:
         csv_dir.mkdir(exist_ok=True)
 
         # Export events as JSONL
-        event_path = run_dir / "event_log.jsonl"
-        with open(event_path, "w") as f:
-            for evt in self._all_events:
-                f.write(json.dumps(evt) + "\n")
+        if self._event_log_path and self._event_log_path.exists():
+            import shutil
+            event_path = run_dir / "event_log.jsonl"
+            shutil.copy(self._event_log_path, event_path)
+        else:
+            # Fallback: export from env if no log file was created
+            event_path = run_dir / "event_log.jsonl"
+            with open(event_path, "w") as f:
+                for evt in self._env.events:
+                    f.write(json.dumps({
+                        "event_type": evt.event_type,
+                        "epoch": evt.epoch,
+                        "step": evt.step,
+                        "agent_id": evt.agent_id,
+                        "details": evt.details,
+                    }) + "\n")
 
         # Export metrics as CSV
         metrics_path = csv_dir / "metrics.csv"
@@ -254,5 +289,5 @@ class DeliveryScenarioRunner:
         return self._env
 
     @property
-    def metrics(self) -> List[DeliveryMetrics]:
+    def metrics(self) -> list[DeliveryMetrics]:
         return list(self._epoch_metrics)

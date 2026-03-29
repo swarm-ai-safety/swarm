@@ -37,6 +37,7 @@ dev = [
     "hypothesis>=6.0",
     "pytest-testmon>=2.0",
     "pytest-xdist>=3.0",
+    "pytest-timeout>=2.0",
     "pytest-socket>=0.7",
     "mypy",
     "types-PyYAML",
@@ -109,9 +110,9 @@ gamescape = [
     "gamescape",
 ]
 langgraph = [
-    "langgraph==1.1.1",
+    "langgraph==1.1.3",
     "langchain-core==1.2.16",
-    "langchain-anthropic==1.3.4",
+    "langchain-anthropic==1.4.0",
     "langchain-ollama>=0.3.0",
     "langchain-openai>=0.3.0",
 ]
