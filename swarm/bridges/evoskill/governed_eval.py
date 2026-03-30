@@ -248,7 +248,7 @@ class GovernedEvalLoop:
         self,
         interactions: List[SoftInteraction],
         contract_type: ContractType,
-    ) -> Dict[str, Any]:
+    ) -> Dict[str, float]:
         """Run governed evaluation — apply contract regime effects."""
         from swarm.contracts.contract import (
             DefaultMarket,
@@ -286,7 +286,6 @@ class GovernedEvalLoop:
             "quality_gap": quality_gap,
             "avg_welfare": avg_welfare,
             "n_interactions": len(governed_interactions),
-            "contract": contract_type.value,
         }
 
     @staticmethod

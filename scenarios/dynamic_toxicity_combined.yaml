@@ -1,0 +1,77 @@
+# Dynamic Toxicity: All Three Mechanisms Combined
+#
+# Tests whether the three feedback loops interact synergistically.
+# Hypothesis: the combination produces collapse at adversarial fractions
+# where no single mechanism alone would — proxy drift degrades screening,
+# contagion spreads distrust, and trust erosion removes honest agents,
+# each amplifying the others.
+
+scenario_id: dynamic_toxicity_combined
+description: "All three dynamic toxicity mechanisms combined"
+motif: dynamic_toxicity
+
+agents:
+  - type: honest
+    count: 6
+  - type: opportunistic
+    count: 2
+  - type: deceptive
+    count: 2
+  # 40% adversarial
+
+governance:
+  transaction_tax_rate: 0.0
+  transaction_tax_split: 0.5
+  reputation_decay_rate: 0.95
+  bandwidth_cap: 10
+  staking_enabled: false
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  audit_enabled: true
+  audit_probability: 0.1
+  audit_threshold_p: 0.4
+
+simulation:
+  n_epochs: 30
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+dynamic_toxicity:
+  enabled:
+    - proxy_drift
+    - trust_erosion
+    - quality_contagion
+  proxy_drift:
+    alpha: 0.3
+    k_floor: 0.5
+  trust_erosion:
+    beta: 0.5
+    exit_threshold: 0.30
+    window: 3
+    min_honest: 1
+  quality_contagion:
+    gamma: 0.3
+    neutral: 0.5
+
+success_criteria:
+  min_epochs: 30
+  min_agents: 5
+  min_net_social_welfare: 0.0
+
+outputs:
+  event_log: "logs/dynamic_toxicity_combined_events.jsonl"

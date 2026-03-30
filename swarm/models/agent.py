@@ -22,6 +22,7 @@ class AgentType(Enum):
     COLLABORATIVE = "collaborative"
     ADAPTIVE = "adaptive"
     WORK_REGIME = "work_regime"
+    SELF_MODIFYING = "self_modifying"
 
 
 class AgentStatus(Enum):

@@ -19,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 from pydantic import BaseModel, ConfigDict, Field
 
 from swarm.agents.base import Action, ActionType, BaseAgent, Observation
+from swarm.agents.hyperagent_self_mod import HyperagentSelfModAgent
 from swarm.boundaries.external_world import ExternalEntity
 from swarm.boundaries.leakage import LeakageReport
 from swarm.core.agent_scheduler import AgentScheduler
@@ -57,7 +58,13 @@ from swarm.governance.engine import GovernanceEffect, GovernanceEngine
 from swarm.knowledge.graph_memory import GraphMemoryStore
 from swarm.logging.event_bus import EventBus
 from swarm.logging.event_log import EventLog
-from swarm.metrics.capabilities import CapabilityAnalyzer, EmergentCapabilityMetrics
+from swarm.metrics.capabilities import (
+    AgentCapabilityProfile,
+    CapabilityAnalyzer,
+    CapabilityType,
+    EmergentCapabilityMetrics,
+    capability_envelope,
+)
 from swarm.metrics.soft_metrics import SoftMetrics
 from swarm.models.agent import AgentState
 from swarm.models.events import Event, EventType
@@ -160,6 +167,9 @@ class OrchestratorConfig(BaseModel):
     # Graph memory (cross-run trust priors) configuration
     graph_memory_path: Optional[str] = None
 
+    # Dynamic toxicity feedback configuration
+    dynamic_toxicity: Optional[Dict[str, Any]] = None
+
 
 class EpochMetrics(BaseModel):
     """Metrics collected at the end of each epoch."""
@@ -175,12 +185,14 @@ class EpochMetrics(BaseModel):
     quality_gap: float = 0.0
     avg_payoff: float = 0.0
     total_welfare: float = 0.0
+    net_social_welfare: float = 0.0
     network_metrics: Optional[Dict[str, float]] = None
     capability_metrics: Optional[EmergentCapabilityMetrics] = None
     spawn_metrics: Optional[Dict[str, Any]] = None
     security_report: Optional[Any] = None
     collusion_report: Optional[Any] = None
     contract_metrics: Optional[Dict[str, Any]] = None
+    capability_envelope_metrics: Optional[Dict[str, Any]] = None
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary for serialization."""
@@ -194,6 +206,7 @@ class EpochMetrics(BaseModel):
             "quality_gap": self.quality_gap,
             "avg_payoff": self.avg_payoff,
             "total_welfare": self.total_welfare,
+            "net_social_welfare": self.net_social_welfare,
             "network_metrics": self.network_metrics,
         }
         if self.capability_metrics is not None:
@@ -216,6 +229,7 @@ class EpochMetrics(BaseModel):
                 "ecosystem_collusion_risk": getattr(self.collusion_report, "ecosystem_collusion_risk", 0.0),
                 "n_flagged_pairs": getattr(self.collusion_report, "n_flagged_pairs", 0),
             }
+        result["capability_envelope_metrics"] = self.capability_envelope_metrics
         return result
 
 
@@ -579,6 +593,57 @@ class Orchestrator:
         # 8. WorkRegimeAgent policy adaptation at epoch end
         self._pipeline.add(WorkRegimeAdaptMiddleware())
 
+        # 9. Dynamic toxicity feedback loops (optional)
+        self._build_dynamic_toxicity()
+
+    def _build_dynamic_toxicity(self) -> None:
+        """Wire dynamic toxicity middleware if configured."""
+        dt_config = self.config.dynamic_toxicity
+        if not dt_config:
+            return
+
+        from swarm.core.dynamic_toxicity import (
+            ProxyCalibrationDriftMiddleware,
+            QualityContagionMiddleware,
+            TrustErosionMiddleware,
+        )
+
+        enabled = dt_config.get("enabled", [])
+
+        if "proxy_drift" in enabled:
+            params = dt_config.get("proxy_drift", {})
+            self._pipeline.add(
+                ProxyCalibrationDriftMiddleware(
+                    self.proxy_computer,
+                    self._event_bus,
+                    alpha=params.get("alpha", 0.5),
+                    k_floor=params.get("k_floor", 0.5),
+                )
+            )
+
+        if "trust_erosion" in enabled:
+            params = dt_config.get("trust_erosion", {})
+            self._pipeline.add(
+                TrustErosionMiddleware(
+                    self._event_bus,
+                    beta=params.get("beta", 0.3),
+                    exit_threshold=params.get("exit_threshold", 0.35),
+                    window=params.get("window", 3),
+                    min_honest=params.get("min_honest", 1),
+                    seed=self.config.seed,
+                )
+            )
+
+        if "quality_contagion" in enabled:
+            params = dt_config.get("quality_contagion", {})
+            self._pipeline.add(
+                QualityContagionMiddleware(
+                    self._event_bus,
+                    gamma=params.get("gamma", 0.1),
+                    neutral=params.get("neutral", 0.5),
+                )
+            )
+
     def _make_context(self) -> MiddlewareContext:
         """Build a ``MiddlewareContext`` from current orchestrator state."""
         return MiddlewareContext(
@@ -722,6 +787,11 @@ class Orchestrator:
         # --- Epoch pre-hooks ---
         self._pipeline.on_epoch_start(ctx)
 
+        # --- Self-modification for HyperagentSelfModAgent instances ---
+        for agent in self._agents.values():
+            if isinstance(agent, HyperagentSelfModAgent):
+                agent.self_modify(epoch_start)
+
         # --- Steps ---
         for _step in range(self.config.steps_per_epoch):
             if self.state.is_paused:
@@ -781,7 +851,18 @@ class Orchestrator:
     # ===================================================================
 
     def _select_action(self, agent: BaseAgent, observation: Observation) -> Action:
-        """Select an action, optionally using governance ensembling."""
+        """Select an action, optionally using governance ensembling or resampling."""
+        action = self._select_action_base(agent, observation)
+
+        # --- Resample protocol (Bhatt et al., 2025) ---
+        # Conditionally resample when the monitor flags suspicion based on
+        # the agent's recent trajectory and reputation.
+        action = self._maybe_resample(agent, observation, action)
+
+        return action
+
+    def _select_action_base(self, agent: BaseAgent, observation: Observation) -> Action:
+        """Core action selection with optional self-ensemble."""
         if (
             self.governance_engine is None
             or not self.governance_engine.config.self_ensemble_enabled
@@ -795,18 +876,81 @@ class Orchestrator:
         selected.metadata["ensemble_samples"] = samples
         return selected
 
+    def _maybe_resample(
+        self,
+        agent: BaseAgent,
+        observation: Observation,
+        original_action: Action,
+    ) -> Action:
+        """Apply resample protocol if suspicion warrants it.
+
+        Uses the agent's reputation as a pre-execution proxy for p,
+        since actual p is only available after handler execution.
+        """
+        if self.governance_engine is None:
+            return original_action
+
+        resample_lever = self.governance_engine.get_resample_lever()
+        if resample_lever is None:
+            return original_action
+
+        # Pre-execution suspicion: use agent reputation as p proxy
+        agent_state = self.state.agents.get(agent.agent_id)
+        if agent_state is None:
+            return original_action
+
+        # Map reputation [-1, 1] to p-proxy [0, 1]
+        p_proxy = max(0.0, min(1.0, 0.5 + agent_state.reputation * 0.5))
+
+        if not resample_lever.should_resample(p_proxy, agent.agent_id):
+            return original_action
+
+        # Resample: draw additional action samples
+        n_samples = self.governance_engine.config.resample_n_samples
+        resample_actions = [agent.act(observation) for _ in range(n_samples)]
+
+        all_actions = [original_action] + resample_actions
+        selected = self._majority_action(all_actions)
+
+        # Annotate with resample metadata for the lever to process later
+        was_blocked = self._action_signature(selected) != self._action_signature(original_action)
+        selected.metadata["resample_triggered"] = True
+        selected.metadata["resample_n_samples"] = n_samples
+        selected.metadata["resample_blocked"] = was_blocked
+        # Store per-sample p-proxy values for incrimination analysis.
+        # True p is only available after handler execution, so we
+        # differentiate pre-execution proxies based on action agreement:
+        # resampled actions that DIFFER from the original suspicious action
+        # suggest the agent is capable of benign behavior (higher p proxy),
+        # while actions matching the original confirm suspicion (lower p).
+        selected.metadata["resample_p_proxy"] = p_proxy
+        original_sig = self._action_signature(original_action)
+        per_sample_p = []
+        for ra in resample_actions:
+            if self._action_signature(ra) != original_sig:
+                # Divergent action → exonerating evidence
+                per_sample_p.append(min(1.0, p_proxy + 0.3))
+            else:
+                # Matching action → confirming suspicion
+                per_sample_p.append(p_proxy)
+        selected.metadata["resample_p_values"] = per_sample_p
+
+        return selected
+
     async def _select_action_async(
         self, agent: BaseAgent, observation: Observation
     ) -> Action:
-        """Async action selection with optional governance ensembling."""
+        """Async action selection with optional governance ensembling and resampling."""
         if (
             self.governance_engine is None
             or not self.governance_engine.config.self_ensemble_enabled
             or self.governance_engine.config.self_ensemble_samples <= 1
         ):
             if self._is_llm_agent(agent):
-                return await agent.act_async(observation)  # type: ignore[attr-defined, no-any-return]
-            return agent.act(observation)  # type: ignore[no-any-return]
+                action = await agent.act_async(observation)  # type: ignore[attr-defined, no-any-return]
+            else:
+                action = agent.act(observation)  # type: ignore[no-any-return]
+            return await self._maybe_resample_async(agent, observation, action)
 
         samples = self.governance_engine.config.self_ensemble_samples
         candidate_actions: List[Action] = []
@@ -818,6 +962,56 @@ class Orchestrator:
 
         selected = self._majority_action(candidate_actions)
         selected.metadata["ensemble_samples"] = samples
+        return await self._maybe_resample_async(agent, observation, selected)
+
+    async def _maybe_resample_async(
+        self,
+        agent: BaseAgent,
+        observation: Observation,
+        original_action: Action,
+    ) -> Action:
+        """Async version of :meth:`_maybe_resample`."""
+        if self.governance_engine is None:
+            return original_action
+
+        resample_lever = self.governance_engine.get_resample_lever()
+        if resample_lever is None:
+            return original_action
+
+        agent_state = self.state.agents.get(agent.agent_id)
+        if agent_state is None:
+            return original_action
+
+        p_proxy = max(0.0, min(1.0, 0.5 + agent_state.reputation * 0.5))
+
+        if not resample_lever.should_resample(p_proxy, agent.agent_id):
+            return original_action
+
+        n_samples = self.governance_engine.config.resample_n_samples
+        resample_actions: List[Action] = []
+        for _ in range(n_samples):
+            if self._is_llm_agent(agent):
+                resample_actions.append(await agent.act_async(observation))  # type: ignore[attr-defined]
+            else:
+                resample_actions.append(agent.act(observation))
+
+        all_actions = [original_action] + resample_actions
+        selected = self._majority_action(all_actions)
+
+        was_blocked = self._action_signature(selected) != self._action_signature(original_action)
+        selected.metadata["resample_triggered"] = True
+        selected.metadata["resample_n_samples"] = n_samples
+        selected.metadata["resample_blocked"] = was_blocked
+        selected.metadata["resample_p_proxy"] = p_proxy
+        original_sig = self._action_signature(original_action)
+        per_sample_p = []
+        for ra in resample_actions:
+            if self._action_signature(ra) != original_sig:
+                per_sample_p.append(min(1.0, p_proxy + 0.3))
+            else:
+                per_sample_p.append(p_proxy)
+        selected.metadata["resample_p_values"] = per_sample_p
+
         return selected
 
     def _majority_action(self, actions: List[Action]) -> Action:
@@ -910,6 +1104,15 @@ class Orchestrator:
             if submission is not None:
                 ground_truth_val = -1 if submission.is_cheat else 1
 
+        # Merge handler metadata with action metadata (resample annotations)
+        merged_metadata = dict(result.metadata or {})
+        if action.metadata:
+            for key in ("resample_triggered", "resample_n_samples",
+                        "resample_blocked", "resample_p_proxy",
+                        "resample_p_values"):
+                if key in action.metadata:
+                    merged_metadata[key] = action.metadata[key]
+
         interaction = SoftInteraction(
             initiator=result.initiator_id,
             counterparty=result.counterparty_id,
@@ -923,7 +1126,7 @@ class Orchestrator:
             v_hat=v_hat,
             p=p,
             tau=tau,
-            metadata=result.metadata or {},
+            metadata=merged_metadata,
             **({"ground_truth": ground_truth_val} if ground_truth_val is not None else {}),
         )
 
@@ -1212,6 +1415,64 @@ class Orchestrator:
         if self._last_contract_metrics is not None:
             contract_metrics_dict = self._last_contract_metrics.to_dict()
 
+        # Capability envelope for self-modifying agents
+        envelope_dict = None
+        self_mod_agents = {
+            aid: agent
+            for aid, agent in self._agents.items()
+            if isinstance(agent, HyperagentSelfModAgent)
+        }
+        if self_mod_agents:
+            # Build profiles from agent proxy weights.
+            # Map proxy weight dimensions to capability types:
+            #   task_progress  → EXECUTION
+            #   rework_penalty → VERIFICATION  (governed)
+            #   verifier_penalty → ANALYSIS    (governed)
+            #   engagement_signal → COMMUNICATION (ungoverned)
+            all_dims = {
+                CapabilityType.EXECUTION,
+                CapabilityType.VERIFICATION,
+                CapabilityType.ANALYSIS,
+                CapabilityType.COMMUNICATION,
+            }
+            profiles: Dict[str, AgentCapabilityProfile] = {}
+            governed: Dict[str, set] = {}
+            for aid, agent in self_mod_agents.items():
+                demonstrated = set(all_dims)
+                # When ungoverned weight exceeds baseline, agent has
+                # expanded beyond governance coverage
+                ungoverned_w = (
+                    agent.proxy_weights.get("engagement_signal", 0)
+                    + agent.proxy_weights.get("task_progress", 0)
+                )
+                if ungoverned_w > 0.6:
+                    demonstrated.add(CapabilityType.CREATIVITY)
+                profiles[aid] = AgentCapabilityProfile(
+                    agent_id=aid,
+                    capabilities=demonstrated,
+                )
+                # Governance covers only monitored dimensions
+                gov_caps = {
+                    CapabilityType.VERIFICATION,
+                    CapabilityType.ANALYSIS,
+                }
+                governed[aid] = gov_caps
+
+            result = capability_envelope(
+                profiles, governed, step=self.state.current_step,
+                all_capability_types=all_dims | {CapabilityType.CREATIVITY},
+            )
+            envelope_dict = {
+                "mean_envelope": result.mean_envelope,
+                "mean_governance_coverage": result.mean_governance_coverage,
+                "mean_governance_gap": result.mean_governance_gap,
+                "max_governance_gap": result.max_governance_gap,
+                "n_self_mod_agents": len(self_mod_agents),
+                "max_modification_depth": max(
+                    a.modification_depth for a in self_mod_agents.values()
+                ),
+            }
+
         if not interactions:
             return EpochMetrics(
                 epoch=self.state.current_epoch,
@@ -1221,6 +1482,7 @@ class Orchestrator:
                 security_report=security_report,
                 collusion_report=collusion_report,
                 contract_metrics=contract_metrics_dict,
+                capability_envelope_metrics=envelope_dict,
             )
 
         accepted = [i for i in interactions if i.accepted]
@@ -1238,12 +1500,14 @@ class Orchestrator:
             quality_gap=quality_gap,
             avg_payoff=welfare.get("avg_initiator_payoff", 0),
             total_welfare=welfare.get("total_welfare", 0),
+            net_social_welfare=welfare.get("net_social_welfare", 0),
             network_metrics=network_metrics,
             capability_metrics=capability_metrics,
             spawn_metrics=spawn_metrics_dict,
             security_report=security_report,
             collusion_report=collusion_report,
             contract_metrics=contract_metrics_dict,
+            capability_envelope_metrics=envelope_dict,
         )
 
     # ===================================================================

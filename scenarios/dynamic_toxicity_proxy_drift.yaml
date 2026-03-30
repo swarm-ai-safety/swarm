@@ -1,0 +1,69 @@
+# Dynamic Toxicity Variant 1: Proxy Calibration Drift
+#
+# Cumulative toxicity degrades the proxy computer's sigmoid sharpness,
+# making screening less discriminating over time.  As k shrinks, p values
+# cluster toward 0.5, the acceptance threshold becomes less effective,
+# and more toxic interactions are admitted -- a vicious cycle.
+#
+# Compare against baseline to see whether the feedback loop accelerates
+# the onset of the phase transition identified in the static model.
+
+scenario_id: dynamic_toxicity_proxy_drift
+description: "Proxy calibration drift: cumulative toxicity flattens sigmoid"
+motif: dynamic_toxicity
+
+agents:
+  - type: honest
+    count: 5
+  - type: opportunistic
+    count: 2
+  - type: deceptive
+    count: 2
+  # ~44% adversarial -- just above the static phase transition threshold
+
+governance:
+  transaction_tax_rate: 0.0
+  transaction_tax_split: 0.5
+  reputation_decay_rate: 0.95
+  bandwidth_cap: 10
+  staking_enabled: false
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  audit_enabled: true
+  audit_probability: 0.1
+  audit_threshold_p: 0.4
+
+simulation:
+  n_epochs: 30
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+dynamic_toxicity:
+  enabled:
+    - proxy_drift
+  proxy_drift:
+    alpha: 0.3       # drift rate per unit cumulative toxicity
+    k_floor: 0.5     # minimum sigmoid_k (prevents total blindness)
+
+success_criteria:
+  min_epochs: 30
+  min_agents: 5
+  min_net_social_welfare: 0.0  # must produce positive net welfare (surplus > externalities)
+
+outputs:
+  event_log: "logs/dynamic_toxicity_proxy_drift_events.jsonl"
