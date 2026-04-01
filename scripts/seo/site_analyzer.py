@@ -15,6 +15,7 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 # ---------------------------------------------------------------------------
 # Content inventory
@@ -73,7 +74,12 @@ def _extract_links(text: str) -> tuple[list[str], list[str]]:
         if not url:
             continue
         if url.startswith(("http://", "https://", "mailto:")):
-            if "swarm-ai.org" in url or "swarm-ai-safety" in url:
+            parsed = urlparse(url)
+            hostname = parsed.hostname or ""
+            path = parsed.path or ""
+            is_own_domain = hostname == "swarm-ai.org" or hostname.endswith(".swarm-ai.org")
+            is_own_github = hostname in ("github.com", "raw.githubusercontent.com") and path.startswith("/swarm-ai-safety/")
+            if is_own_domain or is_own_github:
                 internal.append(url)
             else:
                 external.append(url)
