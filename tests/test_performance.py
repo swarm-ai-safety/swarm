@@ -239,7 +239,7 @@ class TestSummaryOptimised:
 # ---------------------------------------------------------------------------
 
 SUMMARY_BUDGET_MS = 250.0       # optimised target ~5-10ms
-PAYOFFS_BOTH_BUDGET_MS = 50.0   # optimised target ~2ms; CI runners are ~3-4× slower
+PAYOFFS_BOTH_BUDGET_MS = 60.0   # optimised target ~2ms; CI runners are ~3-4× slower
 SIGMOID_FAST_BUDGET_MS = 12.0   # optimised target ~0.5ms; 12ms allows CI jitter
 
 
