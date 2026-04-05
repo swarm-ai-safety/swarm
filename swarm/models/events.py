@@ -138,6 +138,10 @@ class EventType(Enum):
     SELF_MODIFICATION_EXECUTED = "self_modification_executed"
     SELF_MODIFICATION_REVERTED = "self_modification_reverted"
 
+    # Attestation heartbeat events
+    HEARTBEAT_ATTESTED = "heartbeat_attested"
+    HEARTBEAT_LAPSED = "heartbeat_lapsed"
+
     # AWM (Agent World Model) events
     AWM_TASK_ASSIGNED = "awm_task_assigned"
     AWM_TASK_COMPLETED = "awm_task_completed"
