@@ -15,6 +15,7 @@ treats it as a first-class governance signal.  The orchestration layer:
 """
 
 import copy
+import logging
 from collections import deque
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -24,6 +25,9 @@ from typing import Any, Dict, FrozenSet, List, Optional, Set
 from swarm.env.state import EnvState
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.levers import GovernanceLever, LeverEffect
+from swarm.models.events import Event, EventType
+
+logger = logging.getLogger(__name__)
 
 
 class HaltReason(Enum):
@@ -100,8 +104,9 @@ class HardwareTrustLever(GovernanceLever):
         super().__init__(config)
         self._halt_records: Dict[str, HaltRecord] = {}
         self._recovery_states: Dict[str, AgentRecoveryState] = {}
-        self._active_halt_ids: Set[str] = set()
+        self._active_halt_ids: List[str] = []  # Ordered list for deterministic iteration
         self._dependency_graph: Dict[str, Set[str]] = {}  # agent -> dependents
+        self._event_log: List[Event] = []  # Accumulated events for JSONL emission
 
     @property
     def name(self) -> str:
@@ -162,9 +167,19 @@ class HardwareTrustLever(GovernanceLever):
 
         # Propagate to all dependents if propagation enabled
         if self.config.hardware_trust_propagation_enabled:
-            agents_to_freeze |= self._compute_propagation_set(
-                agents_to_freeze, state
-            )
+            propagated = self._compute_propagation_set(agents_to_freeze, state)
+            if propagated:
+                self._emit(
+                    EventType.HARDWARE_HALT_PROPAGATED,
+                    payload={
+                        "halt_id": halt_id,
+                        "source_agents": sorted(agents_to_freeze),
+                        "propagated_to": sorted(propagated),
+                    },
+                    epoch=state.current_epoch,
+                    step=state.current_step,
+                )
+            agents_to_freeze |= propagated
 
         # If no specific agent, freeze everyone (global halt)
         if not agents_to_freeze:
@@ -181,7 +196,22 @@ class HardwareTrustLever(GovernanceLever):
             metadata=metadata or {},
         )
         self._halt_records[halt_id] = record
-        self._active_halt_ids.add(halt_id)
+        if halt_id not in self._active_halt_ids:
+            self._active_halt_ids.append(halt_id)
+
+        # Emit HARDWARE_HALT_RECEIVED event
+        self._emit(
+            EventType.HARDWARE_HALT_RECEIVED,
+            agent_id=source_agent_id,
+            payload={
+                "halt_id": halt_id,
+                "reason": reason.value,
+                "affected_agents": sorted(agents_to_freeze),
+                "causal_trace": list(causal_trace or []),
+            },
+            epoch=state.current_epoch,
+            step=state.current_step,
+        )
 
         # Set up recovery state for each affected agent.
         # Don't overwrite existing recovery entries — keep the more
@@ -202,6 +232,16 @@ class HardwareTrustLever(GovernanceLever):
                 checkpoint_epoch=state.current_epoch,
                 checkpoint_step=state.current_step,
                 recovery_steps_taken=0,
+            )
+            self._emit(
+                EventType.HARDWARE_RECOVERY_ENTERED,
+                agent_id=agent_id,
+                payload={
+                    "halt_id": halt_id,
+                    "mode": RecoveryMode.CONSTRAINED.value,
+                },
+                epoch=state.current_epoch,
+                step=state.current_step,
             )
 
         # Constrained agents are NOT returned in agents_to_freeze —
@@ -264,7 +304,19 @@ class HardwareTrustLever(GovernanceLever):
                 recovery.mode = RecoveryMode.NORMAL
                 recovery.halt_id = None
 
-        self._active_halt_ids.discard(halt_id)
+        if halt_id in self._active_halt_ids:
+            self._active_halt_ids.remove(halt_id)
+
+        # Emit HARDWARE_CONDITION_CLEARED event
+        self._emit(
+            EventType.HARDWARE_CONDITION_CLEARED,
+            payload={
+                "halt_id": halt_id,
+                "resumed_agents": sorted(agents_to_unfreeze),
+            },
+            epoch=state.current_epoch,
+            step=state.current_step,
+        )
 
         return LeverEffect(
             agents_to_unfreeze=agents_to_unfreeze,
@@ -367,6 +419,34 @@ class HardwareTrustLever(GovernanceLever):
                     visited.add(dep)
                     queue.append(dep)
         return visited - initial  # Only the newly discovered dependents
+
+    # ------------------------------------------------------------------
+    # Event emission
+    # ------------------------------------------------------------------
+
+    def _emit(
+        self,
+        event_type: EventType,
+        agent_id: Optional[str] = None,
+        payload: Optional[Dict[str, Any]] = None,
+        epoch: Optional[int] = None,
+        step: Optional[int] = None,
+    ) -> None:
+        """Emit a hardware trust event to the internal log."""
+        event = Event(
+            event_type=event_type,
+            agent_id=agent_id,
+            payload=payload or {},
+            epoch=epoch,
+            step=step,
+        )
+        self._event_log.append(event)
+
+    def drain_events(self) -> List[Event]:
+        """Return and clear accumulated events for external consumption."""
+        events = list(self._event_log)
+        self._event_log.clear()
+        return events
 
     # ------------------------------------------------------------------
     # Query interface

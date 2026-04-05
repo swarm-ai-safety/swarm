@@ -1067,6 +1067,11 @@ class Orchestrator:
         if self.governance_engine is not None:
             action_name = action.action_type.value if hasattr(action.action_type, "value") else str(action.action_type)
             if not self.governance_engine.is_action_allowed(action.agent_id, action_name):
+                logger.info(
+                    "Action %s blocked for agent %s by hardware trust lever",
+                    action_name,
+                    action.agent_id,
+                )
                 return False
 
         handler = self._handler_registry.get_handler(action.action_type)
