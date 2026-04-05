@@ -232,6 +232,9 @@ class GovernanceConfig(BaseModel):
     resample_evidence_decay: float = 0.9  # per-epoch evidence decay factor
     resample_evidence_rep_weight: float = 0.5  # reputation penalty per evidence unit
     # Cascade risk lever (artifact chain governance)
+    # NOTE: Defaults are provisional — not yet validated by parameter sweep.
+    # Run examples/run_cascade_sensitivity.py before relying on these in
+    # production scenarios.  See PR #397 review for context.
     cascade_risk_enabled: bool = False
     cascade_risk_threshold: float = 0.5  # Min cascade risk to trigger penalty
     cascade_risk_penalty_scale: float = 1.0  # Cost multiplier

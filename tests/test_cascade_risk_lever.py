@@ -91,6 +91,36 @@ class TestCascadeRiskLeverEnabled:
         assert effect.reputation_deltas["alice"] < 0
         assert effect.details["cascade_risk"] == pytest.approx(0.75)
 
+    def test_depth_decay_reduces_distant_blame(self):
+        """Deep bad descendants contribute less than shallow ones."""
+        from swarm.metrics.causal_credit import CausalCreditEngine
+
+        engine = CausalCreditEngine(decay=0.5, max_depth=10)
+
+        # Chain: root → mid (good, depth 1) → deep_bad (bad, depth 2)
+        root = _ix("root", p=0.9, initiator="alice")
+        mid = _ix("mid", p=0.8, initiator="bob", causal_parents=["root"])
+        deep_bad = _ix("deep_bad", p=0.1, initiator="eve", causal_parents=["mid"])
+
+        engine.build_dag([root, mid, deep_bad])
+        risk = engine.cascade_risk("root", p_threshold=0.3)
+
+        # mid at depth 1: weight=0.5, good → 0 bad contribution
+        # deep_bad at depth 2: weight=0.25, bad → 0.25 bad contribution
+        # weighted_total = 0.5 + 0.25 = 0.75
+        # weighted_bad = 0.25
+        # risk = 0.25 / 0.75 ≈ 0.333
+        assert risk == pytest.approx(1 / 3, abs=0.01)
+
+        # Compare: if deep_bad were at depth 1, risk would be higher
+        shallow_bad = _ix("shallow_bad", p=0.1, initiator="eve",
+                          causal_parents=["root"])
+        engine.build_dag([root, mid, shallow_bad])
+        risk_shallow = engine.cascade_risk("root", p_threshold=0.3)
+        # Now: mid (depth 1, good), shallow_bad (depth 1, bad)
+        # weighted_bad = 0.5, weighted_total = 1.0 → risk = 0.5
+        assert risk_shallow > risk  # shallow failure is worse
+
     def test_no_penalty_when_descendants_are_good(self):
         """If descendants all have high p, no cascade risk penalty."""
         lever = self._make_lever()

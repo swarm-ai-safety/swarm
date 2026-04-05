@@ -2,8 +2,9 @@
 
 Penalizes agents whose artifacts consistently produce low-quality
 downstream chains.  Uses ``CausalCreditEngine.cascade_risk()`` to
-measure the fraction of an interaction's descendants with ``p`` below
-a safety threshold.
+compute a depth-weighted measure of bad descendants: each descendant's
+contribution is weighted by ``decay^depth`` (default 0.5) so that
+immediate failures matter more than distant ones.
 
 This bridges the artifact layer (emergent tool chaining) with the
 governance engine — it governs *chains*, not just individual nodes.
