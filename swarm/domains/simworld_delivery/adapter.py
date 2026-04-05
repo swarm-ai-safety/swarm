@@ -52,16 +52,22 @@ def _event_to_observables(event: Dict[str, Any]) -> Optional[ProxyObservables]:
     if etype == "delivery_complete":
         on_time = details.get("on_time", False)
         return ProxyObservables(
+            # 1.0 for on-time (full progress); 0.4 for late (partial credit —
+            # the delivery succeeded but caused rework/delay for downstream).
             task_progress_delta=1.0 if on_time else 0.4,
             rework_count=0 if on_time else 1,
             verifier_rejections=0,
             tool_misuse_flags=0,
+            # 0.3: delivery completion is mildly cooperative (fulfills a need)
             counterparty_engagement_delta=0.3,
         )
 
     if etype == "delivery_failed":
         return ProxyObservables(
+            # -0.8 (not -1.0): failed delivery is severe but not as harmful
+            # as active sabotage; some attempt was made.
             task_progress_delta=-0.8,
+            # 2 rework units: the order must be re-assigned and re-delivered.
             rework_count=2,
             verifier_rejections=1,
             tool_misuse_flags=0,
@@ -70,9 +76,11 @@ def _event_to_observables(event: Dict[str, Any]) -> Optional[ProxyObservables]:
 
     if etype == "bid_won":
         num_bidders = details.get("num_bidders", 1)
-        # Competitive bids with multiple bidders signal healthy screening
+        # Normalize by 4: in SimWorld delivery, 4+ bidders represents a
+        # competitive market; fewer bidders = thinner market signal.
         competition = min(num_bidders / 4.0, 1.0)
         return ProxyObservables(
+            # Winning a bid is minor progress; scaled by competition.
             task_progress_delta=0.2 * competition,
             rework_count=0,
             verifier_rejections=0,
@@ -82,19 +90,23 @@ def _event_to_observables(event: Dict[str, Any]) -> Optional[ProxyObservables]:
 
     if etype == "order_shared":
         return ProxyObservables(
+            # 0.3: sharing an order is moderate progress (enables others).
             task_progress_delta=0.3,
             rework_count=0,
             verifier_rejections=0,
             tool_misuse_flags=0,
+            # 0.8: order sharing is the strongest cooperation signal.
             counterparty_engagement_delta=0.8,
         )
 
     if etype == "sharing_bonus":
         return ProxyObservables(
+            # 0.2: bonus is a secondary reward, less impactful than the share.
             task_progress_delta=0.2,
             rework_count=0,
             verifier_rejections=0,
             tool_misuse_flags=0,
+            # 0.6: cooperation signal, weaker than the initial share.
             counterparty_engagement_delta=0.6,
         )
 

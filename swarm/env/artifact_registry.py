@@ -57,6 +57,14 @@ class ArtifactRegistry:
 
         Increases pressure for the requested artifact kind.
         Oldest needs are evicted when the list exceeds ``max_needs``.
+
+        FIFO eviction rationale: oldest needs are least likely to still
+        be actionable (the requesting agent may have moved on or found
+        an alternative).  The cumulative ``_pressure`` counter survives
+        eviction, so persistent demand is still visible in
+        ``pressure_scores()`` even after the matchable need records are
+        dropped.  If priority-based eviction is needed for a scenario,
+        subclass and override this method.
         """
         self._needs.append(need)
         if len(self._needs) > self._max_needs:

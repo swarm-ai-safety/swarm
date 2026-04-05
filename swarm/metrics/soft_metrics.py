@@ -580,11 +580,12 @@ class SoftMetrics:
 
     def synthesis_fraction(self, interactions: List[SoftInteraction]) -> float:
         """
-        Compute synthesis fraction: ratio of multi-parent interactions to total.
+        Compute synthesis fraction: ratio of cross-agent synthesis interactions.
 
-        Multi-parent interactions (causal_parents > 1) indicate emergent
-        cross-agent synthesis — an artifact consumed inputs from multiple
-        independent producers.  Higher synthesis fraction signals richer
+        An interaction counts as *synthesis* only if its ``causal_parents``
+        reference interactions from **distinct initiators** — consuming
+        two artifacts from the same agent is reuse, not cross-agent
+        synthesis.  Higher synthesis fraction signals richer multi-agent
         coordination.
 
         Inspired by Wang et al. (2026) Table 1 metric.
@@ -598,10 +599,23 @@ class SoftMetrics:
         if not interactions:
             return 0.0
 
-        multi_parent = sum(
-            1 for i in interactions if len(i.causal_parents) > 1
-        )
-        return multi_parent / len(interactions)
+        # Index interactions by ID for parent lookups
+        ix_by_id = {i.interaction_id: i for i in interactions}
+
+        synthesis_count = 0
+        for i in interactions:
+            if len(i.causal_parents) < 2:
+                continue
+            # Count distinct initiators among parents
+            parent_initiators = {
+                ix_by_id[pid].initiator
+                for pid in i.causal_parents
+                if pid in ix_by_id
+            }
+            if len(parent_initiators) > 1:
+                synthesis_count += 1
+
+        return synthesis_count / len(interactions)
 
     def synthesis_depth(self, interactions: List[SoftInteraction]) -> float:
         """
