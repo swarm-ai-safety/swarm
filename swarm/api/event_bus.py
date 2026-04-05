@@ -131,9 +131,14 @@ class EventBus:
                 if self._put_event(sub, event):
                     count += 1
             else:
-                # Different thread/loop -- schedule on the subscriber's loop
+                # Different thread/loop -- use run_coroutine_threadsafe
+                # so that asyncio tasks waiting on queue.get() are
+                # properly woken up (call_soon_threadsafe + put_nowait
+                # can miss wakeups on Python 3.12+).
                 try:
-                    sub.loop.call_soon_threadsafe(self._put_event, sub, event)
+                    asyncio.run_coroutine_threadsafe(
+                        sub.queue.put(event), sub.loop
+                    )
                     count += 1
                 except RuntimeError:
                     pass  # Loop closed
