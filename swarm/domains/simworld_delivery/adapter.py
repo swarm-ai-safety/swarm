@@ -34,18 +34,6 @@ logger = logging.getLogger(__name__)
 # Event → Observable mapping
 # ---------------------------------------------------------------------------
 
-# Delivery events that represent meaningful agent interactions.
-# Other events (order_created, wait, deliver_continue) are state
-# transitions with no counterparty and are skipped.
-_INTERACTION_EVENTS = frozenset({
-    "bid_won",
-    "delivery_complete",
-    "delivery_failed",
-    "order_shared",
-    "sharing_bonus",
-})
-
-
 def _event_to_observables(event: Dict[str, Any]) -> Optional[ProxyObservables]:
     """Map a delivery event to SWARM proxy observables.
 
