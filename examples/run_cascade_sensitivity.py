@@ -57,9 +57,12 @@ def run_one(scenario_path: str, threshold: float, p_thresh: float,
         if hasattr(config.governance, k):
             setattr(config.governance, k, v)
 
-    orch = build_orchestrator(config, seed=seed)
-    orch.config.n_epochs = N_EPOCHS
-    orch.config.steps_per_epoch = STEPS_PER_EPOCH
+    # Set seed and epoch config before building orchestrator
+    config.orchestrator_config.seed = seed
+    config.orchestrator_config.n_epochs = N_EPOCHS
+    config.orchestrator_config.steps_per_epoch = STEPS_PER_EPOCH
+
+    orch = build_orchestrator(config)
 
     orch.run()
 
