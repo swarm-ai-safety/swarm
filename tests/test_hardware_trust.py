@@ -2,11 +2,13 @@
 
 import pytest
 
+from swarm.agents.base import Action, ActionType
 from swarm.env.state import EnvState
 from swarm.governance.config import GovernanceConfig
 from swarm.governance.engine import GovernanceEngine
 from swarm.governance.hardware_trust import (
     IRREVERSIBLE_ACTIONS,
+    REVERSIBLE_ACTIONS,
     HaltReason,
     HardwareTrustLever,
     RecoveryMode,
@@ -475,3 +477,144 @@ class TestConfigValidation:
     def test_invalid_recovery_max_steps(self):
         with pytest.raises(ValueError, match="hardware_trust_recovery_max_steps"):
             GovernanceConfig(hardware_trust_recovery_max_steps=0)
+
+
+class TestAllowlistFailSafe:
+    """Test that the allowlist approach blocks unknown action types."""
+
+    def test_unknown_action_blocked_in_constrained_mode(self, lever, state):
+        """New action types not on the allowlist are blocked by default."""
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        # A hypothetical new action type not on either list
+        assert not lever.is_action_allowed("agent-1", "new_dangerous_action")
+
+    def test_reversible_actions_allowed_in_constrained_mode(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        for action in REVERSIBLE_ACTIONS:
+            assert lever.is_action_allowed("agent-1", action), (
+                f"Reversible action {action} should be allowed"
+            )
+
+
+class TestEventEmission:
+    """Test that hardware trust lifecycle emits events."""
+
+    def test_receive_halt_emits_events(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        events = lever.drain_events()
+        event_types = [e.event_type.value for e in events]
+        assert "hardware_halt_received" in event_types
+        assert "hardware_recovery_entered" in event_types
+
+    def test_propagation_emits_event(self, lever, state):
+        lever.register_dependency("agent-1", "agent-2")
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        events = lever.drain_events()
+        event_types = [e.event_type.value for e in events]
+        assert "hardware_halt_propagated" in event_types
+
+    def test_clear_halt_emits_event(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        lever.drain_events()  # Clear receive events
+        lever.clear_halt("halt-1", state)
+        events = lever.drain_events()
+        event_types = [e.event_type.value for e in events]
+        assert "hardware_condition_cleared" in event_types
+
+    def test_drain_events_clears_buffer(self, lever, state):
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=state,
+            source_agent_id="agent-1",
+        )
+        first = lever.drain_events()
+        assert len(first) > 0
+        second = lever.drain_events()
+        assert len(second) == 0
+
+
+class TestOrchestratorIntegration:
+    """Test that the hardware trust lever blocks actions at the orchestrator level."""
+
+    def test_orchestrator_blocks_irreversible_action(self):
+        """Exercise the actual orchestrator _execute_action code path."""
+        from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+
+        gov_config = GovernanceConfig(hardware_trust_enabled=True)
+        orch_config = OrchestratorConfig(
+            governance_config=gov_config,
+            n_epochs=1,
+            steps_per_epoch=1,
+            log_events=False,
+        )
+        orch = Orchestrator(config=orch_config)
+        orch.state.add_agent("agent-1")
+
+        # Trigger a halt
+        lever = orch.governance_engine.get_hardware_trust_lever()
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=orch.state,
+            source_agent_id="agent-1",
+        )
+
+        # Try to execute an irreversible action through the orchestrator
+        action = Action(
+            action_type=ActionType.PROPOSE_INTERACTION,
+            agent_id="agent-1",
+            counterparty_id="agent-2",
+        )
+        result = orch._execute_action(action)
+        assert result is False, "Irreversible action should be blocked by hardware trust"
+
+    def test_orchestrator_allows_reversible_action_after_halt(self):
+        """Reversible actions should still pass through the hardware trust check."""
+        from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+
+        gov_config = GovernanceConfig(hardware_trust_enabled=True)
+        orch_config = OrchestratorConfig(
+            governance_config=gov_config,
+            n_epochs=1,
+            steps_per_epoch=1,
+            log_events=False,
+        )
+        orch = Orchestrator(config=orch_config)
+        orch.state.add_agent("agent-1")
+
+        lever = orch.governance_engine.get_hardware_trust_lever()
+        lever.receive_halt(
+            halt_id="halt-1",
+            reason=HaltReason.INTEGRITY_VIOLATION,
+            state=orch.state,
+            source_agent_id="agent-1",
+        )
+
+        # VOTE is a reversible action — hardware trust should NOT block it
+        assert orch.governance_engine.is_action_allowed("agent-1", "vote")

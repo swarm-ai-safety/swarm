@@ -18,7 +18,7 @@ import copy
 import logging
 from collections import deque
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, FrozenSet, List, Optional, Set
 
@@ -41,7 +41,15 @@ class HaltReason(Enum):
 
 
 class RecoveryMode(Enum):
-    """Agent recovery mode after a hardware halt."""
+    """Agent recovery mode after a hardware halt.
+
+    Recovery budget is **step-based**, not action-based: each call to
+    ``on_step`` increments the counter regardless of whether the agent
+    actually acted during that step.  This is intentional — idle silence
+    under a halt should not buy unlimited time.  If time-gated recovery
+    is undesirable for a scenario, set ``hardware_trust_recovery_max_steps``
+    high enough to effectively disable escalation.
+    """
 
     NORMAL = "normal"
     CONSTRAINED = "constrained"  # No irreversible actions, no external side effects
@@ -75,7 +83,22 @@ class AgentRecoveryState:
     task_state_preserved: Dict[str, Any] = field(default_factory=dict)
 
 
-# Actions that are considered irreversible and blocked in constrained recovery
+# Actions explicitly allowed in constrained recovery mode.
+# Everything NOT on this list is blocked — this fails safe when new
+# action types are added to the codebase.
+REVERSIBLE_ACTIONS: FrozenSet[str] = frozenset({
+    "noop",
+    "vote",
+    "reply",
+    "reject_interaction",
+    "reject_bid",
+    "withdraw_bid",
+    "verify_output",
+    "file_objection",
+    "file_dispute",
+})
+
+# Legacy alias kept for backward compatibility with existing tests.
 IRREVERSIBLE_ACTIONS: FrozenSet[str] = frozenset({
     "propose_interaction",
     "submit_output",
@@ -98,6 +121,15 @@ class HardwareTrustLever(GovernanceLever):
 
     This lever intercepts hardware halt signals, freezes affected agents,
     propagates stop tokens to dependents, and manages constrained recovery.
+
+    .. note:: Thread safety
+
+       All internal state (``_halt_records``, ``_recovery_states``,
+       ``_dependency_graph``, ``_active_halt_ids``) is mutated without
+       locking.  The lever assumes single-threaded access from the
+       orchestrator's step loop.  If concurrent access is ever needed,
+       wrap ``receive_halt`` / ``clear_halt`` / ``on_step`` with an
+       external lock.
     """
 
     def __init__(self, config: GovernanceConfig):
@@ -158,7 +190,7 @@ class HardwareTrustLever(GovernanceLever):
         if not self.config.hardware_trust_enabled:
             return LeverEffect(lever_name=self.name)
 
-        now = datetime.now()
+        now = datetime.now(tz=timezone.utc)
 
         # Determine which agents to freeze
         agents_to_freeze: Set[str] = set()
@@ -271,6 +303,15 @@ class HardwareTrustLever(GovernanceLever):
         resolved. Agents that were frozen by this halt are unfrozen and
         can resume from their last admissible checkpoint.
 
+        **Checkpoint restore contract**: The returned ``LeverEffect.details``
+        contains a ``resume_details`` dict keyed by agent_id.  Each entry
+        provides ``checkpoint_epoch``, ``checkpoint_step``, and
+        ``recovery_steps_taken``.  The orchestrator should call
+        :meth:`get_preserved_task_state` for each resumed agent and
+        reinject the snapshot into the agent's next turn context.  If no
+        task state was preserved (empty dict), the agent starts fresh
+        from the recorded checkpoint coordinates.
+
         Args:
             halt_id: ID of the halt to clear.
             state: Current environment state.
@@ -286,7 +327,7 @@ class HardwareTrustLever(GovernanceLever):
             return LeverEffect(lever_name=self.name)
 
         record.cleared = True
-        record.cleared_at = datetime.now()
+        record.cleared_at = datetime.now(tz=timezone.utc)
 
         agents_to_unfreeze: Set[str] = set()
         resume_details: Dict[str, Any] = {}
@@ -397,8 +438,8 @@ class HardwareTrustLever(GovernanceLever):
             return True
         if recovery.mode == RecoveryMode.FROZEN:
             return False
-        # CONSTRAINED: block irreversible actions
-        return action_type not in IRREVERSIBLE_ACTIONS
+        # CONSTRAINED: only allow explicitly reversible actions (fail-safe)
+        return action_type in REVERSIBLE_ACTIONS
 
     # ------------------------------------------------------------------
     # Propagation
