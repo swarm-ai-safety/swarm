@@ -111,6 +111,10 @@ If you care about AGI safety research, SWARM gives you a practical way to:
 - Which governance settings improve safety with the smallest welfare cost?
 - How robust are conclusions under delayed/noisy labels and task shifts?
 
+## New: Autoresearch-style SWARM loops
+
+To run an experimental autoresearch-style loop that mutates governance parameters, evaluates scenarios against an objective, and records results to `runs/autoresearch/summary.json`, use `python -m swarm autoresearch` (example objective: `examples/program_autoresearch.md`). Implementation details and guardrails are documented in `docs/plans/autoresearch-loop.md`.
+
 ## Installation
 
 ```bash
