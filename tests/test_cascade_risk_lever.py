@@ -108,8 +108,8 @@ class TestCascadeRiskLeverEnabled:
         # All descendants have p > 0.3 → cascade_risk = 0.0
         assert effect.cost_a == 0.0
 
-    def test_epoch_start_triggers_gc(self):
-        """on_epoch_start garbage-collects stale artifacts."""
+    def test_epoch_start_is_noop(self):
+        """on_epoch_start is a no-op (GC moved to orchestrator)."""
         lever = self._make_lever()
         state = EnvState(steps_per_epoch=10)
         state.artifact_registry.publish(
@@ -119,8 +119,8 @@ class TestCascadeRiskLeverEnabled:
         )
         assert len(state.artifact_registry) == 1
         lever.on_epoch_start(state, epoch=50)
-        # step = 50 * 10 = 500, artifact at step 0 is > 200 steps old
-        assert len(state.artifact_registry) == 0
+        # GC is now orchestrator's responsibility, lever should not touch it
+        assert len(state.artifact_registry) == 1
 
 
 class TestCascadeRiskConfig:

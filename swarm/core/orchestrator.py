@@ -787,6 +787,10 @@ class Orchestrator:
         # --- Epoch pre-hooks ---
         self._pipeline.on_epoch_start(ctx)
 
+        # --- Artifact housekeeping (always-on, independent of cascade lever) ---
+        current_step = epoch_start * self.config.steps_per_epoch
+        self.state.artifact_registry.gc(current_step, max_age_steps=200)
+
         # --- Self-modification for HyperagentSelfModAgent instances ---
         for agent in self._agents.values():
             if isinstance(agent, HyperagentSelfModAgent):

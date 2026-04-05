@@ -115,6 +115,11 @@ class InteractionFinalizer:
                 ``_wire_artifacts`` can publish them and auto-wire
                 ``causal_parents``.
         """
+        # Wire artifacts and causal_parents BEFORE governance so that
+        # levers (e.g. CascadeRiskLever) can see the populated DAG edges.
+        if handler_result is not None:
+            self._wire_artifacts(interaction, handler_result)
+
         gov_effect = GovernanceEffect()
         if self._governance_engine:
             gov_effect = self._governance_engine.apply_interaction(
@@ -190,12 +195,6 @@ class InteractionFinalizer:
             self._agents[interaction.counterparty].update_from_outcome(
                 interaction, payoff_counter
             )
-
-        # Publish artifacts and wire causal parents from consumed artifacts.
-        # Must happen before record_interaction so the stored interaction
-        # and emitted events include the causal_parents links.
-        if handler_result is not None:
-            self._wire_artifacts(interaction, handler_result)
 
         self._state.record_interaction(interaction)
 

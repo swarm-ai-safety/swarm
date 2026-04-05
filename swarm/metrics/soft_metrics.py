@@ -605,10 +605,11 @@ class SoftMetrics:
 
     def synthesis_depth(self, interactions: List[SoftInteraction]) -> float:
         """
-        Compute average DAG depth of multi-parent (synthesis) interactions.
+        Compute average arity (parent count) of synthesis interactions.
 
-        Uses causal_parents length as a proxy for depth, since each parent
-        represents a consumed artifact from a prior interaction.
+        Measures the average number of artifacts consumed by multi-parent
+        interactions (those with ``len(causal_parents) > 1``).  Despite
+        the name, this is arity (fan-in) not DAG depth (longest path).
 
         Args:
             interactions: List of interactions

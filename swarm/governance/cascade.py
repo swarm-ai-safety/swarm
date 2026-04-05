@@ -115,7 +115,5 @@ class CascadeRiskLever(GovernanceLever):
         state: EnvState,
         epoch: int,
     ) -> LeverEffect:
-        """Garbage-collect old artifacts at epoch boundaries."""
-        current_step = epoch * state.steps_per_epoch
-        state.artifact_registry.gc(current_step, max_age_steps=200)
+        """No-op — artifact GC is handled by the orchestrator."""
         return LeverEffect(lever_name=self.name)
