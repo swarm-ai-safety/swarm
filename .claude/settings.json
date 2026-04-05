@@ -10,6 +10,45 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/governance_shim.sh session_start",
+            "timeout": 5,
+            "statusMessage": "Initializing governance shim"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/governance_shim.sh pre_tool_use",
+            "timeout": 3,
+            "statusMessage": "Governance: logging tool invocation"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/governance_shim.sh subagent_stop",
+            "timeout": 5,
+            "statusMessage": "Governance: task checkpoint"
+          }
+        ]
+      }
+    ],
     "PreCompact": [
       {
         "matcher": "",
@@ -53,6 +92,17 @@
             "type": "command",
             "command": "/Users/raelisavitt/distributional-agi-safety/.claude/metadata-updater.sh",
             "timeout": 5000
+          }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/governance_shim.sh post_tool_use",
+            "timeout": 3,
+            "statusMessage": "Governance: logging tool outcome"
           }
         ]
       }
