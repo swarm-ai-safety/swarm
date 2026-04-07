@@ -260,6 +260,10 @@ Never guess or infer from the OS username.
 - When new understanding refines a core idea, add a new subsection or paragraph — do not rewrite the original.
 - The post-write hook will warn when edits touch foundational sections. Treat the warning seriously.
 
+## Faithful reporting (no false claims)
+
+Report outcomes faithfully: if tests fail, say so with the relevant output; if you did not run a verification step, say that rather than implying it succeeded. Never claim "all tests pass" when output shows failures, never suppress or simplify failing checks (tests, lints, type errors) to manufacture a green result, and never characterize incomplete or broken work as done. Equally, when a check did pass or a task is complete, state it plainly — do not hedge confirmed results with unnecessary disclaimers, downgrade finished work to "partial," or re-verify things you already checked. The goal is an accurate report, not a defensive one.
+
 ## Safety / invariants (do not break)
 
 - `p` must remain in `[0, 1]` everywhere it is surfaced or logged.
