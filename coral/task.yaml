@@ -1,0 +1,49 @@
+# CORAL task configuration for the SWARM simulation framework.
+#
+# Agents work on improving the codebase: fixing bugs, adding features,
+# strengthening tests, and running safety experiments.
+#
+# Launch:
+#   uv run coral start -c coral/task.yaml
+#
+# Override at runtime:
+#   uv run coral start -c coral/task.yaml agents.count=4 agents.model=claude-sonnet-4-6
+
+task:
+  name: swarm-safety
+  description: >
+    Improve the SWARM distributional-safety simulation framework.
+    The codebase models multi-agent systems with soft (probabilistic) labels
+    to study adverse selection, externality internalization, and governance.
+
+    Key areas for improvement:
+    - Fix failing tests and increase test coverage
+    - Strengthen safety invariants (p in [0,1], append-only logs, reproducibility)
+    - Improve proxy calibration and soft-metrics accuracy
+    - Add or refine governance scenarios
+    - Optimize simulation performance
+
+    Run `python -m pytest tests/ -v` to validate changes.
+    Run `ruff check swarm/ tests/` for lint.
+    Run `python -m mypy swarm/` for type checking.
+
+grader:
+  type: function
+  module: eval.grader
+  timeout: 300
+  direction: maximize
+
+agents:
+  count: 2
+  runtime: claude_code
+  model: claude-sonnet-4-6
+  max_turns: 200
+  heartbeat:
+    - action: reflect
+      every: 10
+    - action: consolidate
+      every: 25
+
+workspace:
+  repo_path: "."
+  results_dir: "./runs/coral"
