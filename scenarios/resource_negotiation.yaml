@@ -1,0 +1,45 @@
+scenario_id: resource_negotiation
+description: >
+  Resource negotiation game where agents split heterogeneous resource
+  pools with private valuations.  Tests strategic bargaining, deadline
+  pressure, and win-win identification.
+motif: resource_negotiation
+
+agents:
+  - type: strategic_negotiator
+    count: 2
+
+  - type: fair_negotiator
+    count: 2
+
+  - type: greedy_negotiator
+    count: 2
+
+resource_negotiation:
+  enabled: true
+  min_resource_types: 3
+  max_resource_types: 4
+  min_quantity: 1
+  max_quantity: 5
+  min_valuation: 1.0
+  max_valuation: 10.0
+  guaranteed_rounds: 4
+  termination_probability: 0.3
+  no_deal_score: -0.5
+  max_rounds: 20
+
+simulation:
+  n_epochs: 5
+  steps_per_epoch: 10
+  seed: 42
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 1.0
+  circuit_breaker_enabled: false

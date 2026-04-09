@@ -91,6 +91,9 @@ class ActionType(Enum):
     # Evolutionary game actions
     EVO_GAME_MOVE = "evo_game_move"
 
+    # Resource negotiation actions
+    RESOURCE_NEGOTIATE = "resource_negotiate"
+
     # Special actions
     NOOP = "noop"  # Do nothing this turn
 
@@ -242,6 +245,10 @@ class Observation:
     awm_last_result: Optional[Dict] = None  # Result of previous tool call
     awm_episode_active: bool = False  # Whether episode is in progress
     awm_steps_remaining: int = 0  # Steps left before max_steps
+
+    # Resource negotiation observations
+    resource_negotiation_games: List[Dict] = field(default_factory=list)  # Active games
+    resource_negotiation_results: List[Dict] = field(default_factory=list)  # Completed games
 
 
 @dataclass

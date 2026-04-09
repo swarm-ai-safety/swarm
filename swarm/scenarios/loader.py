@@ -59,6 +59,11 @@ from swarm.agents.wiki_editor import (
     PointFarmerAgent,
     VandalAgent,
 )
+from swarm.agents.negotiation_agent import (
+    FairNegotiator,
+    GreedyNegotiator,
+    StrategicNegotiator,
+)
 from swarm.agents.work_regime_agent import WorkRegimeAgent
 from swarm.contracts.contract import (
     FairDivisionContract,
@@ -155,6 +160,10 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "tierra": TierraAgent,
     # Work regime (policy-drifting workers under labor stress)
     "work_regime": WorkRegimeAgent,
+    # Resource negotiation agents
+    "fair_negotiator": FairNegotiator,
+    "greedy_negotiator": GreedyNegotiator,
+    "strategic_negotiator": StrategicNegotiator,
 }
 
 class _LazyLoader:
@@ -1098,6 +1107,26 @@ def parse_evo_game_config(data: Dict[str, Any]) -> Optional[Any]:
     return EvoGameConfig(**data)
 
 
+def parse_resource_negotiation_config(data: Dict[str, Any]) -> Optional[Any]:
+    """Parse resource_negotiation section from YAML.
+
+    Args:
+        data: The resource_negotiation section from YAML
+
+    Returns:
+        ResourceNegotiationConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    from swarm.core.resource_negotiation_handler import ResourceNegotiationConfig
+
+    return ResourceNegotiationConfig(**data)
+
+
 def _expand_agent_specs(agent_specs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Expand agent specs honoring ``count``, yielding one dict per agent."""
     expanded: List[Dict[str, Any]] = []
@@ -1146,6 +1175,9 @@ def load_scenario(path: Path) -> ScenarioConfig:
     )
     contracts_config = parse_contracts_config(data.get("contracts", {}))
     evo_game_config = parse_evo_game_config(data.get("evo_game", {}))
+    resource_negotiation_config = parse_resource_negotiation_config(
+        data.get("resource_negotiation", {})
+    )
     tierra_config = parse_tierra_config(data.get("tierra", {}))
 
     # Parse simulation settings
@@ -1180,6 +1212,7 @@ def load_scenario(path: Path) -> ScenarioConfig:
         perturbation_config=perturbation_config,
         contracts_config=contracts_config,
         evo_game_config=evo_game_config,
+        resource_negotiation_config=resource_negotiation_config,
         tierra_config=tierra_config,
         dynamic_toxicity=data.get("dynamic_toxicity"),
         graph_memory_path=outputs_data.get("graph_memory_path"),
@@ -1605,6 +1638,13 @@ def build_orchestrator(scenario: ScenarioConfig) -> Orchestrator:
                 orchestrator._tierra_handler.register_genome(
                     agent.agent_id, agent.genome.to_dict()
                 )
+
+    # Create initial resource negotiation games if handler is present
+    if orchestrator._resource_negotiation_handler is not None:
+        agent_ids = [a.agent_id for a in agents]
+        orchestrator._resource_negotiation_handler.create_games_for_agents(
+            agent_ids
+        )
 
     # Register evolutionary game strategies if handler is present
     if orchestrator._evo_game_handler is not None:
