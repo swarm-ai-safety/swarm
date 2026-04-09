@@ -161,6 +161,9 @@ class OrchestratorConfig(BaseModel):
     # Evolutionary game (gamescape) configuration
     evo_game_config: Optional[Any] = None
 
+    # Resource negotiation game configuration
+    resource_negotiation_config: Optional[Any] = None
+
     # Tierra (artificial life) configuration
     tierra_config: Optional[Any] = None
 
@@ -438,6 +441,7 @@ class Orchestrator:
         self._rivals_handler = self._handlers.rivals_handler
         self._awm_handler = self._handlers.awm_handler
         self._evo_game_handler = self._handlers.evo_game_handler
+        self._resource_negotiation_handler = self._handlers.resource_negotiation_handler
         self._tierra_handler = self._handlers.tierra_handler
         self._boundary_handler = self._handlers.boundary_handler
         self._feed_handler = self._handlers.feed_handler
