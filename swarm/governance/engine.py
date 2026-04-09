@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from swarm.env.state import EnvState
 from swarm.governance.admission import StakingLever
+from swarm.governance.advisor import AdvisorLever
 from swarm.governance.audits import RandomAuditLever
 from swarm.governance.circuit_breaker import CircuitBreakerLever
 from swarm.governance.collusion import CollusionPenaltyLever
@@ -181,6 +182,10 @@ class GovernanceEngine:
         if self.config.hardware_trust_enabled:
             levers.append(HardwareTrustLever(self.config))
 
+        # Advisor-model steering lever (Asawa et al., 2026)
+        if self.config.advisor_enabled:
+            levers.append(AdvisorLever(self.config, seed=seed))
+
         # Stored as a tuple so that external code cannot mutate in place.
         self._levers: tuple[GovernanceLever, ...] = tuple(levers)
 
@@ -198,6 +203,7 @@ class GovernanceEngine:
         self._rbac_lever: Optional[RBACLever] = None
         self._resample_lever: Optional[ResampleLever] = None
         self._hardware_trust_lever: Optional[HardwareTrustLever] = None
+        self._advisor_lever: Optional[AdvisorLever] = None
 
         for lever in self._levers:
             if isinstance(lever, StakingLever):
@@ -224,6 +230,8 @@ class GovernanceEngine:
                 self._resample_lever = lever
             elif isinstance(lever, HardwareTrustLever):
                 self._hardware_trust_lever = lever
+            elif isinstance(lever, AdvisorLever):
+                self._advisor_lever = lever
 
         # Adaptive governance state
         self._incoherence_forecaster: Optional[Any] = None
@@ -548,3 +556,13 @@ class GovernanceEngine:
     def get_hardware_trust_lever(self) -> Optional[HardwareTrustLever]:
         """Return the hardware trust lever if registered."""
         return self._hardware_trust_lever
+
+    def get_advisor_lever(self) -> Optional[AdvisorLever]:
+        """Return the advisor-model lever if registered."""
+        return self._advisor_lever
+
+    def get_advisor_report(self) -> Optional[Dict[str, Any]]:
+        """Return the advisor-model state report."""
+        if self._advisor_lever is None:
+            return None
+        return self._advisor_lever.get_report()

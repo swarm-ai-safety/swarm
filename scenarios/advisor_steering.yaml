@@ -1,0 +1,96 @@
+# Advisor-Model Steering Scenario
+# Demonstrates the advisor-model governance lever (Asawa et al., 2026)
+# that dynamically steers agent behavior through per-instance advice signals.
+#
+# Setup: Mix of honest, opportunistic, and deceptive agents, plus
+# "advised" wrappers around honest agents.  The advisor governance lever
+# tracks quality trends and applies friction/bonuses to steer the
+# ecosystem toward higher social welfare.
+#
+# Reference: Asawa, P. et al. "How to Train Your Advisor: Steering
+# Black-Box LLMs with Advisor Models." arXiv:2510.02453
+
+scenario_id: advisor_steering
+description: "Advisor-model steering with per-instance governance advice"
+motif: advisor_model
+
+agents:
+  # Advised agents (honest base, steered by advisor signals)
+  - type: advised
+    count: 3
+    config:
+      base_agent_type: honest
+      base_agent_config:
+        acceptance_threshold: 0.4
+        post_probability: 0.3
+      advisor_alpha: 0.3
+      advisor_strength: 1.0
+      advisor_threshold_bonus: 0.15
+
+  # Unadvised honest agents (control group)
+  - type: honest
+    count: 2
+
+  # Adversarial agents (the advisor should steer the ecosystem
+  # to apply friction to these agents as quality degrades)
+  - type: opportunistic
+    count: 2
+
+  - type: deceptive
+    count: 1
+
+governance:
+  # Advisor-model lever (the key mechanism under test)
+  advisor_enabled: true
+  advisor_ema_alpha: 0.3
+  advisor_steering_strength: 1.0
+  advisor_friction_rate: 0.05
+  advisor_reputation_rate: 0.1
+  advisor_welfare_weight: 1.0
+  advisor_toxicity_weight: 1.0
+
+  # Light baseline governance for comparison
+  transaction_tax_rate: 0.02
+  transaction_tax_split: 0.5
+  reputation_decay_rate: 0.95
+  bandwidth_cap: 10
+
+  # Transparency to make advisor effects visible
+  transparency_enabled: true
+  transparency_bonus_rate: 0.05
+  transparency_threshold_p: 0.5
+
+  # Circuit breaker as safety net
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.8
+  freeze_threshold_violations: 5
+  freeze_duration_epochs: 2
+
+simulation:
+  n_epochs: 15
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 15
+  min_agents: 8
+  toxicity_threshold: 0.4
+
+outputs:
+  event_log: "logs/advisor_steering_events.jsonl"
+  metrics_csv: "logs/advisor_steering_metrics.csv"

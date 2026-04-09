@@ -4,6 +4,7 @@ from swarm.agents.adaptive_adversary import (
     AdaptiveAdversary,
     AttackStrategy,
 )
+from swarm.agents.advised_agent import AdvisedAgent
 from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.base import (
     Action,
@@ -93,4 +94,6 @@ __all__ = [
     "AdaptiveAgent",
     # Work regime drift agent
     "WorkRegimeAgent",
+    # Advisor-model wrapper (Asawa et al., 2026)
+    "AdvisedAgent",
 ]

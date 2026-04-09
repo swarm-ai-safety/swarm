@@ -9,6 +9,7 @@ from typing import Any, Dict, List, Optional, Type
 import yaml
 
 from swarm.agents.adaptive_adversary import AdaptiveAdversary
+from swarm.agents.advised_agent import AdvisedAgent
 from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.awm_agent import AWMAgent
 from swarm.agents.base import BaseAgent
@@ -155,6 +156,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "tierra": TierraAgent,
     # Work regime (policy-drifting workers under labor stress)
     "work_regime": WorkRegimeAgent,
+    # Advisor-model wrapper (Asawa et al., 2026)
+    "advised": AdvisedAgent,
 }
 
 class _LazyLoader:
@@ -501,6 +504,14 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         hardware_trust_recovery_max_steps=data.get(
             "hardware_trust_recovery_max_steps", 10
         ),
+        # Advisor-model steering (Asawa et al., 2026)
+        advisor_enabled=data.get("advisor_enabled", False),
+        advisor_ema_alpha=data.get("advisor_ema_alpha", 0.3),
+        advisor_steering_strength=data.get("advisor_steering_strength", 1.0),
+        advisor_friction_rate=data.get("advisor_friction_rate", 0.05),
+        advisor_reputation_rate=data.get("advisor_reputation_rate", 0.1),
+        advisor_welfare_weight=data.get("advisor_welfare_weight", 1.0),
+        advisor_toxicity_weight=data.get("advisor_toxicity_weight", 1.0),
     )
     # Pydantic auto-validates
     return config

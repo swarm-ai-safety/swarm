@@ -221,6 +221,15 @@ class GovernanceConfig(BaseModel):
         50  # Window of recent interactions for correlation
     )
 
+    # Advisor-model steering (Asawa et al., 2026)
+    advisor_enabled: bool = False
+    advisor_ema_alpha: float = 0.3  # EMA learning rate for quality tracking
+    advisor_steering_strength: float = 1.0  # Scale of advice signal [-1, +1]
+    advisor_friction_rate: float = 0.05  # Cost added per unit of negative advice
+    advisor_reputation_rate: float = 0.1  # Reputation delta per unit of advice
+    advisor_welfare_weight: float = 1.0  # Weight of welfare in advisor reward
+    advisor_toxicity_weight: float = 1.0  # Weight of toxicity penalty in advisor reward
+
     # Resample protocol (Bhatt et al., 2025 — "Ctrl-Z")
     resample_enabled: bool = False
     resample_suspicion_threshold: float = 0.6  # suspicion >= this triggers resample
@@ -481,6 +490,20 @@ class GovernanceConfig(BaseModel):
             raise ValueError("diversity_audit_cost must be non-negative")
         if self.diversity_correlation_window < 1:
             raise ValueError("diversity_correlation_window must be >= 1")
+
+        # Advisor-model validation
+        if not 0.0 < self.advisor_ema_alpha <= 1.0:
+            raise ValueError("advisor_ema_alpha must be in (0, 1]")
+        if self.advisor_steering_strength < 0:
+            raise ValueError("advisor_steering_strength must be non-negative")
+        if self.advisor_friction_rate < 0:
+            raise ValueError("advisor_friction_rate must be non-negative")
+        if self.advisor_reputation_rate < 0:
+            raise ValueError("advisor_reputation_rate must be non-negative")
+        if self.advisor_welfare_weight < 0:
+            raise ValueError("advisor_welfare_weight must be non-negative")
+        if self.advisor_toxicity_weight < 0:
+            raise ValueError("advisor_toxicity_weight must be non-negative")
 
         # Resample protocol validation
         if not 0.0 <= self.resample_suspicion_threshold <= 1.0:
