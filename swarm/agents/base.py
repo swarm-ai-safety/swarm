@@ -91,6 +91,9 @@ class ActionType(Enum):
     # Evolutionary game actions
     EVO_GAME_MOVE = "evo_game_move"
 
+    # Resource negotiation actions
+    RESOURCE_NEGOTIATE = "resource_negotiate"
+
     # Special actions
     NOOP = "noop"  # Do nothing this turn
 
@@ -246,6 +249,10 @@ class Observation:
     # Artifact layer observations (emergent tool chaining)
     available_artifacts: List[Dict] = field(default_factory=list)  # Consumable artifacts
     artifact_pressure: Dict[str, float] = field(default_factory=dict)  # Unmet demand by kind
+
+    # Resource negotiation observations
+    resource_negotiation_games: List[Dict] = field(default_factory=list)  # Active games
+    resource_negotiation_results: List[Dict] = field(default_factory=list)  # Completed games
 
 
 @dataclass

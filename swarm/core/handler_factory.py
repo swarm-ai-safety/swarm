@@ -50,6 +50,7 @@ class HandlerSet:
         self.rivals_handler: Optional[Any] = None
         self.awm_handler: Optional[Any] = None
         self.evo_game_handler: Optional[Any] = None
+        self.resource_negotiation_handler: Optional[Any] = None
         self.tierra_handler: Optional[Any] = None
         self.boundary_handler: Optional[BoundaryHandler] = None
         self.feed_handler: Optional[FeedHandler] = None
@@ -174,6 +175,27 @@ def build_handlers(
             rng=rng,
         )
         hs.registry.register(hs.evo_game_handler)
+
+    # -- Resource negotiation (lazy import) --
+    if config.resource_negotiation_config is not None:
+        from swarm.core.resource_negotiation_handler import (
+            ResourceNegotiationConfig,
+            ResourceNegotiationHandler,
+        )
+
+        rn_cfg = config.resource_negotiation_config
+        if not isinstance(rn_cfg, ResourceNegotiationConfig):
+            rn_cfg = (
+                ResourceNegotiationConfig(**rn_cfg)
+                if isinstance(rn_cfg, dict)
+                else rn_cfg
+            )
+        hs.resource_negotiation_handler = ResourceNegotiationHandler(
+            config=rn_cfg,
+            event_bus=event_bus,
+            rng=rng,
+        )
+        hs.registry.register(hs.resource_negotiation_handler)
 
     # -- Tierra (lazy import) --
     if config.tierra_config is not None:
