@@ -1,7 +1,9 @@
 """Parameter sweep for batch simulations."""
 
+import copy
 import csv
 import itertools
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
@@ -302,31 +304,55 @@ def _extract_results(
     return result
 
 
+def _run_single_worker(
+    base_scenario: ScenarioConfig,
+    params: Dict[str, Any],
+    run_index: int,
+    seed: Optional[int],
+) -> SweepResult:
+    """Run a single simulation — module-level function for parallel execution."""
+    scenario = copy.deepcopy(base_scenario)
+    scenario = _apply_params(scenario, params)
+    if seed is not None:
+        scenario.orchestrator_config.seed = seed
+    orchestrator = build_orchestrator(scenario)
+    orchestrator.run()
+    return _extract_results(orchestrator, params, run_index, seed or 0)
+
+
 class SweepRunner:
-    """Runs parameter sweeps over simulations."""
+    """Runs parameter sweeps over simulations.
+
+    Args:
+        config: Sweep configuration.
+        progress_callback: Optional callback(current, total, params) for
+            progress updates.  Called per-run in serial mode; called as
+            results complete in parallel mode.
+        n_workers: Number of parallel worker processes.  ``1`` (the default)
+            runs serially.  Values > 1 use a
+            :class:`~concurrent.futures.ProcessPoolExecutor`.
+    """
 
     def __init__(
         self,
         config: SweepConfig,
         progress_callback: Optional[Callable[[int, int, Dict[str, Any]], None]] = None,
+        n_workers: int = 1,
     ):
-        """
-        Initialize the sweep runner.
-
-        Args:
-            config: Sweep configuration
-            progress_callback: Optional callback(current, total, params) for progress updates
-        """
         self.config = config
         self.progress_callback = progress_callback
+        self.n_workers = max(1, n_workers)
         self.results: List[SweepResult] = []
 
     def run(self) -> List[SweepResult]:
-        """
-        Execute the parameter sweep.
+        """Execute the parameter sweep.
+
+        When *n_workers* > 1, runs are distributed across worker processes
+        via :class:`~concurrent.futures.ProcessPoolExecutor`.  Results are
+        collected in submission order so output is deterministic.
 
         Returns:
-            List of results for each run
+            List of results for each run.
         """
         self.results = []
 
@@ -340,56 +366,77 @@ class SweepRunner:
             combinations = [()]
 
         total_runs = self.config.total_runs()
-        current_run = 0
 
+        # Build work items list
+        work_items: List[tuple] = []  # (params, run_idx, seed)
+        current_run = 0
         for combo in combinations:
             params = dict(zip(param_names, combo, strict=True))
-
             for run_idx in range(self.config.runs_per_config):
                 current_run += 1
-
-                # Calculate seed
                 seed = (
                     self.config.seed_base + current_run
                     if self.config.seed_base
                     else None
                 )
+                work_items.append((params, run_idx, seed))
 
-                # Progress callback
-                if self.progress_callback:
-                    self.progress_callback(current_run, total_runs, params)
-
-                # Run simulation
-                result = self._run_single(params, run_idx, seed)
-                self.results.append(result)
+        if self.n_workers > 1:
+            self.results = self._run_parallel(work_items, total_runs)
+        else:
+            self.results = self._run_serial(work_items, total_runs)
 
         return self.results
 
-    def _run_single(
+    def _run_serial(
         self,
-        params: Dict[str, Any],
-        run_index: int,
-        seed: Optional[int],
-    ) -> SweepResult:
-        """Run a single simulation with given parameters."""
-        # Deep copy the base scenario
-        import copy
+        work_items: List[tuple],
+        total_runs: int,
+    ) -> List[SweepResult]:
+        """Run all work items sequentially."""
+        results = []
+        for idx, (params, run_idx, seed) in enumerate(work_items, 1):
+            if self.progress_callback:
+                self.progress_callback(idx, total_runs, params)
+            result = _run_single_worker(
+                self.config.base_scenario, params, run_idx, seed,
+            )
+            results.append(result)
+        return results
 
-        scenario = copy.deepcopy(self.config.base_scenario)
+    def _run_parallel(
+        self,
+        work_items: List[tuple],
+        total_runs: int,
+    ) -> List[SweepResult]:
+        """Run work items in parallel using ProcessPoolExecutor.
 
-        # Apply parameter overrides
-        scenario = _apply_params(scenario, params)
+        Submits all jobs up front and collects results in submission order
+        so output is deterministic regardless of completion order.
+        """
+        results: List[SweepResult] = [None] * len(work_items)  # type: ignore[list-item]
 
-        # Set seed
-        if seed is not None:
-            scenario.orchestrator_config.seed = seed
+        with ProcessPoolExecutor(max_workers=self.n_workers) as pool:
+            future_to_idx = {}
+            for idx, (params, run_idx, seed) in enumerate(work_items):
+                future = pool.submit(
+                    _run_single_worker,
+                    self.config.base_scenario,
+                    params,
+                    run_idx,
+                    seed,
+                )
+                future_to_idx[future] = (idx, params)
 
-        # Build and run
-        orchestrator = build_orchestrator(scenario)
-        orchestrator.run()
+            completed = 0
+            for future in as_completed(future_to_idx):
+                idx, params = future_to_idx[future]
+                results[idx] = future.result()
+                completed += 1
+                if self.progress_callback:
+                    self.progress_callback(completed, total_runs, params)
 
-        # Extract results
-        return _extract_results(orchestrator, params, run_index, seed or 0)
+        return results
 
     # Canonical column names expected by downstream tools (/stats, /plot, papers).
     # Maps internal SweepResult field names → canonical names.

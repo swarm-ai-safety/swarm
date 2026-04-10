@@ -694,6 +694,7 @@ def main() -> int:
     autoresearch_parser.add_argument("--random-seed", type=int, default=42, help="RNG seed for mutation proposals")
     autoresearch_parser.add_argument("--export-root", default="runs/autoresearch", help="Directory for autoresearch outputs")
     autoresearch_parser.add_argument("--auto-commit", action="store_true", help="Commit summary artifact at end of run")
+    autoresearch_parser.add_argument("--plateau-window", type=int, default=5, help="Consecutive stalled iterations before entropy injection")
 
     # evolve
     evolve_parser = subparsers.add_parser("evolve", help="Evolve governance configurations")

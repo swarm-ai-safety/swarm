@@ -5,6 +5,10 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from swarm.analysis.adverse_selection import AdverseSelectionDetector
+from swarm.analysis.convergence import (
+    ConvergenceReport,
+    behavioral_convergence,
+)
 from swarm.analysis.dashboard import (
     AgentSnapshot,
     DashboardConfig,
@@ -60,6 +64,9 @@ if TYPE_CHECKING:
 __all__ = [
     # Adverse selection
     "AdverseSelectionDetector",
+    # Convergence detection
+    "ConvergenceReport",
+    "behavioral_convergence",
     # Sweep
     "SweepConfig",
     "SweepParameter",

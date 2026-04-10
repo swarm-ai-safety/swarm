@@ -300,9 +300,29 @@ def cmd_autoresearch(args: argparse.Namespace) -> int:
         """
     ).strip())
 
+    plateau_window = getattr(args, "plateau_window", 5)
+    plateau_count = 0  # consecutive iterations without improvement
+    entropy_injections = 0
+
     for i in range(1, args.iterations + 1):
         candidate = copy.deepcopy(best_scenario)
-        param, old, new = _mutate_governance(candidate, rng)
+
+        # Inject entropy when flatlined: make multiple mutations
+        n_mutations = 1
+        if plateau_count >= plateau_window:
+            n_mutations = min(3, len(NUMERIC_TUNABLES))
+            entropy_injections += 1
+            print(
+                f"[autoresearch] plateau detected ({plateau_count} iters "
+                f"without improvement) — injecting entropy ({n_mutations} mutations)"
+            )
+            plateau_count = 0  # reset after injection
+
+        mutations = []
+        for _ in range(n_mutations):
+            param, old, new = _mutate_governance(candidate, rng)
+            mutations.append({"param": param, "old": old, "new": new})
+
         candidate_eval = evaluate_candidate(
             scenario=candidate,
             seeds=seeds,
@@ -320,21 +340,35 @@ def cmd_autoresearch(args: argparse.Namespace) -> int:
         if accepted:
             best_scenario = candidate
             best = candidate_eval
+            plateau_count = 0
+        else:
+            plateau_count += 1
+
+        # Use first mutation for backward-compatible log format
+        param = mutations[0]["param"]
+        old = mutations[0]["old"]
+        new = mutations[0]["new"]
 
         record = {
             "iteration": i,
-            "mutation": {"param": param, "old": old, "new": new},
+            "mutation": mutations[0] if len(mutations) == 1 else mutations,
             "candidate_metrics": candidate_eval.metrics,
             "accepted": accepted,
             "guardrail_errors": guardrail_errors,
+            "plateau_count": plateau_count,
+            "entropy_injection": n_mutations > 1,
         }
         ledger["iterations"].append(record)
+        suffix = ""
+        if n_mutations > 1:
+            suffix = f" [entropy x{n_mutations}]"
         print(
             f"[autoresearch] iter={i:03d} {param}: {old} -> {new} "
-            f"candidate={cand_value:.6f} accepted={'yes' if accepted else 'no'}"
+            f"candidate={cand_value:.6f} accepted={'yes' if accepted else 'no'}{suffix}"
         )
 
     ledger["best"] = best.metrics
+    ledger["entropy_injections"] = entropy_injections
     ledger["finished_at"] = datetime.now(timezone.utc).isoformat()
 
     out_dir = Path(args.export_root)
