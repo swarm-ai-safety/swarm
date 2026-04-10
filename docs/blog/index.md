@@ -19,6 +19,17 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
   </div>
 </div>
 
+## April 2026
+
+<div class="blog-post" data-tags="theory engineering" markdown>
+
+**Apr 10** — [The Harness Is the Moat: What Optimization Arena Teaches About Multi-Agent Research](optimization-arena-learnings.md)
+<span class="blog-tag">Theory</span> <span class="blog-tag">Engineering</span>
+
+Benedict Brady's Optimization Arena ran 1,000+ players through nearly 20,000 submissions and found that harness design, not model capability, is the bottleneck. Smart generalists with strong orchestration beat domain experts. We unpack what that means for SWARM-style safety research: parallel evaluation, outer-loop critics, entropy injection, convergent gaming, and the distillation gap.
+
+</div>
+
 ## March 2026
 
 <div class="blog-post" data-tags="governance evaluation" markdown>
