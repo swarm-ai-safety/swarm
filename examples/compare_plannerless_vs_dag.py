@@ -29,6 +29,7 @@ from swarm.scenarios import build_orchestrator, load_scenario
 SCENARIOS = {
     "plannerless": "scenarios/plannerless_coordination.yaml",
     "dag_planner": "scenarios/dag_planner_screening.yaml",
+    "dag_planner_lightgov": "scenarios/dag_planner_screening_lightgov.yaml",
 }
 
 
