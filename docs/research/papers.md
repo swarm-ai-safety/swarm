@@ -41,6 +41,18 @@ Proposes a bias–variance decomposition for AI misalignment, asking whether inc
 
 Studies emergent behavior in multi-agent market settings. Validated using SWARM-AgentXiv.
 
+**Dochkina (2026)** - *Drop the Hierarchy and Roles: How Self-Organizing LLM Agents Outperform Designed Structures*
+[arXiv:2603.28990](https://arxiv.org/abs/2603.28990)
+
+A 25,000-task study comparing fixed-role hierarchies against emergent coordination across 8 models, 4–256 agents, and 8 protocols. Reports that a hybrid Sequential protocol outperforms centralized coordination, that self-organization capacity scales with model capability, and that role labels appear and dissolve dynamically (RSI → 0 with 5,006 unique roles from 8 agents).
+
+SWARM-relevant takeaways:
+
+- **Capability threshold is the most credible finding.** The same self-organizing protocol gains +3.5% with Claude Sonnet 4.6 but loses −9.6% with GLM-5 — a clean cross-model interaction less vulnerable to the paper's verbosity-bias confound. Argues for capability-gating in our `plannerless_coordination` scenario.
+- **Multiplicative model × protocol effect** mirrors SWARM's own finding that governance bundle and coordination mechanism jointly determine welfare and toxicity (10-seed paired Wilcoxon on `plannerless_coordination` vs `dag_planner_screening_lightgov`).
+- **Import with skepticism**: the d = 1.86 Sequential-dominance headline rides on a `Q ∈ [0.25, 1.0]` compressed Likert and an LLM judge with documented length bias on protocols that differ in verbosity. The "no degradation to 256 agents" claim is null-as-evidence (p = 0.61 is failure-to-reject, not equivalence).
+- **Do not import** the zero-cost role-switching premise or the role-invention-as-specialization framing without a behavior-level test.
+
 ## Papers Using SWARM
 
 Research published using the SWARM framework:
