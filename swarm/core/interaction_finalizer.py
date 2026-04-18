@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
+from swarm.core.handler import HandlerActionResult
 from swarm.core.observable_generator import ObservableGenerator
 from swarm.core.payoff import SoftPayoffEngine
 from swarm.core.proxy import ProxyComputer
@@ -103,8 +104,17 @@ class InteractionFinalizer:
     def finalize_interaction(
         self,
         interaction: SoftInteraction,
+        handler_result: Optional[HandlerActionResult] = None,
     ) -> Tuple[GovernanceEffect, float, float]:
-        """Apply governance, compute payoffs, update state, and emit events."""
+        """Apply governance, compute payoffs, update state, and emit events.
+
+        Args:
+            interaction: The interaction to finalize.
+            handler_result: If the interaction was produced by a handler
+                that returned artifacts, pass the result here so
+                ``_wire_artifacts`` can publish them and auto-wire
+                ``causal_parents``.
+        """
         gov_effect = GovernanceEffect()
         if self._governance_engine:
             gov_effect = self._governance_engine.apply_interaction(
@@ -181,6 +191,12 @@ class InteractionFinalizer:
                 interaction, payoff_counter
             )
 
+        # Publish artifacts and wire causal parents from consumed artifacts.
+        # Must happen before record_interaction so the stored interaction
+        # and emitted events include the causal_parents links.
+        if handler_result is not None:
+            self._wire_artifacts(interaction, handler_result)
+
         self._state.record_interaction(interaction)
 
         self._emit_event(
@@ -251,6 +267,36 @@ class InteractionFinalizer:
             agent_state = self._state.get_agent(agent_id)
             if agent_state:
                 agent_state.update_resources(delta)
+
+    # ------------------------------------------------------------------
+    # Artifact layer
+    # ------------------------------------------------------------------
+
+    def _wire_artifacts(
+        self,
+        interaction: SoftInteraction,
+        result: HandlerActionResult,
+    ) -> None:
+        """Publish produced artifacts and auto-wire causal_parents from consumed ones."""
+        registry = self._state.artifact_registry
+
+        # Publish produced artifacts with the interaction's soft label
+        for artifact in result.produced_artifacts:
+            artifact.interaction_id = interaction.interaction_id
+            artifact.p_at_production = interaction.p
+            artifact.step = (
+                self._state.current_epoch * self._state.steps_per_epoch
+                + self._state.current_step
+            )
+            registry.publish(artifact)
+
+        # Consume artifacts and wire causal_parents
+        for consumed_id in result.consumed_artifact_ids:
+            parent_interaction_id = registry.consume(
+                consumed_id, interaction.interaction_id
+            )
+            if parent_interaction_id and parent_interaction_id not in interaction.causal_parents:
+                interaction.causal_parents.append(parent_interaction_id)
 
     # ------------------------------------------------------------------
     # Internal helpers

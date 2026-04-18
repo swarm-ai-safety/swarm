@@ -50,6 +50,9 @@ class ObservationBuilder:
         self._handler_registry = handler_registry
         self._rng = rng
         self._spawn_tree = spawn_tree
+        # Per-step artifact cache (invalidated each step)
+        self._artifact_cache_step: int = -1
+        self._artifact_cache: dict | None = None
 
     # ------------------------------------------------------------------
     # Public API
@@ -215,6 +218,29 @@ class ObservationBuilder:
             can_spawn=can_spawn,
             spawn_depth=spawn_depth,
             spawn_children_count=spawn_children_count,
+            # Artifact layer fields (use per-step cache to avoid O(agents × artifacts))
+            available_artifacts=self._get_artifacts_for_agent(agent_id),
+            artifact_pressure=self._state.artifact_registry.pressure_scores(),
+        )
+
+    def _get_artifacts_for_agent(self, agent_id: str) -> list:
+        """Return available artifacts for *agent_id*, using a per-step cache.
+
+        The cache is built once per simulation step (O(artifacts)) and
+        then each agent lookup is O(producers) instead of O(artifacts).
+        """
+        current_step = (
+            self._state.current_epoch * self._config.steps_per_epoch
+            + self._state.current_step
+        )
+        if self._artifact_cache_step != current_step:
+            self._artifact_cache = (
+                self._state.artifact_registry.fresh_artifact_dicts(current_step)
+            )
+            self._artifact_cache_step = current_step
+
+        return self._state.artifact_registry.match_for_agent(
+            agent_id, current_step, _cache=self._artifact_cache,
         )
 
     def apply_noise(self, record: Dict[str, Any]) -> Dict[str, Any]:

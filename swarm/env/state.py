@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, List, Optional, Set
 
+from swarm.env.artifact_registry import ArtifactRegistry
 from swarm.models.agent import AgentState, AgentType
 from swarm.models.interaction import SoftInteraction
 
@@ -144,6 +145,9 @@ class EnvState:
 
     # Frozen/banned agents
     frozen_agents: Set[str] = field(default_factory=set)
+
+    # Artifact registry for emergent tool chaining
+    artifact_registry: ArtifactRegistry = field(default_factory=ArtifactRegistry)
 
     # Kill switch
     is_paused: bool = False

@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Set
 from swarm.env.state import EnvState
 from swarm.governance.admission import StakingLever
 from swarm.governance.audits import RandomAuditLever
+from swarm.governance.cascade import CascadeRiskLever
 from swarm.governance.circuit_breaker import CircuitBreakerLever
 from swarm.governance.collusion import CollusionPenaltyLever
 from swarm.governance.config import GovernanceConfig
@@ -176,6 +177,10 @@ class GovernanceEngine:
         # Resample protocol lever (Bhatt et al., 2025)
         if self.config.resample_enabled:
             levers.append(ResampleLever(self.config, seed=seed))
+
+        # Cascade risk lever (artifact chain governance)
+        if self.config.cascade_risk_enabled:
+            levers.append(CascadeRiskLever(self.config))
 
         # Stored as a tuple so that external code cannot mutate in place.
         self._levers: tuple[GovernanceLever, ...] = tuple(levers)
