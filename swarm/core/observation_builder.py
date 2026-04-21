@@ -50,8 +50,9 @@ class ObservationBuilder:
         self._handler_registry = handler_registry
         self._rng = rng
         self._spawn_tree = spawn_tree
-        # Per-step artifact cache (invalidated each step)
-        self._artifact_cache_step: int = -1
+        # Per-step artifact cache; keyed by (step, registry_version) so
+        # mid-step publishes/consumes invalidate stale views.
+        self._artifact_cache_key: tuple[int, int] = (-1, -1)
         self._artifact_cache: dict | None = None
 
     # ------------------------------------------------------------------
@@ -224,22 +225,24 @@ class ObservationBuilder:
         )
 
     def _get_artifacts_for_agent(self, agent_id: str) -> list:
-        """Return available artifacts for *agent_id*, using a per-step cache.
+        """Return available artifacts for *agent_id*, using a cached index.
 
-        The cache is built once per simulation step (O(artifacts)) and
-        then each agent lookup is O(producers) instead of O(artifacts).
+        The cache is rebuilt when either the simulation step advances or
+        the registry's mutation version changes.  This keeps the O(producers)
+        per-agent lookup while preventing stale views when an earlier agent
+        in the same step publishes/consumes an artifact.
         """
+        registry = self._state.artifact_registry
         current_step = (
             self._state.current_epoch * self._config.steps_per_epoch
             + self._state.current_step
         )
-        if self._artifact_cache_step != current_step:
-            self._artifact_cache = (
-                self._state.artifact_registry.fresh_artifact_dicts(current_step)
-            )
-            self._artifact_cache_step = current_step
+        key = (current_step, registry.version())
+        if self._artifact_cache_key != key:
+            self._artifact_cache = registry.fresh_artifact_dicts(current_step)
+            self._artifact_cache_key = key
 
-        return self._state.artifact_registry.match_for_agent(
+        return registry.match_for_agent(
             agent_id, current_step, _cache=self._artifact_cache,
         )
 

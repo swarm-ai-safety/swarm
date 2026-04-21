@@ -79,6 +79,24 @@ class TestArtifactRegistryPublish:
         reg.publish(Artifact(artifact_id="a1", kind="receipt", step=10))
         assert reg.pressure_scores()["receipt"] == 0.0
 
+    def test_version_bumps_on_mutation(self):
+        reg = ArtifactRegistry()
+        v0 = reg.version()
+        reg.publish(Artifact(artifact_id="a1", kind="receipt", step=0))
+        v1 = reg.version()
+        assert v1 > v0
+
+        reg.declare_need(ArtifactNeed(kind="receipt", requester_id="b"))
+        v2 = reg.version()
+        assert v2 > v1
+
+        reg.consume("a1", interaction_id="ix1")
+        v3 = reg.version()
+        assert v3 > v2
+
+        reg.gc(current_step=10_000)  # force stale removal
+        assert reg.version() > v3
+
 
 class TestArtifactRegistryMatch:
     def _registry_with_artifacts(self):

@@ -32,6 +32,15 @@ class ArtifactRegistry:
         self._needs: List[ArtifactNeed] = []
         self._max_needs = max_needs
         self._pressure: Dict[str, float] = defaultdict(float)
+        self._version: int = 0
+
+    def version(self) -> int:
+        """Return a monotonic counter bumped on every mutation.
+
+        Consumers (e.g. ``ObservationBuilder``) use this as a cache key
+        so mid-step publishes/consumes invalidate stale artifact views.
+        """
+        return self._version
 
     # ------------------------------------------------------------------
     # Publishing
@@ -47,6 +56,7 @@ class ArtifactRegistry:
         self._pressure[artifact.kind] = max(
             0.0, self._pressure[artifact.kind] - 1.0
         )
+        self._version += 1
 
     # ------------------------------------------------------------------
     # Needs / pressure
@@ -70,6 +80,7 @@ class ArtifactRegistry:
         if len(self._needs) > self._max_needs:
             self._needs = self._needs[-self._max_needs:]
         self._pressure[need.kind] += 1.0
+        self._version += 1
 
     def pressure_scores(self) -> Dict[str, float]:
         """Return current demand pressure per artifact kind.
@@ -180,6 +191,7 @@ class ArtifactRegistry:
         if art is None:
             return None
         art.consumed_by.append(interaction_id)
+        self._version += 1
         return art.interaction_id
 
     def get(self, artifact_id: str) -> Optional[Artifact]:
@@ -212,6 +224,7 @@ class ArtifactRegistry:
             self._by_kind[kind] = [
                 aid for aid in self._by_kind[kind] if aid not in stale_ids
             ]
+        self._version += 1
         return len(stale_ids)
 
     def __len__(self) -> int:
