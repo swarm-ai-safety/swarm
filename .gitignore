@@ -124,6 +124,9 @@ docs/game-app/
 # Allow provenance audit log (matched by *.jsonl above)
 !.claude/provenance.jsonl
 
+# CORAL runtime state (created by `coral start`)
+.coral/
+
 # Letta Code
 .letta/settings.local.json
 !.letta/memory/runs/
