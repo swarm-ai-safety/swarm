@@ -44,6 +44,12 @@ Academic foundations and related publications. SWARM implements the framework de
 
     External repository scouting status and SWARM integration plan
 
+-   :material-chart-timeline-variant: **[CRUX-1 Case Study](docent-crux1-polling-vs-surplus.md)**
+
+    ---
+
+    Real-world run (Docent/Transluce) anchoring the output-count ≠ surplus pathology
+
 </div>
 
 ## Core Research Questions
