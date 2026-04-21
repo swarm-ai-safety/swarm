@@ -29,7 +29,7 @@ task:
 
 grader:
   type: function
-  module: eval.grader
+  module: coral.eval.grader
   timeout: 300
   direction: maximize
 
