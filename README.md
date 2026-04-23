@@ -434,7 +434,7 @@ make ci
 Machine-readable citation metadata: [`CITATION.cff`](CITATION.cff)
 
 ## Papers
-
+- **Soft-Label Governance for Distributional Safety in Multi-Agent Systems https://arxiv.org/abs/2604.19752
 - **Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure** — 11 scenarios, 209 epochs, three regimes.
 - **Governance Mechanisms for Multi-Agent Safety** — Cross-archetype empirical study of 7 scenario types
 - **Collusion Dynamics and Network Resilience** — Progressive decline vs sustained operation under network topology effects
