@@ -68,6 +68,10 @@ class CausalCreditEngine:
             for pid in parents:
                 self._children[pid].append(iid)
 
+    def get_interaction(self, interaction_id: str) -> Optional[SoftInteraction]:
+        """Look up an indexed interaction by ID."""
+        return self._interactions.get(interaction_id)
+
     # ------------------------------------------------------------------
     # Traversal
     # ------------------------------------------------------------------
@@ -213,19 +217,48 @@ class CausalCreditEngine:
         interaction_id: str,
         p_threshold: float = 0.3,
     ) -> float:
-        """Fraction of descendants with p < threshold.
+        """Depth-weighted fraction of bad descendants.
+
+        Each descendant's contribution is weighted by ``decay^depth``
+        so that immediate failures matter more than distant ones.
+        An agent is not equally blamed for a 10th-order descendant
+        failing as for a direct child failing.
+
+        Returns a value in [0, 1]: the ratio of weighted-bad to
+        weighted-total across all descendants within ``max_depth``.
 
         High cascade_risk means this interaction triggered a chain of
-        bad outcomes.
+        bad outcomes, with near descendants weighted most heavily.
         """
-        desc = self.descendants(interaction_id)
-        if not desc:
-            return 0.0
+        # BFS descendants with depth tracking
+        limit = self.max_depth
+        visited: set[str] = set()
+        queue: deque[Tuple[str, int]] = deque()
 
-        bad = sum(
-            1 for d in desc if self._interactions[d].p < p_threshold
-        )
-        return bad / len(desc)
+        for cid in self._children.get(interaction_id, []):
+            if cid in self._interactions:
+                queue.append((cid, 1))
+
+        weighted_bad = 0.0
+        weighted_total = 0.0
+        while queue:
+            nid, depth = queue.popleft()
+            if nid in visited or depth > limit:
+                continue
+            visited.add(nid)
+
+            weight = self.decay ** depth
+            weighted_total += weight
+            if self._interactions[nid].p < p_threshold:
+                weighted_bad += weight
+
+            for cid in self._children.get(nid, []):
+                if cid not in visited and cid in self._interactions:
+                    queue.append((cid, depth + 1))
+
+        if weighted_total == 0.0:
+            return 0.0
+        return weighted_bad / weighted_total
 
     # ------------------------------------------------------------------
     # Snapshot
