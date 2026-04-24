@@ -422,12 +422,27 @@ make ci
 
 ## Citation
 
+If you use SWARM in your research, please cite the paper:
+
+```bibtex
+@article{aiersilan2026soft,
+  title   = {Soft-Label Governance for Distributional Safety in Multi-Agent Systems},
+  author  = {Aiersilan, Aizierjiang and Savitt, Raeli},
+  year    = {2026},
+  journal = {arXiv preprint arXiv:2604.19752},
+  url     = {https://arxiv.org/abs/2604.19752},
+  doi     = {10.48550/arXiv.2604.19752}
+}
+```
+
+To cite the software itself:
+
 ```bibtex
 @software{swarm2026,
-  title = {SWARM: System-Wide Assessment of Risk in Multi-agent systems},
+  title  = {SWARM: System-Wide Assessment of Risk in Multi-agent systems},
   author = {Savitt, Raeli},
-  year = {2026},
-  url = {https://github.com/swarm-ai-safety/swarm}
+  year   = {2026},
+  url    = {https://github.com/swarm-ai-safety/swarm}
 }
 ```
 
