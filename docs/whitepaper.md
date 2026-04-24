@@ -308,19 +308,32 @@ For machine-readable metadata, use `CITATION.cff` at repo root.
 
 Suggested plain-text citation:
 
-Savitt, R. (2026). *Distributional AGI Safety Sandbox: A Practical Lab for AGI
-Safety Research* (Version 0.1.0) [Software]. GitHub.
-https://github.com/swarm-ai-safety/swarm
+Aiersilan, A. & Savitt, R. (2026). *Soft-Label Governance for Distributional
+Safety in Multi-Agent Systems*. arXiv:2604.19752.
+https://arxiv.org/abs/2604.19752
 
-BibTeX:
+BibTeX (paper):
+
+```bibtex
+@article{aiersilan2026soft,
+  title   = {Soft-Label Governance for Distributional Safety in Multi-Agent Systems},
+  author  = {Aiersilan, Aizierjiang and Savitt, Raeli},
+  year    = {2026},
+  journal = {arXiv preprint arXiv:2604.19752},
+  url     = {https://arxiv.org/abs/2604.19752},
+  doi     = {10.48550/arXiv.2604.19752}
+}
+```
+
+BibTeX (software):
 
 ```bibtex
 @software{savitt2026_distributional_agi_safety,
-  author = {Savitt, Raeli},
-  title = {Distributional AGI Safety Sandbox: A Practical Lab for AGI Safety Research},
-  year = {2026},
+  author  = {Savitt, Raeli},
+  title   = {Distributional AGI Safety Sandbox: A Practical Lab for AGI Safety Research},
+  year    = {2026},
   version = {0.1.0},
-  url = {https://github.com/swarm-ai-safety/swarm}
+  url     = {https://github.com/swarm-ai-safety/swarm}
 }
 ```
 

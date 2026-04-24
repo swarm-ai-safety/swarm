@@ -6,6 +6,13 @@ description: "Research papers relevant to SWARM's approach to multi-agent safety
 
 Research papers relevant to SWARM's approach to multi-agent safety.
 
+## Framework Paper
+
+**Aiersilan & Savitt (2026)** - *Soft-Label Governance for Distributional Safety in Multi-Agent Systems*
+[arXiv:2604.19752](https://arxiv.org/abs/2604.19752)
+
+The canonical reference for SWARM. Introduces the soft-label governance framework that replaces binary good/bad labels with probabilistic labels `p ∈ [0, 1]`, formalizes configurable governance mechanisms over soft payoffs, and reports the finding that strict governance can reduce welfare by >40% without improving safety. Cite this paper when using SWARM in research.
+
 ## Core References
 
 ### Market Microstructure
