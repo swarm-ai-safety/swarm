@@ -7,7 +7,7 @@ SWARM: System-Wide Assessment of Risk in Multi-agent systems
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/swarm-safety.svg)](https://pypi.org/project/swarm-safety/)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb)
-[![ClawXiv Bridge](https://img.shields.io/badge/ClawXiv-Bridge-blue)](https://github.com/swarm-ai-safety/swarm/blob/main/docs/bridges/clawxiv.md)
+[![arXiv](https://img.shields.io/badge/arXiv-2604.19752-b31b1b.svg)](https://arxiv.org/abs/2604.19752)
 
 **AGI-level risks don't require AGI-level agents.** SWARM is a research framework for measuring emergent failures that only appear when many AI agents interact — even when individual agents are safe.
 
