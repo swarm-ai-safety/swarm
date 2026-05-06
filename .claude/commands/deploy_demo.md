@@ -134,13 +134,26 @@ seaborn>=0.12
 scipy>=1.10
 ```
 
-#### Step 5: Clone, commit, push
+#### Step 5: Clone HF Space, replace tree, commit, push
+
+The previous `git init` + `git pull --rebase 2>/dev/null || true` pattern fails on every deploy after the first: when the staging dir already has files that exist in `origin/main`, the post-init pull aborts with "untracked working tree files would be overwritten by merge", leaves HEAD unset, and the subsequent commit+push creates an orphan history that origin rejects as non-fast-forward.
+
+Instead, clone the live Space (which gives a working copy with proper history), wipe its tracked files, drop our staged content in place, and commit on top.
 
 ```bash
-cd "$STAGE"
-git init
-git remote add origin https://huggingface.co/spaces/Swarm-AI-Research/swarm-sandbox
-git pull origin main --rebase 2>/dev/null || true
+WORK=$(mktemp -d)
+git clone https://huggingface.co/spaces/Swarm-AI-Research/swarm-sandbox "$WORK"
+cd "$WORK"
+# Remove all tracked files except README.md (HF Space card) and .gitattributes (LFS rules)
+git ls-files | grep -vE "^(README\.md|\.gitattributes)$" | xargs rm -f
+# Drop now-empty directories
+find . -type d -empty -not -path "./.git*" -delete 2>/dev/null
+# Copy staged content into the working clone (preserves README.md and .gitattributes)
+cp -r "$STAGE"/. ./
+# Clean macOS / pycache artifacts that may have come along
+find . -name ".DS_Store" -delete 2>/dev/null
+find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null
+find . -name "*.pyc" -delete 2>/dev/null
 git add -A
 git commit -m "Update SWARM demo ($(date +%Y-%m-%d))"
 git push origin main
@@ -151,7 +164,7 @@ git push origin main
 Wait up to 5 minutes, checking every 30 seconds. Verify both `stage=RUNNING` AND that the deployed `sha` matches what we just pushed — otherwise the API will report `RUNNING` for the previous container while the new build is still in progress.
 
 ```bash
-EXPECTED_SHA=$(git -C "$STAGE" rev-parse HEAD)
+EXPECTED_SHA=$(git -C "$WORK" rev-parse HEAD)
 for i in $(seq 1 10); do
   sleep 30
   RESP=$(curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" \
@@ -183,13 +196,13 @@ fi
 #### Step 8: Cleanup
 
 ```bash
-rm -rf "$STAGE"
+rm -rf "$STAGE" "$WORK"
 ```
 
 ## Error Handling
 
 - If HF auth fails: prompt user to run `hf auth login --token <TOKEN> --add-to-git-credential`
-- If git push is rejected: `git pull --rebase origin main` then retry push
+- If git push is rejected (non-fast-forward): in the clone-based flow this means someone pushed to the HF Space remote between our `git clone` and `git push` — re-run from Step 5 (re-clone, re-stage, re-push) rather than force-pushing
 - If build fails after push: check logs with `curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" "https://huggingface.co/api/spaces/Swarm-AI-Research/swarm-sandbox/runtime"` and report the `stage` field
 
 ## Prerequisites
