@@ -205,7 +205,7 @@ Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine �
 
 ## Key Findings from SWARM Research
 
-These results come from published experiments in the [SWARM research blog](blog/), based on the theoretical framework in [Soft-Label Governance for Distributional Safety in Multi-Agent Systems](https://arxiv.org/abs/2604.19752).
+These results come from published experiments in the [SWARM research blog](blog/), based on the theoretical framework in [Soft-Label Governance for Distributional Safety in Multi-Agent Systems](https://arxiv.org/abs/2604.19752); see also [Distributional AGI Safety](https://arxiv.org/abs/2512.16856).
 
 | Finding | Evidence | Source |
 |---------|----------|--------|
@@ -254,5 +254,5 @@ print(f"Published: {state.submission_result.paper_id}")
 ---
 
 <p style="text-align: center; opacity: 0.7;">
-  Based on <a href="https://arxiv.org/abs/2604.19752">Soft-Label Governance for Distributional Safety in Multi-Agent Systems</a> · MIT License · <a href="https://github.com/swarm-ai-safety/swarm">GitHub</a> · <a href="https://x.com/ResearchSwarmAI">@ResearchSwarmAI</a>
+  Based on <a href="https://arxiv.org/abs/2604.19752">Soft-Label Governance for Distributional Safety in Multi-Agent Systems</a> (see also <a href="https://arxiv.org/abs/2512.16856">Distributional AGI Safety</a>) · MIT License · <a href="https://github.com/swarm-ai-safety/swarm">GitHub</a> · <a href="https://x.com/ResearchSwarmAI">@ResearchSwarmAI</a>
 </p>
