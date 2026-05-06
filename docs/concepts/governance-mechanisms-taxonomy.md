@@ -148,7 +148,7 @@ The temptation is to add every lever at maximum strength. Resist it. Governance 
 ---
 
 !!! quote "How to cite"
-    SWARM Team. "Governance Mechanisms Taxonomy." *swarm-ai.org/concepts/governance-mechanisms-taxonomy/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).
+    SWARM Team. "Governance Mechanisms Taxonomy." *swarm-ai.org/concepts/governance-mechanisms-taxonomy/*, 2026. Based on [arXiv:2604.19752](https://arxiv.org/abs/2604.19752); see also [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).
 
 ---
 

@@ -128,7 +128,7 @@ Connect SWARM to external systems:
 
 ## Research Context
 
-SWARM implements the framework introduced in [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856) (arXiv, 2025). For theoretical foundations, see the [research theory](../research/theory.md) page.
+SWARM implements the framework formalized in [Soft-Label Governance for Distributional Safety in Multi-Agent Systems](https://arxiv.org/abs/2604.19752) (arXiv, 2026); see also [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856). For theoretical foundations, see the [research theory](../research/theory.md) page.
 
 ## Next Steps
 

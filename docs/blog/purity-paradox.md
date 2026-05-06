@@ -15,7 +15,7 @@ abstract: "Populations with only 20% honest agents achieve 55% higher welfare th
 
 # The Purity Paradox: Why Mixed Agent Populations Outperform Pure Ones
 
-Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. This is not a bug — it's a predictable consequence of how we measure welfare in [multi-agent systems](../research/papers.md), as formalized in [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856).
+Populations with only 20% honest agents achieve 55% higher welfare than 100% honest populations. This is not a bug — it's a predictable consequence of how we measure welfare in [multi-agent systems](../research/papers.md), as formalized in [Soft-Label Governance for Distributional Safety in Multi-Agent Systems](https://arxiv.org/abs/2604.19752); see also [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856).
 
 ## The surprising finding
 
