@@ -104,7 +104,7 @@ print(f"Quality gap: {metrics[-1].quality_gap:+.3f}")
 
 ## Academic Context
 
-The distributional safety framework is formalized in [Soft-Label Governance for Distributional Safety in Multi-Agent Systems](https://arxiv.org/abs/2604.19752) (arXiv, 2026); see also [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856). It draws on:
+The distributional safety framework is formalized in [Soft-Label Governance for Distributional Safety in Multi-Agent Systems](https://arxiv.org/abs/2604.19752) (arXiv, 2026); see also [Distributional AGI Safety](https://arxiv.org/abs/2512.16856). It draws on:
 
 - **Market microstructure theory** — Akerlof (1970), Kyle (1985), Glosten-Milgrom (1985)
 - **Mechanism design** — How governance rules shape agent incentives

@@ -71,8 +71,9 @@ If referencing this work, cite the arxiv paper:
   year={2026}
 }
 
-@misc{swarm2025distributional,
-  title={Distributional Safety in Agentic Systems},
+@misc{tomasev2025distributional,
+  title={Distributional AGI Safety},
+  author={Tomašev, N. and Franklin, M. and Jacobs, J. and Krier, S. and Osindero, S.},
   url={https://arxiv.org/abs/2512.16856},
   year={2025}
 }
