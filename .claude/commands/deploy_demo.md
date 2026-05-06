@@ -148,18 +148,24 @@ git push origin main
 
 #### Step 6: Poll until running
 
-Wait up to 5 minutes, checking every 30 seconds:
+Wait up to 5 minutes, checking every 30 seconds. Verify both `stage=RUNNING` AND that the deployed `sha` matches what we just pushed — otherwise the API will report `RUNNING` for the previous container while the new build is still in progress.
 
 ```bash
+EXPECTED_SHA=$(git -C "$STAGE" rev-parse HEAD)
 for i in $(seq 1 10); do
   sleep 30
-  STATUS=$(curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" \
-    "https://huggingface.co/api/spaces/Swarm-AI-Research/swarm-sandbox/runtime" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stage','UNKNOWN'))")
-  echo "Attempt $i: $STATUS"
-  if [ "$STATUS" = "RUNNING" ]; then
-    echo "Space is live: https://Swarm-AI-Research-swarm-sandbox.hf.space"
+  RESP=$(curl -s -H "Authorization: Bearer $(cat ~/.cache/huggingface/token)" \
+    "https://huggingface.co/api/spaces/Swarm-AI-Research/swarm-sandbox/runtime")
+  STATUS=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('stage','UNKNOWN'))")
+  SHA=$(echo "$RESP" | python3 -c "import sys,json; print(json.load(sys.stdin).get('sha',''))")
+  echo "Attempt $i: stage=$STATUS sha=${SHA:0:10}"
+  if [ "$STATUS" = "RUNNING" ] && [ "$SHA" = "$EXPECTED_SHA" ]; then
+    echo "Space is live with new SHA: https://Swarm-AI-Research-swarm-sandbox.hf.space"
     break
   fi
+  case "$STATUS" in
+    *ERROR*) echo "FAILED: stage=$STATUS"; break ;;
+  esac
 done
 ```
 
