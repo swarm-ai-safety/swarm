@@ -1,0 +1,158 @@
+{
+  "metadata": {
+    "title": "Exploration Tree: Research Trajectory from Problem to Solution",
+    "version": "1.0",
+    "total_nodes": 27
+  },
+  "nodes": [
+    {
+      "id": "node-00",
+      "type": "question",
+      "title": "Can soft labels replace binary classifications in multi-agent AI safety?"
+    },
+    {
+      "id": "node-01",
+      "type": "observation",
+      "title": "O1: Binary thresholds are gaming-prone (Goodhart's Law)"
+    },
+    {
+      "id": "node-02",
+      "type": "observation",
+      "title": "O2: Proxy signals aggregation reduces variance"
+    },
+    {
+      "id": "node-03",
+      "type": "observation",
+      "title": "O3-O7: Population metrics reveal selection effects"
+    },
+    {
+      "id": "node-04",
+      "type": "gap",
+      "title": "G1: Calibrate proxy scores to probabilities"
+    },
+    {
+      "id": "node-05",
+      "type": "gap",
+      "title": "G2: Decompose payoffs under distributional uncertainty"
+    },
+    {
+      "id": "node-06",
+      "type": "gap",
+      "title": "G3: Multi-lever Pareto frontier optimization"
+    },
+    {
+      "id": "node-07",
+      "type": "insight",
+      "title": "Adaptive governance levers needed for Pareto improvement"
+    },
+    {
+      "id": "node-08",
+      "type": "method",
+      "title": "M1: Proxy Computer Pipeline"
+    },
+    {
+      "id": "node-09",
+      "type": "method",
+      "title": "M2: Soft Payoff Decomposition"
+    },
+    {
+      "id": "node-10",
+      "type": "method",
+      "title": "M3: Population-Level Metrics"
+    },
+    {
+      "id": "node-11",
+      "type": "experiment",
+      "title": "E01: Main Results (7 scenarios, 5 seeds)"
+    },
+    {
+      "id": "node-12",
+      "type": "experiment",
+      "title": "E02: Ablation Studies (5 parameters)"
+    },
+    {
+      "id": "node-13",
+      "type": "experiment",
+      "title": "E03: Self-Optimizing Agents"
+    },
+    {
+      "id": "node-14",
+      "type": "experiment",
+      "title": "E04: LLM Transfer"
+    },
+    {
+      "id": "node-15",
+      "type": "claim",
+      "title": "C01: Soft labels preserve safety info"
+    },
+    {
+      "id": "node-16",
+      "type": "claim",
+      "title": "C02: Multi-lever reduces welfare loss"
+    },
+    {
+      "id": "node-17",
+      "type": "claim",
+      "title": "C03: Aggressive rho collapses welfare"
+    },
+    {
+      "id": "node-18",
+      "type": "claim",
+      "title": "C04: Goodhart detection via soft metrics"
+    },
+    {
+      "id": "node-19",
+      "type": "claim",
+      "title": "C05: LLM transfer feasibility"
+    },
+    {
+      "id": "node-20",
+      "type": "claim",
+      "title": "C06: Pareto frontier exists"
+    },
+    {
+      "id": "node-21",
+      "type": "claim",
+      "title": "C07: Adaptive governance improves Pareto (inferred)"
+    },
+    {
+      "id": "node-22",
+      "type": "dead_end",
+      "title": "Single-lever sufficiency fails"
+    },
+    {
+      "id": "node-23",
+      "type": "dead_end",
+      "title": "Calibration without validation risky"
+    },
+    {
+      "id": "node-24",
+      "type": "solution_component",
+      "title": "SC1: ProxyComputer + Sigmoid"
+    },
+    {
+      "id": "node-25",
+      "type": "solution_component",
+      "title": "SC2: SoftPayoffEngine"
+    },
+    {
+      "id": "node-26",
+      "type": "solution_component",
+      "title": "SC3: SoftMetrics"
+    }
+  ],
+  "tree_statistics": {
+    "total_nodes": 27,
+    "node_types": {
+      "question": 1,
+      "observation": 3,
+      "gap": 3,
+      "insight": 1,
+      "method": 3,
+      "experiment": 4,
+      "solution_component": 3,
+      "claim": 7,
+      "dead_end": 2
+    }
+  }
+}
