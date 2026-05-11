@@ -19,7 +19,7 @@ This repo is set up as a **Claude Code template** for SWARM-style research work:
 1. **Check existing commands first.** Read `.claude/commands/` and look for a command that covers the same workflow area. If one exists, add a `--flag` or mode to it instead of creating a new file.
 2. **Prefer flags over files.** A command with 3 clear modes (`/ship`, `/ship --fix`, `/ship --all`) is better than 3 separate commands (`/commit_push`, `/fix_commit`, `/sweep_and_ship`).
 3. **Same rule for agents.** If a new role overlaps with an existing agent's domain, extend that agent's `.md` with a new section rather than creating a new agent file.
-4. **Same rule for hooks.** Post-write checks are consolidated into a single `post_write_check.sh`. Add new checks as a section in that file, not as a new hook script.
+4. **Same rule for hooks.** Post-write checks are consolidated into a single `.claude/hooks/post_write_check.sh`. Add new checks as a section in that file, not as a new hook script.
 5. **When in doubt, don't create.** If you're unsure whether something warrants a new command, it probably doesn't. Add it as a mode on the closest existing command and note it in the migration table.
 6. **Document every change.** When extending a command with a new flag/mode or creating a new command:
    - Update the command's `.md` file with usage examples, argument parsing, and behavior for the new mode.
@@ -47,7 +47,7 @@ The `runs/` directory is gitignored. To archive runs, push them to `swarm-artifa
 
 ### Caliber (AI context auditing)
 
-[Caliber](https://github.com/caliber-ai-org/ai-setup) is an external, deterministic auditor for AI context files (`CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.cursor/rules/`, `.github/copilot-instructions.md`). It scores configs against the actual filesystem and flags stale references — no LLM calls, no network.
+[Caliber](https://github.com/caliber-ai-org/ai-setup) is an external, deterministic auditor for AI context files. It scores `CLAUDE.md` and `AGENTS.md` (plus Cursor and Copilot equivalents, if you add them) against the actual filesystem and flags stale references — no LLM calls, no network.
 
 - **Read-only audit (safe):** `/audit_docs --caliber` runs `caliber score` and reports drift. Add `--compare origin/main` to score the delta vs a git ref. Wrapper lives in `.claude/commands/audit_docs.md`.
 - **Generative commands (manual only):** `caliber init`, `caliber regenerate`, and `caliber refresh` rewrite config files. They are **not** invoked by any slash command or hook in this repo because they would conflict with the "Core principles are append-only" rule below. Run them yourself from a clean working tree if you want Caliber-managed regeneration; review the diff before staging.
