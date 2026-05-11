@@ -1,5 +1,5 @@
 {
-  "buildCommand": "uv pip install --system mkdocs-material 'mkdocstrings[python]' pymdown-extensions mkdocs-git-revision-date-localized-plugin mkdocs-rss-plugin && cd viz && npm install && npm run build:deploy && cd .. && mkdocs build",
+  "buildCommand": "uv python install 3.12 && uv venv --python 3.12 .venv-build && uv pip install --python .venv-build/bin/python mkdocs-material 'mkdocstrings[python]' pymdown-extensions mkdocs-git-revision-date-localized-plugin mkdocs-rss-plugin && cd viz && npm install && npm run build:deploy && cd .. && .venv-build/bin/mkdocs build",
   "outputDirectory": "site",
   "headers": [
     {
