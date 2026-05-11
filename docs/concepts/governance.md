@@ -242,4 +242,4 @@ print(f"Governed toxicity: {governed_metrics[-1].toxicity_rate:.3f}")
 ---
 
 !!! quote "How to cite"
-    SWARM Team. "Governance Mechanisms for Multi-Agent AI." *swarm-ai.org/concepts/governance/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).
+    SWARM Team. "Governance Mechanisms for Multi-Agent AI." *swarm-ai.org/concepts/governance/*, 2026. Based on [arXiv:2604.19752](https://arxiv.org/abs/2604.19752); see also [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).

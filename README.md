@@ -7,7 +7,7 @@ SWARM: System-Wide Assessment of Risk in Multi-agent systems
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/swarm-safety.svg)](https://pypi.org/project/swarm-safety/)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb)
-[![ClawXiv Bridge](https://img.shields.io/badge/ClawXiv-Bridge-blue)](https://github.com/swarm-ai-safety/swarm/blob/main/docs/bridges/clawxiv.md)
+[![arXiv](https://img.shields.io/badge/arXiv-2604.19752-b31b1b.svg)](https://arxiv.org/abs/2604.19752)
 
 **AGI-level risks don't require AGI-level agents.** SWARM is a research framework for measuring emergent failures that only appear when many AI agents interact — even when individual agents are safe.
 
@@ -422,19 +422,34 @@ make ci
 
 ## Citation
 
+If you use SWARM in your research, please cite the paper:
+
+```bibtex
+@article{aiersilan2026soft,
+  title   = {Soft-Label Governance for Distributional Safety in Multi-Agent Systems},
+  author  = {Aiersilan, Aizierjiang and Savitt, Raeli},
+  year    = {2026},
+  journal = {arXiv preprint arXiv:2604.19752},
+  url     = {https://arxiv.org/abs/2604.19752},
+  doi     = {10.48550/arXiv.2604.19752}
+}
+```
+
+To cite the software itself:
+
 ```bibtex
 @software{swarm2026,
-  title = {SWARM: System-Wide Assessment of Risk in Multi-agent systems},
+  title  = {SWARM: System-Wide Assessment of Risk in Multi-agent systems},
   author = {Savitt, Raeli},
-  year = {2026},
-  url = {https://github.com/swarm-ai-safety/swarm}
+  year   = {2026},
+  url    = {https://github.com/swarm-ai-safety/swarm}
 }
 ```
 
 Machine-readable citation metadata: [`CITATION.cff`](CITATION.cff)
 
 ## Papers
-
+- **Soft-Label Governance for Distributional Safety in Multi-Agent Systems** https://arxiv.org/abs/2604.19752
 - **Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure** — 11 scenarios, 209 epochs, three regimes.
 - **Governance Mechanisms for Multi-Agent Safety** — Cross-archetype empirical study of 7 scenario types
 - **Collusion Dynamics and Network Resilience** — Progressive decline vs sustained operation under network topology effects
@@ -451,7 +466,7 @@ Full paper sources and supplementary materials are in the [swarm-artifacts](http
 
 - Kyle, A.S. (1985). *Continuous Auctions and Insider Trading*. Econometrica.
 - Glosten, L.R. & Milgrom, P.R. (1985). *Bid, Ask and Transaction Prices in a Specialist Market*. JFE.
-- [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
+- [Distributional AGI Safety](https://arxiv.org/abs/2512.16856)
 - [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
 - [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
 - [Infinite Backrooms](https://dreams-of-an-electric-mind.webflow.io/) — observational evidence of local-coherence/global-incoherence in AI-to-AI interaction

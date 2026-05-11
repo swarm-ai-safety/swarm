@@ -27,6 +27,7 @@ htmlcov/
 logs/
 .env
 .venv/
+.venv-build/
 venv/
 .streamlit/secrets.toml
 .hypothesis/

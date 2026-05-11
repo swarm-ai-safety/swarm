@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, FrozenSet, Optional
 from pydantic import BaseModel, ConfigDict, Field
 
 from swarm.logging.event_bus import EventBus
+from swarm.models.artifact import Artifact
 from swarm.models.events import Event
 from swarm.models.interaction import InteractionType
 
@@ -51,6 +52,10 @@ class HandlerActionResult(BaseModel):
 
     # Ground truth label (-1 or 1), or None for no ground truth
     ground_truth: Optional[int] = None
+
+    # Artifact layer: typed outputs produced and inputs consumed
+    produced_artifacts: list[Artifact] = Field(default_factory=list)
+    consumed_artifact_ids: list[str] = Field(default_factory=list)
 
 
 class Handler(ABC):

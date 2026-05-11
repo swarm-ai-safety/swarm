@@ -2,7 +2,8 @@
 
 > Source: https://swarm-ai.org
 > Repository: https://github.com/swarm-ai-safety/swarm
-> Paper: https://arxiv.org/abs/2512.16856
+> Paper: https://arxiv.org/abs/2604.19752
+> Paper (precursor): https://arxiv.org/abs/2512.16856
 > License: MIT
 
 ## What This Site Is
@@ -63,8 +64,16 @@ SWARM (System-Wide Assessment of Risk in Multi-agent systems) is a research fram
 If referencing this work, cite the arxiv paper:
 
 ```
-@article{swarm2025distributional,
-  title={Distributional Safety in Agentic Systems},
+@article{swarm2026softlabel,
+  title={Soft-Label Governance for Distributional Safety in Multi-Agent Systems},
+  author={Aiersilan, A. and Savitt, R.},
+  url={https://arxiv.org/abs/2604.19752},
+  year={2026}
+}
+
+@misc{tomasev2025distributional,
+  title={Distributional AGI Safety},
+  author={Tomašev, N. and Franklin, M. and Jacobs, J. and Krier, S. and Osindero, S.},
   url={https://arxiv.org/abs/2512.16856},
   year={2025}
 }
