@@ -6,7 +6,7 @@ Consolidates the former `/run_and_plot` command (now `/run_scenario --plot`).
 
 ## Usage
 
-`/run_scenario <scenario_path_or_id> [seed] [epochs] [steps] [--plot]`
+`/run_scenario <scenario_path_or_id> [seed] [epochs] [steps] [--plot] [--engine swarm|miroshark] [--scale N] [--max-rounds N]`
 
 Examples:
 - `/run_scenario baseline`
@@ -14,11 +14,15 @@ Examples:
 - `/run_scenario emergent_capabilities 42 15 20`
 - `/run_scenario baseline --plot` (run + generate plots)
 - `/run_scenario scenarios/strict_governance.yaml 42 15 12 --plot`
+- `/run_scenario adversarial_redteam --engine miroshark --scale 5 --max-rounds 10` (run via the MiroShark social-cascade engine)
 
 ## Argument parsing
 
 Parse `$ARGUMENTS` to extract:
 - `--plot`: After the run completes, generate plots from the results (see Phase 2 below)
+- `--engine <swarm|miroshark>`: Which engine to run on. Default: `swarm` (the in-tree game-theoretic engine). `miroshark` translates the scenario into a MiroShark seed briefing and runs through the MiroShark backend at `$MIROSHARK_API_URL` (default `http://localhost:5001`).
+- `--scale N` (only with `--engine miroshark`): Multiply each agent-type count by `N` before generating the briefing roster. Default 20.
+- `--max-rounds N` (only with `--engine miroshark`): Cap the MiroShark simulation length. Default 30.
 - Positional args: `<scenario_path_or_id> [seed] [epochs] [steps]`
 
 ## Behavior
@@ -36,6 +40,20 @@ Parse `$ARGUMENTS` to extract:
 - `python -m swarm run <scenario.yaml> --seed <seed> --epochs <epochs> --steps <steps> --export-json <run_dir>/history.json --export-csv <run_dir>/csv --export-dolt`
 
 4) If the scenario YAML declares `outputs.event_log` or `outputs.metrics_csv`, copy those artifacts into `<run_dir>/artifacts/` (do not modify the scenario file in-place).
+
+### Phase 1b: MiroShark engine (only if `--engine miroshark` is set)
+
+Skip Phase 1's `python -m swarm run` and instead invoke the SWARM→MiroShark bridge:
+
+- `python -m swarm.bridges.miroshark <scenario.yaml> --scale <scale> --max-rounds <max_rounds> --runs-root runs`
+
+The bridge will:
+1. Translate the scenario YAML into a markdown seed briefing (with a named-agent roster scaled by `--scale`).
+2. POST the seed to `/api/graph/ontology/generate`, then `/api/graph/build`, on the MiroShark backend.
+3. `/api/simulation/create` → `/prepare` (poll) → `/start` → poll `run-status` to completion.
+4. Save into `runs/<YYYYMMDD-HHMMSS>_<scenario_id>_miroshark/`: `seed_document.md`, `scenario.json`, `config.json`, `ontology.json`, `graph_build.json`, `prepare.json`, `start.json`, `run_final_status.json`, `export.json`.
+
+Requires the MiroShark backend reachable at `$MIROSHARK_API_URL` (default `http://localhost:5001`). Skip `--plot` when using `--engine miroshark` — the SWARM plotting script does not consume MiroShark exports.
 
 ### Phase 2: Generate plots (only if `--plot` is set)
 
