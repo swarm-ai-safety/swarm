@@ -7,18 +7,22 @@ Use `--nav-only` to just check mkdocs.yml nav completeness (replaces the former 
 ## Usage
 
 ```
-/audit_docs [--nav-only] [--provenance]
+/audit_docs [--nav-only] [--provenance] [--caliber [--compare <ref>]]
 ```
 
 Examples:
 - `/audit_docs` (full audit)
 - `/audit_docs --nav-only` (just check mkdocs nav)
 - `/audit_docs --provenance` (provenance log analysis only)
+- `/audit_docs --caliber` (Caliber score for AI context configs)
+- `/audit_docs --caliber --compare origin/main` (score delta vs a git ref)
 
 ## Argument parsing
 
 - `--nav-only`: Only run Phase 6 (mkdocs nav check) and report. Skip all other phases.
 - `--provenance`: Analyze `.claude/provenance.jsonl` for documentation health trends. Skip all other phases.
+- `--caliber`: Run `caliber score` (deterministic audit of `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.cursor/rules/`, etc. against the actual filesystem). Skip all other phases. Requires Node.js 20+; uses `npx @rely-ai/caliber` so no global install needed.
+- `--compare <ref>`: Only meaningful with `--caliber`. Forwarded to `caliber score --compare <ref>` to show drift vs a git ref.
 
 ---
 
@@ -72,6 +76,49 @@ Provenance Analysis (.claude/provenance.jsonl)
     swarm/agents/ — 3 commits without docs
 ═══════════════════════════════════════════════
 ```
+
+---
+
+## `--caliber` mode
+
+Run [Caliber](https://github.com/caliber-ai-org/ai-setup) — an external, deterministic auditor — over the AI context configs in this repo. Caliber compares files like `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.cursor/rules/`, and `.github/copilot-instructions.md` against the actual filesystem (file paths, module names, framework markers) and emits a quality score plus a list of stale references. It uses no LLM calls and no network, so it is safe to run in CI or pre-commit.
+
+### 1. Pre-flight
+
+- Verify `node --version` is `>= 20`. If missing or older, print:
+  ```
+  caliber requires Node.js 20+. Skipping. Install via: nvm install 22
+  ```
+  and exit cleanly (do not fail the audit).
+- Do **not** run `caliber init`, `regenerate`, or `refresh` from this command — those would rewrite hand-curated content. This mode is read-only by contract.
+
+### 2. Invoke
+
+```bash
+npx --yes @rely-ai/caliber --no-traces score --agent claude,codex --quiet
+```
+
+`--no-traces` disables anonymous telemetry, which keeps stderr clean in sandboxes that block outbound network. If `--compare <ref>` was passed, append `--compare <ref>`.
+
+### 3. Report
+
+Pass through Caliber's output verbatim, then add a one-line summary:
+
+```
+Caliber Score
+═════════════
+  Score:     <score>/100
+  Drift:     <N> stale references
+  Compared:  <ref or "current tree">
+═════════════
+```
+
+If the score is below 70, list the top 5 drift items and recommend running `npx @rely-ai/caliber refresh` interactively (do not auto-run it).
+
+### 4. Constraints
+
+- Read-only: never invoke `init`, `regenerate`, `refresh`, `hooks`, or `learn` — those mutate config files. The repo's CLAUDE.md is governed by the "Core principles are append-only" rule, so generative Caliber commands must be run by a human, not by this slash command.
+- If `npx` exits non-zero (network error, missing package), print the failure and exit cleanly. Never hard-fail `/audit_docs`.
 
 ---
 

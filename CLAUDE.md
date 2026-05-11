@@ -45,6 +45,15 @@ Prefer writing experiment outputs to a self-contained run folder:
 
 The `runs/` directory is gitignored. To archive runs, push them to `swarm-artifacts`.
 
+### Caliber (AI context auditing)
+
+[Caliber](https://github.com/caliber-ai-org/ai-setup) is an external, deterministic auditor for AI context files (`CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.cursor/rules/`, `.github/copilot-instructions.md`). It scores configs against the actual filesystem and flags stale references — no LLM calls, no network.
+
+- **Read-only audit (safe):** `/audit_docs --caliber` runs `caliber score` and reports drift. Add `--compare origin/main` to score the delta vs a git ref. Wrapper lives in `.claude/commands/audit_docs.md`.
+- **Generative commands (manual only):** `caliber init`, `caliber regenerate`, and `caliber refresh` rewrite config files. They are **not** invoked by any slash command or hook in this repo because they would conflict with the "Core principles are append-only" rule below. Run them yourself from a clean working tree if you want Caliber-managed regeneration; review the diff before staging.
+- **Local artifacts:** `.caliber/` and `caliber.config.json` are gitignored. User-level config lives at `~/.caliber/config.json` (outside the repo).
+- **Requirement:** Node.js 20+. The wrapper uses `npx --yes @rely-ai/caliber` so no global install is needed.
+
 ## Commands
 
 ```bash

@@ -128,3 +128,7 @@ docs/game-app/
 # Letta Code
 .letta/settings.local.json
 !.letta/memory/runs/
+
+# Caliber (https://github.com/caliber-ai-org/ai-setup) local state
+.caliber/
+caliber.config.json

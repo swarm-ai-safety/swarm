@@ -19,6 +19,11 @@ This repo maintains task-focused LLM agent personas in `.claude/agents/*.md`. Us
 - If `pre-commit` is installed, the hook runs `.pre-commit-config.yaml` hooks; otherwise it falls back to inline ruff/mypy.
 - Set `SKIP_SWARM_HOOKS=1` to bypass the hook.
 
+## Caliber (AI context auditing)
+- Read-only score: `/audit_docs --caliber` (wraps `npx @rely-ai/caliber score`). Use `--compare <ref>` for drift vs a git ref.
+- Generative commands (`init`, `regenerate`, `refresh`) are **not** auto-run by any agent or hook; they would conflict with "Core principles are append-only" in `CLAUDE.md`. Run them manually from a clean tree and review the diff.
+- Requires Node.js 20+. Local artifacts (`.caliber/`, `caliber.config.json`) are gitignored.
+
 ## Scenario Architect
 Focus: designs scenarios that isolate a single mechanism and are easy to reproduce.
 Optimizes for:
