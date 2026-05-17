@@ -1,3 +1,7 @@
+---
+description: "Repository: https://github.com/abhi-arya1/wt Package: @abhi-arya1/wt (npm) Version reviewed: 0.0.9 Date: 2026-02-10 Status: No existing integration found..."
+---
+
 # Security & Integration Review: `abhi-arya1/wt`
 
 **Repository:** https://github.com/abhi-arya1/wt

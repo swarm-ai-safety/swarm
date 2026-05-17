@@ -417,6 +417,19 @@ class RedTeamEvaluator:
             else:
                 base_success *= 1.3
 
+        elif scenario.attack_id == "sybil_attack":
+            has_sybil_detection = self.governance_config.get(
+                "sybil_detection_enabled", False
+            )
+            if has_sybil_detection:
+                # Behavioral clustering is strong against identity-correlated Sybils
+                base_success *= 0.25
+            if has_collusion_detection:
+                # Secondary reduction: collusion detection catches coordinated Sybils
+                base_success *= 0.7
+            if not has_sybil_detection and not has_collusion_detection:
+                base_success *= 1.3
+
         # General defense effects
         if has_staking:
             base_success *= 0.9

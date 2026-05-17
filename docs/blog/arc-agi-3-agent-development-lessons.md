@@ -1,3 +1,8 @@
+---
+date: 2026-02-13
+description: "Building a Claude Sonnet 4.5-powered agent for ARC-AGI-3: wrong mental models, recording analysis breakthroughs, and the hard middle ground between LLM..."
+---
+
 # What 13 Agent Versions Taught Us About Interactive Reasoning
 
 *Building a Claude Sonnet 4.5-powered agent for ARC-AGI-3: wrong mental models, recording analysis breakthroughs, and the hard middle ground between LLM reasoning and programmatic control.*
@@ -140,6 +145,29 @@ Token costs scale with image frequency and reasoning depth:
 The key cost driver is images. Each 512x512 PNG encodes to ~1500-3000 tokens. Sending images every turn for 200 actions adds 400K-600K tokens. For movement games, sending every 3rd turn saves ~70% of image cost with minimal information loss. The `navigate_to` tool saves even more by replacing per-step API calls with programmatic execution.
 
 Prompt caching (`cache_control: {"type": "ephemeral"}`) helps with the system prompt, but the real savings come from reducing the number of calls, not the cost per call.
+
+## What this implies for SWARM and multi-agent systems
+
+The same economics become stricter in multi-agent settings. If every handoff mutates harness shape or tool surface area, prompt-prefix reuse collapses and cost spikes even when behavior looks "clean" in architecture diagrams.
+
+For SWARM-style systems, treat these as operational rules:
+
+- each agent should have a stable identity and stable harness
+- subagents should be long-lived enough to amortize cache creation
+- handoffs should be explicit and compact
+- shared tool registries should be deterministic
+- mode switches should happen through messages or tools, not harness mutation
+- branch tasks should inherit parent prefixes when possible
+
+Otherwise, multi-agent systems can look elegant in diagrams and become economically awful in production.
+
+Distilled implementation rules:
+
+1. Static first, dynamic last.
+2. Messages for state changes, not prompt rewrites.
+3. Stable tools and stable model per session.
+4. Forks must reuse the parent prefix.
+5. Monitor cache health like uptime.
 
 ## What remains unsolved
 

@@ -1,0 +1,78 @@
+# Escalation Sandbox — Governance Interventions
+# Tests all governance levers: MAD, treaties, mediation, back-channels, circuit breaker.
+#
+# Run:  python -m swarm.domains.escalation_sandbox.run_scenario scenarios/escalation_governance.yaml
+
+scenario_id: escalation_governance
+description: >
+  Full governance scenario: all levers enabled to test whether they reduce
+  nuclear threshold crossing and which ones backfire.
+motif: escalation
+
+domain:
+  type: escalation_sandbox
+
+  agents:
+    - agent_id: nation_a
+      name: Nation Alpha
+      agent_type: scripted
+      persona: hawk
+      has_nuclear: true
+      has_second_strike: true
+      military_strength: 100.0
+      economic_strength: 100.0
+      intelligence_quality: 0.7
+
+    - agent_id: nation_b
+      name: Nation Beta
+      agent_type: scripted
+      persona: hawk
+      has_nuclear: true
+      has_second_strike: true
+      military_strength: 100.0
+      economic_strength: 100.0
+      intelligence_quality: 0.7
+
+  crisis:
+    template: cuban_missile_analogue
+    timeline_turns: 15
+    initial_escalation: 2
+    asymmetric: false
+    timeline_pressure: true
+    pressure_fog_increase: 0.15
+
+  fog_of_war:
+    enabled: true
+    noise_mu: 0.0
+    noise_sigma: 0.4
+    positive_skew: 0.2
+    per_level_variance_scale: 0.08
+    intelligence_reduction_factor: 0.6
+
+  signals:
+    broadcast_before_action: true
+    trust_decay_rate: 0.9
+    commitment_trap_enabled: true
+    commitment_reputation_cost: 10.0
+
+  governance:
+    mad_enabled: true
+    mad_retaliation_probability: 0.95
+    treaty_commitments:
+      - type: non_aggression
+        parties: [nation_a, nation_b]
+        max_level: 3
+    treaty_max_level: 3
+    treaty_defection_penalty: 20.0
+    mediation_enabled: true
+    mediation_de_escalation_levels: 2
+    mediation_acceptance_bonus: 8.0
+    back_channel_enabled: true
+    back_channel_fog_reduction: 0.5
+    circuit_breaker_enabled: true
+    circuit_breaker_threshold: 7
+    circuit_breaker_negotiation_turns: 2
+    de_escalation_friction_multiplier: 0.5
+
+  max_turns: 15
+  seed: 42

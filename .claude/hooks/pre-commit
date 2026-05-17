@@ -5,6 +5,9 @@ set -euo pipefail
 
 if [[ "${SKIP_SWARM_HOOKS:-0}" == "1" ]]; then
   echo "[swarm pre-commit] SKIP_SWARM_HOOKS=1 set; skipping."
+  # Audit log: record bypass event for traceability (see THREAT_MODEL.md §3)
+  _BYPASS_LOG="$(git rev-parse --show-toplevel 2>/dev/null || echo ".")/.claude/hook_bypass.log"
+  echo "$(date -u +%Y-%m-%dT%H:%M:%SZ)|pre-commit|${SESSION_ID:-local}|${USER:-unknown}" >> "$_BYPASS_LOG" 2>/dev/null || true
   exit 0
 fi
 
@@ -214,7 +217,171 @@ else
     fi
 fi
 
-# ── 4. Tests ──
+# ── 4. Documentation freshness (blocks on new files without CHANGELOG) ──
+# New code/scenario files require a CHANGELOG entry. Modifications are advisory only.
+# Bypass with: SKIP_DOCS_CHECK=1 git commit (for metadata-only commits)
+STAGED_CODE=$(git diff --cached --name-only --diff-filter=ACM | grep -E '^(swarm|scenarios)/' || true)
+STAGED_CHANGELOG=$(git diff --cached --name-only | grep -F 'CHANGELOG.md' || true)
+STAGED_README=$(git diff --cached --name-only | grep -F 'README.md' || true)
+
+if [ -n "$STAGED_CODE" ]; then
+    # Count new files (likely need docs updates)
+    NEW_CODE_FILES=$(git diff --cached --name-only --diff-filter=A | grep -E '^(swarm|scenarios)/' || true)
+    NEW_COUNT=0
+    if [ -n "$NEW_CODE_FILES" ]; then
+        NEW_COUNT=$(echo "$NEW_CODE_FILES" | wc -l | tr -d ' ')
+    fi
+
+    if [ "$NEW_COUNT" -gt 0 ] && [ -z "$STAGED_CHANGELOG" ]; then
+        if [ "${SKIP_DOCS_CHECK:-0}" = "1" ]; then
+            echo "[swarm pre-commit] SKIP_DOCS_CHECK=1: bypassing CHANGELOG requirement for $NEW_COUNT new file(s)."
+        else
+            echo "=========================================="
+            echo "COMMIT BLOCKED: New files without CHANGELOG"
+            echo "=========================================="
+            echo ""
+            echo "$NEW_COUNT new file(s) staged but CHANGELOG.md not updated:"
+            echo "$NEW_CODE_FILES" | head -10 | while read -r f; do echo "    + $f"; done
+            echo ""
+            echo "Add an entry to the [Unreleased] section of CHANGELOG.md, then re-stage."
+            echo "To bypass (metadata-only commits): SKIP_DOCS_CHECK=1 git commit ..."
+            echo ""
+            exit 1
+        fi
+    fi
+
+    # Check for new agent/command files specifically
+    NEW_COMMANDS=$(git diff --cached --name-only --diff-filter=A | grep -E '^\.claude/(commands|agents)/' || true)
+    if [ -n "$NEW_COMMANDS" ]; then
+        STAGED_AGENTS_MD=$(git diff --cached --name-only | grep -F 'AGENTS.md' || true)
+        NEW_AGENTS=$(echo "$NEW_COMMANDS" | grep -E '\.claude/agents/' || true)
+        if [ -n "$NEW_AGENTS" ] && [ -z "$STAGED_AGENTS_MD" ]; then
+            echo "[swarm pre-commit] NOTE: New agent file(s) but AGENTS.md not updated."
+        fi
+        if [ -z "$STAGED_CHANGELOG" ]; then
+            if [ "${SKIP_DOCS_CHECK:-0}" = "1" ]; then
+                echo "[swarm pre-commit] SKIP_DOCS_CHECK=1: bypassing CHANGELOG requirement for new command/agent file(s)."
+            else
+                echo "=========================================="
+                echo "COMMIT BLOCKED: New commands/agents without CHANGELOG"
+                echo "=========================================="
+                echo ""
+                echo "New command/agent file(s) staged but CHANGELOG.md not updated:"
+                echo "$NEW_COMMANDS" | while read -r f; do echo "    + $f"; done
+                echo ""
+                echo "Add an entry to the [Unreleased] section of CHANGELOG.md, then re-stage."
+                echo "To bypass: SKIP_DOCS_CHECK=1 git commit ..."
+                echo ""
+                exit 1
+            fi
+        fi
+    fi
+fi
+
+# ── 5. Docs reminder compliance check ──
+# Check if outstanding docs reminders from post-write hooks were addressed.
+RESOLVED=0
+UNRESOLVED=0
+REMINDER_LOG="$ROOT/.claude/docs_reminders.log"
+if [ -f "$REMINDER_LOG" ] && [ -s "$REMINDER_LOG" ]; then
+    TOTAL_REMINDERS=$(wc -l < "$REMINDER_LOG" | tr -d ' ')
+    RESOLVED=0
+    UNRESOLVED=0
+    UNRESOLVED_LIST=""
+
+    while IFS='|' read -r timestamp filepath hint; do
+        # Check if the reminder was about CHANGELOG and CHANGELOG is now staged
+        ADDRESSED=false
+        if echo "$hint" | grep -q "CHANGELOG" && [ -n "$STAGED_CHANGELOG" ]; then
+            ADDRESSED=true
+        fi
+        if echo "$hint" | grep -q "AGENTS.md"; then
+            STAGED_AGENTS_CHECK=$(git diff --cached --name-only | grep -F 'AGENTS.md' || true)
+            if [ -n "$STAGED_AGENTS_CHECK" ]; then
+                ADDRESSED=true
+            fi
+        fi
+        if echo "$hint" | grep -q "README" && [ -n "$STAGED_README" ]; then
+            ADDRESSED=true
+        fi
+
+        if [ "$ADDRESSED" = true ]; then
+            RESOLVED=$((RESOLVED + 1))
+        else
+            UNRESOLVED=$((UNRESOLVED + 1))
+            UNRESOLVED_LIST="${UNRESOLVED_LIST}    $(basename "$filepath"): $hint\n"
+        fi
+    done < "$REMINDER_LOG"
+
+    if [ "$UNRESOLVED" -gt 0 ]; then
+        echo "[swarm pre-commit] DOCS COMPLIANCE: $RESOLVED/$TOTAL_REMINDERS reminders addressed, $UNRESOLVED outstanding:"
+        echo -e "$UNRESOLVED_LIST"
+    else
+        echo "[swarm pre-commit] DOCS COMPLIANCE: all $TOTAL_REMINDERS reminder(s) addressed"
+    fi
+
+    # Only clear resolved entries; keep unresolved reminders for next commit
+    if [ "$UNRESOLVED" -gt 0 ] && [ "$RESOLVED" -gt 0 ]; then
+        # Rewrite log with only unresolved entries
+        TEMP_LOG=$(mktemp)
+        while IFS='|' read -r timestamp filepath hint; do
+            KEEP=true
+            if echo "$hint" | grep -q "CHANGELOG" && [ -n "$STAGED_CHANGELOG" ]; then
+                KEEP=false
+            fi
+            if echo "$hint" | grep -q "AGENTS.md"; then
+                STAGED_AGENTS_RECHECK=$(git diff --cached --name-only | grep -F 'AGENTS.md' || true)
+                if [ -n "$STAGED_AGENTS_RECHECK" ]; then
+                    KEEP=false
+                fi
+            fi
+            if echo "$hint" | grep -q "README" && [ -n "$STAGED_README" ]; then
+                KEEP=false
+            fi
+            if [ "$KEEP" = true ]; then
+                echo "${timestamp}|${filepath}|${hint}" >> "$TEMP_LOG"
+            fi
+        done < "$REMINDER_LOG"
+        mv "$TEMP_LOG" "$REMINDER_LOG"
+    elif [ "$UNRESOLVED" -eq 0 ]; then
+        # All resolved — clear the log
+        : > "$REMINDER_LOG"
+    fi
+    # If all unresolved (RESOLVED=0), leave the log as-is
+fi
+
+# ── 6. Provenance log ──
+# Append a JSONL entry recording what this commit touches and compliance status.
+PROVENANCE_LOG="$ROOT/.claude/provenance.jsonl"
+BRANCH_NAME=$(git branch --show-current 2>/dev/null || echo "detached")
+TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+STAGED_LIST=$(git diff --cached --name-only | tr '\n' ',' | sed 's/,$//')
+DOCS_COSTAGED=""
+[ -n "$STAGED_CHANGELOG" ] && DOCS_COSTAGED="${DOCS_COSTAGED}changelog,"
+[ -n "$STAGED_README" ] && DOCS_COSTAGED="${DOCS_COSTAGED}readme,"
+NEW_FILES_STAGED=$(git diff --cached --name-only --diff-filter=A | tr '\n' ',' | sed 's/,$//')
+
+# Use python for safe JSON serialization
+python3 -c "
+import json, sys
+entry = {
+    'timestamp': '$TIMESTAMP',
+    'branch': '$BRANCH_NAME',
+    'session_id': '${SESSION_ID:-}',
+    'worktree_id': '${WORKTREE_ID:-}',
+    'agent_role': '${SWARM_AGENT_ROLE:-}',
+    'files_changed': [f for f in '$STAGED_LIST'.split(',') if f],
+    'new_files': [f for f in '$NEW_FILES_STAGED'.split(',') if f],
+    'docs_co_staged': [d for d in '${DOCS_COSTAGED}'.split(',') if d],
+    'docs_reminders_resolved': $RESOLVED if '$RESOLVED' else 0,
+    'docs_reminders_unresolved': $UNRESOLVED if '$UNRESOLVED' else 0,
+}
+# Remove empty optional fields
+entry = {k: v for k, v in entry.items() if v or v == 0}
+print(json.dumps(entry))
+" >> "$PROVENANCE_LOG" 2>/dev/null || true
+
+# ── 7. Tests ──
 # Tests run in pre-push (via `make ci`), NOT pre-commit.
 # This keeps commits fast (~2s) and avoids HEAD race conditions
 # when parallel sessions share a worktree.

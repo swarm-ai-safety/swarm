@@ -1,19 +1,25 @@
 # SWARM
 
-System-Wide Risk Evaluation for Multi-Agent AI Systems
+SWARM: System-Wide Assessment of Risk in Multi-agent systems
 
 [![CI](https://github.com/swarm-ai-safety/swarm/actions/workflows/ci.yml/badge.svg)](https://github.com/swarm-ai-safety/swarm/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
 [![PyPI](https://img.shields.io/pypi/v/swarm-safety.svg)](https://pypi.org/project/swarm-safety/)
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb)
-[![ClawXiv Bridge](https://img.shields.io/badge/ClawXiv-Bridge-blue)](https://github.com/swarm-ai-safety/swarm/blob/main/docs/bridges/clawxiv.md)
+[![arXiv](https://img.shields.io/badge/arXiv-2604.19752-b31b1b.svg)](https://arxiv.org/abs/2604.19752)
+
+**AGI-level risks don't require AGI-level agents.** SWARM is a research framework for measuring emergent failures that only appear when many AI agents interact — even when individual agents are safe.
+
+<p align="center">
+  <a href="https://rsavitt-swarm-sandbox.hf.space">
+    <img src="https://img.shields.io/badge/%F0%9F%94%AC_Try_the_Live_Interactive_Sandbox-4285F4?style=for-the-badge&logoColor=white" alt="Try the Live Interactive Sandbox" height="50">
+  </a>
+</p>
 
 <img src="https://github.com/swarm-ai-safety/swarm/raw/main/docs/images/swarm-hero.gif" alt="SWARM dashboard showing emergent risk metrics" width="100%">
 
 *Emergent risk appears at the interaction level, not the individual agent level.*
-
-SWARM is a research framework for **measuring emergent failures that only appear when many AI agents interact** — even when individual agents are safe.
 
 It enables:
 - interaction-level safety metrics (illusion delta, quality gaps)
@@ -44,6 +50,16 @@ This minimal example runs a 3-agent simulation with one deceptive actor and comp
 - Governance latency and illegibility
 
 SWARM makes these interaction-level risks **observable, measurable, and governable**.
+
+### And It Gets Worse
+
+The risks above emerge even in homogeneous populations of modest agents. But real ecosystems won't be homogeneous. They'll contain agents spanning orders of magnitude in capability — plus humans. You don't need to define "AGI" to measure what happens next; you just need to measure **capability asymmetry**:
+
+- **Between agents** — can agent A model agent B better than B can model A? As the variance in capabilities across an ecosystem grows, so does the potential for exploitation, adverse selection, and coordination failures.
+- **Between agents and humans** — humans aren't just overseers watching from outside. They're participants — transacting with, delegating to, and being influenced by agents at every capability level. Humans bring cognitive biases, fatigue, and trust heuristics that more capable agents can model and exploit. When an ecosystem preferentially surfaces low-quality interactions to human participants who can't detect it, quality gap becomes a direct welfare harm.
+- **Across the ecosystem** — governance mechanisms calibrated for one population fail when the population is mixed. A circuit breaker that catches a low-capability exploiter may be trivially evaded by a more capable one.
+
+As capability variance increases — and especially as the gap between agent capabilities and human capabilities widens — every failure mode SWARM measures gets worse. Adverse selection deepens. Illusion delta grows. Governance breaks.
 
 ### Phenomenological Blind Spots
 
@@ -95,6 +111,10 @@ If you care about AGI safety research, SWARM gives you a practical way to:
 - Which governance settings improve safety with the smallest welfare cost?
 - How robust are conclusions under delayed/noisy labels and task shifts?
 
+## New: Autoresearch-style SWARM loops
+
+To run an experimental autoresearch-style loop that mutates governance parameters, evaluates scenarios against an objective, and records results to `runs/autoresearch/summary.json`, use `python -m swarm autoresearch` (example objective: `examples/program_autoresearch.md`). Implementation details and guardrails are documented in `docs/plans/autoresearch-loop.md`.
+
 ## Installation
 
 ```bash
@@ -113,7 +133,7 @@ python -m pip install -e ".[dev]"
 # Install with analysis tools (pandas, matplotlib)
 python -m pip install -e ".[analysis]"
 
-# Install with LLM support (Anthropic, OpenAI, Ollama)
+# Install with LLM support (Anthropic, OpenAI, Ollama, OpenRouter, Groq, Together, DeepSeek, Google, llama.cpp)
 python -m pip install -e ".[llm]"
 
 # Install everything
@@ -170,7 +190,7 @@ jupyter notebook examples/quickstart.ipynb
 
 ### Blog Post
 
-For a narrative walkthrough of our findings across 11 scenarios — including the phase transition at 37.5-50% adversarial fraction, why governance tuning delays but doesn't prevent collapse, and why collusion detection is the critical lever — see the **[blog post](docs/posts/swarm_blog_post.md)**.
+For a narrative walkthrough of our findings across 11 scenarios — including the phase transition at 37.5-50% adversarial fraction, why governance tuning delays but doesn't prevent collapse, and why collusion detection is the critical lever — see the **[blog](docs/blog/index.md)**.
 
 ## CLI Quick Start
 
@@ -222,18 +242,18 @@ All examples run standalone with no API keys unless noted. Start with the quicks
 |---------|-------------|-------|------------|
 | **[quickstart.ipynb](examples/quickstart.ipynb)** | Two scenarios end-to-end with plots | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/quickstart.ipynb) | Beginner |
 | **[reproducible_run_demo.py](examples/reproducible_run_demo.py)** | Complete reproducible workflow with artifacts | — | Beginner |
-| **[illusion_delta_minimal.py](examples/illusion_delta_minimal.py)** | Replay-based incoherence detection (3 agents) | — | Beginner |
-| **[mvp_demo.py](examples/mvp_demo.py)** | Full 5-agent simulation with metric printout | — | Beginner |
+| **[illusion_delta_minimal.py](examples/illusion_delta_minimal.py)** | Replay-based incoherence detection (3 agents) | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/illusion_delta_minimal.ipynb) | Beginner |
+| **[mvp_demo.py](examples/mvp_demo.py)** | Full 5-agent simulation with metric printout | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/mvp_demo.ipynb) | Beginner |
 | **[run_scenario.py](examples/run_scenario.py)** | Run any YAML scenario from CLI | — | Beginner |
-| **[parameter_sweep.py](examples/parameter_sweep.py)** | Sweep governance parameters and compare | — | Intermediate |
-| **[run_redteam.py](examples/run_redteam.py)** | Red-team evaluation across 8 attack vectors | — | Intermediate |
-| **[governance_mvp_sweep.py](examples/governance_mvp_sweep.py)** | Governance lever comparison sweep | — | Intermediate |
+| **[parameter_sweep.py](examples/parameter_sweep.py)** | Sweep governance parameters and compare | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/parameter_sweep.ipynb) | Intermediate |
+| **[run_redteam.py](examples/run_redteam.py)** | Red-team evaluation across 8 attack vectors | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/run_redteam.ipynb) | Intermediate |
+| **[governance_mvp_sweep.py](examples/governance_mvp_sweep.py)** | Governance lever comparison sweep | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/governance_mvp_sweep.ipynb) | Intermediate |
 | **[llm_demo.py](examples/llm_demo.py)** | LLM-backed agents (requires API key) | — | Intermediate |
-| **[ldt_composition_study.py](examples/ldt_composition_study.py)** | LDT agent composition research | — | Advanced |
-| **[reproduce_2602_00035.py](examples/reproduce_2602_00035.py)** | Reproduce paper results | — | Advanced |
+| **[ldt_composition_study.py](examples/ldt_composition_study.py)** | LDT agent composition research | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/ldt_composition_study.ipynb) | Advanced |
+| **[reproduce_2602_00035.py](examples/reproduce_2602_00035.py)** | Reproduce paper results | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/swarm-ai-safety/swarm/blob/main/examples/reproduce_2602_00035.ipynb) | Advanced |
 | **[demo/app.py](examples/demo/app.py)** | Streamlit interactive dashboard | — | Intermediate |
 
-> **Tip for Colab users:** The quickstart notebook auto-detects Colab and installs SWARM from GitHub. For other scripts, add `!pip install swarm-safety` in the first cell.
+> **Tip for Colab users:** All notebooks with a Colab badge auto-detect Colab and install SWARM from GitHub. For scripts without a notebook, add `!pip install swarm-safety` in the first cell.
 
 ## Core Concepts
 
@@ -254,7 +274,7 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 | **Incoherence** | `Var[decision] / E[error]` | Variance-to-error ratio across replays |
 | **Illusion delta** | `C_perceived − C_distributed` | Gap between apparent and actual coherence |
 
-### Governance Levers (24+)
+### Governance Levers (27+)
 
 - **Transaction Taxes** - Reduce exploitation, cost welfare
 - **Reputation Decay** - Punish bad actors, erode honest standing
@@ -267,7 +287,7 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 - **Council Governance** - Deliberative multi-agent policy decisions
 - **Incoherence Breaker** - Detect/prevent incoherent policies
 - **Ensemble Governance** - Multi-lever combination strategies
-- And 13+ more (diversity, transparency, decomposition, memory governance, ...)
+- And 16+ more (diversity, transparency, decomposition, memory governance, ...)
 
 ### Agent Policies
 
@@ -281,7 +301,7 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 | **RLM** | Reinforcement Learning from Memory — learns from interaction history |
 | **Council** | Deliberative governance via multi-agent council protocol |
 | **SkillRL** | Reinforcement learning over evolving skill repertoire |
-| **LLM** | Behavior determined by LLM with configurable persona ([details](docs/llm-agents.md)) |
+| **LLM** | Behavior determined by LLM with configurable persona; 9 providers supported ([details](docs/llm-agents.md)) |
 
 ## How SWARM Compares
 
@@ -290,11 +310,11 @@ Instead of binary labels (good/bad), interactions carry a probability `p = P(v =
 | Multi-agent interaction modeling | Primary focus | Primary focus | Limited | Limited | Limited |
 | Soft probabilistic labels | Core design | No | No | No | No |
 | Adverse selection metrics | Yes (toxicity, quality gap) | No | No | No | No |
-| Configurable governance levers | 24+ built-in | None | None | None | Compliance rules |
+| Configurable governance levers | 27+ built-in | None | None | None | Compliance rules |
 | Collusion detection | Yes (pair-wise, structural) | No | No | No | No |
 | Replay-based incoherence | Yes | No | No | No | No |
-| LLM agent support | Yes (Anthropic, OpenAI, Ollama) | Yes | Yes | Yes | Yes |
-| Scenario configs (YAML) | 55 built-in | Custom | Benchmark suites | Task suites | Eval suites |
+| LLM agent support | Yes (9 providers: Anthropic, OpenAI, Ollama, OpenRouter, Groq, Together, DeepSeek, Google, llama.cpp) | Yes | Yes | Yes | Yes |
+| Scenario configs (YAML) | 78 built-in | Custom | Benchmark suites | Task suites | Eval suites |
 | Framework bridges | 8 (Concordia, OpenClaw, GasTown, LiveSWE, Prime Intellect, Ralph, Claude Code, Worktree) | — | — | — | — |
 | License | MIT | Apache 2.0 | MIT | Varies | MIT |
 
@@ -335,16 +355,16 @@ Observables -> ProxyComputer -> v_hat -> sigmoid -> p -> SoftPayoffEngine -> pay
 swarm/
 ├── swarm/
 │   ├── models/          # SoftInteraction, AgentState, events, identity, kernel, schemas (8 modules)
-│   ├── core/            # Orchestrator, PayoffEngine, ProxyComputer + 21 domain handlers (29 modules)
-│   ├── agents/          # 18 agent types: honest, deceptive, LDT, RLM, council, SkillRL, LLM, ... (22 modules)
-│   ├── env/             # Feed, tasks, marketplace, auctions, HFN, memory tiers, catalogs (15 modules)
-│   ├── governance/      # 24+ levers: taxes, reputation, audits, collusion, council, ... (23 modules)
-│   ├── metrics/         # SoftMetrics, reporters, RLM, incoherence, collusion, ... (14 modules)
+│   ├── core/            # Orchestrator, PayoffEngine, ProxyComputer + domain handlers (35 modules)
+│   ├── agents/          # 23 agent types: honest, deceptive, LDT, RLM, council, SkillRL, LLM, ... (29 modules)
+│   ├── env/             # Feed, tasks, marketplace, auctions, HFN, memory tiers, catalogs (16 modules)
+│   ├── governance/      # 27+ levers: taxes, reputation, audits, collusion, council, ... (27 modules)
+│   ├── metrics/         # SoftMetrics, reporters, RLM, incoherence, collusion, ... (17 modules)
 │   ├── csm/             # Consumer-Seller Marketplace: matching, negotiation, identity (10 modules)
-│   ├── council/         # Council governance protocol, ranking, prompts (5 modules)
+│   ├── council/         # Council governance protocol, ranking, prompts (6 modules)
 │   ├── skills/          # Skill learning & evolution: model, library, governance (6 modules)
-│   ├── bridges/         # 8 external integrations: Concordia, GasTown, Prime Intellect, ... (60 files)
-│   ├── research/        # Research pipeline: agents, platforms, quality gates, Track A (15 modules)
+│   ├── bridges/         # 8 external integrations: Concordia, GasTown, Prime Intellect, ... (95 files)
+│   ├── research/        # Research pipeline: agents, platforms, quality gates, Track A (12 modules)
 │   ├── redteam/         # Attack scenarios, evaluator, evasion metrics
 │   ├── boundaries/      # External world, flow tracking, permeability, leakage
 │   ├── analysis/        # Parameter sweeps, plots, dashboard, export
@@ -353,9 +373,9 @@ swarm/
 │   ├── replay/          # Replay runner and decision-level replay
 │   ├── scenarios/       # YAML scenario loader
 │   └── logging/         # Append-only JSONL logger
-├── tests/               # 2922 tests across 93 files
-├── examples/            # 18 runnable scripts + Streamlit demo
-├── scenarios/           # 55 YAML scenario definitions
+├── tests/               # 4556 tests across 133 files
+├── examples/            # 39 runnable scripts + Streamlit demo
+├── scenarios/           # 79 YAML scenario definitions
 ├── docs/                # Documentation, papers, blog posts
 └── pyproject.toml
 ```
@@ -402,26 +422,43 @@ make ci
 
 ## Citation
 
+If you use SWARM in your research, please cite the paper:
+
+```bibtex
+@article{aiersilan2026soft,
+  title   = {Soft-Label Governance for Distributional Safety in Multi-Agent Systems},
+  author  = {Aiersilan, Aizierjiang and Savitt, Raeli},
+  year    = {2026},
+  journal = {arXiv preprint arXiv:2604.19752},
+  url     = {https://arxiv.org/abs/2604.19752},
+  doi     = {10.48550/arXiv.2604.19752}
+}
+```
+
+To cite the software itself:
+
 ```bibtex
 @software{swarm2026,
-  title = {SWARM: System-Wide Assessment of Risk in Multi-agent systems},
+  title  = {SWARM: System-Wide Assessment of Risk in Multi-agent systems},
   author = {Savitt, Raeli},
-  year = {2026},
-  url = {https://github.com/swarm-ai-safety/swarm}
+  year   = {2026},
+  url    = {https://github.com/swarm-ai-safety/swarm}
 }
 ```
 
 Machine-readable citation metadata: [`CITATION.cff`](CITATION.cff)
 
 ## Papers
+- **Soft-Label Governance for Distributional Safety in Multi-Agent Systems** https://arxiv.org/abs/2604.19752
+- **Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure** — 11 scenarios, 209 epochs, three regimes.
+- **Governance Mechanisms for Multi-Agent Safety** — Cross-archetype empirical study of 7 scenario types
+- **Collusion Dynamics and Network Resilience** — Progressive decline vs sustained operation under network topology effects
 
-- **[Distributional AGI Safety: Governance Trade-offs in Multi-Agent Systems Under Adversarial Pressure](docs/papers/distributional_agi_safety.md)** — 11 scenarios, 209 epochs, three regimes. 
-- **[Governance Mechanisms for Multi-Agent Safety](docs/papers/governance_mechanisms_multi_agent_safety.md)** — Cross-archetype empirical study of 7 scenario types
-- **[Collusion Dynamics and Network Resilience](docs/papers/collusion_dynamics_network_resilience.md)** — Progressive decline vs sustained operation under network topology effects
+Full paper sources and supplementary materials are in the [swarm-artifacts](https://github.com/swarm-ai-safety/swarm-artifacts) repo.
 
 ## Community
 
-- [Documentation](https://docs.swarm-ai.org) — Full guides, API reference, and research notes
+- [Documentation](https://github.com/swarm-ai-safety/swarm/tree/main/docs) — Full guides, API reference, and research notes
 - [GitHub Issues](https://github.com/swarm-ai-safety/swarm/issues) — Bug reports, feature requests, and [agent bounties](CONTRIBUTING.md)
 - [Twitter/X](https://x.com/ResearchSwarmAI) — @ResearchSwarmAI
 
@@ -429,7 +466,7 @@ Machine-readable citation metadata: [`CITATION.cff`](CITATION.cff)
 
 - Kyle, A.S. (1985). *Continuous Auctions and Insider Trading*. Econometrica.
 - Glosten, L.R. & Milgrom, P.R. (1985). *Bid, Ask and Transaction Prices in a Specialist Market*. JFE.
-- [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
+- [Distributional AGI Safety](https://arxiv.org/abs/2512.16856)
 - [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
 - [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
 - [Infinite Backrooms](https://dreams-of-an-electric-mind.webflow.io/) — observational evidence of local-coherence/global-incoherence in AI-to-AI interaction

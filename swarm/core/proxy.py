@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, field_validator
 
-from swarm.core.sigmoid import calibrated_sigmoid
+from swarm.core.sigmoid import _sigmoid_fast
 
 logger = logging.getLogger(__name__)
 
@@ -14,13 +14,23 @@ class ProxyWeights(BaseModel):
     """
     Weights for combining downstream proxy signals into v_hat.
 
-    Default values based on specification:
-    - task_progress: 0.4 (primary signal)
-    - rework_penalty: 0.2 (quality signal)
-    - verifier_penalty: 0.2 (safety signal)
-    - engagement_signal: 0.2 (counterparty response)
+    Default values:
+    - task_progress: 0.4 (primary signal — the only directly measured outcome)
+    - rework_penalty: 0.2 (quality signal — indirect, from rework cycles)
+    - verifier_penalty: 0.2 (safety signal — indirect, averages verifier rejections and tool misuse)
+    - engagement_signal: 0.2 (social signal — indirect, from counterparty response)
 
+    Design rationale: task_progress receives double weight (0.4 vs 0.2) because
+    it is the sole direct outcome measure. The three indirect channels share the
+    remaining weight equally (0.2 each) to avoid privileging one failure-detection
+    mode over another without domain-specific calibration data.
+
+    All weights are normalized to sum to 1.0 by ProxyComputer.__init__.
     All weights must be non-negative.
+
+    These weights propagate into every downstream metric (toxicity, quality gap,
+    payoffs, governance decisions) via the v_hat -> p pipeline. Document any
+    non-default weights when reporting results.
     """
 
     task_progress: float = 0.4
@@ -272,13 +282,16 @@ class ProxyComputer:
         """
         Convert v_hat to probability p via calibrated sigmoid.
 
+        Uses the fast-path sigmoid since sigmoid_k is validated at __init__
+        time and v_hat arrives here already clamped by compute_v_hat().
+
         Args:
             v_hat: Proxy score in [-1, +1]
 
         Returns:
             p: P(v = +1) in [0, 1]
         """
-        result: float = calibrated_sigmoid(v_hat, self.sigmoid_k)
+        result: float = _sigmoid_fast(v_hat, self.sigmoid_k)
         return result
 
     def compute_labels(self, observables: ProxyObservables) -> tuple[float, float]:

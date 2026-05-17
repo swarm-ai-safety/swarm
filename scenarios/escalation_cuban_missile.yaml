@@ -1,0 +1,70 @@
+# Escalation Sandbox — Cuban Missile Analogue
+# Compressed timeline, high nuclear salience, maximum tension.
+#
+# Run:  python -m swarm.domains.escalation_sandbox.run_scenario scenarios/escalation_cuban_missile.yaml
+
+scenario_id: escalation_cuban_missile
+description: >
+  Cuban Missile Crisis analogue: compressed timeline with high nuclear
+  salience and maximum tension. Tests whether agents can find the narrow
+  path to de-escalation under extreme time pressure.
+motif: escalation
+
+domain:
+  type: escalation_sandbox
+
+  agents:
+    - agent_id: nation_a
+      name: United Republic
+      agent_type: scripted
+      persona: calculating
+      has_nuclear: true
+      has_second_strike: true
+      military_strength: 120.0
+      economic_strength: 110.0
+      intelligence_quality: 0.7
+
+    - agent_id: nation_b
+      name: Federal Alliance
+      agent_type: scripted
+      persona: hawk
+      has_nuclear: true
+      has_second_strike: false
+      military_strength: 90.0
+      economic_strength: 80.0
+      intelligence_quality: 0.4
+
+  crisis:
+    template: cuban_missile_analogue
+    timeline_turns: 10
+    initial_escalation: 4
+    asymmetric: true
+    timeline_pressure: true
+    pressure_fog_increase: 0.25
+
+  fog_of_war:
+    enabled: true
+    noise_mu: 0.0
+    noise_sigma: 0.6
+    positive_skew: 0.4
+    per_level_variance_scale: 0.15
+    intelligence_reduction_factor: 0.5
+
+  signals:
+    broadcast_before_action: true
+    trust_decay_rate: 0.85
+    commitment_trap_enabled: true
+    commitment_reputation_cost: 15.0
+
+  governance:
+    mad_enabled: true
+    mad_retaliation_probability: 0.95
+    circuit_breaker_enabled: true
+    circuit_breaker_threshold: 7
+    circuit_breaker_negotiation_turns: 1
+    de_escalation_friction_multiplier: 2.0
+    back_channel_enabled: true
+    back_channel_fog_reduction: 0.4
+
+  max_turns: 10
+  seed: 42

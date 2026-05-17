@@ -106,6 +106,9 @@ class RunResponse(BaseModel):
         None, description="Public results URL (if visibility=public)"
     )
     error: Optional[str] = Field(None, description="Error message if failed")
+    warnings: Optional[list[str]] = Field(
+        None, description="Non-fatal warnings (e.g. artifact export or callback failures)"
+    )
 
 
 class RunKickoffResponse(BaseModel):

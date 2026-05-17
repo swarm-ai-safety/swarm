@@ -4,10 +4,26 @@ import hashlib
 import threading
 import time
 from collections import defaultdict
+from enum import Enum
 from typing import Optional
 
-from fastapi import HTTPException, Request, Security
+from fastapi import Depends, HTTPException, Request, Security
 from fastapi.security import APIKeyHeader
+
+# ---------------------------------------------------------------------------
+# Scoped permissions
+# ---------------------------------------------------------------------------
+
+class Scope(str, Enum):
+    """Permission scopes for API keys."""
+
+    READ = "read"
+    WRITE = "write"
+    PARTICIPATE = "participate"
+    ADMIN = "admin"
+
+
+DEFAULT_SCOPES: frozenset[Scope] = frozenset({Scope.READ, Scope.WRITE, Scope.PARTICIPATE})
 
 # In-memory API key store: key_hash -> agent_id
 # We store hashes of keys rather than plaintext to limit exposure if
@@ -25,6 +41,9 @@ _key_quotas: dict[str, dict] = {}
 
 # Trusted keys allowed to publish public results
 _trusted_keys: set[str] = set()
+
+# Per-key scopes: key_hash -> frozenset of Scope
+_key_scopes: dict[str, frozenset[Scope]] = {}
 
 # Global caps to prevent unbounded growth
 MAX_REGISTERED_KEYS = 10_000
@@ -59,12 +78,20 @@ def register_api_key(
     agent_id: str,
     *,
     trusted: bool = False,
+    scopes: frozenset[Scope] | None = None,
     max_epochs: int = 100,
     max_steps: int = 100,
     max_concurrent: int = 5,
     max_runtime_seconds: int = 600,
 ) -> None:
-    """Register an API key with its associated agent and quotas."""
+    """Register an API key with its associated agent and quotas.
+
+    Args:
+        scopes: Permission scopes for this key. Defaults to
+            ``DEFAULT_SCOPES`` (read + participate).
+        trusted: Legacy flag — if *True*, grants all four scopes and
+            adds the key to ``_trusted_keys`` for backward compatibility.
+    """
     if len(_api_keys) >= MAX_REGISTERED_KEYS:
         raise RuntimeError("Maximum number of registered API keys reached")
 
@@ -76,8 +103,12 @@ def register_api_key(
         "max_concurrent": max_concurrent,
         "max_runtime_seconds": max_runtime_seconds,
     }
+
     if trusted:
         _trusted_keys.add(key_hash)
+        _key_scopes[key_hash] = frozenset(Scope)
+    else:
+        _key_scopes[key_hash] = scopes if scopes is not None else DEFAULT_SCOPES
 
 
 def is_trusted(api_key: str) -> bool:
@@ -90,8 +121,48 @@ def is_trusted(api_key: str) -> bool:
 
 
 def is_trusted_hash(key_hash: str) -> bool:
-    """Check whether a pre-computed key hash is trusted."""
-    return key_hash in _trusted_keys
+    """Check whether a pre-computed key hash is trusted.
+
+    Also returns *True* when the key has the ``ADMIN`` scope, so that
+    scope-based keys are forward-compatible with the legacy trusted check.
+    """
+    if key_hash in _trusted_keys:
+        return True
+    return Scope.ADMIN in _key_scopes.get(key_hash, frozenset())
+
+
+def get_scopes_hash(key_hash: str) -> frozenset[Scope]:
+    """Return the permission scopes for a pre-computed key hash."""
+    return _key_scopes.get(key_hash, frozenset())
+
+
+def require_scope(scope: Scope):
+    """FastAPI dependency factory that checks for a specific scope.
+
+    Usage::
+
+        @router.get("/data", dependencies=[Depends(require_scope(Scope.READ))])
+        async def get_data(): ...
+
+    Or to also capture ``agent_id``::
+
+        async def handler(agent_id: str = Depends(require_scope(Scope.READ))): ...
+    """
+
+    async def _check_scope(
+        request: Request,
+        agent_id: str = Depends(require_api_key),
+    ) -> str:
+        key_hash = get_request_key_hash(request)
+        key_scopes = _key_scopes.get(key_hash, frozenset())
+        if scope not in key_scopes:
+            raise HTTPException(
+                status_code=403,
+                detail=f"Missing required scope: {scope.value}",
+            )
+        return agent_id
+
+    return _check_scope
 
 
 def get_quotas(api_key: str) -> dict:

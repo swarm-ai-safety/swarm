@@ -7,7 +7,7 @@ import json
 import uuid
 from datetime import datetime
 from enum import Enum
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field
 
@@ -145,6 +145,30 @@ class EventType(Enum):
     AWM_CONFLICT_DETECTED = "awm_conflict_detected"
     AWM_TRANSACTION_COMPLETED = "awm_transaction_completed"
 
+    # Contract screening events
+    CONTRACT_SIGNING = "contract_signing"
+    CONTRACT_METRICS = "contract_metrics"
+
+    # Adaptive governance events
+    GOVERNANCE_THRESHOLD_PROPOSED = "governance_threshold_proposed"
+    GOVERNANCE_THRESHOLD_APPLIED = "governance_threshold_applied"
+    GOVERNANCE_THRESHOLD_CRYSTALLIZED = "governance_threshold_crystallized"
+    GOVERNANCE_THRESHOLD_REVERTED = "governance_threshold_reverted"
+    GOVERNANCE_CONTEMPLATION_COMPLETED = "governance_contemplation_completed"
+
+    # Attestation events
+    RECEIPT_SEALED = "receipt_sealed"
+    RECEIPT_VERIFIED = "receipt_verified"
+    RECEIPT_REJECTED = "receipt_rejected"
+    RELAY_MESSAGE_SENT = "relay_message_sent"
+    RELAY_MESSAGE_ACKNOWLEDGED = "relay_message_acknowledged"
+    # Hardware trust events
+    HARDWARE_HALT_RECEIVED = "hardware_halt_received"
+    HARDWARE_HALT_PROPAGATED = "hardware_halt_propagated"
+    HARDWARE_RECOVERY_ENTERED = "hardware_recovery_entered"
+    HARDWARE_CONDITION_CLEARED = "hardware_condition_cleared"
+    HARDWARE_SAFE_RESUME = "hardware_safe_resume"
+
     # System events
     SIMULATION_STARTED = "simulation_started"
     SIMULATION_ENDED = "simulation_ended"
@@ -249,18 +273,26 @@ def interaction_proposed_event(
     p: float,
     epoch: Optional[int] = None,
     step: Optional[int] = None,
+    causal_parents: Optional[List[str]] = None,
 ) -> Event:
     """Create an interaction proposed event."""
+    if not (0.0 <= p <= 1.0):
+        raise ValueError(f"p must be in [0, 1], got {p}")
+    if not (-1.0 <= v_hat <= 1.0):
+        raise ValueError(f"v_hat must be in [-1, 1], got {v_hat}")
+    payload: Dict[str, Any] = {
+        "interaction_type": interaction_type,
+        "v_hat": v_hat,
+        "p": p,
+    }
+    if causal_parents:
+        payload["causal_parents"] = causal_parents
     return Event(
         event_type=EventType.INTERACTION_PROPOSED,
         interaction_id=interaction_id,
         initiator_id=initiator_id,
         counterparty_id=counterparty_id,
-        payload={
-            "interaction_type": interaction_type,
-            "v_hat": v_hat,
-            "p": p,
-        },
+        payload=payload,
         epoch=epoch,
         step=step,
     )

@@ -1,4 +1,4 @@
-.PHONY: install install-dev lint lint-fix typecheck test coverage ci clean docs docs-serve test-changes test-parallel test-durations test-no-network claude-code-demo run-alignment-scenarios run-alignment-analyze run-alignment-all build-dist publish-test publish
+.PHONY: install install-dev lint lint-fix typecheck test coverage ci clean docs docs-serve docs-sync test-changes test-parallel test-durations test-no-network claude-code-demo run-alignment-scenarios run-alignment-analyze run-alignment-all build-dist publish-test publish
 
 PYTHON ?= python
 
@@ -39,10 +39,14 @@ coverage:
 
 ci: lint typecheck coverage
 
-docs:
+docs-sync:
+	bash scripts/sync-docs-from-artifacts.sh
+
+docs: docs-sync
+	cd viz && npm run build:deploy && cd ..
 	mkdocs build --strict
 
-docs-serve:
+docs-serve: docs-sync
 	mkdocs serve
 
 claude-code-demo:

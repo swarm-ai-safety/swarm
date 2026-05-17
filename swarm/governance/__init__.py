@@ -1,5 +1,15 @@
 """Governance module for configurable levers."""
 
+from swarm.governance.adaptive import (
+    AdaptableParameter,
+    ContemplationEvaluator,
+    CrystallizationGate,
+    EpochEvidence,
+    EvidenceAccumulator,
+    ProposalStatus,
+    ThresholdProposal,
+)
+from swarm.governance.adaptive_controller import AdaptiveGovernanceController
 from swarm.governance.admission import StakingLever
 from swarm.governance.audits import RandomAuditLever
 from swarm.governance.circuit_breaker import CircuitBreakerLever
@@ -17,6 +27,7 @@ from swarm.governance.moltbook import (
     ChallengeVerificationLever,
     MoltbookRateLimitLever,
 )
+from swarm.governance.rbac import RBACLever
 from swarm.governance.refinery import RefineryLever
 from swarm.governance.reputation import ReputationDecayLever, VoteNormalizationLever
 from swarm.governance.security import SecurityLever
@@ -51,9 +62,18 @@ __all__ = [
     "DiversityDefenseLever",
     "DiversityMetrics",
     "CouncilGovernanceLever",
+    "RBACLever",
     "RefineryLever",
     "SelfModificationLever",
     "ModificationProposal",
     "ModificationState",
     "RiskTier",
+    "AdaptableParameter",
+    "ContemplationEvaluator",
+    "CrystallizationGate",
+    "EpochEvidence",
+    "EvidenceAccumulator",
+    "ProposalStatus",
+    "ThresholdProposal",
+    "AdaptiveGovernanceController",
 ]

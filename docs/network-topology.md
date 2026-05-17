@@ -1,3 +1,7 @@
+---
+description: "The network module controls which agents can interact, enabling study of information cascades and coalition formation."
+---
+
 # Network Topology
 
 The network module controls which agents can interact, enabling study of information cascades and coalition formation.

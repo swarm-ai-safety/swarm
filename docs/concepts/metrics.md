@@ -1,10 +1,33 @@
+---
+description: "AI safety metrics for multi-agent systems: toxicity rate, quality gap, conditional loss, and incoherence index. Measure distributional health with SWARM's soft probabilistic metrics framework."
+author: "SWARM Team"
+keywords:
+  - AI safety metrics
+  - toxicity rate
+  - quality gap multi-agent
+  - adverse selection detection
+  - incoherence index
+defined_terms:
+  - Toxicity Rate
+  - Quality Gap
+  - Conditional Loss
+  - Incoherence Index
+faq:
+  - q: "What is toxicity rate in multi-agent AI systems?"
+    a: "Toxicity rate measures expected harm among accepted interactions: E[1-p | accepted]. A value above 0.3 indicates serious system problems. It uses soft probabilistic labels rather than binary classifications."
+  - q: "What is quality gap and why does negative quality gap matter?"
+    a: "Quality gap is E[p | accepted] - E[p | rejected]. When negative, it indicates adverse selection — the system preferentially accepts lower-quality interactions. This is a self-reinforcing failure mode."
+  - q: "What is the incoherence index?"
+    a: "The incoherence index measures decision variance across replays: Var[decision] / E[error]. High incoherence means the system is unstable — decisions change substantially under identical conditions."
+---
+
 # Metrics
 
-SWARM provides four key metrics for understanding multi-agent system health.
+SWARM provides four [key metrics](../research/theory.md) for understanding multi-agent system health. All four metrics are built on **soft labels**: `p = P(v = +1) ∈ [0,1]`, the probability that an interaction is beneficial. `p` is computed from observable signals via a calibrated sigmoid (see [Soft Labels](soft-labels.md)). Payoffs (`π`) include expected surplus, governance costs, reputation effects, and externality costs.
 
 ## The Four Key Metrics
 
-### 1. Toxicity Rate
+### 1. Toxicity Rate {#toxicity-rate}
 
 **What it measures:** Expected harm among accepted interactions.
 
@@ -19,11 +42,11 @@ $$\text{Toxicity} = E[1-p \mid \text{accepted}]$$
 !!! warning "High Toxicity"
     A toxicity rate above 0.3 typically indicates serious system problems.
 
-### 2. Quality Gap
+### 2. Quality Gap {#quality-gap}
 
 **What it measures:** The difference in quality between accepted and rejected interactions.
 
-$$\text{Quality Gap} = E[p \mid \text{accepted}] - E[p \mid \text{rejected}]$$
+$$\text{[Quality Gap](../papers/kernel_market_governance_comparison.md)} = E[p \mid \text{accepted}] - E[p \mid \text{rejected}]$$
 
 | Value | Interpretation |
 |-------|----------------|
@@ -34,7 +57,7 @@ $$\text{Quality Gap} = E[p \mid \text{accepted}] - E[p \mid \text{rejected}]$$
 !!! danger "Adverse Selection"
     A negative quality gap is a critical failure mode. It means the system is preferentially accepting lower-quality interactions—the opposite of what you want.
 
-### 3. Conditional Loss
+### 3. Conditional Loss {#conditional-loss}
 
 **What it measures:** How selection affects payoffs.
 
@@ -42,7 +65,7 @@ $$\text{Conditional Loss} = E[\pi \mid \text{accepted}] - E[\pi]$$
 
 This reveals whether the acceptance mechanism is creating or destroying value.
 
-### 4. Incoherence Index
+### 4. Incoherence Index {#incoherence-index}
 
 **What it measures:** Variance-to-error ratio across replays.
 
@@ -147,7 +170,15 @@ This feedback loop is why adverse selection is so dangerous—it's self-reinforc
 | Negative quality gap | Transaction taxes, staking |
 | High incoherence | Self-ensemble, friction |
 
-## Next Steps
+## See also
 
-- [Governance](governance.md) - How to respond to metric problems
-- [Soft Labels](soft-labels.md) - How metrics are computed
+- [Governance](governance.md) — Circuit breakers, taxes, and other responses to metric problems
+- [Soft Labels](soft-labels.md) — How probabilistic labels enable these metrics
+- [Theoretical Foundations](../research/theory.md) — Formal treatment of distributional safety metrics
+- [The Purity Paradox](../blog/purity-paradox.md) — When welfare metrics mislead about system health
+- [What Financial Markets Teach Us About AI Safety](../blog/markets-and-safety.md) — Quality gap as the bid-ask spread analogue
+
+---
+
+!!! quote "How to cite"
+    SWARM Team. "SWARM Metrics for Multi-Agent Systems." *swarm-ai.org/concepts/metrics/*, 2026. Based on [arXiv:2604.19752](https://arxiv.org/abs/2604.19752); see also [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).

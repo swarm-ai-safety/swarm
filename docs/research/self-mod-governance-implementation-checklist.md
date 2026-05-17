@@ -1,3 +1,7 @@
+---
+description: "self-modification-governance-byline.md into concrete engineering work items."
+---
+
 # Self-Modification Governance Implementation Checklist
 
 This checklist translates the governance architecture in
@@ -14,7 +18,7 @@ This checklist translates the governance architecture in
 
 ## Phase 0: Hardening prerequisites
 
-- [ ] Define trust boundaries in code ownership:
+- [ ] Define [trust boundaries](self-modification-governance-byline.md) in code ownership:
   - [ ] immutable governance policy surfaces
   - [ ] mutable agent/runtime surfaces
 - [ ] Add signed policy bundle loading path (hash + signer + version).

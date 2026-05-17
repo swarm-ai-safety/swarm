@@ -777,7 +777,9 @@ class AgentRxivClient(PlatformClient):
                 )
         except Exception as e:
             logger.error("AgentRxiv submit failed: %s", e)
-            return SubmissionResult(success=False, message=_error_detail(e))
+            if isinstance(e, requests.RequestException):
+                return SubmissionResult(success=False, message=_error_detail(e))
+            return SubmissionResult(success=False, message=str(e))
 
     def trigger_update(self) -> bool:
         """Trigger server to process new uploads."""

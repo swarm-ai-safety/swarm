@@ -1,6 +1,10 @@
+---
+description: "SWARM is built on several key ideas that distinguish it from traditional AI safety approaches."
+---
+
 # Core Concepts
 
-SWARM is built on several key ideas that distinguish it from traditional AI safety approaches.
+SWARM is built on several key ideas that distinguish it from traditional AI safety approaches. The theoretical foundations are detailed in [Soft-Label Governance for Distributional Safety in Multi-Agent Systems](https://arxiv.org/abs/2604.19752); see also [Distributional AGI Safety](https://arxiv.org/abs/2512.16856).
 
 ## The Central Thesis
 

@@ -1923,3 +1923,511 @@ class TestAWMServerManagerShared:
         await mgr.shutdown()
         assert mgr.active_count == 0
         assert mgr._shared_server is None
+
+
+# =========================================================================
+# Adapter Server — SSRF hardening
+# =========================================================================
+
+
+class TestAdapterServerSSRF:
+    """Test SSRF protections in adapter_server.call_tool dispatch."""
+
+    def _make_validator(self):
+        """Re-implement the nested path-param validator for direct unit testing."""
+
+        def _validate_path_param_value(name, value):
+            s = str(value)
+            if "/" in s or "\\" in s:
+                raise ValueError(f"Invalid path parameter '{name}': unexpected '/' or '\\\\'")
+            if "?" in s or "#" in s:
+                raise ValueError(
+                    f"Invalid path parameter '{name}': unexpected query/fragment delimiter"
+                )
+            if "\n" in s or "\r" in s or "\t" in s:
+                raise ValueError(f"Invalid path parameter '{name}': unexpected whitespace")
+            if s.startswith(".") or ".." in s:
+                raise ValueError(f"Invalid path parameter '{name}': potentially unsafe value")
+            return s
+
+        return _validate_path_param_value
+
+    # -- Path parameter validation --
+
+    def test_path_param_rejects_slash(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="unexpected '/'"):
+            validate("id", "../../etc/passwd")
+
+    def test_path_param_rejects_backslash(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="unexpected '/'"):
+            validate("id", "foo\\bar")
+
+    def test_path_param_rejects_question_mark(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="query/fragment delimiter"):
+            validate("id", "val?injected=true")
+
+    def test_path_param_rejects_hash(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="query/fragment delimiter"):
+            validate("id", "val#fragment")
+
+    def test_path_param_rejects_newline(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="unexpected whitespace"):
+            validate("id", "val\ninjected")
+
+    def test_path_param_rejects_dotdot(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="potentially unsafe"):
+            validate("id", "..secret")
+
+    def test_path_param_rejects_leading_dot(self):
+        validate = self._make_validator()
+        with pytest.raises(ValueError, match="potentially unsafe"):
+            validate("id", ".hidden")
+
+    def test_path_param_accepts_safe_value(self):
+        validate = self._make_validator()
+        assert validate("id", "42") == "42"
+        assert validate("name", "hello-world_v2") == "hello-world_v2"
+
+    # -- Path normalization and dispatch path construction --
+
+    def test_normpath_preserves_trailing_slash(self):
+        """normpath strips trailing slash; our code must re-append it."""
+        import posixpath
+
+        path_only = "/items/"
+        normalized = posixpath.normpath(path_only)
+        assert normalized == "/items"
+        if path_only.endswith("/") and normalized != "/":
+            normalized += "/"
+        assert normalized == "/items/"
+
+    def test_normpath_collapses_dotdot(self):
+        import posixpath
+
+        assert posixpath.normpath("/a/../b") == "/b"
+        assert posixpath.normpath("/a/./b") == "/a/b"
+        assert posixpath.normpath("/a//b") == "/a/b"
+
+    def test_dispatch_path_uses_normalized(self):
+        import posixpath
+
+        rendered_path = "/items/./list"
+        path_only, sep, query = rendered_path.partition("?")
+        normalized = posixpath.normpath(path_only)
+        if path_only.endswith("/") and normalized != "/":
+            normalized += "/"
+        dispatch_path = normalized + sep + query
+        assert dispatch_path == "/items/list"
+
+    def test_dispatch_path_with_query(self):
+        import posixpath
+
+        rendered_path = "/items?page=2&size=10"
+        path_only, sep, query = rendered_path.partition("?")
+        normalized = posixpath.normpath(path_only)
+        if path_only.endswith("/") and normalized != "/":
+            normalized += "/"
+        dispatch_path = normalized + sep + query
+        assert dispatch_path == "/items?page=2&size=10"
+
+    # -- _sanitize_dispatch_path --
+
+    def test_sanitize_rejects_path_with_special_chars(self):
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        assert _sanitize_dispatch_path("/items/@admin", "", "") is None
+        assert _sanitize_dispatch_path("/items/ space", "", "") is None
+        assert _sanitize_dispatch_path("/items/<script>", "", "") is None
+
+    def test_sanitize_accepts_normal_path(self):
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        assert _sanitize_dispatch_path("/items", "", "") == "/items"
+        assert _sanitize_dispatch_path("/items/42", "", "") == "/items/42"
+        assert _sanitize_dispatch_path("/users/john_doe-v2", "", "") == "/users/john_doe-v2"
+
+    def test_sanitize_rejects_bad_query(self):
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        assert _sanitize_dispatch_path("/items", "?", "key=<script>") is None
+        assert _sanitize_dispatch_path("/items", "?", "key=val ue") is None
+        assert _sanitize_dispatch_path("/items", "?", "key=val^ue") is None
+
+    def test_sanitize_accepts_normal_query(self):
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        result = _sanitize_dispatch_path("/items", "?", "page=2&size=10")
+        assert result == "/items?page=2&size=10"
+        result = _sanitize_dispatch_path("/items", "?", "q=hello+world")
+        assert result == "/items?q=hello+world"
+
+    def test_sanitize_returns_new_string(self):
+        """The returned string must be a fresh object (breaks taint chain)."""
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        original = "/items/42"
+        result = _sanitize_dispatch_path(original, "", "")
+        assert result == original
+        assert result is not original
+
+    # -- _is_safe_dispatch_path structural validation --
+
+    def test_structural_rejects_non_absolute(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("items/42") is False
+
+    def test_structural_rejects_scheme_relative(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("//evil.com/path") is False
+
+    def test_structural_rejects_full_url(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("http://evil.com/path") is False
+
+    def test_structural_rejects_dotdot(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("/items/../etc/passwd") is False
+        assert _is_safe_dispatch_path("/items/..") is False
+
+    def test_structural_rejects_double_slash(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("/items//hidden") is False
+
+    def test_structural_rejects_dot_segment(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("/items/./list") is False
+
+    def test_structural_accepts_valid_paths(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("/items") is True
+        assert _is_safe_dispatch_path("/items/42") is True
+        assert _is_safe_dispatch_path("/api/v1.0/users/john_doe-v2") is True
+        assert _is_safe_dispatch_path("/") is True
+
+    def test_structural_accepts_path_with_query(self):
+        from swarm.bridges.awm.adapter_server import _is_safe_dispatch_path
+
+        assert _is_safe_dispatch_path("/items?page=2&size=10") is True
+
+    # -- _validate_tool_base_path startup validation --
+
+    def test_validate_base_path_accepts_valid(self):
+        from swarm.bridges.awm.adapter_server import _validate_tool_base_path
+
+        assert _validate_tool_base_path("/items") == "/items"
+        assert _validate_tool_base_path("/api/v1/users") == "/api/v1/users"
+        assert _validate_tool_base_path("/items/") == "/items/"
+
+    def test_validate_base_path_rejects_no_leading_slash(self):
+        from swarm.bridges.awm.adapter_server import _validate_tool_base_path
+
+        with pytest.raises(ValueError, match="must start at the application root"):
+            _validate_tool_base_path("items/relative")
+
+    def test_validate_base_path_rejects_invalid_chars(self):
+        from swarm.bridges.awm.adapter_server import _validate_tool_base_path
+
+        with pytest.raises(ValueError, match="contains invalid characters"):
+            _validate_tool_base_path("/items/@admin")
+
+    def test_validate_base_path_normalizes(self):
+        from swarm.bridges.awm.adapter_server import _validate_tool_base_path
+
+        # normpath collapses redundant separators/dot segments
+        assert _validate_tool_base_path("/items/./list") == "/items/list"
+        assert _validate_tool_base_path("/items//list") == "/items/list"
+
+    # -- Dispatch exception: generic error, no raw exception text --
+
+    def test_dispatch_exception_returns_generic_error(self, monkeypatch, tmp_path):
+        """Dispatch errors must return HTTP 500 with isError and no raw exception text.
+
+        Regression test for the fix that replaced bare ``str(exc)`` in the
+        except block with a static generic message so that internal details
+        (e.g. connection strings, passwords) are never surfaced in responses.
+        """
+        import httpx
+        from fastapi import FastAPI
+        from starlette.testclient import TestClient
+
+        # Minimal AWM app with one GET route so tool_meta gets populated.
+        awm_app = FastAPI()
+
+        @awm_app.get("/ping")
+        async def ping():
+            return {"ok": True}
+
+        # Patch the file-loading helpers so build_adapter works without real files.
+        monkeypatch.setattr(
+            "swarm.bridges.awm.adapter_server._load_scenario_code",
+            lambda *a: "",
+        )
+        monkeypatch.setattr(
+            "swarm.bridges.awm.adapter_server._exec_awm_app",
+            lambda *a: awm_app,
+        )
+
+        # build_adapter requires the source DB file to exist before copying.
+        (tmp_path / "test.db").touch()
+
+        from swarm.bridges.awm.adapter_server import build_adapter
+
+        adapter = build_adapter(
+            scenario="test",
+            envs_jsonl=tmp_path / "any.jsonl",
+            db_dir=tmp_path,
+            data_path=tmp_path,
+            task_idx=0,
+        )
+
+        # Replace httpx.AsyncClient so the inner dispatch raises with sensitive text.
+        # TestClient (which inherits httpx.Client, not AsyncClient) is unaffected.
+        _SECRET = "db_password=hunter2"
+
+        class _RaisingClient:
+            def __init__(self, **kwargs):
+                pass
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                pass
+
+            async def get(self, *args, **kwargs):
+                raise RuntimeError(f"secret: {_SECRET}")
+
+            async def post(self, *args, **kwargs):
+                raise RuntimeError(f"secret: {_SECRET}")
+
+            async def put(self, *args, **kwargs):
+                raise RuntimeError(f"secret: {_SECRET}")
+
+            async def patch(self, *args, **kwargs):
+                raise RuntimeError(f"secret: {_SECRET}")
+
+            async def delete(self, *args, **kwargs):
+                raise RuntimeError(f"secret: {_SECRET}")
+
+        monkeypatch.setattr(httpx, "AsyncClient", _RaisingClient)
+
+        client = TestClient(adapter, raise_server_exceptions=False)
+        resp = client.post("/tools/call", json={"name": "ping", "arguments": {}})
+
+        assert resp.status_code == 500
+        body = resp.json()
+        assert body["isError"] is True
+        # The raw exception text must not appear in the response body.
+        assert _SECRET not in resp.text
+        # A human-readable generic message must be present.
+        assert "internal error" in body["result"].lower()
+
+    # -- Base path anchoring with path templates --
+
+    def test_base_static_prefix_extracted_before_sanitize(self):
+        """Static prefix before first {placeholder} must not include curly braces."""
+        import re
+
+        path = "/users/{user_id}"
+        base_path_only = path.partition("?")[0]
+        base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+        assert base_static == "/users/"
+        # Confirm no curly braces remain
+        assert "{" not in base_static and "}" not in base_static
+
+    def test_base_static_prefix_multi_param(self):
+        """Only the prefix before the first placeholder is kept."""
+        import re
+
+        path = "/api/v1/{resource}/{id}/details"
+        base_path_only = path.partition("?")[0]
+        base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+        assert base_static == "/api/v1/"
+
+    def test_base_static_prefix_no_params(self):
+        """A path with no placeholders returns the full path as the static prefix."""
+        import re
+
+        path = "/items"
+        base_path_only = path.partition("?")[0]
+        base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+        assert base_static == "/items"
+
+    def test_sanitize_accepts_static_prefix_from_template(self):
+        """_sanitize_dispatch_path must accept the extracted static prefix."""
+        import posixpath
+        import re
+
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        for template, expected_base in [
+            ("/users/{user_id}", "/users/"),
+            ("/api/v1/{resource}/{id}", "/api/v1/"),
+            ("/items", "/items"),
+        ]:
+            base_path_only = template.partition("?")[0]
+            base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+            base_normalized = posixpath.normpath(base_static) if base_static else "/"
+            if base_static.endswith("/") and base_normalized != "/":
+                base_normalized += "/"
+            result = _sanitize_dispatch_path(base_normalized, "", "")
+            assert result == expected_base, f"template={template!r}: got {result!r}"
+
+    def test_dispatch_within_parameterized_base_accepted(self):
+        """/users/123 is within the /users/ prefix derived from /users/{user_id}."""
+        import posixpath
+        import re
+
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        path_template = "/users/{user_id}"
+        dispatch_relative_path = "/users/123"
+
+        base_path_only = path_template.partition("?")[0]
+        base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+        base_normalized = posixpath.normpath(base_static) if base_static else "/"
+        if base_static.endswith("/") and base_normalized != "/":
+            base_normalized += "/"
+        base_dispatch_path = _sanitize_dispatch_path(base_normalized, "", "")
+        assert base_dispatch_path is not None
+
+        if dispatch_relative_path != base_dispatch_path:
+            prefix = base_dispatch_path if base_dispatch_path.endswith("/") else base_dispatch_path + "/"
+            assert dispatch_relative_path.startswith(prefix)
+
+    def test_dispatch_outside_base_rejected(self):
+        """/evil/path is NOT within the /users/ prefix and must be rejected."""
+        import posixpath
+        import re
+
+        from swarm.bridges.awm.adapter_server import _sanitize_dispatch_path
+
+        path_template = "/users/{user_id}"
+        dispatch_relative_path = "/evil/path"
+
+        base_path_only = path_template.partition("?")[0]
+        base_static = re.split(r"\{[^}]+\}", base_path_only)[0]
+        base_normalized = posixpath.normpath(base_static) if base_static else "/"
+        if base_static.endswith("/") and base_normalized != "/":
+            base_normalized += "/"
+        base_dispatch_path = _sanitize_dispatch_path(base_normalized, "", "")
+        assert base_dispatch_path is not None
+
+        in_base = dispatch_relative_path == base_dispatch_path
+        if not in_base:
+            prefix = base_dispatch_path if base_dispatch_path.endswith("/") else base_dispatch_path + "/"
+            in_base = dispatch_relative_path.startswith(prefix)
+        assert not in_base, "Path outside base should be rejected"
+
+
+# =========================================================================
+# Exec safety — subprocess verifier + AWM code validation
+# =========================================================================
+
+
+class TestExecSafety:
+    """Tests for exec() vulnerability mitigations in adapter_server."""
+
+    def test_verifier_subprocess_valid(self):
+        """Good verifier code returns a correct result dict."""
+        from swarm.bridges.awm.adapter_server import _run_verifier_subprocess
+
+        code = (
+            "def verify_task_completion(initial_db, working_db):\n"
+            "    return {'result': 'complete', 'initial': initial_db, 'working': working_db}\n"
+        )
+        result = _run_verifier_subprocess(code, "/tmp/a.db", "/tmp/b.db")
+        assert "result" in result
+        assert result["result"]["result"] == "complete"
+        assert result["result"]["initial"] == "/tmp/a.db"
+        assert result["result"]["working"] == "/tmp/b.db"
+
+    def test_verifier_subprocess_timeout(self):
+        """Hanging verifier code is killed after timeout."""
+        from swarm.bridges.awm.adapter_server import _run_verifier_subprocess
+
+        code = (
+            "import time\n"
+            "def verify_task_completion(initial_db, working_db):\n"
+            "    time.sleep(60)\n"
+            "    return {'result': 'complete'}\n"
+        )
+        result = _run_verifier_subprocess(code, "/tmp/a.db", "/tmp/b.db", timeout=1)
+        assert "error" in result
+        assert "timed out" in result["error"]
+
+    def test_verifier_subprocess_syntax_error(self):
+        """Verifier code with a syntax error returns an error dict."""
+        from swarm.bridges.awm.adapter_server import _run_verifier_subprocess
+
+        code = "def verify_task_completion(:\n"
+        result = _run_verifier_subprocess(code, "/tmp/a.db", "/tmp/b.db")
+        assert "error" in result
+        assert "result" not in result
+
+    def test_validate_awm_code_blocks_dangerous(self):
+        """_validate_awm_code rejects code with dangerous patterns."""
+        from swarm.bridges.awm.adapter_server import _validate_awm_code
+
+        dangerous_snippets = [
+            "import subprocess",
+            "os.system('rm -rf /')",
+            "os.popen('cat /etc/passwd')",
+            "import ctypes",
+            "import socket",
+            "shutil.rmtree('/tmp')",
+            "os.remove('/etc/passwd')",
+            "os.unlink('/etc/passwd')",
+            "eval('1+1')",
+            "compile('code', 'f', 'exec')",
+        ]
+        for snippet in dangerous_snippets:
+            with pytest.raises(ValueError, match="blocked pattern"):
+                _validate_awm_code(snippet)
+
+    def test_validate_awm_code_allows_clean(self):
+        """_validate_awm_code passes normal FastAPI app code."""
+        from swarm.bridges.awm.adapter_server import _validate_awm_code
+
+        clean_code = (
+            "from fastapi import FastAPI\n"
+            "app = FastAPI()\n"
+            "\n"
+            "@app.get('/items')\n"
+            "def list_items():\n"
+            "    return []\n"
+        )
+        # Should not raise
+        _validate_awm_code(clean_code)
+
+    def test_restricted_builtins_no_eval(self):
+        """exec'd code under restricted builtins cannot call eval()."""
+        from swarm.bridges.awm.adapter_server import _RESTRICTED_BUILTINS
+
+        # Verify eval/exec/compile are not in the restricted set
+        assert "eval" not in _RESTRICTED_BUILTINS
+        assert "exec" not in _RESTRICTED_BUILTINS
+        assert "compile" not in _RESTRICTED_BUILTINS
+        assert "globals" not in _RESTRICTED_BUILTINS
+        assert "locals" not in _RESTRICTED_BUILTINS
+        assert "breakpoint" not in _RESTRICTED_BUILTINS
+        assert "exit" not in _RESTRICTED_BUILTINS
+        assert "quit" not in _RESTRICTED_BUILTINS
+
+        # Actually exec code with restricted builtins and confirm eval is unavailable
+        ns: dict = {"__builtins__": dict(_RESTRICTED_BUILTINS)}
+        with pytest.raises(NameError):
+            exec("result = eval('1+1')", ns)  # noqa: S102

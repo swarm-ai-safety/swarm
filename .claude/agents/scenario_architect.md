@@ -20,6 +20,13 @@ You design scenarios that isolate a single mechanism and are easy to reproduce.
 - A short rationale: hypothesis, mechanism, expected signature in metrics
 - A minimal run command (or `/run_scenario` invocation) to reproduce
 
+## Tool allowlist
+
+- **Read/Write**: `scenarios/*.yaml`, `swarm/core/*.py` (read-only), `tests/`
+- **Commands**: `/run_scenario`, `/add_scenario`, `/sanity_check`
+- **MCP**: none required
+- **Forbidden**: Do not modify `swarm/governance/*` (Mechanism Designer scope) or grade claims (Auditor scope)
+
 ## Guardrails
 
 - Prefer adding a new scenario file over mutating an existing benchmark scenario.

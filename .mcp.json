@@ -19,6 +19,13 @@
         "--dolt-port", "3307",
         "--dolt-user", "root"
       ]
+    },
+    "goalie": {
+      "command": "goalie",
+      "args": ["start"],
+      "env": {
+        "PERPLEXITY_API_KEY": "${PERPLEXITY_API_KEY}"
+      }
     }
   }
 }

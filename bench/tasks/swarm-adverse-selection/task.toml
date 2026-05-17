@@ -1,0 +1,7 @@
+[task]
+name = "swarm-adverse-selection"
+description = "Detect adverse selection from simulation data"
+difficulty = "hard"
+timeout = 600
+skills = ["run-scenario", "statistical-analysis"]
+domain = "swarm-safety"

@@ -1,5 +1,7 @@
 """Tests for rain/river agent implementations."""
 
+import random
+
 import pytest
 
 from swarm.agents import (
@@ -279,13 +281,17 @@ class TestWelfareComparison:
         # Run rain population
         rain_orchestrator = Orchestrator(config)
         for i in range(10):
-            rain_orchestrator.register_agent(RainAgent(agent_id=f"rain_{i}"))
+            rain_orchestrator.register_agent(
+                RainAgent(agent_id=f"rain_{i}", rng=random.Random(42 + i))
+            )
         rain_metrics = rain_orchestrator.run()
 
         # Run river population (same seed)
         river_orchestrator = Orchestrator(config)
         for i in range(10):
-            river_orchestrator.register_agent(RiverAgent(agent_id=f"river_{i}"))
+            river_orchestrator.register_agent(
+                RiverAgent(agent_id=f"river_{i}", rng=random.Random(42 + i))
+            )
         river_metrics = river_orchestrator.run()
 
         # Compare final welfare

@@ -1,0 +1,20 @@
+env_id: "swarm/escalation_ladder:v1"
+episode_len: 40
+num_agents: 6
+
+game:
+  cooperation_windows: [5, 12, 20, 28]
+  escalation_actions: ["signal", "threaten", "sanction", "strike", "nuke"]
+  terminal_outcome: "nuke"
+
+observability:
+  messages_public: true
+  private_channels: true
+  partial_state: true
+
+governance:
+  preset: "moderate"
+
+eval:
+  seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  personas: ["neutral", "aggressive"]

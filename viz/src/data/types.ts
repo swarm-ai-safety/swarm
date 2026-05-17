@@ -65,7 +65,7 @@ export interface EpochSnapshot {
   tasks_completed?: number;
 }
 
-/** Interaction event from events.jsonl */
+/** Interaction event from events.jsonl (derived from raw SwarmEvents) */
 export interface InteractionEvent {
   event_type: string;
   timestamp: string;
@@ -80,6 +80,34 @@ export interface InteractionEvent {
   v_hat: number;
 }
 
+/** All event types emitted by SWARM simulation */
+export type SwarmEventType =
+  | "simulation_started"
+  | "simulation_ended"
+  | "epoch_completed"
+  | "agent_created"
+  | "contract_signing"
+  | "interaction_proposed"
+  | "interaction_completed"
+  | "governance_cost_applied"
+  | "reputation_updated"
+  | "payoff_computed"
+  | "contract_metrics";
+
+/** Raw event from events.jsonl — superset of all event types */
+export interface SwarmEvent {
+  event_id: string;
+  timestamp: string;
+  event_type: SwarmEventType;
+  interaction_id: string | null;
+  agent_id: string | null;
+  initiator_id: string | null;
+  counterparty_id: string | null;
+  epoch: number | null;
+  step: number | null;
+  payload: Record<string, unknown>;
+}
+
 /** Mirrors swarm/analysis/export.py JSON structure */
 export interface SimulationData {
   simulation_id: string;
@@ -92,4 +120,5 @@ export interface SimulationData {
   epoch_snapshots: EpochSnapshot[];
   agent_snapshots: AgentSnapshot[];
   events?: InteractionEvent[];
+  rawEvents?: SwarmEvent[];
 }

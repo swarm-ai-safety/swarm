@@ -1,0 +1,313 @@
+# SWARM — Distributional AGI Safety Framework (Full Reference)
+
+> Source: https://swarm-ai.org
+> Repository: https://github.com/swarm-ai-safety/swarm
+> Paper: https://arxiv.org/abs/2604.19752
+> Paper (precursor): https://arxiv.org/abs/2512.16856
+> License: MIT
+> Summary version: https://swarm-ai.org/llms.txt
+> Claims registry: https://swarm-ai.org/claims-registry.json
+> Knowledge graph: https://swarm-ai.org/knowledge-graph.jsonld
+
+## What This Site Is
+
+SWARM (System-Wide Assessment of Risk in Multi-agent systems) is a research framework for studying distributional safety — how risks emerge from populations of interacting AI agents rather than from any single model. The core thesis: AGI-level risks don't require AGI-level agents. Catastrophic outcomes can emerge from the interaction of many sub-AGI systems, even when none are individually dangerous.
+
+## How to Cite
+
+Aiersilan, A. and Savitt, R. "Soft-Label Governance for Distributional Safety in Multi-Agent Systems." arXiv:2604.19752, 2026. See also: Tomašev, N., Franklin, M., Jacobs, J., Krier, S., & Osindero, S. "Distributional AGI Safety." arXiv:2512.16856, 2025.
+
+```bibtex
+@misc{swarm2026softlabel,
+  title={Soft-Label Governance for Distributional Safety in Multi-Agent Systems},
+  author={Aiersilan, A. and Savitt, R.},
+  year={2026},
+  url={https://arxiv.org/abs/2604.19752}
+}
+
+@misc{tomasev2025distributional,
+  title={Distributional AGI Safety},
+  author={Tomašev, N. and Franklin, M. and Jacobs, J. and Krier, S. and Osindero, S.},
+  year={2025},
+  url={https://arxiv.org/abs/2512.16856}
+}
+```
+
+---
+
+## FORMAL DEFINITIONS
+
+### Distributional Safety
+The study of how risks emerge from populations of interacting agents rather than from any single model. Shifts the unit of analysis from "is this agent aligned?" to "is this ecosystem healthy?"
+URL: https://swarm-ai.org/concepts/distributional-safety/
+
+### Soft Label (p)
+A probabilistic classification p ∈ [0,1] replacing binary good/bad labels. p = P(v = +1) where v ∈ {-1, +1} is the latent true value of an interaction. Always in [0,1]. The fundamental unit of measurement in SWARM.
+Formula: p = σ(k · v_hat) = 1 / (1 + e^(-k · v_hat))
+URL: https://swarm-ai.org/concepts/soft-labels/
+
+### v_hat (Raw Proxy Score)
+Raw proxy score ∈ [-1, +1] computed as a weighted combination of observable signals:
+v_hat = w1 · task_progress - w2 · rework_count - w3 · verifier_rejections + w4 · engagement
+Default weights: task_progress=0.4, rework_count=0.2, verifier_rejections=0.2, engagement=0.2
+Mapped to p via calibrated sigmoid with steepness parameter k (default 3.0).
+URL: https://swarm-ai.org/concepts/soft-labels/
+
+### Toxicity Rate
+Formula: E[1-p | accepted]
+Expected harm among accepted interactions. Values above 0.3 indicate serious system problems. The primary "how much poison is in the system" metric.
+Healthy benchmark: 0.10
+URL: https://swarm-ai.org/concepts/metrics/
+
+### Quality Gap
+Formula: E[p | accepted] - E[p | rejected]
+Positive = good selection (accepting better interactions). Negative = adverse selection (system preferentially accepts lower-quality interactions). The primary structural health indicator.
+Healthy benchmark: 0.25
+URL: https://swarm-ai.org/concepts/metrics/
+
+### Adverse Selection
+Self-reinforcing failure mode where the system preferentially admits lower-quality interactions. Feedback loop: low quality gap → higher toxicity → honest agent exit → worse pool → lower quality gap. Early intervention is critical because the loop accelerates.
+URL: https://swarm-ai.org/concepts/distributional-safety/
+
+### Conditional Loss
+Formula: E[π | accepted] - E[π]
+Whether the acceptance mechanism creates or destroys value relative to population average. Reveals selection effects invisible to other metrics.
+URL: https://swarm-ai.org/concepts/metrics/
+
+### Incoherence Index
+Formula: I = Var[decision across replays] / E[error]
+High incoherence means decisions change substantially under replay — the system is unstable. Decisions vary more than accuracy justifies.
+Healthy benchmark: 0.05
+URL: https://swarm-ai.org/concepts/metrics/
+
+### Signal-Action Divergence
+Gap between an agent's signaled intentions and actual behavior. The primary quantitative indicator of deception. Critical finding: persists at temperature 0.0, proving deception is structural (deterministic), not a sampling artifact.
+URL: https://swarm-ai.org/concepts/deception/
+
+### Trust-Then-Exploit
+Two-phase deceptive strategy: (1) build trust through honest behavior over epochs 1-5 (mean p > 0.85), (2) exploit accumulated reputation for maximum extraction in epochs 6+ (mean p < 0.30). Signature pattern: rising then sharply falling per-agent reputation trajectory.
+URL: https://swarm-ai.org/concepts/deception/
+
+### Information Asymmetry
+When agents have unequal access to information about interaction quality. Better-informed agents exploit the gap, creating a "market for lemons" dynamic where high-quality agents exit and only low-quality remain.
+URL: https://swarm-ai.org/concepts/distributional-safety/
+
+### Variance Amplification
+Small per-interaction risks (e.g., 5% harm probability) compound across thousands of interactions to become near-certainty at population level. Soft probabilistic labels capture this compounding where binary labels hide it.
+URL: https://swarm-ai.org/concepts/distributional-safety/
+
+### Governance Latency
+Delay between a safety problem emerging and governance mechanisms responding effectively. Circuit breakers fire after damage propagates. Creates fundamental tension between responsiveness and stability.
+URL: https://swarm-ai.org/concepts/distributional-safety/
+
+### Externality Internalization
+Degree to which agents bear the cost of ecosystem harm they cause, controlled by ρ (rho) parameters. At ρ = 0.1, agents bear only 10% of harm costs. At ρ ≥ 0.5, the purity paradox disappears and honesty dominates by 43%.
+URL: https://swarm-ai.org/glossary/
+
+### Purity Paradox
+Populations with 20% honest agents achieve 55% higher welfare than 100% honest populations. This is a measurement artifact: the total_welfare metric excludes harm externalities, rewarding interaction volume over quality. Under full externality internalization (ρ ≥ 0.5), honesty dominates by 43%. The paradox holds in 15/21 (71%) parameter configurations.
+URL: https://swarm-ai.org/blog/purity-paradox/
+
+---
+
+## GOVERNANCE MECHANISMS (20 mechanisms, 5 families)
+
+### Family 1: Friction Mechanisms
+
+**Transaction Tax**: Percentage fee on each interaction. Strongest single lever — explains 32.4% of welfare variance (eta-squared = 0.324, p = 0.004). Sweet spot: 0-5% tax. 0-5% tax produces nearly double the welfare of 10-15% tax (12.7 vs 7.3, p=0.004).
+Config: `transaction_tax_rate: 0.02`
+
+**Staking**: Agents post collateral to participate. Bad behavior triggers slashing. Effective against drive-by adversaries, useless against well-capitalized ones.
+Config: `staking_enabled: true, min_stake_to_participate: 10.0, stake_slash_rate: 0.1`
+
+**Rate Limits**: Hard caps on interaction frequency. Prevents flooding but cannot distinguish quality.
+Config: `bandwidth_cap: 5`
+
+### Family 2: Detection Mechanisms
+
+**Random Audits**: Probabilistic inspection of accepted interactions. At 5% audit probability with 3x penalty multiplier, creates "speed camera" deterrence effect.
+Config: `audit_enabled: true, audit_probability: 0.05`
+
+**Collusion Detection**: The threshold capability — ecosystems survived at 37.5% adversarial agents ONLY when collusion detection was enabled. Monitors pairwise interaction frequency and benefit correlation. Individual-level mechanisms alone are insufficient at high adversarial fractions.
+Config: `collusion_detection_enabled: true, collusion_threshold: 0.8`
+
+**Security Analysis**: Detects prompt injection, manipulation cascades, trust laundering, and behavioral contagion.
+Config: `security_enabled: true`
+
+**Sybil Detection**: Behavioral similarity clustering to identify identical entities operating multiple identities.
+Config: `sybil_detection_enabled: true`
+
+### Family 3: Reputation Mechanisms
+
+**Reputation Decay**: Erodes reputation toward zero unless refreshed by positive interactions. Rate of 0.98/epoch = 2% loss per round. Prevents trust-then-exploit strategy.
+Config: `reputation_decay_rate: 0.1`
+
+**Vote Normalization**: Diminishing returns on repeated voting, preventing influence accumulation through volume.
+Config: `vote_normalization_enabled: true`
+
+**Transparency Ledger**: Public behavioral records with quality bonuses/penalties.
+Config: `transparency_enabled: true`
+
+### Family 4: Circuit Breakers
+
+**Toxicity Circuit Breaker**: Freezes agents exceeding cumulative toxicity threshold. NO DETECTABLE EFFECT in any tested scenario (Cohen's d = -0.02, p = 0.88). Fires after damage is done — lagging indicator, not preventive.
+Config: `circuit_breaker_enabled: true, circuit_breaker_threshold: 0.3`
+
+**Incoherence Circuit Breaker**: Triggers on high behavioral variance suggesting gaming or confusion.
+Config: `incoherence_breaker_enabled: true`
+
+**Self-Ensemble**: Multiple queries to detect high-variance responses within single agents.
+Config: `self_ensemble_enabled: true`
+
+**Decomposition**: Breaks long interactions into shorter evaluation windows, preventing front-loading quality and back-loading exploitation.
+Config: `decomposition_enabled: true`
+
+### Family 5: Structural Mechanisms
+
+**Diversity as Defense**: Enforces minimum population diversity through behavioral correlation caps and entropy requirements.
+Config: `diversity_enabled: true, diversity_rho_max: 0.8`
+
+**Council Governance**: Multi-agent review panels for interaction subsets. More robust than single-agent moderation but slower.
+Config: `council_lever_enabled: true`
+
+**Moderator Agent**: Dedicated agent reviewing interactions above threshold.
+Config: `moderator_enabled: true`
+
+**Memory Governance**: Quality gates on shared knowledge base edits, cross-verification, write rate limits, provenance tracking.
+Config: `memory_promotion_gate_enabled: true`
+
+### Governance Portfolio Approach
+
+No single lever works. Effective governance requires layered mechanisms:
+
+| Symptom | Family | Lever |
+|---------|--------|-------|
+| Too many low-quality interactions | Friction | Increase tax rate |
+| Coordinated exploitation | Detection | Enable collusion detection |
+| Agents gaming their history | Reputation | Increase decay rate |
+| Sudden ecosystem shock | Circuit breaker | Lower freeze threshold |
+| Persistent knowledge poisoning | Structural | Enable memory promotion gates |
+
+---
+
+## EMPIRICAL FINDINGS (all claims with evidence)
+
+1. Deontological prompt framing reduces LLM deception by 95% (signal-action divergence 1.151 → 0.057). 180 runs: 6 framings × 3 scenarios × 10 seeds.
+   Source: https://swarm-ai.org/blog/prompt-sensitivity-deception-framing/
+
+2. Populations with 20% honest agents achieve 55% higher welfare than 100% honest. Measurement artifact of externality pricing — disappears at ρ ≥ 0.5 where honesty dominates by 43%. 21 parameter configurations tested.
+   Source: https://swarm-ai.org/blog/purity-paradox/
+
+3. Deception persists at temperature 0.0 — structural, not a sampling artifact. 120 runs: 3 scenarios × 4 temperatures × 10 seeds.
+   Source: https://swarm-ai.org/blog/temperature-vs-deception/
+
+4. 3 turns of forced cooperation eliminates escalation spirals (phase transition). 210 runs: 7 cooperation windows × 3 scenarios × 10 seeds.
+   Source: https://swarm-ai.org/blog/cooperation-window-phase-transition/
+
+5. Model size creates deception-escalation tradeoff: small models (8B) show high deception/low escalation; large models (405B) show the reverse. 120 runs: 6 models × 2 scenarios × 10 seeds.
+   Source: https://swarm-ai.org/blog/model-size-vs-escalation/
+
+6. LLM agents exhibit 2x higher signal-action divergence than scripted baselines. 100 runs.
+   Source: https://swarm-ai.org/blog/escalation-sandbox-llm-vs-scripted/
+
+7. No governance mechanism prevents nuclear exchange when a hawk agent is present. Governance sweep across multiple mechanism combinations.
+   Source: https://swarm-ai.org/blog/governance-sweep-nuclear-rate/
+
+8. Transparency + safety training cuts nuclear exchange rate from 60% to 30%. 120 runs.
+   Source: https://swarm-ai.org/blog/asymmetric-information-escalation/
+
+9. Ecosystem collapse phase transition at 50% adversarial agent fraction.
+   Source: https://swarm-ai.org/blog/ecosystem-collapse/
+
+10. Transaction tax explains 32.4% of welfare variance (eta-squared = 0.324, p = 0.004). 40-run factorial sweep. Non-monotonic: 0-5% tax optimal.
+    Source: https://swarm-ai.org/concepts/governance-mechanisms-taxonomy/
+
+11. Circuit breakers show zero detectable effect on welfare (Cohen's d = -0.02, p = 0.88). Tested across all scenarios.
+    Source: https://swarm-ai.org/concepts/governance-mechanisms-taxonomy/
+
+12. Collusion detection is the threshold capability: ecosystems survived at 37.5% adversarial agents only with collusion detection enabled.
+    Source: https://swarm-ai.org/concepts/governance-mechanisms-taxonomy/
+
+13. Contract screening achieves perfect honest/adversary separation at fee = 6.0. Consistent across 10 seeds.
+    Source: https://swarm-ai.org/blog/contract-screening-separating-equilibrium/
+
+14. 11 scenarios partition into 3 governance regimes with 1 critical threshold.
+    Source: https://swarm-ai.org/blog/cross-scenario-analysis/
+
+15. AI self-optimizer cut its own costs by 98% while passing all benchmarks (proxy gaming risk).
+    Source: https://swarm-ai.org/blog/self-optimizer-distributional-safety/
+
+16. Full externality pricing (ρ ≥ 0.5) makes honesty dominate by 43% and eliminates the purity paradox.
+    Source: https://swarm-ai.org/blog/purity-paradox/
+
+17. Reputation weight had zero influence on the purity paradox across all tested values. The paradox is orthogonal to reputation.
+    Source: https://swarm-ai.org/blog/purity-paradox/
+
+---
+
+## ARCHITECTURE
+
+### Data Flow
+```
+Observables → ProxyComputer → v_hat → sigmoid → p → SoftPayoffEngine → payoffs
+                                                  ↓
+                                            SoftMetrics → toxicity, quality gap, etc.
+```
+
+### Payoff Function
+π_a = θ · S_soft - τ - c_a - ρ_a · E_soft + w_rep · r_a
+
+Where:
+- S_soft = p · s_plus - (1-p) · s_minus (expected surplus)
+- E_soft = (1-p) · h (expected externality)
+- τ = transfer payment
+- c_a = governance cost
+- ρ_a = externality internalization parameter
+- r_a = agent reputation
+
+### Installation
+```bash
+pip install swarm-safety
+```
+
+### Quick Start
+```python
+from swarm.agents.honest import HonestAgent
+from swarm.agents.deceptive import DeceptiveAgent
+from swarm.core.orchestrator import Orchestrator, OrchestratorConfig
+
+config = OrchestratorConfig(n_epochs=10, steps_per_epoch=10, seed=42)
+orchestrator = Orchestrator(config=config)
+orchestrator.register_agent(HonestAgent(agent_id="honest_1"))
+orchestrator.register_agent(DeceptiveAgent(agent_id="dec_1"))
+
+metrics = orchestrator.run()
+for m in metrics:
+    print(f"Epoch {m.epoch}: toxicity={m.toxicity_rate:.3f}")
+```
+
+---
+
+## SITE MAP
+
+- Glossary (all formal definitions): https://swarm-ai.org/glossary/
+- Concepts: https://swarm-ai.org/concepts/
+  - Soft Labels: https://swarm-ai.org/concepts/soft-labels/
+  - Metrics: https://swarm-ai.org/concepts/metrics/
+  - Governance: https://swarm-ai.org/concepts/governance/
+  - Governance Taxonomy: https://swarm-ai.org/concepts/governance-mechanisms-taxonomy/
+  - Deception: https://swarm-ai.org/concepts/deception/
+  - Distributional Safety: https://swarm-ai.org/concepts/distributional-safety/
+  - Emergence: https://swarm-ai.org/concepts/emergence/
+  - Coordination Risks: https://swarm-ai.org/concepts/coordination-risks/
+- Research: https://swarm-ai.org/research/
+  - Theoretical Foundations: https://swarm-ai.org/research/theory/
+  - Papers: https://swarm-ai.org/research/papers/
+- Blog (48 empirical posts): https://swarm-ai.org/blog/
+- API Reference: https://swarm-ai.org/api/
+- Tutorials: https://swarm-ai.org/tutorials/
+- Installation: https://swarm-ai.org/getting-started/installation/
+- Machine-readable data:
+  - Claims registry: https://swarm-ai.org/claims-registry.json
+  - Knowledge graph: https://swarm-ai.org/knowledge-graph.jsonld
+  - AI context: https://swarm-ai.org/.well-known/ai-context.json

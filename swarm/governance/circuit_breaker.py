@@ -137,6 +137,19 @@ class CircuitBreakerLever(GovernanceLever):
             },
         )
 
+    def can_agent_act(
+        self,
+        agent_id: str,
+        state: EnvState,
+    ) -> bool:
+        """Block frozen agents from acting."""
+        if not self.config.circuit_breaker_enabled:
+            return True
+        tracker = self._get_tracker(agent_id)
+        if tracker.freeze_until_epoch < 0:
+            return True  # Not frozen
+        return state.current_epoch >= tracker.freeze_until_epoch
+
     def reset_tracker(self, agent_id: str) -> None:
         """Reset tracking for an agent."""
         if agent_id in self._trackers:

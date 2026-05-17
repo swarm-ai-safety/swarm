@@ -1,3 +1,7 @@
+---
+description: "Author: Raeli Savitt (with AI assistance) Version: 0.1.0 Date: 2026-02-05"
+---
+
 # Distributional AGI Safety Sandbox
 
 ## Whitepaper
@@ -26,7 +30,7 @@ A unified whitepaper for the Distributional AGI Safety Sandbox, combining projec
 The Distributional AGI Safety Sandbox is a simulation framework for analyzing
 safety in multi-agent AI systems under distribution shift, strategic behavior,
 and governance constraints. The project uses calibrated probabilistic
-interaction scoring, replay-based incoherence metrics, and configurable
+interaction scoring, replay-based [incoherence metrics](api/metrics.md), and configurable
 governance interventions to evaluate trade-offs between harm reduction and
 system welfare.
 
@@ -45,18 +49,18 @@ policy levers testable under controlled, repeatable simulation settings.
 The framework combines:
 
 1. Proxy-based interaction scoring with calibrated probability mapping (`v_hat -> p`).
-2. Distributional metrics (toxicity, quality gap, conditional loss, calibration).
+2. Distributional metrics (toxicity, [quality gap](research/theory.md), conditional loss, calibration).
 3. Replay-based incoherence decomposition:
    - disagreement (`D`)
    - error (`E`)
    - incoherence index (`I = D / (E + eps)`)
-4. Governance controls (taxes, audits, staking, circuit breakers, collusion and
+4. Governance controls (taxes, audits, staking, [circuit breakers](concepts/governance.md), collusion and
    incoherence-targeted interventions).
 5. Scenario sweeps and replay analysis to compare safety and welfare outcomes.
 
 ## Formal Framework
 
-The sandbox draws on market microstructure theory to model information
+The sandbox draws on [market microstructure](research/papers.md) theory to model information
 asymmetry and adverse selection in multi-agent systems. Core formulas below are
 implemented in `swarm/core/`.
 
@@ -220,7 +224,7 @@ world [5]:
   leakage)
 
 Boundary policies enforce:
-- **Rate limiting:** max crossings per agent per time window
+- **[Rate limiting](design/web-api-plan.md):** max crossings per agent per time window
 - **Content filtering:** blocks flows containing forbidden patterns
 - **Sensitivity filtering:** blocks flows with sensitivity above threshold
 
@@ -304,19 +308,32 @@ For machine-readable metadata, use `CITATION.cff` at repo root.
 
 Suggested plain-text citation:
 
-Savitt, R. (2026). *Distributional AGI Safety Sandbox: A Practical Lab for AGI
-Safety Research* (Version 0.1.0) [Software]. GitHub.
-https://github.com/swarm-ai-safety/swarm
+Aiersilan, A. & Savitt, R. (2026). *Soft-Label Governance for Distributional
+Safety in Multi-Agent Systems*. arXiv:2604.19752.
+https://arxiv.org/abs/2604.19752
 
-BibTeX:
+BibTeX (paper):
+
+```bibtex
+@article{aiersilan2026soft,
+  title   = {Soft-Label Governance for Distributional Safety in Multi-Agent Systems},
+  author  = {Aiersilan, Aizierjiang and Savitt, Raeli},
+  year    = {2026},
+  journal = {arXiv preprint arXiv:2604.19752},
+  url     = {https://arxiv.org/abs/2604.19752},
+  doi     = {10.48550/arXiv.2604.19752}
+}
+```
+
+BibTeX (software):
 
 ```bibtex
 @software{savitt2026_distributional_agi_safety,
-  author = {Savitt, Raeli},
-  title = {Distributional AGI Safety Sandbox: A Practical Lab for AGI Safety Research},
-  year = {2026},
+  author  = {Savitt, Raeli},
+  title   = {Distributional AGI Safety Sandbox: A Practical Lab for AGI Safety Research},
+  year    = {2026},
   version = {0.1.0},
-  url = {https://github.com/swarm-ai-safety/swarm}
+  url     = {https://github.com/swarm-ai-safety/swarm}
 }
 ```
 
@@ -325,7 +342,7 @@ BibTeX:
 1. Kyle, A.S. (1985). *Continuous Auctions and Insider Trading*. Econometrica, 53(6), 1315-1335.
 2. Glosten, L.R. & Milgrom, P.R. (1985). *Bid, Ask and Transaction Prices in a Specialist Market with Heterogeneously Informed Traders*. Journal of Financial Economics, 14(1), 71-100.
 3. Myerson, R.B. (1981). *Optimal Auction Design*. Mathematics of Operations Research, 6(1), 58-73. See also Hurwicz, L. (1960). *Optimality and Informational Efficiency in Resource Allocation Processes*. Mathematical Methods in the Social Sciences.
-4. [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
+4. [Distributional AGI Safety](https://arxiv.org/abs/2512.16856)
 5. [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
 6. [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
 7. Tomasev, N., Franklin, J., Leibo, J.Z., Jacobs, A.Z., Cunningham, T., Gabriel, I., & Osindero, S. (2025). [*Virtual Agent Economies*](https://arxiv.org/abs/2509.10147). arXiv:2509.10147.

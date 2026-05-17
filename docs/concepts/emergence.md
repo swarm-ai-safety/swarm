@@ -1,3 +1,22 @@
+---
+description: "Emergent behavior in multi-agent AI systems: how system-level risks arise from agent interactions. Covers phase transitions, tipping points, and population-level failure modes in SWARM."
+author: "SWARM Team"
+keywords:
+  - emergent behavior AI
+  - phase transitions multi-agent
+  - tipping points AI safety
+  - population-level failure modes
+defined_terms:
+  - Emergence
+  - Phase Transition
+  - Tipping Point
+faq:
+  - q: "How do emergent risks arise in multi-agent AI systems?"
+    a: "System-level failures emerge from agent interactions that aren't predictable from individual properties. Information asymmetry, adverse selection, variance amplification, and governance lag combine to produce population-level risks even when no individual agent is misaligned."
+  - q: "What is the hot mess hypothesis in AI safety?"
+    a: "The theory that AGI-level catastrophes may not require AGI-level agents, instead emerging from chaotic interactions of many sub-AGI systems pursuing local objectives that combine into globally harmful outcomes."
+---
+
 # Emergence
 
 Understanding how system-level risks emerge from agent interactions.
@@ -12,7 +31,7 @@ SWARM asks:
 
 > "What happens when many agents—each potentially aligned—interact in ways that produce misaligned outcomes?"
 
-This is the **emergence problem**: system-level failures that aren't predictable from individual agent properties.
+This is the **emergence problem**: system-level failures that aren't predictable from individual agent properties. The formal treatment appears in [Soft-Label Governance for Distributional Safety in Multi-Agent Systems](https://arxiv.org/abs/2604.19752); see also [Distributional AGI Safety](https://arxiv.org/abs/2512.16856).
 
 ## Why Emergence Matters
 
@@ -163,13 +182,15 @@ Key predictions:
 
 SWARM enables investigation of:
 
-- When does adverse selection emerge in multi-agent systems?
+- When does adverse selection emerge in [multi-agent systems](../research/papers.md)?
 - How does governance delay affect emergent risk?
 - What's the relationship between agent diversity and system stability?
 - Can emergence be predicted from agent-level properties?
 
-## Next Steps
+## See also
 
-- [Metrics](metrics.md) - Measure emergent properties
-- [Governance](governance.md) - Intervene on emergence
-- [Theoretical Foundations](../research/theory.md) - Formal treatment
+- [Metrics](metrics.md) — Measure emergent properties like adverse selection and toxicity drift
+- [Governance](governance.md) — Interventions that shape emergent dynamics
+- [Theoretical Foundations](../research/theory.md) — Formal treatment of phase transitions and collapse
+- [When Agent Ecosystems Collapse](../blog/ecosystem-collapse.md) — The 37.5-50% adversarial phase transition
+- [Reflexivity](../research/reflexivity.md) — When agents adapt to the research about them

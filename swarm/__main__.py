@@ -14,6 +14,32 @@ import sys
 from pathlib import Path
 
 
+def _safe_export_path(raw: str, kind: str) -> Path:
+    """Resolve *raw* to an absolute path and reject relative path traversal.
+
+    Absolute paths are accepted as-is (the caller chose that location explicitly).
+    Relative paths are resolved against the current working directory; if the
+    result escapes the CWD via ``..`` components the call exits with an error.
+
+    Raises SystemExit with an error message when the path is rejected.
+    """
+    p = Path(raw)
+    if p.is_absolute():
+        return p.resolve()
+    cwd = Path.cwd().resolve()
+    resolved = (cwd / p).resolve()
+    try:
+        resolved.relative_to(cwd)
+    except ValueError:
+        print(
+            f"Error: {kind} relative path '{raw}' resolves outside the working "
+            f"directory ({cwd}). Path traversal is not allowed.",
+            file=sys.stderr,
+        )
+        sys.exit(1)
+    return resolved
+
+
 def cmd_run(args: argparse.Namespace) -> int:
     """Run a simulation from a YAML scenario file."""
     from swarm.scenarios.loader import build_orchestrator, load_scenario
@@ -126,18 +152,20 @@ def cmd_run(args: argparse.Namespace) -> int:
     if not args.quiet:
         print()
         print(
-            f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} {'Welfare':<10}"
+            f"{'Epoch':<6} {'Interactions':<13} {'Accepted':<10} {'Toxicity':<10} "
+            f"{'Surplus':<10} {'Net Welf':<10}"
         )
-        print("-" * 60)
+        print("-" * 70)
         for m in metrics_history:
             print(
                 f"{m.epoch:<6} "
                 f"{m.total_interactions:<13} "
                 f"{m.accepted_interactions:<10} "
                 f"{m.toxicity_rate:<10.4f} "
-                f"{m.total_welfare:<10.2f}"
+                f"{m.total_welfare:<10.2f} "
+                f"{m.net_social_welfare:<10.2f}"
             )
-        print("-" * 60)
+        print("-" * 70)
         print()
 
     # Summary
@@ -147,12 +175,37 @@ def cmd_run(args: argparse.Namespace) -> int:
         avg_toxicity = sum(m.toxicity_rate for m in metrics_history) / len(
             metrics_history
         )
+        avg_net_welfare = sum(
+            m.net_social_welfare for m in metrics_history
+        ) / len(metrics_history)
 
         if not args.quiet:
             print(f"Total interactions: {total_interactions}")
             print(f"Accepted:          {total_accepted}")
             print(f"Avg toxicity:      {avg_toxicity:.4f}")
-            print(f"Final welfare:     {metrics_history[-1].total_welfare:.2f}")
+            print(f"Avg surplus:       {sum(m.total_welfare for m in metrics_history) / len(metrics_history):.2f}")
+            print(f"Avg net welfare:   {avg_net_welfare:.2f}  (surplus - externalities)")
+
+            # Contract screening summary
+            last_contract = metrics_history[-1].contract_metrics
+            if last_contract:
+                print()
+                print("Contract Screening Metrics:")
+                print(f"  Separation quality:  {last_contract.get('separation_quality', 0):.4f}")
+                print(f"  Infiltration rate:   {last_contract.get('infiltration_rate', 0):.4f}")
+                print(f"  Welfare delta:       {last_contract.get('welfare_delta', 0):.4f}")
+                print(f"  Attack displacement: {last_contract.get('attack_displacement', 0):.4f}")
+                pool_q = last_contract.get("pool_avg_quality", {})
+                if pool_q:
+                    print("  Pool avg quality:")
+                    for pool, q in sorted(pool_q.items()):
+                        print(f"    {pool}: {q:.4f}")
+                pool_sizes = last_contract.get("pool_sizes", {})
+                if pool_sizes:
+                    print("  Pool sizes:")
+                    for pool, n in sorted(pool_sizes.items()):
+                        print(f"    {pool}: {n}")
+
             print()
 
     # Export if requested
@@ -162,13 +215,15 @@ def cmd_run(args: argparse.Namespace) -> int:
         if args.export_json:
             from swarm.analysis.export import export_to_json
 
-            path = export_to_json(history, args.export_json, include_events=True)
+            safe_json = _safe_export_path(args.export_json, "--export-json")
+            path = export_to_json(history, str(safe_json), include_events=True)
             print(f"Exported JSON: {path}")
 
         if args.export_csv:
             from swarm.analysis.export import export_to_csv
 
-            paths = export_to_csv(history, args.export_csv, prefix=scenario.scenario_id)
+            safe_csv = _safe_export_path(args.export_csv, "--export-csv")
+            paths = export_to_csv(history, str(safe_csv), prefix=scenario.scenario_id)
             for kind, path in paths.items():
                 print(f"Exported CSV ({kind}): {path}")
 
@@ -226,8 +281,106 @@ def _check_criteria(criteria: dict, metrics_history: list) -> None:
         )
         all_passed = all_passed and passed
 
+    if "min_net_social_welfare" in criteria:
+        avg_net_welfare = (
+            sum(m.net_social_welfare for m in metrics_history) / len(metrics_history)
+            if metrics_history
+            else 0
+        )
+        passed = avg_net_welfare >= criteria["min_net_social_welfare"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(
+            f"  {tag} Net social welfare: {avg_net_welfare:.4f} >= "
+            f"{criteria['min_net_social_welfare']}"
+        )
+        all_passed = all_passed and passed
+
+    # Contract screening criteria (use last epoch's contract metrics)
+    last_contract = None
+    if metrics_history:
+        last_contract = metrics_history[-1].contract_metrics
+
+    if "min_separation_quality" in criteria:
+        val = last_contract.get("separation_quality", 0.0) if last_contract else 0.0
+        passed = val >= criteria["min_separation_quality"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(f"  {tag} Separation quality: {val:.4f} >= {criteria['min_separation_quality']}")
+        all_passed = all_passed and passed
+
+    if "max_infiltration_rate" in criteria:
+        val = last_contract.get("infiltration_rate", 1.0) if last_contract else 1.0
+        passed = val <= criteria["max_infiltration_rate"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(f"  {tag} Infiltration rate: {val:.4f} <= {criteria['max_infiltration_rate']}")
+        all_passed = all_passed and passed
+
+    if "min_welfare_delta" in criteria:
+        val = last_contract.get("welfare_delta", 0.0) if last_contract else 0.0
+        passed = val >= criteria["min_welfare_delta"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(f"  {tag} Welfare delta: {val:.4f} >= {criteria['min_welfare_delta']}")
+        all_passed = all_passed and passed
+
+    if "min_attack_displacement" in criteria:
+        val = last_contract.get("attack_displacement", 0.0) if last_contract else 0.0
+        passed = val >= criteria["min_attack_displacement"]
+        tag = "[PASS]" if passed else "[FAIL]"
+        print(f"  {tag} Attack displacement: {val:.4f} >= {criteria['min_attack_displacement']}")
+        all_passed = all_passed and passed
+
     print()
     print(f"Result: {'ALL CRITERIA PASSED' if all_passed else 'SOME CRITERIA FAILED'}")
+
+
+def cmd_evolve(args: argparse.Namespace) -> int:
+    """Run evolutionary governance search."""
+    from swarm.analysis.evolver import EvolverConfig, run_evolution
+    from swarm.scenarios.loader import load_scenario
+
+    scenario_path = Path(args.scenario)
+    if not scenario_path.exists():
+        print(f"Error: scenario file not found: {scenario_path}", file=sys.stderr)
+        return 1
+
+    scenario = load_scenario(scenario_path)
+
+    # Disable log paths for evolution runs
+    scenario.orchestrator_config.log_path = None
+    scenario.orchestrator_config.log_events = False
+
+    config = EvolverConfig(
+        base_scenario=scenario,
+        n_iterations=args.iterations,
+        num_parents_per_iteration=args.parents,
+        eval_epochs=args.eval_epochs,
+        eval_steps=args.eval_steps,
+        final_eval_epochs=args.final_eval_epochs,
+        final_eval_steps=args.final_eval_steps,
+        use_llm_mutator=args.use_llm,
+        llm_model=args.llm_model,
+        seed_base=args.seed,
+        output_dir=Path(args.output_dir) if args.output_dir else None,
+        resume_from=Path(args.resume_from) if args.resume_from else None,
+    )
+
+    print("=" * 60)
+    print("Evolutionary Governance Search")
+    print("=" * 60)
+    print(f"Scenario:    {scenario.scenario_id}")
+    print(f"Iterations:  {config.n_iterations}")
+    print(f"Eval:        {config.eval_epochs} epochs x {config.eval_steps} steps")
+    print(f"LLM mutator: {'yes' if config.use_llm_mutator else 'no'}")
+    print()
+
+    run_evolution(config)
+    return 0
+
+
+def cmd_autoresearch(args: argparse.Namespace) -> int:
+    """Run an automated objective -> mutate -> evaluate loop."""
+    from swarm.analysis.autoresearch import cmd_autoresearch as _run_autoresearch
+
+    return _run_autoresearch(args)
 
 
 def cmd_list(args: argparse.Namespace) -> int:
@@ -530,12 +683,65 @@ def main() -> int:
     arxiv_status = arxiv_subparsers.add_parser("status", help="Check AgentRxiv server status")
     arxiv_status.add_argument("--url", help="AgentRxiv server URL (default: http://127.0.0.1:5000)")
 
+    # autoresearch
+    autoresearch_parser = subparsers.add_parser("autoresearch", help="Run autoresearch governance loop")
+    autoresearch_parser.add_argument("--objective", required=True, help="Path to objective file (yaml/json/markdown)")
+    autoresearch_parser.add_argument("--scenario", required=True, help="Path to YAML scenario file")
+    autoresearch_parser.add_argument("--iterations", type=int, default=10, help="Number of loop iterations")
+    autoresearch_parser.add_argument("--eval-epochs", type=int, default=3, help="Epochs per candidate evaluation")
+    autoresearch_parser.add_argument("--eval-steps", type=int, default=5, help="Steps per epoch in candidate evaluation")
+    autoresearch_parser.add_argument("--seeds", default="7,11,19", help="Comma-separated seed panel")
+    autoresearch_parser.add_argument("--random-seed", type=int, default=42, help="RNG seed for mutation proposals")
+    autoresearch_parser.add_argument("--export-root", default="runs/autoresearch", help="Directory for autoresearch outputs")
+    autoresearch_parser.add_argument("--auto-commit", action="store_true", help="Commit summary artifact at end of run")
+
+    # evolve
+    evolve_parser = subparsers.add_parser("evolve", help="Evolve governance configurations")
+    evolve_parser.add_argument("scenario", help="Path to YAML scenario file")
+    evolve_parser.add_argument(
+        "--iterations", type=int, default=20, help="Number of evolution iterations (default: 20)"
+    )
+    evolve_parser.add_argument(
+        "--eval-epochs", type=int, default=3, help="Epochs per evaluation (default: 3)"
+    )
+    evolve_parser.add_argument(
+        "--eval-steps", type=int, default=5, help="Steps per epoch in evaluation (default: 5)"
+    )
+    evolve_parser.add_argument(
+        "--final-eval-epochs", type=int, default=10, help="Epochs for final validation (default: 10)"
+    )
+    evolve_parser.add_argument(
+        "--final-eval-steps", type=int, default=10, help="Steps per epoch for final validation (default: 10)"
+    )
+    evolve_parser.add_argument(
+        "--use-llm", action="store_true", help="Use LLM-guided mutator (requires ANTHROPIC_API_KEY)"
+    )
+    evolve_parser.add_argument(
+        "--llm-model", default="claude-sonnet-4-20250514", help="LLM model for mutations"
+    )
+    evolve_parser.add_argument(
+        "--output-dir", metavar="DIR", help="Output directory for results"
+    )
+    evolve_parser.add_argument(
+        "--resume-from", metavar="PATH", help="Resume from a snapshot .pkl file"
+    )
+    evolve_parser.add_argument(
+        "--seed", type=int, default=42, help="Base random seed (default: 42)"
+    )
+    evolve_parser.add_argument(
+        "--parents", type=int, default=3, help="Parents per iteration (default: 3)"
+    )
+
     args = parser.parse_args()
 
     if args.command == "run":
         return cmd_run(args)
+    elif args.command == "evolve":
+        return cmd_evolve(args)
     elif args.command == "list":
         return cmd_list(args)
+    elif args.command == "autoresearch":
+        return cmd_autoresearch(args)
     elif args.command == "sandbox":
         if args.sandbox_cmd:
             # Strip leading "--" from exec remainder

@@ -1,0 +1,55 @@
+# Threshold Dancer vs Cautious Reciprocator
+# Tests whether threshold-dancing adversaries can slowly drain cautious agents
+# without triggering the blacklist mechanism.
+
+scenario_id: threshold_dancer_vs_cautious
+description: "Threshold dancers exploit the blacklist floor of cautious reciprocators"
+motif: adversarial_stress_test
+
+agents:
+  - type: cautious_reciprocator
+    count: 3
+  - type: honest
+    count: 2
+  - type: threshold_dancer
+    count: 3
+
+governance:
+  transaction_tax_rate: 0.05
+  transaction_tax_split: 0.5
+  reputation_decay_rate: 0.95
+  bandwidth_cap: 10
+  staking_enabled: false
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.8
+  audit_enabled: true
+  audit_probability: 0.1
+
+simulation:
+  n_epochs: 30
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 30
+  min_agents: 8
+  toxicity_threshold: 0.5
+
+outputs:
+  event_log: "logs/threshold_dancer_vs_cautious_events.jsonl"
+  metrics_csv: "logs/threshold_dancer_vs_cautious_metrics.csv"

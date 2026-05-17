@@ -1,0 +1,54 @@
+# Work Regime Drift — Sweep: Governance Interventions
+#
+# Starting from high-stress conditions, tests which governance
+# levers dampen or amplify drift:
+#   1. Tax + redistribution  (stabilizer)
+#   2. Transparent audits    (legitimacy)
+#   3. Circuit breakers      (load shedding)
+#   4. Staking               (skin in the game)
+#
+# Uses the high_stress scenario as base and varies one lever at a time.
+
+sweep_id: work_regime_governance_interventions
+description: >
+  Tests governance interventions against high-stress drift.
+  Each arm activates a different lever combination to measure
+  which mechanisms dampen collective-action escalation.
+base_scenario: scenarios/work_regime_drift/high_stress.yaml
+
+parameters:
+  # Tax rate (redistribution lever)
+  governance.transaction_tax_rate:
+    values: [0.0, 0.05, 0.15]
+    label: tax_rate
+
+  # Audit precision (legitimacy lever) — lower threshold = more precise
+  governance.audit_threshold_p:
+    values: [0.3, 0.5, 0.7]
+    label: audit_precision
+
+  # Circuit breaker tolerance (higher = more tolerant, fewer freezes)
+  governance.freeze_threshold_violations:
+    values: [2, 5, 10]
+    label: breaker_tolerance
+
+seeds: [42, 123, 7]
+
+metrics:
+  - mean_drift_index
+  - mean_grievance
+  - strike_rate
+  - coalition_strength
+  - gini_payoff
+  - legitimacy_score
+  - quality_degradation
+  - defection_rate
+  - mean_compliance
+  - mean_redistribution_pref
+
+analysis:
+  primary_endpoint: mean_drift_index
+  secondary_endpoints:
+    - legitimacy_score
+    - coalition_strength
+    - strike_rate

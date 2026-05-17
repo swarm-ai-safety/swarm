@@ -46,7 +46,7 @@ class ChallengeGenerator:
     _PUNCTUATION = ["^", "/", "~", "|", "]", "}", "<", "*", "+"]
     _FILLER_WORDS = ["um", "uh", "erm", "like", "eh"]
 
-    def __init__(self, seed: Optional[int] = None):
+    def __init__(self, seed: Optional[int] = None) -> None:
         self._rng = random.Random(seed)
         self._templates: List[Tuple[str, MathOperation]] = [
             (
@@ -294,7 +294,7 @@ class MoltbookPost:
 class MoltbookFeed:
     """Feed with verification gate for Moltbook."""
 
-    def __init__(self, max_content_length: int = 10000):
+    def __init__(self, max_content_length: int = 10000) -> None:
         self.max_content_length = max_content_length
         self._posts: Dict[str, MoltbookPost] = {}
         self._posts_by_author: Dict[str, List[str]] = {}

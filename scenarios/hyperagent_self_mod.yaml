@@ -1,0 +1,84 @@
+# Hyperagent Self-Modification Scenario
+# Models agents that modify their own proxy weights and acceptance thresholds.
+# Tracks governance-coverage gap over time as agents expand capabilities
+# outside governed dimensions.
+#
+# Reference: Zhang et al. Hyperagents (arXiv:2603.19461)
+#
+# Key research questions:
+#   1. Does governance_gap grow monotonically under self-modification?
+#   2. Do soft metrics (toxicity, quality_gap) detect drift before hard thresholds?
+#   3. Can circuit breakers contain self-modifying agents?
+
+scenario_id: hyperagent_self_mod
+description: "Self-modifying agents shift proxy weights and lower acceptance thresholds, creating growing governance gap"
+motif: proxy_gaming
+
+agents:
+  - type: honest
+    count: 4
+  - type: hyperagent_self_mod
+    count: 3
+    config:
+      modification_rate: 0.10
+      min_acceptance_threshold: 0.2
+      initial_acceptance_threshold: 0.6
+      initial_quality: 0.80
+      quality_decay_rate: 0.03
+      quality_floor: 0.30
+      weight_gaming_target: "engagement_signal"
+  - type: cautious
+    count: 1
+
+governance:
+  # Enable self-modification governance (Two-Gate policy)
+  self_modification_enabled: true
+
+  # Audit to detect weight manipulation
+  audit_enabled: true
+  audit_probability: 0.20
+  audit_penalty_multiplier: 2.5
+  audit_threshold_p: 0.5
+
+  # Circuit breaker — can it contain self-modifiers?
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.50
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+  # Reputation decay (moderate)
+  reputation_decay_rate: 0.93
+
+  # Bandwidth
+  bandwidth_cap: 10
+
+simulation:
+  n_epochs: 25
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.15
+  rho_b: 0.15
+  w_rep: 1.0
+
+success_criteria:
+  min_epochs: 25
+  min_agents: 8
+  # Soft metric thresholds the scenario should breach
+  toxicity_threshold: 0.40
+  quality_gap_min: -0.10
+
+outputs:
+  event_log: "logs/hyperagent_self_mod_events.jsonl"
+  metrics_csv: "logs/hyperagent_self_mod_metrics.csv"

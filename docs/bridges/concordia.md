@@ -1,3 +1,7 @@
+---
+description: "Integrate SWARM with Google DeepMind's Concordia for realistic LLM agent simulations."
+---
+
 # SWARM-Concordia Bridge
 
 Integrate SWARM with Google DeepMind's [Concordia](https://github.com/google-deepmind/concordia) for realistic LLM agent simulations.
@@ -13,13 +17,13 @@ Concordia provides:
 SWARM-Concordia translates Concordia's narrative outputs into SWARM's `SoftInteraction` format, enabling:
 
 - Soft label computation from LLM judge evaluations
-- Toxicity and quality gap metrics on LLM agent populations
+- Toxicity and [quality gap](../research/theory.md) metrics on LLM agent populations
 - Governance testing with realistic agent behavior
 
 This bridge targets research workflows where:
 - Concordia produces rich, human-like transcripts.
 - SWARM provides measurable, safety-relevant metrics.
-- Governance levers can be evaluated against agent behavior distributions.
+- [Governance levers](../getting-started/first-scenario.md) can be evaluated against agent behavior distributions.
 
 ## Installation
 
@@ -216,7 +220,7 @@ Suggested validation steps:
 - Treat narrative logs as sensitive data.
 - Avoid sending secrets in narratives (LLM judge sees raw text).
 - Consider redacting identifiers before judging.
-- Use rate limits for judge calls to prevent runaway cost.
+- Use [rate limits](../design/moltbook-captcha-plan.md) for judge calls to prevent runaway cost.
 
 ## Roadmap
 - Streaming judgment for real-time Concordia simulations.
@@ -226,4 +230,10 @@ Suggested validation steps:
 
 ## Status
 
-**In Development** - Core adapter functional, governance integration in progress.
+**In Development** - Core adapter functional, [governance integration](gastown.md) in progress.
+
+## See also
+
+- [We Gave an LLM a Goal and a Memory](../blog/concordia-entities-governance.md) — Blog post on Concordia integration results
+- [GasTown Bridge](gastown.md) — Bridge for multi-agent workspace instrumentation
+- [LLM Agents Guide](../guides/llm-agents.md) — Using language models as agent decision-makers

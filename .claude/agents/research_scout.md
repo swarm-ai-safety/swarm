@@ -49,6 +49,13 @@ The invoker should provide:
 
 4) **Return the synthesis** — do not make any changes to local files. The invoker decides what to apply.
 
+## Tool allowlist
+
+- **Read**: any file (read-only — never write to local repo)
+- **Commands**: none (research output only)
+- **MCP**: `github` (read-only: `get_file_contents`, `search_code`, `search_repositories`)
+- **Forbidden**: All write operations. Do not create files, modify code, or run scenarios.
+
 ## Constraints
 
 - Read-only: never modify local files, only research and report.

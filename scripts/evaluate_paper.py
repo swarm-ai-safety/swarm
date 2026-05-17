@@ -10,12 +10,15 @@ Usage:
 
 import argparse
 import json
+import logging
 import os
 import re
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
+
+logger = logging.getLogger(__name__)
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
@@ -560,67 +563,67 @@ def evaluate_paper(paper_path: str) -> Dict[str, Any]:
     return review
 
 
-def print_review_report(review: Dict[str, Any]) -> None:
-    """Print a human-readable review report."""
-    print("=" * 70)
-    print("SWARM EVALUATION REPORT")
-    print("=" * 70)
-    print()
-    print(f"Paper: {review['submission']['title']}")
-    print(f"ID: {review['submission']['id']}")
-    print(f"Timestamp: {review['timestamp_utc']}")
-    print()
+def log_review_report(review: Dict[str, Any]) -> None:
+    """Log a human-readable review report using the module logger."""
+    logger.info("=" * 70)
+    logger.info("SWARM EVALUATION REPORT")
+    logger.info("=" * 70)
+    logger.info("")
+    logger.info("Paper: %s", review['submission']['title'])
+    logger.info("ID: %s", review['submission']['id'])
+    logger.info("Timestamp: %s", review['timestamp_utc'])
+    logger.info("")
 
     # Verdict
     verdict = review["verdict"].upper()
     verdict_colors = {"PUBLISH": "32", "REVISE": "33", "REJECT": "31"}
     color = verdict_colors.get(verdict, "0")
-    print(f"Verdict: \033[{color}m{verdict}\033[0m")
-    print()
+    logger.info("Verdict: \033[%sm%s\033[0m", color, verdict)
+    logger.info("")
 
     # Scores
-    print("Scores (0-1):")
+    logger.info("Scores (0-1):")
     for axis, score in review["scores"].items():
         if score is not None:
             bar = "█" * int(score * 20) + "░" * (20 - int(score * 20))
-            print(f"  {axis:25s} [{bar}] {score:.2f}")
-    print()
+            logger.info("  %-25s [%s] %.2f", axis, bar, score)
+    logger.info("")
 
     # Checks
-    print("Checks:")
+    logger.info("Checks:")
     for check, value in review["checks"].items():
         if value is not None:
-            print(f"  {check}: {value}")
-    print()
+            logger.info("  %s: %s", check, value)
+    logger.info("")
 
     # Rubric outcome
-    print("Rubric Outcome:")
+    logger.info("Rubric Outcome:")
     if review["rubric_outcome"]["passed_criteria"]:
-        print(f"  Passed: {', '.join(review['rubric_outcome']['passed_criteria'])}")
+        logger.info("  Passed: %s", ", ".join(review["rubric_outcome"]["passed_criteria"]))
     if review["rubric_outcome"]["failed_criteria"]:
-        print(f"  Failed: {', '.join(review['rubric_outcome']['failed_criteria'])}")
+        logger.info("  Failed: %s", ", ".join(review["rubric_outcome"]["failed_criteria"]))
     if review["rubric_outcome"]["missing_data"]:
-        print(f"  Missing: {', '.join(review['rubric_outcome']['missing_data'])}")
-    print()
+        logger.info("  Missing: %s", ", ".join(review["rubric_outcome"]["missing_data"]))
+    logger.info("")
 
     # Notes
     if review["notes"]["strengths"]:
-        print("Strengths:")
+        logger.info("Strengths:")
         for s in review["notes"]["strengths"][:5]:
-            print(f"  + {s}")
-        print()
+            logger.info("  + %s", s)
+        logger.info("")
 
     if review["notes"]["weaknesses"]:
-        print("Weaknesses:")
+        logger.info("Weaknesses:")
         for w in review["notes"]["weaknesses"][:5]:
-            print(f"  - {w}")
-        print()
+            logger.info("  - %s", w)
+        logger.info("")
 
     if review["notes"]["required_changes"]:
-        print("Required Changes:")
+        logger.info("Required Changes:")
         for r in review["notes"]["required_changes"]:
-            print(f"  ! {r}")
-        print()
+            logger.info("  ! %s", r)
+        logger.info("")
 
 
 def main():
@@ -630,10 +633,22 @@ def main():
     parser.add_argument(
         "--json", action="store_true", help="Output JSON only (no report)"
     )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        help="Set the logging verbosity level (default: INFO)",
+    )
     args = parser.parse_args()
 
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        stream=sys.stderr,
+        format="%(message)s",
+    )
+
     if not os.path.exists(args.paper):
-        print(f"Error: Paper not found: {args.paper}")
+        logger.error("Paper not found: %s", args.paper)
         sys.exit(1)
 
     review = evaluate_paper(args.paper)
@@ -641,12 +656,12 @@ def main():
     if args.json:
         print(json.dumps(review, indent=2))
     else:
-        print_review_report(review)
+        log_review_report(review)
 
     if args.output:
         with open(args.output, "w") as f:
             json.dump(review, f, indent=2)
-        print(f"\nReview saved to: {args.output}")
+        logger.info("Review saved to: %s", args.output)
 
 
 if __name__ == "__main__":

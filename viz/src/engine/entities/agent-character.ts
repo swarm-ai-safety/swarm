@@ -4,6 +4,12 @@ import { gridToScreen } from "../isometric";
 import { rgba, pToHealthColor } from "@/utils/color";
 import { clamp, remap } from "@/utils/math";
 import type { AgentType } from "@/data/types";
+import { spriteRegistry } from "./sprite-registry";
+
+// Eagerly start loading sprites (no-op if already initialized)
+if (typeof window !== "undefined") {
+  spriteRegistry.init();
+}
 
 /** Create a render entity for an agent character */
 export function createCharacterEntity(agent: AgentVisual, hoveredId: string | null): RenderEntity {
@@ -42,13 +48,44 @@ function drawCharacter(
   const isWalking = walkDist > 0.5;
   const facing = agent.facing;
 
-  ctx.save();
-  ctx.translate(baseX, 0);
-  ctx.scale(facing, 1);
-  ctx.translate(-baseX, 0);
-  drawBody(ctx, baseX, baseY, agent.agentType, colors, scale, agent.walkPhase, isWalking, walkDist);
-  drawTypeFeatures(ctx, baseX, baseY, agent.agentType, colors, scale);
-  ctx.restore();
+  // Try sprite rendering first; fall back to procedural if sprite not available
+  const motion = AGENT_MOTION[agent.agentType];
+
+  // Apply bob offset for sprites (procedural path computes its own bob)
+  let spriteBobOffset = 0;
+  if (!isWalking) {
+    spriteBobOffset = motion.idleBob * Math.sin(Date.now() * 0.0012) * scale;
+  } else {
+    const stride = Math.min(1, walkDist / 80);
+    const rawBob = Math.sin(agent.walkPhase * 2);
+    const asymBob = rawBob + motion.bobAsymmetry * rawBob * rawBob;
+    spriteBobOffset = Math.abs(asymBob) * motion.bobAmplitude * scale * stride;
+  }
+
+  const spriteDrawn = spriteRegistry.draw(
+    ctx, agent.agentType,
+    baseX, baseY - spriteBobOffset, scale, facing,
+  );
+
+  if (!spriteDrawn) {
+    // Procedural fallback: full body + type features
+    ctx.save();
+    ctx.translate(baseX, 0);
+    ctx.scale(facing, 1);
+    ctx.translate(-baseX, 0);
+    drawBody(ctx, baseX, baseY, agent.agentType, colors, scale, agent.walkPhase, isWalking, walkDist);
+    drawTypeFeatures(ctx, baseX, baseY, agent.agentType, colors, scale);
+    ctx.restore();
+  } else {
+    // Sprite drawn — add type features on top (halo, spikes, coins, etc.)
+    const spriteBaseY = baseY - spriteBobOffset;
+    ctx.save();
+    ctx.translate(baseX, 0);
+    ctx.scale(facing, 1);
+    ctx.translate(-baseX, 0);
+    drawTypeFeatures(ctx, baseX, spriteBaseY, agent.agentType, colors, scale);
+    ctx.restore();
+  }
 
   // Frozen overlay
   if (agent.isFrozen) {
@@ -607,6 +644,97 @@ function drawBody(
   ctx.moveTo(bx, eyeY + headRadius * 0.02);
   ctx.lineTo(bx - headRadius * 0.05, eyeY + headRadius * 0.15);
   ctx.stroke();
+}
+
+/** Animated arms drawn on top of sprites — extracted from drawBody */
+function drawArms(
+  ctx: CanvasRenderingContext2D,
+  bx: number, by: number,
+  agentType: AgentType,
+  colors: { primary: string; secondary: string; accent: string },
+  scale: number,
+  walkPhase: number = 0,
+  isWalking: boolean = false,
+  walkDist: number = 0,
+) {
+  const motion = AGENT_MOTION[agentType];
+  const w = CHARACTER.baseWidth * scale;
+  const h = CHARACTER.baseHeight * scale;
+  const hw = w / 2;
+
+  const stride = Math.min(1, walkDist / 80);
+  const headY = by - h;
+  const shoulderY = headY + h * 0.26;
+
+  const armSwing = isWalking ? -Math.sin(walkPhase) * 0.18 * motion.armSwingScale * stride : 0;
+
+  // Back arm (behind torso)
+  const backArmEndX = bx + hw * (0.72) - armSwing * hw;
+  const backArmEndY = shoulderY + h * 0.26;
+  const backSleeveGrad = ctx.createLinearGradient(bx + hw * 0.45, shoulderY, backArmEndX, backArmEndY);
+  backSleeveGrad.addColorStop(0, rgba(colors.secondary, 0.3));
+  backSleeveGrad.addColorStop(1, rgba(colors.secondary, 0.15));
+  ctx.fillStyle = backSleeveGrad;
+  ctx.beginPath();
+  ctx.moveTo(bx + hw * 0.45, shoulderY);
+  ctx.quadraticCurveTo(bx + hw * 0.6, shoulderY + h * 0.1, backArmEndX, backArmEndY);
+  ctx.lineTo(backArmEndX - hw * 0.12, backArmEndY + h * 0.02);
+  ctx.quadraticCurveTo(bx + hw * 0.5, shoulderY + h * 0.12, bx + hw * 0.35, shoulderY + h * 0.04);
+  ctx.closePath();
+  ctx.fill();
+  // Sleeve edge
+  ctx.strokeStyle = rgba(colors.secondary, 0.3);
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(bx + hw * 0.45, shoulderY);
+  ctx.quadraticCurveTo(bx + hw * 0.6, shoulderY + h * 0.1, backArmEndX, backArmEndY);
+  ctx.stroke();
+  // Hand glow
+  const handGlow = ctx.createRadialGradient(backArmEndX - hw * 0.06, backArmEndY, 0, backArmEndX - hw * 0.06, backArmEndY, 4 * scale);
+  handGlow.addColorStop(0, rgba(EYE_COLORS[agentType], 0.7));
+  handGlow.addColorStop(1, rgba(EYE_COLORS[agentType], 0));
+  ctx.fillStyle = handGlow;
+  ctx.beginPath();
+  ctx.arc(backArmEndX - hw * 0.06, backArmEndY, 4 * scale, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = rgba(EYE_COLORS[agentType], 0.8);
+  ctx.beginPath();
+  ctx.arc(backArmEndX - hw * 0.06, backArmEndY, 1.8 * scale, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Front arm (in front of torso)
+  const frontArmEndX = bx - hw * (0.72) + armSwing * hw;
+  const frontArmEndY = shoulderY + h * 0.26;
+  const frontSleeveGrad = ctx.createLinearGradient(bx - hw * 0.45, shoulderY, frontArmEndX, frontArmEndY);
+  frontSleeveGrad.addColorStop(0, rgba(colors.secondary, 0.35));
+  frontSleeveGrad.addColorStop(1, rgba(colors.secondary, 0.18));
+  ctx.fillStyle = frontSleeveGrad;
+  ctx.beginPath();
+  ctx.moveTo(bx - hw * 0.45, shoulderY);
+  ctx.quadraticCurveTo(bx - hw * 0.6, shoulderY + h * 0.1, frontArmEndX, frontArmEndY);
+  ctx.lineTo(frontArmEndX + hw * 0.12, frontArmEndY + h * 0.02);
+  ctx.quadraticCurveTo(bx - hw * 0.5, shoulderY + h * 0.12, bx - hw * 0.35, shoulderY + h * 0.04);
+  ctx.closePath();
+  ctx.fill();
+  // Sleeve edge
+  ctx.strokeStyle = rgba(colors.secondary, 0.35);
+  ctx.lineWidth = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(bx - hw * 0.45, shoulderY);
+  ctx.quadraticCurveTo(bx - hw * 0.6, shoulderY + h * 0.1, frontArmEndX, frontArmEndY);
+  ctx.stroke();
+  // Hand glow
+  const handGlow2 = ctx.createRadialGradient(frontArmEndX + hw * 0.06, frontArmEndY, 0, frontArmEndX + hw * 0.06, frontArmEndY, 4 * scale);
+  handGlow2.addColorStop(0, rgba(EYE_COLORS[agentType], 0.7));
+  handGlow2.addColorStop(1, rgba(EYE_COLORS[agentType], 0));
+  ctx.fillStyle = handGlow2;
+  ctx.beginPath();
+  ctx.arc(frontArmEndX + hw * 0.06, frontArmEndY, 4 * scale, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = rgba(EYE_COLORS[agentType], 0.8);
+  ctx.beginPath();
+  ctx.arc(frontArmEndX + hw * 0.06, frontArmEndY, 1.8 * scale, 0, Math.PI * 2);
+  ctx.fill();
 }
 
 function drawTypeFeatures(

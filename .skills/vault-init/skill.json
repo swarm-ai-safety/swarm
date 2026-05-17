@@ -1,0 +1,20 @@
+{
+  "name": "research-os-vault-init",
+  "description": "Initialize or extend a SWARM Research OS vault. Creates directory structure, installs templates, generates index, and optionally backfills run.yaml metadata for existing runs.",
+  "version": "0.1.0",
+  "author": "arscontexta",
+  "tags": [
+    "research-os",
+    "vault",
+    "setup",
+    "knowledge-management",
+    "swarm"
+  ],
+  "entry": "SKILL.md",
+  "platform_hints": {
+    "claude-code": {
+      "context": "fork",
+      "model": "opus"
+    }
+  }
+}

@@ -1,14 +1,18 @@
+---
+description: "Red-team your AI agent governance with adversarial stress testing. SWARM's attack library tests 8 standard patterns — deception detection, adversarial agents, and governance bypass strategies."
+---
+
 # Red Teaming
 
 > **Implementation reference:** For adaptive adversary internals, full strategy table, governance effectiveness metrics, and evaluation results, see [docs/red-teaming.md](../red-teaming.md).
 
-Test your governance mechanisms against adversarial agents.
+Test your [governance mechanisms](../concepts/governance.md) against adversarial agents.
 
 ## Overview
 
 SWARM's red-teaming module provides:
 
-- **Adversarial agents** with configurable attack strategies
+- **Adversarial agents** with configurable [attack strategies](../red-teaming.md)
 - **Attack scenarios** that stress-test governance
 - **Evasion metrics** to measure detection capabilities
 
@@ -220,3 +224,10 @@ jobs:
           pip install swarm-safety[dev]
           swarm redteam scenarios/governed.yaml --threshold 0.8
 ```
+
+## See also
+
+- [Governance](../concepts/governance.md) — The safety mechanisms red teaming aims to stress-test
+- [Parameter Sweeps](parameter-sweeps.md) — Systematic parameter exploration complements red teaming
+- [Red-Teaming the Contract Screening Mechanism](../blog/red-team-contract-screening.md) — Example red team study
+- [Emergence](../concepts/emergence.md) — How system-level failures emerge from agent interactions

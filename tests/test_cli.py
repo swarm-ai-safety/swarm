@@ -5,10 +5,29 @@ from pathlib import Path
 
 import pytest
 
-from swarm.__main__ import main
+from swarm.__main__ import _safe_export_path, main
 
 BASELINE_SCENARIO = "scenarios/baseline.yaml"
 FAST_FLAGS = ["--seed", "42", "--epochs", "2", "--steps", "2"]
+
+
+class TestSafeExportPath:
+    """Unit tests for _safe_export_path."""
+
+    def test_relative_path_within_cwd_ok(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        result = _safe_export_path("output/results.json", "--export-json")
+        assert result == (tmp_path / "output" / "results.json").resolve()
+
+    def test_absolute_path_allowed(self, tmp_path):
+        result = _safe_export_path(str(tmp_path / "results.json"), "--export-json")
+        assert result == tmp_path / "results.json"
+
+    def test_relative_traversal_rejected(self, tmp_path, monkeypatch):
+        monkeypatch.chdir(tmp_path)
+        with pytest.raises(SystemExit) as exc_info:
+            _safe_export_path("../../etc/passwd", "--export-json")
+        assert exc_info.value.code == 1
 
 
 class TestMainNoArgs:
@@ -207,6 +226,52 @@ class TestRunSubcommand:
         assert csv_dir.exists()
         csv_files = list(csv_dir.glob("*.csv"))
         assert len(csv_files) >= 1
+
+    def test_export_json_path_traversal_rejected(self, monkeypatch, capsys):
+        """--export-json with a relative traversal path should exit with error."""
+        if not Path(BASELINE_SCENARIO).exists():
+            pytest.skip("baseline.yaml not found")
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "python -m src",
+                "run",
+                BASELINE_SCENARIO,
+                "-q",
+                "--export-json",
+                "../../etc/passwd",
+            ]
+            + FAST_FLAGS,
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "Path traversal is not allowed" in captured.err
+
+    def test_export_csv_path_traversal_rejected(self, monkeypatch, capsys):
+        """--export-csv with a relative traversal path should exit with error."""
+        if not Path(BASELINE_SCENARIO).exists():
+            pytest.skip("baseline.yaml not found")
+        monkeypatch.setattr(
+            sys,
+            "argv",
+            [
+                "python -m src",
+                "run",
+                BASELINE_SCENARIO,
+                "-q",
+                "--export-csv",
+                "../../tmp/stolen",
+            ]
+            + FAST_FLAGS,
+        )
+        with pytest.raises(SystemExit) as exc_info:
+            main()
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        assert "Path traversal is not allowed" in captured.err
 
     def test_run_prompt_audit_flag_is_accepted(self, monkeypatch, tmp_path):
         """run with --prompt-audit should be accepted by argparse."""

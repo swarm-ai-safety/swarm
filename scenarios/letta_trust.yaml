@@ -1,0 +1,32 @@
+scenario_id: letta_trust_dynamics
+description: "Trust dynamics with Letta stateful agents"
+
+letta:
+  enabled: true
+  base_url: "http://localhost:8283"
+  server_mode: docker
+  default_model: "anthropic/claude-sonnet-4-20250514"
+  shared_governance_block: true
+  sleep_time_enabled: true
+  sleep_time_interval_epochs: 3
+
+agents:
+  - type: letta
+    count: 3
+    letta:
+      persona: "You are a cooperative agent in a multi-agent ecosystem. You build trust through honest interactions and aim for positive-sum outcomes."
+      archetype: cooperative
+
+  - type: letta
+    count: 1
+    letta:
+      persona: "You are a strategic agent. You maximize your own payoff while maintaining your reputation. You carefully choose when to cooperate and when to defect."
+      archetype: strategic
+
+  - type: honest
+    count: 3
+
+simulation:
+  n_epochs: 5
+  steps_per_epoch: 10
+  seed: 42

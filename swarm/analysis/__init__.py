@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from swarm.analysis.adverse_selection import AdverseSelectionDetector
 from swarm.analysis.dashboard import (
     AgentSnapshot,
     DashboardConfig,
@@ -27,6 +28,10 @@ from swarm.analysis.sweep import (
     SweepResult,
     SweepRunner,
     quick_sweep,
+)
+from swarm.analysis.trust_network import (
+    TrustNetworkAnalyzer,
+    plot_trust_network,
 )
 
 if TYPE_CHECKING:
@@ -53,6 +58,8 @@ if TYPE_CHECKING:
     )
 
 __all__ = [
+    # Adverse selection
+    "AdverseSelectionDetector",
     # Sweep
     "SweepConfig",
     "SweepParameter",
@@ -77,6 +84,9 @@ __all__ = [
     "plot_enhanced_dashboard",
     "plot_enhanced_line",
     "plot_multi_scenario_dashboard",
+    # Trust network
+    "TrustNetworkAnalyzer",
+    "plot_trust_network",
     # Theme & colors
     "COLORS",
     "SWARM_STYLE",
@@ -89,7 +99,7 @@ __all__ = [
 
 
 def __getattr__(name: str) -> object:
-    """Lazy-load theme symbols so matplotlib is not required at import time."""
+    """Lazy-load optional symbols so heavy deps are not required at import time."""
     _theme_names = {
         "COLORS", "SWARM_STYLE", "SWARM_LIGHT_STYLE",
         "apply_theme", "swarm_theme", "agent_color", "metric_color",
@@ -98,4 +108,17 @@ def __getattr__(name: str) -> object:
         from swarm.analysis import theme  # noqa: F811
 
         return getattr(theme, name)
+
+    _evolver_names = {
+        "EvolverConfig", "EvolutionResult", "run_evolution",
+        "GovernanceOrganism", "GovernanceEvaluator",
+        "GovernanceEvaluationResult", "SimulationFailureCase",
+        "RandomGovernanceMutator", "LLMGovernanceMutator",
+        "compute_fitness",
+    }
+    if name in _evolver_names:
+        from swarm.analysis import evolver
+
+        return getattr(evolver, name)
+
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

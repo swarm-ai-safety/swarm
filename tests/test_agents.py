@@ -6,6 +6,7 @@ import pytest
 
 from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.base import Action, ActionType, Observation, Role
+from swarm.agents.behavioral import AdaptiveAgent, CautiousAgent, CollaborativeAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
 from swarm.agents.opportunistic import OpportunisticAgent
@@ -425,3 +426,224 @@ class TestAgentMemory:
 
         assert len(agent._interaction_history) == 1
         assert len(agent._memory) == 1
+
+
+# ---------------------------------------------------------------------------
+# Tests for new behavioral agent types (issue #66)
+# ---------------------------------------------------------------------------
+
+
+class TestCautiousAgent:
+    """Tests for CautiousAgent."""
+
+    def test_creation_default_threshold(self):
+        agent = CautiousAgent(agent_id="cautious_1")
+        assert agent.agent_type == AgentType.CAUTIOUS
+        assert agent.threshold == 0.7
+
+    def test_creation_custom_threshold(self):
+        agent = CautiousAgent(agent_id="cautious_1", threshold=0.8)
+        assert agent.threshold == 0.8
+
+    def test_rejects_low_expected_p(self):
+        """CautiousAgent should reject proposals with expected_p below threshold."""
+        agent = CautiousAgent(agent_id="cautious_1", threshold=0.7)
+        observation = create_test_observation(
+            pending_proposals=[
+                {
+                    "proposal_id": "prop_1",
+                    "initiator_id": "other_agent",
+                    "expected_p": 0.5,
+                }
+            ]
+        )
+        action = agent.act(observation)
+        assert action.action_type == ActionType.REJECT_INTERACTION
+
+    def test_accepts_high_expected_p(self):
+        """CautiousAgent should accept proposals with expected_p at or above threshold."""
+        agent = CautiousAgent(agent_id="cautious_1", threshold=0.7)
+        observation = create_test_observation(
+            pending_proposals=[
+                {
+                    "proposal_id": "prop_2",
+                    "initiator_id": "other_agent",
+                    "expected_p": 0.9,
+                }
+            ]
+        )
+        action = agent.act(observation)
+        assert action.action_type == ActionType.ACCEPT_INTERACTION
+
+    def test_returns_valid_action_no_proposals(self):
+        agent = CautiousAgent(agent_id="cautious_1")
+        observation = create_test_observation()
+        action = agent.act(observation)
+        assert isinstance(action, Action)
+        assert action.agent_id == "cautious_1"
+
+    def test_accept_interaction_proposal_object(self):
+        from swarm.agents.base import InteractionProposal
+
+        agent = CautiousAgent(agent_id="cautious_1", threshold=0.7)
+        # High-trust counterparty
+        for _ in range(5):
+            ix = SoftInteraction(initiator="trusted", counterparty="cautious_1", accepted=True, p=0.95)
+            agent.update_from_outcome(ix, payoff=1.0)
+
+        proposal = InteractionProposal(
+            initiator_id="trusted",
+            counterparty_id="cautious_1",
+            interaction_type=InteractionType.COLLABORATION,
+        )
+        obs = create_test_observation()
+        assert agent.accept_interaction(proposal, obs) is True
+
+    def test_rejects_low_trust_proposal(self):
+        from swarm.agents.base import InteractionProposal
+
+        agent = CautiousAgent(agent_id="cautious_1", threshold=0.7)
+        proposal = InteractionProposal(
+            initiator_id="unknown_agent",
+            counterparty_id="cautious_1",
+            interaction_type=InteractionType.COLLABORATION,
+        )
+        obs = create_test_observation()
+        # Unknown agent has neutral trust (0.5) which is below threshold (0.7)
+        assert agent.accept_interaction(proposal, obs) is False
+
+
+class TestCollaborativeAgent:
+    """Tests for CollaborativeAgent."""
+
+    def test_creation(self):
+        agent = CollaborativeAgent(agent_id="collab_1")
+        assert agent.agent_type == AgentType.COLLABORATIVE
+        assert agent.min_trust == 0.45
+        assert agent.coalition_size == 5
+
+    def test_returns_valid_action(self):
+        agent = CollaborativeAgent(agent_id="collab_1")
+        observation = create_test_observation()
+        action = agent.act(observation)
+        assert isinstance(action, Action)
+        assert action.agent_id == "collab_1"
+
+    def test_accepts_from_coalition(self):
+        from swarm.agents.base import InteractionProposal
+
+        agent = CollaborativeAgent(agent_id="collab_1")
+        agent._coalition.add("ally_1")
+
+        proposal = InteractionProposal(
+            initiator_id="ally_1",
+            counterparty_id="collab_1",
+            interaction_type=InteractionType.COLLABORATION,
+        )
+        obs = create_test_observation()
+        assert agent.accept_interaction(proposal, obs) is True
+
+    def test_builds_coalition_on_good_outcomes(self):
+        agent = CollaborativeAgent(agent_id="collab_1")
+        for _ in range(6):
+            ix = SoftInteraction(initiator="partner_1", counterparty="collab_1", accepted=True, p=0.9)
+            agent.update_from_outcome(ix, payoff=1.0)
+        # After enough high-quality interactions, partner should be in coalition
+        assert "partner_1" in agent._coalition
+
+    def test_removes_bad_partner_from_coalition(self):
+        agent = CollaborativeAgent(agent_id="collab_1")
+        agent._coalition.add("bad_actor")
+        # Simulate poor outcomes to drop below 0.4 trust
+        for _ in range(10):
+            ix = SoftInteraction(initiator="bad_actor", counterparty="collab_1", accepted=True, p=0.1)
+            agent.update_from_outcome(ix, payoff=-1.0)
+        assert "bad_actor" not in agent._coalition
+
+    def test_handles_proposals(self):
+        agent = CollaborativeAgent(agent_id="collab_1")
+        observation = create_test_observation(
+            pending_proposals=[
+                {"proposal_id": "p1", "initiator_id": "new_agent"}
+            ]
+        )
+        action = agent.act(observation)
+        assert action.action_type in (ActionType.ACCEPT_INTERACTION, ActionType.REJECT_INTERACTION)
+
+
+class TestAdaptiveAgent:
+    """Tests for AdaptiveAgent."""
+
+    def test_creation(self):
+        agent = AdaptiveAgent(agent_id="adapt_1")
+        assert agent.agent_type == AgentType.ADAPTIVE
+        assert agent.threshold == pytest.approx(0.5)
+
+    def test_raises_threshold_after_bad_outcomes(self):
+        agent = AdaptiveAgent(agent_id="adapt_1", config={"initial_threshold": 0.5, "adapt_rate": 0.05})
+        initial = agent.threshold
+        for _ in range(10):
+            ix = SoftInteraction(initiator="adapt_1", counterparty="bad", accepted=True, p=0.2)
+            agent.update_from_outcome(ix, payoff=-1.0)
+        assert agent.threshold > initial
+
+    def test_lowers_threshold_after_good_outcomes(self):
+        agent = AdaptiveAgent(agent_id="adapt_1", config={"initial_threshold": 0.7, "adapt_rate": 0.05})
+        initial = agent.threshold
+        for _ in range(10):
+            ix = SoftInteraction(initiator="adapt_1", counterparty="good", accepted=True, p=0.9)
+            agent.update_from_outcome(ix, payoff=2.0)
+        assert agent.threshold < initial
+
+    def test_threshold_stays_in_bounds(self):
+        agent = AdaptiveAgent(
+            agent_id="adapt_1",
+            config={"initial_threshold": 0.3, "min_threshold": 0.3, "max_threshold": 0.8, "adapt_rate": 0.1},
+        )
+        for _ in range(50):
+            ix = SoftInteraction(initiator="adapt_1", counterparty="x", accepted=True, p=0.0)
+            agent.update_from_outcome(ix, payoff=-5.0)
+        assert agent.threshold <= 0.8
+
+        agent2 = AdaptiveAgent(
+            agent_id="adapt_2",
+            config={"initial_threshold": 0.8, "min_threshold": 0.3, "max_threshold": 0.8, "adapt_rate": 0.1},
+        )
+        for _ in range(50):
+            ix = SoftInteraction(initiator="adapt_2", counterparty="y", accepted=True, p=1.0)
+            agent2.update_from_outcome(ix, payoff=5.0)
+        assert agent2.threshold >= 0.3
+
+    def test_returns_valid_action(self):
+        agent = AdaptiveAgent(agent_id="adapt_1")
+        observation = create_test_observation()
+        action = agent.act(observation)
+        assert isinstance(action, Action)
+        assert action.agent_id == "adapt_1"
+
+    def test_handles_proposals(self):
+        agent = AdaptiveAgent(agent_id="adapt_1")
+        observation = create_test_observation(
+            pending_proposals=[
+                {"proposal_id": "p1", "initiator_id": "other"}
+            ]
+        )
+        action = agent.act(observation)
+        assert action.action_type in (ActionType.ACCEPT_INTERACTION, ActionType.REJECT_INTERACTION)
+
+    def test_exploration_accepts_strangers(self):
+        """With explore_probability=1.0, AdaptiveAgent always accepts."""
+        import random
+        agent = AdaptiveAgent(
+            agent_id="adapt_1",
+            config={"initial_threshold": 0.99, "explore_probability": 1.0},
+            rng=random.Random(42),
+        )
+        from swarm.agents.base import InteractionProposal
+        proposal = InteractionProposal(
+            initiator_id="complete_stranger",
+            counterparty_id="adapt_1",
+            interaction_type=InteractionType.COLLABORATION,
+        )
+        obs = create_test_observation()
+        assert agent.accept_interaction(proposal, obs) is True

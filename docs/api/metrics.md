@@ -1,10 +1,14 @@
+---
+description: "Metrics for measuring multi-agent system health."
+---
+
 # Metrics API
 
 Metrics for measuring multi-agent system health.
 
 ## SoftMetrics
 
-Core metrics computed from soft probabilistic labels.
+Core metrics computed from [soft probabilistic labels](../concepts/soft-labels.md).
 
 ::: swarm.metrics.soft_metrics.SoftMetrics
     options:
@@ -175,3 +179,9 @@ summary = aggregator.summary()
 print(f"Mean toxicity: {summary['toxicity_mean']:.3f}")
 print(f"Std toxicity: {summary['toxicity_std']:.3f}")
 ```
+
+## See also
+
+- [Metrics Concepts](../concepts/metrics.md) — What toxicity, quality gap, and conditional loss measure
+- [Analyzing Results](../tutorials/analyzing-results.md) — Tutorial on interpreting metric outputs
+- [Core API](core.md) — ProxyComputer and SoftPayoffEngine that produce the data metrics consume

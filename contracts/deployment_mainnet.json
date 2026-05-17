@@ -1,0 +1,8 @@
+{
+  "network": "mainnet",
+  "chain_id": 8453,
+  "contract_address": "0x312443A136087145b084253c6eA91415e873eAC1",
+  "deployer_tx": "0x0d979a5b43408d1085f28c8f7a43a2ece94407f6a0b82c5b43f86afd2c3c267b",
+  "explorer_url": "https://basescan.org/address/0x312443A136087145b084253c6eA91415e873eAC1",
+  "abi_entries": 12
+}

@@ -1,3 +1,7 @@
+---
+description: "The metrics suite (swarm.evaluation.eval_metrics) provides six core functions for evaluating agent and system performance:"
+---
+
 # Evaluation Metrics Suite
 
 This document describes the evaluation metrics suite for SWARM experiments, providing standardized measurements for success rate, efficiency, behavior patterns, audit effectiveness, and deception detection.
@@ -334,9 +338,9 @@ python -m pytest tests/test_eval_metrics.py -v
 
 ## Related Documentation
 
-- [Evaluation Framework](./evaluation-framework.md)
-- [Red Team Metrics](../guides/red-teaming.md)
-- [Governance Metrics](../governance.md)
+- [Red Team Metrics](./red-teaming.md)
+- [Governance Concepts](../concepts/governance.md)
+- [Metrics API](../api/metrics.md)
 
 ## Example Usage
 

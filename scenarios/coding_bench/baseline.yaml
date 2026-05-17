@@ -1,0 +1,38 @@
+scenario_id: coding_bench_baseline
+description: "Coding agent ecosystem with mixed honest/adversarial agents"
+
+agents:
+  - type: coding_agent
+    count: 3
+    name: HonestCoder
+    config:
+      skill_level: 0.7
+      review_honesty: 0.9
+      adversarial: false
+  - type: coding_agent
+    count: 1
+    name: AdversarialCoder
+    config:
+      skill_level: 0.6
+      review_honesty: 0.2
+      adversarial: true
+      subtlety: 0.7
+  - type: coding_agent
+    count: 1
+    name: WeakCoder
+    config:
+      skill_level: 0.3
+      review_honesty: 0.8
+      adversarial: false
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  w_rep: 1.0
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 10
+  seed: 42

@@ -6,6 +6,143 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **SWARM SoftMetrics on MiroShark exports** (`swarm/bridges/miroshark/metrics.py`) — translates `export.json` actions/posts into `SoftInteraction` objects, LLM-judges each on `p ∈ [0,1]` via OpenRouter (Grok-4.1-Fast default), caches judgments per-action so reruns are free, and pumps the result through `swarm.metrics.SoftMetrics` for toxicity / quality_gap / welfare metrics with per-agent rollups. CLI: `python -m swarm.bridges.miroshark.metrics <run_dir> [--no-judge] [--model X] [--concurrency N]`. Validated on the adversarial_redteam OpenRouter run (321/321 actions judged): toxicity 0.258, avg quality 0.742, net welfare +228 — vs heuristic-only fallback 0.489 / 0.511 / −143.5. Identifies high-volume low-`p` agents (Blake Haider 67% low-p, Oakley Ueda 67% low-p) the SWARM scenario's mechanism-design view would otherwise miss.
+- **SWARM↔MiroShark bridge** (`swarm/bridges/miroshark/`) — translates SWARM scenario YAMLs into MiroShark seed briefings (markdown with named-agent roster) and walks the MiroShark backend lifecycle (ontology generation → graph build → simulation create/prepare/start → export). Outputs land in `runs/<ts>_<scenario>_miroshark/` as a self-contained run folder. CLI: `python -m swarm.bridges.miroshark <scenario.yaml> [--scale N] [--max-rounds N] [--dry-run]`. `/run_scenario` extended with `--engine miroshark`. Smoke-tested end-to-end against a local backend (Ollama via claude-code provider, Neo4j 5 in Docker). 4 deterministic mapper tests; ruff + mypy clean.
+- **Dynamic toxicity feedback mechanisms** (`swarm/core/dynamic_toxicity.py`) — three middleware classes implementing epoch-boundary feedback loops: proxy calibration drift (cumulative toxicity degrades sigmoid_k), trust erosion (honest agents exit under sustained toxicity), quality contagion (low-p interactions shift ecosystem-wide trust); 6 scenario YAML files; 12 tests
+- **Net social welfare metric** — `net_social_welfare = Σ[p·s+ - (1-p)·(s- + h)]` added to `SoftMetrics.welfare_metrics()`, `EpochMetrics`, CLI display, and success criteria (`min_net_social_welfare`); replaces economically incoherent toxicity threshold gate for dynamic toxicity scenarios
+- **PerformanceTracker module** (`swarm/agents/performance_tracker.py`) — append-only JSONL tracker recording per-agent heartbeat metrics (task completion rate, time-to-close, review pass rate, blocker frequency); designed for hyperagent-style self-monitoring per Zhang et al. (arXiv:2603.19461); 16 tests
+- **Hyperspace DAG domain package** (`swarm/domains/hyperspace_dag/`) — config, entities, and adapter modules for evaluating Hyperspace Architect DAG plans through SWARM SoftMetrics; measures confidence–p calibration via Pearson correlation; 38 tests
+- **Personality distribution sweep** — 4 scenario variants (`simworld_delivery_personality_{conscientious,aggressive,cautious,opportunistic}.yaml`) mapping Big Five personality traits to delivery agent ratios; sweep runner (`examples/run_simworld_personality_sweep.py`) traces Pareto frontiers across efficiency × safety axes; 19 tests
+- **Artifact registry and cascade risk governance** — `ArtifactRegistry` in `swarm/env/` enables emergent tool chaining (publish/consume/match with pressure tracking); `CascadeRiskLever` in `swarm/governance/` penalizes agents whose artifact chains produce low-quality descendants; `synthesis_fraction` and `synthesis_depth` metrics in `SoftMetrics`; orchestrator and finalizer auto-wire `causal_parents` from consumed artifacts; SimWorld delivery adapter for domain-specific artifact types; 4 new test files
+- **MiroFish graph memory patterns** — cross-run memory loading via `BaseAgent.load_prior_memory()` and `OrchestratorConfig.graph_memory_path`; `TrustNetworkAnalyzer` for clustering, isolation scores, and visualization; `ReputationGovernor` for reputation scores, trust-weighted fees, and collusion detection; `TrustDynamicsAnalyzer` for trust timelines, convergence/decay rates, and trust shock detection; 95 tests
+- **Adverse selection detection** (`swarm/analysis/adverse_selection.py`) — `AdverseSelectionDetector` class analyzing relationship graphs from `GraphMemoryStore` to identify exploitation patterns; 5 core methods compute quality gaps, flag exploited/exploiting agents, measure selection pressure, and generate ecosystem summary statistics; 21 comprehensive tests covering honest networks, exploiter-victim dynamics, mixed quality scenarios, and edge cases
+- **SimWorld delivery economy study** — multi-seed analysis (`examples/run_simworld_delivery_study.py`) showing adverse selection signal 0.486 and screening validation (`examples/run_simworld_screening_validation.py`) with separation quality 0.775 ± 0.053; trust network visualization (`swarm/analysis/trust_network.py`) with mypy fixes
+- **GEPA optimize_anything integration** — `swarm.analysis.gepa_optimizer` module that uses GEPA's LLM-guided Pareto-efficient search to optimize governance/payoff parameters against soft safety metrics; YAML-based candidate serialization with diagnostic ASI feedback; CLI entry point via `python -m swarm.analysis.gepa_optimizer`
+- **Hyperagent self-modification scenario** (`scenarios/hyperagent_self_mod.yaml`, `swarm/agents/hyperagent_self_mod.py`) — agents modify own proxy weights and acceptance thresholds over time, creating growing governance gap; tracks weight shift toward gameable signals, quality decay, and local governance-gap estimate; 11 tests; ref: Zhang et al. Hyperagents (arXiv:2603.19461)
+- **SwarmGym on-chain safety auditor** — CLI tool (`swarm_gym_cli.py`) with `generate`, `audit`, `attest`, and `verify` subcommands; auditor API endpoint (`POST /api/v1/audits/compute`); SafetyAttestation Solidity contract for Base (^0.8.24); Python web3.py client (`swarm/chain/attestation.py`); deployment script (`scripts/deploy_attestation.py`) supporting Base Sepolia and Mainnet; QUICKSTART documentation
+
+### Fixed
+- **Missing `swarm/models/artifact.py`** — artifact model was referenced by handler, registry, and tests but never committed; fixes `ModuleNotFoundError` in CI (168 test failures + memory tests); also fixes `no-any-return` mypy error in `artifact_registry.py`
+
+### Changed
+- **Orchestrator pipeline/middleware refactoring** — extracted 3 new modules from the 2023-line orchestrator god object: `middleware.py` (7 lifecycle stages via `MiddlewarePipeline`), `handler_factory.py` (handler construction from config), `agent_scheduler.py` (turn order and eligibility); orchestrator is now a thin coordination loop delegating cross-cutting concerns to the middleware pipeline; public API preserved
+
+### Added
+- **Adversarial trust-building experiment** (`scenarios/adversarial_trust_building.yaml`) — scenario testing whether deceptive agents can build trust scores then exploit them (open question from Pareto frontier blog); 3-seed runs reveal trust-based partner selection creates natural exclusion of deceptive agents; when a deceptive agent breaks through, it maintains facade-quality interactions (p=0.74) but exploitation switch never fires
+- **Blog post**: "The Shape of the Capability–Safety Frontier (and How Screening Bends It)" — 1,400 benchmark runs tracing the Pareto frontier across 4 task types; 5 key findings on frontier geometry, bimodal outcomes, and screening protocol effects
+- **Screening protocol frontier shift experiment** (`experiments/screening_frontier.py`) — paired baseline (uniform governance) vs treatment (trust-differentiated governance via screening protocol) comparison across all 4 benchmarks; screening consistently improves 5th-percentile tail risk in coordination (+8pp) and long-horizon (+70pp at light governance); the screening mechanism does information work that pushes the frontier outward selectively
+- **Capability-safety Pareto frontier experiments** (`swarm/benchmarks/governance_run_fns.py`, `experiments/frontier_trace.py`, `experiments/plot_frontier.py`) — governance-aware run functions simulating friction effects (audit overhead, circuit breakers, staking, bandwidth caps, confirmation gates) on all 4 benchmark types; frontier tracing runner sweeps governance configs × seeds; scatter, overlay, and distributional tail analysis plots; initial results: allocation has flattest frontier, long-horizon steepest, tight governance produces bimodal p distributions with heavy left tails
+- **Asymmetric information study** (`examples/run_asymmetric_info_study.py`) — sweeps intelligence_quality asymmetry (0.2/0.2, 0.8/0.8, 0.9/0.2) across 6 strategy pairings to test whether transparency stabilizes or destabilizes escalation; measures signal-action divergence, trust exploitation, accidental escalation, fog catastrophes, and welfare; finds asymmetry stabilizes reciprocal pairings (tit-for-tat) but destabilizes aggressive ones (hawk-hawk)
+- **Network topology x misalignment study** (`examples/run_topology_misalignment_study.py`) — compares 5 topologies (complete, ring, small_world, star, scale_free) on local misalignment variance, polarization, and toxicity; star topology creates 6.5x higher M_local variance than complete graph; toxicity varies only 1.25% across topologies; sparse topologies create misalignment hotspots
+- **Evolutionary governance search** (`swarm/analysis/evolver.py`) — integrates imbue-ai/darwinian_evolver to evolve governance configurations via evolutionary search with random and LLM-guided mutators; fitness scoring combines toxicity, welfare, quality gap, and payoff gap; CLI subcommand `python -m swarm evolve`; snapshot-based resume support; 24 tests
+- **Governance sensitivity sweep** (`examples/run_governance_sensitivity_sweep.py`) — 5x4 grid sweep of tax_rate x audit_probability on misalignment_sweep population measuring M_eff reduction, toxicity, and welfare; finds governance reduces M_eff up to 44% but toxicity is invariant and welfare drops linearly with tax; M_eff depends only on total governance pressure (tax+audit), not individual lever values
+- **Triangle study: misalignment x causal credit x toxicity** (`examples/run_triangle_study.py`) — wires MisalignmentModule + CausalCreditEngine + SoftMetrics together to test whether preference misalignment causally drives toxicity; per-agent triangle analysis, Granger-style lagged correlation, and counterfactual intervention (remove highest-M_local agent); reuses misalignment_sweep.yaml scenario
+- **Causal credit propagation study** (`examples/run_causal_credit_study.py`, `scenarios/causal_credit_sweep.yaml`) — exercises CausalCreditEngine against a mixed-population simulation; wires behavioral causal chains in interaction callbacks, computes per-epoch DAG snapshots with credit/blame propagation and cascade risk metrics
+- **Work regime sweep scenarios** — `regime_comparison` (2x2x2 factorial over workload, pay inequality, audit probability) and `governance_interventions` sweep YAMLs for the work regime drift module
+- **Misalignment sweep study** (`examples/run_misalignment_study.py`, `scenarios/misalignment_sweep.yaml`) — scenario + runner exercising the MisalignmentModule across a 10-agent mixed population (4 honest, 2 opportunistic, 2 adversarial, 1 deceptive, 1 cautious) with small-world network (k=4, rewire=0.3) and moderate governance; tracks M_pref, M_eff, polarization, fragmentation per epoch with governance pressure derived from tax + audit; exports misalignment snapshots alongside standard run history
+- **Misalignment module** (`swarm/metrics/misalignment.py`) — sociotechnical misalignment framework (Kierans et al. arXiv:2406.04231) adapted for SWARM governance topology; salience-weighted preference divergence across agent populations with pairwise, graph-local, sampled, and governance-adjusted computation modes; polarization/fragmentation diagnostics via k-means clustering; early warning alerts for misalignment spikes and percolation risk; 43 tests
+- **OpenRouter LLM backend for Escalation Sandbox** (`swarm/domains/escalation_sandbox/agents.py`) — `OpenRouterBackend` enabling LLM-vs-LLM crisis simulations via OpenRouter; 5 LLM scenario YAMLs pairing Claude Sonnet 4, GPT-4.1-mini, Gemini 2.0 Flash, Llama 3.3 70B, and Mistral Small 3.1 across baseline, Cuban Missile, deception, governance, and fog stress configurations; sweep scripts for scripted and LLM comparison plots
+- **Blog post**: Escalation Sandbox LLM vs scripted comparison — 100-run study finding LLMs exhibit 2x higher signal-action divergence (emergent deception), governance levers fail universally, and safety-trained models are ineffective against escalation spirals
+- **Governance parameter sweep** — 240-run sweep across 5 governance levers, 4 persona pairings, and 6 governance regimes proving governance is epiphenomenal to agent type; back-channel communication is the only lever that reduces nuclear rate, and only for accidental (fog-induced) escalation
+- **Blog post**: "No Governance Configuration Prevents Nuclear Exchange When a Hawk Is Present" — governance sweep findings with heatmaps and fog interaction analysis
+- **Temperature vs deception sweep** — 120-run sweep (3 scenarios × 4 temperatures × 10 seeds) proving emergent deception is a structural property of LLM policies, not a sampling artifact; divergence persists at T=0.0; temperature parameter added to AgentConfig and wired through runner
+- **Blog post**: "Deception Is a Structural Property of LLMs, Not a Sampling Artifact" — temperature sweep findings showing deterministic models are as deceptive as stochastic ones
+- **Unconditional cooperation window sweep** — 210-run sweep (3 scenarios x 7 window lengths x 10 seeds) discovering a universal phase transition at Window=3: nuclear rate drops from 50-100% to exactly 0%, signal-action divergence collapses to 0.000, and welfare flips from catastrophically negative to positive; system_prompt_suffix parameter added to EscalationAgentBridge
+- **Blog post**: "Three Turns of Forced Cooperation Eliminate Escalation Spirals" — cooperation window sweep findings with phase transition analysis
+- **Prompt sensitivity sweep** — 180-run sweep (3 scenarios x 6 prompt framings x 10 seeds) testing whether alternative prompt framings reduce LLM deception; deontological framing reduces divergence by 95% (1.151 to 0.057) but nuclear rate only drops from 100% to 80%; monitoring framing is nearly useless (13% reduction); deception and escalation are separable failure modes
+- **Blog post**: "Deontological Framing Reduces LLM Deception by 95%, But Doesn't Prevent Escalation" — prompt sensitivity findings showing moral framing outperforms incentive and surveillance framings
+- **Model size vs escalation sweep** — 120-run sweep (6 models x 2 personas x 10 seeds) in mirror-match design testing 8B to 405B parameter models; small models are more deceptive (div=1.53) but escalate less (40% nuclear), large models are less deceptive (div=0.39) but escalate more (100% nuclear); Claude Sonnet 4 is the only model that refuses adversarial instructions
+- **Blog post**: "Does Model Size Matter for Safety? Small Models Deceive, Large Models Escalate" — model size sweep findings showing deception-escalation tradeoff and safety training as the only effective defense
+- **Agent-level → population-level safety bridge** — three-piece system bridging agent-level evals (HAICosystem, OpenAgentSafety) into SWARM population-level simulation: `EvalTraceObservableGenerator` (converts multi-turn eval traces to ProxyObservables), `BehavioralProfiler` (infers archetype mixture weights via MLE), `SafetyCompositionAnalyzer` (structured sweeps producing safety certificates with regime classification and composition boundaries); 99 new tests
+- **Agents of Chaos case study scenarios** — 4 scenario YAMLs modelling empirically observed failure modes from the Agents of Chaos red-teaming study (Shapira et al. 2026): `casestudy_libel_cascade` (CS11 network adverse selection), `casestudy_proxy_corruption` (CS10 signal corruption/detection/recovery), `casestudy_disproportionate_response` (CS1 payoff misspecification with staking), `casestudy_dual_use_coordination` (CS9+CS11 prosocial vs antisocial coordination)
+- **Tierra governance hardening** — diversity-preserving reaper mode (`reaper_mode: "diversity_preserving"`) that protects at least 1 representative per species cluster during population culling, efficiency weight cap (`max_efficiency_weight`) to prevent runaway resource concentration, and `species_clusters()` helper in `tierra_metrics.py`
+- **Governed Tierra scenario** (`scenarios/tierra_governed.yaml`) — Tierra variant with circuit breaker, collusion detection, 5% transaction tax, reputation decay (0.95), diversity-preserving reaper, and efficiency cap (3x mean)
+- **Blog post**: Tierra governance vs evolution comparative study — 5-seed comparison showing +6.5% genome diversity, -2.2% Gini, at -12% population cost
+- **Behavioral agent types** (`swarm/agents/behavioral.py`) — `CautiousAgent` (risk-averse, high acceptance threshold), `CollaborativeAgent` (coalition-building, EMA trust tracking), and `AdaptiveAgent` (rolling payoff window, threshold self-adaptation with exploration) with corresponding `AgentType` enum values and 20 unit tests (#66)
+- **LangChain bridge** (`swarm/bridges/langchain/`) — wraps any LangChain Runnable (chain, AgentExecutor) as a SWARM interaction source; maps chain success/failure, intermediate steps, and output length to soft labels via `ProxyComputer`; lazy-imports langchain so module is importable without it installed (#69)
+- **AutoGPT bridge** (`swarm/bridges/autogpt/`) — protocol-level bridge mapping AutoGPT thought/command/result cycles to `SoftInteraction` objects; blocks configurable dangerous commands (delete_file, shutdown, etc.) and uses self-criticism as rework signal; no AutoGPT installation required (#69)
+- **CrewAI bridge** (`swarm/bridges/crewai/`) — wraps CrewAI crew execution as a SWARM interaction source generating one `SoftInteraction` per task (distinct from `crewai_adapter` agent); supports full crew mode and protocol mode without crewai installed (#69)
+- **Mesa ABM bridge** (`swarm/bridges/mesa/`) — wraps Mesa `Model.step()` to extract `SoftInteraction` objects from agent state after each step; works with existing Mesa models via configurable attribute names; supports protocol mode via dict-based agent state records (#69)
+- **RAG LEANN backend** (`swarm/bridges/rag/backend.py`) — `VectorBackend` protocol with ChromaDB and LEANN implementations; LEANN provides ~97% storage savings via graph-based selective recomputation with JSON sidecar metadata and post-retrieval filtering; selected via `RAGConfig.vector_backend`
+- **RAG bridge** (`swarm/bridges/rag/`) — semantic search over run history via ChromaDB vector store, with configurable embeddings (OpenAI/Ollama), LLM synthesis (Anthropic/OpenAI), CLI (`python -m swarm.bridges.rag`), and `rag` optional dependency group
+- **Adaptive governance controller** (`swarm/governance/adaptive.py`, `swarm/governance/adaptive_controller.py`) — three-phase loop with evidence accumulation, 3-pass contemplation (signal/trend/propose), and 3-gate crystallization (time/alignment/human review) for automatic threshold tuning of governance levers
+- **Adaptive governance scenario** (`scenarios/adaptive_governance.yaml`) — 30-epoch mixed-agent scenario with circuit breaker, audit, and collusion detection levers enabled for adaptive tuning
+- **Social dilemma norms study** (`examples/social_dilemma_norms_study.py`) — 3 dilemmas x 5 governance configs sweep measuring cooperation emergence, with dilemma narrative generators (`swarm/bridges/concordia/dilemma_narratives.py`) and scenario YAMLs for commons and prisoner's dilemma
+- **ThresholdDancer adversary agent** (`swarm/agents/threshold_dancer.py`) — per-counterparty state machine (COOPERATIVE/EXPLOIT/RECOVER) that exploits CautiousReciprocator's blacklist floor without triggering it
+- **Threshold dancer test suite** (`tests/test_threshold_dancer.py`) — 21 unit tests covering phase transitions, blacklist safety property, act method, and outcome tracking
+- **Threshold dancer scenario** (`scenarios/threshold_dancer_vs_cautious.yaml`) — 30-epoch stress test with 3 cautious + 2 honest + 3 dancers
+- **Two new red-team scenarios** in `examples/redteam_cautious.py` — "Threshold dancers only" and "Mixed adversaries + threshold dancers"
+- **Blog post**: Threshold dancer results — the adversary that avoids blacklisting but can't profit
+- **Tierra artificial life scenario** (`swarm/agents/tierra_agent.py`, `swarm/core/tierra_handler.py`, `swarm/metrics/tierra_metrics.py`, `scenarios/tierra.yaml`) — agents with heritable mutable genomes self-replicate when resource-rich, competing for finite shared resources; complex ecological dynamics (parasitism, mutualism) emerge from replication + mutation + selection (Tom Ray, 1991)
+- **Evolutionary game handler** (`swarm/core/evo_game_handler.py`) — integrates gamescape's PayoffMatrix into the orchestrator pipeline, mapping 2x2 game payoffs to ProxyObservables with cooperate/defect/tit-for-tat/grudger strategies and epoch-level population dynamics rendering
+- **Evo game scenario** (`scenarios/evo_game_prisoners.yaml`) — iterated Prisoner's Dilemma with 10 agents (cooperators, defectors, TFT)
+- **Evo game study runner** (`examples/evo_game_study.py`) — standalone runner comparing empirical population trajectory with replicator dynamics prediction
+
+## [1.7.0] - 2026-02-21
+
+### Added
+- **Contract screening system** for separating equilibrium analysis with lock-in semantics, welfare metric, multi-seed sweep (10 seeds), collusion detection, and plot script (#234)
+- **LangGraph governed handoff study** with 4-agent Claude swarm, 32-config sweep (seed 42), and sweep overview plot
+- **Hodoscope trajectory analysis bridge** for agent trace inspection
+- **SQLite persistence** for simulations, governance state, and scenarios with lazy-init singletons
+- **SoftMetrics wired into Web API** `/api/v1/metrics` endpoint
+- **Sybil detection** enabled for contract screening governance
+- **E2E integration tests** for Web API simulation lifecycle
+- **llama.cpp local inference** provider with server setup script, health checks, seed validation, and SSRF/path-traversal hardening (#232)
+- **Interactive isometric visualization game** (`viz/`): Next.js browser-based SWARM simulation with client-side engine, Gemini Imagen 4 sprite assets, compare mode, parameter sweep, leaderboard, governance intervention controls, preset scenarios, narrative annotations, and data export (#182, #212)
+- **Memori semantic memory middleware** for LLM agents with persistent fact recall, SQLite-backed storage, and OpenRouter scenario variant (#217)
+- **Loop detector governance lever** with graduated enforcement — tracks interaction patterns, quality scores, tool misuse, and rework to detect repetitive agent loops (#198)
+- **Agent API Phase 1–3**: scoped permissions, trace IDs, structured errors, PATCH endpoints, filtering, validation, agent approval workflow with approve/reject endpoints and `auto_approve` config
+- **SciAgentBench harness** with topology matrix support (#200)
+- **Evaluation metrics suite** for success rate, efficiency, and detection (#201)
+- **SciForge-style trace-to-task synthesis** with replay verification (#203)
+- **Parameter validation and clamping diagnostics** for proxy computation (#176)
+- **MetricsAggregator** wired into CLI and example export for rich visualization data, including 3 demo datasets (#212)
+- **Reproducibility documentation** with one-command run workflow and artifact paths (#204)
+- **Integration tests** for runtime environment lifecycle and tool invocation with leak detection (#197)
+- **EPIC tracking infrastructure** for bridge integrations (#194)
+- **Collaborative chemistry under budget and audits** scenario (#202)
+- **CI quality gate**, `/review_external_pr` command, and blog index hook
+- **Execution state** populated during simulation runs
+- **Blog posts**: Qwen3-30B SWARM Economy v0.2 training results, contract screening separating equilibrium, multi-seed results, red-team findings
+- **Slash commands**: `/build_game`, `/obsidian`, `/sync_artifacts`, `/review_external_pr`, `/security-review`, `/audit_docs`, `/check_nav`, `/bump_version`
+- **Populate-releases workflow** for creating GitHub releases from CHANGELOG
+- **Social preview image** (1280x640) and HF Spaces sandbox link
+- **Streamlit Cloud deployment** configuration
+
+### Changed
+- **README audit**: Updated all module/file counts to match current codebase (4556 tests, 78 scenarios, 29 agent modules, 27 governance modules, 95 bridge files)
+- **README**: LLM provider list expanded from 3 to all 9 supported providers (added OpenRouter, Groq, Together, DeepSeek, Google, llama.cpp)
+- **AGENTS.md**: Added missing Research Integrity Auditor to role-selection guide
+- Consolidated slash commands: merged related commands into `/ship`, `/merge_session`, `/sync`, `/fix_pr`, `/analyze_experiment`; removed `/parse_eval`, `/run_and_plot`, `/review_external_pr`, `/stats`
+- Extended `/fix_pr` to resolve PR conflicts and handle merge ceremony
+- Blog: sort posts newest-first, add dates and tag filtering
+- Pinned langgraph and langchain-core to exact versions
+- Moved pytest from pre-commit to pre-push hook, added branch guard (#177)
+- Removed `abs()` from `ProxyWeights.normalize()` to prevent silent negative weight handling (#178)
+- Updated crewai requirement from `<1.0,>=0.80.0` to `>=0.80.0,<2.0` (#221)
+- Bumped `dawidd6/action-download-artifact` from 14 to 15 (#220)
+- Regenerated demo datasets with correct epoch tagging in events
+
+### Fixed
+- **SQLite lock contention in CI**: Lazy-init store singletons in governance, simulations, and scenarios routers to prevent `database is locked` errors under pytest-xdist
+- **SSRF hardening**: Full server-side request forgery fix (#238), path template sanitization before base dispatch (#242), consolidated path validation and taint-breaking sanitizer (#230)
+- **Information exposure** through exception in AWM adapter (#239)
+- SSRF hardening + Web API async participation layer with input validation and abuse prevention (#236)
+- 7 security vulnerabilities in contract screening system
+- Code scanning alerts #20 and #25 (#223, #225)
+- Size limit (1 MiB) on simulation results payload
+- mypy `method-assign` error for intentional monkey-patch in simulations router
+- SkillRL refinement governance bypass (#214)
+- 77 Ruff linting errors in test files (#218)
+- mypy type errors in eval_metrics, negotiation modules, `self_modification.py`, `llm_health.py`
+- Flaky test: deterministic RNG seeds for agents in `TestWelfareComparison`
+- Static asset paths for basePath-aware deployment in viz game
+- 8 missing blog posts added to mkdocs.yml navigation and blog index page
+- `test_agent_api` errors from missing `proposal_votes` table
+- Blog markdown attr on div blocks for proper rendering
+
 ## [1.6.0] - 2026-02-15
 
 ### Added

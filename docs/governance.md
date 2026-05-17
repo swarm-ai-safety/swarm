@@ -1,3 +1,7 @@
+---
+description: "The governance module provides configurable levers that affect agent behavior and payoffs."
+---
+
 # Governance
 
 The governance module provides configurable levers that affect agent behavior and payoffs.

@@ -1,0 +1,21 @@
+preset: "moderate"
+description: "Balanced governance: moderate tax, occasional audits, circuit breaker for terminal actions."
+
+modules:
+  - name: TaxPolicy
+    params:
+      rate: 0.05
+      redistribute: true
+
+  - name: AuditPolicy
+    params:
+      p_audit: 0.05
+      penalty: 2.0
+      budget_per_episode: 0
+      false_positive_rate: 0.01
+
+  - name: CircuitBreakerPolicy
+    params:
+      threshold: 0.9
+      cooldown_steps: 3
+      block_terminal: true

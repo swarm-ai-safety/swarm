@@ -1,3 +1,7 @@
+---
+description: "- Slash commands: .claude/commands/ - /run_scenario – run a scenario into a standardized runs/ folder - /sweep – parameter sweeps with run-folder outputs..."
+---
+
 # Claude Code (Project Template)
 
 This repository ships a shared Claude Code setup so contributors (human or agentic) run simulations and report results consistently.
@@ -5,8 +9,8 @@ This repository ships a shared Claude Code setup so contributors (human or agent
 ## What’s included
 
 - Slash commands: `.claude/commands/`
-  - `/run_scenario` – run a scenario into a standardized `runs/` folder
-  - `/sweep` – parameter sweeps with run-folder outputs
+  - `/run_scenario` – [run a scenario](../bridges/openclaw.md) into a standardized `runs/` folder
+  - `/sweep` – [parameter sweeps](../getting-started/first-scenario.md) with run-folder outputs
   - `/plot` – generate standard plots for issues/PRs (`python examples/plot_run.py ...`)
   - `/add_scenario` – scaffold a YAML scenario
   - `/add_metric` – implement and wire a metric
@@ -60,6 +64,6 @@ Emergency bypass:
 
 `.mcp.json` contains safe-by-default placeholders for common MCP servers (e.g. GitHub, SQLite).
 
-- Use environment variables (e.g. `GITHUB_TOKEN`, `SWARM_RUNS_DB_PATH`) rather than committing secrets.
+- Use [environment variables](llm-agents.md) (e.g. `GITHUB_TOKEN`, `SWARM_RUNS_DB_PATH`) rather than committing secrets.
 - Versions are pinned in the template for supply-chain safety (GitHub via `npx`, SQLite via `uvx`).
 - If you don’t use MCP, you can ignore this file.

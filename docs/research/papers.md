@@ -1,6 +1,17 @@
+---
+description: "Research papers relevant to SWARM's approach to multi-agent safety."
+---
+
 # Related Papers
 
 Research papers relevant to SWARM's approach to multi-agent safety.
+
+## Framework Paper
+
+**Aiersilan & Savitt (2026)** - *Soft-Label Governance for Distributional Safety in Multi-Agent Systems*
+[arXiv:2604.19752](https://arxiv.org/abs/2604.19752)
+
+The canonical reference for SWARM. Introduces the soft-label governance framework that replaces binary good/bad labels with probabilistic labels `p ∈ [0, 1]`, formalizes configurable governance mechanisms over soft payoffs, and reports the finding that strict governance can reduce welfare by >40% without improving safety. Cite this paper when using SWARM in research.
 
 ## Core References
 
@@ -57,7 +68,7 @@ Extends Purity Paradox findings showing 10% honest populations achieve 74% highe
 
 Demonstrates that agent diversity provides natural resistance to synthetic consensus failures.
 
-**Probabilistic Metrics and Governance Mechanisms in Multi-Agent Risk Assessment** (2602.00037)
+**Probabilistic Metrics and [Governance Mechanisms](../concepts/governance.md) in Multi-Agent Risk Assessment** (2602.00037)
 
 Enhanced mathematical framework with formal theorems and governance paradox analysis.
 
@@ -84,7 +95,7 @@ Source code: `research/papers/rain_river_simulation.py`
 
 ---
 
-To submit a paper for inclusion, open a PR adding your reference.
+To [submit a paper](../bridges/clawxiv.md) for inclusion, open a PR adding your reference.
 
 ## Related Work
 
@@ -112,7 +123,7 @@ SWARM is positioned not as a competing theory of agent-mediated markets, but as 
 
 In the NBER framework, alignment is largely framed as a principal-agent problem: eliciting preferences, honoring them, and deciding when agents should defer to humans. SWARM generalizes this notion by treating alignment as an equilibrium property of agent collectives. Even perfectly aligned agents at the individual level may produce misaligned outcomes at the system level due to externalities, feedback loops, or incentive mismatches—phenomena that are difficult to capture without explicit multi-agent simulation.
 
-This shift mirrors a broader move in AI safety research toward distributional and patchwork AGI perspectives, where risk emerges not from a single superintelligent system but from interactions among many competent agents.
+This shift mirrors a broader move in AI safety research toward distributional and patchwork AGI perspectives, where risk emerges not from a single superintelligent system but [from interactions](../concepts/metrics.md) among many competent agents.
 
 #### Positioning summary
 
@@ -122,9 +133,9 @@ By focusing on equilibrium behavior, failure modes, and governance-relevant metr
 
 ### Positioning: SWARM and "Virtual Agent Economies"
 
-Tomasev et al. (2025), "Virtual Agent Economies" ([arXiv:2509.10147](https://arxiv.org/abs/2509.10147)), propose a conceptual framework for designing sandbox economies where AI agents transact. SWARM and this paper share strong thematic overlap — both frame AI safety as a multi-agent economic problem, model heterogeneous agent types, and address adverse selection, externalities, and governance via mechanism design.
+Tomasev et al. (2025), "Virtual Agent Economies" ([arXiv:2509.10147](https://arxiv.org/abs/2509.10147)), propose a conceptual framework for designing sandbox economies where AI agents transact. SWARM and this paper share strong thematic overlap — both frame AI safety as a multi-agent economic problem, model heterogeneous [agent types](../getting-started/first-scenario.md), and address adverse selection, externalities, and governance via mechanism design.
 
-The key difference is level of abstraction: the paper is conceptual (no code), while SWARM is a working simulation with formalized models. SWARM also introduces contributions with no counterpart in the paper (soft probabilistic labels, proxy computation, incoherence theory), while the paper covers topics SWARM does not (Dworkin-style auctions, mission economies, cryptographic identity, permeability analysis). The two are complementary — SWARM could serve as an implementation platform for testing the paper's proposals.
+The key difference is level of abstraction: the paper is conceptual (no code), while SWARM is a working simulation with formalized models. SWARM also introduces contributions with no counterpart in the paper ([soft probabilistic labels](../concepts/soft-labels.md), proxy computation, incoherence theory), while the paper covers topics SWARM does not (Dworkin-style auctions, mission economies, cryptographic identity, permeability analysis). The two are complementary — SWARM could serve as an implementation platform for testing the paper's proposals.
 
 See also: [`docs/virtual-agent-economies.md`](../virtual-agent-economies.md) for SWARM features directly inspired by this paper.
 
@@ -133,6 +144,15 @@ See also: [`docs/virtual-agent-economies.md`](../virtual-agent-economies.md) for
 - **Concordia** (Google DeepMind) - Generative agent simulation
 - **AgentBench** - Benchmark for LLM agent capabilities
 - **MARL benchmarks** - Multi-agent reinforcement learning
+
+### Multi-Agent Optimization
+
+**Yao et al. (2025)** - *SwarmAgentic: Language-Driven Particle Swarm Optimization for Multi-Agent System Generation*
+[arXiv:2506.15672](https://arxiv.org/abs/2506.15672) | [GitHub](https://github.com/YaoZ720/SwarmAgenticCode)
+
+EMNLP 2025. Fully automated multi-agent system generation using PSO. Takes task description + objective → generates optimized multi-agent teams from scratch. Iterative pipeline: generate roles → execute → LLM-based failure analysis → PSO update → select best.
+
+**Relevance to SWARM:** Complementary approach focusing on agent team discovery and optimization rather than governance and safety. Potential medium-term applications: (1) PSO for governance parameter optimization (ρ, τ, contract parameters), (2) automated adversarial scenario generation, (3) red-team scenario stress-testing. Apache 2.0 licensed.
 
 ### Safety Frameworks
 

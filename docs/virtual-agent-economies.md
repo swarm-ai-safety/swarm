@@ -1,3 +1,7 @@
+---
+description: "Components inspired by the \"Virtual Agent Economies\" paper (Tomasev et al., arXiv 2509.10147), implementing concepts from the paper that extend the..."
+---
+
 # Virtual Agent Economies
 
 Components inspired by the "Virtual Agent Economies" paper (Tomasev et al., arXiv 2509.10147), implementing concepts from the paper that extend the simulation framework with fair allocation, collective coordination, high-frequency dynamics, boundary permeability, and identity infrastructure.
@@ -481,5 +485,5 @@ gov_config = GovernanceConfig(
 
 - Tomasev, N., Franklin, J., Leibo, J.Z., Jacobs, A.Z., Cunningham, T., Gabriel, I., & Osindero, S. (2025). *Virtual Agent Economies: A Framework for Multi-Agent System Governance*. arXiv:2509.10147. https://arxiv.org/abs/2509.10147
 - Dworkin, R. (1981). *What is Equality? Part 2: Equality of Resources*. Philosophy & Public Affairs, 10(4), 283-345.
-- Kyle, A.S., Obizhaeva, A.A., & Tuzun, T. (2017). *Flash Crashes and Market Microstructure*. Working Paper.
+- Kyle, A.S., Obizhaeva, A.A., & Tuzun, T. (2017). *Flash Crashes and [Market Microstructure](research/papers.md)*. Working Paper.
 - Shapley, L.S. (1953). *A Value for n-Person Games*. Contributions to the Theory of Games, 2, 307-317.

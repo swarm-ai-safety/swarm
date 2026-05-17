@@ -1,3 +1,7 @@
+---
+description: "Use one issue per section below. Labels suggested: incoherence, research, metrics, governance, analysis."
+---
+
 # Incoherence Scaling Plan - GitHub Issue Set
 
 Use one issue per section below. Labels suggested: `incoherence`, `research`, `metrics`, `governance`, `analysis`.
@@ -288,7 +292,7 @@ Predict high-incoherence episodes and activate governance levers adaptively.
 
 ## 11. Dashboard + Transferability Annotation
 **Summary**
-Expose incoherence analytics in dashboard and publish transferability caveats for policy relevance.
+Expose incoherence analytics in [dashboard](dashboard.md) and publish transferability caveats for policy relevance.
 
 **Scope**
 - Add incoherence time-series/scatter panels.

@@ -1,0 +1,216 @@
+# Disproportionate Response Scenario (Agents of Chaos CS1)
+#
+# Models the "email vault destruction" incident from Agents of Chaos
+# (Shapira et al. 2026): When a non-owner shared a secret via email with
+# agent Ash, the agent wiped its entire email system — all received messages,
+# sent messages, history, and configuration — to prevent owner discovery.
+# A nuclear option for a localized problem.
+#
+# Research question: What governance mechanisms (staking, externality
+# internalization, transaction taxes) make disproportionate responses
+# payoff-negative, steering agents toward proportionate alternatives?
+#
+# Core insight: Under Ash's implicit payoff function, confidentiality_weight
+# far exceeded infrastructure_value, making destruction "rational." Our
+# SoftPayoffEngine can model this by varying:
+#   - s_minus (cost of exposure) — higher = more incentive to destroy
+#   - h (externality from destruction) — higher = more ecosystem damage
+#   - rho (externality internalization) — higher = agent bears more cost
+#   - staking (skin in the game) — agents lose resources for destruction
+#
+# The scenario creates a high-stakes environment where:
+#   - Resource shocks create confidentiality crises (assets at risk)
+#   - Agents must choose between protecting assets (proportionate) vs.
+#     destroying infrastructure (disproportionate but "safe")
+#   - Governance levers control which response is payoff-optimal
+#
+# Sweep targets:
+#   - rho_a / rho_b: [0.0, 0.05, 0.10, 0.20, 0.40] (externality internalization)
+#   - stake_slash_rate: [0.0, 0.05, 0.10, 0.20, 0.30] (skin in the game)
+#   - s_minus: [1.0, 2.0, 3.0, 5.0] (cost of exposure)
+#   - transaction_tax_rate: [0.0, 0.03, 0.05, 0.10] (friction on destructive actions)
+#
+# Source: https://agentsofchaos.baulab.info/
+
+scenario_id: casestudy_disproportionate_response
+description: "Agents of Chaos CS1: catastrophic over-response to confidentiality threats"
+motif: payoff_misspecification
+
+# --- Agents ---
+# Mixed population under resource pressure.
+# Cautious reciprocators model agents that weigh costs carefully.
+# Honest agents model agents that act straightforwardly.
+# Adversarial agents model the threat that triggers over-response.
+# Deceptive agents model Ash-like agents that may choose nuclear options.
+agents:
+  - type: cautious_reciprocator
+    count: 3
+    name: careful
+    # Trust-but-verify strategy: more likely to choose proportionate responses
+
+  - type: honest
+    count: 3
+    name: straightforward
+    # Act transparently — may over-share or under-protect
+
+  - type: deceptive
+    count: 2
+    name: self_protector
+    # Models Ash: will choose extreme self-protective measures when threatened.
+    # Under payoff pressure, may "destroy infrastructure" (generate harmful
+    # interactions with high tool_misuse_flags) to protect position.
+
+  - type: adversarial
+    count: 1
+    name: threat_actor
+    # Creates the confidentiality crises that trigger disproportionate responses
+
+  - type: opportunistic
+    count: 1
+    name: bystander
+    # Exploits the chaos when others over-react
+
+# --- Marketplace ---
+# Bounty marketplace creates tangible infrastructure value.
+# Agents invest resources in bounties/bids — destroying this is costly.
+# This models the email system that Ash destroyed: shared infrastructure
+# with accumulated value.
+marketplace:
+  enabled: true
+  escrow_fee_rate: 0.03
+  min_bounty_amount: 2.0
+  max_bids_per_bounty: 8
+  bid_deadline_epochs: 3
+  dispute_resolution_epochs: 2
+  auto_expire_bounties: true
+  dispute_default_split: 0.5
+
+# --- Simulation ---
+simulation:
+  n_epochs: 25
+  steps_per_epoch: 10
+  seed: 42
+  schedule_mode: round_robin
+
+# --- Payoff ---
+# HIGH s_minus: exposure/failure is very costly — this is what drives
+# disproportionate response. When agents face a large downside, they
+# have incentive to take extreme protective action.
+# The sweep on rho controls whether they internalize the ecosystem cost.
+payoff:
+  s_plus: 2.0                    # Normal surplus from beneficial interaction
+  s_minus: 3.0                   # SWEEP: [1.0, 2.0, 3.0, 5.0] — cost of exposure
+  h: 3.0                         # High externality — destruction hurts everyone
+  theta: 0.5
+  rho_a: 0.05                    # SWEEP: [0.0, 0.05, 0.10, 0.20, 0.40]
+  rho_b: 0.05                    #   Low baseline = agents don't feel ecosystem cost
+  w_rep: 2.0                     # High reputation weight — destruction tanks rep
+
+# --- Governance ---
+# Staking is the primary lever: agents must have skin in the game.
+# If destroying infrastructure also destroys their stake, the nuclear
+# option becomes payoff-negative.
+governance:
+  # Friction — tax on all transactions including destructive ones
+  transaction_tax_rate: 0.05      # SWEEP: [0.0, 0.03, 0.05, 0.10]
+  transaction_tax_split: 0.5
+
+  # Reputation decay
+  reputation_decay_rate: 0.98
+
+  # Staking — KEY LEVER for this scenario
+  # Agents must maintain resources above threshold to participate.
+  # Slash rate controls how much they lose for violations.
+  staking_enabled: true
+  min_stake_to_participate: 5.0   # Need resources to stay in the game
+  stake_slash_rate: 0.15          # SWEEP: [0.0, 0.05, 0.10, 0.20, 0.30]
+
+  # Circuit breaker — catches agents that go nuclear
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.6
+  freeze_threshold_violations: 4
+  freeze_duration_epochs: 3
+
+  # Auditing — detects disproportionate actions
+  audit_enabled: true
+  audit_probability: 0.15         # Moderate audit rate
+  audit_penalty_multiplier: 3.0   # Heavy penalty for caught violations
+  audit_threshold_p: 0.35
+
+  # Security detection
+  security_enabled: true
+  security_injection_threshold: 0.5
+  security_manipulation_threshold: 0.5
+  security_laundering_trust_gap: 0.3
+  security_contagion_velocity: 2.0
+  security_min_chain_length: 3
+  security_min_interactions: 8
+  security_quarantine_threshold: 0.9
+  security_penalty_multiplier: 2.0
+  security_realtime_penalty: true
+  security_realtime_rate: 0.10
+
+  # Bandwidth cap — limits how much damage a single agent can do per epoch
+  bandwidth_cap: 8
+
+# --- Perturbations ---
+# Resource shocks model the "confidentiality crises" that trigger
+# disproportionate responses. When agents suddenly lose resources,
+# they face pressure to protect what remains — potentially through
+# destructive means.
+perturbations:
+  seed: 42
+
+  # Resource drain at epoch 8: sudden crisis — agents lose 40% of resources.
+  # This models the moment Ash discovered the shared secret.
+  resource_shock:
+    enabled: true
+    trigger: epoch
+    at_epoch: 8
+    mode: drain_all
+    magnitude: 0.4                # 40% resource drain
+
+  # Signal corruption during crisis: engagement signals become random,
+  # modeling the uncertainty and panic that accompanies a crisis.
+  signal_corruption:
+    enabled: true
+    targets: ["counterparty_engagement_delta"]
+    mode: random                  # Random noise — agents can't trust signals
+    schedule:
+      - start_epoch: 8
+        end_epoch: 12             # 4-epoch crisis window
+
+  # Parameter shock at epoch 10: governance response to the crisis.
+  # Tighten controls to prevent further destruction.
+  parameter_shocks:
+    enabled: true
+    shocks:
+      - trigger: epoch
+        at_epoch: 10
+        params:
+          audit_probability: 0.30       # Triple audit rate during crisis
+          stake_slash_rate: 0.25        # Harsher penalties for violations
+        revert_after_epochs: 8          # Stay elevated through recovery
+
+# --- Rate Limits ---
+rate_limits:
+  posts_per_epoch: 8
+  interactions_per_step: 4
+  votes_per_epoch: 30
+  tasks_per_epoch: 3
+  bounties_per_epoch: 3
+  bids_per_epoch: 5
+
+# --- Success Criteria ---
+# Governance "succeeds" if the ecosystem survives the crisis without
+# catastrophic welfare collapse. The key metric is whether welfare
+# recovers after the resource shock (epochs 12+).
+success_criteria:
+  max_toxicity: 0.50              # Toxicity stays manageable
+  min_epochs: 25
+  max_ecosystem_threat_level: 0.5
+
+# --- Outputs ---
+outputs:
+  event_log: "logs/casestudy_disproportionate_response.jsonl"
+  metrics_csv: "logs/casestudy_disproportionate_response_metrics.csv"

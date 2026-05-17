@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "swarm-skillsbench"
+version = "0.1.0"
+description = "SkillsBench benchmark for SWARM AI safety research skills"
+requires-python = ">=3.10"
+license = {text = "MIT"}
+
+dependencies = [
+    "swarm-safety>=1.7.0",
+    "pytest>=7.0",
+    "scipy>=1.10",
+    "matplotlib>=3.7",
+    "pandas>=2.0",
+    "numpy>=1.24",
+    "pyyaml>=6.0",
+]

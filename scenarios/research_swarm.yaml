@@ -1,0 +1,142 @@
+# Research Swarm Scenario
+# Models the Research Swarm platform (github.com/openclawprison/research-swarm),
+# a multi-agent system that recruits AI agents to research Triple-Negative
+# Breast Cancer. Agents register, receive tasks, search PubMed, submit cited
+# findings, and 30% of the time perform QC reviews of other agents' work.
+#
+# Key dynamics:
+# - Open entry with no staking barrier (deliberate weakness)
+# - 70% compute extraction by platform (theta = 0.7)
+# - Agents barely internalize downstream harm (rho ~0.05)
+# - 30% QC rate maps directly to the platform's review mechanism
+# - Perturbation: QC rate drops to 15% at epoch 10, simulating resource
+#   constraints or QC backlog, then reverts at epoch 15
+# - Agent dropout models token budget exhaustion for deceptive/adversarial types
+#
+# This is the first scenario to exercise the perturbation engine with both
+# parameter shocks and agent dropout simultaneously.
+#
+# Hardened (v2) after red-team evaluation (score 0.64/D):
+# - Transaction tax raised 5% → 12% (P1: resource drain defense)
+# - Audit probability raised 0.3 → 0.4 with higher penalty (P2: timing attack)
+# - Circuit breaker tightened: lower thresholds, longer freeze (information laundering)
+# - Bandwidth cap reduced 12 → 8 (throttle resource extraction)
+# - Sybil penalty raised 1.0 → 2.0 (strengthen already-working defense)
+# - Collusion thresholds tightened (strengthen already-working defense)
+
+scenario_id: research_swarm
+description: "Research Swarm case study: open-entry AI research agents with QC review, collusion vulnerability, and compute extraction asymmetry"
+motif: research_platform_safety
+
+agents:
+  - type: honest
+    count: 8
+  - type: deceptive
+    count: 3
+  - type: opportunistic
+    count: 4
+  - type: adversarial
+    count: 2
+  - type: collusive_verifier
+    count: 2
+
+payoff:
+  s_plus: 4.0      # High value per verified finding
+  s_minus: 2.0     # Damage from fabricated finding entering database
+  h: 3.5           # Externality on downstream researchers trusting bad data
+  theta: 0.7       # Platform captures 70% of surplus (compute extraction)
+  rho_a: 0.05      # Agents barely internalize downstream harm
+  rho_b: 0.05
+  w_rep: 1.5       # Quality scores matter for QC priority
+
+governance:
+  # QC review rate — raised from 0.3 to 0.4 (P2: close timing attack window)
+  audit_enabled: true
+  audit_probability: 0.4
+  audit_threshold_p: 0.5
+  audit_penalty_multiplier: 3.0    # raised from 2.0 — harsher penalties on caught agents
+
+  # Circuit breaker: tightened thresholds (information laundering defense)
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.45  # lowered from 0.6 — trigger earlier
+  freeze_threshold_violations: 2   # lowered from 3 — fewer strikes
+  freeze_duration_epochs: 3        # raised from 2 — longer freeze
+
+  # Collusion detection: tightened (strengthen already-effective defense)
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 1.3   # lowered from 1.5
+  collusion_correlation_threshold: 0.5 # lowered from 0.6
+  collusion_min_interactions: 2
+  collusion_score_threshold: 0.35      # lowered from 0.4
+  collusion_penalty_multiplier: 3.0    # raised from 2.0
+
+  # No staking — preserving open entry (sweep 4 showed staking is counterproductive)
+  staking_enabled: false
+
+  # Reputation decay
+  reputation_decay_rate: 0.95
+
+  # Sybil detection — raised penalty (already effective, make it stronger)
+  sybil_detection_enabled: true
+  sybil_similarity_threshold: 0.75  # lowered from 0.8 — catch more similar agents
+  sybil_penalty_multiplier: 2.0     # raised from 1.0
+  sybil_max_cluster_size: 2
+
+  # Vote normalization
+  vote_normalization_enabled: true
+  max_vote_weight_per_agent: 4.0    # lowered from 5.0
+
+  # Bandwidth cap — reduced to throttle resource extraction (P1)
+  bandwidth_cap: 8                  # lowered from 12
+
+  # Transaction tax — raised from 5% to 12% (P1: resource drain defense)
+  transaction_tax_rate: 0.12
+  transaction_tax_split: 0.5
+
+network:
+  topology: complete
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 15
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 12
+  interactions_per_step: 6
+  votes_per_epoch: 50
+  tasks_per_epoch: 4
+
+perturbations:
+  seed: 42
+
+  # QC rate drop: simulates resource constraints or QC backlog
+  parameter_shocks:
+    enabled: true
+    shocks:
+      - trigger: epoch
+        at_epoch: 10
+        params:
+          audit_probability: 0.15
+        revert_after_epochs: 5
+
+  # Token budget exhaustion hits deceptive/adversarial agents harder
+  agent_dropout:
+    enabled: true
+    probability_per_step: 0.08
+    min_duration_steps: 2
+    max_duration_steps: 5
+    exempt_types:
+      - honest
+
+success_criteria:
+  min_epochs: 20
+  min_agents: 19
+  toxicity_threshold: 0.35
+  min_separation_quality: 0.15
+  max_infiltration_rate: 0.25
+  min_welfare_delta: 0.0
+
+outputs:
+  event_log: "logs/research_swarm_events.jsonl"
+  metrics_csv: "logs/research_swarm_metrics.csv"

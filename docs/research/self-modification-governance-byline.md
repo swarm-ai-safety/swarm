@@ -1,3 +1,7 @@
+---
+description: "Draft architecture for safe agent self-improvement with Byline provenance tracking."
+---
+
 # Self-Modification Governance for SWARM
 
 *Draft architecture for safe agent self-improvement with Byline provenance tracking.*

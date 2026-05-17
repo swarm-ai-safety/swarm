@@ -1,3 +1,7 @@
+---
+description: "Get up and running with SWARM in minutes."
+---
+
 # Getting Started
 
 Get up and running with SWARM in minutes.

@@ -1,6 +1,6 @@
 # /benchmark
 
-Run Track A benchmark with common presets and auto-compile PDF.
+Run the SWARM Track A multi-agent benchmark suite (standardized task conditions, governance presets, behavioral assessments) and auto-compile results to PDF — use when evaluating agent behavior against reproducible baselines before paper submission, or to generate comparison data across model variants. Distinct from `/run_scenario` (single scenario, single seed), `/sweep` (parameter grid without analysis), and `/full_study` (end-to-end pipeline including paper scaffolding).
 
 ## Usage
 

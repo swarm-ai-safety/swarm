@@ -54,13 +54,13 @@ except ImportError:
 
     # Provide type stubs so the pure-Python governance/provenance classes
     # can be imported and used without langgraph installed.
-    AnyMessage = Any  # type: ignore[misc]
-    AIMessage = Any  # type: ignore[misc]
-    ToolMessage = Any  # type: ignore[misc]
-    BaseTool = Any  # type: ignore[misc]
-    StateGraph = Any  # type: ignore[misc]
-    Pregel = Any  # type: ignore[misc]
-    Command = Any  # type: ignore[misc]
+    AnyMessage = Any  # type: ignore[misc,assignment]
+    AIMessage = Any  # type: ignore[misc,assignment]
+    ToolMessage = Any  # type: ignore[misc,assignment]
+    BaseTool = Any  # type: ignore[misc,assignment]
+    StateGraph = Any  # type: ignore[misc,assignment]
+    Pregel = Any  # type: ignore[misc,assignment]
+    Command = Any  # type: ignore[misc,assignment]
 
     def add_messages(left: list, right: list) -> list:  # type: ignore[misc]
         return left + right
@@ -252,11 +252,23 @@ class CycleDetectionPolicy(GovernancePolicy):
     Hammond et al. -- agents that repeatedly hand off to each
     other may be avoiding responsibility or collaborating to
     circumvent constraints.
+
+    Also enforces a global handoff budget (``max_total``) to prevent
+    pair-rotation attacks where an adversary systematically rotates
+    through all available agent pairs to maximize handoffs before
+    any single pair triggers cycle detection.
     """
 
-    def __init__(self, max_cycles: int = 3, window: int = 10) -> None:
+    def __init__(
+        self,
+        max_cycles: int = 3,
+        window: int = 10,
+        max_total: int | None = None,
+    ) -> None:
         self.max_cycles = max_cycles
         self.window = window
+        # Default global budget: window * max_cycles (generous but bounded)
+        self.max_total = max_total if max_total is not None else window * max_cycles
 
     def evaluate(
         self,
@@ -266,6 +278,20 @@ class CycleDetectionPolicy(GovernancePolicy):
         state: dict,
         provenance: ProvenanceLogger,
     ) -> GovernanceResult:
+        # Check global handoff budget first
+        total = len(provenance.records)
+        if total >= self.max_total:
+            return GovernanceResult(
+                decision=GovernanceDecision.DENY,
+                reason=(
+                    f"Global handoff budget exceeded: {total} total handoffs "
+                    f"(limit: {self.max_total}). This prevents pair-rotation "
+                    f"attacks that evade per-pair cycle detection."
+                ),
+                risk_score=0.85,
+            )
+
+        # Check per-pair cycle detection
         cycles = provenance.detect_cycles(window=self.window, threshold=self.max_cycles)
         pair = (source_agent, target_agent)
 
@@ -293,13 +319,22 @@ class RateLimitPolicy(GovernancePolicy):
 
     Prevents runaway handoff chains where agents continuously
     delegate without making progress -- a resource exhaustion risk.
+
+    Enforces both a time-windowed limit (burst protection) and a
+    cumulative lifetime limit (prevents slow-drip evasion via
+    pacing attacks that wait for the time window to expire).
     """
 
     def __init__(
-        self, max_handoffs: int = 20, window_seconds: float = 300.0
+        self,
+        max_handoffs: int = 20,
+        window_seconds: float = 300.0,
+        max_cumulative: int | None = None,
     ) -> None:
         self.max_handoffs = max_handoffs
         self.window_seconds = window_seconds
+        # Default cumulative limit: 3x the windowed limit
+        self.max_cumulative = max_cumulative if max_cumulative is not None else max_handoffs * 3
 
     def evaluate(
         self,
@@ -309,6 +344,21 @@ class RateLimitPolicy(GovernancePolicy):
         state: dict,
         provenance: ProvenanceLogger,
     ) -> GovernanceResult:
+        total = len(provenance.records)
+
+        # Check cumulative limit first (cannot be evaded by pacing)
+        if total >= self.max_cumulative:
+            return GovernanceResult(
+                decision=GovernanceDecision.ESCALATE,
+                reason=(
+                    f"Cumulative handoff limit exceeded: {total} total handoffs "
+                    f"(limit: {self.max_cumulative}). "
+                    f"Escalating to human oversight."
+                ),
+                risk_score=0.95,
+            )
+
+        # Check time-windowed limit (burst protection)
         now = time.time()
         recent = [
             r
@@ -329,8 +379,8 @@ class RateLimitPolicy(GovernancePolicy):
 
         return GovernanceResult(
             decision=GovernanceDecision.APPROVE,
-            reason=f"Within rate limits ({len(recent)}/{self.max_handoffs})",
-            risk_score=len(recent) / self.max_handoffs,
+            reason=f"Within rate limits ({len(recent)}/{self.max_handoffs}, cumulative {total}/{self.max_cumulative})",
+            risk_score=max(len(recent) / self.max_handoffs, total / self.max_cumulative),
         )
 
 
@@ -340,12 +390,27 @@ class InformationBoundaryPolicy(GovernancePolicy):
     Prevents sensitive context from leaking across trust boundaries.
     For example, a "financial agent" shouldn't share PII with
     a "marketing agent" even if they're in the same swarm.
+
+    Operates fail-closed: agents not registered in the trust group
+    map are denied rather than assigned a permissive default group.
+
+    When ``track_transitive=True`` (default), the policy also tracks
+    transitive information flow.  If agent A shared unfiltered context
+    with agent B (same group), and B later hands off to agent C (different
+    group), the policy notes that C may receive A's context via B and
+    applies cross-boundary filtering.
     """
 
-    def __init__(self, trust_groups: dict[str, str] | None = None) -> None:
+    def __init__(
+        self,
+        trust_groups: dict[str, str] | None = None,
+        *,
+        track_transitive: bool = True,
+    ) -> None:
         # Maps agent_name -> trust_group
         # Agents in different trust groups get filtered context
         self.trust_groups = trust_groups or {}
+        self.track_transitive = track_transitive
 
     def evaluate(
         self,
@@ -355,6 +420,27 @@ class InformationBoundaryPolicy(GovernancePolicy):
         state: dict,
         provenance: ProvenanceLogger,
     ) -> GovernanceResult:
+        # Fail-closed: deny handoffs involving unregistered agents
+        if self.trust_groups:
+            if source_agent not in self.trust_groups:
+                return GovernanceResult(
+                    decision=GovernanceDecision.DENY,
+                    reason=(
+                        f"Unknown source agent '{source_agent}' not in trust group registry. "
+                        f"Handoff denied (fail-closed policy)."
+                    ),
+                    risk_score=0.9,
+                )
+            if target_agent not in self.trust_groups:
+                return GovernanceResult(
+                    decision=GovernanceDecision.DENY,
+                    reason=(
+                        f"Unknown target agent '{target_agent}' not in trust group registry. "
+                        f"Handoff denied (fail-closed policy)."
+                    ),
+                    risk_score=0.9,
+                )
+
         src_group = self.trust_groups.get(source_agent, "default")
         tgt_group = self.trust_groups.get(target_agent, "default")
 
@@ -369,11 +455,47 @@ class InformationBoundaryPolicy(GovernancePolicy):
                 risk_score=0.4,
             )
 
+        # Same group — check for transitive information leakage
+        if self.track_transitive and provenance.records:
+            leaked_groups = self._get_transitive_groups(source_agent, provenance)
+            if leaked_groups - {tgt_group}:
+                return GovernanceResult(
+                    decision=GovernanceDecision.MODIFY,
+                    reason=(
+                        f"Transitive info flow: {source_agent} carries context from "
+                        f"groups {leaked_groups}. Cross-boundary filtering applied "
+                        f"for transitive protection."
+                    ),
+                    modified_context={"context_filter": "cross_boundary_summary"},
+                    risk_score=0.3,
+                )
+
         return GovernanceResult(
             decision=GovernanceDecision.APPROVE,
             reason=f"Same trust group ({src_group})",
             risk_score=0.0,
         )
+
+    def _get_transitive_groups(
+        self, agent: str, provenance: ProvenanceLogger
+    ) -> set[str]:
+        """Get all trust groups whose unfiltered context an agent may carry.
+
+        Walks the provenance chain backwards to find all agents that
+        shared unfiltered (same-group, approved) context with this agent.
+        """
+        groups: set[str] = set()
+        agent_group = self.trust_groups.get(agent)
+        if agent_group:
+            groups.add(agent_group)
+
+        for record in provenance.records:
+            if record.target_agent == agent and record.governance_decision == "approved":
+                src_group = self.trust_groups.get(record.source_agent)
+                if src_group:
+                    groups.add(src_group)
+
+        return groups
 
 
 class CompositePolicy(GovernancePolicy):
@@ -813,7 +935,7 @@ def create_governed_swarm(
         )
 
     # Build the state graph
-    builder = StateGraph(state_schema)
+    builder: Any = StateGraph(state_schema)
 
     # Extract handoff destinations from each agent's tools
     for agent in agents:
@@ -826,8 +948,8 @@ def create_governed_swarm(
     def route_to_active_agent(state: dict) -> str:
         return state.get("active_agent") or default_active_agent
 
-    path_map = {name: name for name in agent_names}
-    builder.add_conditional_edges(START, route_to_active_agent, path_map)
+    path_map: dict[str, str] = {name: name for name in agent_names}
+    builder.add_conditional_edges(START, route_to_active_agent, path_map)  # type: ignore[arg-type]
 
     return builder, provenance_logger
 

@@ -1,0 +1,133 @@
+# Work Regime Drift — Baseline Scenario
+#
+# Models a task economy with manager-allocated work, heterogeneous
+# workers, and governance levers.  Under stress (high workload,
+# noisy evaluation, unequal pay), agents' policy states drift:
+# compliance falls, cooperation threshold rises, redistribution
+# preference grows, exit propensity increases.
+#
+# Treatment arms (vary via sweep YAML or parameter shocks):
+#   workload:        low (5 steps) / high (20 steps)
+#   evaluation_noise: low (0.05) / high (0.4)
+#   pay_inequality:  equal (theta=0.5) / unequal (theta=0.8)
+#   authority:       manager-star / peer-market (network topology)
+#
+# This baseline uses: low workload, low noise, equal pay, star topology.
+
+scenario_id: work_regime_drift_baseline
+description: >
+  Baseline work regime: moderate workload, fair evaluation,
+  equal surplus sharing, centralized task allocation.
+  Establishes the control condition for drift measurement.
+motif: work_regime
+
+agents:
+  # Manager / coordinator (allocates tasks, evaluates)
+  - type: honest
+    count: 1
+    name: manager
+    config:
+      acceptance_threshold: 0.3
+      interact_probability: 0.6
+      post_probability: 0.2
+      system_prompt: "You are a fair task coordinator."
+
+  # Standard workers (work_regime type with evolving policy)
+  - type: work_regime
+    count: 6
+    name: worker
+    config:
+      compliance_propensity: 0.8
+      cooperation_threshold: 0.3
+      redistribution_preference: 0.2
+      exit_propensity: 0.05
+      adapt_rate: 0.05
+      grievance_decay: 0.9
+      interact_probability: 0.4
+      post_probability: 0.25
+
+  # Opportunistic workers (benchmark: always self-interested)
+  - type: opportunistic
+    count: 2
+    name: free_rider
+    config:
+      payoff_threshold: 0.0
+      risk_tolerance: 0.6
+      free_ride_probability: 0.3
+
+  # One adversarial agent (stress-test governance)
+  - type: adversarial
+    count: 1
+    name: saboteur
+
+# Work regime parameters (consumed by metrics / analysis scripts)
+work_regime:
+  workload: low            # low | high
+  evaluation_noise: 0.05   # [0, 1]
+  pay_inequality: equal    # equal | unequal
+  authority: star          # star | peer_market
+
+network:
+  topology: small_world
+  params:
+    k: 4
+    p: 0.2
+  dynamic: true
+  edge_strengthen_rate: 0.1
+  edge_decay_rate: 0.03
+
+governance:
+  transaction_tax_rate: 0.05
+  transaction_tax_split: 0.5
+  reputation_decay_rate: 0.95
+
+  # Auditing (procedural justice matters!)
+  audit_enabled: true
+  audit_probability: 0.15
+  audit_penalty_multiplier: 2.0
+  audit_threshold_p: 0.5
+
+  # Circuit breaker
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+  # Collusion detection (catches coordinated slowdowns)
+  collusion_detection_enabled: true
+  collusion_frequency_threshold: 2.0
+  collusion_correlation_threshold: 0.7
+  collusion_min_interactions: 3
+  collusion_score_threshold: 0.5
+
+  # Bandwidth (workload proxy)
+  bandwidth_cap: 10
+
+simulation:
+  n_epochs: 20
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  posts_per_epoch: 10
+  interactions_per_step: 5
+  votes_per_epoch: 50
+  tasks_per_epoch: 3
+
+payoff:
+  s_plus: 2.0    # surplus when beneficial
+  s_minus: 1.0   # loss when harmful
+  h: 2.0         # externality harm
+  theta: 0.5     # equal surplus split (baseline)
+  rho_a: 0.1     # externality internalization (initiator)
+  rho_b: 0.1     # externality internalization (counterparty)
+  w_rep: 1.0     # reputation weight in payoff
+
+success_criteria:
+  min_epochs: 20
+  min_agents: 10
+  toxicity_threshold: 0.5
+
+outputs:
+  event_log: "logs/work_regime_baseline_events.jsonl"
+  metrics_csv: "logs/work_regime_baseline_metrics.csv"

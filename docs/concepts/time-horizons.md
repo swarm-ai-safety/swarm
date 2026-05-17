@@ -1,3 +1,7 @@
+---
+description: "Based on Herbie Bradley's \"Glimpses of AI Progress\" (Pathways AI, 2025)."
+---
+
 # Time Horizon Metrics
 
 Based on Herbie Bradley's "Glimpses of AI Progress" (Pathways AI, 2025).

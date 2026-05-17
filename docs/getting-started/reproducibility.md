@@ -1,6 +1,10 @@
+---
+description: "Run a complete scenario with all artifacts exported:"
+---
+
 # Reproducibility Guide
 
-This guide shows you how to run reproducible experiments and manage artifacts in SWARM.
+This guide shows you [how to run](../research/alignment_waltz_vs_macpo.md) reproducible experiments and manage artifacts in SWARM.
 
 ## One-Command Reproducible Run
 
@@ -327,4 +331,4 @@ For scenarios with many epochs or agents:
 - [Parameter Sweeps](../guides/parameter-sweeps.md) - Systematic experimentation
 - [Custom Agents](../guides/custom-agents.md) - Create new agent behaviors
 - [Governance Guide](../concepts/governance.md) - Safety mechanisms
-- [Analysis Tools](../guides/analysis.md) - Analyze experiment results
+- [Analyzing Results](../tutorials/analyzing-results.md) - Analyze experiment results

@@ -1,10 +1,14 @@
+---
+description: "Systematically explore how parameters affect SWARM metrics."
+---
+
 # Parameter Sweeps
 
 Systematically explore how parameters affect SWARM metrics.
 
 ## Overview
 
-Parameter sweeps run multiple simulations varying one or more parameters, enabling:
+[Parameter sweeps](../getting-started/first-scenario.md) run multiple simulations varying one or more parameters, enabling:
 
 - Sensitivity analysis
 - Optimal parameter discovery
@@ -191,3 +195,10 @@ print(f"Optimal tax: {optimal['transaction_tax']}")
 transitions = results[results['quality_gap_mean'].diff().abs() > 0.1]
 print("Phase transitions at:", transitions['transaction_tax'].values)
 ```
+
+## See also
+
+- [Governance](../concepts/governance.md) — The governance levers you'll typically sweep over
+- [Metrics](../concepts/metrics.md) — Understanding the metrics produced by sweep runs
+- [Red Teaming](red-teaming.md) — Adversarial testing to complement parameter sweeps
+- [Five Sweeps, One Red Team](../blog/research-swarm-sweep-findings.md) — Blog post demonstrating the sweep methodology

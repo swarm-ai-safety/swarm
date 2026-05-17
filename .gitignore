@@ -27,6 +27,7 @@ htmlcov/
 logs/
 .env
 .venv/
+.venv-build/
 venv/
 .streamlit/secrets.toml
 .hypothesis/
@@ -49,11 +50,13 @@ promo/
 research/
 docs/papers/
 
+# Company-role agents (run as independent sessions, not committed)
+agents/
+
 # Relocated directories (prevent re-creation at root)
 submissions/
 /bridges/
 swarm-api/
-examples/demo/
 
 # API keys and secrets
 *.pem
@@ -77,6 +80,9 @@ secrets.json
 # Binary/regeneratable artifacts (prevent index race conditions across sessions)
 *.pdf
 *.png
+# Exception: viz assets (committed, served by Next.js)
+!viz/public/sprites/*.png
+!viz/public/splash.png
 *.parquet
 **/fontlist*.json
 
@@ -87,18 +93,38 @@ lean/lake-packages/
 lean/lake-manifest.json
 lean/build/
 
+# GGUF model files (llama.cpp)
+models/
+
 # Runtime artifacts
 .DS_Store
 sandboxes/
 .worktrees/
+agent-orchestrator.yaml
 *.db
 # runs/ is fully ignored above (migrated to swarm-artifacts)
 node_modules/
+
+# Next.js static export build artifact
+docs/game-app/
 
 # Allow documentation images
 !docs/**/*.png
 
 # Allow secrets scanner tooling (matched by *_secret* above)
 !.claude/hooks/scan_secrets.sh
-!.claude/hooks/post_write_secrets_check.sh
+!.claude/hooks/post_write_check.sh
 !.claude/commands/scan_secrets.md
+
+# Session-local docs reminder queue (cleared each commit)
+.claude/docs_reminders.log
+
+# Hook bypass audit trail (local-only, see THREAT_MODEL.md §3)
+.claude/hook_bypass.log
+
+# Allow provenance audit log (matched by *.jsonl above)
+!.claude/provenance.jsonl
+
+# Letta Code
+.letta/settings.local.json
+!.letta/memory/runs/

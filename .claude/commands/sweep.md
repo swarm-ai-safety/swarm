@@ -1,6 +1,6 @@
 # /sweep
 
-Run a parameter sweep and write results to a standardized run folder.
+Run a parameter sweep and write results to a standardized run folder — use standalone when you need sweep data only, without statistical analysis or paper scaffolding. Distinct from `/run_scenario` (single scenario, single seed), `/analyze_experiment` (statistical analysis on existing data), and `/full_study` (end-to-end pipeline chaining sweep + analysis + plots + paper).
 
 ## Usage
 

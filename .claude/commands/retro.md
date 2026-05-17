@@ -28,6 +28,26 @@ Session Health
   Tasks: 4
 ```
 
+### Provenance Analysis
+
+If `.claude/provenance.jsonl` exists and is non-empty, filter entries relevant to this session (by `session_id` field if present, otherwise use entries from the last 4 hours as a heuristic). Report:
+
+```
+Provenance (this session)
+  Commits tracked: 4
+  Docs co-staged:  2/4 (50%)
+  Reminders resolved: 3/5 (60%)
+  Reminders unresolved: 2
+```
+
+Where:
+- **Commits tracked**: number of provenance entries matching the session filter
+- **Docs co-staged**: entries where `files_changed` includes CHANGELOG.md, README.md, or AGENTS.md
+- **Reminders resolved**: sum of `docs_reminders_resolved` across entries
+- **Reminders unresolved**: sum of `docs_reminders_unresolved` across entries
+
+If `.claude/provenance.jsonl` doesn't exist or has no matching entries, skip this sub-section silently.
+
 ## Phase 2: Trajectory Decomposition
 
 Before scanning for patterns, decompose the session into structured steps:
@@ -65,11 +85,12 @@ Where:
 
 Also apply a **cost/benefit filter**: if creating the automation has more overhead than doing it manually 2-3 more times, mark it as "not worth automating yet" but still report it.
 
-Classify each candidate into one of three tiers:
+Classify each candidate into one of four tiers (prefer higher tiers):
 
 | Tier | Where it lives | When to use |
 |---|---|---|
-| **Slash command** | `.claude/commands/*.md` | General, cross-session, reusable workflow |
+| **Extend existing** | `.claude/commands/*.md` (modified) | Pattern fits as a new mode/arg on an existing command |
+| **New slash command** | `.claude/commands/*.md` (new file) | Genuinely unrelated to any existing command |
 | **Specialist agent** | `.claude/agents/*.md` | Domain-specific multi-step reasoning |
 | **Session-scoped** | (noted, not persisted) | Too narrow for permanence; worth remembering for similar future tasks |
 
@@ -89,14 +110,23 @@ Rate the session on two axes (inspired by SWE-bench's F2P/P2P grading):
 
 - **Goal completion**: Did the intended tasks get done? (FULL / PARTIAL / BLOCKED)
 - **Maintenance**: Were existing tests/code kept passing? (CLEAN / REGRESSED)
+- **Docs compliance**: If provenance data is available for this session, factor the docs compliance rate into the grade. If >50% of commits had unresolved reminders (`docs_reminders_unresolved > 0`), note it as a maintenance concern (e.g. "Docs compliance: 2/4 commits had unresolved reminders — consider addressing before session close").
 - **Overall**: CLEAN (all goals met, nothing broken), MESSY (goals met but with corrections/retries), or BLOCKED (goals not fully achieved)
 
 ## Phase 7: Generate
 
-Ask the user which candidates to create. For each selected candidate:
-- Generate the `.claude/commands/*.md` or `.claude/agents/*.md` file
+**Extend, don't proliferate.** This is a hard rule (see CLAUDE.md "Extend, don't proliferate"). Before proposing ANY new command, agent, or hook:
+
+1. Read `.claude/commands/` and `.claude/agents/` to find the closest existing match.
+2. If one exists, propose a new `--flag` or mode section on it — not a new file.
+3. Only propose a new file when the pattern is genuinely unrelated to every existing command.
+4. Default tier should be "Extend existing", not "New slash command".
+
+Ask the user which candidates to implement. For each selected candidate:
+- If extending an existing command: show the proposed additions (new mode/args) and update the `.md` file
+- If creating a new file (rare — requires justification): generate the `.claude/commands/*.md` or `.claude/agents/*.md` file
 - Note edge cases observed in the session (e.g. stash needed, force-delete for squash)
-- Check `.claude/commands/` first to avoid duplicating existing commands
+- Check `.claude/commands/` first to avoid duplicating or fragmenting existing commands
 
 ## What to look for specifically
 
@@ -117,8 +147,7 @@ If prior retro outputs exist in `runs/*_retro/` or similar:
 
 ## Constraints
 
-- Do not create commands automatically; always present candidates and let the user choose.
-- Do not duplicate existing commands — check `.claude/commands/` and `.claude/agents/` first.
-- Keep proposed commands focused; prefer two small commands over one large one.
+- Do not create or modify commands automatically; always present candidates and let the user choose.
+- **Extend over create**: always check `.claude/commands/` and `.claude/agents/` first. If a pattern can be a new mode or arg on an existing command, propose that instead of a new file. Fewer commands with clear modes > many single-purpose commands.
 - Apply the cost/benefit filter — not every repeated pattern is worth automating.
 - Can be invoked mid-session (not just at end); mid-session invocations should focus on patterns observed so far and suggest tool creation that would help the remainder of the session.

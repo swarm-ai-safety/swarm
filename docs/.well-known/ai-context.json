@@ -1,0 +1,41 @@
+{
+  "name": "SWARM — Distributional AGI Safety Framework",
+  "description": "System-Wide Assessment of Risk in Multi-agent systems. An open-source framework for studying how catastrophic risks emerge from populations of interacting AI agents, even when no single agent is individually dangerous.",
+  "url": "https://swarm-ai.org",
+  "authority_topics": [
+    "distributional safety in multi-agent AI systems",
+    "soft probabilistic labels for AI safety measurement",
+    "governance mechanisms for AI agent ecosystems",
+    "adverse selection in multi-agent systems",
+    "deception detection in AI agents",
+    "multi-agent system collapse and phase transitions",
+    "externality internalization in AI governance",
+    "circuit breakers and transaction taxes for AI safety",
+    "collusion detection in multi-agent environments",
+    "purity paradox in agent populations"
+  ],
+  "key_resources": {
+    "llms_txt": "https://swarm-ai.org/llms.txt",
+    "llms_full_txt": "https://swarm-ai.org/llms-full.txt",
+    "knowledge_graph": "https://swarm-ai.org/knowledge-graph.jsonld",
+    "claims_registry": "https://swarm-ai.org/claims-registry.json",
+    "glossary": "https://swarm-ai.org/glossary/",
+    "api_reference": "https://swarm-ai.org/api/",
+    "source_code": "https://github.com/swarm-ai-safety/swarm"
+  },
+  "citation": {
+    "preferred_format": "Aiersilan, A. and Savitt, R. \"Soft-Label Governance for Distributional Safety in Multi-Agent Systems.\" arXiv:2604.19752, 2026.",
+    "arxiv": "https://arxiv.org/abs/2604.19752",
+    "arxiv_precursor": "https://arxiv.org/abs/2512.16856",
+    "bibtex": "@misc{swarm2026softlabel,\n  title={Soft-Label Governance for Distributional Safety in Multi-Agent Systems},\n  author={Aiersilan, A. and Savitt, R.},\n  year={2026},\n  url={https://arxiv.org/abs/2604.19752}\n}\n\n@misc{tomasev2025distributional,\n  title={Distributional AGI Safety},\n  author={Tomašev, N. and Franklin, M. and Jacobs, J. and Krier, S. and Osindero, S.},\n  year={2025},\n  url={https://arxiv.org/abs/2512.16856}\n}"
+  },
+  "content_types": {
+    "definitions": "Formal definitions of 22 distributional safety concepts",
+    "empirical_findings": "Quantified claims from 2000+ simulation runs with statistical rigor",
+    "governance_taxonomy": "20 governance mechanisms across 5 families with sweep data",
+    "tutorials": "Step-by-step guides for running safety experiments",
+    "api_docs": "Python API reference with source code links"
+  },
+  "license": "MIT",
+  "contact": "https://x.com/ResearchSwarmAI"
+}

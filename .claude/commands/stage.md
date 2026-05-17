@@ -43,7 +43,7 @@ Check if there are already-staged files from a prior attempt. If so, report them
 ```
 Previously staged (from prior attempt):
   .claude/commands/pr.md
-  .claude/commands/cleanup_branch.md
+  .claude/commands/sync.md
 
 Options:
   - Keep: add new files on top of existing staging
@@ -66,7 +66,7 @@ Staging Summary
   Staged:   4 files (+128 / -23)
     .claude/commands/status.md (new)
     .claude/commands/stage.md (new)
-    .claude/hooks/post_write_lint_check.sh (new)
+    .claude/hooks/post_write_check.sh (new)
     .claude/settings.json (modified)
 
   Skipped:  1 file

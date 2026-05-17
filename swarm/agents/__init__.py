@@ -11,6 +11,11 @@ from swarm.agents.base import (
     BaseAgent,
     Observation,
 )
+from swarm.agents.behavioral import (
+    AdaptiveAgent,
+    CautiousAgent,
+    CollaborativeAgent,
+)
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
 from swarm.agents.ldt_agent import LDTAgent
@@ -32,12 +37,14 @@ from swarm.agents.rain_river import (
 )
 from swarm.agents.ralph_agent import AdversarialRalphAgent, RalphLoopAgent
 from swarm.agents.self_optimizer import SelfOptimizerAgent
+from swarm.agents.threshold_dancer import ThresholdDancer
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,
     PointFarmerAgent,
     VandalAgent,
 )
+from swarm.agents.work_regime_agent import WorkRegimeAgent
 
 __all__ = [
     # Base classes
@@ -78,4 +85,12 @@ __all__ = [
     "ObfuscationStrategy",
     # Attack strategies
     "AttackStrategy",
+    # Threshold dancer adversary
+    "ThresholdDancer",
+    # Behavioral archetypes (issue #66)
+    "CautiousAgent",
+    "CollaborativeAgent",
+    "AdaptiveAgent",
+    # Work regime drift agent
+    "WorkRegimeAgent",
 ]

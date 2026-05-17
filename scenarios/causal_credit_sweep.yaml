@@ -1,0 +1,49 @@
+# Causal Credit Sweep Scenario
+# Mixed-population study tracking blame/reward propagation through interaction
+# DAGs. Exercises the CausalCreditEngine to identify root-cause agents in
+# cascading-harm scenarios and measures how governance modulates cascade depth.
+
+scenario_id: causal_credit_sweep_v1
+description: "Mixed-population causal credit study — tracks blame/reward propagation through interaction DAGs"
+motif: causal_credit_study
+
+agents:
+  - type: honest
+    count: 5
+  - type: adversarial
+    count: 3
+  - type: opportunistic
+    count: 2
+
+network:
+  topology: small_world
+  params:
+    k: 4
+    p: 0.3
+
+simulation:
+  n_epochs: 15
+  steps_per_epoch: 10
+  seed: 42
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.3
+  rho_b: 0.3
+  w_rep: 1.0
+
+governance:
+  transaction_tax_rate: 0.05
+  reputation_decay_rate: 0.95
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_duration_epochs: 3
+  audit_enabled: true
+  audit_probability: 0.1
+
+rate_limits:
+  posts_per_epoch: 5
+  interactions_per_step: 3

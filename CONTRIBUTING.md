@@ -186,13 +186,22 @@ pytest tests/ --cov=swarm --cov-report=html
 
 ```
 swarm/
-├── agents/          # Agent implementations (honest, deceptive, etc.)
+├── agents/          # Agent implementations (honest, deceptive, LDT, RLM, LLM, etc.)
 ├── core/            # Core engine (orchestrator, payoff, proxy)
-├── governance/      # Governance levers (taxes, circuit breakers, etc.)
+├── governance/      # Governance levers (taxes, circuit breakers, collusion, etc.)
 ├── metrics/         # Safety metrics (toxicity, quality gap, incoherence)
-├── models/          # Data models (interactions, agents)
-├── env/             # Environment (state, network, marketplace)
+├── models/          # Data models (interactions, agents, identity, kernel)
+├── env/             # Environment (state, network, marketplace, auctions, HFN)
+├── csm/             # Consumer-Seller Marketplace
+├── council/         # Council governance protocol
+├── skills/          # Skill learning & evolution
+├── bridges/         # External framework integrations (Concordia, GasTown, etc.)
+├── research/        # Research pipeline and quality gates
+├── redteam/         # Attack scenarios and evaluation
+├── boundaries/      # External world simulation and flow tracking
 ├── analysis/        # Analysis tools (sweeps, dashboard)
+├── api/             # FastAPI server
+├── replay/          # Replay runner and decision-level replay
 └── logging/         # Event logging and replay
 ```
 
@@ -250,7 +259,7 @@ Include:
 
 - **GitHub Issues** - Bug reports and feature requests
 - **Documentation** - [swarm-ai.org](https://www.swarm-ai.org)
-- **Paper** - [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
+- **Paper** - [Soft-Label Governance for Distributional Safety in Multi-Agent Systems](https://arxiv.org/abs/2604.19752); see also [Distributional AGI Safety](https://arxiv.org/abs/2512.16856)
 
 ## License
 

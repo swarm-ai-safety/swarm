@@ -14,6 +14,7 @@ from swarm.models.interaction import InteractionType, SoftInteraction
 
 if TYPE_CHECKING:
     from swarm.agents.memory_config import MemoryConfig
+    from swarm.knowledge.graph_memory import AgentMemorySnapshot
 
 # ----- Memory bounds (prevent unbounded growth in long runs) -----
 MAX_MEMORY_SIZE: int = 1000
@@ -87,6 +88,9 @@ class ActionType(Enum):
     AWM_TOOL_CALL = "awm_tool_call"        # Single tool call, episode continues
     AWM_FINISH_TASK = "awm_finish_task"    # Finalize episode, run verification
 
+    # Evolutionary game actions
+    EVO_GAME_MOVE = "evo_game_move"
+
     # Special actions
     NOOP = "noop"  # Do nothing this turn
 
@@ -119,6 +123,11 @@ class Action:
 
     # Metadata
     metadata: Dict = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        """Auto-inject action_type into metadata for RBAC enforcement."""
+        if "action_type" not in self.metadata:
+            self.metadata["action_type"] = self.action_type.value
 
     def to_dict(self) -> Dict:
         """Serialize action."""
@@ -234,6 +243,10 @@ class Observation:
     awm_episode_active: bool = False  # Whether episode is in progress
     awm_steps_remaining: int = 0  # Steps left before max_steps
 
+    # Artifact layer observations (emergent tool chaining)
+    available_artifacts: List[Dict] = field(default_factory=list)  # Consumable artifacts
+    artifact_pressure: Dict[str, float] = field(default_factory=dict)  # Unmet demand by kind
+
 
 @dataclass
 class InteractionProposal:
@@ -285,6 +298,7 @@ class BaseAgent(ABC):
         self.agent_type = agent_type
         self.roles = roles or [Role.WORKER]
         self.config = config or {}
+        self.is_external: bool = False
         self._rng: random.Random = rng or random.Random()
 
         # Memory configuration (import here to avoid circular imports)
@@ -521,6 +535,27 @@ class BaseAgent(ABC):
         self._counterparty_memory[counterparty_id] = (
             current * (1 - alpha) + new_p * alpha
         )
+
+    def load_prior_memory(self, snapshot: "AgentMemorySnapshot") -> None:
+        """
+        Load trust priors from a prior run's snapshot.
+
+        Sets _counterparty_memory from snapshot.counterparty_trust.
+        Does NOT overwrite interaction_history (ephemeral per-run).
+
+        Args:
+            snapshot: AgentMemorySnapshot from a prior run
+        """
+        from swarm.knowledge.graph_memory import AgentMemorySnapshot
+
+        if not isinstance(snapshot, AgentMemorySnapshot):
+            raise TypeError(f"Expected AgentMemorySnapshot, got {type(snapshot)}")
+
+        # Validate before loading
+        snapshot.validate()
+
+        # Load trust priors (counterparty_memory)
+        self._counterparty_memory = snapshot.counterparty_trust.copy()
 
     def should_post(self, observation: Observation) -> bool:
         """Determine if agent should create a post."""

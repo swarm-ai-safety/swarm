@@ -14,6 +14,7 @@ from swarm.api.config import APIConfig  # noqa: E402
 from swarm.api.middleware import (  # noqa: E402
     _api_keys,
     _key_quotas,
+    _key_scopes,
     _rate_limit_windows,
     _trusted_keys,
     register_api_key,
@@ -33,37 +34,56 @@ def _clear_middleware_state():
 
     _api_keys.clear()
     _key_quotas.clear()
+    _key_scopes.clear()
     _rate_limit_windows.clear()
     _trusted_keys.clear()
     agents_mod._registration_rate.clear()
     agents_mod._registered_agents.clear()
+    agents_mod._pending_keys.clear()
     posts_mod._public_rate.clear()
     yield
     _api_keys.clear()
     _key_quotas.clear()
+    _key_scopes.clear()
     _rate_limit_windows.clear()
     _trusted_keys.clear()
     agents_mod._registration_rate.clear()
     agents_mod._registered_agents.clear()
+    agents_mod._pending_keys.clear()
     posts_mod._public_rate.clear()
 
 
 @pytest.fixture(autouse=True)
 def _use_temp_db(tmp_path):
     """Point persistence stores at a temp SQLite DB for test isolation."""
+    import swarm.api.routers.governance as governance_mod
     import swarm.api.routers.posts as posts_mod
     import swarm.api.routers.runs as runs_mod
-    from swarm.api.persistence import PostStore, RunStore
+    import swarm.api.routers.scenarios as scenarios_mod
+    import swarm.api.routers.simulations as simulations_mod
+    from swarm.api.persistence import (
+        PostStore,
+        ProposalStore,
+        RunStore,
+        ScenarioStore,
+        SimulationStore,
+    )
 
     db_path = tmp_path / "test_api.db"
     runs_mod._store = RunStore(db_path=db_path)
     posts_mod._post_store = PostStore(db_path=db_path)
+    governance_mod._store = ProposalStore(db_path=db_path)
+    scenarios_mod._store = ScenarioStore(db_path=db_path)
+    simulations_mod._store = SimulationStore(db_path=db_path)
     # Clear shutdown state from previous tests
     runs_mod._shutting_down.clear()
     runs_mod._run_cancel_events.clear()
     yield
     runs_mod._store = None
     posts_mod._post_store = None
+    governance_mod._store = None
+    scenarios_mod._store = None
+    simulations_mod._store = None
 
 
 @pytest.fixture
@@ -1154,3 +1174,94 @@ class TestFeedQueryModel:
 
         fq = FeedQuery(tags=["a", "b"], limit=50, offset=10, agent_id="x")
         assert fq.limit == 50
+
+
+# ---------------------------------------------------------------------------
+# Thread-safety: concurrent store singleton init
+# ---------------------------------------------------------------------------
+
+
+class TestStoreThreadSafety:
+    """Verify that concurrent calls to lazy-init helpers return the same instance."""
+
+    def test_run_store_concurrent_init(self, tmp_path):
+        import threading
+
+        import swarm.api.routers.runs as runs_mod
+        from swarm.api.persistence import RunStore
+
+        # Reset to None so the lazy-init path is exercised
+        runs_mod._store = None
+        db_path = tmp_path / "thread_run.db"
+        results: list = []
+
+        def _init():
+            s = runs_mod.get_store()
+            results.append(id(s))
+
+        threads = [threading.Thread(target=_init) for _ in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        # All calls must return the same singleton instance
+        assert len(set(results)) == 1
+
+        # Restore test isolation
+        runs_mod._store = RunStore(db_path=db_path)
+
+    def test_scenario_store_concurrent_init(self, tmp_path):
+        import threading
+
+        import swarm.api.routers.scenarios as scenarios_mod
+        from swarm.api.persistence import ScenarioStore
+
+        scenarios_mod._store = None
+        db_path = tmp_path / "thread_scen.db"
+        results: list = []
+
+        def _init():
+            s = scenarios_mod._get_store()
+            results.append(id(s))
+
+        threads = [threading.Thread(target=_init) for _ in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert len(set(results)) == 1
+        scenarios_mod._store = ScenarioStore(db_path=db_path)
+
+    def test_posts_rate_limit_concurrent(self):
+        """_check_public_rate_limit must not corrupt _public_rate under concurrency."""
+        import threading
+        from unittest.mock import MagicMock
+
+        import swarm.api.routers.posts as posts_mod
+
+        posts_mod._public_rate.clear()
+        errors: list = []
+
+        def _hit():
+            req = MagicMock()
+            req.client.host = "1.2.3.4"
+            try:
+                posts_mod._check_public_rate_limit(req)
+            except Exception as exc:
+                # 429 is expected once the rate limit is hit — not an error
+                from fastapi import HTTPException
+                if not isinstance(exc, HTTPException) or exc.status_code != 429:
+                    errors.append(exc)
+
+        threads = [threading.Thread(target=_hit) for _ in range(20)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+
+        assert not errors, f"Unexpected errors: {errors}"
+        # All 20 hits recorded for the same IP (rate limit not reached at 20 < 120)
+        assert len(posts_mod._public_rate.get("1.2.3.4", [])) == 20
+        posts_mod._public_rate.clear()

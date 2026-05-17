@@ -91,7 +91,6 @@ def add_section_headers(content: str) -> str:
     added_methods = has_methods
     added_results = has_results
     added_conclusion = has_conclusion
-    in_first_para = True
     para_count = 0
 
     for i, line in enumerate(lines):

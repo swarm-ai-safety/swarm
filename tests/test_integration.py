@@ -261,10 +261,16 @@ class TestCallbackIntegration:
         assert epoch_log == [m.epoch for m in metrics]
 
     def test_interaction_callback_fires(self):
-        config = OrchestratorConfig(n_epochs=3, steps_per_epoch=5, seed=7)
+        config = OrchestratorConfig(n_epochs=5, steps_per_epoch=10, seed=7)
         orch = Orchestrator(config=config)
-        for i in range(3):
-            orch.register_agent(HonestAgent(agent_id=f"h_{i}"))
+        # Use high interact_probability to ensure interactions happen deterministically
+        for i in range(4):
+            orch.register_agent(
+                HonestAgent(
+                    agent_id=f"h_{i}",
+                    config={"interact_probability": 0.95, "post_probability": 0.0},
+                )
+            )
 
         interactions_logged: list[float] = []
         orch.on_interaction_complete(lambda ix, pa, pb: interactions_logged.append(pa))

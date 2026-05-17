@@ -1,4 +1,4 @@
-site_name: SWARM
+site_name: "SWARM — Open-Source Multi-Agent AI Safety Framework"
 site_description: "SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework"
 site_url: https://swarm-ai.org
 repo_url: https://github.com/swarm-ai-safety/swarm
@@ -73,8 +73,24 @@ extra_javascript:
   - javascripts/mathjax.js
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
 
+hooks:
+  - docs/overrides/hooks/external_links.py
+  - docs/overrides/hooks/semantic_html.py
+
 plugins:
   - search
+  - social
+  - meta
+  - git-revision-date-localized:
+      enable_creation_date: true
+      fallback_to_build_date: true
+      enable_git_follow: false
+  - rss:
+      match_path: "blog/.*"
+      date_from_meta:
+        as_creation: date
+      categories:
+        - tags
   - mkdocstrings:
       handlers:
         python:
@@ -96,23 +112,39 @@ nav:
     - Soft Labels: concepts/soft-labels.md
     - Metrics: concepts/metrics.md
     - Governance: concepts/governance.md
+    - Distributional Safety: concepts/distributional-safety.md
     - Emergence: concepts/emergence.md
+    - Deception: concepts/deception.md
+    - Coordination Risks: concepts/coordination-risks.md
+    - Governance Taxonomy: concepts/governance-mechanisms-taxonomy.md
     - Time Horizons: concepts/time-horizons.md
     - Recursive Research: concepts/recursive-research.md
+  - Tutorials:
+    - Overview: tutorials/index.md
+    - Your First Governance Experiment: tutorials/first-governance-experiment.md
+    - Understanding Soft Labels: tutorials/understanding-soft-labels.md
+    - Analyzing Results: tutorials/analyzing-results.md
   - Guides:
     - Overview: guides/index.md
     - Claude Code: guides/claude-code.md
+    - Framework Overview: guides/framework-overview.md
+    - Governance Simulation: guides/governance-simulation.md
     - Writing Scenarios: guides/scenarios.md
     - Custom Agents: guides/custom-agents.md
     - Parameter Sweeps: guides/parameter-sweeps.md
     - LLM Agents: guides/llm-agents.md
+    - Risk Assessment: guides/risk-assessment.md
     - Red Teaming: guides/red-teaming.md
+    - Benchmarking: guides/benchmarking.md
     - Research Workflow: guides/research-workflow.md
+    - Custom Governance Levers: guides/governance-levers.md
+    - Transferability Considerations: guides/transferability.md
   - API Reference:
     - Overview: api/index.md
     - Core: api/core.md
     - Agents: api/agents.md
     - Governance: api/governance.md
+    - Contracts: api/contracts.md
     - Metrics: api/metrics.md
   - Bridges:
     - Overview: bridges/index.md
@@ -121,6 +153,11 @@ nav:
     - GasTown: bridges/gastown.md
     - AgentXiv: bridges/agentxiv.md
     - ClawXiv: bridges/clawxiv.md
+    - Claude Code: bridges/claude_code.md
+    - Prime Intellect: bridges/prime_intellect.md
+    - Ralph: bridges/ralph.md
+    - Research Swarm: bridges/research_swarm.md
+    - OpenClaw LLM Router: bridges/openclaw-swarm-llmrouter.md
   - Research:
     - Overview: research/index.md
     - Theoretical Foundations: research/theory.md
@@ -130,22 +167,53 @@ nav:
     - AI Index 2025: research/ai-index-2025.md
     - Self-Modification Governance: research/self-modification-governance-byline.md
     - Self-Modification Governance Implementation Checklist: research/self-mod-governance-implementation-checklist.md
+    - InitRunner vs SWARM Comparison: research/initrunner-swarm-comparison.md
+    - AIRS-Bench Governance Analysis: research/airs-bench-governance-analysis.md
   - Comparison: comparison.md
+  - SWARM vs Alternatives: swarm-vs-alternatives.md
+  - Glossary: glossary.md
+  - Game: game.md
   - Blog:
     - blog/index.md
+    - "SimWorld's Delivery Agents Look Profitable. They're Also Adversely Selected.": blog/simworld-delivery-what-profit-misses.md
+    - "The Shape of the Capability–Safety Frontier": blog/capability-safety-pareto-frontier.md
+    - "Transparency Stabilizes Escalation — But Only With Safety Training": blog/asymmetric-information-escalation.md
+    - "Does Model Size Matter for Safety?": blog/model-size-vs-escalation.md
+    - "Deontological Framing Reduces Deception by 95%": blog/prompt-sensitivity-deception-framing.md
+    - "Three Turns of Forced Cooperation Eliminate Escalation Spirals": blog/cooperation-window-phase-transition.md
+    - "Deception Is Structural, Not a Sampling Artifact": blog/temperature-vs-deception.md
+    - "No Governance Prevents Nuclear Exchange When a Hawk Is Present": blog/governance-sweep-nuclear-rate.md
+    - "LLMs Are More Deceptive Than Scripted Agents": blog/escalation-sandbox-llm-vs-scripted.md
+    - "Six Frontier Models Played a Bluffing Game": blog/six-frontier-models-played-a-bluffing-game.md
+    - "Hodoscope Trajectory Analysis": blog/hodoscope-trajectory-analysis.md
+    - "Skill Activation Is the Bottleneck": blog/skill-activation-is-the-bottleneck.md
+    - "The Cure Was Worse Than the Disease": blog/runaway-intelligence-three-level-containment.md
+    - "Threshold Dancer Results": blog/threshold-dancer-results.md
+    - "Red-Teaming the Contract Screening Mechanism": blog/red-team-contract-screening.md
+    - "Perfect Separation Holds Across 10 Seeds": blog/contract-screening-sweep-10-seeds.md
+    - "Costly Contracts Separate Honest from Adversaries": blog/contract-screening-separating-equilibrium.md
+    - "Does Model Size Matter for Safety?": blog/local-llama-model-size-safety.md
+    - "We Gave an LLM a Goal and a Memory": blog/concordia-entities-governance.md
+    - "Training an LLM Agent with RL": blog/qwen3-30b-trains-in-the-swarm-economy.md
+    - "SkillRL Agents Learn 5x Faster": blog/skillrl-dynamics.md
     - "Your CI Is Flaky Because Your Margins Are Zero": blog/your-ci-is-flaky-because-your-margins-are-zero.md
     - "I Got Claude Code to Spin Up 10 Subagents": blog/claude-code-10-subagents.md
     - "An AI Tax Planner Learned Progressive Taxation": blog/ai-economist-gtb-simulation.md
     - "An AI Agent Cut Its Own Costs by 98%": blog/self-optimizer-distributional-safety.md
+    - "Three Agents, Three Philosophies, One Benchmark": blog/three-agents-three-philosophies.md
+    - "What 13 Agent Versions Taught Us": blog/arc-agi-3-agent-development-lessons.md
+    - "Three Models, One Study — LLM Council Peer-Review": blog/llm-council-three-models-one-study.md
     - "Using LLM Councils for Multi-Agent Evaluation": blog/llm-councils-for-multi-agent-evaluation.md
     - "Two Eval Runs, One Model, 41% Apart": blog/two-eval-runs-one-model-41-percent-apart.md
-    - Governance Mechanisms Taxonomy: blog/governance-mechanisms-taxonomy.md
-    - GPT-4.1 Mini Plays the SWARM Economy: blog/gpt-41-mini-plays-the-swarm-economy.md
-    - RL Training Lessons for Multi-Agent Governance: blog/rl-training-lessons-multi-agent-governance.md
+
+    - "GPT-4.1 Mini Plays the SWARM Economy": blog/gpt-41-mini-plays-the-swarm-economy.md
+    - "RL Training Lessons for Multi-Agent Governance": blog/rl-training-lessons-multi-agent-governance.md
     - "11 Scenarios, 3 Regimes, 1 Critical Threshold": blog/cross-scenario-analysis.md
-    - What Financial Markets Teach Us About AI Safety: blog/markets-and-safety.md
-    - The Purity Paradox: blog/purity-paradox.md
-    - When Agent Ecosystems Collapse: blog/ecosystem-collapse.md
+    - "What Financial Markets Teach Us About AI Safety": blog/markets-and-safety.md
+    - "The Purity Paradox": blog/purity-paradox.md
+    - "When Agent Ecosystems Collapse": blog/ecosystem-collapse.md
+    - "Five Sweeps, One Red Team, and the Limits of Parametric Governance": blog/research-swarm-sweep-findings.md
+    - "We Modeled a Live AI Research Platform": blog/we-modeled-a-live-ai-research-platform.md
 
 extra:
   social:

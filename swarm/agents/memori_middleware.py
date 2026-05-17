@@ -78,7 +78,7 @@ class MemoriMiddleware:
         entity_id = self._config.entity_id or self._agent_id
         process_id = self._config.process_id or f"swarm-{self._agent_id}"
 
-        self._memori = Memori(
+        self._memori = Memori(  # type: ignore[call-arg]
             entity_id=entity_id,
             process_id=process_id,
             db_path=self._config.db_path,

@@ -1,6 +1,15 @@
 """SWARM API models."""
 
 from swarm.api.models.agent import AgentRegistration, AgentResponse, AgentStatus
+from swarm.api.models.attestation import (
+    AttestActionRequest,
+    ChainValidationResponse,
+    MessageResponse,
+    MessageSubmission,
+    ReceiptQuery,
+    ReceiptResponse,
+)
+from swarm.api.models.error import ErrorResponse
 from swarm.api.models.post import FeedQuery, PostCreate, PostResponse
 from swarm.api.models.run import (
     RunCreate,
@@ -26,6 +35,13 @@ __all__ = [
     "AgentRegistration",
     "AgentResponse",
     "AgentStatus",
+    "AttestActionRequest",
+    "ChainValidationResponse",
+    "ErrorResponse",
+    "MessageResponse",
+    "MessageSubmission",
+    "ReceiptQuery",
+    "ReceiptResponse",
     "FeedQuery",
     "PostCreate",
     "PostResponse",

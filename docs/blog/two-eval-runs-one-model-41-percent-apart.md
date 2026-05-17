@@ -1,3 +1,8 @@
+---
+date: 2026-02-12
+description: "How three environment fixes turned a broken eval into a useful one — and what that teaches about measuring agent behavior."
+---
+
 # Two Eval Runs, One Model, 41% Apart
 
 *How three environment fixes turned a broken eval into a useful one — and what that teaches about measuring agent behavior.*

@@ -86,6 +86,17 @@ class GovernanceConfig(BaseModel):
     adaptive_incoherence_threshold: float = 0.5
     adaptive_use_behavioral_features: bool = False
 
+    # Adaptive governance controller (contemplation + crystallization)
+    adaptive_controller_enabled: bool = False
+    adaptive_controller_evidence_window: int = 20
+    adaptive_controller_contemplation_interval: int = 5
+    adaptive_controller_min_evidence_epochs: int = 10
+    adaptive_controller_confidence_threshold: float = 0.8
+    adaptive_controller_crystallization_min_epochs: int = 5
+    adaptive_controller_require_human_review: bool = True
+    adaptive_controller_max_degradation_tolerance: float = 0.05
+    adaptive_controller_max_active_proposals: int = 3
+
     # Sybil detection (VAE paper)
     sybil_detection_enabled: bool = False
     sybil_similarity_threshold: float = 0.8  # Behavioral similarity threshold
@@ -176,6 +187,20 @@ class GovernanceConfig(BaseModel):
     loop_detector_freeze_threshold: int = 4  # violations before circuit breaker
     loop_detector_freeze_duration: int = 1  # epochs to freeze
 
+    # RBAC (Role-Based Access Control)
+    rbac_enabled: bool = False
+    rbac_violation_penalty: float = 0.5
+    rbac_violation_reputation_penalty: float = -0.2
+    rbac_high_stakes_actions: list[str] = []
+    rbac_security_clearance_required: int = 2
+    rbac_high_stakes_penalty_multiplier: float = 2.0
+    rbac_role_action_map: dict[str, list[str]] = {}
+
+    # Hardware trust rejection handling
+    hardware_trust_enabled: bool = False
+    hardware_trust_propagation_enabled: bool = True  # Propagate stop token to dependents
+    hardware_trust_recovery_max_steps: int = 10  # Max steps in constrained recovery mode
+
     # Diversity as Defense (DaD)
     diversity_enabled: bool = False
     diversity_rho_max: float = 0.5  # Correlation cap (Rule 1)
@@ -195,6 +220,27 @@ class GovernanceConfig(BaseModel):
     diversity_correlation_window: int = (
         50  # Window of recent interactions for correlation
     )
+
+    # Resample protocol (Bhatt et al., 2025 — "Ctrl-Z")
+    resample_enabled: bool = False
+    resample_suspicion_threshold: float = 0.6  # suspicion >= this triggers resample
+    resample_n_samples: int = 3  # additional samples drawn on flag
+    resample_trajectory_analysis: bool = False  # use trajectory context for suspicion
+    resample_trajectory_window: int = 5  # recent interactions for trend analysis
+    resample_incrimination_threshold: float = 2.0  # cumulative evidence to freeze agent
+    resample_compute_cost: float = 0.01  # per-sample compute surcharge
+    resample_evidence_decay: float = 0.9  # per-epoch evidence decay factor
+    resample_evidence_rep_weight: float = 0.5  # reputation penalty per evidence unit
+    # Cascade risk lever (artifact chain governance)
+    # NOTE: Defaults are provisional — not yet validated by parameter sweep.
+    # Run examples/run_cascade_sensitivity.py before relying on these in
+    # production scenarios.  See PR #397 review for context.
+    cascade_risk_enabled: bool = False
+    cascade_risk_threshold: float = 0.5  # Min cascade risk to trigger penalty
+    cascade_risk_penalty_scale: float = 1.0  # Cost multiplier
+    cascade_risk_reputation_scale: float = 0.5  # Reputation penalty multiplier
+    cascade_risk_p_threshold: float = 0.3  # Descendants below this p are "bad"
+    cascade_risk_window: int = 200  # Rolling interaction window for DAG analysis
 
     @model_validator(mode="after")
     def _run_validation(self) -> "GovernanceConfig":
@@ -276,6 +322,34 @@ class GovernanceConfig(BaseModel):
         # Adaptive governance validation
         if not 0.0 <= self.adaptive_incoherence_threshold <= 1.0:
             raise ValueError("adaptive_incoherence_threshold must be in [0, 1]")
+
+        # Adaptive controller validation
+        if self.adaptive_controller_evidence_window < 1:
+            raise ValueError("adaptive_controller_evidence_window must be >= 1")
+        if self.adaptive_controller_contemplation_interval < 1:
+            raise ValueError(
+                "adaptive_controller_contemplation_interval must be >= 1"
+            )
+        if self.adaptive_controller_min_evidence_epochs < 1:
+            raise ValueError(
+                "adaptive_controller_min_evidence_epochs must be >= 1"
+            )
+        if not 0.0 <= self.adaptive_controller_confidence_threshold <= 1.0:
+            raise ValueError(
+                "adaptive_controller_confidence_threshold must be in [0, 1]"
+            )
+        if self.adaptive_controller_crystallization_min_epochs < 1:
+            raise ValueError(
+                "adaptive_controller_crystallization_min_epochs must be >= 1"
+            )
+        if self.adaptive_controller_max_degradation_tolerance < 0:
+            raise ValueError(
+                "adaptive_controller_max_degradation_tolerance must be non-negative"
+            )
+        if self.adaptive_controller_max_active_proposals < 1:
+            raise ValueError(
+                "adaptive_controller_max_active_proposals must be >= 1"
+            )
 
         # Memory tier governance validation
         if not 0.0 <= self.memory_promotion_min_quality <= 1.0:
@@ -386,6 +460,18 @@ class GovernanceConfig(BaseModel):
         if self.loop_detector_freeze_duration < 1:
             raise ValueError("loop_detector_freeze_duration must be >= 1")
 
+        # RBAC validation
+        if self.rbac_violation_penalty < 0:
+            raise ValueError("rbac_violation_penalty must be non-negative")
+        if self.rbac_security_clearance_required < 0:
+            raise ValueError("rbac_security_clearance_required must be non-negative")
+        if self.rbac_high_stakes_penalty_multiplier < 0:
+            raise ValueError("rbac_high_stakes_penalty_multiplier must be non-negative")
+
+        # Hardware trust validation
+        if self.hardware_trust_recovery_max_steps < 1:
+            raise ValueError("hardware_trust_recovery_max_steps must be >= 1")
+
         # Diversity as Defense validation
         if not 0.0 <= self.diversity_rho_max <= 1.0:
             raise ValueError("diversity_rho_max must be in [0, 1]")
@@ -405,3 +491,30 @@ class GovernanceConfig(BaseModel):
             raise ValueError("diversity_audit_cost must be non-negative")
         if self.diversity_correlation_window < 1:
             raise ValueError("diversity_correlation_window must be >= 1")
+
+        # Resample protocol validation
+        if not 0.0 <= self.resample_suspicion_threshold <= 1.0:
+            raise ValueError("resample_suspicion_threshold must be in [0, 1]")
+        if self.resample_n_samples < 1:
+            raise ValueError("resample_n_samples must be >= 1")
+        if self.resample_trajectory_window < 2:
+            raise ValueError("resample_trajectory_window must be >= 2")
+        if self.resample_incrimination_threshold <= 0:
+            raise ValueError("resample_incrimination_threshold must be positive")
+        if self.resample_compute_cost < 0:
+            raise ValueError("resample_compute_cost must be non-negative")
+        if not 0.0 <= self.resample_evidence_decay <= 1.0:
+            raise ValueError("resample_evidence_decay must be in [0, 1]")
+        if self.resample_evidence_rep_weight < 0:
+            raise ValueError("resample_evidence_rep_weight must be non-negative")
+        # Cascade risk validation
+        if not 0.0 <= self.cascade_risk_threshold <= 1.0:
+            raise ValueError("cascade_risk_threshold must be in [0, 1]")
+        if self.cascade_risk_penalty_scale < 0:
+            raise ValueError("cascade_risk_penalty_scale must be non-negative")
+        if self.cascade_risk_reputation_scale < 0:
+            raise ValueError("cascade_risk_reputation_scale must be non-negative")
+        if not 0.0 <= self.cascade_risk_p_threshold <= 1.0:
+            raise ValueError("cascade_risk_p_threshold must be in [0, 1]")
+        if self.cascade_risk_window < 1:
+            raise ValueError("cascade_risk_window must be >= 1")

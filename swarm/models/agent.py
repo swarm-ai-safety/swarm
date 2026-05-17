@@ -15,6 +15,14 @@ class AgentType(Enum):
     ADVERSARIAL = "adversarial"
     RLM = "rlm"
     CREWAI = "crewai"
+    SWARMS = "swarms"
+    CODING = "coding"
+    TIERRA = "tierra"
+    CAUTIOUS = "cautious"
+    COLLABORATIVE = "collaborative"
+    ADAPTIVE = "adaptive"
+    WORK_REGIME = "work_regime"
+    SELF_MODIFYING = "self_modifying"
 
 
 class AgentStatus(Enum):

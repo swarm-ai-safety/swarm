@@ -1,6 +1,6 @@
 # /add_metric
 
-Add a new metric and wire it into SWARM reporting.
+Add a new metric and wire it into SWARM reporting — use when analysis reveals a measurement gap not covered by existing toxicity, quality-gap, or payoff metrics. Distinct from `/add_scenario` (new parameter config) and `/add_domain` (new task category with new observables).
 
 ## Usage
 

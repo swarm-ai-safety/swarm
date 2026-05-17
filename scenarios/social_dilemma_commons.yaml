@@ -1,0 +1,78 @@
+# Social Dilemma: Tragedy of the Commons
+# 4 agents harvest from a shared resource with different strategies.
+# Baseline scenario with no governance (control condition).
+
+scenario_id: social_dilemma_commons
+description: "Commons dilemma with sustainable, greedy, and conditional harvesters"
+motif: social_dilemma
+
+dilemma:
+  type: commons
+  resource_pool: 100.0
+  resource_regen_rate: 0.1
+  resource_capacity: 100.0
+
+agents:
+  - id: sustainable_1
+    type: llm
+    strategy: sustainable
+    llm:
+      provider: ollama
+      model: llama3.2
+      temperature: 0.3
+      max_tokens: 256
+      persona: "You are a careful resource manager who values long-term sustainability."
+
+  - id: sustainable_2
+    type: llm
+    strategy: sustainable
+    llm:
+      provider: ollama
+      model: llama3.2
+      temperature: 0.4
+      max_tokens: 256
+      persona: "You believe in fair use of shared resources and setting good examples."
+
+  - id: greedy_1
+    type: llm
+    strategy: greedy
+    llm:
+      provider: ollama
+      model: llama3.2
+      temperature: 0.7
+      max_tokens: 256
+      persona: "You want to maximize your own harvest before others take everything."
+
+  - id: conditional_1
+    type: llm
+    strategy: conditional
+    llm:
+      provider: ollama
+      model: llama3.2
+      temperature: 0.5
+      max_tokens: 256
+      persona: "You cooperate when others do, but switch to self-interest when trust breaks down."
+
+governance:
+  transaction_tax_rate: 0.0
+  reputation_decay_rate: 1.0
+  circuit_breaker_enabled: false
+  audit_enabled: false
+
+simulation:
+  n_epochs: 15
+  steps_per_epoch: 5
+  seed: 42
+
+payoff:
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.0
+  rho_b: 0.0
+  w_rep: 1.0
+
+outputs:
+  event_log: "logs/social_dilemma_commons_events.jsonl"
+  metrics_csv: "logs/social_dilemma_commons_metrics.csv"

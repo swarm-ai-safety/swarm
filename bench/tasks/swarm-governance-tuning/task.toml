@@ -1,0 +1,7 @@
+[task]
+name = "swarm-governance-tuning"
+description = "Find optimal governance via sweep and statistical analysis"
+difficulty = "hard"
+timeout = 900
+skills = ["parameter-sweep", "statistical-analysis"]
+domain = "swarm-safety"

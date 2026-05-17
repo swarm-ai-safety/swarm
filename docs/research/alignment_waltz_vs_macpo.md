@@ -1,3 +1,7 @@
+---
+description: "Summarize two alignment-central multi-agent papers and connect them to SWARM's research workflow so they can be validated with SWARM scenarios and metrics."
+---
+
 # Alignment Waltz vs MACPO (SWARM Research Note)
 
 ## Purpose
@@ -28,13 +32,13 @@ Summarize two alignment-central multi-agent papers and connect them to SWARM's r
 If you care about deployment-time safety without blanket refusals, this is a pragmatic design: a feedback agent that only intervenes when needed gives you a measurable safety gain without slowing down normal traffic. The core insight is that collaboration can shift the helpfulness-harmlessness tradeoff without requiring a new base model.
 
 **When to use in SWARM**
-Use this framing when you want to compare always-on governance vs targeted interventions. It maps cleanly to SWARM levers like circuit breakers, audits, and security controls, where you want intervention only on high-risk interactions.
+Use this framing when you want to compare always-on governance vs targeted interventions. It maps cleanly to SWARM levers like [circuit breakers](../concepts/governance.md), audits, and security controls, where you want intervention only on high-risk interactions.
 
 **MACPO**
 If your supervision is weaker than your model, this is one of the clearest training-time recipes for climbing that gap. The method is especially appealing when you can scale the number of weak teachers and iterate, because the gains appear to compound across rounds.
 
 **When to use in SWARM**
-Use this framing when you want to model weak-to-strong supervision dynamics via population composition and iterative evaluation. It aligns with experiments that vary the mix of honest/opportunistic/deceptive agents and test whether governance levers improve outcomes across rounds.
+Use this framing when you want to model weak-to-strong supervision dynamics via population composition and iterative evaluation. It aligns with experiments that vary the mix of honest/opportunistic/deceptive agents and test whether [governance levers](../getting-started/first-scenario.md) improve outcomes across rounds.
 
 ## Draft SWARM Scenarios
 These are starting-point YAMLs you can drop into `scenarios/` and tune.

@@ -47,8 +47,12 @@ class PayoffConfig(BaseModel):
             raise ValueError("h must be non-negative")
         if not 0 <= self.theta <= 1:
             raise ValueError("theta must be in [0, 1]")
-        if self.rho_a < 0 or self.rho_b < 0:
-            raise ValueError("rho values must be non-negative")
+        if not 0 <= self.rho_a <= 1:
+            raise ValueError("rho_a must be in [0, 1]")
+        if not 0 <= self.rho_b <= 1:
+            raise ValueError("rho_b must be in [0, 1]")
+        if not 0 <= self.w_rep <= 100:
+            raise ValueError("w_rep must be in [0, 100]")
 
     def to_dict(self) -> dict:
         """Convert to dictionary."""
@@ -149,13 +153,14 @@ class SoftPayoffEngine:
         S_soft = self.expected_surplus(interaction.p)
         E_soft = self.expected_harm(interaction.p)
 
-        return (
+        result: float = (
             self.config.theta * S_soft
             - interaction.tau
             - interaction.c_a
             - self.config.rho_a * E_soft
             + self.config.w_rep * interaction.r_a
         )
+        return result
 
     def payoff_counterparty(self, interaction: SoftInteraction) -> float:
         """
@@ -172,13 +177,14 @@ class SoftPayoffEngine:
         S_soft = self.expected_surplus(interaction.p)
         E_soft = self.expected_harm(interaction.p)
 
-        return (
+        result: float = (
             (1 - self.config.theta) * S_soft
             + interaction.tau
             - interaction.c_b
             - self.config.rho_b * E_soft
             + self.config.w_rep * interaction.r_b
         )
+        return result
 
     def payoff_breakdown_initiator(
         self, interaction: SoftInteraction
@@ -256,6 +262,39 @@ class SoftPayoffEngine:
             total=total,
         )
 
+    def payoffs_both(self, interaction: SoftInteraction) -> tuple[float, float]:
+        """
+        Compute both initiator and counterparty payoffs in a single call.
+
+        Avoids redundant expected_surplus / expected_harm computation
+        compared to calling payoff_initiator + payoff_counterparty separately.
+
+        Args:
+            interaction: The soft interaction
+
+        Returns:
+            (pi_a, pi_b): Initiator and counterparty payoffs
+        """
+        p = interaction.p
+        S_soft = p * self.config.s_plus - (1 - p) * self.config.s_minus
+        E_soft = (1 - p) * self.config.h
+
+        pi_a = (
+            self.config.theta * S_soft
+            - interaction.tau
+            - interaction.c_a
+            - self.config.rho_a * E_soft
+            + self.config.w_rep * interaction.r_a
+        )
+        pi_b = (
+            (1 - self.config.theta) * S_soft
+            + interaction.tau
+            - interaction.c_b
+            - self.config.rho_b * E_soft
+            + self.config.w_rep * interaction.r_b
+        )
+        return pi_a, pi_b
+
     def total_welfare(self, interaction: SoftInteraction) -> float:
         """
         Compute total welfare (sum of payoffs minus externality).
@@ -302,7 +341,10 @@ class SoftPayoffEngine:
         Returns:
             Break-even probability
         """
-        return self.config.s_minus / (self.config.s_plus + self.config.s_minus)
+        denominator = self.config.s_plus + self.config.s_minus
+        if denominator == 0:
+            return 0.5
+        return self.config.s_minus / denominator
 
     def social_break_even_p(self) -> float:
         """
@@ -316,4 +358,6 @@ class SoftPayoffEngine:
         """
         numerator = self.config.s_minus + self.config.h
         denominator = self.config.s_plus + self.config.s_minus + self.config.h
+        if denominator == 0:
+            return 0.5
         return numerator / denominator

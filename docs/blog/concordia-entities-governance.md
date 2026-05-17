@@ -1,3 +1,8 @@
+---
+date: 2026-02-15
+description: "Three Concordia entities backed by Llama 3.1 8B played the SWARM economy for 10 epochs across 3 seeds. They proposed 8x more interactions than scripted..."
+---
+
 # We Gave an LLM a Goal and a Memory. Governance Held Anyway.
 
 *Three Concordia entities backed by Llama 3.1 8B played the SWARM economy for 10 epochs across 3 seeds. They proposed 8x more interactions than scripted agents — and produced nearly identical payoffs.*
@@ -107,7 +112,7 @@ Swap the provider in the YAML to use OpenRouter, Anthropic, Google, or any OpenA
 - **Longer horizons** — 50-100 epochs to see if LLM agents develop emergent strategies as memory accumulates
 - **Response auditing** — logging raw LLM outputs to verify the parser captures actual intent
 
-The full data is in [`docs/papers/concordia_entity_sweep.md`](concordia_entity_sweep.md) and the event log at `logs/concordia_entity_sweep.jsonl`.
+The full data is in [`docs/papers/concordia_entity_sweep.md`](../papers/concordia_entity_sweep.md) and the event log at `logs/concordia_entity_sweep.jsonl`.
 
 ---
 

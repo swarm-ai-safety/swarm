@@ -1,84 +1,277 @@
 # /ship
 
-Commit and push in one shot. For quick direct-to-branch pushes without the full PR workflow.
+Commit and push in one shot. Consolidates the former `/commit_push`, `/fix_commit`, `/sweep_and_ship`, and `/close_and_ship` commands.
 
 ## Usage
 
-`/ship [commit message]`
+`/ship [options] [commit message]`
 
 Examples:
 - `/ship` (auto-generates commit message from diff)
 - `/ship "Fix typo in governance config"`
+- `/ship --fix "Add PettingZoo bridge"` (auto-fix lint/mypy before committing)
+- `/ship --test "Fix governance vulnerabilities"` (run tests before committing)
+- `/ship --fix --test "Add PettingZoo bridge"` (auto-fix lint/mypy, then run tests)
+- `/ship --all "Batch commit session output"` (stage everything safe)
+- `/ship --close b6t b7x "Finish live integration tests"` (close beads + commit + push)
+- `/ship --fix --close b6t` (auto-fix, close beads, commit, push)
+- `/ship --research-close` (update research memory, then commit + push)
+- `/ship --research-close "Finished governance knob sweep"` (with explicit message)
+
+## Argument parsing
+
+Parse `$ARGUMENTS` to extract:
+- `--fix`: Enable ruff/mypy auto-fix with retry loop (up to 3 attempts)
+- `--test [path]`: Run pytest before committing. If tests fail, stop and report (never auto-fix tests). Optional path restricts to specific test file/directory (e.g. `--test tests/test_governed_swarm.py`). Without a path, runs full suite with `pytest -x -q`.
+- `--all`: Stage all modified + untracked files (excluding secrets/junk), not just already-staged ones
+- `--close <bead-ids...>`: Close specified beads before committing. Bead IDs are tokens matching `distributional-agi-safety-*` or similar short IDs. Collect all bead IDs that follow `--close` until the next flag or quoted string.
+- `--research-close`: Run the research session close ritual (Phase 0) before committing. Updates memory files with session summary, active thread, and run pointers.
+- `--no-push`: Commit only, skip push step
+- Everything else in quotes (or the remaining non-flag text) is the commit message.
+
+Flag combinations: `--fix --test` runs lint/mypy auto-fix first (Phase 3), then tests (Phase 3.5). If `--fix` succeeds but tests fail, stop and report — never auto-fix test failures.
+
+If no flags are given, behavior matches the original `/ship`: commit staged changes and push.
 
 ## Behavior
 
-1) Check for changes:
-- Run `git status` to identify staged, unstaged, and untracked files.
-- If nothing to commit, say so and stop.
+### Phase 0: Research Close (only if `--research-close` flag is set)
 
-2) Already-committed early detection:
-- Before staging, identify the files you intend to commit.
-- Run `git diff HEAD -- <files>` for tracked files and check `git ls-files <file>` for untracked files.
-- If ALL target files already match HEAD (i.e. a parallel session committed them), report "already committed" and skip to step 7 (push check). This avoids a wasted stage+commit cycle.
+Runs the research session close ritual before any git operations.
 
-3) Stage changes:
+**Step 0a: Inventory changes**
+- Run `git status` and `git diff --stat` to see what changed this session.
+
+**Step 0b: Summarize session**
+- Generate a concise session summary: what files changed, what was learned, what's next.
+- Format as an append-only entry with ISO timestamp header.
+
+**Step 0c: Append to research log**
+- Append the session summary to `.letta/memory/threads/research-log.md`.
+- Each entry format:
+  ```
+  ## <ISO-8601 timestamp>
+
+  **Changed:** <brief list of key changes>
+  **Learned:** <key insight or finding>
+  **Next:** <next planned action>
+  ```
+- This file is append-only — never overwrite existing entries.
+
+**Step 0d: Update active thread**
+- Read `.letta/memory/threads/current.md`.
+- Update it to reflect the current state: active hypothesis, blockers, next experiment.
+- If the hypothesis was resolved, note the outcome and set the next one (or mark as "No active hypothesis").
+
+**Step 0e: Update run pointers**
+- If new runs were completed during this session (check `runs/` directory for recent timestamps), add them to `.letta/memory/runs/latest.md`.
+- Keep only the 10 most recent entries.
+
+**Step 0f: Stage memory files**
+- Stage all modified files under `.letta/memory/` (never stage secrets or credentials).
+- Proceed to Phase 1 with these files included in the commit.
+
+### Phase 1: Pre-flight
+
+1. Run `git status` to identify staged, unstaged, and untracked files.
+2. If nothing to commit, say so and stop.
+3. **Already-committed detection**: Before staging, run `git diff HEAD -- <files>` for tracked files. If ALL target files already match HEAD (parallel session committed them), report "already committed" and skip to Phase 5 (push).
+
+### Phase 1.5: Docs compliance check
+
+Before staging, check whether new files will need documentation updates:
+
+1. Identify new (untracked or newly added) files in `swarm/`, `scenarios/`, `.claude/commands/`, `.claude/agents/`.
+2. If any new files are found, check whether `CHANGELOG.md` has been modified (staged or unstaged via `git diff` and `git diff --cached`).
+3. If CHANGELOG.md has NOT been modified:
+   - Show the list of new files.
+   - Ask the user: **"N new file(s) detected but CHANGELOG.md not updated. Stage CHANGELOG too, skip docs check, or abort?"**
+     - **Stage CHANGELOG**: Open/update CHANGELOG.md with draft entries (see Phase 2 auto-draft), stage it, and continue.
+     - **Skip docs**: Set `SKIP_DOCS_CHECK=1` in the environment so the pre-commit hook won't block, and continue.
+     - **Abort**: Stop the `/ship` command.
+4. If CHANGELOG.md IS already modified, continue silently.
+
+This catches missing docs before the pre-commit hook, with a friendlier interactive UX.
+
+### Phase 2: Stage
+
+**If `--all` flag is set:**
+- Stage all modified + untracked files, listing them explicitly (never `git add -A` or `git add .`).
+- Exclude files matching: `.DS_Store`, `*.db`, `.env*`, `credentials*`, `*_token*`, `*_secret*`, `*.pem`, `*.key`.
+- If ALL files are excluded, report "Nothing safe to ship" and exit.
+- **Auto-draft CHANGELOG entries**: If new files are detected (untracked files being staged) and CHANGELOG.md has no pending changes:
+  1. Read the current CHANGELOG.md. Find the `## [Unreleased]` section.
+  2. Auto-append draft entries based on file paths. Categorize:
+     - `swarm/agents/*` or `.claude/agents/*` → "### Added" with "New agent: `<filename>`"
+     - `swarm/scenarios/*` or `scenarios/*` → "### Added" with "New scenario: `<filename>`"
+     - `.claude/commands/*` → "### Added" with "New command: `<filename>`"
+     - `swarm/**/*.py` → "### Added" or "### Changed" with "New/updated module: `<path>`"
+  3. Stage the updated CHANGELOG.md.
+  4. Show the user what was auto-drafted so they can review in the commit diff.
+
+**Otherwise (default):**
 - If there are already staged changes, use those.
 - If nothing is staged but there are unstaged/untracked changes, show them and ask the user what to stage.
-- Never stage `.DS_Store`, `*.db`, `.env`, or credential files (the pre-commit hook will catch these too, but avoid staging them in the first place).
+- Never stage `.DS_Store`, `*.db`, `.env`, or credential files.
 
-4) Pre-stage lint check (`.py` files only):
-- Before committing, run `ruff check` on all staged `.py` files.
-- If errors are found, show **all** of them upfront and fix them before attempting `git commit`. This avoids the iterative fix-one-discover-next loop where the pre-commit hook blocks, you fix one error, re-commit, and hit the next.
-- After fixing, re-run `ruff check` to confirm clean, then proceed.
+### Phase 3: Fix (only if `--fix` flag is set)
 
-5) Index race guard (CRITICAL for multi-session repos):
-- After staging, run `git diff --cached --name-only` to get the ACTUAL list of staged files.
+**Step 3a: Ruff auto-fix**
+- Run `ruff check --fix` on all staged `.py` files.
+- Common fixes: F401 (unused imports), I001 (import sorting), C420, B019.
+- Re-stage any modified files.
+
+**Step 3b: Mypy mechanical fixes**
+- Run `mypy` on staged `swarm/` files. Apply mechanical fixes for `no-any-return`:
+
+| Return type | Pattern | Fix |
+|---|---|---|
+| `bool` | `return self._rng.random() < X` | `return bool(self._rng.random() < X)` |
+| `bool` | `return expr > X` | `return bool(expr > X)` |
+| `str` | `return self._rng.choice(items)` | `result: str = self._rng.choice(items); return result` |
+| `float` | `return expr` | `return float(expr)` |
+| `dict` | `return obj` | `return dict(obj)` |
+| Custom type | `return self._rng.choice(items)` | `typed_local: Type = self._rng.choice(items); return typed_local` |
+
+- Re-stage fixed files. Re-run mypy. Repeat up to 3 times for cascading errors.
+- For non-mechanical errors, report them and stop.
+
+**Step 3c: Syntax check**
+- Run `python -m py_compile` on each staged `.py` file.
+- If any fail, report the file and error. Do NOT auto-fix syntax errors. Suggest `git checkout -- <file>` or `git reset HEAD <file>`.
+
+### Phase 3.5: Test (only if `--test` flag is set)
+
+Run pytest to catch regressions before committing. This prevents the "fix code → commit → discover test failure → fix test → commit again" pattern that produces unnecessary fix-up commits.
+
+**Step 3.5a: Determine test scope**
+- If `--test` was given a path (e.g. `--test tests/test_governed_swarm.py`), use that path.
+- If `--test` was given without a path, run the full suite.
+
+**Step 3.5b: Run pytest**
+```bash
+python -m pytest <scope> -x -q --tb=short
+```
+- `-x`: Stop on first failure (fast feedback).
+- `-q`: Quiet output (summary only unless there's a failure).
+- `--tb=short`: Concise tracebacks on failure.
+
+**Step 3.5c: Handle results**
+- **All tests pass**: Report pass count and duration, continue to Phase 4.
+- **Tests fail**: Report the failure summary (file, test name, assertion). **Stop and do NOT commit.** Never auto-fix test failures — these need human review.
+  - If `--fix` was also set and lint/mypy fixes were applied in Phase 3, note that those fixes are still staged and the user can commit manually after fixing the test.
+
+### Phase 4: Commit
+
+**4a: Pre-stage auto-lint** (always, even without `--fix`):
+- Get list of staged `.py` files via `git diff --cached --name-only -- '*.py'`.
+- If any exist, run `ruff check --fix <files>` to auto-fix safe issues (I001 import sorting, F401 unused imports, F541 f-string without placeholders, B007 unused loop variables, etc.).
+- Re-stage any files modified by ruff (`git add <modified files>`).
+- Run `ruff check <files>` again to verify no remaining errors. If unfixable errors remain, report them and stop.
+- This prevents the iterative "pre-commit rejects → manually fix → restage → retry" loop. Safe fixes are applied automatically; only genuinely broken code blocks the commit.
+
+**4b: Index race guard** (CRITICAL for multi-session repos):
+- After staging, run `git diff --cached --name-only` to get the ACTUAL staged files.
 - Compare against the files YOU explicitly staged.
-- If there are unexpected files (staged by another concurrent session), warn the user and list them.
-- **Safe unstage strategy**: Do NOT use `git reset HEAD <unexpected-files>` — this can nuke your intended staged files when the index is shared. Instead:
+- If there are unexpected files (from a concurrent session):
   1. Save your intended file list.
   2. Run `git reset HEAD` to clear the entire index.
-  3. Re-stage ONLY your intended files with `git add <my-files>`.
+  3. Re-stage ONLY your intended files.
   4. Re-verify with `git diff --cached --name-only`.
-- This prevents the shared git index race condition where parallel Claude/Codex sessions pollute each other's commits.
 
-6) Commit (with parallel session awareness):
-- If `<commit message>` is provided, use it.
+**4c: Close beads** (only if `--close` flag is set):
+- Run `bd close <id1> <id2> ...` to close all specified issues.
+- If any close fails, report the error but continue.
+- Run `bd sync` (or `bd --sandbox sync` in session worktrees).
+- Stage `.beads/issues.jsonl` if modified.
+
+**4d: Commit**:
+- If a commit message was provided, use it.
+- If `--close` was used and no message provided, auto-generate from closed bead titles (e.g. "Close b6t: AWM live integration tests").
 - Otherwise, analyze the diff and draft a concise commit message.
 - Always append `Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>`.
-- Let the pre-commit hook run (do not bypass with `SKIP_SWARM_HOOKS=1` unless the hook itself is being modified).
-- **If the commit exits non-zero but pre-commit hooks passed**: A parallel session likely committed the same files during the hook run. Run `git log --oneline -1` and `git diff --cached --stat` to check:
-  - If staged diff is now empty (all files match HEAD), report "parallel session committed these files" and skip to step 7 (push check).
-  - If staged diff is smaller (some files remain), report which files were taken by the parallel session, then re-commit only the remaining changes.
-  - Do NOT re-run `git add` on files that are already at HEAD — this stages empty diffs that produce confusing "nothing to commit" errors.
+- Let pre-commit hooks run (never bypass with `--no-verify`).
 
-7) Push (with auto-rebase on conflict):
+**4e: Handle commit failure**:
+- If `--fix` is set and failure is from fixable lint/mypy: go back to Phase 3. Max 3 total attempts.
+- If commit exits non-zero but hooks passed: check if a parallel session committed the same files. If staged diff is now empty, skip to Phase 5.
+- If pre-commit hook fails with test failures: report but do NOT auto-fix tests.
+
+### Phase 5: Push (skip if `--no-push` flag is set)
+
 - Push to the current branch's upstream (`git push`).
 - If no upstream is set, push with `-u origin <current-branch>`.
-- **If push fails with non-fast-forward** (common in multi-session repos):
-  1. Check for uncommitted changes. If any exist, `git stash` them first.
+- **If push fails with non-fast-forward**:
+  1. Check for uncommitted changes. If any, `git stash push -m "ship: auto-stash"`.
   2. Run `git pull --rebase origin <current-branch>`.
-  3. If there were stashed changes, `git stash pop`.
-  4. If the rebase succeeds with no conflicts, retry `git push`.
-  5. If there are merge conflicts, stop and report them — do not force-push.
-  6. If the commit is already on remote (e.g. another session pushed it), report success and skip the push.
-- Never retry more than once. If the second push also fails, stop and report.
+  3. If stashed, `git stash pop`.
+  4. Retry push once. If it fails again, stop and report.
+  5. If merge conflicts arise, stop and report — never force-push.
 
-8) Post-ship status report:
-- Print a compact summary so the user doesn't need to run `/status` afterward:
-  ```
-  Shipped:
-    Commit:    <sha> <first line of commit message>
-    Branch:    <branch>
-    Remote:    origin/<branch> — pushed (rebased N if applicable)
-    Remaining: <N files modified, M untracked> (or "clean")
-  ```
-- Run `git status --short` and `git diff --stat` to populate the "Remaining" line.
-- If everything is clean, say "Working tree clean".
+### Phase 6: Beads sync
+
+- If beads are configured (`.beads/` directory exists):
+  - Detect worktree context: compare `git rev-parse --git-dir` vs `--git-common-dir`. If they differ and branch starts with `session/`, use `bd --sandbox sync`.
+  - Otherwise: `bd sync`.
+
+### Phase 7: Status report
+
+Print a compact summary:
+```
+Shipped:
+  Commit:    <sha> <first line of commit message>
+  Branch:    <branch> -> origin/<branch>
+  Closed:    <bead-ids> (if --close was used)
+  Auto-fix:  N ruff fixes, M mypy fixes (if --fix was used)
+  Attempts:  K (if --fix retried)
+  Remaining: <N files modified, M untracked> (or "clean")
+```
+
+### Phase 8: Follow-up nudges
+
+After a successful push, inspect the committed files for patterns that require follow-up commands. Run `git diff --name-only HEAD~1` to get the list of files in the last commit.
+
+**Blog post detection**: If any committed file matches `docs/blog/*.md` (excluding `index.md`):
+1. Check whether `docs/blog/index.md` was also modified in this commit.
+2. Check whether `mkdocs.yml` was also modified in this commit.
+3. If either is missing, **immediately invoke `/add_post`** with the blog post title (extracted from the file's H1 or frontmatter `title` field) and the file path as source. Do not ask — just do it. The post is incomplete without nav wiring.
+4. After `/add_post` completes, stage and commit the wiring changes, then push.
+
+**Run artifacts detection**: If any committed file matches `runs/*/` patterns OR if `runs/` contains directories newer than the last commit timestamp:
+1. Check whether those run directories exist in `runs/` (gitignored, local-only).
+2. If run artifacts exist locally, **prompt the user**: "Detected run artifacts in `runs/<dir>`. Push to swarm-artifacts? (`/sync_artifacts`)"
+3. If the user confirms, invoke `/sync_artifacts` automatically.
+
+**Run artifacts in experiment scripts**: If the commit includes files matching `experiments/*.py` and those scripts produce output to `runs/`, nudge: "This experiment writes to `runs/`. After running, use `/sync_artifacts` to archive results."
+
+These nudges ensure that blog posts always get wired into the site and run data always gets archived — the two most common follow-up steps that get skipped.
+
+## Session worktrees
+
+When running inside a session worktree (branch `session/pane-*`), `/ship` commits and pushes to the **session branch**, not directly to `main`. Use `/merge_session` afterward to merge into main.
 
 ## Constraints
 
 - Never force-push.
 - Never commit files likely containing secrets.
-- If the pre-commit hook fails, stop and report — do not bypass.
+- Never `--no-verify` to skip hooks.
+- Never auto-fix test failures or syntax errors — these need human review.
+- Maximum 3 commit attempts (with `--fix`) before giving up.
+- If pre-commit hooks fail, stop and report.
 - For full branch + PR workflows, use `/pr` instead.
+
+## Migration from old commands
+
+| Old command | Equivalent |
+|---|---|
+| `/commit_push` | `/ship` |
+| `/commit_push "msg"` | `/ship "msg"` |
+| `/fix_commit "msg"` | `/ship --fix "msg"` |
+| `/fix_commit "msg" file1 file2` | `git add file1 file2` then `/ship --fix "msg"` |
+| `/sweep_and_ship` | `/ship --all` |
+| `/sweep_and_ship "msg"` | `/ship --all "msg"` |
+| `/close_and_ship b6t b7x` | `/ship --close b6t b7x` |
+| `/close_and_ship b6t "msg"` | `/ship --close b6t "msg"` |
+| `letta-os.sh close` | `/ship --research-close` |
+| manual pytest + commit | `/ship --test` |
+| `/ship --fix` + manual test rerun | `/ship --fix --test` |

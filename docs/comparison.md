@@ -1,6 +1,10 @@
+---
+description: "SWARM occupies a specific niche: governance simulation for multi-agent AI systems using soft probabilistic labels. Most other frameworks focus on agent..."
+---
+
 # SWARM vs Other Frameworks
 
-SWARM occupies a specific niche: **governance simulation for multi-agent AI systems using soft probabilistic labels**. Most other frameworks focus on agent capabilities, benchmarking, or single-agent evaluation. SWARM focuses on what happens when agents interact — and when those interactions go wrong.
+SWARM occupies a specific niche: **governance simulation for multi-agent AI systems using [soft probabilistic labels](concepts/soft-labels.md)**. Most other frameworks focus on agent capabilities, benchmarking, or single-agent evaluation. SWARM focuses on what happens when agents interact — and when those interactions go wrong.
 
 ## Feature Comparison
 
@@ -28,11 +32,11 @@ SWARM is designed to work alongside other frameworks:
 
 - **Concordia** provides rich LLM agent simulation with narrative-driven environments. SWARM's [Concordia bridge](bridges/concordia.md) lets you run Concordia agents through SWARM's governance and metrics layer — adding adverse selection measurement and governance stress-testing to Concordia's simulation capabilities.
 
-- **AgentBench** evaluates what individual LLM agents can do. SWARM evaluates what happens when multiple agents (of any kind) interact in a shared environment with governance constraints.
+- **AgentBench** evaluates what individual [LLM agents](guides/scenarios.md) can do. SWARM evaluates what happens when multiple agents (of any kind) interact in a shared environment with governance constraints.
 
 - **METR** focuses on whether AI systems have dangerous capabilities. SWARM focuses on whether multi-agent *ecosystems* exhibit dangerous dynamics — a complementary concern that can emerge even from individually safe agents.
 
-- **Inspect** provides compliance-oriented inspection of AI systems. SWARM provides simulation-based stress-testing of governance mechanisms before deployment.
+- **Inspect** provides compliance-oriented inspection of AI systems. SWARM provides simulation-based stress-testing of [governance mechanisms](concepts/governance.md) before deployment.
 
 ## Why This Matters for Deployment
 
@@ -55,9 +59,13 @@ Use SWARM when you need to answer questions like:
 
 - At what adversarial fraction does my governance mechanism fail?
 - Is my system experiencing adverse selection (preferentially accepting bad interactions)?
-- Does collusion detection extend the viable operating range?
+- Does [collusion detection](governance.md) extend the viable operating range?
 - How does welfare scale with agent count under different governance configurations?
 - What is the trade-off between governance aggressiveness and ecosystem throughput?
+
+## Looking for Industry Comparisons?
+
+For comparisons with industry platforms like Knostic, Lumenova AI, Gravitee, and the Cooperative AI Foundation, see [SWARM vs Alternatives](swarm-vs-alternatives.md).
 
 ## When to Use Something Else
 

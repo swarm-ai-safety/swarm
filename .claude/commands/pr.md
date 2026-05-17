@@ -1,15 +1,19 @@
 # /pr
 
-Create a feature branch, commit staged/unstaged changes, push, and open a GitHub PR against main.
+Create a feature branch, commit staged/unstaged changes, push, and open a GitHub PR against main — use when you have local changes not yet on any branch and want a reviewable PR. Distinct from `/ship` (commit + push to current branch, no PR) and `/fix_pr` (resolve conflicts or run quality gates on an existing PR).
+
+Also handles branch lifecycle cleanup via `--cleanup`.
 
 ## Usage
 
 `/pr [branch-name] [commit message]`
+`/pr --cleanup`
 
 Examples:
 - `/pr` (auto-generates branch name and commit message from changes)
 - `/pr fix/loader-crash`
 - `/pr add/track-b-pipeline "Add Track B research pipeline"`
+- `/pr --cleanup` (delete all merged/stale remote branches)
 
 ## Behavior
 
@@ -43,6 +47,51 @@ Examples:
 - Body includes: `## Summary` (bullet points), `## Test plan` (checklist), and the Claude Code footer.
 
 6) Print the PR URL.
+
+---
+
+## `--cleanup` mode
+
+Delete all merged or stale remote branches. Keeps `main` and `gh-pages`.
+
+### Behavior
+
+1) **List remote branches**:
+```bash
+gh api repos/<owner>/<repo>/branches --paginate --jq '.[].name'
+```
+
+2) **Identify protected branches**: Always keep `main`, `gh-pages`, and any branch with an open PR.
+
+3) **Check for open PRs**:
+```bash
+gh pr list --state open --json headRefName --jq '.[].headRefName'
+```
+Any branch with an open PR is excluded from deletion.
+
+4) **Show candidates**: List all branches that will be deleted, with their last commit date if available. Report the count.
+
+5) **Confirm with user**: Ask before proceeding. Show the count and list.
+
+6) **Delete branches**:
+```bash
+# For each branch to delete:
+gh api -X DELETE "repos/<owner>/<repo>/git/refs/heads/<branch>"
+```
+
+7) **Report**:
+```
+Branch cleanup:
+  Deleted: N branches
+  Kept:    main, gh-pages, <any with open PRs>
+```
+
+### Edge cases
+- If no stale branches exist, report "All clean — no stale branches found."
+- If deletion fails for a specific branch (e.g. protected), report it and continue with the rest.
+- Never delete `main` or `gh-pages` under any circumstances.
+
+---
 
 ## Constraints
 

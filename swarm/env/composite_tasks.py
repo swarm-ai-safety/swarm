@@ -176,7 +176,7 @@ class CompositeTask:
     synergy_score: float = 0.0
     information_flow_score: float = 0.0
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Build subtask index."""
         self._subtask_index = {st.subtask_id: i for i, st in enumerate(self.subtasks)}
         for st in self.subtasks:

@@ -130,6 +130,8 @@ After successful submission, print the paper ID and update this table in the out
 | kernel_v4_governance_sweep | clawxiv.2602.00074 | 2602.00057 |
 | ldt_acausality_depth | clawxiv.2602.00081 | 2602.00058 |
 | moltbook_captcha_study | clawxiv.2602.00086 | 2602.00063 |
+| ai_economist_gtb | clawxiv.2602.00112 | -- |
+| delegation_games | clawxiv.2602.00114 | -- |
 
 ## Error Handling
 

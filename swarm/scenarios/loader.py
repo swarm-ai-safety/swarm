@@ -1,6 +1,7 @@
 """Scenario loader for YAML configuration files."""
 
 import random
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Type
@@ -11,8 +12,12 @@ from swarm.agents.adaptive_adversary import AdaptiveAdversary
 from swarm.agents.adversarial import AdversarialAgent
 from swarm.agents.awm_agent import AWMAgent
 from swarm.agents.base import BaseAgent
+from swarm.agents.behavioral import CautiousAgent
+from swarm.agents.cautious_reciprocator import CautiousReciprocator
+from swarm.agents.coding_agent import CodingAgent
 from swarm.agents.deceptive import DeceptiveAgent
 from swarm.agents.honest import HonestAgent
+from swarm.agents.hyperagent_self_mod import HyperagentSelfModAgent
 from swarm.agents.ldt_agent import LDTAgent
 from swarm.agents.memory_agent import (
     CacheGamerAgent,
@@ -46,12 +51,20 @@ from swarm.agents.skill_evolving import (
     SkillEvolvingOpportunisticAgent,
 )
 from swarm.agents.skillrl_agent import SkillRLAgent
+from swarm.agents.threshold_dancer import ThresholdDancer
+from swarm.agents.tierra_agent import TierraAgent
 from swarm.agents.wiki_editor import (
     CollusiveEditorAgent,
     DiligentEditorAgent,
     PointFarmerAgent,
     VandalAgent,
 )
+from swarm.agents.work_regime_agent import WorkRegimeAgent
+from swarm.contracts.contract import (
+    FairDivisionContract,
+    TruthfulAuctionContract,
+)
+from swarm.contracts.market import ContractMarket, ContractMarketConfig
 from swarm.core.kernel_handler import KernelOracleConfig
 from swarm.core.memory_handler import MemoryTierConfig
 from swarm.core.moltbook_handler import MoltbookConfig
@@ -115,6 +128,8 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     "skillrl": SkillRLAgent,
     # Self-optimizing agent (recursive cost-cutting)
     "self_optimizer": SelfOptimizerAgent,
+    # Hyperagent self-modifying agent (Zhang et al., 2026)
+    "hyperagent_self_mod": HyperagentSelfModAgent,
     # Rivals pipeline agents (Team-of-Rivals)
     "rivals_producer": RivalsProducerAgent,
     "rivals_critic": RivalsCriticAgent,
@@ -128,62 +143,113 @@ AGENT_TYPES: Dict[str, Type[BaseAgent]] = {
     # Ralph loop agents (artifact-mediated memory)
     "ralph_loop": RalphLoopAgent,
     "adversarial_ralph": AdversarialRalphAgent,
+    # Behavioral agents (cautious, collaborative, adaptive)
+    "cautious": CautiousAgent,
+    # Custom: cautious reciprocator (trust-but-verify)
+    "cautious_reciprocator": CautiousReciprocator,
+    # Threshold dancer (exploits blacklist floor)
+    "threshold_dancer": ThresholdDancer,
+    # Coding agent (models coding agent behavior)
+    "coding_agent": CodingAgent,
+    # Tierra (artificial life with heritable genomes)
+    "tierra": TierraAgent,
+    # Work regime (policy-drifting workers under labor stress)
+    "work_regime": WorkRegimeAgent,
 }
 
-# LLM agent support (lazy import to avoid requiring LLM dependencies)
-_LLM_AGENT_CLASS = None
-_LLM_CONFIG_CLASSES = None
-_COUNCIL_AGENT_CLASS = None
-_CONCORDIA_ENTITY_CLASS = None
-_CREWAI_AGENT_CLASS = None
-_CREWAI_CONFIG_CLASS = None
+class _LazyLoader:
+    """Thread-safe lazy loader using double-checked locking.
+
+    Encapsulates a single threading.Lock, a ``None`` sentinel, and the
+    double-checked locking pattern so that each lazy-import site only
+    needs to supply an *initializer* callable.
+    """
+
+    def __init__(self) -> None:
+        self._lock = threading.Lock()
+        self._value = None
+
+    def get(self, initializer):
+        """Return the cached value, calling *initializer* once to populate it."""
+        if self._value is None:
+            with self._lock:
+                if self._value is None:
+                    self._value = initializer()
+        return self._value
+
+
+# Per-loader instances for lazy class initialisation in threaded scenarios
+_CREWAI_LOADER = _LazyLoader()
+_SWARMS_LOADER = _LazyLoader()
+_LETTA_LOADER = _LazyLoader()
+_LLM_LOADER = _LazyLoader()
+_COUNCIL_LOADER = _LazyLoader()
+_CONCORDIA_LOADER = _LazyLoader()
 
 
 def _get_crewai_classes():
     """Lazy import CrewAI adapter classes."""
-    global _CREWAI_AGENT_CLASS, _CREWAI_CONFIG_CLASS
-    if _CREWAI_AGENT_CLASS is None:
+    def _load():
         from swarm.agents.crewai_adapter import CrewBackedAgent, CrewConfig
 
-        _CREWAI_AGENT_CLASS = CrewBackedAgent
-        _CREWAI_CONFIG_CLASS = CrewConfig
-    return _CREWAI_AGENT_CLASS, _CREWAI_CONFIG_CLASS
+        return CrewBackedAgent, CrewConfig
+
+    return _CREWAI_LOADER.get(_load)
+
+
+def _get_swarms_classes():
+    """Lazy import Swarms adapter classes."""
+    def _load():
+        from swarm.agents.swarms_adapter import SwarmsBackedAgent, SwarmsConfig
+
+        return SwarmsBackedAgent, SwarmsConfig
+
+    return _SWARMS_LOADER.get(_load)
+
+
+def _get_letta_agent_class():
+    """Lazy import LettaAgent class."""
+    def _load():
+        from swarm.agents.letta_agent import LettaAgent
+
+        return LettaAgent
+
+    return _LETTA_LOADER.get(_load)
 
 
 def _get_llm_classes():
     """Lazy import LLM agent classes."""
-    global _LLM_AGENT_CLASS, _LLM_CONFIG_CLASSES
-    if _LLM_AGENT_CLASS is None:
+    def _load():
         from swarm.agents.llm_agent import LLMAgent
         from swarm.agents.llm_config import LLMConfig, LLMProvider, PersonaType
 
-        _LLM_AGENT_CLASS = LLMAgent
-        _LLM_CONFIG_CLASSES = {
+        return LLMAgent, {
             "LLMConfig": LLMConfig,
             "LLMProvider": LLMProvider,
             "PersonaType": PersonaType,
         }
-    return _LLM_AGENT_CLASS, _LLM_CONFIG_CLASSES
+
+    return _LLM_LOADER.get(_load)
 
 
 def _get_council_agent_class():
     """Lazy import CouncilAgent class."""
-    global _COUNCIL_AGENT_CLASS
-    if _COUNCIL_AGENT_CLASS is None:
+    def _load():
         from swarm.agents.council_agent import CouncilAgent
 
-        _COUNCIL_AGENT_CLASS = CouncilAgent
-    return _COUNCIL_AGENT_CLASS
+        return CouncilAgent
+
+    return _COUNCIL_LOADER.get(_load)
 
 
 def _get_concordia_entity_class():
     """Lazy import ConcordiaEntityAgent class."""
-    global _CONCORDIA_ENTITY_CLASS
-    if _CONCORDIA_ENTITY_CLASS is None:
+    def _load():
         from swarm.bridges.concordia.entity_agent import ConcordiaEntityAgent
 
-        _CONCORDIA_ENTITY_CLASS = ConcordiaEntityAgent
-    return _CONCORDIA_ENTITY_CLASS
+        return ConcordiaEntityAgent
+
+    return _CONCORDIA_LOADER.get(_load)
 
 
 @dataclass
@@ -286,6 +352,13 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         security_clear_history_on_epoch=data.get(
             "security_clear_history_on_epoch", False
         ),
+        # Sybil detection (behavioral similarity clustering)
+        sybil_detection_enabled=data.get("sybil_detection_enabled", False),
+        sybil_similarity_threshold=data.get("sybil_similarity_threshold", 0.8),
+        sybil_penalty_multiplier=data.get("sybil_penalty_multiplier", 1.0),
+        sybil_realtime_penalty=data.get("sybil_realtime_penalty", False),
+        sybil_realtime_rate=data.get("sybil_realtime_rate", 0.1),
+        sybil_max_cluster_size=data.get("sybil_max_cluster_size", 1),
         # Council governance lever
         council_lever_enabled=data.get("council_lever_enabled", False),
         council_lever_review_probability=data.get(
@@ -367,6 +440,66 @@ def parse_governance_config(data: Dict[str, Any]) -> GovernanceConfig:
         memory_provenance_enabled=data.get("memory_provenance_enabled", False),
         memory_provenance_revert_penalty=data.get(
             "memory_provenance_revert_penalty", 0.1
+        ),
+        # RBAC governance
+        rbac_enabled=data.get("rbac_enabled", False),
+        rbac_violation_penalty=data.get("rbac_violation_penalty", 0.5),
+        rbac_violation_reputation_penalty=data.get(
+            "rbac_violation_reputation_penalty", -0.2
+        ),
+        rbac_high_stakes_actions=data.get("rbac_high_stakes_actions", []),
+        rbac_security_clearance_required=data.get(
+            "rbac_security_clearance_required", 2
+        ),
+        rbac_high_stakes_penalty_multiplier=data.get(
+            "rbac_high_stakes_penalty_multiplier", 2.0
+        ),
+        rbac_role_action_map=data.get("rbac_role_action_map", {}),
+        # Resample protocol (Bhatt et al., 2025 — "Ctrl-Z")
+        resample_enabled=data.get("resample_enabled", False),
+        resample_suspicion_threshold=data.get("resample_suspicion_threshold", 0.6),
+        resample_n_samples=data.get("resample_n_samples", 3),
+        resample_trajectory_analysis=data.get("resample_trajectory_analysis", False),
+        resample_trajectory_window=data.get("resample_trajectory_window", 5),
+        resample_incrimination_threshold=data.get(
+            "resample_incrimination_threshold", 2.0
+        ),
+        resample_compute_cost=data.get("resample_compute_cost", 0.01),
+        resample_evidence_decay=data.get("resample_evidence_decay", 0.9),
+        resample_evidence_rep_weight=data.get("resample_evidence_rep_weight", 0.5),
+        # Self-modification governance (Two-Gate policy)
+        self_modification_enabled=data.get("self_modification_enabled", False),
+        self_modification_max_per_epoch=data.get(
+            "self_modification_max_per_epoch", 10
+        ),
+        self_modification_tau_min_low=data.get(
+            "self_modification_tau_min_low", -0.10
+        ),
+        self_modification_tau_min_medium=data.get(
+            "self_modification_tau_min_medium", 0.00
+        ),
+        self_modification_tau_min_high=data.get(
+            "self_modification_tau_min_high", 0.25
+        ),
+        self_modification_k_max_low=data.get(
+            "self_modification_k_max_low", 20.0
+        ),
+        self_modification_k_max_medium=data.get(
+            "self_modification_k_max_medium", 35.0
+        ),
+        self_modification_k_max_high=data.get(
+            "self_modification_k_max_high", 50.0
+        ),
+        self_modification_window_days=data.get(
+            "self_modification_window_days", 14
+        ),
+        # Hardware trust rejection handling
+        hardware_trust_enabled=data.get("hardware_trust_enabled", False),
+        hardware_trust_propagation_enabled=data.get(
+            "hardware_trust_propagation_enabled", True
+        ),
+        hardware_trust_recovery_max_steps=data.get(
+            "hardware_trust_recovery_max_steps", 10
         ),
     )
     # Pydantic auto-validates
@@ -719,6 +852,26 @@ def parse_awm_config(data: Dict[str, Any]) -> Optional[Any]:
     return AWMConfig(**data)
 
 
+def parse_letta_config(data: Dict[str, Any]) -> Optional[Any]:
+    """Parse letta section from YAML into LettaConfig.
+
+    Args:
+        data: The letta section from YAML
+
+    Returns:
+        LettaConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    from swarm.bridges.letta.config import LettaConfig
+
+    return LettaConfig(**data)
+
+
 def parse_perturbation_config(
     data: Dict[str, Any],
 ) -> Optional[PerturbationConfig]:
@@ -848,6 +1001,113 @@ def parse_perturbation_config(
     )
 
 
+@dataclass
+class ContractsConfig:
+    """Parsed contracts configuration from scenario YAML."""
+
+    truthful_auction_kwargs: Dict[str, Any] = field(default_factory=dict)
+    fair_division_kwargs: Dict[str, Any] = field(default_factory=dict)
+    default_market_kwargs: Dict[str, Any] = field(default_factory=dict)
+    market_kwargs: Dict[str, Any] = field(default_factory=dict)
+
+
+def parse_contracts_config(
+    data: Dict[str, Any],
+) -> Optional[ContractsConfig]:
+    """Parse contracts section from YAML into ContractsConfig.
+
+    Args:
+        data: The contracts section from YAML.
+
+    Returns:
+        ContractsConfig if section is present, None otherwise.
+    """
+    if not data:
+        return None
+
+    return ContractsConfig(
+        truthful_auction_kwargs=data.get("truthful_auction", {}),
+        fair_division_kwargs=data.get("fair_division", {}),
+        default_market_kwargs=data.get("default_market", {}),
+        market_kwargs=data.get("market", {}),
+    )
+
+
+def build_contract_market(
+    config: ContractsConfig,
+    seed: Optional[int] = None,
+) -> ContractMarket:
+    """Build a ContractMarket from parsed YAML config.
+
+    Args:
+        config: Parsed contracts configuration.
+        seed: Random seed for reproducible agent decisions.
+
+    Returns:
+        Configured ContractMarket instance.
+    """
+    contracts = [
+        TruthfulAuctionContract(**config.truthful_auction_kwargs),
+        FairDivisionContract(**config.fair_division_kwargs),
+    ]
+    market_config = ContractMarketConfig(**config.market_kwargs)
+    return ContractMarket(
+        contracts=contracts,
+        config=market_config,
+        seed=seed,
+    )
+
+
+def parse_tierra_config(data: Dict[str, Any]) -> Optional[Any]:
+    """Parse tierra section from YAML into TierraConfig.
+
+    Args:
+        data: The tierra section from YAML
+
+    Returns:
+        TierraConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    from swarm.core.tierra_handler import TierraConfig
+
+    return TierraConfig(**data)
+
+
+def parse_evo_game_config(data: Dict[str, Any]) -> Optional[Any]:
+    """Parse evo_game section from YAML into EvoGameConfig.
+
+    Args:
+        data: The evo_game section from YAML
+
+    Returns:
+        EvoGameConfig if enabled, None otherwise
+    """
+    if not data:
+        return None
+
+    if data.get("enabled") is False:
+        return None
+
+    from swarm.core.evo_game_handler import EvoGameConfig
+
+    return EvoGameConfig(**data)
+
+
+def _expand_agent_specs(agent_specs: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """Expand agent specs honoring ``count``, yielding one dict per agent."""
+    expanded: List[Dict[str, Any]] = []
+    for spec in agent_specs:
+        count = spec.get("count", 1)
+        for _ in range(count):
+            expanded.append(spec)
+    return expanded
+
+
 def load_scenario(path: Path) -> ScenarioConfig:
     """
     Load a scenario from a YAML file.
@@ -880,9 +1140,13 @@ def load_scenario(path: Path) -> ScenarioConfig:
     spawn_config = parse_spawn_config(data.get("spawn", {}))
     rivals_config = parse_rivals_config(data.get("rivals", {}))
     awm_config = parse_awm_config(data.get("awm", {}))
+    letta_config = parse_letta_config(data.get("letta", {}))
     perturbation_config = parse_perturbation_config(
         data.get("perturbations", {})
     )
+    contracts_config = parse_contracts_config(data.get("contracts", {}))
+    evo_game_config = parse_evo_game_config(data.get("evo_game", {}))
+    tierra_config = parse_tierra_config(data.get("tierra", {}))
 
     # Parse simulation settings
     sim_data = data.get("simulation", {})
@@ -912,7 +1176,13 @@ def load_scenario(path: Path) -> ScenarioConfig:
         spawn_config=spawn_config,
         rivals_config=rivals_config,
         awm_config=awm_config,
+        letta_config=letta_config,
         perturbation_config=perturbation_config,
+        contracts_config=contracts_config,
+        evo_game_config=evo_game_config,
+        tierra_config=tierra_config,
+        dynamic_toxicity=data.get("dynamic_toxicity"),
+        graph_memory_path=outputs_data.get("graph_memory_path"),
         log_path=Path(outputs_data["event_log"])
         if outputs_data.get("event_log")
         else None,
@@ -1005,28 +1275,42 @@ def parse_llm_config(data: Dict[str, Any]) -> Any:
     except ValueError as err:
         raise ValueError(f"Unknown persona type: {persona_str}") from err
 
-    return LLMConfig(
-        provider=provider,
-        model=data.get("model", "claude-sonnet-4-20250514"),
-        api_key=data.get("api_key"),  # Usually from env var
-        base_url=data.get("base_url"),
-        temperature=data.get("temperature", 0.7),
-        max_tokens=data.get("max_tokens", 512),
-        timeout=data.get("timeout", 30.0),
-        max_retries=data.get("max_retries", 3),
-        persona=persona,
-        system_prompt=data.get("system_prompt"),
-        cost_tracking=data.get("cost_tracking", True),
-        prompt_audit_path=data.get("prompt_audit_path"),
-        prompt_audit_include_system_prompt=data.get(
+    # Build kwargs, including optional llama.cpp in-process fields
+    kwargs: dict = {
+        "provider": provider,
+        "model": data.get("model", "claude-sonnet-4-20250514"),
+        "api_key": data.get("api_key"),  # Usually from env var
+        "base_url": data.get("base_url"),
+        "temperature": data.get("temperature", 0.7),
+        "max_tokens": data.get("max_tokens", 512),
+        "timeout": data.get("timeout", 30.0),
+        "max_retries": data.get("max_retries", 3),
+        "persona": persona,
+        "system_prompt": data.get("system_prompt"),
+        "cost_tracking": data.get("cost_tracking", True),
+        "prompt_audit_path": data.get("prompt_audit_path"),
+        "prompt_audit_include_system_prompt": data.get(
             "prompt_audit_include_system_prompt", False
         ),
-        prompt_audit_hash_system_prompt=data.get(
+        "prompt_audit_hash_system_prompt": data.get(
             "prompt_audit_hash_system_prompt", True
         ),
-        prompt_audit_max_chars=data.get("prompt_audit_max_chars", 20_000),
-        memori_config=data.get("memori"),
-    )
+        "prompt_audit_max_chars": data.get("prompt_audit_max_chars", 20_000),
+        "memori_config": data.get("memori"),
+    }
+
+    # llama.cpp in-process fields (only set when present in YAML;
+    # validation happens in LLMConfig.__post_init__)
+    if "model_path" in data:
+        kwargs["model_path"] = data["model_path"]
+    if "n_ctx" in data:
+        kwargs["n_ctx"] = data["n_ctx"]
+    if "n_threads" in data:
+        kwargs["n_threads"] = data["n_threads"]
+    if "llama_seed" in data:
+        kwargs["llama_seed"] = data["llama_seed"]
+
+    return LLMConfig(**kwargs)
 
 
 def create_agents(
@@ -1172,6 +1456,86 @@ def create_agents(
                 )
                 agents.append(agent)
 
+        # Handle Swarms adapter agents
+        elif agent_type == "swarms_adapter":
+            SwarmsBackedAgent, SwarmsConfig = _get_swarms_classes()
+            swarms_params = spec.get("params", {})
+            swarms_config_kwargs = {
+                "architecture": swarms_params.get("architecture", "Agent"),
+                "model_name": swarms_params.get("model_name", "gpt-4o-mini"),
+                "max_loops": swarms_params.get("max_loops", 1),
+                "verbose": swarms_params.get("verbose", False),
+                "enable_trace": swarms_params.get("enable_trace", True),
+            }
+            if "system_prompt" in swarms_params:
+                swarms_config_kwargs["system_prompt"] = swarms_params[
+                    "system_prompt"
+                ]
+            if "timeout_seconds" in swarms_params:
+                swarms_config_kwargs["timeout_seconds"] = swarms_params[
+                    "timeout_seconds"
+                ]
+            if "temperature" in swarms_params:
+                swarms_config_kwargs["temperature"] = swarms_params[
+                    "temperature"
+                ]
+            swarms_config = SwarmsConfig(**swarms_config_kwargs)
+
+            for _ in range(count):
+                counters["swarms_adapter"] = (
+                    counters.get("swarms_adapter", 0) + 1
+                )
+                agent_id = f"swarms_{counters['swarms_adapter']}"
+                agent_name = (
+                    f"{base_name}_{counters['swarms_adapter']}"
+                    if base_name and count > 1
+                    else base_name
+                )
+
+                _agent_counter += 1
+                agent_rng = (
+                    random.Random(seed + _agent_counter)
+                    if seed is not None
+                    else None
+                )
+                agent = SwarmsBackedAgent(
+                    agent_id=agent_id,
+                    swarms_config=swarms_config,
+                    name=agent_name,
+                    config=agent_config,
+                    rng=agent_rng,
+                )
+                agents.append(agent)
+
+        # Handle Letta (MemGPT) agents
+        elif agent_type == "letta":
+            LettaAgent = _get_letta_agent_class()
+            letta_params = spec.get("letta", {})
+
+            for _ in range(count):
+                counters["letta"] = counters.get("letta", 0) + 1
+                agent_id = f"letta_{counters['letta']}"
+                agent_name = (
+                    f"{base_name}_{counters['letta']}"
+                    if base_name and count > 1
+                    else base_name
+                )
+
+                _agent_counter += 1
+                agent_rng = (
+                    random.Random(seed + _agent_counter)
+                    if seed is not None
+                    else None
+                )
+                agent = LettaAgent(
+                    agent_id=agent_id,
+                    letta_config=letta_params,
+                    name=agent_name,
+                    config=agent_config,
+                    rng=agent_rng,
+                )
+                agents.append(agent)
+
         # Handle scripted agents
         elif agent_type in AGENT_TYPES:
             agent_class = AGENT_TYPES[agent_type]
@@ -1234,7 +1598,50 @@ def build_orchestrator(scenario: ScenarioConfig) -> Orchestrator:
                     agent.agent_id, agent.role
                 )
 
+    # Register Tierra agent genomes if handler is present
+    if orchestrator._tierra_handler is not None:
+        for agent in agents:
+            if hasattr(agent, "genome"):
+                orchestrator._tierra_handler.register_genome(
+                    agent.agent_id, agent.genome.to_dict()
+                )
+
+    # Register evolutionary game strategies if handler is present
+    if orchestrator._evo_game_handler is not None:
+        for agent, spec in zip(agents, _expand_agent_specs(scenario.agent_specs), strict=False):
+            strategy_override = spec.get("strategy")
+            orchestrator._evo_game_handler.register_agent_strategy(
+                agent.agent_id,
+                spec.get("type", "honest"),
+                strategy_override=strategy_override,
+            )
+
     return orchestrator
+
+
+def apply_config_overrides(
+    scenario: ScenarioConfig,
+    overrides: Any,
+) -> None:
+    """Merge validated API overrides into a loaded scenario config.
+
+    Args:
+        scenario: The loaded scenario to mutate in place.
+        overrides: Validated ``SimulationOverrides`` instance.
+    """
+    oc = scenario.orchestrator_config
+    if overrides.n_epochs is not None:
+        oc.n_epochs = overrides.n_epochs
+    if overrides.steps_per_epoch is not None:
+        oc.steps_per_epoch = overrides.steps_per_epoch
+    if overrides.seed is not None:
+        oc.seed = overrides.seed
+    if overrides.payoff is not None:
+        oc.payoff_config = PayoffConfig(**overrides.payoff)
+    if overrides.governance is not None:
+        oc.governance_config = GovernanceConfig(**overrides.governance)
+    if overrides.rate_limits is not None:
+        scenario.rate_limits = RateLimits(**overrides.rate_limits)
 
 
 def load_and_build(path: Path) -> Orchestrator:
