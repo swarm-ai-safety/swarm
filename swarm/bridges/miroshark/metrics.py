@@ -2,8 +2,16 @@
 
 Reads a ``runs/<ts>_<scenario>_miroshark/`` folder produced by the bridge,
 LLM-judges each agent action into ``p ∈ [0, 1]`` (cached on disk so reruns
-are free), translates posts/comments/quotes/likes into ``SoftInteraction``
-objects, and pumps them through ``swarm.metrics.SoftMetrics``.
+are free), translates posts/comments/quotes into ``SoftInteraction`` objects,
+and pumps them through ``swarm.metrics.SoftMetrics``.
+
+``accepted`` is derived from *amplification*: a created post/comment/quote is
+accepted iff other agents engaged with it (quoted/replied/liked/reposted),
+rejected if it was ignored. MiroShark's ``num_dislikes``/``num_reports`` are
+identically 0 on every export, so they cannot drive selection directly — but
+``_is_rejected_by_moderation`` keeps them wired as a forward-compatible
+demotion path. This makes ``quality_gap``/``spread`` measure real adverse
+selection instead of being pinned at 0.
 
 CLI: ``python -m swarm.bridges.miroshark.metrics <run_dir> [--no-judge]``.
 """
@@ -94,6 +102,75 @@ def _engagement_delta(action: Dict[str, Any], post_index: Dict[int, Dict[str, An
         denom = max(1, likes + dislikes + reports)
         return (likes - dislikes - 2 * reports) / denom
     return 0.0
+
+
+_CREATED_TYPES = {"CREATE_POST", "QUOTE_POST", "CREATE_COMMENT"}
+_AMPLIFY_TYPES = {"QUOTE_POST", "LIKE_POST", "LIKE_COMMENT", "REPOST", "CREATE_COMMENT"}
+_REF_KEYS = ("quoted_id", "post_id", "comment_id", "like_id")
+
+
+def _produced_content_id(action: Dict[str, Any]) -> Optional[int]:
+    """Id of the post/comment this action *created* (None for non-creating acts)."""
+    args = action.get("action_args") or {}
+    atype = action.get("action_type")
+    if atype == "CREATE_POST":
+        cid = args.get("post_id")
+    elif atype == "QUOTE_POST":
+        cid = args.get("new_post_id")
+    elif atype == "CREATE_COMMENT":
+        cid = args.get("comment_id")
+    else:
+        return None
+    return cid if isinstance(cid, int) else None
+
+
+def _build_amplification_index(
+    actions: List[Dict[str, Any]],
+    posts: List[Dict[str, Any]],
+) -> set[int]:
+    """Content ids that the ecosystem amplified.
+
+    MiroShark never emits ``num_dislikes``/``num_reports`` (always 0) and likes
+    are extremely sparse, so a piece of content is treated as *accepted* iff
+    other agents engaged with it: another post quotes/reposts/comments on it
+    (``original_post_id``), an action references it, or it drew an intrinsic
+    like/share. Content nobody touched is *rejected* (ignored). The
+    dislikes/reports branch is kept for forward-compatibility — it is a no-op on
+    today's exports but will demote content once MiroShark surfaces the signal.
+    """
+    amplified: set[int] = set()
+    for post in posts:
+        parent = post.get("original_post_id")
+        if isinstance(parent, int):
+            amplified.add(parent)
+        pid = post.get("post_id")
+        if isinstance(pid, int) and (
+            int(post.get("num_likes", 0) or 0) > 0 or int(post.get("num_shares", 0) or 0) > 0
+        ):
+            amplified.add(pid)
+    for action in actions:
+        if action.get("action_type") not in _AMPLIFY_TYPES:
+            continue
+        args = action.get("action_args") or {}
+        for key in _REF_KEYS:
+            ref = args.get(key)
+            if isinstance(ref, int):
+                amplified.add(ref)
+    return amplified
+
+
+def _is_rejected_by_moderation(post: Optional[Dict[str, Any]]) -> bool:
+    """Forward-compat demotion: any report, or net-negative votes => rejected.
+
+    No-op on current exports (dislikes/reports identically 0); becomes active if
+    MiroShark starts surfacing negative engagement.
+    """
+    if not post:
+        return False
+    reports = int(post.get("num_reports", 0) or 0)
+    dislikes = int(post.get("num_dislikes", 0) or 0)
+    likes = int(post.get("num_likes", 0) or 0)
+    return reports > 0 or dislikes > likes
 
 
 def _heuristic_p(action: Dict[str, Any], content: str, post_index: Dict[int, Dict[str, Any]]) -> float:
@@ -260,6 +337,7 @@ def actions_to_interactions(
     judgments: Dict[str, Dict[str, Any]],
 ) -> List[SoftInteraction]:
     post_index = {int(p["post_id"]): p for p in posts if "post_id" in p}
+    amplified = _build_amplification_index(actions, posts)
     interactions: List[SoftInteraction] = []
     for action in actions:
         content = _action_content(action)
@@ -272,6 +350,13 @@ def actions_to_interactions(
         p = float(verdict["p"])
         v_hat = max(-1.0, min(1.0, 2.0 * p - 1.0))
         eng = _engagement_delta(action, post_index)
+        produced_id = _produced_content_id(action)
+        produced_post = post_index.get(produced_id) if produced_id is not None else None
+        accepted = (
+            produced_id is not None
+            and produced_id in amplified
+            and not _is_rejected_by_moderation(produced_post)
+        )
         ts = action.get("timestamp")
         try:
             timestamp = datetime.fromisoformat(ts) if ts else datetime.now(timezone.utc)
@@ -284,7 +369,7 @@ def actions_to_interactions(
                 initiator=str(action.get("agent_name") or f"agent_{action.get('agent_id')}"),
                 counterparty=_counterparty(action, post_index),
                 interaction_type=_interaction_type(action.get("action_type", "")),
-                accepted=True,
+                accepted=accepted,
                 p=p,
                 v_hat=v_hat,
                 counterparty_engagement_delta=eng,
@@ -292,6 +377,8 @@ def actions_to_interactions(
                     "round": action.get("round_num"),
                     "platform": action.get("platform"),
                     "action_type": action.get("action_type"),
+                    "produced_content_id": produced_id,
+                    "amplified": accepted,
                     "judge_source": verdict.get("source"),
                     "judge_model": verdict.get("model"),
                 },
@@ -322,7 +409,15 @@ def compute_metrics(
         post_index=post_index,
     )
     interactions = actions_to_interactions(actions, posts, judgments)
-    logger.info("built %d SoftInteractions from %d actions", len(interactions), len(actions))
+    n_accepted = sum(1 for it in interactions if it.accepted)
+    n_rejected = len(interactions) - n_accepted
+    logger.info(
+        "built %d SoftInteractions from %d actions (%d amplified/accepted, %d ignored/rejected)",
+        len(interactions),
+        len(actions),
+        n_accepted,
+        n_rejected,
+    )
 
     sm = SoftMetrics()
     welfare = sm.welfare_metrics(interactions)
@@ -347,6 +442,9 @@ def compute_metrics(
         "n_actions": len(actions),
         "n_actions_judged": len(judgments),
         "n_interactions": len(interactions),
+        "n_accepted": n_accepted,
+        "n_rejected": n_rejected,
+        "accept_rate": (n_accepted / len(interactions)) if interactions else 0.0,
         "n_agents": len(agent_stats),
         "judge_sources": dict(sources),
         "soft_metrics": {
@@ -402,7 +500,10 @@ def main(argv: Optional[List[str]] = None) -> int:
     print(
         f"  toxicity (accepted)={sm['toxicity_rate_accepted']:.3f}  "
         f"avg_q={sm['average_quality_accepted']:.3f}  "
-        f"net_welfare={sm['net_social_welfare']:.2f}  "
+        f"quality_gap={sm['quality_gap']:.3f}  spread={sm['spread']:.3f}  "
+        f"net_welfare={sm['net_social_welfare']:.2f}\n"
+        f"  accepted={metrics['n_accepted']}/{metrics['n_interactions']} "
+        f"(rate={metrics['accept_rate']:.2f})  "
         f"actions={metrics['n_actions']}  judged={metrics['n_actions_judged']}"
     )
     return 0
