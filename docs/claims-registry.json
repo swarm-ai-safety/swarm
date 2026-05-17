@@ -2,7 +2,8 @@
   "$schema": "https://swarm-ai.org/schemas/claims-registry-v1.json",
   "project": "SWARM — Distributional AGI Safety Framework",
   "url": "https://swarm-ai.org",
-  "arxiv": "2512.16856",
+  "arxiv": "2604.19752",
+  "arxiv_precursor": "2512.16856",
   "last_updated": "2026-03-03",
   "claims": [
     {

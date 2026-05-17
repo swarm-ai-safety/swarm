@@ -29,6 +29,28 @@ logger = logging.getLogger(__name__)
 
 
 @dataclass
+class NeedsSignal:
+    """A structured declaration of what data would advance an investigation.
+
+    Inspired by ScienceClaw's NeedsSignal (Wang et al., 2026): agents
+    attach these to provenance records to broadcast unsatisfied input
+    requirements.  Peer agents scan needs to find fulfillable requests,
+    enabling plannerless coordination.
+
+    Attributes:
+        kind: Artifact kind required (matches ``ArtifactSchema.kind``).
+        description: Human-readable description of the need.
+        min_quality: Minimum acceptable quality (maps to ``p`` threshold).
+        fulfilled: Whether this need has been satisfied.
+    """
+
+    kind: str = ""
+    description: str = ""
+    min_quality: float = 0.0
+    fulfilled: bool = False
+
+
+@dataclass
 class ProvenanceRecord:
     """A single provenance entry in the Byline audit trail.
 
@@ -45,6 +67,8 @@ class ProvenanceRecord:
         parent_id: Provenance ID of the causal parent (chain linking).
         contract_id: Governing contract at time of action.
         timestamp: When the action occurred.
+        needs: Unsatisfied input requirements broadcast to peers
+            for plannerless coordination (Wang et al., 2026).
         metadata: Additional context.
     """
 
@@ -61,6 +85,7 @@ class ProvenanceRecord:
     timestamp: datetime = field(
         default_factory=lambda: datetime.now(timezone.utc)
     )
+    needs: List[NeedsSignal] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -76,6 +101,15 @@ class ProvenanceRecord:
             "parent_id": self.parent_id,
             "contract_id": self.contract_id,
             "timestamp": self.timestamp.isoformat(),
+            "needs": [
+                {
+                    "kind": n.kind,
+                    "description": n.description,
+                    "min_quality": n.min_quality,
+                    "fulfilled": n.fulfilled,
+                }
+                for n in self.needs
+            ],
             "metadata": self.metadata,
         }
         if self.hmac_signature:

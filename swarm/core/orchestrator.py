@@ -787,6 +787,10 @@ class Orchestrator:
         # --- Epoch pre-hooks ---
         self._pipeline.on_epoch_start(ctx)
 
+        # --- Artifact housekeeping (always-on, independent of cascade lever) ---
+        current_step = epoch_start * self.config.steps_per_epoch
+        self.state.artifact_registry.gc(current_step, max_age_steps=200)
+
         # --- Self-modification for HyperagentSelfModAgent instances ---
         for agent in self._agents.values():
             if isinstance(agent, HyperagentSelfModAgent):
@@ -1063,6 +1067,17 @@ class Orchestrator:
         if not isinstance(action.action_type, ActionType):
             return False
 
+        # Check hardware-trust constrained-mode action filtering
+        if self.governance_engine is not None:
+            action_name = action.action_type.value if hasattr(action.action_type, "value") else str(action.action_type)
+            if not self.governance_engine.is_action_allowed(action.agent_id, action_name):
+                logger.info(
+                    "Action %s blocked for agent %s by hardware trust lever",
+                    action_name,
+                    action.agent_id,
+                )
+                return False
+
         handler = self._handler_registry.get_handler(action.action_type)
         if handler is None:
             return False
@@ -1133,7 +1148,19 @@ class Orchestrator:
         if self.contract_market is not None:
             interaction = self.contract_market.route_interaction(interaction)
 
-        gov_effect, _, _ = self._finalize_interaction(interaction)
+        # Pass handler result for artifact wiring if it produced/consumed artifacts.
+        # Guard with getattr for legacy handler result types that don't
+        # extend HandlerActionResult (e.g. MoltbookActionResult).
+        artifact_result = None
+        if (
+            getattr(result, "produced_artifacts", None)
+            or getattr(result, "consumed_artifact_ids", None)
+        ):
+            artifact_result = result
+
+        gov_effect, _, _ = self._finalize_interaction(
+            interaction, handler_result=artifact_result
+        )
 
         try:
             handler.post_finalize(result, interaction, gov_effect, self.state)
@@ -1366,9 +1393,12 @@ class Orchestrator:
     def _finalize_interaction(
         self,
         interaction: SoftInteraction,
+        handler_result: Any = None,
     ) -> Tuple[GovernanceEffect, float, float]:
         """Apply governance, compute payoffs, update state, and emit events."""
-        return self._finalizer.finalize_interaction(interaction)
+        return self._finalizer.finalize_interaction(
+            interaction, handler_result=handler_result
+        )
 
     def _generate_observables(
         self,

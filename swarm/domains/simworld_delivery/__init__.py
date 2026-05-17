@@ -5,6 +5,10 @@ A multi-agent delivery economy inspired by SimWorld's Case 2 benchmark
 compete/cooperate in an urban environment with governance interventions.
 """
 
+from swarm.domains.simworld_delivery.adapter import (
+    AdapterReport,
+    DeliveryAdapter,
+)
 from swarm.domains.simworld_delivery.agents import (
     AggressivePolicy,
     CautiousPolicy,
@@ -31,6 +35,7 @@ from swarm.domains.simworld_delivery.metrics import (
 from swarm.domains.simworld_delivery.runner import DeliveryScenarioRunner
 
 __all__ = [
+    "AdapterReport",
     "AgentState",
     "AggressivePolicy",
     "Bid",
@@ -38,6 +43,7 @@ __all__ = [
     "ConscientiousPolicy",
     "DeliveryAction",
     "DeliveryActionType",
+    "DeliveryAdapter",
     "DeliveryConfig",
     "DeliveryEnvironment",
     "DeliveryEvent",

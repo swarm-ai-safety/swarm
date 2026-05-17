@@ -6,6 +6,7 @@ from typing import Any, Dict, List, Optional, Set
 from swarm.env.state import EnvState
 from swarm.governance.admission import StakingLever
 from swarm.governance.audits import RandomAuditLever
+from swarm.governance.cascade import CascadeRiskLever
 from swarm.governance.circuit_breaker import CircuitBreakerLever
 from swarm.governance.collusion import CollusionPenaltyLever
 from swarm.governance.config import GovernanceConfig
@@ -14,6 +15,7 @@ from swarm.governance.decomposition import DecompositionLever
 from swarm.governance.diversity import DiversityDefenseLever
 from swarm.governance.dynamic_friction import IncoherenceFrictionLever
 from swarm.governance.ensemble import SelfEnsembleLever
+from swarm.governance.hardware_trust import HardwareTrustLever
 from swarm.governance.identity_lever import SybilDetectionLever
 from swarm.governance.incoherence_breaker import IncoherenceCircuitBreakerLever
 from swarm.governance.levers import GovernanceLever, LeverEffect
@@ -176,6 +178,12 @@ class GovernanceEngine:
         # Resample protocol lever (Bhatt et al., 2025)
         if self.config.resample_enabled:
             levers.append(ResampleLever(self.config, seed=seed))
+        # Hardware trust rejection lever
+        if self.config.hardware_trust_enabled:
+            levers.append(HardwareTrustLever(self.config))
+        # Cascade risk lever (artifact chain governance)
+        if self.config.cascade_risk_enabled:
+            levers.append(CascadeRiskLever(self.config))
 
         # Stored as a tuple so that external code cannot mutate in place.
         self._levers: tuple[GovernanceLever, ...] = tuple(levers)
@@ -193,6 +201,7 @@ class GovernanceEngine:
         self._self_modification_lever: Optional[SelfModificationLever] = None
         self._rbac_lever: Optional[RBACLever] = None
         self._resample_lever: Optional[ResampleLever] = None
+        self._hardware_trust_lever: Optional[HardwareTrustLever] = None
 
         for lever in self._levers:
             if isinstance(lever, StakingLever):
@@ -217,6 +226,8 @@ class GovernanceEngine:
                 self._rbac_lever = lever
             elif isinstance(lever, ResampleLever):
                 self._resample_lever = lever
+            elif isinstance(lever, HardwareTrustLever):
+                self._hardware_trust_lever = lever
 
         # Adaptive governance state
         self._incoherence_forecaster: Optional[Any] = None
@@ -528,3 +539,16 @@ class GovernanceEngine:
         if self._resample_lever is None:
             return None
         return self._resample_lever.get_report()
+    def is_action_allowed(self, agent_id: str, action_type: str) -> bool:
+        """Check if a specific action is allowed for an agent.
+
+        Delegates to the hardware trust lever for constrained-mode filtering.
+        Returns True if no hardware trust lever is registered.
+        """
+        if self._hardware_trust_lever is not None:
+            return self._hardware_trust_lever.is_action_allowed(agent_id, action_type)
+        return True
+
+    def get_hardware_trust_lever(self) -> Optional[HardwareTrustLever]:
+        """Return the hardware trust lever if registered."""
+        return self._hardware_trust_lever

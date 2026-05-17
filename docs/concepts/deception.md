@@ -129,4 +129,4 @@ The [red-team attack library](../guides/red-teaming.md) tests all 8 standard att
 ---
 
 !!! quote "How to cite"
-    SWARM Team. "Deception Detection in Multi-Agent AI." *swarm-ai.org/concepts/deception/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).
+    SWARM Team. "Deception Detection in Multi-Agent AI." *swarm-ai.org/concepts/deception/*, 2026. Based on [arXiv:2604.19752](https://arxiv.org/abs/2604.19752); see also [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).

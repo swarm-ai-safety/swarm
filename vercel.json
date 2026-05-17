@@ -1,5 +1,5 @@
 {
-  "buildCommand": "uv pip install --system mkdocs-material 'mkdocstrings[python]' pymdown-extensions mkdocs-git-revision-date-localized-plugin mkdocs-rss-plugin && cd viz && npm install && npm run build:deploy && cd .. && mkdocs build",
+  "buildCommand": "bash scripts/vercel-build.sh",
   "outputDirectory": "site",
   "headers": [
     {
