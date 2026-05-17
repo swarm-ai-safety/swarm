@@ -109,6 +109,10 @@ Toxicity doubles, welfare flips strongly negative — from a judge change alone.
 
 This post started as "the crowd amplifies the worst." It ended as "the crowd amplified the worst in the runs we happened to generate, the ordering is judge-robust, and we should not trust the rest until it is replicated." That second sentence is the honest one.
 
+## Raw data & reproduction
+
+All three five-round runs — `export.json`, the grok-4.3 `metrics.json`/`judgments.json`, *and* the preserved grok-4.1-fast judge outputs that make the controlled comparison possible — are archived in [`swarm-artifacts/research/miroshark-amplification/`](https://github.com/swarm-ai-safety/swarm-artifacts/tree/main/research/miroshark-amplification), with a README walking the full table and reproduction commands. The amplification metric itself is `swarm/bridges/miroshark/metrics.py` in the main repo. Inspect the judgments, disagree with our `p` calls, re-run with a different judge — the point of publishing the raw runs is that the fragility above is checkable, not asserted.
+
 ---
 
 *Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*
