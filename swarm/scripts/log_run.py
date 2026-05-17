@@ -57,12 +57,67 @@ def _parse_dir_name(run_dir: Path) -> dict:
     return result
 
 
+def _iter_agent_snapshot_records(agent_snapshots: object) -> list[dict]:
+    """Normalize exported agent snapshots to a flat list of dict records."""
+    if isinstance(agent_snapshots, list):
+        return [snap for snap in agent_snapshots if isinstance(snap, dict)]
+
+    if isinstance(agent_snapshots, dict):
+        records = []
+        for agent_id, snapshots in agent_snapshots.items():
+            if not isinstance(snapshots, list):
+                continue
+            for snap in snapshots:
+                if not isinstance(snap, dict):
+                    continue
+                record = dict(snap)
+                record.setdefault("agent_id", agent_id)
+                records.append(record)
+        return records
+
+    return []
+
+
+def _is_adversarial_agent_type(agent_type: object) -> bool:
+    normalized = str(agent_type or "").lower()
+    return "adversarial" in normalized or "redteam" in normalized
+
+
+def _compute_adversarial_fraction(agent_snapshots: object) -> float:
+    """Compute final-epoch fraction of adversarial/redteam agents."""
+    records = _iter_agent_snapshot_records(agent_snapshots)
+    usable_records = [record for record in records if record.get("agent_id")]
+    if not usable_records:
+        return 0.0
+
+    epochs = [record.get("epoch") for record in usable_records if record.get("epoch") is not None]
+    final_epoch = max(epochs) if epochs else None
+    if final_epoch is not None:
+        usable_records = [record for record in usable_records if record.get("epoch") == final_epoch]
+
+    agent_types: dict[str, object] = {}
+    for record in usable_records:
+        agent_id = str(record["agent_id"])
+        agent_type = record.get("agent_type")
+        if agent_type is not None or agent_id not in agent_types:
+            agent_types[agent_id] = agent_type
+
+    if not agent_types:
+        return 0.0
+
+    n_adversarial = sum(
+        1 for agent_type in agent_types.values() if _is_adversarial_agent_type(agent_type)
+    )
+    return round(n_adversarial / len(agent_types), 4)
+
+
 def extract_from_history(history_path: Path) -> dict:
     """Extract metrics from a history.json file."""
     with open(history_path) as f:
         h = json.load(f)
 
     epochs = h.get("epoch_snapshots", [])
+    agent_snapshots = h.get("agent_snapshots", [])
     n_epochs = len(epochs)
 
     total_interactions = sum(e["total_interactions"] for e in epochs)
@@ -102,9 +157,23 @@ def extract_from_history(history_path: Path) -> dict:
         "final_welfare": final_welfare,
         "total_welfare": total_welfare,
         "welfare_per_epoch": welfare_per_epoch,
-        "adversarial_fraction": 0.0,  # TODO: parse from agent snapshots
+        "adversarial_fraction": _compute_adversarial_fraction(agent_snapshots),
         "collapse_epoch": collapse_epoch,
     }
+
+
+def _compute_adversarial_fraction_from_csv(csv_dir: Path) -> float:
+    agent_files = sorted(csv_dir.glob("*agent*.csv"))
+    if not agent_files:
+        return 0.0
+
+    rows = []
+    with open(agent_files[0]) as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            rows.append(row)
+
+    return _compute_adversarial_fraction(rows)
 
 
 def extract_from_csv(csv_dir: Path) -> dict:
@@ -165,7 +234,7 @@ def extract_from_csv(csv_dir: Path) -> dict:
         "final_welfare": final_welfare,
         "total_welfare": total_welfare,
         "welfare_per_epoch": welfare_per_epoch,
-        "adversarial_fraction": 0.0,
+        "adversarial_fraction": _compute_adversarial_fraction_from_csv(csv_dir),
         "collapse_epoch": collapse_epoch,
     }
 
