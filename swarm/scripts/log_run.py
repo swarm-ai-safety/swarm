@@ -83,6 +83,17 @@ def _is_adversarial_agent_type(agent_type: object) -> bool:
     return "adversarial" in normalized or "redteam" in normalized
 
 
+def _parse_epoch(epoch: object) -> int | None:
+    if isinstance(epoch, int):
+        return epoch
+    if isinstance(epoch, str):
+        try:
+            return int(epoch)
+        except ValueError:
+            return None
+    return None
+
+
 def _compute_adversarial_fraction(agent_snapshots: object) -> float:
     """Compute final-epoch fraction of adversarial/redteam agents."""
     records = _iter_agent_snapshot_records(agent_snapshots)
@@ -90,10 +101,20 @@ def _compute_adversarial_fraction(agent_snapshots: object) -> float:
     if not usable_records:
         return 0.0
 
-    epochs = [record.get("epoch") for record in usable_records if record.get("epoch") is not None]
+    epochs: list[int] = []
+    record_epochs: dict[int, int] = {}
+    for i, record in enumerate(usable_records):
+        epoch = _parse_epoch(record.get("epoch"))
+        if epoch is not None:
+            epochs.append(epoch)
+            record_epochs[i] = epoch
     final_epoch = max(epochs) if epochs else None
     if final_epoch is not None:
-        usable_records = [record for record in usable_records if record.get("epoch") == final_epoch]
+        usable_records = [
+            record
+            for i, record in enumerate(usable_records)
+            if record_epochs.get(i) == final_epoch
+        ]
 
     agent_types: dict[str, object] = {}
     for record in usable_records:
