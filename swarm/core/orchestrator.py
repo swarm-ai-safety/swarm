@@ -693,6 +693,12 @@ class Orchestrator:
             )
         )
 
+        # Register with heartbeat lever so it tracks from first step
+        if self.governance_engine is not None:
+            hb = self.governance_engine.get_attestation_heartbeat_lever()
+            if hb is not None:
+                hb.register_agent(agent.agent_id, initial_step=self.state.current_step)
+
         return state
 
     def _initialize_network(self) -> None:
