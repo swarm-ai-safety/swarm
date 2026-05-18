@@ -202,6 +202,11 @@ class GovernanceConfig(BaseModel):
     attestation_heartbeat_reputation_penalty: float = -0.1  # per missed heartbeat
     attestation_heartbeat_reset_on_epoch: bool = True  # clear lapsed status each epoch
 
+    # Hardware trust rejection handling
+    hardware_trust_enabled: bool = False
+    hardware_trust_propagation_enabled: bool = True  # Propagate stop token to dependents
+    hardware_trust_recovery_max_steps: int = 10  # Max steps in constrained recovery mode
+
     # Diversity as Defense (DaD)
     diversity_enabled: bool = False
     diversity_rho_max: float = 0.5  # Correlation cap (Rule 1)
@@ -232,6 +237,16 @@ class GovernanceConfig(BaseModel):
     resample_compute_cost: float = 0.01  # per-sample compute surcharge
     resample_evidence_decay: float = 0.9  # per-epoch evidence decay factor
     resample_evidence_rep_weight: float = 0.5  # reputation penalty per evidence unit
+    # Cascade risk lever (artifact chain governance)
+    # NOTE: Defaults are provisional — not yet validated by parameter sweep.
+    # Run examples/run_cascade_sensitivity.py before relying on these in
+    # production scenarios.  See PR #397 review for context.
+    cascade_risk_enabled: bool = False
+    cascade_risk_threshold: float = 0.5  # Min cascade risk to trigger penalty
+    cascade_risk_penalty_scale: float = 1.0  # Cost multiplier
+    cascade_risk_reputation_scale: float = 0.5  # Reputation penalty multiplier
+    cascade_risk_p_threshold: float = 0.3  # Descendants below this p are "bad"
+    cascade_risk_window: int = 200  # Rolling interaction window for DAG analysis
 
     @model_validator(mode="after")
     def _run_validation(self) -> "GovernanceConfig":
@@ -463,6 +478,10 @@ class GovernanceConfig(BaseModel):
         if self.attestation_heartbeat_interval < 1:
             raise ValueError("attestation_heartbeat_interval must be >= 1")
 
+        # Hardware trust validation
+        if self.hardware_trust_recovery_max_steps < 1:
+            raise ValueError("hardware_trust_recovery_max_steps must be >= 1")
+
         # Diversity as Defense validation
         if not 0.0 <= self.diversity_rho_max <= 1.0:
             raise ValueError("diversity_rho_max must be in [0, 1]")
@@ -498,3 +517,14 @@ class GovernanceConfig(BaseModel):
             raise ValueError("resample_evidence_decay must be in [0, 1]")
         if self.resample_evidence_rep_weight < 0:
             raise ValueError("resample_evidence_rep_weight must be non-negative")
+        # Cascade risk validation
+        if not 0.0 <= self.cascade_risk_threshold <= 1.0:
+            raise ValueError("cascade_risk_threshold must be in [0, 1]")
+        if self.cascade_risk_penalty_scale < 0:
+            raise ValueError("cascade_risk_penalty_scale must be non-negative")
+        if self.cascade_risk_reputation_scale < 0:
+            raise ValueError("cascade_risk_reputation_scale must be non-negative")
+        if not 0.0 <= self.cascade_risk_p_threshold <= 1.0:
+            raise ValueError("cascade_risk_p_threshold must be in [0, 1]")
+        if self.cascade_risk_window < 1:
+            raise ValueError("cascade_risk_window must be >= 1")

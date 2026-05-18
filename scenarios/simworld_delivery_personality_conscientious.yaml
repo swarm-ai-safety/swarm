@@ -1,0 +1,59 @@
+# Personality Sweep: High Conscientiousness
+# Population dominated by reliable, rule-following agents.
+# Big Five mapping: high conscientiousness → low risk, consistent execution.
+# Hypothesis: high delivery rate, low adverse selection, low inequality.
+
+scenario_id: simworld_delivery_personality_conscientious
+description: >
+  Conscientious-dominant delivery economy. 6/8 agents are reliable
+  completers. Tests whether a cooperative population produces Pareto-optimal
+  outcomes but sacrifices throughput diversity.
+motif: simworld_delivery
+
+agents:
+  - policy: conscientious
+    count: 6
+  - policy: cautious
+    count: 1
+  - policy: opportunistic
+    count: 1
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 20
+  seed: 42
+
+delivery:
+  city:
+    width: 40.0
+    height: 40.0
+    num_depots: 3
+  orders:
+    orders_per_epoch: 15
+    min_value: 5.0
+    max_value: 50.0
+    min_deadline_steps: 20
+    max_deadline_steps: 60
+  economy:
+    starting_budget: 100.0
+    scooter_cost: 50.0
+    scooter_speed_multiplier: 2.0
+    late_penalty_fraction: 0.3
+    failed_delivery_penalty: 5.0
+    sharing_bonus_fraction: 0.1
+  governance:
+    delivery_fee_rate: 0.05
+    reputation_decay: 0.01
+    reputation_bonus_on_time: 0.05
+    reputation_penalty_late: 0.1
+    reputation_penalty_fail: 0.2
+    min_reputation_to_bid: 0.3
+
+success_criteria:
+  min_epochs: 10
+  delivery_rate_threshold: 0.3
+  max_overbid_rate: 0.5
+
+outputs:
+  event_log: "logs/events.jsonl"
+  metrics_csv: "logs/metrics.csv"

@@ -22,9 +22,18 @@ abstract: >
   governance interventions to reveal how catastrophic failures can emerge from the
   interaction of many sub-AGI agents.
 preferred-citation:
-  type: software
+  type: article
   authors:
-    - name: "Raeli Savitt"
-  title: "SWARM: System-Wide Assessment of Risk in Multi-agent systems"
+    - family-names: "Aiersilan"
+      given-names: "Aizierjiang"
+    - family-names: "Savitt"
+      given-names: "Raeli"
+  title: "Soft-Label Governance for Distributional Safety in Multi-Agent Systems"
   year: 2026
-  url: "https://github.com/swarm-ai-safety/swarm"
+  journal: "arXiv"
+  url: "https://arxiv.org/abs/2604.19752"
+  doi: "10.48550/arXiv.2604.19752"
+  identifiers:
+    - type: other
+      value: "arXiv:2604.19752"
+      description: "arXiv preprint identifier"

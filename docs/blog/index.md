@@ -19,6 +19,17 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
   </div>
 </div>
 
+## May 2026
+
+<div class="blog-post" data-tags="evaluation llm-agents" markdown>
+
+**May 16** — [When the Crowd Amplifies the Worst — and When the Metric Doesn't Hold](amplification-adverse-selection-miroshark.md)
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span>
+
+MiroShark's agents never down-vote, so we derived acceptance from amplification. The concentrated libel cascade shows stronger adverse selection than diffuse red-teaming, and that ordering is robust to swapping the LLM judge — but it's single-seed and vanishes when the simulation is regenerated, and absolute toxicity/welfare are judge artifacts. As much a cautionary tale about LLM-judged metrics as a finding.
+
+</div>
+
 ## March 2026
 
 <div class="blog-post" data-tags="governance evaluation" markdown>

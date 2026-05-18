@@ -34,7 +34,7 @@
   <meta name="citation_journal_title" content="SWARM Research" />
   <meta name="citation_publisher" content="SWARM" />
   {% if is_theory or is_blog %}
-  <meta name="citation_arxiv_id" content="2512.16856" />
+  <meta name="citation_arxiv_id" content="2604.19752" />
   {% endif %}
   {% if keywords %}
   <meta name="citation_keywords" content="{{ keywords | join('; ') }}" />
@@ -101,7 +101,7 @@
       "name": "{{ author }}"
     },
     {% if keywords %}"keywords": "{{ keywords | join(', ') }}",{% endif %}
-    "citation": "https://arxiv.org/abs/2512.16856",
+    "citation": ["https://arxiv.org/abs/2604.19752", "https://arxiv.org/abs/2512.16856"],
     "publisher": {
       "@type": "Organization",
       "name": "SWARM",
@@ -143,7 +143,7 @@
       "name": "{{ author }}"
     },
     {% if keywords %}"keywords": "{{ keywords | join(', ') }}",{% endif %}
-    "citation": "https://arxiv.org/abs/2512.16856",
+    "citation": ["https://arxiv.org/abs/2604.19752", "https://arxiv.org/abs/2512.16856"],
     "publisher": {
       "@type": "Organization",
       "name": "SWARM",
@@ -168,11 +168,18 @@
       "@type": "Organization",
       "name": "{{ author }}"
     },
-    "citation": {
-      "@type": "ScholarlyArticle",
-      "name": "Distributional Safety in Agentic Systems",
-      "url": "https://arxiv.org/abs/2512.16856"
-    },
+    "citation": [
+      {
+        "@type": "ScholarlyArticle",
+        "name": "Soft-Label Governance for Distributional Safety in Multi-Agent Systems",
+        "url": "https://arxiv.org/abs/2604.19752"
+      },
+      {
+        "@type": "ScholarlyArticle",
+        "name": "Distributional AGI Safety",
+        "url": "https://arxiv.org/abs/2512.16856"
+      }
+    ],
     "publisher": {
       "@type": "Organization",
       "name": "SWARM",

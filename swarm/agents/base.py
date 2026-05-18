@@ -243,6 +243,10 @@ class Observation:
     awm_episode_active: bool = False  # Whether episode is in progress
     awm_steps_remaining: int = 0  # Steps left before max_steps
 
+    # Artifact layer observations (emergent tool chaining)
+    available_artifacts: List[Dict] = field(default_factory=list)  # Consumable artifacts
+    artifact_pressure: Dict[str, float] = field(default_factory=dict)  # Unmet demand by kind
+
 
 @dataclass
 class InteractionProposal:
