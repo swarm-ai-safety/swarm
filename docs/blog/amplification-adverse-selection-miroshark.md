@@ -1,6 +1,6 @@
 ---
 date: 2026-05-16
-description: "MiroShark's agents never down-vote, so we derived acceptance from amplification. A concentrated libel cascade shows stronger adverse selection than diffuse red-teaming — an ordering that's robust to the judge model but NOT to regenerating the simulation. A finding and a cautionary tale about single-seed LLM-judged metrics."
+description: "MiroShark's agents never down-vote, so we derived acceptance from amplification. Single runs showed a concentrated libel cascade more adversely selected than diffuse red-teaming — but a preregistered fixed-regime multi-seed follow-up did NOT replicate that libel<redteam<0 ordering: it is regime-fragile, not a property. The durable result is the non-circular amplification metric and a cautionary tale about single-seed LLM-judged safety metrics."
 author: "SWARM Team"
 keywords:
   - adverse selection multi-agent
@@ -9,24 +9,27 @@ keywords:
   - LLM judge sensitivity
   - soft labels distributional safety
 claims:
-  - metric: "Quality-gap ordering (judge-robust)"
+  - metric: "Headline ordering did NOT replicate (preregistered follow-up)"
+    value: "libel ≈ redteam (Δ≈+0.002)"
+    description: "A preregistered fixed-regime multi-seed study (grok-4.3 sim+judge, SHA-256-hashed prereg before any run) was run. At the underpowered n=3/scenario it reached before an external infra/quota wall, the libel<redteam<0 ordering did NOT hold (libel mean qg -0.064 vs redteam -0.067; one extra libel draw collapsed the n=2 gap and exploded its variance; H1/H2 not supported, H3 fail-to-reject). The ordering is regime-fragile, not a scenario property. A powered >=8/scenario run remains open, blocked on external OpenAI quota."
+  - metric: "Single-seed ordering (observed, not replicated)"
     value: "libel < redteam < 0"
-    description: "Under both grok-4.1-fast and grok-4.3 judges, the concentrated libel cascade has a more negative quality_gap than diffuse red-teaming (g4.1f: -0.059 vs -0.037; g4.3: -0.027 vs -0.022). Sign and ordering survive the judge change; magnitude compresses ~50%."
+    description: "In single runs under both grok-4.1-fast and grok-4.3 judges, the concentrated libel cascade had a more negative quality_gap than diffuse red-teaming (g4.1f: -0.059 vs -0.037; g4.3: -0.027 vs -0.022). Sign/ordering survived the judge swap, magnitude compressed ~50% — but this is what those particular single seeds showed, and the preregistered multi-seed follow-up did not reproduce it. Read as a hypothesis, not a finding."
   - metric: "Signal fragility (simulation-sensitive)"
     value: "-0.022 → +0.001"
-    description: "Same redteam scenario, same grok-4.3 judge, different simulation model + seed: the negative quality_gap vanishes. The effect is single-seed and not robust to simulation regime."
+    description: "Same redteam scenario, same grok-4.3 judge, different simulation model + seed: the negative quality_gap vanishes. The effect is single-seed and not robust to simulation regime — corroborated by the multi-seed follow-up above."
   - metric: "Absolute metrics are judge artifacts"
     value: "toxicity 0.28 → 0.61"
     description: "Switching the judge from grok-4.1-fast to grok-4.3 on identical data roughly doubles toxicity and flips net welfare negative. Absolute toxicity/welfare are not scenario properties."
-  - metric: "Preregistered powered follow-up (did not replicate)"
-    value: "libel ≈ redteam (Δ≈+0.002)"
-    description: "A preregistered fixed-regime multi-seed study (grok-4.3 sim+judge) was attempted. At the underpowered n=3/scenario it reached before an external infra/quota wall, the libel<redteam<0 ordering did NOT hold (libel mean qg -0.064 vs redteam -0.067; one extra libel draw collapsed the gap). The ordering is regime-fragile as suspected; a powered >=8/scenario run remains open and blocked on external quota."
-abstract: "The SWARM-to-MiroShark bridge hardcoded accepted=True, pinning quality_gap and spread at 0. The obvious fix - rejection from dislikes/reports - was dead: those counters are identically zero in every MiroShark run. We defined acceptance by amplification instead (content other agents quoted/replied/liked/reposted is accepted; ignored content is rejected), with p judged independently so quality_gap stays non-circular. Result: a real selection signal - the concentrated libel cascade shows a more negative quality_gap than diffuse red-teaming, and this ordering is robust to swapping the LLM judge. But it is single-seed and does NOT survive regenerating the simulation under a different model, and the absolute toxicity/welfare numbers are dominated by judge choice. This post is as much a cautionary tale about LLM-judged, single-seed safety metrics as it is a finding."
+  - metric: "Durable contribution: non-circular amplification metric"
+    value: "quality_gap unpinned"
+    description: "MiroShark agents never down-vote (dislikes/reports identically 0), so acceptance is derived from the amplification graph while p is judged independently from content. This unpins quality_gap/spread non-circularly and is the result that survives — shipped in swarm/bridges/miroshark/metrics.py."
+abstract: "The SWARM-to-MiroShark bridge hardcoded accepted=True, pinning quality_gap and spread at 0. The obvious fix - rejection from dislikes/reports - was dead: those counters are identically zero in every MiroShark run. We defined acceptance by amplification instead (content other agents quoted/replied/liked/reposted is accepted; ignored content is rejected), with p judged independently so quality_gap stays non-circular - and that method is the durable result. Single runs then showed a tempting selection signal: the concentrated libel cascade more adversely selected than diffuse red-teaming, an ordering even robust to swapping the LLM judge. We did not stop there. A preregistered fixed-regime multi-seed follow-up did NOT replicate the libel<redteam<0 ordering (libel ≈ redteam, one extra draw collapsed it); combined with its non-robustness to regenerating the simulation and judge-dominated absolute toxicity/welfare, the lesson is that the headline ordering is regime-fragile, not a property. This post is primarily a cautionary tale about LLM-judged, single-seed safety metrics - and a worked example of preregistering the test that retired our own headline."
 ---
 
 # When the Crowd Amplifies the Worst — and When the Metric Doesn't Hold
 
-*MiroShark's agents never press "report," so we measured rejection by amplification. We got a clean adverse-selection ordering — then watched half of it evaporate when we changed one model. Both halves are the point.*
+*MiroShark's agents never press "report," so we measured rejection by amplification. Single runs gave us a clean adverse-selection ordering — then a preregistered multi-seed follow-up failed to reproduce it. The non-circular metric is the keeper; the headline ordering isn't.*
 
 ---
 
@@ -65,9 +68,11 @@ What MiroShark agents *do* do is engage with each other's content — 313 of 379
 
 `p` is judged independently: an LLM scores each action's constructiveness from its content alone, with no knowledge of who amplified it. Acceptance comes from the engagement graph; quality from the content. They never see each other, so `quality_gap` is a real selection measurement, not a tautology.
 
-## The result that holds: concentration amplifies adverse selection
+## The tempting result: concentration *appeared* to amplify adverse selection
 
-With acceptance defined by amplification, the concentrated libel cascade (a few injector/amplifier agents pumping a false narrative) shows a **more negative quality_gap** than diffuse red-teaming. And — importantly — that *ordering* survives swapping the LLM judge:
+> **Read this section as the hypothesis, not the conclusion.** The ordering below looked robust across judges in single runs — but the preregistered multi-seed follow-up ([Update, 2026-05-18](#update-2026-05-18-the-preregistered-powered-follow-up-did-not-replicate-the-ordering)) did **not** reproduce it. Kept here because the *reasoning* that made it tempting, and how it failed, is the point of the post.
+
+With acceptance defined by amplification, the concentrated libel cascade (a few injector/amplifier agents pumping a false narrative) showed a **more negative quality_gap** than diffuse red-teaming in single runs. And — temptingly — that *ordering* survived swapping the LLM judge:
 
 | Run (5 rounds) | Judge | quality_gap | spread |
 |---|---|---|---|
@@ -76,7 +81,7 @@ With acceptance defined by amplification, the concentrated libel cascade (a few 
 | Libel cascade | grok-4.3 | **−0.027** | +0.014 |
 | Red-team (run A) | grok-4.3 | **−0.022** | +0.006 |
 
-Under *both* judges: `libel < redteam < 0`. The concentrated manipulation cascade is more adversely selected than diffuse noise — the sign and the ordering are robust to a judge swap, even though grok-4.3 compresses the magnitudes by about half. Aggregate toxicity barely distinguishes these two worlds; the *selection* metric does. That is the argument for distributional, selection-aware safety metrics over a single threshold count.
+Under *both* judges, in these single runs: `libel < redteam < 0` — robust to a judge swap (grok-4.3 just compresses magnitudes ~50%). That judge-robustness is exactly what made it tempting to call a finding. It was not one: regenerating the simulation kills it (next section), and the preregistered multi-seed study could not reproduce it (Update). What *does* survive is the weaker, methodological point — aggregate toxicity barely distinguishes these two worlds while a *selection* metric at least responds to them, which is the argument for developing distributional, selection-aware metrics, not evidence about libel vs. red-team specifically.
 
 ## The result that doesn't hold: the signal is single-seed
 
@@ -110,7 +115,7 @@ Toxicity doubles, welfare flips strongly negative — from a judge change alone.
 - **But:** the specific magnitudes, the absolute toxicity/welfare, and even the *existence* of redteam adverse selection are not robust to single-seed variance, simulation model, or judge model. Treat them as hypotheses, not results.
 - **Next:** a multi-seed study under a single fixed model regime (sim + judge), with confidence intervals, before any of the magnitudes are quoted as findings.
 
-This post started as "the crowd amplifies the worst." It ended as "the crowd amplified the worst in the runs we happened to generate, the ordering is judge-robust, and we should not trust the rest until it is replicated." That second sentence is the honest one.
+This post started as "the crowd amplifies the worst." It ended as "the crowd amplified the worst in the runs we happened to generate, the ordering looked judge-robust, and then we preregistered the replication and it did not hold." We ran the test that retired our own headline — that is the honest version, and the one worth publishing.
 
 ## Update (2026-05-18): the preregistered powered follow-up did not replicate the ordering
 
