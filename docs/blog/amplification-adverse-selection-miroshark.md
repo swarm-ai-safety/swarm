@@ -18,6 +18,9 @@ claims:
   - metric: "Absolute metrics are judge artifacts"
     value: "toxicity 0.28 → 0.61"
     description: "Switching the judge from grok-4.1-fast to grok-4.3 on identical data roughly doubles toxicity and flips net welfare negative. Absolute toxicity/welfare are not scenario properties."
+  - metric: "Preregistered powered follow-up (did not replicate)"
+    value: "libel ≈ redteam (Δ≈+0.002)"
+    description: "A preregistered fixed-regime multi-seed study (grok-4.3 sim+judge) was attempted. At the underpowered n=3/scenario it reached before an external infra/quota wall, the libel<redteam<0 ordering did NOT hold (libel mean qg -0.064 vs redteam -0.067; one extra libel draw collapsed the gap). The ordering is regime-fragile as suspected; a powered >=8/scenario run remains open and blocked on external quota."
 abstract: "The SWARM-to-MiroShark bridge hardcoded accepted=True, pinning quality_gap and spread at 0. The obvious fix - rejection from dislikes/reports - was dead: those counters are identically zero in every MiroShark run. We defined acceptance by amplification instead (content other agents quoted/replied/liked/reposted is accepted; ignored content is rejected), with p judged independently so quality_gap stays non-circular. Result: a real selection signal - the concentrated libel cascade shows a more negative quality_gap than diffuse red-teaming, and this ordering is robust to swapping the LLM judge. But it is single-seed and does NOT survive regenerating the simulation under a different model, and the absolute toxicity/welfare numbers are dominated by judge choice. This post is as much a cautionary tale about LLM-judged, single-seed safety metrics as it is a finding."
 ---
 
@@ -108,6 +111,25 @@ Toxicity doubles, welfare flips strongly negative — from a judge change alone.
 - **Next:** a multi-seed study under a single fixed model regime (sim + judge), with confidence intervals, before any of the magnitudes are quoted as findings.
 
 This post started as "the crowd amplifies the worst." It ended as "the crowd amplified the worst in the runs we happened to generate, the ordering is judge-robust, and we should not trust the rest until it is replicated." That second sentence is the honest one.
+
+## Update (2026-05-18): the preregistered powered follow-up did not replicate the ordering
+
+The "Next" above was attempted. We preregistered a fixed-regime multi-seed study (hypotheses, fixed N, stopping rule, and an explicit no-reproducible-seeds caveat written and SHA-256-hashed *before* any run — `sha256 386420a3…`; orchestrator `scripts/multiseed_miroshark.py`): grok-4.3 for **both** the MiroShark SMART/NER simulation and the metrics judge, scale=3, 5 rounds, target ≥8 independent stochastic replications per scenario.
+
+It did not complete. A cascade of *infrastructure* failures — a dead ambient judge API key silently degrading every verdict to p=0.5, a wedged Docker engine taking Neo4j down, and a hard recurring **OpenAI daily-request-cap exhaustion on MiroShark's ontology step** — capped us at **n=3 clean replications per scenario**, well short of the preregistered ≥8. So this is **still underpowered and not confirmatory.** But the indicative direction is itself the point:
+
+| Preregistered metric (grok-4.3 sim+judge, clean runs) | n | mean `quality_gap` | bootstrap 95% CI |
+|---|---|---|---|
+| libel cascade | 3 | **−0.064** | [−0.171, +0.063] |
+| red-team | 3 | **−0.067** | [−0.152, +0.020] |
+
+- **H1** (libel < redteam): Δ = **+0.002**, 95% CI [−0.133, +0.138], Welch t≈0.03 — **not supported**.
+- **H2** (libel < 0): CI includes 0 — **not supported**.
+- **H3** (redteam ≈ 0): CI includes 0 — **fail to reject** (consistent).
+
+A single additional libel draw (qg ≈ +0.06) collapsed the libel mean from −0.13 (at n=2) toward redteam's and exploded its variance. **The `libel < redteam < 0` ordering claimed above is not robust across independent stochastic draws even within one fixed regime** — exactly the fragility this post warned about, now observed under the controlled conditions it asked for, not just across judge/sim swaps. The judge-robust ordering claim in the front-matter should be read strictly as "what the single-seed runs showed," not as a replicated property.
+
+The powered ≥8/scenario study remains open (beads `distributional-agi-safety-qopt`), blocked on the external OpenAI ontology-model quota, not on anything in SWARM. The preregistration, per-run manifest, and indicative `SUMMARY.md` live in the (gitignored) batch dir `runs/20260517-142704_multiseed_miroshark/`; they are **not** yet in `swarm-artifacts` because the study is incomplete — they will be archived only when a powered run finishes, to avoid presenting an aborted batch as a result.
 
 ## Raw data & reproduction
 
