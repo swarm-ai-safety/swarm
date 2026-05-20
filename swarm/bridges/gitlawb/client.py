@@ -126,7 +126,9 @@ class GitlawbClient:
         """Execute a GraphQL query/mutation via HTTP."""
         client = await self._get_http_client()
         async with client as session:
-            result = await session.execute(document, variable_values=variables)
+            result: dict[str, Any] = await session.execute(
+                document, variable_values=variables
+            )
             return result
 
     async def subscribe_ref_updates(
@@ -224,17 +226,20 @@ class GitlawbClient:
             QUERY_TASKS,
             {"status": status, "assigneeDid": assignee_did, "limit": limit},
         )
-        return result.get("tasks", [])
+        tasks: list[dict[str, Any]] = result.get("tasks", [])
+        return tasks
 
     async def fetch_task(self, task_id: str) -> Optional[dict[str, Any]]:
         """Fetch a single task by ID."""
         result = await self.execute_query(QUERY_TASK, {"id": task_id})
-        return result.get("task")
+        task: Optional[dict[str, Any]] = result.get("task")
+        return task
 
     async def fetch_repos(self) -> list[dict[str, Any]]:
         """List all repos on the node."""
         result = await self.execute_query(QUERY_REPOS)
-        return result.get("repos", [])
+        repos: list[dict[str, Any]] = result.get("repos", [])
+        return repos
 
     async def fetch_historical_ref_updates(
         self,
@@ -246,7 +251,8 @@ class GitlawbClient:
             QUERY_REF_UPDATES,
             {"repo": repo, "limit": limit},
         )
-        return result.get("refUpdates", [])
+        updates: list[dict[str, Any]] = result.get("refUpdates", [])
+        return updates
 
     async def close(self) -> None:
         """Cancel all subscriptions and close connections."""

@@ -49,6 +49,7 @@ class GitlawbRunner:
 
     def _load_persisted(self) -> None:
         """Load interactions from persistence file on startup."""
+        assert self._config.persistence_path is not None
         path = Path(self._config.persistence_path)
         if not path.exists():
             return
@@ -131,6 +132,7 @@ class GitlawbRunner:
 
     async def _persist_interaction(self, interaction: SoftInteraction) -> None:
         """Append an interaction to the persistence file."""
+        assert self._config.persistence_path is not None
         path = Path(self._config.persistence_path)
         try:
             existing = []
@@ -143,6 +145,7 @@ class GitlawbRunner:
 
     async def _persist_metrics(self, report: GitlawbMetricsReport) -> None:
         """Write metrics report to a companion file."""
+        assert self._config.persistence_path is not None
         path = Path(self._config.persistence_path).with_suffix(".metrics.json")
         try:
             await asyncio.to_thread(
