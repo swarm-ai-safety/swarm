@@ -1,7 +1,7 @@
 """Dual reporting for soft and hard metrics."""
 
 from dataclasses import dataclass, replace
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Mapping, Optional
 
 from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.metrics.incoherence import DecisionRecord, IncoherenceMetrics
@@ -597,3 +597,180 @@ class MetricsReporter:
         lines.append("=" * 50)
 
         return "\n".join(lines)
+
+    def to_markdown(
+        self,
+        interactions: List[SoftInteraction],
+        *,
+        metadata: Optional[Mapping[str, Any]] = None,
+        decimals: int = 4,
+    ) -> str:
+        """Render the metrics summary as a GitHub-flavored markdown document.
+
+        The output is suitable for pasting into GitHub issues, PR comments, or
+        research notes. The structure is::
+
+            # Metrics report
+
+            **seed:** ...   (optional run metadata header, one bullet per key)
+
+            ## Soft metrics (probabilistic)
+            | Metric | Value |
+            ...
+
+            ## Hard metrics (threshold-based)
+            | Metric | Value |
+            ...
+
+            ## Counts
+            | Metric | Value |
+            ...
+
+        Args:
+            interactions: Interactions to summarise (same shape as
+                ``format_report``).
+            metadata: Optional mapping of run metadata (e.g.
+                ``{"seed": 42, "scenario": "baseline.yaml", "epochs": 10}``).
+                Rendered as bold-key bullet rows at the top of the document.
+            decimals: Number of decimal places for floating-point cells
+                (default: 4). Integers are rendered without rounding.
+
+        Returns:
+            A markdown document as a single string.
+        """
+        summary = self.summary(interactions)
+
+        def escape(text: str) -> str:
+            """Escape pipes so a string survives as a single GFM table cell."""
+            return text.replace("|", "\\|")
+
+        def fmt(value: Any) -> str:
+            if value is None:
+                return "n/a"
+            if isinstance(value, bool):
+                return str(value)
+            if isinstance(value, float):
+                return f"{round(value, decimals):.{decimals}f}"
+            return escape(str(value))
+
+        def render_table(rows: List[tuple[str, Any]]) -> List[str]:
+            lines = ["| Metric | Value |", "| --- | ---: |"]
+            for label, value in rows:
+                lines.append(f"| {escape(label)} | {fmt(value)} |")
+            return lines
+
+        lines: List[str] = ["# Metrics report", ""]
+
+        if metadata:
+            for key, value in metadata.items():
+                lines.append(f"- **{key}:** {value}")
+            lines.append("")
+
+        lines.append("## Soft metrics (probabilistic)")
+        lines.append("")
+        lines.extend(
+            render_table(
+                [
+                    ("Toxicity (E[1-p | accepted])", summary.toxicity_soft),
+                    ("Average quality (E[p])", summary.average_quality),
+                    ("Quality gap", summary.quality_gap),
+                    ("Spread", summary.spread),
+                    ("Uncertain fraction", summary.uncertain_fraction),
+                    (
+                        "Conditional loss (initiator)",
+                        summary.conditional_loss_initiator,
+                    ),
+                    (
+                        "Conditional loss (counterparty)",
+                        summary.conditional_loss_counterparty,
+                    ),
+                ]
+            )
+        )
+        lines.append("")
+
+        lines.append("## Hard metrics (threshold-based)")
+        lines.append("")
+        lines.extend(
+            render_table(
+                [
+                    (
+                        "Hard toxicity (low-quality among accepted)",
+                        summary.toxicity_hard,
+                    ),
+                    ("Acceptance rate", summary.acceptance_rate),
+                    (
+                        "High-quality acceptance rate",
+                        summary.high_quality_acceptance,
+                    ),
+                    (
+                        "Low-quality acceptance rate",
+                        summary.low_quality_acceptance,
+                    ),
+                ]
+            )
+        )
+        lines.append("")
+
+        lines.append("## Counts")
+        lines.append("")
+        lines.extend(
+            render_table(
+                [
+                    ("Total interactions", summary.total_interactions),
+                    ("Accepted", summary.accepted_count),
+                    ("Rejected", summary.rejected_count),
+                    ("High quality", summary.high_quality_count),
+                    ("Low quality", summary.low_quality_count),
+                ]
+            )
+        )
+        lines.append("")
+
+        lines.append("## Welfare")
+        lines.append("")
+        lines.extend(
+            render_table(
+                [
+                    ("Total welfare", summary.total_welfare),
+                    ("Total social surplus", summary.total_social_surplus),
+                    (
+                        "Avg initiator payoff",
+                        summary.avg_initiator_payoff,
+                    ),
+                    (
+                        "Avg counterparty payoff",
+                        summary.avg_counterparty_payoff,
+                    ),
+                ]
+            )
+        )
+        lines.append("")
+
+        if any(
+            v is not None
+            for v in (
+                summary.brier_score,
+                summary.log_loss,
+                summary.calibration_error,
+                summary.expected_calibration_error,
+            )
+        ):
+            lines.append("## Calibration")
+            lines.append("")
+            lines.extend(
+                render_table(
+                    [
+                        ("Brier score", summary.brier_score),
+                        ("Log loss", summary.log_loss),
+                        ("Calibration error", summary.calibration_error),
+                        (
+                            "Expected calibration error",
+                            summary.expected_calibration_error,
+                        ),
+                    ]
+                )
+            )
+            lines.append("")
+
+        return "\n".join(lines).rstrip() + "\n"
