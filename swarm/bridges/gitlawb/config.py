@@ -34,7 +34,7 @@ class GitlawbConfig:
     # In-memory interaction ring buffer size
     history_max_size: int = 10_000
 
-    # Optional JSON persistence path
+    # Optional JSONL persistence path (one interaction per line, append-only)
     persistence_path: Optional[str] = None
 
     # WebSocket reconnection

@@ -48,15 +48,17 @@ class GitlawbRunner:
             self._load_persisted()
 
     def _load_persisted(self) -> None:
-        """Load interactions from persistence file on startup."""
+        """Load interactions from the JSONL persistence file on startup."""
         assert self._config.persistence_path is not None
         path = Path(self._config.persistence_path)
         if not path.exists():
             return
         try:
-            data = json.loads(path.read_text())
-            for item in data:
-                self._interactions.append(SoftInteraction.from_dict(item))
+            for line in path.read_text().splitlines():
+                line = line.strip()
+                if not line:
+                    continue
+                self._interactions.append(SoftInteraction.from_dict(json.loads(line)))
             logger.info("Loaded %d persisted interactions", len(self._interactions))
         except Exception as exc:
             logger.warning("Failed to load persisted interactions: %s", exc)
@@ -131,15 +133,17 @@ class GitlawbRunner:
                 await self._persist_metrics(report)
 
     async def _persist_interaction(self, interaction: SoftInteraction) -> None:
-        """Append an interaction to the persistence file."""
+        """Append an interaction to the JSONL persistence file."""
         assert self._config.persistence_path is not None
         path = Path(self._config.persistence_path)
+        line = json.dumps(interaction.to_dict()) + "\n"
+
+        def _append() -> None:
+            with open(path, "a") as f:
+                f.write(line)
+
         try:
-            existing = []
-            if path.exists():
-                existing = json.loads(path.read_text())
-            existing.append(interaction.to_dict())
-            await asyncio.to_thread(path.write_text, json.dumps(existing, indent=2))
+            await asyncio.to_thread(_append)
         except Exception as exc:
             logger.warning("Persistence write failed: %s", exc)
 
@@ -169,8 +173,7 @@ class GitlawbRunner:
             for repo in all_repos:
                 name = repo.get("name", "")
                 owner = repo.get("ownerDid", "")
-                # Strip did:key: prefix to get the raw key
-                key = owner.split(":")[-1] if ":" in owner else owner
+                key = owner.removeprefix("did:key:")
                 did_id = f"{key}/{name}"
                 self._resolved_repos[name] = did_id
             logger.info("Resolved %d repos", len(self._resolved_repos))
@@ -306,7 +309,7 @@ def main() -> None:
     parser.add_argument("--ws-url", default="wss://node.gitlawb.com/graphql")
     parser.add_argument("--limit", type=int, default=100)
     parser.add_argument("--json-output", type=str, help="Write report JSON to file")
-    parser.add_argument("--persistence", type=str, help="JSON persistence file path")
+    parser.add_argument("--persistence", type=str, help="JSONL persistence file path (one interaction per line)")
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
 

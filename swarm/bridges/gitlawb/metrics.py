@@ -56,30 +56,28 @@ class GitlawbMetrics:
 
     def compute(self, interactions: list[SoftInteraction]) -> GitlawbMetricsReport:
         """Compute aggregate safety metrics."""
-        scored = [i for i in interactions if i.p != 0.5 or i.metadata.get("event_source")]
-        if not scored:
+        if not interactions:
             return GitlawbMetricsReport(
                 timestamp=datetime.now(timezone.utc).isoformat(),
                 interaction_count=0,
             )
 
-        welfare = self._soft.welfare_metrics(scored)
+        welfare = self._soft.welfare_metrics(interactions)
 
-        # Average quality by interaction type
         by_type: dict[str, list[float]] = defaultdict(list)
-        for i in scored:
+        for i in interactions:
             by_type[i.interaction_type.value].append(i.p)
         per_type = {k: sum(v) / len(v) for k, v in by_type.items()}
 
         return GitlawbMetricsReport(
             timestamp=datetime.now(timezone.utc).isoformat(),
-            interaction_count=len(scored),
-            toxicity_rate=self._soft.toxicity_rate(scored),
-            toxicity_rate_all=self._soft.toxicity_rate_all(scored),
-            quality_gap=self._soft.quality_gap(scored),
-            spread=self._soft.spread(scored),
-            conditional_loss_initiator=self._soft.conditional_loss_initiator(scored),
-            average_quality=self._soft.average_quality(scored),
+            interaction_count=len(interactions),
+            toxicity_rate=self._soft.toxicity_rate(interactions),
+            toxicity_rate_all=self._soft.toxicity_rate_all(interactions),
+            quality_gap=self._soft.quality_gap(interactions),
+            spread=self._soft.spread(interactions),
+            conditional_loss_initiator=self._soft.conditional_loss_initiator(interactions),
+            average_quality=self._soft.average_quality(interactions),
             welfare=welfare,
             per_interaction_type=per_type,
         )
