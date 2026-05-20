@@ -27,6 +27,59 @@ from pathlib import Path
 # Metric extraction
 # ---------------------------------------------------------------------------
 
+# Agent types treated as adversarial when computing ``adversarial_fraction``.
+# Sourced from swarm.models.agent.AgentType — kept as a string set here so this
+# script can run on bare history.json files without importing the simulation
+# code (and without pulling in heavy deps like pydantic for a logging script).
+# Cross-checked against:
+#   - swarm/models/agent.py (AgentType enum)
+#   - swarm/redteam/metrics.py:321 (canonical predicate)
+#   - swarm/core/composition_analyzer.py:393 (canonical counting site)
+ADVERSARIAL_AGENT_TYPES = frozenset({"adversarial", "deceptive"})
+
+
+def _compute_adversarial_fraction(agent_snapshots: list) -> float:
+    """Compute the fraction of unique agents whose type is adversarial.
+
+    Args:
+        agent_snapshots: List of per-agent-per-epoch records as serialized by
+            ``swarm.analysis.export.history_to_agent_records`` (i.e. each
+            record has an ``agent_id`` and an ``agent_type`` field).
+
+    Returns:
+        Fraction in ``[0.0, 1.0]``. Returns ``0.0`` if ``agent_snapshots`` is
+        empty or contains no usable ``agent_id`` / ``agent_type`` fields, so
+        that older history.json files (which may pre-date the per-agent type
+        export) still produce a sensible default.
+
+    Notes:
+        Each agent appears once per epoch in the snapshots, so we deduplicate
+        by ``agent_id`` and take the first observed ``agent_type``. Agent type
+        in SWARM is immutable for the lifetime of a run.
+    """
+    if not agent_snapshots:
+        return 0.0
+
+    agent_type_by_id: dict[str, str] = {}
+    for record in agent_snapshots:
+        agent_id = record.get("agent_id")
+        if not agent_id or agent_id in agent_type_by_id:
+            continue
+        agent_type = record.get("agent_type")
+        if agent_type is None:
+            continue
+        agent_type_by_id[agent_id] = str(agent_type).lower()
+
+    n_total = len(agent_type_by_id)
+    if n_total == 0:
+        return 0.0
+
+    n_adversarial = sum(
+        1 for t in agent_type_by_id.values() if t in ADVERSARIAL_AGENT_TYPES
+    )
+    return round(n_adversarial / n_total, 4)
+
+
 def _parse_dir_name(run_dir: Path) -> dict:
     """Extract scenario_id, run_timestamp, and seed from directory name.
 
@@ -59,10 +112,11 @@ def _parse_dir_name(run_dir: Path) -> dict:
 
 def extract_from_history(history_path: Path) -> dict:
     """Extract metrics from a history.json file."""
-    with open(history_path) as f:
+    with open(history_path, encoding="utf-8") as f:
         h = json.load(f)
 
     epochs = h.get("epoch_snapshots", [])
+    agent_snapshots = h.get("agent_snapshots", [])
     n_epochs = len(epochs)
 
     total_interactions = sum(e["total_interactions"] for e in epochs)
@@ -102,9 +156,25 @@ def extract_from_history(history_path: Path) -> dict:
         "final_welfare": final_welfare,
         "total_welfare": total_welfare,
         "welfare_per_epoch": welfare_per_epoch,
-        "adversarial_fraction": 0.0,  # TODO: parse from agent snapshots
+        "adversarial_fraction": _compute_adversarial_fraction(agent_snapshots),
         "collapse_epoch": collapse_epoch,
     }
+
+
+def _adversarial_fraction_from_agents_csv(csv_dir: Path) -> float:
+    """Compute adversarial fraction from the ``*agents*.csv`` sidecar.
+
+    Mirrors :func:`_compute_adversarial_fraction` but operates on the CSV
+    export written by ``swarm.analysis.export.export_to_csv``. Returns
+    ``0.0`` when no agents CSV is present (e.g. legacy runs) so the caller
+    can transparently fall back.
+    """
+    agents_csvs = sorted(csv_dir.glob("*agents*.csv"))
+    if not agents_csvs:
+        return 0.0
+    with open(agents_csvs[0], encoding="utf-8") as f:
+        rows = list(csv.DictReader(f))
+    return _compute_adversarial_fraction(rows)
 
 
 def extract_from_csv(csv_dir: Path) -> dict:
@@ -116,7 +186,7 @@ def extract_from_csv(csv_dir: Path) -> dict:
         raise FileNotFoundError(f"No CSV files found in {csv_dir}")
 
     rows = []
-    with open(csv_files[0]) as f:
+    with open(csv_files[0], encoding="utf-8") as f:
         reader = csv.DictReader(f)
         for row in reader:
             rows.append(row)
@@ -165,7 +235,7 @@ def extract_from_csv(csv_dir: Path) -> dict:
         "final_welfare": final_welfare,
         "total_welfare": total_welfare,
         "welfare_per_epoch": welfare_per_epoch,
-        "adversarial_fraction": 0.0,
+        "adversarial_fraction": _adversarial_fraction_from_agents_csv(csv_dir),
         "collapse_epoch": collapse_epoch,
     }
 
