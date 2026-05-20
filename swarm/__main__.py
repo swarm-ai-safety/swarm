@@ -402,6 +402,54 @@ def cmd_list(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_agents(args: argparse.Namespace) -> int:
+    """List registered agent types (subclasses of BaseAgent)."""
+    import inspect
+
+    from swarm import agents as agents_pkg
+    from swarm.agents.base import BaseAgent
+
+    discovered: list[tuple[str, type]] = []
+    seen: set[type] = set()
+    for name in getattr(agents_pkg, "__all__", []):
+        obj = getattr(agents_pkg, name, None)
+        if (
+            obj is not None
+            and inspect.isclass(obj)
+            and issubclass(obj, BaseAgent)
+            and obj is not BaseAgent
+            and obj not in seen
+        ):
+            discovered.append((name, obj))
+            seen.add(obj)
+
+    discovered.sort(key=lambda item: item[0].lower())
+
+    if not discovered:
+        print("No agent types discovered.", file=sys.stderr)
+        return 1
+
+    if args.verbose:
+        for name, cls in discovered:
+            doc = inspect.getdoc(cls) or "(no docstring)"
+            print(f"{name}")
+            print(f"  module: {cls.__module__}")
+            for line in doc.splitlines():
+                print(f"  {line}" if line else "")
+            print()
+        return 0
+
+    name_width = max(len(name) for name, _ in discovered)
+    print(f"{'AGENT'.ljust(name_width)}  DESCRIPTION")
+    print(f"{'-' * name_width}  {'-' * 11}")
+    for name, cls in discovered:
+        doc = inspect.getdoc(cls)
+        first_line = doc.splitlines()[0] if doc else "(no docstring)"
+        print(f"{name.ljust(name_width)}  {first_line}")
+
+    return 0
+
+
 def cmd_sandbox(args: argparse.Namespace) -> int:
     """Handle sandbox subcommands."""
     from swarm.bridges.worktree.__main__ import (
@@ -620,6 +668,17 @@ def main() -> int:
         "--dir", default="scenarios", help="Scenarios directory (default: scenarios)"
     )
 
+    # agents
+    agents_parser = subparsers.add_parser(
+        "agents", help="List registered agent types"
+    )
+    agents_parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show the full docstring for each agent (default: first line only)",
+    )
+
     # sandbox
     sandbox_parser = subparsers.add_parser("sandbox", help="Manage worktree sandboxes for agents")
     sandbox_subparsers = sandbox_parser.add_subparsers(dest="sandbox_cmd")
@@ -740,6 +799,8 @@ def main() -> int:
         return cmd_evolve(args)
     elif args.command == "list":
         return cmd_list(args)
+    elif args.command == "agents":
+        return cmd_agents(args)
     elif args.command == "autoresearch":
         return cmd_autoresearch(args)
     elif args.command == "sandbox":
