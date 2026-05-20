@@ -27,6 +27,7 @@ dependencies = [
     "numpy>=1.24",
     "pydantic>=2.0",
     "pandas>=2.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -51,7 +52,6 @@ analysis = [
     "scipy>=1.10",
 ]
 runtime = [
-    "pyyaml>=6.0",
     "requests>=2.31",
     "tenacity>=8.2",
 ]
