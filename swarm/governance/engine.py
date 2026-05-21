@@ -5,6 +5,7 @@ from typing import Any, Dict, List, Optional, Set
 
 from swarm.env.state import EnvState
 from swarm.governance.admission import StakingLever
+from swarm.governance.attestation_heartbeat import AttestationHeartbeatLever
 from swarm.governance.audits import RandomAuditLever
 from swarm.governance.cascade import CascadeRiskLever
 from swarm.governance.circuit_breaker import CircuitBreakerLever
@@ -160,6 +161,10 @@ class GovernanceEngine:
         if self.config.council_lever_enabled and council is not None:
             levers.append(CouncilGovernanceLever(self.config, council=council, seed=seed))
 
+        # Attestation heartbeat lever
+        if self.config.attestation_heartbeat_enabled:
+            levers.append(AttestationHeartbeatLever(self.config))
+
         # Diversity as Defense lever
         levers.append(DiversityDefenseLever(self.config))
 
@@ -201,6 +206,7 @@ class GovernanceEngine:
         self._self_modification_lever: Optional[SelfModificationLever] = None
         self._rbac_lever: Optional[RBACLever] = None
         self._resample_lever: Optional[ResampleLever] = None
+        self._attestation_heartbeat_lever: Optional[AttestationHeartbeatLever] = None
         self._hardware_trust_lever: Optional[HardwareTrustLever] = None
 
         for lever in self._levers:
@@ -226,6 +232,8 @@ class GovernanceEngine:
                 self._rbac_lever = lever
             elif isinstance(lever, ResampleLever):
                 self._resample_lever = lever
+            elif isinstance(lever, AttestationHeartbeatLever):
+                self._attestation_heartbeat_lever = lever
             elif isinstance(lever, HardwareTrustLever):
                 self._hardware_trust_lever = lever
 
@@ -539,6 +547,11 @@ class GovernanceEngine:
         if self._resample_lever is None:
             return None
         return self._resample_lever.get_report()
+
+    def get_attestation_heartbeat_lever(self) -> Optional[AttestationHeartbeatLever]:
+        """Return the attestation heartbeat lever if registered."""
+        return self._attestation_heartbeat_lever
+
     def is_action_allowed(self, agent_id: str, action_type: str) -> bool:
         """Check if a specific action is allowed for an agent.
 
