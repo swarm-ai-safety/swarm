@@ -14,6 +14,31 @@ import sys
 from pathlib import Path
 
 
+def _validate_scenario_path(path: Path) -> int:
+    """Validate that *path* exists, is a regular file and is readable.
+
+    Returns 0 when the path is valid, 1 otherwise (a user-facing error
+    message is printed to stderr in the failure case). Kept separate from
+    ``cmd_run`` so it can be unit-tested in isolation.
+    """
+    if not path.exists():
+        print(f"Error: scenario file '{path}' not found.", file=sys.stderr)
+        return 1
+    if not path.is_file():
+        print(
+            f"Error: scenario path '{path}' is not a regular file.",
+            file=sys.stderr,
+        )
+        return 1
+    if not os.access(path, os.R_OK):
+        print(
+            f"Error: scenario file '{path}' is not readable (check permissions).",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
 def _safe_export_path(raw: str, kind: str) -> Path:
     """Resolve *raw* to an absolute path and reject relative path traversal.
 
@@ -42,15 +67,42 @@ def _safe_export_path(raw: str, kind: str) -> Path:
 
 def cmd_run(args: argparse.Namespace) -> int:
     """Run a simulation from a YAML scenario file."""
+    import yaml
+
     from swarm.scenarios.loader import build_orchestrator, load_scenario
 
     scenario_path = Path(args.scenario)
-    if not scenario_path.exists():
-        print(f"Error: scenario file not found: {scenario_path}", file=sys.stderr)
+    if (rc := _validate_scenario_path(scenario_path)) != 0:
+        return rc
+
+    # Load scenario — surface common configuration mistakes with a
+    # CLI-friendly message instead of a noisy traceback.
+    try:
+        scenario = load_scenario(scenario_path)
+    except yaml.YAMLError as exc:
+        print(
+            f"Error: scenario file '{scenario_path}' is not valid YAML: {exc}",
+            file=sys.stderr,
+        )
+        return 1
+    except (KeyError, ValueError, TypeError) as exc:
+        print(
+            f"Error: scenario file '{scenario_path}' has invalid configuration: "
+            f"{exc}",
+            file=sys.stderr,
+        )
         return 1
 
-    # Load scenario
-    scenario = load_scenario(scenario_path)
+    # Required config keys: at minimum, an `agents:` list with one entry is
+    # needed for the simulation to produce any behaviour. We surface this
+    # explicitly so users don't see a silent "ran 0 epochs, 0 agents" result.
+    if not scenario.agent_specs:
+        print(
+            f"Error: scenario file '{scenario_path}' has no 'agents' entries. "
+            "Add an 'agents:' list with at least one agent spec.",
+            file=sys.stderr,
+        )
+        return 1
 
     # In constrained environments, scenario-configured event log paths
     # may not be writable. Fall back to in-memory-only execution.
