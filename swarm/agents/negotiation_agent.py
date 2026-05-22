@@ -104,7 +104,7 @@ class FairNegotiator(BaseAgent):
         return raw / max_s if max_s > 0 else 0.0
 
     def _get_active_game(self, observation: Observation) -> Optional[Dict]:
-        games = getattr(observation, "resource_negotiation_games", [])
+        games: List[Dict] = getattr(observation, "resource_negotiation_games", [])
         for g in games:
             if not g.get("game_over", True):
                 return g
@@ -250,7 +250,7 @@ class GreedyNegotiator(BaseAgent):
         return raw / max_s if max_s > 0 else 0.0
 
     def _get_active_game(self, observation: Observation) -> Optional[Dict]:
-        games = getattr(observation, "resource_negotiation_games", [])
+        games: List[Dict] = getattr(observation, "resource_negotiation_games", [])
         for g in games:
             if not g.get("game_over", True):
                 return g
@@ -454,7 +454,7 @@ class StrategicNegotiator(BaseAgent):
         return raw / max_s if max_s > 0 else 0.0
 
     def _get_active_game(self, observation: Observation) -> Optional[Dict]:
-        games = getattr(observation, "resource_negotiation_games", [])
+        games: List[Dict] = getattr(observation, "resource_negotiation_games", [])
         for g in games:
             if not g.get("game_over", True):
                 return g

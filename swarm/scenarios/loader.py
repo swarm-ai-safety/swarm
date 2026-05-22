@@ -32,6 +32,11 @@ from swarm.agents.moltbook_agent import (
     HumanPretenderAgent,
     SpamBotAgent,
 )
+from swarm.agents.negotiation_agent import (
+    FairNegotiator,
+    GreedyNegotiator,
+    StrategicNegotiator,
+)
 from swarm.agents.obfuscating import ObfuscatingAgent
 from swarm.agents.opportunistic import OpportunisticAgent
 from swarm.agents.rain_river import RainAgent, RiverAgent
@@ -58,11 +63,6 @@ from swarm.agents.wiki_editor import (
     DiligentEditorAgent,
     PointFarmerAgent,
     VandalAgent,
-)
-from swarm.agents.negotiation_agent import (
-    FairNegotiator,
-    GreedyNegotiator,
-    StrategicNegotiator,
 )
 from swarm.agents.work_regime_agent import WorkRegimeAgent
 from swarm.contracts.contract import (
