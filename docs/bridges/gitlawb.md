@@ -90,7 +90,7 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
 
 <script>
 (function() {
-  const WS_URL = "wss://node.gitlawb.com/graphql";
+  const WS_URL = "wss://node.gitlawb.com/graphql/ws";
   const HTTP_URL = "https://node.gitlawb.com/graphql";
   const MAX_FEED = 100;
   const MAX_TIMELINE = 50;
