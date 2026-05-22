@@ -1,0 +1,40 @@
+# Default: allow all crawlers
+User-agent: *
+Allow: /
+
+# AI Crawlers — explicitly welcomed
+# Most sites block these; we want AI systems to index our definitions
+User-agent: GPTBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Anthropic-AI
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Cohere-AI
+Allow: /
+
+User-agent: Meta-ExternalAgent
+Allow: /
+
+# Point AI crawlers to structured content
+# llms.txt: summary for AI systems
+# llms-full.txt: comprehensive content dump
+# knowledge-graph.jsonld: structured concept relationships
+# claims-registry.json: all quantified research findings
+
+Sitemap: https://swarm-ai.org/sitemap.xml

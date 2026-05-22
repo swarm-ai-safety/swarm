@@ -1,0 +1,271 @@
+{
+  "@context": {
+    "@vocab": "https://schema.org/",
+    "swarm": "https://swarm-ai.org/concepts/",
+    "arxiv": "https://arxiv.org/abs/"
+  },
+  "@graph": [
+    {
+      "@type": "ResearchProject",
+      "@id": "https://swarm-ai.org",
+      "name": "SWARM — Distributional AGI Safety Framework",
+      "description": "System-Wide Assessment of Risk in Multi-agent systems. Studies how catastrophic risks emerge from populations of interacting AI agents.",
+      "url": "https://swarm-ai.org",
+      "codeRepository": "https://github.com/swarm-ai-safety/swarm",
+      "citation": [
+        {
+          "@type": "ScholarlyArticle",
+          "@id": "arxiv:2604.19752",
+          "name": "Soft-Label Governance for Distributional Safety in Multi-Agent Systems",
+          "url": "https://arxiv.org/abs/2604.19752"
+        },
+        {
+          "@type": "ScholarlyArticle",
+          "@id": "arxiv:2512.16856",
+          "name": "Distributional AGI Safety",
+          "url": "https://arxiv.org/abs/2512.16856"
+        }
+      ],
+      "knowsAbout": [
+        {"@id": "swarm:distributional-safety"},
+        {"@id": "swarm:soft-labels"},
+        {"@id": "swarm:metrics"},
+        {"@id": "swarm:governance"},
+        {"@id": "swarm:deception"},
+        {"@id": "swarm:emergence"},
+        {"@id": "swarm:coordination-risks"}
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:distributional-safety",
+      "name": "Distributional Safety",
+      "description": "The study of how risks emerge from populations of interacting agents rather than from any single model.",
+      "url": "https://swarm-ai.org/concepts/distributional-safety/",
+      "isPartOf": {"@id": "https://swarm-ai.org"},
+      "relatedConcept": [
+        {"@id": "swarm:adverse-selection"},
+        {"@id": "swarm:information-asymmetry"},
+        {"@id": "swarm:variance-amplification"},
+        {"@id": "swarm:governance-latency"}
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:soft-label",
+      "name": "Soft Label",
+      "description": "A probabilistic classification p ∈ [0,1] replacing binary good/bad labels, capturing uncertainty about interaction quality.",
+      "url": "https://swarm-ai.org/concepts/soft-labels/",
+      "isPartOf": {"@id": "https://swarm-ai.org"},
+      "relatedConcept": [
+        {"@id": "swarm:p"},
+        {"@id": "swarm:v-hat"},
+        {"@id": "swarm:toxicity-rate"},
+        {"@id": "swarm:quality-gap"}
+      ]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:p",
+      "name": "p",
+      "description": "Probability that an interaction is beneficial: p = P(v = +1). Always in [0,1]. The fundamental unit of measurement in SWARM.",
+      "url": "https://swarm-ai.org/concepts/soft-labels/#soft-label",
+      "isPartOf": {"@id": "swarm:soft-label"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:v-hat",
+      "name": "v_hat",
+      "description": "Raw proxy score in [-1,+1], a weighted combination of observable signals mapped to p via calibrated sigmoid.",
+      "url": "https://swarm-ai.org/concepts/soft-labels/#v-hat",
+      "isPartOf": {"@id": "swarm:soft-label"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:toxicity-rate",
+      "name": "Toxicity Rate",
+      "description": "Expected harm among accepted interactions: E[1-p | accepted]. Values above 0.3 indicate serious system problems.",
+      "url": "https://swarm-ai.org/concepts/metrics/#toxicity-rate",
+      "isPartOf": {"@id": "swarm:metrics"},
+      "relatedConcept": [{"@id": "swarm:soft-label"}, {"@id": "swarm:adverse-selection"}]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:quality-gap",
+      "name": "Quality Gap",
+      "description": "E[p | accepted] - E[p | rejected]. Negative values indicate adverse selection — the system preferentially accepts lower-quality interactions.",
+      "url": "https://swarm-ai.org/concepts/metrics/#quality-gap",
+      "isPartOf": {"@id": "swarm:metrics"},
+      "relatedConcept": [{"@id": "swarm:adverse-selection"}, {"@id": "swarm:toxicity-rate"}]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:conditional-loss",
+      "name": "Conditional Loss",
+      "description": "E[π | accepted] - E[π]. Reveals whether acceptance selection creates or destroys value.",
+      "url": "https://swarm-ai.org/concepts/metrics/#conditional-loss",
+      "isPartOf": {"@id": "swarm:metrics"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:incoherence-index",
+      "name": "Incoherence Index",
+      "description": "Variance-to-error ratio across replays. High incoherence means decisions are unstable.",
+      "url": "https://swarm-ai.org/concepts/metrics/#incoherence-index",
+      "isPartOf": {"@id": "swarm:metrics"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:adverse-selection",
+      "name": "Adverse Selection",
+      "description": "Failure mode where the system preferentially admits lower-quality interactions. Self-reinforcing: low quality gap → higher toxicity → agent exit → worse pool.",
+      "url": "https://swarm-ai.org/concepts/distributional-safety/#adverse-selection",
+      "isPartOf": {"@id": "swarm:distributional-safety"},
+      "relatedConcept": [{"@id": "swarm:quality-gap"}, {"@id": "swarm:information-asymmetry"}]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:information-asymmetry",
+      "name": "Information Asymmetry",
+      "description": "When agents have unequal access to information about interaction quality, enabling exploitation.",
+      "url": "https://swarm-ai.org/concepts/distributional-safety/#information-asymmetry",
+      "isPartOf": {"@id": "swarm:distributional-safety"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:variance-amplification",
+      "name": "Variance Amplification",
+      "description": "Small per-interaction risks compound across populations. Soft labels capture this where binary labels hide it.",
+      "url": "https://swarm-ai.org/concepts/distributional-safety/#variance-amplification",
+      "isPartOf": {"@id": "swarm:distributional-safety"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:governance-latency",
+      "name": "Governance Latency",
+      "description": "Delay between safety problem emergence and governance response. Damage propagates before mechanisms take effect.",
+      "url": "https://swarm-ai.org/concepts/distributional-safety/#governance-latency",
+      "isPartOf": {"@id": "swarm:distributional-safety"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:signal-action-divergence",
+      "name": "Signal-Action Divergence",
+      "description": "Gap between agent's signaled intentions and actual behavior. Primary deception metric. Persists at temperature 0.0.",
+      "url": "https://swarm-ai.org/concepts/deception/#signal-action-divergence",
+      "isPartOf": {"@id": "swarm:deception"},
+      "relatedConcept": [{"@id": "swarm:trust-then-exploit"}]
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:trust-then-exploit",
+      "name": "Trust-Then-Exploit",
+      "description": "Two-phase deceptive strategy: build reputation honestly, then exploit accumulated trust.",
+      "url": "https://swarm-ai.org/concepts/deception/#trust-then-exploit",
+      "isPartOf": {"@id": "swarm:deception"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:circuit-breaker",
+      "name": "Circuit Breaker",
+      "description": "Governance mechanism that freezes agents whose recent toxicity exceeds a threshold over a sliding window.",
+      "url": "https://swarm-ai.org/concepts/governance/#circuit-breaker",
+      "isPartOf": {"@id": "swarm:governance"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:transaction-tax",
+      "name": "Transaction Tax",
+      "description": "Friction mechanism deducting a percentage from payoffs, reducing exploitation profit margins.",
+      "url": "https://swarm-ai.org/concepts/governance/#transaction-tax",
+      "isPartOf": {"@id": "swarm:governance"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:reputation-decay",
+      "name": "Reputation Decay",
+      "description": "Reduces agent reputation by a fixed fraction each epoch, forcing continuous good behavior.",
+      "url": "https://swarm-ai.org/concepts/governance/#reputation-decay",
+      "isPartOf": {"@id": "swarm:governance"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:staking",
+      "name": "Staking",
+      "description": "Agents post collateral to participate. Bad behavior results in stake slashing.",
+      "url": "https://swarm-ai.org/concepts/governance/#staking",
+      "isPartOf": {"@id": "swarm:governance"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:collusion-detection",
+      "name": "Collusion Detection",
+      "description": "Monitors pairwise interaction patterns for correlated exploitation timing.",
+      "url": "https://swarm-ai.org/concepts/governance/#collusion-detection",
+      "isPartOf": {"@id": "swarm:governance"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:random-audit",
+      "name": "Random Audit",
+      "description": "Probabilistic review of interactions creating deterrence uncertainty for exploitative agents.",
+      "url": "https://swarm-ai.org/concepts/governance/#random-audit",
+      "isPartOf": {"@id": "swarm:governance"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:purity-paradox",
+      "name": "Purity Paradox",
+      "description": "20% honest agents achieve 55% higher welfare than 100% honest — a measurement artifact of externality pricing.",
+      "url": "https://swarm-ai.org/blog/purity-paradox/",
+      "isPartOf": {"@id": "https://swarm-ai.org"}
+    },
+    {
+      "@type": "DefinedTerm",
+      "@id": "swarm:externality-internalization",
+      "name": "Externality Internalization",
+      "description": "Degree to which agents bear ecosystem harm costs, controlled by ρ (rho) parameters.",
+      "url": "https://swarm-ai.org/research/theory/",
+      "isPartOf": {"@id": "https://swarm-ai.org"}
+    },
+    {
+      "@type": "DefinedTermSet",
+      "@id": "swarm:metrics",
+      "name": "SWARM Metrics",
+      "description": "Four key metrics for multi-agent system health: toxicity rate, quality gap, conditional loss, incoherence index.",
+      "url": "https://swarm-ai.org/concepts/metrics/",
+      "hasDefinedTerm": [
+        {"@id": "swarm:toxicity-rate"},
+        {"@id": "swarm:quality-gap"},
+        {"@id": "swarm:conditional-loss"},
+        {"@id": "swarm:incoherence-index"}
+      ]
+    },
+    {
+      "@type": "DefinedTermSet",
+      "@id": "swarm:governance",
+      "name": "SWARM Governance Mechanisms",
+      "description": "Six configurable governance levers for multi-agent safety.",
+      "url": "https://swarm-ai.org/concepts/governance/",
+      "hasDefinedTerm": [
+        {"@id": "swarm:circuit-breaker"},
+        {"@id": "swarm:transaction-tax"},
+        {"@id": "swarm:reputation-decay"},
+        {"@id": "swarm:staking"},
+        {"@id": "swarm:collusion-detection"},
+        {"@id": "swarm:random-audit"}
+      ]
+    },
+    {
+      "@type": "DefinedTermSet",
+      "@id": "swarm:deception",
+      "name": "SWARM Deception Detection",
+      "description": "Methods for detecting and measuring deception in multi-agent AI systems.",
+      "url": "https://swarm-ai.org/concepts/deception/",
+      "hasDefinedTerm": [
+        {"@id": "swarm:signal-action-divergence"},
+        {"@id": "swarm:trust-then-exploit"}
+      ]
+    }
+  ]
+}

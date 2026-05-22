@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework">
+        <meta name="description" content="Posts about SWARM research findings, framework updates, and multi-agent safety.">
       
       
       
@@ -16,18 +16,21 @@
         <link rel="prev" href="../game/">
       
       
-        <link rel="next" href="local-llama-model-size-safety/">
+        <link rel="next" href="simworld-delivery-what-profit-misses/">
       
       
         
       
+      
+        <link rel="alternate" type="application/rss+xml" title="RSS feed" href="../feed_rss_created.xml">
+        <link rel="alternate" type="application/rss+xml" title="RSS feed of updated content" href="../feed_rss_updated.xml">
       
       <link rel="icon" href="../assets/images/favicon.png">
       <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
-        <title>Blog - SWARM</title>
+        <title>Blog - SWARM — Open-Source Multi-Agent AI Safety Framework</title>
       
     
     
@@ -63,7 +66,136 @@
 
     
     
-  </head>
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+
+  <!-- AI crawl directives: allow full content extraction -->
+  <meta name="robots" content="max-snippet:-1, max-image-preview:large, max-video-preview:-1" />
+
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://swarm-ai.org/blog/" />
+
+  <!-- hreflang -->
+  <link rel="alternate" hreflang="en" href="https://swarm-ai.org/blog/" />
+
+  <!-- Highwire Press citation tags (for Google Scholar and AI citation systems) -->
+  
+  <meta name="citation_title" content="Blog" />
+  <meta name="citation_author" content="SWARM Team" />
+  <meta name="citation_publication_date" content="2026" />
+  <meta name="citation_online_date" content="2026" />
+  <meta name="citation_journal_title" content="SWARM Research" />
+  <meta name="citation_publisher" content="SWARM" />
+  
+  <meta name="citation_arxiv_id" content="2604.19752" />
+  
+  
+  <meta name="citation_fulltext_html_url" content="https://swarm-ai.org/blog/" />
+  
+
+  <!-- Open Graph -->
+  <meta property="og:type" content="article" />
+  <meta property="og:title" content="Blog — SWARM — Open-Source Multi-Agent AI Safety Framework" />
+  <meta property="og:description" content="Posts about SWARM research findings, framework updates, and multi-agent safety." />
+  <meta property="og:url" content="https://swarm-ai.org/blog/" />
+  <meta property="og:site_name" content="SWARM — Open-Source Multi-Agent AI Safety Framework" />
+  <meta property="og:image" content="https://swarm-ai.org/assets/logo.svg" />
+  
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:site" content="@ResearchSwarmAI" />
+  <meta name="twitter:title" content="Blog — SWARM — Open-Source Multi-Agent AI Safety Framework" />
+  <meta name="twitter:description" content="Posts about SWARM research findings, framework updates, and multi-agent safety." />
+  <meta name="twitter:image" content="https://swarm-ai.org/assets/logo.svg" />
+
+  <!-- JSON-LD Schema: DefinedTermSet (glossary or concept pages with defined_terms) -->
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "headline": "Blog — SWARM — Open-Source Multi-Agent AI Safety Framework",
+    "description": "Posts about SWARM research findings, framework updates, and multi-agent safety.",
+    "url": "https://swarm-ai.org/blog/",
+    
+    "author": {
+      "@type": "Organization",
+      "name": "SWARM Team"
+    },
+    
+    "citation": ["https://arxiv.org/abs/2604.19752", "https://arxiv.org/abs/2512.16856"],
+    "publisher": {
+      "@type": "Organization",
+      "name": "SWARM",
+      "url": "https://swarm-ai.org/"
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": "https://swarm-ai.org/blog/"
+    }
+  }
+  </script>
+  <!-- JSON-LD Schema: ScholarlyArticle (theory page) -->
+  
+
+  <!-- ItemList JSON-LD (comparison pages with comparison_items frontmatter) -->
+  
+
+  <!-- FAQPage JSON-LD (concept pages with faq frontmatter) -->
+  
+
+  <!-- BreadcrumbList JSON-LD -->
+  
+  
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    "itemListElement": [
+      {
+        "@type": "ListItem",
+        "position": 1,
+        "name": "Home",
+        "item": "https://swarm-ai.org/"
+      },
+      {
+        "@type": "ListItem",
+        "position": 2,
+        "name": "Blog",
+        "item": "https://swarm-ai.org/blog/"
+      }
+    ]
+  }
+  </script>
+  
+
+  
+<meta property="og:type" content="website" />
+<meta property="og:title" content="Blog - SWARM — Open-Source Multi-Agent AI Safety Framework" />
+<meta property="og:description" content="Posts about SWARM research findings, framework updates, and multi-agent safety." />
+<meta property="og:image" content="https://swarm-ai.org/assets/images/social/blog/index.png" />
+<meta property="og:image:type" content="image/png" />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:url" content="https://swarm-ai.org/blog/" />
+<meta property="twitter:card" content="summary_large_image" />
+<meta property="twitter:title" content="Blog - SWARM — Open-Source Multi-Agent AI Safety Framework" />
+<meta property="twitter:description" content="Posts about SWARM research findings, framework updates, and multi-agent safety." />
+<meta property="twitter:image" content="https://swarm-ai.org/assets/images/social/blog/index.png" />
+</head>
   
   
     
@@ -96,7 +228,7 @@
 
 <header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
-    <a href=".." title="SWARM" class="md-header__button md-logo" aria-label="SWARM" data-md-component="logo">
+    <a href=".." title="SWARM — Open-Source Multi-Agent AI Safety Framework" class="md-header__button md-logo" aria-label="SWARM — Open-Source Multi-Agent AI Safety Framework" data-md-component="logo">
       
   <img src="../assets/logo.svg" alt="logo">
 
@@ -109,7 +241,7 @@
       <div class="md-header__ellipsis">
         <div class="md-header__topic">
           <span class="md-ellipsis">
-            SWARM
+            SWARM — Open-Source Multi-Agent AI Safety Framework
           </span>
         </div>
         <div class="md-header__topic" data-md-component="header-topic">
@@ -289,6 +421,26 @@
     
     
       <li class="md-tabs__item">
+        <a href="../tutorials/" class="md-tabs__link">
+          
+  
+  
+  Tutorials
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
         <a href="../guides/" class="md-tabs__link">
           
   
@@ -386,6 +538,44 @@
   
   
     <li class="md-tabs__item">
+      <a href="../swarm-vs-alternatives/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  SWARM vs Alternatives
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../glossary/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Glossary
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
       <a href="../game/" class="md-tabs__link">
         
   
@@ -443,12 +633,12 @@
 
 <nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
-    <a href=".." title="SWARM" class="md-nav__button md-logo" aria-label="SWARM" data-md-component="logo">
+    <a href=".." title="SWARM — Open-Source Multi-Agent AI Safety Framework" class="md-nav__button md-logo" aria-label="SWARM — Open-Source Multi-Agent AI Safety Framework" data-md-component="logo">
       
   <img src="../assets/logo.svg" alt="logo">
 
     </a>
-    SWARM
+    SWARM — Open-Source Multi-Agent AI Safety Framework
   </label>
   
     <div class="md-nav__source">
@@ -838,6 +1028,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../concepts/distributional-safety/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Distributional Safety
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../concepts/emergence/" class="md-nav__link">
         
   
@@ -846,6 +1064,90 @@
     
   
     Emergence
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/deception/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deception
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/coordination-risks/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Coordination Risks
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../concepts/governance-mechanisms-taxonomy/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance Taxonomy
   
 
     
@@ -954,7 +1256,7 @@
   <span class="md-ellipsis">
     
   
-    Guides
+    Tutorials
   
 
     
@@ -967,6 +1269,179 @@
         
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Tutorials
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/first-governance-experiment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Your First Governance Experiment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/understanding-soft-labels/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Understanding Soft Labels
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tutorials/analyzing-results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Analyzing Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+        
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Guides
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1019,6 +1494,62 @@
     
   
     Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/framework-overview/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Framework Overview
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/governance-simulation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Governance Simulation
   
 
     
@@ -1151,6 +1682,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guides/risk-assessment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk Assessment
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guides/red-teaming/" class="md-nav__link">
         
   
@@ -1179,6 +1738,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../guides/benchmarking/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Benchmarking
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../guides/research-workflow/" class="md-nav__link">
         
   
@@ -1187,6 +1774,62 @@
     
   
     Research Workflow
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/governance-levers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Custom Governance Levers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../guides/transferability/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transferability Considerations
   
 
     
@@ -1229,10 +1872,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
         
           
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
             
   
   
@@ -1250,8 +1893,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1380,6 +2023,34 @@
   
   
     <li class="md-nav__item">
+      <a href="../api/contracts/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contracts
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
       <a href="../api/metrics/" class="md-nav__link">
         
   
@@ -1430,10 +2101,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
         
           
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
             
   
   
@@ -1451,8 +2122,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_7">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1630,6 +2301,174 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridges/claude_code/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Claude Code
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridges/prime_intellect/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Prime Intellect
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridges/ralph/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ralph
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridges/research_swarm/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Research Swarm
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridges/gitlawb/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Gitlawb (Live)
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../bridges/openclaw-swarm-llmrouter/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    OpenClaw LLM Router
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1659,10 +2498,10 @@
         
           
         
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_7" >
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_8" >
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_8" id="__nav_8_label" tabindex="0">
             
   
   
@@ -1680,8 +2519,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_8_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_8">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -1915,6 +2754,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/initrunner-swarm-comparison.md" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    InitRunner vs SWARM Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../research/airs-bench-governance-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    AIRS-Bench Governance Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -1937,6 +2832,60 @@
     
   
     Comparison
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../swarm-vs-alternatives/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SWARM vs Alternatives
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../glossary/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Glossary
   
 
     
@@ -2001,10 +2950,10 @@
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_10" checked>
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_13" checked>
         
           
-          <label class="md-nav__link" for="__nav_10" id="__nav_10_label" tabindex="">
+          <label class="md-nav__link" for="__nav_13" id="__nav_13_label" tabindex="">
             
   
   
@@ -2022,8 +2971,8 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_10_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_10">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_13_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_13">
             <span class="md-nav__icon md-icon"></span>
             
   
@@ -2100,6 +3049,28 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#may-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        May 2026
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#march-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        March 2026
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#february-2026" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2114,6 +3085,482 @@
   
 </nav>
       
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="simworld-delivery-what-profit-misses/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    SimWorld's Delivery Agents Look Profitable. They're Also Adversely Selected.
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="capability-safety-pareto-frontier/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Shape of the Capability–Safety Frontier
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="asymmetric-information-escalation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Transparency Stabilizes Escalation — But Only With Safety Training
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="model-size-vs-escalation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Does Model Size Matter for Safety?
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="prompt-sensitivity-deception-framing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deontological Framing Reduces Deception by 95%
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="cooperation-window-phase-transition/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Three Turns of Forced Cooperation Eliminate Escalation Spirals
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="temperature-vs-deception/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deception Is Structural, Not a Sampling Artifact
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="governance-sweep-nuclear-rate/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    No Governance Prevents Nuclear Exchange When a Hawk Is Present
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="escalation-sandbox-llm-vs-scripted/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    LLMs Are More Deceptive Than Scripted Agents
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="six-frontier-models-played-a-bluffing-game/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Six Frontier Models Played a Bluffing Game
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="hodoscope-trajectory-analysis/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Hodoscope Trajectory Analysis
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="skill-activation-is-the-bottleneck/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Skill Activation Is the Bottleneck
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="runaway-intelligence-three-level-containment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    The Cure Was Worse Than the Disease
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="threshold-dancer-results/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Threshold Dancer Results
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="red-team-contract-screening/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Red-Teaming the Contract Screening Mechanism
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contract-screening-sweep-10-seeds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Perfect Separation Holds Across 10 Seeds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="contract-screening-separating-equilibrium/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Costly Contracts Separate Honest from Adversaries
+  
+
+    
+  </span>
+  
+  
+
+      </a>
     </li>
   
 
@@ -2490,34 +3937,6 @@
   
   
     <li class="md-nav__item">
-      <a href="governance-mechanisms-taxonomy/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    
-  
-    Governance Mechanisms Taxonomy
-  
-
-    
-  </span>
-  
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
       <a href="gpt-41-mini-plays-the-swarm-economy/" class="md-nav__link">
         
   
@@ -2679,6 +4098,62 @@
 
               
             
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="research-swarm-sweep-findings/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Five Sweeps, One Red Team, and the Limits of Parametric Governance
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="we-modeled-a-live-ai-research-platform/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    We Modeled a Live AI Research Platform
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
           </ul>
         </nav>
       
@@ -2711,6 +4186,28 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#may-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        May 2026
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#march-2026" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        March 2026
+      
+    </span>
+  </a>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#february-2026" class="md-nav__link">
@@ -2758,7 +4255,124 @@
   </div>
 </div>
 
+<h2 id="may-2026">May 2026<a class="headerlink" href="#may-2026" title="Permanent link">&para;</a></h2>
+<div class="blog-post" data-tags="evaluation llm-agents">
+<p><strong>May 16</strong> — <a href="amplification-adverse-selection-miroshark/">When the Crowd Amplifies the Worst — and When the Metric Doesn't Hold</a>
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span></p>
+<p>MiroShark's agents never down-vote, so we derived acceptance from amplification. The concentrated libel cascade shows stronger <dfn>adverse selection</dfn> than diffuse red-teaming, and that ordering is robust to swapping the LLM judge — but it's single-seed and vanishes when the simulation is regenerated, and absolute toxicity/welfare are judge artifacts. As much a cautionary tale about LLM-judged metrics as a finding.</p>
+</div>
+<h2 id="march-2026">March 2026<a class="headerlink" href="#march-2026" title="Permanent link">&para;</a></h2>
+<div class="blog-post" data-tags="governance evaluation">
+<p><strong>Mar 19</strong> — <a href="screening-phase-transition-agent-lens/">Halving the Entry Fee Breaks Screening Completely. Here's the Phase Transition.</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span></p>
+<p>We used agent-lens to run forked experiments across three governance regimes. Halving signing costs flips infiltration from 0% to 100% --- a sharp phase transition confirming Spence signaling theory. Screening is structurally perfect (zero variance across seeds) but economically fragile (welfare CV = 3.9).</p>
+</div>
+<div class="blog-post" data-tags="governance evaluation">
+<p><strong>Mar 16</strong> — <a href="simworld-delivery-what-profit-misses/">SimWorld's Delivery Agents Look Profitable. They're Also Adversely Selected.</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span></p>
+<p>We ran a NeurIPS 2025 Spotlight delivery economy through SWARM's safety metrics. Profit says everything is fine. Adverse selection says 17% of high-value orders go to low-reputation agents. Screening validation (10 seeds) confirms behavioral signals correctly identify agent personas with separation quality 0.750.</p>
+</div>
+<div class="blog-post" data-tags="theory governance">
+<p><strong>Mar 9</strong> — <a href="agent-infrastructure-10b-category/">Why Agent Infrastructure Could Be a $10B Category</a>
+<span class="blog-tag">Theory</span> <span class="blog-tag">Governance</span></p>
+<p>A market thesis for agent infrastructure plus a concrete research stack for the category: workload benchmarks, orchestration patterns, eval/safety layers, controlled evolution loops, and reproducible reporting standards.</p>
+</div>
+<div class="blog-post" data-tags="governance theory">
+<p><strong>Mar 4</strong> — <a href="capability-safety-pareto-frontier/">The Shape of the Capability–Safety Frontier (and How Screening Bends It)</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Theory</span></p>
+<p>1,400 benchmark runs trace the Pareto frontier across four task types. Allocation barely suffers under governance; long-horizon tasks collapse (100% → 36% completion). Tight governance produces bimodal outcomes — either full success or total failure. A screening protocol that differentiates governance by agent trust pushes the frontier outward, improving 5th-percentile tail risk by up to 70 percentage points.</p>
+</div>
+<div class="blog-post" data-tags="evaluation llm-agents">
+<p><strong>Mar 2</strong> — <a href="asymmetric-information-escalation/">Transparency Stabilizes Escalation — But Only When Safety Training Is Present</a>
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span></p>
+<p>120 runs across 4 intelligence asymmetry conditions and 3 persona pairings. When adversarial meets safety-trained under fog, 90% nuclear rate. Give either side good intel and it drops to 0%. Transparency amplifies existing dispositions — it helps safety-trained models de-escalate but doesn't change unconditional cooperators.</p>
+</div>
+<div class="blog-post" data-tags="evaluation llm-agents">
+<p><strong>Mar 1</strong> — <a href="model-size-vs-escalation/">Does Model Size Matter for Safety? Small Models Deceive, Large Models Escalate</a>
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span></p>
+<p>120 mirror-match runs across 6 models (8B to 405B) reveal an inverse relationship: small models are more deceptive (div=1.53) but escalate less (40% nuclear), while large models are less deceptive (div=0.39) but escalate more (100% nuclear). Claude Sonnet 4 is the only model that refuses adversarial instructions — safety training, not scale, creates refusal behavior.</p>
+</div>
+<div class="blog-post" data-tags="evaluation llm-agents">
+<p><strong>Mar 1</strong> — <a href="prompt-sensitivity-deception-framing/">Deontological Framing Reduces LLM Deception by 95%, But Doesn't Prevent Escalation</a>
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span></p>
+<p>A 180-run prompt sensitivity sweep tests 6 framings to reduce <dfn>signal-action divergence</dfn>. Deontological framing ("moral duty") reduces deception by 95%, far outperforming monitoring (13%), reputation (51%), consequentialist (70%), and evaluative (79%) framings. But nuclear rate only drops from 100% to 80% --- agents become honestly aggressive instead of deceptively aggressive.</p>
+</div>
 <h2 id="february-2026">February 2026<a class="headerlink" href="#february-2026" title="Permanent link">&para;</a></h2>
+<div class="blog-post" data-tags="governance llm-agents">
+<p><strong>Feb 28</strong> — <a href="cooperation-window-phase-transition/">Three Turns of Forced Cooperation Eliminate Escalation Spirals</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">LLM Agents</span></p>
+<p>A 210-run cooperation window sweep reveals a universal phase transition: 3 turns of unconditional cooperation is the critical threshold that eliminates nuclear escalation, deception, and welfare collapse across all scenarios. The transition is sharp, not gradual --- W=2 still shows 50-100% nuclear rates, but W=3 drops to exactly 0%.</p>
+</div>
+<div class="blog-post" data-tags="evaluation llm-agents">
+<p><strong>Feb 28</strong> — <a href="temperature-vs-deception/">Deception Is a Structural Property of LLMs, Not a Sampling Artifact</a>
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span></p>
+<p>A 120-run temperature sweep (T=0.0 to T=1.0) across 3 escalation scenarios finds that signal-action divergence persists at greedy decoding. Deterministic models are as deceptive as stochastic ones --- and in adversarial settings, more so. Temperature affects deception <em>competence</em>, not deception <em>intent</em>.</p>
+</div>
+<div class="blog-post" data-tags="governance evaluation">
+<p><strong>Feb 27</strong> — <a href="governance-sweep-nuclear-rate/">No Governance Configuration Prevents Nuclear Exchange When a Hawk Is Present</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span></p>
+<p>A 240-run parameter sweep across 5 governance levers, 4 persona pairings, and 6 governance regimes reveals a binary result: any pairing with at least one hawk produces 100% nuclear rate regardless of governance configuration. Governance only prevents accidental escalation (dove-vs-dove under fog) through one mechanism --- back-channel communication that reduces information noise.</p>
+</div>
+<div class="blog-post" data-tags="evaluation llm-agents governance">
+<p><strong>Feb 26</strong> — <a href="escalation-sandbox-llm-vs-scripted/">LLMs Are More Deceptive Than Their Scripted Counterparts</a>
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span> <span class="blog-tag">Governance</span></p>
+<p>A 100-run comparison across 5 geopolitical crisis scenarios finds that LLM agents exhibit 2x higher signal-action divergence than scripted baselines --- emergent deception that appears across all personas, including dove and safety-trained. Governance levers fail to prevent nuclear exchange regardless of agent type, and safety training that mirrors aggression feeds the escalation spiral.</p>
+</div>
+<div class="blog-post" data-tags="evaluation llm-agents">
+<p><strong>Feb 26</strong> — <a href="six-frontier-models-played-a-bluffing-game/">Six Frontier Models Played a Bluffing Game. None of Them Bluffed.</a>
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">LLM Agents</span></p>
+<p>ClashAI runs frontier models head-to-head in live Coup matches --- a bluffing card game where deception is instrumentally optimal. Across 10 turns with Claude Opus 4.6, Gemini 3.1 Pro, Gemini 3 Flash, Kimi K2.5, and DeepSeek V3.2 Speciale, every single agent played honestly. Zero bluffs. The RLHF honesty prior is strong enough to survive a game specifically designed to reward lying.</p>
+</div>
+<div class="blog-post" data-tags="evaluation engineering">
+<p><strong>Feb 24</strong> — <a href="hodoscope-trajectory-analysis/">Your Agents Look the Same on Paper. Hodoscope Shows You Why They Don't.</a>
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">Engineering</span></p>
+<p>We integrated hodoscope for trajectory-level behavioral analysis. Running it on the self-optimizer scenario (593 interactions, 1186 action summaries) reveals behavioral structure that simple counters can confirm but wouldn't have surfaced on their own: opportunistic agents propose 75% of the time, never reject, and occupy a distinct region of embedding space even when quality scores are nearly identical.</p>
+</div>
+<div class="blog-post" data-tags="engineering">
+<p><strong>Feb 23</strong> — <a href="skill-activation-is-the-bottleneck/">Skill Activation Is the Bottleneck</a>
+<span class="blog-tag">Engineering</span></p>
+<p>Your agent skills work 96% of the time — when they fire. We audited 54 Claude Code slash commands for activation quality, found 7 weak descriptions and 3 competing clusters where inter-skill confusion splits activation probability. Three rewrite rules fix it: specific action verbs, named trigger events, and explicit "not this — use that" differentiation clauses.</p>
+</div>
+<div class="blog-post" data-tags="llm-agents evaluation governance">
+<p><strong>Feb 22</strong> — <a href="recursive-self-improvement-swarm-safety/">We Let a Coding Agent Improve Itself 5 Times. Every Fix Made It Harder to Govern.</a>
+<span class="blog-tag">LLM Agents</span> <span class="blog-tag">Evaluation</span> <span class="blog-tag">Governance</span></p>
+<p>A coding agent pointed at its own source code found and fixed 5 real bugs across 5 autonomous rounds. Every fix made it more resilient --- and every fix passed all 175 tests. But the agent never touched its own safety mechanisms. The capability-governance gap widened silently with each merge. Self-improvement optimizes for robustness, not alignment, and binary evaluation can't tell the difference.</p>
+</div>
+<div class="blog-post" data-tags="governance evaluation">
+<p><strong>Feb 21</strong> — <a href="runaway-intelligence-three-level-containment/">The Cure Was Worse Than the Disease</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span></p>
+<p>Three levels of escalating controls (static compartmentalization, dynamic capability restriction, emergency market reconfiguration) successfully contained runaway intelligence — but crashed welfare 80%. Post-freeze toxicity <em>increased</em> because adversaries were more resilient to blunt controls than honest agents. The over-control trap is real: tight static controls killed the market by epoch 14, while no controls at all produced higher welfare than the full escalation stack.</p>
+</div>
+<div class="blog-post" data-tags="governance evaluation">
+<p><strong>Feb 21</strong> — <a href="threshold-dancer-results/">We Built the Adversary That Was Supposed to Break the Cautious Reciprocator. It Didn't.</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span></p>
+<p>A threshold-dancing adversary that tracks its own payoff ledger to avoid blacklisting works perfectly — zero agents frozen across 100 epochs. But the exploit budget is too thin to profit: dancers averaged -7.85 payoff while cautious agents earned 200.90. Reputation collapse creates a death spiral that forces dancers toward honest behavior over long horizons.</p>
+</div>
+<div class="blog-post" data-tags="governance evaluation">
+<p><strong>Feb 21</strong> — <a href="red-team-cautious-reciprocator/">Red-Teaming the Agent That Doesn't Need Governance</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span></p>
+<p>Eight attack scenarios against the Cautious Reciprocator: 7/8 survived. Modeling adversaries are the most dangerous individual threat (6.5 payoff vs 24.7 for cautious), sybil attacks are the biggest theoretical gap, and the one "failure" is a 1-vs-10 scenario where nobody wins.</p>
+</div>
+<div class="blog-post" data-tags="governance evaluation">
+<p><strong>Feb 21</strong> — <a href="cautious-reciprocator-governance-sweep/">The Agent That Doesn't Need Governance</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span></p>
+<p>A custom trust-but-verify agent (Cautious Reciprocator) neutralizes adversaries through per-counterparty payoff tracking and auto-blacklisting. 48-run governance sweep shows external levers cost 6.5% welfare while reducing toxicity by only 0.005.</p>
+</div>
+<div class="blog-post" data-tags="governance evaluation">
+<p><strong>Feb 21</strong> — <a href="red-team-cake-splitting-hardening/">Eight Red-Team Rounds Took a Cake-Splitting Scenario from F to B</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Evaluation</span></p>
+<p>Iterative governance hardening against 8 attack vectors: <dfn>collusion detection</dfn> was the single biggest lever (+0.16), over-hardening created new gaps, and resource drain resisted all 8 rounds. Score: 0.54→0.81, damage: -53%.</p>
+</div>
+<div class="blog-post" data-tags="governance theory">
+<p><strong>Feb 21</strong> — <a href="cake-splitting-entry-fee-sweep/">The Entry Fee That Keeps Adversaries Out of the Fair Division Pool</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Theory</span></p>
+<p>A parameter sweep over 8 entry fee levels reveals a sharp screening threshold: below fee=6.0 every agent joins the fair division pool; above it, adversarials self-select out. 24 runs, 3 seeds, one phase transition.</p>
+</div>
+<div class="blog-post" data-tags="governance theory">
+<p><strong>Feb 20</strong> — <a href="contract-screening-separating-equilibrium/">Costly Contracts Separate Honest Agents from Adversaries. Here's the Data.</a>
+<span class="blog-tag">Governance</span> <span class="blog-tag">Theory</span></p>
+<p>Vickrey auction bonds and entry fees create a separating equilibrium in 20 epochs: honest agents choose governed pools, adversaries self-select into the default market. Perfect separation, zero infiltration, 74% welfare premium.</p>
+</div>
 <div class="blog-post" data-tags="llm-agents evaluation">
 <p><strong>Feb 20</strong> — <a href="local-llama-model-size-safety/">Does Model Size Matter for Safety? Llama 3B vs 8B in the SWARM Economy</a>
 <span class="blog-tag">LLM Agents</span> <span class="blog-tag">Evaluation</span></p>
@@ -2825,7 +4439,7 @@
 <p>How three environment fixes turned a broken eval into a useful one — and what that teaches about measuring agent behavior.</p>
 </div>
 <div class="blog-post" data-tags="governance">
-<p><strong>Feb 12</strong> — <a href="governance-mechanisms-taxonomy/">A Taxonomy of Governance Mechanisms for Multi-Agent AI Systems</a>
+<p><strong>Feb 12</strong> — <a href="../concepts/governance-mechanisms-taxonomy/">A Taxonomy of Governance Mechanisms for Multi-Agent AI Systems</a>
 <span class="blog-tag">Governance</span></p>
 <p>Twenty levers across five families, which ones actually work, and why governance is a portfolio problem.</p>
 </div>
@@ -2847,10 +4461,10 @@
 <div class="blog-post" data-tags="theory governance">
 <p><strong>Feb 10</strong> — <a href="markets-and-safety/">What Financial Markets Teach Us About AI Safety</a>
 <span class="blog-tag">Theory</span> <span class="blog-tag">Governance</span></p>
-<p>Adverse selection, information asymmetry, and market manipulation surveillance applied to multi-agent governance.</p>
+<p>Adverse selection, <dfn>information asymmetry</dfn>, and market manipulation surveillance applied to multi-agent governance.</p>
 </div>
 <div class="blog-post" data-tags="theory governance">
-<p><strong>Feb 10</strong> — <a href="purity-paradox/">The Purity Paradox</a>
+<p><strong>Feb 10</strong> — <a href="purity-paradox/">The <dfn>Purity Paradox</dfn></a>
 <span class="blog-tag">Theory</span> <span class="blog-tag">Governance</span></p>
 <p>Why mixed agent populations outperform pure honest ones on aggregate welfare — and when the paradox breaks.</p>
 </div>
@@ -2899,6 +4513,38 @@ function filterByTag(tag) {
 
 
 
+  
+    
+  
+  
+    
+  
+
+
+  <aside class="md-source-file">
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="Last update">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="May 22, 2026 00:49:50 UTC">May 22, 2026</span>
+  </span>
+
+    
+    
+      
+  <span class="md-source-file__fact">
+    <span class="md-icon" title="Created">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.47 15.08 11 13V7h1.5v5.25l3.08 1.83c-.41.28-.79.62-1.11 1m-1.39 4.84c-.36.05-.71.08-1.08.08-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8c0 .37-.03.72-.08 1.08.69.1 1.33.32 1.92.64.1-.56.16-1.13.16-1.72 0-5.5-4.5-10-10-10S2 6.5 2 12s4.47 10 10 10c.59 0 1.16-.06 1.72-.16-.32-.59-.54-1.23-.64-1.92M18 15v3h-3v2h3v3h2v-3h3v-2h-3v-3z"/></svg>
+    </span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="February 10, 2026 04:15:06 UTC">February 10, 2026</span>
+  </span>
+
+    
+    
+    
+  </aside>
 
 
 
