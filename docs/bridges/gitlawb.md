@@ -247,18 +247,15 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     return id.slice(0, 8);
   }
 
-  // --- Backfill recent data via HTTP ---
+  // --- Backfill recent data via same-origin snapshot ---
+  // The browser cannot query node.gitlawb.com directly (the site CSP connect-src
+  // and the node's missing CORS headers both block the cross-origin request), so
+  // history is baked at deploy time by scripts/gen_gitlawb_snapshot.py and served
+  // same-origin. Live events still stream in over the WebSocket below.
   async function backfill() {
     try {
-      const res = await fetch(HTTP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: `query { refUpdates(limit: 20) { repo refName oldSha newSha pusherDid nodeDid timestamp } tasks(limit: 20) { id status delegatorDid assigneeDid createdAt } }`
-        })
-      });
-      const json = await res.json();
-      const data = json.data || {};
+      const res = await fetch("/bridges/gitlawb_snapshot.json", { cache: "no-store" });
+      const data = await res.json();
       (data.refUpdates || []).forEach(e => addInteraction(e, "push"));
       (data.tasks || []).forEach(e => addInteraction(e, "task"));
     } catch (e) {
