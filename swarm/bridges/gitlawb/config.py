@@ -13,7 +13,7 @@ class GitlawbConfig:
 
     # Gitlawb node endpoints
     node_url: str = "https://node.gitlawb.com"
-    ws_url: str = "wss://node.gitlawb.com/graphql"
+    ws_url: str = "wss://node.gitlawb.com/graphql/ws"
 
     # Repos to subscribe to (empty = all)
     repos: list[str] = field(default_factory=list)

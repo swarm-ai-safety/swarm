@@ -16,3 +16,7 @@ uv pip install --python "$VENV/bin/python" \
 (cd viz && npm install && npm run build:deploy)
 
 "$VENV/bin/mkdocs" build
+
+# Generate a same-origin backfill snapshot for the gitlawb live dashboard.
+# Fail-safe: a node outage writes an empty snapshot rather than failing the build.
+"$VENV/bin/python" scripts/gen_gitlawb_snapshot.py site/bridges/gitlawb_snapshot.json
