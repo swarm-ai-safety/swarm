@@ -159,6 +159,10 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
 
   // --- Heuristic quality score ---
   function scoreEvent(event, type) {
+    // Prefer the bridge-computed SoftMetrics p baked into the snapshot
+    // (scripts/gen_gitlawb_snapshot.py). Live WebSocket events have no p and
+    // fall back to the heuristic below.
+    if (typeof event.p === "number" && isFinite(event.p)) return event.p;
     if (type === "push") {
       let base = 0.7;
       const ref = event.refName || "";

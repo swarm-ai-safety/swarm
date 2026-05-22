@@ -1,0 +1,49 @@
+name: gitlawb snapshot
+
+# Refresh the SoftMetrics-scored backfill snapshot the live dashboard loads
+# (docs/bridges/gitlawb_snapshot.json). Runs the real swarm gitlawb bridge
+# server-side (no CORS/CSP), scores recent events, and commits the result so
+# Vercel redeploys with fresh scored history. Live updates still stream over
+# the WebSocket in-browser; this just keeps the initial paint current.
+
+on:
+  schedule:
+    - cron: "0 */6 * * *" # every 6 hours
+  workflow_dispatch: {}
+
+concurrency:
+  group: gitlawb-snapshot
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install swarm (gitlawb bridge)
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[runtime,gitlawb]"
+
+      - name: Generate scored snapshot
+        run: python scripts/gen_gitlawb_snapshot.py docs/bridges/gitlawb_snapshot.json
+
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- docs/bridges/gitlawb_snapshot.json; then
+            echo "No snapshot change; nothing to commit."
+            exit 0
+          fi
+          git config user.name "swarm-ai-bot"
+          git config user.email "bot@swarm-ai.org"
+          git add docs/bridges/gitlawb_snapshot.json
+          git commit -m "chore(gitlawb): refresh scored dashboard snapshot [skip ci]"
+          git push

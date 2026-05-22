@@ -1,16 +1,26 @@
 #!/usr/bin/env python3
-"""Generate a same-origin backfill snapshot for the gitlawb live dashboard.
+"""Generate a backfill snapshot for the gitlawb live dashboard.
 
 The dashboard at docs/bridges/gitlawb.md cannot fetch node.gitlawb.com directly
-from the browser: the site's CSP (`connect-src`) and the node's missing CORS
+from the browser: the site CSP (`connect-src`) and the node's missing CORS
 headers both block a cross-origin request. The WebSocket stream still delivers
-*live* events once CSP allows the origin, but the page would otherwise load with
-no history.
+*live* events, but the page would otherwise load with no history.
 
-This script runs at deploy time (server-side, no CORS/CSP), queries the same
-backfill data the page used to fetch, and writes it next to the built page so the
-browser can load it same-origin. It is deliberately fail-safe: any network error
-produces an empty-but-valid snapshot so the deploy never breaks.
+This script runs server-side (no CORS/CSP), queries the same backfill data, and
+writes it next to the built page so the browser can load it same-origin.
+
+It has two scoring tiers:
+
+  * Scored (option C): if the ``swarm`` package is importable, each event is run
+    through the real ``GitlawbMapper``/``GitlawbMetrics`` bridge so every record
+    carries a SoftMetrics quality probability ``p`` and the snapshot includes an
+    aggregate metrics block. This is what the scheduled GitHub Action produces.
+  * Raw fallback: in a minimal environment without ``swarm`` (e.g. the Vercel
+    docs build venv), events are emitted without ``p`` and the page falls back
+    to its in-browser heuristic.
+
+It is deliberately fail-safe: any network error produces an empty-but-valid
+snapshot so a deploy never breaks.
 """
 
 from __future__ import annotations
@@ -49,19 +59,91 @@ def fetch_backfill() -> dict:
     }
 
 
-def main() -> int:
-    out_path = Path(sys.argv[1]) if len(sys.argv) > 1 else Path("site/bridges/gitlawb_snapshot.json")
+def score_with_bridge(ref_updates: list[dict], tasks: list[dict]) -> dict | None:
+    """Score events via the real SWARM gitlawb bridge.
 
-    snapshot = {"refUpdates": [], "tasks": [], "generatedAt": None, "ok": False}
+    Returns a dict with per-event ``p`` attached and an aggregate ``metrics``
+    block, or ``None`` if the swarm package is not importable (raw fallback).
+    """
+    # Ensure the repo root is importable even when run as `python scripts/...`
+    # (which puts scripts/ — not the repo root — on sys.path).
+    repo_root = str(Path(__file__).resolve().parent.parent)
+    if repo_root not in sys.path:
+        sys.path.insert(0, repo_root)
+
     try:
-        result = fetch_backfill()
-        snapshot.update(result)
+        import asyncio
+
+        from swarm.bridges.gitlawb.config import GitlawbConfig
+        from swarm.bridges.gitlawb.mapper import GitlawbMapper
+        from swarm.bridges.gitlawb.metrics import GitlawbMetrics
+    except ImportError:
+        return None
+
+    # Heuristic scoring only — deterministic, no API key / network judge.
+    config = GitlawbConfig(use_llm_judge=False)
+    mapper = GitlawbMapper(config)
+    metrics = GitlawbMetrics(config)
+
+    async def _run() -> dict:
+        interactions = []
+        scored_refs = []
+        for event in ref_updates:
+            interaction = await mapper.enrich(mapper.map_ref_update(event))
+            interactions.append(interaction)
+            scored_refs.append({**event, "p": round(interaction.p, 4)})
+
+        scored_tasks = []
+        for task in tasks:
+            interaction = await mapper.enrich(mapper.map_task_creation(task))
+            interactions.append(interaction)
+            scored_tasks.append({**task, "p": round(interaction.p, 4)})
+
+        report = metrics.compute(interactions)
+        return {
+            "refUpdates": scored_refs,
+            "tasks": scored_tasks,
+            "metrics": report.to_dict(),
+        }
+
+    return asyncio.run(_run())
+
+
+def main() -> int:
+    out_path = (
+        Path(sys.argv[1]) if len(sys.argv) > 1 else Path("site/bridges/gitlawb_snapshot.json")
+    )
+
+    snapshot: dict = {
+        "refUpdates": [],
+        "tasks": [],
+        "metrics": None,
+        "scored": False,
+        "generatedAt": None,
+        "ok": False,
+    }
+    try:
+        raw = fetch_backfill()
+        scored = score_with_bridge(raw["refUpdates"], raw["tasks"])
+        if scored is not None:
+            snapshot["refUpdates"] = scored["refUpdates"]
+            snapshot["tasks"] = scored["tasks"]
+            snapshot["metrics"] = scored["metrics"]
+            snapshot["scored"] = True
+            tier = "scored (SoftMetrics)"
+        else:
+            snapshot["refUpdates"] = raw["refUpdates"]
+            snapshot["tasks"] = raw["tasks"]
+            tier = "raw (swarm not importable)"
         snapshot["ok"] = True
         n = len(snapshot["refUpdates"]) + len(snapshot["tasks"])
-        print(f"gitlawb snapshot: fetched {n} events from {HTTP_URL}")
+        print(f"gitlawb snapshot: {tier} — {n} events from {HTTP_URL}")
     except (urllib.error.URLError, TimeoutError, ValueError, OSError) as e:
         # Never fail the build on a node outage — ship an empty snapshot.
-        print(f"gitlawb snapshot: backfill unavailable ({e!r}); writing empty snapshot", file=sys.stderr)
+        print(
+            f"gitlawb snapshot: backfill unavailable ({e!r}); writing empty snapshot",
+            file=sys.stderr,
+        )
 
     snapshot["generatedAt"] = datetime.now(timezone.utc).isoformat()
     out_path.parent.mkdir(parents=True, exist_ok=True)
