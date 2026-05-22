@@ -1,10 +1,17 @@
-name: gitlawb snapshot
+name: gitlawb snapshot refresh
 
-# Refresh the SoftMetrics-scored backfill snapshot the live dashboard loads
-# (docs/bridges/gitlawb_snapshot.json). Runs the real swarm gitlawb bridge
-# server-side (no CORS/CSP), scores recent events, and commits the result so
-# Vercel redeploys with fresh scored history. Live updates still stream over
-# the WebSocket in-browser; this just keeps the initial paint current.
+# Keep the dashboard's SoftMetrics-scored backfill snapshot fresh.
+#
+# main is a protected branch (requires the quality-gate check), so a bot cannot
+# push a regenerated snapshot directly. Instead we trigger a Vercel rebuild via a
+# deploy hook: the build (scripts/vercel-build.sh) re-runs the real swarm gitlawb
+# bridge server-side and regenerates the scored snapshot. No git push, no PR,
+# no branch-protection conflict. Live updates still stream over the WebSocket
+# in-browser; this just refreshes the first-paint history.
+#
+# Setup: create a Deploy Hook in the Vercel project (Settings -> Git -> Deploy
+# Hooks) and add its URL as the repo secret VERCEL_DEPLOY_HOOK. Without the
+# secret this workflow is a graceful no-op.
 
 on:
   schedule:
@@ -15,35 +22,17 @@ concurrency:
   group: gitlawb-snapshot
   cancel-in-progress: false
 
-permissions:
-  contents: write
-
 jobs:
-  snapshot:
+  refresh:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.12"
-
-      - name: Install swarm (gitlawb bridge)
+      - name: Trigger Vercel rebuild
+        env:
+          HOOK: ${{ secrets.VERCEL_DEPLOY_HOOK }}
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install -e ".[runtime,gitlawb]"
-
-      - name: Generate scored snapshot
-        run: python scripts/gen_gitlawb_snapshot.py docs/bridges/gitlawb_snapshot.json
-
-      - name: Commit if changed
-        run: |
-          if git diff --quiet -- docs/bridges/gitlawb_snapshot.json; then
-            echo "No snapshot change; nothing to commit."
+          if [ -z "$HOOK" ]; then
+            echo "VERCEL_DEPLOY_HOOK secret not set; skipping scheduled refresh."
+            echo "Add it (Vercel: Settings -> Git -> Deploy Hooks) to enable."
             exit 0
           fi
-          git config user.name "swarm-ai-bot"
-          git config user.email "bot@swarm-ai.org"
-          git add docs/bridges/gitlawb_snapshot.json
-          git commit -m "chore(gitlawb): refresh scored dashboard snapshot [skip ci]"
-          git push
+          curl -fsS -X POST "$HOOK" >/dev/null && echo "Triggered Vercel rebuild."

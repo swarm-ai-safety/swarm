@@ -18,12 +18,24 @@ uv pip install --python "$VENV/bin/python" \
 "$VENV/bin/mkdocs" build
 
 # gitlawb dashboard backfill snapshot.
-# Prefer the SoftMetrics-scored snapshot committed by the scheduled bridge run
-# (.github/workflows/gitlawb-snapshot.yml), which mkdocs copies into site/. Only
-# generate a raw fallback here if no committed snapshot exists, so a build never
-# clobbers scored data. Fail-safe: a node outage writes an empty snapshot.
-if [ ! -f site/bridges/gitlawb_snapshot.json ]; then
-  "$VENV/bin/python" scripts/gen_gitlawb_snapshot.py site/bridges/gitlawb_snapshot.json
+# mkdocs has copied the committed scored snapshot (docs/bridges/gitlawb_snapshot.json)
+# into site/. Refresh it with freshly SoftMetrics-scored data using an isolated venv
+# (swarm core is light: numpy/pydantic/pandas + gql). On ANY failure, keep the
+# committed snapshot so the deploy never breaks and scored data is preserved.
+# A scheduled Vercel deploy hook (.github/workflows/gitlawb-snapshot.yml) re-runs
+# this build to keep the snapshot fresh without pushing to a protected branch.
+SNAP=site/bridges/gitlawb_snapshot.json
+SNAP_VENV=.venv-snapshot
+if uv venv --python "$PY" "$SNAP_VENV" \
+  && uv pip install --python "$SNAP_VENV/bin/python" -e ".[runtime,gitlawb]" \
+  && "$SNAP_VENV/bin/python" scripts/gen_gitlawb_snapshot.py "$SNAP.tmp" \
+  && "$SNAP_VENV/bin/python" -c "import json,sys; sys.exit(0 if json.load(open('$SNAP.tmp'))['scored'] else 1)"; then
+  mv "$SNAP.tmp" "$SNAP"
+  echo "gitlawb snapshot: refreshed with build-time scored data"
 else
-  echo "gitlawb snapshot: using committed scored snapshot from docs/bridges/"
+  rm -f "$SNAP.tmp"
+  if [ ! -f "$SNAP" ]; then
+    "$VENV/bin/python" scripts/gen_gitlawb_snapshot.py "$SNAP" || true
+  fi
+  echo "gitlawb snapshot: kept existing snapshot (build-time scoring unavailable)"
 fi
