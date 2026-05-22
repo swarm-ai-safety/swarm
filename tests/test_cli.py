@@ -76,6 +76,44 @@ class TestRunSubcommand:
         assert rc == 1
         captured = capsys.readouterr()
         assert "Error" in captured.err
+        assert "no_such_file.yaml" in captured.err
+        assert "not found" in captured.err
+
+    def test_run_scenario_is_directory(self, monkeypatch, capsys, tmp_path):
+        """run with a directory as scenario path returns 1 with a clear error."""
+        monkeypatch.setattr(sys, "argv", ["python -m src", "run", str(tmp_path)])
+        rc = main()
+        assert rc == 1
+        assert "not a regular file" in capsys.readouterr().err
+
+    def test_run_invalid_yaml_returns_one(self, monkeypatch, capsys, tmp_path):
+        """run with an unparseable YAML scenario returns 1 and explains why."""
+        bad = tmp_path / "bad.yaml"
+        bad.write_text("agents: [\n  - this is: not valid: yaml\n")
+        monkeypatch.setattr(sys, "argv", ["python -m src", "run", str(bad)])
+        rc = main()
+        assert rc == 1
+        err = capsys.readouterr().err
+        assert "not valid YAML" in err
+        assert str(bad) in err
+
+    def test_run_empty_agents_list_returns_one(self, monkeypatch, capsys, tmp_path):
+        """run with a YAML missing or empty 'agents:' list returns 1."""
+        empty = tmp_path / "empty_agents.yaml"
+        empty.write_text(
+            "scenario_id: empty\n"
+            "description: scenario with no agents\n"
+            "simulation:\n"
+            "  n_epochs: 1\n"
+            "  steps_per_epoch: 1\n"
+            "agents: []\n"
+        )
+        monkeypatch.setattr(sys, "argv", ["python -m src", "run", str(empty)])
+        rc = main()
+        assert rc == 1
+        err = capsys.readouterr().err
+        assert "no 'agents' entries" in err
+        assert str(empty) in err
 
     def test_run_baseline_returns_zero(self, monkeypatch, capsys):
         """run with baseline.yaml should complete and return 0."""
