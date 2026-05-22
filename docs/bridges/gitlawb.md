@@ -271,7 +271,7 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     $conn.textContent = "Connecting...";
     $conn.style.color = "#f38ba8";
 
-    const ws = new WebSocket(WS_URL, "graphql-transport-wp");
+    const ws = new WebSocket(WS_URL, "graphql-ws");
     state.ws = ws;
 
     ws.onopen = () => {
@@ -305,7 +305,7 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
         }));
       }
 
-      if (data.type === "next" && data.payload && data.payload.data) {
+      if ((data.type === "next" || data.type === "data") && data.payload && data.payload.data) {
         const d = data.payload.data;
         if (d.refUpdates) addInteraction(d.refUpdates, "push");
         if (d.taskEvents) addInteraction(d.taskEvents, "task");
