@@ -48,6 +48,16 @@ Instrument real production systems with SWARM metrics.
 
 [Learn more →](gastown.md)
 
+### SWARM–Gitlawb
+
+Monitor AI agent interactions on the Gitlawb decentralized git network in real time.
+
+- **Purpose:** Live safety monitoring of decentralized agent collaboration
+- **Features:** WebSocket event subscriptions, heuristic + LLM quality scoring, live dashboard, persistence
+- **Status:** Available Now
+
+[Learn more →](gitlawb.md)
+
 ### SWARM–Prime Intellect
 
 Train and evaluate RL models on SWARM safety metrics using Prime Intellect's distributed training platform.
