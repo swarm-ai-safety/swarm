@@ -200,8 +200,11 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
   // --- Add interaction ---
   function addInteraction(event, type) {
     const p = scoreEvent(event, type);
-    const now = new Date().toISOString();
-    state.interactions.push({ event, type, p, ts: now });
+    // Use the event's own timestamp so backfilled history spreads across the
+    // timeline. Snapshot pushes carry `timestamp`, snapshot tasks `createdAt`,
+    // live WS task events `at`; fall back to now() for anything missing.
+    const ts = event.timestamp || event.createdAt || event.at || new Date().toISOString();
+    state.interactions.push({ event, type, p, ts });
     if (state.interactions.length > 2000) state.interactions.shift();
 
     // Update quality buckets
@@ -209,7 +212,7 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     state.qualityBuckets[bucket]++;
 
     // Update timeline
-    state.timeline.push(now.slice(0, 16));
+    state.timeline.push(ts.slice(0, 16));
 
     // Track repos
     if (event.repo) state.repos.add(event.repo);
@@ -232,7 +235,7 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
 
     const el = document.createElement("div");
     el.className = "gl-event";
-    const time = now.slice(11, 19);
+    const time = ts.slice(11, 19);
     let detail = "";
     if (type === "push") {
       detail = `${shortDid(event.pusherDid)} pushed to ${event.repo}:${(event.refName || "").replace("refs/heads/", "")}`;
