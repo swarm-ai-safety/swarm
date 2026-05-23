@@ -196,6 +196,12 @@ class GovernanceConfig(BaseModel):
     rbac_high_stakes_penalty_multiplier: float = 2.0
     rbac_role_action_map: dict[str, list[str]] = {}
 
+    # Attestation heartbeat (dead man's switch)
+    attestation_heartbeat_enabled: bool = False
+    attestation_heartbeat_interval: int = 5  # steps between required attestations
+    attestation_heartbeat_reputation_penalty: float = -0.1  # per missed heartbeat
+    attestation_heartbeat_reset_on_epoch: bool = True  # clear lapsed status each epoch
+
     # Hardware trust rejection handling
     hardware_trust_enabled: bool = False
     hardware_trust_propagation_enabled: bool = True  # Propagate stop token to dependents
@@ -467,6 +473,10 @@ class GovernanceConfig(BaseModel):
             raise ValueError("rbac_security_clearance_required must be non-negative")
         if self.rbac_high_stakes_penalty_multiplier < 0:
             raise ValueError("rbac_high_stakes_penalty_multiplier must be non-negative")
+
+        # Attestation heartbeat validation
+        if self.attestation_heartbeat_interval < 1:
+            raise ValueError("attestation_heartbeat_interval must be >= 1")
 
         # Hardware trust validation
         if self.hardware_trust_recovery_max_steps < 1:

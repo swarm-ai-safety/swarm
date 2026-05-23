@@ -24,9 +24,10 @@
     "source_code": "https://github.com/swarm-ai-safety/swarm"
   },
   "citation": {
-    "preferred_format": "SWARM Team. \"Distributional Safety in Agentic Systems.\" swarm-ai.org, 2026.",
-    "arxiv": "https://arxiv.org/abs/2512.16856",
-    "bibtex": "@misc{swarm2025distributional,\n  title={Distributional Safety in Agentic Systems},\n  author={SWARM Team},\n  year={2025},\n  url={https://swarm-ai.org},\n  note={Based on arXiv:2512.16856}\n}"
+    "preferred_format": "Aiersilan, A. and Savitt, R. \"Soft-Label Governance for Distributional Safety in Multi-Agent Systems.\" arXiv:2604.19752, 2026.",
+    "arxiv": "https://arxiv.org/abs/2604.19752",
+    "arxiv_precursor": "https://arxiv.org/abs/2512.16856",
+    "bibtex": "@misc{swarm2026softlabel,\n  title={Soft-Label Governance for Distributional Safety in Multi-Agent Systems},\n  author={Aiersilan, A. and Savitt, R.},\n  year={2026},\n  url={https://arxiv.org/abs/2604.19752}\n}\n\n@misc{tomasev2025distributional,\n  title={Distributional AGI Safety},\n  author={Tomašev, N. and Franklin, M. and Jacobs, J. and Krier, S. and Osindero, S.},\n  year={2025},\n  url={https://arxiv.org/abs/2512.16856}\n}"
   },
   "content_types": {
     "definitions": "Formal definitions of 22 distributional safety concepts",

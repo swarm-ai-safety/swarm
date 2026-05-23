@@ -46,8 +46,9 @@ class EventBus:
 
     Subscribers receive events via ``asyncio.Queue``. Publishing is
     thread-safe: if the caller is on a different thread than the
-    subscriber's event loop, ``call_soon_threadsafe`` is used to
-    ensure the queue's internal waiters are properly notified.
+    subscriber's event loop, ``run_coroutine_threadsafe`` schedules a
+    non-blocking queue put on the subscriber loop so waiters are notified
+    while preserving drop-on-full semantics.
     """
 
     def __init__(self) -> None:
@@ -100,6 +101,10 @@ class EventBus:
         except asyncio.QueueFull:
             return False
 
+    async def _put_event_async(self, sub: _Subscriber, event: SimEvent) -> bool:
+        """Put an event from another thread without blocking on full queues."""
+        return self._put_event(sub, event)
+
     async def publish(self, event: SimEvent) -> int:
         """Publish an event (async). Returns number of subscribers notified.
 
@@ -131,9 +136,16 @@ class EventBus:
                 if self._put_event(sub, event):
                     count += 1
             else:
-                # Different thread/loop -- schedule on the subscriber's loop
+                # Different thread/loop -- use run_coroutine_threadsafe
+                # so that asyncio tasks waiting on queue.get() are
+                # properly woken up (call_soon_threadsafe + put_nowait
+                # can miss wakeups on Python 3.12+), but keep put_nowait
+                # semantics so full queues drop events instead of
+                # accumulating pending Queue.put tasks.
                 try:
-                    sub.loop.call_soon_threadsafe(self._put_event, sub, event)
+                    asyncio.run_coroutine_threadsafe(
+                        self._put_event_async(sub, event), sub.loop
+                    )
                     count += 1
                 except RuntimeError:
                     pass  # Loop closed

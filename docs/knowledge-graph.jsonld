@@ -12,12 +12,20 @@
       "description": "System-Wide Assessment of Risk in Multi-agent systems. Studies how catastrophic risks emerge from populations of interacting AI agents.",
       "url": "https://swarm-ai.org",
       "codeRepository": "https://github.com/swarm-ai-safety/swarm",
-      "citation": {
-        "@type": "ScholarlyArticle",
-        "@id": "arxiv:2512.16856",
-        "name": "Distributional Safety in Agentic Systems",
-        "url": "https://arxiv.org/abs/2512.16856"
-      },
+      "citation": [
+        {
+          "@type": "ScholarlyArticle",
+          "@id": "arxiv:2604.19752",
+          "name": "Soft-Label Governance for Distributional Safety in Multi-Agent Systems",
+          "url": "https://arxiv.org/abs/2604.19752"
+        },
+        {
+          "@type": "ScholarlyArticle",
+          "@id": "arxiv:2512.16856",
+          "name": "Distributional AGI Safety",
+          "url": "https://arxiv.org/abs/2512.16856"
+        }
+      ],
       "knowsAbout": [
         {"@id": "swarm:distributional-safety"},
         {"@id": "swarm:soft-labels"},

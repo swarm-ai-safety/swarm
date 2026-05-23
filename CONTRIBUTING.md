@@ -259,7 +259,7 @@ Include:
 
 - **GitHub Issues** - Bug reports and feature requests
 - **Documentation** - [swarm-ai.org](https://www.swarm-ai.org)
-- **Paper** - [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
+- **Paper** - [Soft-Label Governance for Distributional Safety in Multi-Agent Systems](https://arxiv.org/abs/2604.19752); see also [Distributional AGI Safety](https://arxiv.org/abs/2512.16856)
 
 ## License
 

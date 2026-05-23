@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PY=3.12
+VENV=.venv-build
+
+uv python install "$PY"
+uv venv --python "$PY" "$VENV"
+uv pip install --python "$VENV/bin/python" \
+  mkdocs-material \
+  'mkdocstrings[python]' \
+  pymdown-extensions \
+  mkdocs-git-revision-date-localized-plugin \
+  mkdocs-rss-plugin
+
+(cd viz && npm install && npm run build:deploy)
+
+"$VENV/bin/mkdocs" build
+
+# gitlawb dashboard backfill snapshot.
+# Regenerate the scored snapshot at build time (stdlib only, no swarm install).
+# A scheduled Vercel deploy hook (.github/workflows/gitlawb-snapshot.yml) re-runs
+# this build to keep it fresh without pushing to a protected branch. Fail-safe:
+# a node outage writes an empty snapshot rather than failing the build.
+"$VENV/bin/python" scripts/gen_gitlawb_snapshot.py site/bridges/gitlawb_snapshot.json

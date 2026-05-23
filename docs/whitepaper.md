@@ -308,19 +308,32 @@ For machine-readable metadata, use `CITATION.cff` at repo root.
 
 Suggested plain-text citation:
 
-Savitt, R. (2026). *Distributional AGI Safety Sandbox: A Practical Lab for AGI
-Safety Research* (Version 0.1.0) [Software]. GitHub.
-https://github.com/swarm-ai-safety/swarm
+Aiersilan, A. & Savitt, R. (2026). *Soft-Label Governance for Distributional
+Safety in Multi-Agent Systems*. arXiv:2604.19752.
+https://arxiv.org/abs/2604.19752
 
-BibTeX:
+BibTeX (paper):
+
+```bibtex
+@article{aiersilan2026soft,
+  title   = {Soft-Label Governance for Distributional Safety in Multi-Agent Systems},
+  author  = {Aiersilan, Aizierjiang and Savitt, Raeli},
+  year    = {2026},
+  journal = {arXiv preprint arXiv:2604.19752},
+  url     = {https://arxiv.org/abs/2604.19752},
+  doi     = {10.48550/arXiv.2604.19752}
+}
+```
+
+BibTeX (software):
 
 ```bibtex
 @software{savitt2026_distributional_agi_safety,
-  author = {Savitt, Raeli},
-  title = {Distributional AGI Safety Sandbox: A Practical Lab for AGI Safety Research},
-  year = {2026},
+  author  = {Savitt, Raeli},
+  title   = {Distributional AGI Safety Sandbox: A Practical Lab for AGI Safety Research},
+  year    = {2026},
   version = {0.1.0},
-  url = {https://github.com/swarm-ai-safety/swarm}
+  url     = {https://github.com/swarm-ai-safety/swarm}
 }
 ```
 
@@ -329,7 +342,7 @@ BibTeX:
 1. Kyle, A.S. (1985). *Continuous Auctions and Insider Trading*. Econometrica, 53(6), 1315-1335.
 2. Glosten, L.R. & Milgrom, P.R. (1985). *Bid, Ask and Transaction Prices in a Specialist Market with Heterogeneously Informed Traders*. Journal of Financial Economics, 14(1), 71-100.
 3. Myerson, R.B. (1981). *Optimal Auction Design*. Mathematics of Operations Research, 6(1), 58-73. See also Hurwicz, L. (1960). *Optimality and Informational Efficiency in Resource Allocation Processes*. Mathematical Methods in the Social Sciences.
-4. [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
+4. [Distributional AGI Safety](https://arxiv.org/abs/2512.16856)
 5. [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
 6. [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
 7. Tomasev, N., Franklin, J., Leibo, J.Z., Jacobs, A.Z., Cunningham, T., Gabriel, I., & Osindero, S. (2025). [*Virtual Agent Economies*](https://arxiv.org/abs/2509.10147). arXiv:2509.10147.

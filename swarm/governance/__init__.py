@@ -11,6 +11,7 @@ from swarm.governance.adaptive import (
 )
 from swarm.governance.adaptive_controller import AdaptiveGovernanceController
 from swarm.governance.admission import StakingLever
+from swarm.governance.attestation_heartbeat import AttestationHeartbeatLever
 from swarm.governance.audits import RandomAuditLever
 from swarm.governance.circuit_breaker import CircuitBreakerLever
 from swarm.governance.collusion import CollusionPenaltyLever
@@ -76,4 +77,5 @@ __all__ = [
     "ProposalStatus",
     "ThresholdProposal",
     "AdaptiveGovernanceController",
+    "AttestationHeartbeatLever",
 ]

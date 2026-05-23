@@ -34,6 +34,10 @@ st.sidebar.markdown("---")
 st.sidebar.markdown(
     "[Source Code](https://github.com/swarm-ai-safety/swarm)"
 )
+st.sidebar.markdown(
+    "[Paper](https://arxiv.org/abs/2604.19752) "
+    "(see also [arXiv:2512.16856](https://arxiv.org/abs/2512.16856))"
+)
 
 # Main page content (shown when no sub-page is selected)
 st.title("Distributional AGI Safety")
