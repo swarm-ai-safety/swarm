@@ -9,6 +9,13 @@
 # This script renders the page in headless Chrome (which runs the JS), then
 # makes assertions against the *rendered* DOM and saves a screenshot.
 #
+# LIMITATION: --virtual-time-budget fast-forwards JS timers but does NOT await
+# real cross-origin network (e.g. a wss:// WebSocket to another origin). A live-
+# connection element may therefore read "Connecting..." here while a real browser
+# shows "Connected". Assert on same-origin/backfilled content (which IS reliable
+# under virtual time); to verify genuine live-connection state, drive Chrome over
+# CDP with a real wall-clock wait instead.
+#
 # The canonical bug this guards against: SWARM-Gitlawb dashboard, May 2026.
 # drawBarChart set canvas.height = offsetHeight*2 with no CSS cap, so the
 # canvas doubled on every redraw and blew past the browser's max bitmap size,
