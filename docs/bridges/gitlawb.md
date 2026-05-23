@@ -93,12 +93,10 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
   const WS_URL = "wss://node.gitlawb.com/graphql/ws";
   const HTTP_URL = "https://node.gitlawb.com/graphql";
   const MAX_FEED = 100;
-  const MAX_TIMELINE = 50;
 
   const state = {
     interactions: [],
     repos: new Set(),
-    timeline: [],
     qualityBuckets: [0, 0, 0, 0, 0], // 0-0.2, 0.2-0.4, 0.4-0.6, 0.6-0.8, 0.8-1.0
     ws: null,
     connected: false,
@@ -160,13 +158,27 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     drawBarChart("gl-quality-chart", state.qualityBuckets,
       ["0-20", "20-40", "40-60", "60-80", "80-100"], "#89b4fa");
 
-    const tl = state.timeline.slice(-20);
-    if (tl.length > 1) {
-      const counts = {};
-      tl.forEach(t => { counts[t] = (counts[t] || 0) + 1; });
-      const labels = Object.keys(counts);
-      const vals = Object.values(counts);
-      drawBarChart("gl-timeline-chart", vals, labels.map(l => l.slice(11, 16)), "#a6e3a1");
+    // Events over time: bucket interactions chronologically so the x-axis reads
+    // left-to-right in time order (the old version plotted the last 20 events in
+    // insertion order -> jumbled labels like "12:28 23:30 02:17"). The data can
+    // span anything from minutes to months, so pick the bin unit from the span:
+    // hours for <=2 days, days otherwise. Labels match the unit (HH:00 vs M/D).
+    const times = state.interactions.map(it => it.ts).filter(Boolean).sort();
+    if (times.length > 1) {
+      const spanMs = Date.parse(times[times.length - 1]) - Date.parse(times[0]);
+      const byDay = spanMs > 2 * 86400000; // > 2 days -> bucket by day
+      const keyLen = byDay ? 10 : 13;      // YYYY-MM-DD  or  YYYY-MM-DDTHH
+      const bins = new Map();
+      times.forEach(t => { const k = t.slice(0, keyLen); bins.set(k, (bins.get(k) || 0) + 1); });
+      const keys = [...bins.keys()].sort().slice(byDay ? -30 : -24);
+      const vals = keys.map(k => bins.get(k));
+      // ~8 evenly-spaced labels so they stay readable instead of crowding.
+      const step = Math.ceil(keys.length / 8);
+      const fmt = byDay
+        ? (k => { const p = k.split("-"); return (+p[1]) + "/" + (+p[2]); })
+        : (k => k.slice(11, 13) + ":00");
+      const labels = keys.map((k, i) => (i % step === 0) ? fmt(k) : "");
+      drawBarChart("gl-timeline-chart", vals, labels, "#a6e3a1");
     }
   }
 
@@ -215,9 +227,6 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     // Update quality buckets
     const bucket = Math.min(4, Math.floor(p * 5));
     state.qualityBuckets[bucket]++;
-
-    // Update timeline
-    state.timeline.push(ts.slice(0, 16));
 
     // Track repos
     if (event.repo) state.repos.add(event.repo);
