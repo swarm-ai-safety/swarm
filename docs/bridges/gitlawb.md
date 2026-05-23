@@ -90,7 +90,7 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
 
 <script>
 (function() {
-  const WS_URL = "wss://node.gitlawb.com/graphql";
+  const WS_URL = "wss://node.gitlawb.com/graphql/ws";
   const HTTP_URL = "https://node.gitlawb.com/graphql";
   const MAX_FEED = 100;
   const MAX_TIMELINE = 50;
@@ -117,8 +117,16 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     const canvas = document.getElementById(canvasId);
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
+    // Pin the *displayed* size via CSS so offsetWidth/offsetHeight stay stable.
+    // Otherwise `canvas.height = offsetHeight * 2` feeds back on itself (the
+    // backing-store height becomes the displayed height with no CSS cap), so
+    // the canvas doubles in size on every redraw — across the ~40 backfill
+    // calls it blows past the browser's max canvas size and renders blank.
+    const CSS_H = 160;
+    canvas.style.width = "100%";
+    canvas.style.height = CSS_H + "px";
     const w = canvas.width = canvas.offsetWidth * 2;
-    const h = canvas.height = canvas.offsetHeight * 2;
+    const h = canvas.height = CSS_H * 2;
     ctx.clearRect(0, 0, w, h);
 
     const max = Math.max(...data, 1);
@@ -159,6 +167,10 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
 
   // --- Heuristic quality score ---
   function scoreEvent(event, type) {
+    // Prefer the bridge-computed SoftMetrics p baked into the snapshot
+    // (scripts/gen_gitlawb_snapshot.py). Live WebSocket events have no p and
+    // fall back to the heuristic below.
+    if (typeof event.p === "number" && isFinite(event.p)) return event.p;
     if (type === "push") {
       let base = 0.7;
       const ref = event.refName || "";
@@ -247,18 +259,15 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     return id.slice(0, 8);
   }
 
-  // --- Backfill recent data via HTTP ---
+  // --- Backfill recent data via same-origin snapshot ---
+  // The browser cannot query node.gitlawb.com directly (the site CSP connect-src
+  // and the node's missing CORS headers both block the cross-origin request), so
+  // history is baked at deploy time by scripts/gen_gitlawb_snapshot.py and served
+  // same-origin. Live events still stream in over the WebSocket below.
   async function backfill() {
     try {
-      const res = await fetch(HTTP_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          query: `query { refUpdates(limit: 20) { repo refName oldSha newSha pusherDid nodeDid timestamp } tasks(limit: 20) { id status delegatorDid assigneeDid createdAt } }`
-        })
-      });
-      const json = await res.json();
-      const data = json.data || {};
+      const res = await fetch("/bridges/gitlawb_snapshot.json", { cache: "no-store" });
+      const data = await res.json();
       (data.refUpdates || []).forEach(e => addInteraction(e, "push"));
       (data.tasks || []).forEach(e => addInteraction(e, "task"));
     } catch (e) {
@@ -271,7 +280,7 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     $conn.textContent = "Connecting...";
     $conn.style.color = "#f38ba8";
 
-    const ws = new WebSocket(WS_URL, "graphql-transport-wp");
+    const ws = new WebSocket(WS_URL, "graphql-ws");
     state.ws = ws;
 
     ws.onopen = () => {
@@ -305,7 +314,7 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
         }));
       }
 
-      if (data.type === "next" && data.payload && data.payload.data) {
+      if ((data.type === "next" || data.type === "data") && data.payload && data.payload.data) {
         const d = data.payload.data;
         if (d.refUpdates) addInteraction(d.refUpdates, "push");
         if (d.taskEvents) addInteraction(d.taskEvents, "task");
