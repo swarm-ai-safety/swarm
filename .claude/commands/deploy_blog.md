@@ -81,6 +81,13 @@ encodes that lesson — its runaway-canvas check fails on exactly this bug
 (verified: it flags the reproduced canvas at 67M×67M px). Treat a green deploy
 as unverified until JS-bearing pages pass render-verify.
 
+This is also enforced **pre-merge in CI**: the `render-verify` job in
+`.github/workflows/ci.yml` builds the static site, serves it, and runs the same
+check against the dashboard. It is part of the `quality-gate` required status,
+so a broken JS docs page blocks the merge before it can ever deploy. The manual
+step 4 above remains useful for post-deploy spot-checks against the live origin
+(which also exercises the real CSP headers that the local CI server does not).
+
 ## Constraints
 
 - Do NOT use `--strict` flag with mkdocs build — pre-existing broken image links in papers/ will cause it to fail.
