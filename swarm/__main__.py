@@ -443,8 +443,8 @@ def cmd_agents(args: argparse.Namespace) -> int:
     print(f"{'AGENT'.ljust(name_width)}  DESCRIPTION")
     print(f"{'-' * name_width}  {'-' * 11}")
     for name, cls in discovered:
-        doc = inspect.getdoc(cls)
-        first_line = doc.splitlines()[0] if doc else "(no docstring)"
+        doc = inspect.getdoc(cls) or "(no docstring)"
+        first_line = doc.splitlines()[0]
         print(f"{name.ljust(name_width)}  {first_line}")
 
     return 0
