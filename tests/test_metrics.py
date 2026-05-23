@@ -355,6 +355,75 @@ class TestMetricsReporter:
         assert "counts" in d
         assert "welfare" in d
 
+    def test_to_markdown_structure(self):
+        """to_markdown should emit valid GitHub-flavored markdown."""
+        reporter = MetricsReporter()
+        interactions = generate_mixed_batch(count=100, seed=42)
+
+        md = reporter.to_markdown(
+            interactions,
+            metadata={"seed": 42, "scenario": "baseline.yaml", "epochs": 10},
+        )
+
+        assert isinstance(md, str)
+        assert md.startswith("# Metrics report")
+        # Run metadata header rendered as bullets.
+        assert "**seed:** 42" in md
+        assert "**scenario:** baseline.yaml" in md
+        assert "**epochs:** 10" in md
+        # Section headings present.
+        assert "## Soft metrics (probabilistic)" in md
+        assert "## Hard metrics (threshold-based)" in md
+        assert "## Counts" in md
+        assert "## Welfare" in md
+        # Valid table delimiters.
+        assert "| Metric | Value |" in md
+        assert "| --- | ---: |" in md
+        # Every data row should have exactly two cells when respecting
+        # pipe escaping (\| stays inside a cell).
+        import re
+
+        for line in md.splitlines():
+            if line.startswith("|") and "Metric" not in line and "---" not in line:
+                # Split only on unescaped pipes.
+                parts = re.split(r"(?<!\\)\|", line)
+                cells = [c for c in parts if c.strip()]
+                assert len(cells) == 2, f"row has unexpected pipe count: {line!r}"
+
+    def test_to_markdown_rounds_floats_to_four_decimals(self):
+        """Floating-point cells should be rendered to 4 decimal places by default."""
+        import re
+
+        reporter = MetricsReporter()
+        interactions = generate_mixed_batch(count=100, seed=42)
+
+        md = reporter.to_markdown(interactions)
+
+        float_cells = re.findall(r"\|\s*(-?\d+\.\d+)\s*\|", md)
+        assert float_cells, "expected at least one floating-point cell"
+        for cell in float_cells:
+            decimals = cell.split(".")[1]
+            assert len(decimals) == 4, f"cell {cell!r} not rounded to 4 decimals"
+
+    def test_to_markdown_handles_empty_interactions(self):
+        """to_markdown should not crash with an empty interaction list."""
+        reporter = MetricsReporter()
+
+        md = reporter.to_markdown([])
+
+        assert "# Metrics report" in md
+        assert "| Total interactions | 0 |" in md
+
+    def test_to_markdown_metadata_optional(self):
+        """to_markdown should omit the metadata block when none is supplied."""
+        reporter = MetricsReporter()
+        interactions = generate_mixed_batch(count=20, seed=7)
+
+        md = reporter.to_markdown(interactions)
+
+        assert "# Metrics report" in md
+        assert "**seed:**" not in md
+
 
 class TestWelfareMetrics:
     """Tests for welfare calculations."""
