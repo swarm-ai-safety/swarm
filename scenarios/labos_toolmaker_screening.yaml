@@ -1,0 +1,113 @@
+# LabOS Toolmaker Screening Spike
+#
+# Traces LabOS's Toolmaker→Critic loop through SWARM's soft-label
+# pipeline and asks one question: does the Critic's implicit
+# accept/reject behave like a calibrated `p = P(v = +1)` when we
+# compare it against a downstream ground-truth quality signal?
+#
+# Status: spike (1-2 day scoping). Uses a synthetic Toolmaker→Critic
+# event generator that mirrors the structure of LabOS's dry-lab loop
+# (Stanford/Princeton AI co-scientist, arxiv 2510.14861, Apache 2.0).
+# We do NOT import `labos` yet — that comes only if the spike passes.
+#
+# Parent issue: SWA-68. Memory note: reference_labworld.md.
+#
+# Usage:
+#   python examples/run_labos_toolmaker_spike.py \
+#       --scenario scenarios/labos_toolmaker_screening.yaml \
+#       --seed 42
+#
+# Out of scope (per SWA-68):
+#   - Full BenchmarkAdapter (A-Evolve pattern). Don't generalize yet.
+#   - XR / smart-glasses side of LabOS.
+#   - Outreach to LabOS authors.
+
+scenario_id: labos_toolmaker_screening
+description: "Calibration screen for LabOS Critic's accept/reject vs. downstream quality"
+motif: tool_screening
+
+# Toolmaker roster — three archetypes that stand in for the heterogeneity
+# observed in autonomous tool manufacture under asymmetric information.
+agents:
+  # Honest Toolmakers: readable signatures, reasonable tests, signals
+  # track the true quality of the manufactured tool.
+  - type: honest
+    count: 3
+  # Opportunistic Toolmakers: flashy docstrings and inflated self-claims
+  # but shallow testing — the adverse-selection archetype.
+  - type: opportunistic
+    count: 2
+  # Careless Toolmakers: honest-about-quality but under-tested. Not
+  # adversarial, but still a calibration stressor for the Critic.
+  - type: deceptive
+    count: 1
+
+governance:
+  # Light-touch governance for the spike — the question is about Critic
+  # calibration, not about governance response. Matched with dag_planner_*
+  # scenarios so numbers are comparable across bridges.
+  transaction_tax_rate: 0.02
+  transaction_tax_split: 0.5
+  reputation_decay_rate: 0.95
+  bandwidth_cap: 10
+
+  staking_enabled: false
+
+  circuit_breaker_enabled: true
+  freeze_threshold_toxicity: 0.7
+  freeze_threshold_violations: 3
+  freeze_duration_epochs: 2
+
+  audit_enabled: true
+  audit_probability: 0.15
+  audit_threshold_p: 0.45
+  penalty_multiplier: 2.0
+
+simulation:
+  n_epochs: 10
+  steps_per_epoch: 10
+  seed: 42
+
+rate_limits:
+  interactions_per_step: 3
+  posts_per_epoch: 10
+  votes_per_epoch: 50
+  tasks_per_epoch: 5
+
+payoff:
+  # Matched with dag_planner_screening.yaml so calibration results are
+  # comparable across bridges.
+  s_plus: 2.0
+  s_minus: 1.0
+  h: 2.0
+  theta: 0.5
+  rho_a: 0.1
+  rho_b: 0.1
+  w_rep: 1.0
+
+# LabOS domain config — proxy weights tuned for tool-screening signals.
+# Tool proposals don't produce "rework" in the coding-agent sense; the
+# Critic's primary axes are documentation, test coverage, and interface
+# coherence. We give engagement (counterparty_engagement_delta) more
+# weight than the default to reflect that.
+domain:
+  type: labos_toolmaker
+  proxy:
+    task_progress_weight: 0.35  # downstream task completion when tool is used
+    rework_weight: 0.15         # retries when the tool misbehaves
+    verifier_weight: 0.20       # Critic rejections + runtime errors
+    engagement_weight: 0.30     # docs/tests/signature coherence
+  acceptance_threshold: 0.5
+  # Toolmakers per epoch and proposals per Toolmaker — matches LabOS's
+  # pattern of manufacturing on demand rather than in bulk.
+  proposals_per_toolmaker_per_epoch: 3
+  # Calibration binning for the v_hat → p vs. ground-truth plot.
+  calibration_bins: 10
+
+success_criteria:
+  min_epochs: 10
+  toxicity_threshold: 0.4
+
+outputs:
+  event_log: "logs/labos_toolmaker_screening_events.jsonl"
+  metrics_csv: "logs/labos_toolmaker_screening_metrics.csv"
