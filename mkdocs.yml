@@ -1,6 +1,6 @@
 site_name: "SWARM — Open-Source Multi-Agent AI Safety Framework"
 site_description: "SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework"
-site_url: https://swarm-ai.org
+site_url: https://www.swarm-ai.org
 repo_url: https://github.com/swarm-ai-safety/swarm
 repo_name: swarm-ai-safety/swarm
 
@@ -26,7 +26,6 @@ theme:
     text: Inter
     code: JetBrains Mono
   features:
-    - navigation.instant
     - navigation.tracking
     - navigation.tabs
     - navigation.sections
