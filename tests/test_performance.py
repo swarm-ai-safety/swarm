@@ -243,8 +243,15 @@ PAYOFFS_BOTH_BUDGET_MS = 50.0   # optimised target ~2ms; CI runners are ~3-4× s
 SIGMOID_FAST_BUDGET_MS = 12.0   # optimised target ~0.5ms; 12ms allows CI jitter
 
 
+@pytest.mark.perf
 class TestPerformance:
-    """Wall-clock budgets for hot-path operations on 10k interactions."""
+    """Wall-clock budgets for hot-path operations on 10k interactions.
+
+    Marked ``perf`` so CI runs these serially and without coverage: the
+    coverage tracer and xdist parallelism distort wall-clock timing by
+    5-20×, which is unrelated to the regressions these budgets exist to
+    catch. See the dedicated ``perf`` step in ``.github/workflows/ci.yml``.
+    """
 
     def test_summary_within_budget(self, interactions_10k, reporter):
         elapsed_s = _timeit(lambda: reporter.summary(interactions_10k))
