@@ -66,6 +66,43 @@ class TestListSubcommand:
         assert "Error" in captured.err
 
 
+class TestAgentsSubcommand:
+    """Tests for the 'agents' subcommand."""
+
+    def test_agents_lists_known_agent_types(self, monkeypatch, capsys):
+        """agents should list at least a few well-known agent types."""
+        monkeypatch.setattr(sys, "argv", ["python -m src", "agents"])
+        rc = main()
+        assert rc == 0
+        captured = capsys.readouterr()
+        assert "AGENT" in captured.out
+        assert "HonestAgent" in captured.out
+        assert "AdversarialAgent" in captured.out
+
+    def test_agents_excludes_base_agent(self, monkeypatch, capsys):
+        """The abstract BaseAgent should not appear as a selectable agent."""
+        monkeypatch.setattr(sys, "argv", ["python -m src", "agents"])
+        rc = main()
+        assert rc == 0
+        lines = capsys.readouterr().out.splitlines()
+        agent_names = [
+            line.split()[0]
+            for line in lines
+            if line and not line.startswith(("AGENT", "-"))
+        ]
+        assert "BaseAgent" not in agent_names
+
+    def test_agents_verbose_includes_module_and_full_doc(
+        self, monkeypatch, capsys
+    ):
+        """agents -v should include module paths and multi-line docstrings."""
+        monkeypatch.setattr(sys, "argv", ["python -m src", "agents", "-v"])
+        rc = main()
+        assert rc == 0
+        captured = capsys.readouterr()
+        assert "module: swarm.agents." in captured.out
+
+
 class TestRunSubcommand:
     """Tests for the 'run' subcommand."""
 
