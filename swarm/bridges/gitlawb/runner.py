@@ -306,7 +306,7 @@ def main() -> None:
         help="Repos to monitor (empty = all)",
     )
     parser.add_argument("--node-url", default="https://node.gitlawb.com")
-    parser.add_argument("--ws-url", default="wss://node.gitlawb.com/graphql")
+    parser.add_argument("--ws-url", default="wss://node.gitlawb.com/graphql/ws")
     parser.add_argument("--limit", type=int, default=100)
     parser.add_argument("--json-output", type=str, help="Write report JSON to file")
     parser.add_argument("--persistence", type=str, help="JSONL persistence file path (one interaction per line)")
