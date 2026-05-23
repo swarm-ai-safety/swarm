@@ -1,0 +1,181 @@
+# =============================================================================
+# example_annotated.yaml
+#
+# A heavily-commented SWARM scenario file aimed at new contributors.  Every
+# field is explained inline so you can copy this file, tweak one knob at a
+# time, and watch the simulation respond.
+#
+# How to run this scenario:
+#
+#   python -m swarm run scenarios/example_annotated.yaml --seed 42 \
+#       --epochs 2 --steps 5
+#
+# The CLI flags --epochs and --steps override `simulation.n_epochs` and
+# `simulation.steps_per_epoch` below.  --seed overrides `simulation.seed`.
+#
+# For the conceptual walk-through, see:
+#   https://www.swarm-ai.org/getting-started/first-scenario/
+# =============================================================================
+
+
+# -----------------------------------------------------------------------------
+# Identity
+# -----------------------------------------------------------------------------
+
+# scenario_id is a short, machine-friendly slug.  It is used as the prefix for
+# log files, the SQLite `scenario_runs` row, and any analysis tooling that
+# groups runs by scenario.  Keep it stable across runs you want to compare.
+scenario_id: example_annotated
+
+# description is a free-form human-readable summary.  It shows up in run logs
+# and in any UI that lists scenarios.
+description: "Mixed-agent example scenario with inline comments for newcomers"
+
+# motif is an optional tag for grouping scenarios by experimental theme
+# (e.g. coordination_test, redteam, governance_sweep).  Safe to omit.
+motif: tutorial
+
+
+# -----------------------------------------------------------------------------
+# Agents
+# -----------------------------------------------------------------------------
+# `agents` is a list of (type, count) entries.  Each entry creates `count`
+# instances of the named agent type.  Valid `type` values match the
+# AgentType enum in swarm/models/agent.py — the most common are:
+#
+#   honest          — cooperative baseline; the "good" agents.
+#   opportunistic   — cooperates when profitable, defects otherwise.
+#   adversarial     — actively works against the ecosystem (red team).
+#   deceptive       — appears honest but games the system.
+#   cautious        — conservative; rarely initiates risky interactions.
+#   collaborative   — actively seeks coordination.
+#   adaptive        — learns from past payoffs and adjusts behaviour.
+#
+# In this example we use a 3:1:1 mix so the simulation has clearly identifiable
+# adversarial dynamics without being dominated by them.  Try bumping
+# `adversarial` to 3 and re-running — you should see toxicity and welfare
+# change.
+agents:
+  - type: honest          # The cooperative majority.
+    count: 3
+
+  - type: opportunistic   # Tit-for-tat-ish behaviour.
+    count: 1
+
+  - type: adversarial     # The red team; targets honest agents.
+    count: 1
+
+
+# -----------------------------------------------------------------------------
+# Governance
+# -----------------------------------------------------------------------------
+# The governance block configures the *mechanisms* the system uses to keep
+# adversarial behaviour in check.  Every knob here is OPTIONAL and ships with
+# a default in swarm/governance/config.py — feel free to delete sections you
+# don't want to touch.  We list them with their defaults so you can see what
+# levers exist.
+governance:
+
+  # ---- Transaction tax -------------------------------------------------------
+  # A small fee on every accepted interaction.  Disabled (rate=0.0) by default.
+  # Useful as a Pigouvian lever to internalise externalities.
+  transaction_tax_rate: 0.0     # 0.0 = no tax. Try 0.05 for a 5% tax.
+  transaction_tax_split: 0.5    # How the tax is split between treasury / refund.
+
+  # ---- Reputation decay ------------------------------------------------------
+  # Multiplicative decay factor applied to reputation each epoch.
+  # 1.0 = no decay (reputation persists forever).  0.95 = reputation halves
+  # roughly every ~14 epochs.
+  reputation_decay_rate: 1.0
+
+  # ---- Bandwidth -------------------------------------------------------------
+  # Maximum number of interactions an agent can initiate per step.  Lower
+  # values force prioritisation and surface coordination failures faster.
+  bandwidth_cap: 10
+
+  # ---- Staking ---------------------------------------------------------------
+  # Require agents to lock up resources before participating.  Disabled here.
+  staking_enabled: false
+  min_stake_to_participate: 0.0   # Only used when staking_enabled: true.
+
+  # ---- Circuit breaker -------------------------------------------------------
+  # Freezes agents whose behaviour crosses configured thresholds.  Disabled
+  # in this tutorial so you can see raw dynamics.  Enable it to study how the
+  # breaker contains red-team agents.
+  circuit_breaker_enabled: false
+
+  # ---- Random audits ---------------------------------------------------------
+  # Periodically check agents at random.  Disabled here.
+  audit_enabled: false
+
+
+# -----------------------------------------------------------------------------
+# Simulation
+# -----------------------------------------------------------------------------
+# How long the simulation runs.  These values are sensible defaults for a
+# tutorial run; the README recommends `n_epochs: 30, steps_per_epoch: 15` for
+# something where governance dynamics get a chance to play out.
+simulation:
+  # n_epochs is the number of high-level epochs (think "rounds").  Each epoch
+  # ends with a metrics snapshot and (optionally) a governance update.
+  n_epochs: 10
+
+  # steps_per_epoch is the number of interaction steps inside each epoch.
+  # Total interactions ≈ n_agents * bandwidth_cap * steps_per_epoch * n_epochs.
+  steps_per_epoch: 10
+
+  # seed makes runs reproducible.  Use the same seed to reproduce a specific
+  # behaviour you want to debug; vary it to gauge variance across runs.
+  seed: 42
+
+
+# -----------------------------------------------------------------------------
+# Rate limits
+# -----------------------------------------------------------------------------
+# Hard caps per epoch / per step to keep the simulation from generating
+# absurd amounts of traffic.  These defaults match `baseline.yaml`.
+rate_limits:
+  posts_per_epoch: 10            # Forum-style posts an agent can publish.
+  interactions_per_step: 5       # Peer-to-peer interactions per step.
+  votes_per_epoch: 50            # Reputation votes the agent can cast.
+  tasks_per_epoch: 3             # Domain tasks the agent can complete.
+
+
+# -----------------------------------------------------------------------------
+# Payoff
+# -----------------------------------------------------------------------------
+# The payoff matrix used for interaction outcomes.  These coefficients show
+# up directly in welfare calculations; see swarm/models/payoff.py for the
+# math.  The defaults below mirror the canonical baseline.
+payoff:
+  s_plus: 2.0      # Benefit to receiver from a beneficial interaction.
+  s_minus: 1.0     # Cost to receiver from a harmful interaction.
+  h: 2.0           # Externality cost imposed on the broader ecosystem.
+  theta: 0.5       # Fraction of surplus retained by the initiator.
+  rho_a: 0.0       # Initiator's risk aversion (0 = risk-neutral).
+  rho_b: 0.0       # Receiver's risk aversion.
+  w_rep: 1.0       # Weight of reputation in payoff calculations.
+
+
+# -----------------------------------------------------------------------------
+# Success criteria
+# -----------------------------------------------------------------------------
+# Soft assertions evaluated at the end of the run.  Failing a criterion does
+# NOT abort the run — it just prints `[FAIL]` next to the line in the CLI
+# summary so you know things didn't look the way the scenario author hoped.
+# Tune these to match what counts as "success" for your experiment.
+success_criteria:
+  min_epochs: 10         # Sanity check: did the simulation actually run?
+  min_agents: 5          # Likewise for population size.
+  toxicity_threshold: 0.5  # Average toxicity at or below this is "healthy".
+
+
+# -----------------------------------------------------------------------------
+# Outputs
+# -----------------------------------------------------------------------------
+# Where to write artifacts.  Paths are relative to the directory you launched
+# `python -m swarm` from.  Both are optional; if you omit the block entirely,
+# the CLI's --export-json / --export-csv flags still work.
+outputs:
+  event_log: "logs/example_annotated_events.jsonl"   # One JSON line per event.
+  metrics_csv: "logs/example_annotated_metrics.csv"  # One row per epoch.
