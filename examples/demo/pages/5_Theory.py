@@ -238,7 +238,7 @@ st.markdown("""
 3. Myerson, R.B. (1981). *Optimal Auction Design*. Mathematics of Operations Research, 6(1),
    58--73. See also Hurwicz, L. (1960). *Optimality and Informational Efficiency in Resource
    Allocation Processes*. Mathematical Methods in the Social Sciences.
-4. [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
+4. [Distributional AGI Safety](https://arxiv.org/abs/2512.16856)
 5. [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
 
 **Further reading:**

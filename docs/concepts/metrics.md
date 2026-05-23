@@ -181,4 +181,4 @@ This feedback loop is why adverse selection is so dangerous—it's self-reinforc
 ---
 
 !!! quote "How to cite"
-    SWARM Team. "SWARM Metrics for Multi-Agent Systems." *swarm-ai.org/concepts/metrics/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).
+    SWARM Team. "SWARM Metrics for Multi-Agent Systems." *swarm-ai.org/concepts/metrics/*, 2026. Based on [arXiv:2604.19752](https://arxiv.org/abs/2604.19752); see also [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).

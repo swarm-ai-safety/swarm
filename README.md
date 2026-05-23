@@ -466,7 +466,7 @@ Full paper sources and supplementary materials are in the [swarm-artifacts](http
 
 - Kyle, A.S. (1985). *Continuous Auctions and Insider Trading*. Econometrica.
 - Glosten, L.R. & Milgrom, P.R. (1985). *Bid, Ask and Transaction Prices in a Specialist Market*. JFE.
-- [Distributional Safety in Agentic Systems](https://arxiv.org/abs/2512.16856)
+- [Distributional AGI Safety](https://arxiv.org/abs/2512.16856)
 - [Multi-Agent Market Dynamics](https://arxiv.org/abs/2502.14143)
 - [The Hot Mess Theory of AI](https://alignment.anthropic.com/2026/hot-mess-of-ai/)
 - [Infinite Backrooms](https://dreams-of-an-electric-mind.webflow.io/) — observational evidence of local-coherence/global-incoherence in AI-to-AI interaction

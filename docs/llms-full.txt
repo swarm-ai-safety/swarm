@@ -2,7 +2,8 @@
 
 > Source: https://swarm-ai.org
 > Repository: https://github.com/swarm-ai-safety/swarm
-> Paper: https://arxiv.org/abs/2512.16856
+> Paper: https://arxiv.org/abs/2604.19752
+> Paper (precursor): https://arxiv.org/abs/2512.16856
 > License: MIT
 > Summary version: https://swarm-ai.org/llms.txt
 > Claims registry: https://swarm-ai.org/claims-registry.json
@@ -14,15 +15,21 @@ SWARM (System-Wide Assessment of Risk in Multi-agent systems) is a research fram
 
 ## How to Cite
 
-SWARM Team. "Distributional Safety in Agentic Systems." swarm-ai.org, 2026. Based on arXiv:2512.16856.
+Aiersilan, A. and Savitt, R. "Soft-Label Governance for Distributional Safety in Multi-Agent Systems." arXiv:2604.19752, 2026. See also: Tomašev, N., Franklin, M., Jacobs, J., Krier, S., & Osindero, S. "Distributional AGI Safety." arXiv:2512.16856, 2025.
 
 ```bibtex
-@misc{swarm2025distributional,
-  title={Distributional Safety in Agentic Systems},
-  author={SWARM Team},
+@misc{swarm2026softlabel,
+  title={Soft-Label Governance for Distributional Safety in Multi-Agent Systems},
+  author={Aiersilan, A. and Savitt, R.},
+  year={2026},
+  url={https://arxiv.org/abs/2604.19752}
+}
+
+@misc{tomasev2025distributional,
+  title={Distributional AGI Safety},
+  author={Tomašev, N. and Franklin, M. and Jacobs, J. and Krier, S. and Osindero, S.},
   year={2025},
-  url={https://swarm-ai.org},
-  note={Based on arXiv:2512.16856}
+  url={https://arxiv.org/abs/2512.16856}
 }
 ```
 

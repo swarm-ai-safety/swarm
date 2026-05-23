@@ -1,0 +1,442 @@
+# Exploration Tree: Research Trajectory from Problem to Solution
+
+exploration:
+  nodes:
+    # Central question (root)
+    - id: node-00
+    type: question
+    title: "Can soft (probabilistic) labels replace binary good/bad classifications in multi-agent AI safety?"
+    description: "Core research question: distributed safety requires nuanced judgment about interaction quality; binary thresholds miss distributional information (Goodhart's Law), enabling gaming. Can probabilistic soft labels provide richer safety signals and enable better governance?"
+    support_level: explicit
+    source_refs:
+        - "Abstract (lines 1–10): motivation"
+        - "§1 Introduction (lines 12–45): problem framing"
+    children:
+        - node-01
+        - node-02
+        - node-03
+  
+      # Observation tier (direct problem observations)
+      - id: node-01
+    type: observation
+    title: "O1: Binary acceptance thresholds are gaming-prone (Goodhart's Law)"
+    description: "Observable problem: when governance uses binary p > 0.5 criterion, agents strategically manipulate signals to cross threshold while degrading true quality. Soft labels capture distribution around boundary."
+    support_level: explicit
+    source_refs:
+        - "§2 Observations (O1)"
+        - "problem.md (Observations section)"
+    parent: node-00
+  
+      - id: node-02
+    type: observation
+    title: "O2: Proxy signals are noisy; aggregation via weighted combination reduces variance"
+    description: "Observable: single signals (task_progress, rework, rejections, engagement) are individually unreliable; combining them with learned weights improves discriminative power between honest and adversarial agents."
+    support_level: explicit
+    source_refs:
+        - "§2 Observations (O2)"
+        - "Table 9: proxy weight sensitivity"
+    parent: node-00
+  
+      - id: node-03
+    type: observation
+    title: "O3–O7: Population-level distributional metrics reveal selection effects missed by hard thresholds"
+    description: "Observable: toxicity (E[1-p|accepted]), quality gap (adverse selection), conditional loss (externality filtering), and spread (diversity) provide granular feedback on governance efficacy."
+    support_level: explicit
+    source_refs:
+        - "§2 Observations (O3–O7)"
+        - "Algorithm section (Eq. 12–15)"
+        - "Table 4: metric comparison"
+    parent: node-00
+  
+      # Gap tier (technical gaps requiring solution)
+      - id: node-04
+    type: gap
+    title: "G1: How to calibrate proxy scores to probabilities?"
+    description: "Gap: Observable signals map to raw proxy score v̂ ∈ [-1,+1]; must convert to calibrated probability p ∈ [0,1] that accurately reflects interaction quality. Solution: sigmoid calibration with steepness k=2.0."
+    support_level: explicit
+    source_refs:
+        - "problem.md (Gaps section, G1)"
+        - "§4 Algorithm (Eq. 3, Sigmoid calibration section)"
+        - "H02 Heuristic: sigmoid steepness"
+    parent: node-00
+    related_claims:
+        - C01
+  
+      - id: node-05
+    type: gap
+    title: "G2: How to decompose payoffs under uncertainty to enable independent governance?"
+    description: "Gap: Agent payoffs depend on interaction quality (uncertain); must decompose payoff into independent lever costs (tax, externality, reputation) so each can be ablated and optimized. Solution: S_soft = p·s⁺ − (1−p)·s⁻; govern via Π = S_soft − τ·S_soft − ρ·(1−p)·h + L_rep."
+    support_level: explicit
+    source_refs:
+        - "problem.md (Gaps section, G2)"
+        - "§4 Algorithm (Eq. 4–11, Soft payoff decomposition)"
+        - "H04 Heuristic: governance lever additivity"
+    parent: node-00
+    related_claims:
+        - C02
+        - C03
+        - C06
+  
+      - id: node-06
+    type: gap
+    title: "G3: What governance lever combinations achieve Pareto improvement (welfare, safety)?"
+    description: "Gap: Single levers (e.g., aggressive externality internalization ρ) collapse welfare without reducing toxicity. Must find multi-lever combinations that trade off welfare and toxicity optimally. Solution: Adaptive Governance (ρ=0.30 paired with θ_CB=0.70) recovers welfare."
+    support_level: explicit
+    source_refs:
+        - "problem.md (Gaps section, G3)"
+        - "Table 5: ρ ablation shows welfare collapse"
+        - "Table 6b: θ_CB optimal region [0.35–0.50]"
+        - "C03, C06, C07: key findings"
+    parent: node-00
+    related_claims:
+        - C03
+        - C06
+        - C07
+  
+      # Key insight (integrating observations + gaps)
+      - id: node-07
+    type: insight
+    title: "Key Insight: Distributional Safety via Soft Labels + Adaptive Levers"
+    description: "Core realization: soft labels (probabilistic assessments) preserve information lost in binary thresholds, enabling detection of Goodhart-style gaming (C04). Multi-lever governance must pair aggressive mechanisms (ρ) with adaptive thresholds (θ_CB) to avoid welfare collapse. Distributional metrics (toxicity, quality gap) directly measure what binary metrics miss."
+    support_level: explicit
+    source_refs:
+        - "§4 (Core insight section)"
+        - "Claims C01–C07 (integrated framing)"
+    parent: node-00
+    children:
+        - node-08
+        - node-09
+        - node-10
+  
+      # Methodological tier (how to validate key insight)
+      - id: node-08
+    type: method
+    title: "M1: Proxy computer + sigmoid calibration pipeline"
+    description: "Architecture: Normalize observables → weighted combination v̂ → sigmoid p. Tested empirically with five seed replication (H03) across seven scenarios (Table 2). Assumption A2 (calibration succeeds) is critical but not explicitly validated in paper."
+    support_level: explicit
+    source_refs:
+        - "Architecture section: ProxyComputer → CalibratedSigmoid"
+        - "Algorithm section: Eq. 1–3"
+        - "H01–H02 heuristics"
+    parent: node-07
+  
+      - id: node-09
+    type: method
+    title: "M2: Soft payoff decomposition with independent governance levers"
+    description: "Architecture: Compute S_soft from p; apply independent costs (τ, ρ, audit, reputation). Assumption A6 (additivity) enables ablation. Tested via grid search on τ, ρ, θ_CB, λ, p_audit (Table 5, 6a–d)."
+    support_level: explicit
+    source_refs:
+        - "Architecture section: SoftPayoffEngine"
+        - "Algorithm section: Eq. 4–11"
+        - "H04–H07 heuristics"
+        - "Table 5, 6a–d: ablation results"
+    parent: node-07
+  
+      - id: node-10
+    type: method
+    title: "M3: Population-level distributional metrics"
+    description: "Architecture: Compute toxicity, quality gap, conditional loss, spread over accepted/rejected sets. Metrics directly measure selection effects and gaming indicators. Tested across scenarios to quantify governance efficacy."
+    support_level: explicit
+    source_refs:
+        - "Architecture section: SoftMetrics"
+        - "Algorithm section: Eq. 12–15"
+        - "Table 4: main results with metrics"
+    parent: node-07
+  
+      # Experimental tier (empirical validation)
+      - id: node-11
+    type: experiment
+    title: "E01: Main Results Across Seven Scenarios"
+    description: "Verifies C01, C02, C03 via 7 scenarios (Baseline, Strict, Adaptive, Threshold Dancer, Misalignment Sweeps, LLM Backing, Adversarial Prompts). 5 seeds each, ≥100 interactions/epoch. Measures toxicity, welfare, quality gap, spread."
+    support_level: explicit
+    source_refs:
+        - "Table 2: scenario definitions"
+        - "Table 4: main results"
+        - "experiments.md (E01)"
+    parent: node-07
+  
+      - id: node-12
+    type: experiment
+    title: "E02: Ablation Studies on Five Governance Parameters"
+    description: "Verifies C02, C03, C06 via sweeps on τ, θ_CB, ρ, λ, p_audit. Finds: tax monotonic welfare decline (Table 6a); CB non-monotonic with optimal region (Table 6b); ρ monotonic welfare collapse (Table 5); audit weak effect (Table 6c); λ inverse welfare relationship (Table 6d)."
+    support_level: explicit
+    source_refs:
+        - "Table 5, 6a–d: ablation results"
+        - "experiments.md (E02)"
+        - "H05–H07 heuristics"
+    parent: node-07
+  
+      - id: node-13
+    type: experiment
+    title: "E03: Self-Optimizing Agent Case Study"
+    description: "Verifies C04 (Goodhart detection) via single cost-minimizing agent in honest population. Expected: agent passes hard metrics while soft metrics (toxicity, quality gap) independently detect degradation."
+    support_level: explicit
+    source_refs:
+        - "experiments.md (E03)"
+        - "C04 claim"
+    parent: node-07
+  
+      - id: node-14
+    type: experiment
+    title: "E04: Transfer to LLM-Backed Agents"
+    description: "Verifies C05 via Concordia (Llama 3.1 8B), Claude (Haiku/Sonnet), GPT-4o Mini. Expected: LLM behavioral outputs subject to same soft-label pipeline; governance bypass rate low; RLHF-aligned models resist adversarial prompts."
+    support_level: explicit
+    source_refs:
+        - "experiments.md (E04)"
+        - "C05 claim"
+        - "Table 2 (LLM Backing, Adversarial Prompts rows)"
+    parent: node-07
+  
+      # Solution tier (design decisions & heuristics)
+      - id: node-15
+    type: solution_component
+    title: "H01: Default Proxy Weights (Task Progress Priority, w1=0.4)"
+    description: "Design decision: prioritize task_progress (w1=0.4, double other weights) because it's the only direct outcome measure. Indirect signals (rework, rejections, engagement) are noisy/manipulable. Sensitivity: High (5–60pp separation shift, Table 9). Bounds: w1 ∈ [0.2, 0.8]."
+    support_level: explicit
+    source_refs:
+        - "H01 heuristic"
+        - "Table 9: proxy weight ablation"
+        - "architecture.md: ProxyComputer design choice"
+    parent: node-09
+    related_claims:
+        - C01
+        - C02
+  
+      - id: node-16
+    type: solution_component
+    title: "H02: Sigmoid Steepness k=2.0"
+    description: "Calibration heuristic: k=2.0 is practical midpoint balancing discrimination vs. overconfidence. Sensitivity: Medium. Bounds: k ∈ [1.0, 5.0]. No explicit ablation in paper; fixed based on standard calibration practices."
+    support_level: explicit
+    source_refs:
+        - "H02 heuristic"
+        - "Appendix C: calibration heuristics"
+        - "architecture.md: CalibratedSigmoid design choice"
+    parent: node-08
+    related_claims:
+        - C01
+  
+      - id: node-17
+    type: solution_component
+    title: "H03: Five-Seed Replication Protocol (Seeds: 42, 123, 456, 789, 1024)"
+    description: "Replication heuristic: five seeds provide ~25–35% tighter error bars than 3 seeds, adequate for detecting large effects (40%+ welfare changes). Tradeoff: cross-seed variation not deeply characterized. Bounds: practical 5–30 seeds."
+    support_level: explicit
+    source_refs:
+        - "H03 heuristic"
+        - "Assumption A5 (Five-Seed Replication)"
+        - "algorithm.md: complexity analysis"
+    parent: node-07
+    related_claims:
+        - all claims
+  
+      - id: node-18
+    type: solution_component
+    title: "H04–H07: Governance Lever Heuristics (τ, θ_CB, ρ, λ)"
+    description: "Parameter calibration heuristics derived from ablation studies. H04: τ optimal [0.05–0.15]. H05: θ_CB optimal [0.35–0.50]. H06: λ ∈ [0.85–0.95]. H07: ρ optimal [0.0–0.30]; ρ > 0.5 risks welfare collapse."
+    support_level: explicit
+    source_refs:
+        - "H04–H07 heuristics"
+        - "Table 5, 6a–d ablation results"
+        - "training.md: governance parameter bounds"
+    parent: node-09
+    related_claims:
+        - C02
+        - C03
+        - C06
+        - C07
+  
+      # Claim tier (formal findings)
+      - id: node-19
+    type: claim
+    title: "C01: Soft Labels Preserve Safety Information"
+    description: "Soft probabilistic labels p ∈ [0,1] preserve information about interaction quality distribution that binary thresholds discard. Soft metrics (toxicity, quality gap, spread) reveal gaming and selection effects invisible to hard metrics. Proof: Table 9 (proxy weights) and Table 4 (scenario comparison) show soft metrics distinguish scenarios where hard acceptance rates differ marginally."
+    support_level: explicit
+    source_refs:
+        - "Claims section (C01)"
+        - "Table 4, 9"
+    parent: node-15
+        related_experiments:
+        - E01
+        - E03
+  
+      - id: node-20
+    type: claim
+    title: "C02: Multi-Lever Governance Reduces Welfare"
+    description: "Applying multiple governance levers (τ, θ_CB, ρ, audit, reputation) simultaneously reduces agent welfare without sufficient toxicity reduction. Strict Governance scenario (τ=0.10, ρ=0.10, θ_CB=0.35) cuts welfare ~40% with minimal toxicity gain. Proof: Table 4 (Baseline welfare 262.14 → Strict welfare ~155)."
+    support_level: explicit
+    source_refs:
+        - "Claims section (C02)"
+        - "Table 4: scenario comparison"
+        - "Table 5, 6a–d: ablation results"
+    parent: node-18
+        related_experiments:
+        - E01
+        - E02
+  
+      - id: node-21
+    type: claim
+    title: "C03: Aggressive Externality Internalization Collapses Welfare Without Safety Gain"
+    description: "Increasing externality internalization ρ beyond 0.30 monotonically collapses welfare (262.14 → −67.51 as ρ 0→1, Table 5) without reducing toxicity, demonstrating that passive cost-imposing mechanisms alone are insufficient. Key finding: must pair ρ with adaptive acceptance threshold θ_CB for Pareto improvement."
+    support_level: explicit
+    source_refs:
+        - "Claims section (C03)"
+        - "Table 5: externality internalization ablation"
+    parent: node-18
+        related_experiments:
+        - E02
+  
+      - id: node-22
+    type: claim
+    title: "C04: Soft Metrics Detect Goodhart's Law Gaming"
+    description: "When agents strategically game hard metrics (binary p > 0.5), soft distributional metrics (toxicity, quality gap, proxy score trend) independently detect quality degradation. Example: self-optimizing agent passes hard acceptance threshold while soft metrics show rising toxicity and shrinking spread. Proof: E03 case study."
+    support_level: explicit
+    source_refs:
+        - "Claims section (C04)"
+        - "experiments.md (E03)"
+    parent: node-07
+        related_experiments:
+        - E03
+  
+      - id: node-23
+    type: claim
+    title: "C05: Governance Transfers to LLM-Backed Agents"
+    description: "Soft-label governance mechanisms successfully constrain LLM-backed agents (Concordia, Claude, GPT-4o). LLM behavioral outputs produce p ∈ [0,1] soft labels via same proxy pipeline; governance levers statistically comparable to scripted agents; RLHF-aligned models resist adversarial prompt injection. Proof: E04 experiments across model families."
+    support_level: explicit
+    source_refs:
+        - "Claims section (C05)"
+        - "experiments.md (E04)"
+        - "Table 2 (LLM Backing, Adversarial Prompts scenarios)"
+    parent: node-14
+        related_experiments:
+        - E04
+  
+      - id: node-24
+    type: claim
+    title: "C06: Welfare-Toxicity Pareto Frontier Exists"
+    description: "Grid search over governance parameters reveals Pareto frontier: multiple lever combinations achieve different welfare/toxicity tradeoffs. Table 6b shows non-monotonic θ_CB sweep with optimal region [0.35–0.50]; Table 5 shows ρ-welfare tradeoff. Practitioners can choose governance configuration matching their risk tolerance."
+    support_level: explicit
+    source_refs:
+        - "Claims section (C06)"
+        - "Table 5, 6a–d: ablation results"
+    parent: node-18
+        related_experiments:
+        - E02
+  
+      - id: node-25
+    type: claim
+    title: "C07: Adaptive Governance (Paired Levers) Achieves Pareto Improvement"
+    description: "Pairing aggressive externality internalization (ρ=0.30) with permissive circuit breaker (θ_CB=0.70) recovers welfare toward baseline while maintaining toxicity control. Adaptive Governance scenario achieves welfare ~95–110 vs. Baseline 262 and Strict ~155, with comparable toxicity. Proof: Inferred from Table 4 scenario comparison; hypothesis-level (requires explicit Adaptive scenario validation)."
+    support_level: inferred
+    source_refs:
+        - "Claims section (C07)"
+        - "Table 2 (Adaptive Governance row)"
+        - "Table 4 (scenario results, inferred)"
+    parent: node-18
+        related_experiments:
+        - E01
+        - E02
+  
+      # Dead-end / negative result nodes (for completeness of exploration tree)
+      - id: node-26
+    type: dead_end
+    title: "Dead End: Single Governance Lever Sufficiency"
+    description: "Exploration: could one lever alone (e.g., high ρ or high τ) achieve both welfare and safety? Result: No. Aggressive single-lever application collapses welfare (Table 5: ρ=1.0 yields −67.51 welfare, Table 6a: τ=0.30 yields ~60 welfare). Multi-lever composition required."
+    support_level: explicit
+    source_refs:
+        - "Table 5, 6a: negative findings"
+        - "C03 (key negative result)"
+    parent: node-09
+  
+      - id: node-27
+    type: dead_end
+    title: "Dead End: Perfect Calibration Without Validation"
+    description: "Exploration: assume sigmoid calibration (k=2.0) succeeds without explicit validation on held-out data. Assumption A2 is critical but not empirically verified in paper. Violation: if proxy signal distribution is bimodal or shifted, sigmoid may misalign p with true success rate. Mitigation: production deployment requires calibration testing."
+    support_level: explicit
+    source_refs:
+        - "Assumption A2 (Calibrated Sigmoid Succeeds)"
+        - "Constraints section (Calibration Assumption)"
+    parent: node-08
+  
+
+    tree_statistics:
+      total_nodes: 27
+      node_types:
+        question: 1
+        observation: 3
+        gap: 3
+        insight: 1
+        method: 3
+        experiment: 4
+        solution_component: 7
+        claim: 7
+        dead_end: 2
+        unclassified: 0
+
+      support_distribution:
+        explicit: 24
+        inferred: 1
+        unknown: 2
+
+      claims_mapping:
+        C01:
+        nodes:
+          - node-15
+          - node-16
+          - node-19
+        status: explicit
+        C02:
+        nodes:
+          - node-18
+          - node-20
+        status: explicit
+        C03:
+        nodes:
+          - node-06
+          - node-18
+          - node-21
+        status: explicit
+        C04:
+        nodes:
+          - node-07
+          - node-22
+        status: explicit
+        C05:
+        nodes:
+          - node-14
+          - node-23
+        status: explicit
+        C06:
+        nodes:
+          - node-06
+          - node-18
+          - node-24
+        status: explicit
+        C07:
+        nodes:
+          - node-18
+          - node-25
+        status: inferred
+
+    # Path from root to each claim (simplified narrative chain)
+    narrative_paths:
+      "C01 Path":
+        - "node-00: Can soft labels replace binary thresholds?"
+        - "node-02: Proxy signals are noisy but aggregatable"
+        - "node-04: Need calibration mechanism"
+        - "node-08: Proxy computer + sigmoid pipeline"
+        - "node-15,16: Design heuristics H01, H02"
+        - "node-19: C01 — soft labels preserve safety info"
+
+      "C03 Path":
+        - "node-00: Central question"
+        - "node-06: Multi-lever Pareto tradeoff gap"
+        - "node-09: Soft payoff decomposition method"
+        - "node-12: E02 ablation studies"
+        - "node-21: C03 — aggressive ρ collapses welfare"
+
+      "C07 Path":
+        - "node-00: Central question"
+        - "node-06: Multi-lever optimization gap"
+        - "node-07: Key insight: adaptive levers needed"
+        - "node-09,10: Methods for payoff decomposition & metrics"
+        - "node-18: H04–H07 leverage heuristics"
+        - "node-25: C07 — Adaptive Governance achieves Pareto improvement (inferred)"

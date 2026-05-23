@@ -130,4 +130,4 @@ The degree to which agents bear the cost of ecosystem harm they cause, controlle
 ---
 
 !!! quote "How to cite this glossary"
-    SWARM Team. "SWARM Glossary: Distributional AGI Safety Definitions." *swarm-ai.org/glossary/*, 2026. Based on [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).
+    SWARM Team. "SWARM Glossary: Distributional AGI Safety Definitions." *swarm-ai.org/glossary/*, 2026. Based on [arXiv:2604.19752](https://arxiv.org/abs/2604.19752); see also [arXiv:2512.16856](https://arxiv.org/abs/2512.16856).
