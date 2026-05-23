@@ -47,6 +47,19 @@ class CautiousAgent(BaseAgent):
         name: Optional[str] = None,
         rng=None,
     ):
+        """Initialise a CautiousAgent.
+
+        Args:
+            agent_id: Stable identifier for this agent in the simulation.
+            threshold: Minimum expected interaction quality `p` (or trust) to
+                accept a counterparty. Used as the default if not overridden
+                via ``config["threshold"]``.
+            roles: Optional explicit role list; defaults to BaseAgent default.
+            config: Optional config dict. Recognised keys: ``threshold``,
+                ``post_probability``.
+            name: Optional human-readable display name.
+            rng: Optional ``random.Random``-like instance for reproducibility.
+        """
         super().__init__(
             agent_id=agent_id,
             agent_type=AgentType.CAUTIOUS,
@@ -63,6 +76,18 @@ class CautiousAgent(BaseAgent):
     # ------------------------------------------------------------------
 
     def act(self, observation: Observation) -> Action:
+        """Choose the next action under a cautious / risk-averse policy.
+
+        Decision order: accept/reject pending proposals, evaluate bids,
+        finish in-progress tasks, claim only easy/trivial tasks, propose to
+        high-trust agents, occasionally post, then upvote good content.
+
+        Args:
+            observation: Current world view for this agent.
+
+        Returns:
+            The selected ``Action`` (defaults to a no-op when nothing matches).
+        """
         # 1. Handle pending proposals
         if observation.pending_proposals:
             proposal = observation.pending_proposals[0]
@@ -115,12 +140,32 @@ class CautiousAgent(BaseAgent):
     def accept_interaction(
         self, proposal: InteractionProposal, observation: Observation
     ) -> bool:
+        """Accept only if expected quality (or fallback trust) clears threshold.
+
+        Args:
+            proposal: Incoming interaction proposal.
+            observation: Current world view (unused here but kept for API parity).
+
+        Returns:
+            True when the proposal's expected ``p`` (or counterparty trust)
+            is at least ``self.threshold``.
+        """
         expected_p = proposal.metadata.get("expected_p") if proposal.metadata else None
         return self._is_acceptable(proposal.initiator_id, expected_p)
 
     def propose_interaction(
         self, observation: Observation, counterparty_id: str
     ) -> Optional[InteractionProposal]:
+        """Propose a collaboration only to a trusted counterparty.
+
+        Args:
+            observation: Current world view (unused here but kept for API parity).
+            counterparty_id: Candidate counterparty agent id.
+
+        Returns:
+            A new ``InteractionProposal`` when the counterparty meets the
+            cautious trust threshold, otherwise ``None``.
+        """
         if not self._is_acceptable(counterparty_id):
             return None
         return InteractionProposal(
@@ -206,6 +251,16 @@ class CollaborativeAgent(BaseAgent):
         name: Optional[str] = None,
         rng=None,
     ):
+        """Initialise a CollaborativeAgent.
+
+        Args:
+            agent_id: Stable identifier for this agent in the simulation.
+            roles: Optional explicit role list; defaults to BaseAgent default.
+            config: Optional config dict. Recognised keys: ``min_trust``,
+                ``coalition_size``, ``post_probability``.
+            name: Optional human-readable display name.
+            rng: Optional ``random.Random``-like instance for reproducibility.
+        """
         super().__init__(
             agent_id=agent_id,
             agent_type=AgentType.COLLABORATIVE,
@@ -226,6 +281,18 @@ class CollaborativeAgent(BaseAgent):
     # ------------------------------------------------------------------
 
     def act(self, observation: Observation) -> Action:
+        """Choose the next action under a coalition-building policy.
+
+        Decision order: accept proposals from coalition or trusted agents,
+        finish in-progress tasks, claim available tasks, propose to coalition
+        members or rising-trust peers, signal openness via posts, then vote.
+
+        Args:
+            observation: Current world view for this agent.
+
+        Returns:
+            The selected ``Action`` (defaults to a no-op when nothing matches).
+        """
         # 1. Handle pending proposals — accept from coalition and trusted agents
         if observation.pending_proposals:
             proposal = observation.pending_proposals[0]
@@ -272,11 +339,31 @@ class CollaborativeAgent(BaseAgent):
     def accept_interaction(
         self, proposal: InteractionProposal, observation: Observation
     ) -> bool:
+        """Accept when the initiator is in the coalition or sufficiently trusted.
+
+        Args:
+            proposal: Incoming interaction proposal.
+            observation: Current world view (unused here but kept for API parity).
+
+        Returns:
+            True when the initiator is a coalition member or has trust
+            ``>= self.min_trust``.
+        """
         return self._should_accept(proposal.initiator_id)
 
     def propose_interaction(
         self, observation: Observation, counterparty_id: str
     ) -> Optional[InteractionProposal]:
+        """Propose to a coalition member or a trust-qualified candidate.
+
+        Args:
+            observation: Current world view (unused here but kept for API parity).
+            counterparty_id: Candidate counterparty agent id.
+
+        Returns:
+            A new ``InteractionProposal`` when the counterparty is acceptable,
+            otherwise ``None``.
+        """
         if not self._should_accept(counterparty_id):
             return None
         return InteractionProposal(
@@ -287,6 +374,16 @@ class CollaborativeAgent(BaseAgent):
         )
 
     def update_from_outcome(self, interaction, payoff: float) -> None:
+        """Update trust and dynamically grow/prune the coalition set.
+
+        High-trust partners (>=0.65) are added to the coalition up to
+        ``self.coalition_size``; partners whose trust drops below 0.4 are
+        evicted.
+
+        Args:
+            interaction: The completed interaction record.
+            payoff: Realised payoff for this agent from the interaction.
+        """
         super().update_from_outcome(interaction, payoff)
         # Promote high-quality partners into the coalition
         counterparty = (
@@ -369,6 +466,18 @@ class AdaptiveAgent(BaseAgent):
         name: Optional[str] = None,
         rng=None,
     ):
+        """Initialise an AdaptiveAgent.
+
+        Args:
+            agent_id: Stable identifier for this agent in the simulation.
+            roles: Optional explicit role list; defaults to BaseAgent default.
+            config: Optional config dict. Recognised keys:
+                ``initial_threshold``, ``min_threshold``, ``max_threshold``,
+                ``window_size``, ``adapt_rate``, ``explore_probability``,
+                ``post_probability``.
+            name: Optional human-readable display name.
+            rng: Optional ``random.Random``-like instance for reproducibility.
+        """
         super().__init__(
             agent_id=agent_id,
             agent_type=AgentType.ADAPTIVE,
@@ -393,6 +502,18 @@ class AdaptiveAgent(BaseAgent):
     # ------------------------------------------------------------------
 
     def act(self, observation: Observation) -> Action:
+        """Choose the next action under an adaptive / learning policy.
+
+        Decision order: accept/reject proposals at the current adapted
+        threshold, finish active tasks, claim tasks, propose using an
+        explore/exploit policy, occasionally post status updates, then vote.
+
+        Args:
+            observation: Current world view for this agent.
+
+        Returns:
+            The selected ``Action`` (defaults to a no-op when nothing matches).
+        """
         # 1. Handle pending proposals with adaptive threshold
         if observation.pending_proposals:
             proposal = observation.pending_proposals[0]
@@ -439,11 +560,34 @@ class AdaptiveAgent(BaseAgent):
     def accept_interaction(
         self, proposal: InteractionProposal, observation: Observation
     ) -> bool:
+        """Accept when the initiator clears the current adaptive threshold.
+
+        With probability ``self.explore_probability`` an unknown initiator is
+        also accepted to enable exploration of new partners.
+
+        Args:
+            proposal: Incoming interaction proposal.
+            observation: Current world view (unused here but kept for API parity).
+
+        Returns:
+            True when the initiator is acceptable under the current threshold
+            or selected for exploration.
+        """
         return self._is_acceptable(proposal.initiator_id)
 
     def propose_interaction(
         self, observation: Observation, counterparty_id: str
     ) -> Optional[InteractionProposal]:
+        """Propose to a counterparty that clears the adaptive threshold.
+
+        Args:
+            observation: Current world view (unused here but kept for API parity).
+            counterparty_id: Candidate counterparty agent id.
+
+        Returns:
+            A new ``InteractionProposal`` when the counterparty is acceptable
+            under the current threshold, otherwise ``None``.
+        """
         if not self._is_acceptable(counterparty_id):
             return None
         return InteractionProposal(
@@ -454,6 +598,16 @@ class AdaptiveAgent(BaseAgent):
         )
 
     def update_from_outcome(self, interaction, payoff: float) -> None:
+        """Record payoff in the rolling window and re-tune the threshold.
+
+        High average payoffs relax the threshold (open up); low average
+        payoffs tighten it. Window length is ``self.window_size`` and the
+        per-update step is ``self.adapt_rate``.
+
+        Args:
+            interaction: The completed interaction record.
+            payoff: Realised payoff for this agent from the interaction.
+        """
         super().update_from_outcome(interaction, payoff)
         # Record payoff and adapt threshold
         self._recent_payoffs.append(payoff)

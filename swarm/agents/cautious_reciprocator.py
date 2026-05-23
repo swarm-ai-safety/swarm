@@ -34,6 +34,17 @@ class CautiousReciprocator(BaseAgent):
         name: Optional[str] = None,
         rng=None,
     ):
+        """Initialise a CautiousReciprocator.
+
+        Args:
+            agent_id: Stable identifier for this agent in the simulation.
+            roles: Optional explicit role list; defaults to BaseAgent default.
+            config: Optional config dict. Recognised keys: ``base_threshold``,
+                ``blacklist_threshold``, ``max_per_partner``,
+                ``post_probability``.
+            name: Optional human-readable display name.
+            rng: Optional ``random.Random``-like instance for reproducibility.
+        """
         super().__init__(
             agent_id=agent_id,
             agent_type=AgentType.HONEST,  # Registers as honest archetype
@@ -61,6 +72,19 @@ class CautiousReciprocator(BaseAgent):
     # ------------------------------------------------------------------
 
     def act(self, observation: Observation) -> Action:
+        """Choose the next action under a trust-but-verify policy.
+
+        Decision order: accept/reject proposals against the per-counterparty
+        ledger, handle bid decisions, occasionally bid on bounties, finish
+        active tasks, claim new ones, propose to vetted partners, post
+        occasionally, then vote.
+
+        Args:
+            observation: Current world view for this agent.
+
+        Returns:
+            The selected ``Action`` (defaults to a no-op when nothing matches).
+        """
         # 1. Handle pending proposals
         if observation.pending_proposals:
             proposal = observation.pending_proposals[0]
@@ -112,11 +136,32 @@ class CautiousReciprocator(BaseAgent):
     def accept_interaction(
         self, proposal: InteractionProposal, observation: Observation
     ) -> bool:
+        """Accept only when the initiator clears trust and ledger gates.
+
+        Args:
+            proposal: Incoming interaction proposal.
+            observation: Current world view (unused here but kept for API parity).
+
+        Returns:
+            True iff the initiator is not blacklisted, has not exceeded the
+            per-partner cap with a non-profitable record, and meets the
+            ledger-adjusted trust threshold.
+        """
         return self._is_acceptable(proposal.initiator_id)
 
     def propose_interaction(
         self, observation: Observation, counterparty_id: str
     ) -> Optional[InteractionProposal]:
+        """Propose only to a counterparty currently flagged as acceptable.
+
+        Args:
+            observation: Current world view (unused here but kept for API parity).
+            counterparty_id: Candidate counterparty agent id.
+
+        Returns:
+            A new ``InteractionProposal`` when the counterparty passes the
+            ledger-adjusted gate, otherwise ``None``.
+        """
         if not self._is_acceptable(counterparty_id):
             return None
         return InteractionProposal(
@@ -131,6 +176,16 @@ class CautiousReciprocator(BaseAgent):
     # ------------------------------------------------------------------
 
     def update_from_outcome(self, interaction, payoff: float) -> None:
+        """Update the per-counterparty ledger and auto-blacklist on losses.
+
+        Tracks cumulative payoff and interaction count for each partner.
+        Any counterparty whose cumulative payoff drops below
+        ``self.blacklist_threshold`` is permanently added to the blacklist.
+
+        Args:
+            interaction: The completed interaction record.
+            payoff: Realised payoff for this agent from the interaction.
+        """
         super().update_from_outcome(interaction, payoff)
 
         counterparty = (
