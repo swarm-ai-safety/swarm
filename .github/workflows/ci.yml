@@ -65,7 +65,13 @@ jobs:
         run: python scripts/test_changes.py -- pytest tests/ -v -n auto --dist=loadfile --timeout=300 --durations=20 --durations-min=1.0 -p no:pytest_cov
       - name: Run full tests with coverage
         if: matrix.mode == 'full'
-        run: pytest tests/ -v -n auto --dist=loadfile --timeout=300 --durations=20 --durations-min=1.0 --cov=swarm --cov-report=term-missing --cov-fail-under=70 -p no:testmon
+        run: pytest tests/ -v -n auto --dist=loadfile --timeout=300 --durations=20 --durations-min=1.0 --cov=swarm --cov-report=term-missing --cov-fail-under=70 -p no:testmon -m "not perf"
+      # Wall-clock budget tests run serially and without coverage: the coverage
+      # tracer and xdist parallelism inflate timing 5-20×, causing false failures
+      # unrelated to real regressions. See the `perf` marker in pyproject.toml.
+      - name: Run performance budgets (serial, no coverage)
+        if: matrix.mode == 'full'
+        run: pytest tests/test_performance.py -v --timeout=300 -p no:testmon -p no:pytest_cov -p no:xdist -m perf
       - name: Upload testmon data
         if: success() && matrix.mode == 'full'
         uses: actions/upload-artifact@v7
@@ -81,11 +87,63 @@ jobs:
           path: .testmondata
           if-no-files-found: ignore
 
+  # Render-verify JS-bearing docs pages: build the static site, serve it, and
+  # confirm the dashboards actually render in a headless browser. HTTP 200 is
+  # not proof a page works — curl/WebFetch don't run JS. This gate would have
+  # caught the May-2026 runaway-canvas bug that blanked the Gitlawb dashboard.
+  render-verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Install image libs for mkdocs-material social cards
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libcairo2-dev libfreetype6-dev libffi-dev libjpeg-dev libpng-dev libz-dev pngquant
+      - name: Install docs build deps
+        run: |
+          python -m pip install \
+            "mkdocs-material[imaging]" \
+            "mkdocstrings[python]" \
+            pymdown-extensions \
+            mkdocs-git-revision-date-localized-plugin \
+            mkdocs-rss-plugin
+      - name: Build static site
+        # No --strict: pre-existing broken image links in papers/ are tolerated.
+        # The committed docs/bridges/gitlawb_snapshot.json is copied into site/,
+        # so the dashboard's same-origin backfill works without network access.
+        run: mkdocs build
+      - name: Serve built site
+        run: |
+          python -m http.server 8000 --directory site &> /tmp/http.log &
+          for i in $(seq 1 20); do
+            curl -sf http://localhost:8000/ >/dev/null && break
+            sleep 0.5
+          done
+          google-chrome --version || true
+      - name: Render-verify JS dashboards
+        run: |
+          scripts/render-verify.sh "http://localhost:8000/bridges/gitlawb/" \
+            --id-nonempty gl-count \
+            --expect-text "Quality Distribution" \
+            --screenshot /tmp/gitlawb.png
+      - name: Upload screenshots on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: render-verify-screenshots
+          path: /tmp/*.png
+          if-no-files-found: ignore
+
   # Single required status check that gates PR merges.
   # Add "quality-gate" as a required check in GitHub branch protection.
   quality-gate:
     if: always()
-    needs: [lint, type-check, test]
+    needs: [lint, type-check, test, render-verify]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs passed
@@ -100,6 +158,10 @@ jobs:
           fi
           if [[ "${{ needs.test.result }}" != "success" ]]; then
             echo "::error::Tests failed"
+            exit 1
+          fi
+          if [[ "${{ needs.render-verify.result }}" != "success" ]]; then
+            echo "::error::Render-verify failed (a JS docs page is broken)"
             exit 1
           fi
           echo "All quality gates passed"

@@ -183,6 +183,7 @@ markers = [
     "slow: mark test as slow running (deselect with '-m \"not slow\"')",
     "memory: mark test as memory-focused (runs with memory limits)",
     "memory_intensive: mark test as long-running memory test (>1000 epochs)",
+    "perf: mark wall-clock performance budget test (run serially without coverage; tracer/xdist distort timing)",
 ]
 
 [tool.mypy]
