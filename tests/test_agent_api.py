@@ -112,13 +112,34 @@ def _auth_header(api_key: str) -> dict[str, str]:
     return {"Authorization": f"Bearer {api_key}"}
 
 
-def _wait_for_run(client, run_id: str, api_key: str, timeout: int = 60) -> dict:
-    """Wait for a run to complete and return its data."""
+def _wait_for_run(
+    client,
+    run_id: str,
+    api_key: str,
+    timeout: int = 60,
+    *,
+    require_completed: bool = False,
+) -> dict:
+    """Wait for a run to reach a terminal state and return its data.
+
+    By default both ``completed`` and ``failed`` are accepted as terminal
+    (some tests deliberately inspect failed runs). Pass
+    ``require_completed=True`` when the caller's contract is a *successful*
+    run: a ``failed`` run then fails the test loudly with the run's error,
+    rather than being returned silently and surfacing as a confusing
+    assertion further downstream (e.g. a compare endpoint returning 400
+    "not completed" instead of the expected 404).
+    """
     headers = _auth_header(api_key)
     for _ in range(timeout * 2):
         resp = client.get(f"/api/runs/{run_id}", headers=headers)
         data = resp.json()
         if data["status"] in ("completed", "failed"):
+            if require_completed and data["status"] == "failed":
+                pytest.fail(
+                    f"Run {run_id} failed during test setup "
+                    f"(expected completion): {data.get('error')!r}"
+                )
             return data
         time.sleep(0.5)
     pytest.fail("Run did not complete within timeout")
@@ -562,7 +583,7 @@ class TestCompareEndpoint:
             headers=_auth_header(api_key),
         )
         run_id = resp.json()["run_id"]
-        _wait_for_run(client, run_id, api_key)
+        _wait_for_run(client, run_id, api_key, require_completed=True)
         return run_id
 
     def test_compare_two_runs(self, client):
