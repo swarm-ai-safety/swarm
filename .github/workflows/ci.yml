@@ -65,7 +65,13 @@ jobs:
         run: python scripts/test_changes.py -- pytest tests/ -v -n auto --dist=loadfile --timeout=300 --durations=20 --durations-min=1.0 -p no:pytest_cov
       - name: Run full tests with coverage
         if: matrix.mode == 'full'
-        run: pytest tests/ -v -n auto --dist=loadfile --timeout=300 --durations=20 --durations-min=1.0 --cov=swarm --cov-report=term-missing --cov-fail-under=70 -p no:testmon
+        run: pytest tests/ -v -n auto --dist=loadfile --timeout=300 --durations=20 --durations-min=1.0 --cov=swarm --cov-report=term-missing --cov-fail-under=70 -p no:testmon -m "not perf"
+      # Wall-clock budget tests run serially and without coverage: the coverage
+      # tracer and xdist parallelism inflate timing 5-20×, causing false failures
+      # unrelated to real regressions. See the `perf` marker in pyproject.toml.
+      - name: Run performance budgets (serial, no coverage)
+        if: matrix.mode == 'full'
+        run: pytest tests/test_performance.py -v --timeout=300 -p no:testmon -p no:pytest_cov -p no:xdist -m perf
       - name: Upload testmon data
         if: success() && matrix.mode == 'full'
         uses: actions/upload-artifact@v7
