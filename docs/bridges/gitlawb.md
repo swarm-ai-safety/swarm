@@ -180,7 +180,9 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
       return Math.max(0.1, Math.min(0.95, base));
     }
     if (type === "task") {
-      const s = (event.newStatus || "").toLowerCase();
+      // Live WS events carry a status transition (newStatus); snapshot tasks
+      // carry the task's current state (status). Accept either.
+      const s = (event.newStatus || event.status || "").toLowerCase();
       if (s === "completed") return 0.8;
       if (s === "failed") return 0.2;
       if (s === "claimed") return 0.5;
@@ -235,7 +237,13 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     if (type === "push") {
       detail = `${shortDid(event.pusherDid)} pushed to ${event.repo}:${(event.refName || "").replace("refs/heads/", "")}`;
     } else if (type === "task") {
-      detail = `Task ${shortId(event.taskId)}: ${event.oldStatus} -> ${event.newStatus}`;
+      // Live WS event: oldStatus -> newStatus transition.
+      // Snapshot task: a single current status with no transition.
+      const tid = shortId(event.taskId || event.id);
+      const s = event.newStatus || event.status || "?";
+      detail = event.oldStatus
+        ? `Task ${tid}: ${event.oldStatus} -> ${s}`
+        : `Task ${tid}: ${s}`;
     }
     el.innerHTML = `
       <span class="gl-event-time">${time}</span>

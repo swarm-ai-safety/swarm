@@ -71,8 +71,21 @@ def _score_ref_update(event: dict) -> float:
 
 
 def _score_task(event: dict) -> float:
-    """Mirror of GitlawbMapper heuristic for a task-creation event."""
-    return 0.6
+    """Mirror of GitlawbMapper heuristic for a task event.
+
+    The bridge keys off the task status (`_heuristic_score` in
+    swarm/bridges/gitlawb/mapper.py): completed is a positive signal, failed a
+    strong negative. The backfill query returns each task's current ``status``,
+    which is the snapshot-equivalent of the live event's ``new_status``.
+    """
+    status = str(event.get("status") or "").lower()
+    if status == "completed":
+        return 0.8
+    if status == "failed":
+        return 0.2
+    if status == "claimed":
+        return 0.5
+    return 0.5
 
 
 def score(ref_updates: list[dict], tasks: list[dict]) -> dict:
