@@ -1,23 +1,22 @@
 #!/usr/bin/env python3
-"""Generate a backfill snapshot for the gitlawb live dashboard.
+"""Generate a scored backfill snapshot for the gitlawb live dashboard.
 
 The dashboard at docs/bridges/gitlawb.md cannot fetch node.gitlawb.com directly
 from the browser: the site CSP (`connect-src`) and the node's missing CORS
 headers both block a cross-origin request. The WebSocket stream still delivers
 *live* events, but the page would otherwise load with no history.
 
-This script runs server-side (no CORS/CSP), queries the same backfill data, and
-writes it next to the built page so the browser can load it same-origin.
+This script runs server-side (no CORS/CSP) at deploy time, queries the same
+backfill data, scores each event, and writes it next to the built page so the
+browser can load it same-origin.
 
-It has two scoring tiers:
-
-  * Scored (option C): if the ``swarm`` package is importable, each event is run
-    through the real ``GitlawbMapper``/``GitlawbMetrics`` bridge so every record
-    carries a SoftMetrics quality probability ``p`` and the snapshot includes an
-    aggregate metrics block. This is what the scheduled GitHub Action produces.
-  * Raw fallback: in a minimal environment without ``swarm`` (e.g. the Vercel
-    docs build venv), events are emitted without ``p`` and the page falls back
-    to its in-browser heuristic.
+Scoring mirrors the SWARM gitlawb bridge's heuristic
+(`swarm.bridges.gitlawb.mapper._heuristic_score`) exactly, but is reimplemented
+here with the standard library only. The bridge's heuristic *is* its scoring
+method when no LLM judge is configured, so this is faithful to it — and avoids
+installing/importing the full swarm package (numpy/pandas/pydantic/gql) in the
+docs build, which proved brittle across dependency versions. The page reads the
+per-event ``p`` directly (see scoreEvent in gitlawb.md).
 
 It is deliberately fail-safe: any network error produces an empty-but-valid
 snapshot so a deploy never breaks.
@@ -59,54 +58,35 @@ def fetch_backfill() -> dict:
     }
 
 
-def score_with_bridge(ref_updates: list[dict], tasks: list[dict]) -> dict | None:
-    """Score events via the real SWARM gitlawb bridge.
+def _score_ref_update(event: dict) -> float:
+    """Mirror of GitlawbMapper heuristic for a ref-update (push)."""
+    base = 0.7
+    ref = str(event.get("refName") or "").lower()
+    if "temp" in ref or "test" in ref or "wip" in ref:
+        base -= 0.15
+    old_sha = str(event.get("oldSha") or "")
+    if old_sha and all(c == "0" for c in old_sha):
+        base -= 0.2  # force push / branch creation
+    return round(max(0.1, min(0.95, base)), 4)
 
-    Returns a dict with per-event ``p`` attached and an aggregate ``metrics``
-    block, or ``None`` if the swarm package is not importable (raw fallback).
-    """
-    # Ensure the repo root is importable even when run as `python scripts/...`
-    # (which puts scripts/ — not the repo root — on sys.path).
-    repo_root = str(Path(__file__).resolve().parent.parent)
-    if repo_root not in sys.path:
-        sys.path.insert(0, repo_root)
 
-    try:
-        import asyncio
+def _score_task(event: dict) -> float:
+    """Mirror of GitlawbMapper heuristic for a task-creation event."""
+    return 0.6
 
-        from swarm.bridges.gitlawb.config import GitlawbConfig
-        from swarm.bridges.gitlawb.mapper import GitlawbMapper
-        from swarm.bridges.gitlawb.metrics import GitlawbMetrics
-    except ImportError:
-        return None
 
-    # Heuristic scoring only — deterministic, no API key / network judge.
-    config = GitlawbConfig(use_llm_judge=False)
-    mapper = GitlawbMapper(config)
-    metrics = GitlawbMetrics(config)
+def score(ref_updates: list[dict], tasks: list[dict]) -> dict:
+    scored_refs = [{**e, "p": _score_ref_update(e)} for e in ref_updates]
+    scored_tasks = [{**t, "p": _score_task(t)} for t in tasks]
 
-    async def _run() -> dict:
-        interactions = []
-        scored_refs = []
-        for event in ref_updates:
-            interaction = await mapper.enrich(mapper.map_ref_update(event))
-            interactions.append(interaction)
-            scored_refs.append({**event, "p": round(interaction.p, 4)})
-
-        scored_tasks = []
-        for task in tasks:
-            interaction = await mapper.enrich(mapper.map_task_creation(task))
-            interactions.append(interaction)
-            scored_tasks.append({**task, "p": round(interaction.p, 4)})
-
-        report = metrics.compute(interactions)
-        return {
-            "refUpdates": scored_refs,
-            "tasks": scored_tasks,
-            "metrics": report.to_dict(),
-        }
-
-    return asyncio.run(_run())
+    ps = [e["p"] for e in scored_refs] + [t["p"] for t in scored_tasks]
+    n = len(ps)
+    metrics = {
+        "interaction_count": n,
+        "average_quality": round(sum(ps) / n, 4) if n else 0.0,
+        "toxicity_rate": round(sum(1 for p in ps if p < 0.3) / n, 4) if n else 0.0,
+    }
+    return {"refUpdates": scored_refs, "tasks": scored_tasks, "metrics": metrics}
 
 
 def main() -> int:
@@ -124,20 +104,12 @@ def main() -> int:
     }
     try:
         raw = fetch_backfill()
-        scored = score_with_bridge(raw["refUpdates"], raw["tasks"])
-        if scored is not None:
-            snapshot["refUpdates"] = scored["refUpdates"]
-            snapshot["tasks"] = scored["tasks"]
-            snapshot["metrics"] = scored["metrics"]
-            snapshot["scored"] = True
-            tier = "scored (SoftMetrics)"
-        else:
-            snapshot["refUpdates"] = raw["refUpdates"]
-            snapshot["tasks"] = raw["tasks"]
-            tier = "raw (swarm not importable)"
+        result = score(raw["refUpdates"], raw["tasks"])
+        snapshot.update(result)
+        snapshot["scored"] = True
         snapshot["ok"] = True
         n = len(snapshot["refUpdates"]) + len(snapshot["tasks"])
-        print(f"gitlawb snapshot: {tier} — {n} events from {HTTP_URL}")
+        print(f"gitlawb snapshot: scored {n} events from {HTTP_URL}")
     except (urllib.error.URLError, TimeoutError, ValueError, OSError) as e:
         # Never fail the build on a node outage — ship an empty snapshot.
         print(
