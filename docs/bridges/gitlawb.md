@@ -198,7 +198,7 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
   }
 
   // --- Add interaction ---
-  function addInteraction(event, type) {
+  function addInteraction(event, type, defer) {
     const p = scoreEvent(event, type);
     // Use the event's own timestamp so backfilled history spreads across the
     // timeline. Snapshot pushes carry `timestamp`, snapshot tasks `createdAt`,
@@ -257,7 +257,9 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     $feed.prepend(el);
     while ($feed.children.length > MAX_FEED) $feed.lastChild.remove();
 
-    updateCharts();
+    // During bulk backfill, defer the canvas redraw — drawing once per event
+    // would mean ~700 redraws on load. Caller redraws once when done.
+    if (!defer) updateCharts();
   }
 
   function shortDid(did) {
@@ -279,8 +281,9 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     try {
       const res = await fetch("/bridges/gitlawb_snapshot.json", { cache: "no-store" });
       const data = await res.json();
-      (data.refUpdates || []).forEach(e => addInteraction(e, "push"));
-      (data.tasks || []).forEach(e => addInteraction(e, "task"));
+      (data.refUpdates || []).forEach(e => addInteraction(e, "push", true));
+      (data.tasks || []).forEach(e => addInteraction(e, "task", true));
+      updateCharts(); // single redraw after the whole backfill
     } catch (e) {
       console.warn("Backfill failed:", e);
     }

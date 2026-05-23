@@ -32,10 +32,16 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 HTTP_URL = "https://node.gitlawb.com/graphql"
+# Sample sizes: node1 carries ~99% of cluster write activity. limit:20 made the
+# dashboard show only ~2 active repos out of the ~27 the node has seen recently;
+# these larger windows make Interactions/Repos Active representative of node1's
+# real recent activity. (refUpdates has 1000+ available; tasks ~213 total.)
+REFUPDATE_LIMIT = 500
+TASK_LIMIT = 250
 QUERY = (
     "query { "
-    "refUpdates(limit: 20) { repo refName oldSha newSha pusherDid nodeDid timestamp } "
-    "tasks(limit: 20) { id status delegatorDid assigneeDid createdAt } "
+    f"refUpdates(limit: {REFUPDATE_LIMIT}) {{ repo refName oldSha newSha pusherDid nodeDid timestamp }} "
+    f"tasks(limit: {TASK_LIMIT}) {{ id status delegatorDid assigneeDid createdAt }} "
     "}"
 )
 TIMEOUT_S = 15
