@@ -133,12 +133,17 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
     const barW = w / data.length * 0.7;
     const gap = w / data.length * 0.3;
 
+    // Reserve headroom top (for the value label above the tallest bar) and
+    // bottom (for the x-axis label) so neither gets clipped at the canvas edge.
+    const BOTTOM_PAD = 20;
+    const TOP_PAD = 28;
     data.forEach((v, i) => {
-      const barH = (v / max) * (h - 30);
+      const barH = (v / max) * (h - TOP_PAD - BOTTOM_PAD);
       const x = i * (barW + gap) + gap / 2;
+      const barTop = h - BOTTOM_PAD - barH;
       ctx.fillStyle = color;
       ctx.globalAlpha = 0.8;
-      ctx.fillRect(x, h - 20 - barH, barW, barH);
+      ctx.fillRect(x, barTop, barW, barH);
       ctx.globalAlpha = 0.5;
       ctx.font = "18px JetBrains Mono, monospace";
       ctx.fillStyle = "#cdd6f4";
@@ -146,7 +151,7 @@ Real-time safety metrics for AI agent interactions on the [Gitlawb](https://gitl
       ctx.fillText(labels[i], x + barW / 2, h - 4);
       if (v > 0) {
         ctx.globalAlpha = 0.9;
-        ctx.fillText(v, x + barW / 2, h - 24 - barH);
+        ctx.fillText(v, x + barW / 2, barTop - 6);
       }
     });
   }
