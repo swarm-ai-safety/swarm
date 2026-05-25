@@ -37,6 +37,11 @@ from swarm.detection.market import (
     market_selection_scores,
     pooled_window,
 )
+from swarm.detection.stats import (
+    PairedComparison,
+    compute_paired_stats,
+    paired_comparison,
+)
 
 __all__ = [
     "MatchedDetectors",
@@ -44,6 +49,9 @@ __all__ = [
     "MarketSelectionRow",
     "market_selection_scores",
     "pooled_window",
+    "PairedComparison",
+    "paired_comparison",
+    "compute_paired_stats",
     "StreamConfig",
     "PopulationConfig",
     "AgentStream",

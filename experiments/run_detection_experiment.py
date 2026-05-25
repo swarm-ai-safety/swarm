@@ -37,6 +37,7 @@ from swarm.detection import (  # noqa: E402
     PopulationConfig,
     StreamConfig,
     aggregate,
+    compute_paired_stats,
     run_experiment,
 )
 
@@ -340,6 +341,13 @@ def main() -> None:
         {"detection": det_agg, "ttd": ttd_agg, "market": mkt_agg, "calibration": cal_agg},
     )
 
+    # Paired soft-vs-binary significance tests (built-in Phase 2).
+    stats = compute_paired_stats(res)
+    print(
+        f"Paired stats: {stats['n_survive_holm']}/{stats['family_size']} "
+        f"comparisons survive Holm-Bonferroni (alpha={stats['alpha']})"
+    )
+
     # Machine-readable summary for downstream /full_study phases (analysis, paper).
     summary = {
         "experiment": "detection_baselines",
@@ -351,6 +359,7 @@ def main() -> None:
         "time_to_detection": ttd_agg,
         "market_selection": mkt_agg,
         "calibration": cal_agg,
+        "stats": stats,
     }
     (out / "summary.json").write_text(json.dumps(summary, indent=2, default=_np_safe))
 
