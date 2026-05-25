@@ -3,8 +3,9 @@
 Produces tidy per-(base_rate, seed, metric, variant) rows for three headline
 deliverables:
 
-1. **Detection curves** — AUROC / AUPRC of each detector across adversarial
-   base rates (the ROC/PR curves themselves are recomputed for plotting).
+1. **Detection curves** — AUROC / AUPRC + partial AUROC at low FPR of each
+   detector across adversarial base rates (the ROC/PR curves themselves are
+   recomputed for plotting).
 2. **Time-to-detection** — epochs from onset until a detector flags a degrading
    agent, at a threshold calibrated to FPR <= 0.05 on benign agents.
 3. **Calibration** — Brier score and ECE of the soft proxy vs its hard
@@ -52,15 +53,16 @@ class ExperimentResults:
     detection_rows: List[dict] = field(default_factory=list)
     ttd_rows: List[dict] = field(default_factory=list)
     calibration_rows: List[dict] = field(default_factory=list)
-    # Market-level adverse-selection rows (quality_gap, conditional_loss).
+    # Market-level adverse-selection rows (quality_gap, conditional_loss, spread).
     market_rows: List[dict] = field(default_factory=list)
     # Kept for plotting one representative ROC/PR per (metric, variant).
     representative_curves: Dict[str, object] = field(default_factory=dict)
 
 
-# Toxicity is the per-agent detector; quality_gap & conditional_loss are
-# market-level selection metrics reported separately.
-_PER_AGENT_METRICS = ("toxicity",)
+# Per-agent detectors (get full AUROC + TTD treatment).
+# Market-level selection metrics (quality_gap, conditional_loss, spread) are
+# reported separately because they require a quality mixture.
+_PER_AGENT_METRICS = ("toxicity", "uncertain_fraction")
 
 
 def _eval_window(cfg: ExperimentConfig) -> tuple[int, int]:
@@ -81,7 +83,7 @@ def run_experiment(cfg: ExperimentConfig) -> ExperimentResults:
             pop = replace(cfg.population, base_rate=base_rate)
             streams = generate_population(pop, seed=seed)
 
-            # --- per-agent detection curves (toxicity) ---
+            # --- per-agent detection curves (toxicity, uncertain_fraction) ---
             for metric in _PER_AGENT_METRICS:
                 for variant, detector in pairs[metric].items():
                     scores, labels = per_agent_scores(
@@ -96,13 +98,15 @@ def run_experiment(cfg: ExperimentConfig) -> ExperimentResults:
                             "variant": variant,
                             "auroc": curve.auroc,
                             "auprc": curve.auprc,
+                            "pauroc_fpr05": curve.pauroc_fpr05,
+                            "pauroc_fpr01": curve.pauroc_fpr01,
                         }
                     )
                     # Stash one representative curve (first seed, mid base rate).
                     if seed == cfg.seeds[0] and abs(base_rate - 0.2) < 1e-9:
                         results.representative_curves[f"{metric}/{variant}"] = curve
 
-            # --- market-level adverse selection (quality_gap, conditional_loss) ---
+            # --- market-level adverse selection (quality_gap, conditional_loss, spread) ---
             market = market_selection_scores(streams, detectors, eval_start, eval_end)
             for metric, variant_vals in market.items():
                 for variant, value in variant_vals.items():

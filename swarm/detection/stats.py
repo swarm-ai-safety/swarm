@@ -131,31 +131,48 @@ def compute_paired_stats(results, alpha: float = 0.05) -> dict:
     """
     comps: List[PairedComparison] = []
 
-    # AUROC (soft - binary) per base rate.
-    auroc = _by_seed(results.detection_rows, "auroc", ["base_rate"])
-    for (br,), vmap in sorted(auroc.items()):
+    # AUROC (soft - binary) per (base rate, detector metric). Grouping by metric
+    # is required now that multiple per-agent detectors (toxicity,
+    # uncertain_fraction) emit a detection row per (base_rate, seed, variant);
+    # without it, _by_seed would overwrite one metric with the other per seed.
+    auroc = _by_seed(results.detection_rows, "auroc", ["base_rate", "metric"])
+    for (br, metric), vmap in sorted(auroc.items()):
         soft, binary = _aligned(vmap)
-        comps.append(paired_comparison(soft, binary, f"AUROC soft-binary @ br={br:.2f}"))
+        comps.append(
+            paired_comparison(soft, binary, f"AUROC soft-binary @ br={br:.2f} [{metric}]")
+        )
 
-    # Time-to-detection (binary - soft; positive => soft faster), pooled over base rates.
-    ttd = _by_seed(results.ttd_rows, "median_ttd", ["base_rate"])
-    dr = _by_seed(results.ttd_rows, "detection_rate", ["base_rate"])
-    soft_ttd, bin_ttd, soft_dr, bin_dr = [], [], [], []
-    for vmap in ttd.values():
+    # Time-to-detection (binary - soft; positive => soft faster), pooled over
+    # base rates but kept separate per detector metric (same overwrite hazard).
+    ttd = _by_seed(results.ttd_rows, "median_ttd", ["base_rate", "metric"])
+    dr = _by_seed(results.ttd_rows, "detection_rate", ["base_rate", "metric"])
+    ttd_by_metric: Dict[str, dict] = defaultdict(lambda: {"soft": [], "binary": []})
+    dr_by_metric: Dict[str, dict] = defaultdict(lambda: {"soft": [], "binary": []})
+    for (_br, metric), vmap in ttd.items():
         s, b = _aligned(vmap)
-        soft_ttd.extend(s)
-        bin_ttd.extend(b)
-    for vmap in dr.values():
+        ttd_by_metric[metric]["soft"].extend(s)
+        ttd_by_metric[metric]["binary"].extend(b)
+    for (_br, metric), vmap in dr.items():
         s, b = _aligned(vmap)
-        soft_dr.extend(s)
-        bin_dr.extend(b)
+        dr_by_metric[metric]["soft"].extend(s)
+        dr_by_metric[metric]["binary"].extend(b)
     # median_ttd can be None (censored); coerce to NaN so pairs drop cleanly.
-    soft_ttd = [np.nan if v is None else v for v in soft_ttd]
-    bin_ttd = [np.nan if v is None else v for v in bin_ttd]
-    comps.append(paired_comparison(bin_ttd, soft_ttd, "TTD binary-soft (epochs; +=soft faster)"))
-    comps.append(
-        paired_comparison(soft_dr, bin_dr, "Detection-rate soft-binary (+=soft catches more)")
-    )
+    for metric in sorted(ttd_by_metric):
+        soft_ttd = [np.nan if v is None else v for v in ttd_by_metric[metric]["soft"]]
+        bin_ttd = [np.nan if v is None else v for v in ttd_by_metric[metric]["binary"]]
+        comps.append(
+            paired_comparison(
+                bin_ttd, soft_ttd, f"TTD binary-soft (epochs; +=soft faster) [{metric}]"
+            )
+        )
+    for metric in sorted(dr_by_metric):
+        comps.append(
+            paired_comparison(
+                dr_by_metric[metric]["soft"],
+                dr_by_metric[metric]["binary"],
+                f"Detection-rate soft-binary (+=soft catches more) [{metric}]",
+            )
+        )
 
     # Market |signal| (soft vs binary) per metric, pooled over base rates.
     mkt = _by_seed(results.market_rows, "value", ["metric", "base_rate"])

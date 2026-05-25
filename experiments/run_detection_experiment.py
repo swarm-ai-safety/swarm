@@ -9,6 +9,7 @@ than a narrative. Writes a self-contained run folder under ``runs/``:
       csv/{detection,ttd,market,calibration}.csv   # raw per-(base_rate,seed) rows
       csv/*_agg.csv                                 # mean/std aggregates
       plots/{roc_toxicity,auroc_vs_baserate,ttd,market_selection,calibration}.png
+      # Full per-detector tables now include: AUROC, AUPRC, pAUROC@FPR≤0.05/0.01 (see sections 1, 1a, 1b)
       summary.md                                    # headline tables
       config.json                                   # exact config for reproducibility
 
@@ -176,38 +177,84 @@ def _write_summary(out: Path, cfg: ExperimentConfig, res, aggs: dict) -> None:
     lines.append("")
     lines.append(
         "Each soft metric is paired with its **binary analogue** — the *same* "
-        "metric computed on the proxy thresholded at τ\\*=%.2f. Toxicity is a "
-        "per-agent detector; quality-gap and conditional-loss are market-level "
-        "adverse-selection metrics (they need a quality mixture)." % cfg.tau_star
+        "metric computed on the proxy thresholded at τ\\*=%.2f. Toxicity and "
+        "uncertain_fraction are per-agent detectors; quality-gap, conditional-loss, "
+        "and spread are market-level adverse-selection metrics (they need a quality mixture). "
+        "Full per-metric rows are in the CSVs; headline tables below focus on the primary signals."
+         % cfg.tau_star
     )
     lines.append("")
 
-    lines.append("## 1. Per-agent toxicity detector — AUROC by base rate")
+    lines.append("## 1. Per-agent toxicity detector — AUROC by base rate (see CSVs for uncertain_fraction)")
     lines.append("")
     lines.append("| base rate | soft AUROC | binary AUROC |")
     lines.append("| --- | ---: | ---: |")
     det = aggs["detection"]
-    for br in sorted({r["base_rate"] for r in det}):
-        s = next(r for r in det if r["base_rate"] == br and r["variant"] == "soft")
-        b = next(r for r in det if r["base_rate"] == br and r["variant"] == "binary")
+    tox = [r for r in det if r["metric"] == "toxicity"]
+    for br in sorted({r["base_rate"] for r in tox}):
+        s = next(r for r in tox if r["base_rate"] == br and r["variant"] == "soft")
+        b = next(r for r in tox if r["base_rate"] == br and r["variant"] == "binary")
         lines.append(
             f"| {br:.2f} | {_fmt(s['auroc_mean'])} ± {_fmt(s['auroc_std'])} "
             f"| {_fmt(b['auroc_mean'])} ± {_fmt(b['auroc_std'])} |"
         )
     lines.append("")
 
-    lines.append("## 2. Time-to-detection at FPR ≤ %.2f" % cfg.max_fpr)
+    # AUPRC section - now properly surfaced (Area Under the Precision-Recall Curve)
+    lines.append("## 1a. AUPRC (Area Under the Precision-Recall Curve)")
+    lines.append("")
+    lines.append("| base rate | metric | soft AUPRC | binary AUPRC |")
+    lines.append("| --- | --- | ---: | ---: |")
+    for br in sorted({r["base_rate"] for r in det}):
+        for metric in sorted({r["metric"] for r in det if r["base_rate"] == br}):
+            s = next((r for r in det if r["base_rate"] == br and r["metric"] == metric and r["variant"] == "soft"), None)
+            b = next((r for r in det if r["base_rate"] == br and r["metric"] == metric and r["variant"] == "binary"), None)
+            s_val = _fmt(s.get("auprc_mean")) if s and s.get("auprc_mean") is not None else "n/a"
+            b_val = _fmt(b.get("auprc_mean")) if b and b.get("auprc_mean") is not None else "n/a"
+            lines.append(f"| {br:.2f} | {metric} | {s_val} | {b_val} |")
+    lines.append("")
+
+    # pAUROC section (new high-signal safety metric)
+    lines.append(
+        "## 1b. Partial AUROC at low FPR (FPR≤0.05 and ≤0.01 safety operating points)"
+    )
+    lines.append("")
+    lines.append(
+        "| base rate | metric | soft @FPR≤0.05 | binary @FPR≤0.05 "
+        "| soft @FPR≤0.01 | binary @FPR≤0.01 |"
+    )
+    lines.append("| --- | --- | ---: | ---: | ---: | ---: |")
+
+    def _cell(row, key):
+        return _fmt(row.get(key)) if row and row.get(key) is not None else "n/a"
+
+    for br in sorted({r["base_rate"] for r in det}):
+        for metric in sorted({r["metric"] for r in det if r["base_rate"] == br}):
+            s = next((r for r in det if r["base_rate"] == br and r["metric"] == metric and r["variant"] == "soft"), None)
+            b = next((r for r in det if r["base_rate"] == br and r["metric"] == metric and r["variant"] == "binary"), None)
+            lines.append(
+                f"| {br:.2f} | {metric} "
+                f"| {_cell(s, 'pauroc_fpr05_mean')} | {_cell(b, 'pauroc_fpr05_mean')} "
+                f"| {_cell(s, 'pauroc_fpr01_mean')} | {_cell(b, 'pauroc_fpr01_mean')} |"
+            )
+    lines.append("")
+
+    lines.append(
+        "## 2. Time-to-detection (toxicity detector) at FPR ≤ %.2f "
+        "(see CSVs for uncertain_fraction)" % cfg.max_fpr
+    )
     lines.append("")
     lines.append("| variant | median epochs from onset | detection rate |")
     lines.append("| --- | ---: | ---: |")
-    for r in sorted(aggs["ttd"], key=lambda r: r["variant"]):
+    ttd_tox = [r for r in aggs["ttd"] if r["metric"] == "toxicity"]
+    for r in sorted(ttd_tox, key=lambda r: r["variant"]):
         lines.append(
             f"| {r['variant']} | {_fmt(r['median_ttd_mean'], 2)} "
             f"| {_fmt(r['detection_rate_mean'], 2)} |"
         )
     lines.append("")
 
-    lines.append("## 3. Market adverse selection (risk = −gap; higher = more adverse)")
+    lines.append("## 3. Market adverse selection (risk = −gap or spread; higher = more adverse)")
     lines.append("")
     lines.append("| metric | variant | " + " | ".join(
         f"br={br:.2f}" for br in sorted(cfg.base_rates)) + " |")
@@ -250,6 +297,101 @@ def _np_safe(o):
     raise TypeError(f"Object of type {type(o)} is not JSON serializable")
 
 
+def _run_sensitivity(args) -> None:
+    """Quick sensitivity sweep over one generative knob (e.g. proxy_noise).
+
+    Produces a compact matrix of headline metrics (AUROC, AUPRC, pAUROC@FPR≤0.05)
+    for the main per-agent detectors across (parameter_value × base_rate).
+    Designed for fast exploration while still using the real experiment engine.
+    """
+    param = args.sensitivity
+    raw_values = [float(v.strip()) for v in args.values.split(",")]
+
+    # Reduced but still meaningful config for sensitivity
+    base_rates = (0.05, 0.2, 0.5)
+    n_seeds = 4
+    n_agents = 25
+    n_epochs = 16
+
+    all_rows = []
+    print(f"Sensitivity sweep: {param} over {raw_values}  |  base_rates={base_rates}  |  seeds={n_seeds}")
+
+    for val in raw_values:
+        stream_cfg = StreamConfig(
+            n_epochs=n_epochs,
+            interactions_per_epoch=8,
+            proxy_noise=val if param == "proxy_noise" else 0.09,
+            quality_jitter=val if param == "quality_jitter" else 0.02,
+            benchmark_noise=val if param == "benchmark_noise" else 0.10,
+        )
+        cfg = ExperimentConfig(
+            base_rates=base_rates,
+            seeds=tuple(range(n_seeds)),
+            population=PopulationConfig(n_agents=n_agents, stream=stream_cfg),
+        )
+
+        res = run_experiment(cfg)
+
+        # Aggregate per (base_rate, metric, variant)
+        det_agg = aggregate(
+            res.detection_rows,
+            ["base_rate", "metric", "variant"],
+            ["auroc", "auprc", "pauroc_fpr05"],
+        )
+
+        for row in det_agg:
+            row = row.copy()
+            row[param] = val
+            all_rows.append(row)
+
+    # Write results
+    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+    out = Path(args.out) if args.out else Path("runs") / f"{ts}_sensitivity_{param}"
+    (out / "csv").mkdir(parents=True, exist_ok=True)
+
+    _write_csv(out / "csv" / "sensitivity_raw.csv", all_rows)
+
+    # Build a nice headline matrix focused on the primary per-agent metric (toxicity)
+    # and also show uncertain_fraction for comparison
+    lines = [f"# Sensitivity: {param}\n"]
+    lines.append(f"Swept values: {raw_values}")
+    lines.append(f"Reduced config: {n_seeds} seeds × {n_agents} agents × {n_epochs} epochs\n")
+
+    for metric in ["toxicity", "uncertain_fraction"]:
+        lines.append(f"## {metric} — soft vs binary\n")
+
+        for mname, col in [
+            ("AUROC", "auroc_mean"),
+            ("AUPRC", "auprc_mean"),
+            ("pAUROC@FPR≤0.05", "pauroc_fpr05_mean"),
+        ]:
+            lines.append(f"### {mname}\n")
+            lines.append("| value | " + " | ".join(f"br={br:.2f}" for br in base_rates) + " |")
+            lines.append("| --- | " + " | ".join("---:" for _ in base_rates) + " |")
+
+            for val in raw_values:
+                cells = []
+                for br in base_rates:
+                    soft = next(
+                        (r for r in all_rows
+                         if r[param] == val and r["base_rate"] == br and r["metric"] == metric and r["variant"] == "soft"),
+                        None
+                    )
+                    binary = next(
+                        (r for r in all_rows
+                         if r[param] == val and r["base_rate"] == br and r["metric"] == metric and r["variant"] == "binary"),
+                        None
+                    )
+                    s = _fmt(soft[col]) if soft else "n/a"
+                    b = _fmt(binary[col]) if binary else "n/a"
+                    cells.append(f"{s} / {b}")
+                lines.append(f"| {val} | " + " | ".join(cells) + " |")
+            lines.append("")
+
+    (out / "sensitivity_summary.md").write_text("\n".join(lines))
+    print(f"Wrote sensitivity matrix to {out}/sensitivity_summary.md")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--smoke", action="store_true", help="quick small-scale run")
@@ -262,7 +404,23 @@ def main() -> None:
         help="Output run directory. Default: runs/<ts>_detection_baselines. "
         "Used by /full_study --detection to place artifacts in the study folder.",
     )
+    ap.add_argument(
+        "--sensitivity",
+        type=str,
+        default=None,
+        help="Parameter from StreamConfig to sweep (e.g. proxy_noise, quality_jitter, benchmark_noise)",
+    )
+    ap.add_argument(
+        "--values",
+        type=str,
+        default=None,
+        help="Comma-separated values for the sensitivity sweep, e.g. 0.03,0.06,0.09,0.15",
+    )
     args = ap.parse_args()
+
+    # --- Sensitivity mode (quick matrix on generative knobs) ---
+    if args.sensitivity and args.values:
+        return _run_sensitivity(args)
 
     if args.smoke:
         cfg = ExperimentConfig(
@@ -296,9 +454,12 @@ def main() -> None:
     _write_csv(out / "csv" / "market.csv", res.market_rows)
     _write_csv(out / "csv" / "calibration.csv", res.calibration_rows)
 
-    # Aggregates
-    det_agg = aggregate(res.detection_rows, ["base_rate", "variant"], ["auroc", "auprc"])
-    ttd_agg = aggregate(res.ttd_rows, ["variant"], ["median_ttd", "detection_rate"])
+    # Aggregates (include metric so pAUROC and multi-detector data aggregates correctly)
+    det_agg = aggregate(res.detection_rows, ["base_rate", "metric", "variant"], ["auroc", "auprc", "pauroc_fpr05", "pauroc_fpr01"])
+    # Group TTD by metric too: ttd_rows now carries multiple per-agent detectors
+    # (toxicity, uncertain_fraction); aggregating by variant alone would average
+    # their unrelated TTD distributions together.
+    ttd_agg = aggregate(res.ttd_rows, ["metric", "variant"], ["median_ttd", "detection_rate"])
     mkt_agg = aggregate(res.market_rows, ["metric", "variant", "base_rate"], ["value"])
     cal_agg = aggregate(
         res.calibration_rows, [],
@@ -312,8 +473,16 @@ def main() -> None:
     # Plots
     if res.representative_curves:
         _plot_roc(res.representative_curves, out / "plots" / "roc_toxicity.png")
-    _plot_auroc_vs_baserate(det_agg, out / "plots" / "auroc_vs_baserate.png")
-    _plot_ttd(ttd_agg, out / "plots" / "ttd.png")
+    # Headline plots focus on the primary per-agent detector (toxicity); the
+    # full per-metric data is in the *_agg.csv files and summary.json.
+    _plot_auroc_vs_baserate(
+        [r for r in det_agg if r["metric"] == "toxicity"],
+        out / "plots" / "auroc_vs_baserate.png",
+    )
+    _plot_ttd(
+        [r for r in ttd_agg if r["metric"] == "toxicity"],
+        out / "plots" / "ttd.png",
+    )
     _plot_market(mkt_agg, out / "plots" / "market_selection.png")
     _plot_calibration(cal_agg, out / "plots" / "calibration.png")
 

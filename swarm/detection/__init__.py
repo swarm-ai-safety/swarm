@@ -1,11 +1,11 @@
 """Matched soft-vs-binary detection experiment.
 
-Treats each soft metric (toxicity, quality gap, conditional loss) as a detector
-of degrading/adversarial agents and compares it head-to-head with its binary
-analogue — the same metric computed on the proxy thresholded at ``tau_star`` —
-on identical interaction streams. Produces ROC/PR curves across adversarial base
-rates, AUROC/AUPRC, time-to-detection at a fixed FPR, and proxy calibration
-(Brier, ECE).
+Treats each soft metric (toxicity, quality gap, conditional loss, spread,
+uncertain_fraction) as a detector of degrading/adversarial agents and compares it
+head-to-head with its binary analogue — the same metric computed on the proxy
+thresholded at ``tau_star`` — on identical interaction streams. Produces ROC/PR
+curves across adversarial base rates, AUROC/AUPRC + partial AUROC at low FPR,
+time-to-detection at a fixed FPR, and proxy calibration (Brier, ECE).
 """
 
 from swarm.detection.curves import (

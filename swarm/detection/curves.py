@@ -1,9 +1,12 @@
-"""Detection-curve metrics: ROC/PR, AUROC/AUPRC, threshold@FPR, time-to-detection.
+"""Detection-curve metrics: ROC/PR, AUROC/AUPRC, partial AUROC, threshold@FPR, time-to-detection.
 
 These are the headline measurements that replace the narrative "soft metrics
 flagged it": every detector is scored as a real classifier of degrading vs
 benign agents, with curves across adversarial base rates and a time-to-detection
 at a fixed, calibrated false-positive rate.
+
+Partial AUROC (pAUROC) at low FPR (e.g. 0.05 and 0.01) is included because safety
+monitoring almost always operates under tight false-alarm budgets.
 """
 
 from __future__ import annotations
@@ -21,7 +24,11 @@ from swarm.models.interaction import SoftInteraction
 
 @dataclass
 class DetectionCurve:
-    """ROC and PR curves plus their summary areas for one detector."""
+    """ROC and PR curves plus their summary areas for one detector.
+
+    Also includes partial AUROC (pAUROC) at low false-positive operating points,
+    which are the regimes that matter most for safety monitoring.
+    """
 
     fpr: np.ndarray
     tpr: np.ndarray
@@ -32,8 +39,18 @@ class DetectionCurve:
     auprc: float
     base_rate: float  # prevalence of positives (degrading agents)
 
+    # Partial AUROC at low FPR operating points (computed via sklearn max_fpr)
+    pauroc_fpr05: float  # pAUROC for FPR <= 0.05 (primary safety-relevant point)
+    pauroc_fpr01: float  # pAUROC for FPR <= 0.01 (very low false-alarm regime)
+
     def to_summary(self) -> dict:
-        return {"auroc": self.auroc, "auprc": self.auprc, "base_rate": self.base_rate}
+        return {
+            "auroc": self.auroc,
+            "auprc": self.auprc,
+            "base_rate": self.base_rate,
+            "pauroc_fpr05": self.pauroc_fpr05,
+            "pauroc_fpr01": self.pauroc_fpr01,
+        }
 
 
 def compute_curve(scores: Sequence[float], labels: Sequence[int]) -> DetectionCurve:
@@ -65,10 +82,18 @@ def compute_curve(scores: Sequence[float], labels: Sequence[int]) -> DetectionCu
             auroc=0.5,
             auprc=base_rate,
             base_rate=base_rate,
+            pauroc_fpr05=0.5,
+            pauroc_fpr01=0.5,
         )
 
     fpr, tpr, roc_thresholds = roc_curve(labels_arr, scores_arr)
     precision, recall, _ = precision_recall_curve(labels_arr, scores_arr)
+
+    # Partial AUROC at low FPR (safety-critical regimes)
+    # sklearn's roc_auc_score with max_fpr returns the normalized partial AUC
+    pauroc05 = float(roc_auc_score(labels_arr, scores_arr, max_fpr=0.05))
+    pauroc01 = float(roc_auc_score(labels_arr, scores_arr, max_fpr=0.01))
+
     return DetectionCurve(
         fpr=fpr,
         tpr=tpr,
@@ -78,6 +103,8 @@ def compute_curve(scores: Sequence[float], labels: Sequence[int]) -> DetectionCu
         auroc=float(roc_auc_score(labels_arr, scores_arr)),
         auprc=float(average_precision_score(labels_arr, scores_arr)),
         base_rate=base_rate,
+        pauroc_fpr05=pauroc05,
+        pauroc_fpr01=pauroc01,
     )
 
 

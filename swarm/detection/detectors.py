@@ -1,11 +1,11 @@
 """Matched soft-vs-binary detectors over interaction streams.
 
 Every soft metric reported in the framework (toxicity, quality gap, conditional
-loss) has an *obvious binary analogue*: threshold the proxy ``p`` at a cutoff
-``tau_star`` and recompute the **same** metric on the resulting hard labels. A
-soft detector reads the full probability; its matched binary detector reads only
-``1{p >= tau_star}``. Reporting both on the *same* interaction stream isolates
-exactly what thresholding throws away.
+loss, spread, uncertain fraction) has an *obvious binary analogue*: threshold the
+proxy ``p`` at a cutoff ``tau_star`` and recompute the **same** metric on the
+resulting hard labels. A soft detector reads the full probability; its matched
+binary detector reads only ``1{p >= tau_star}``. Reporting both on the *same*
+interaction stream isolates exactly what thresholding throws away.
 
 A *detector* here is a callable that maps a stream of
 :class:`~swarm.models.interaction.SoftInteraction` to a single real-valued
@@ -71,6 +71,11 @@ class MatchedDetectors:
     - **conditional loss** — the initiator's selection loss
       ``E[pi|acc] - E[pi]`` is *negative* when accepted interactions are worse
       than average, so the risk score negates it: ``-conditional_loss``.
+    - **spread** — positive when the market filters out high-quality interactions
+      (adverse selection); used as-is.
+    - **uncertain_fraction** — higher fraction of near-0.5 ``p`` values may flag
+      agents operating near decision boundaries (potential gaming/low-confidence
+      output); used as-is (band=0.25).
     """
 
     tau_star: float = 0.5
@@ -92,6 +97,14 @@ class MatchedDetectors:
     def soft_conditional_loss(self, stream: Sequence[SoftInteraction]) -> float:
         return -self._metrics.conditional_loss_initiator(list(stream))
 
+    def soft_spread(self, stream: Sequence[SoftInteraction]) -> float:
+        """Market-level adverse selection (higher = more filtering of high-quality work)."""
+        return self._metrics.spread(list(stream))
+
+    def soft_uncertain_fraction(self, stream: Sequence[SoftInteraction]) -> float:
+        """Per-agent uncertainty signal (higher = more p values near 0.5)."""
+        return self._metrics.uncertain_fraction(list(stream), band=0.25)
+
     # ------------------------------------------------------------------
     # Binary detectors (same metric, proxy thresholded at tau_star)
     # ------------------------------------------------------------------
@@ -104,6 +117,14 @@ class MatchedDetectors:
     def binary_conditional_loss(self, stream: Sequence[SoftInteraction]) -> float:
         return -self._metrics.conditional_loss_initiator(
             binarize_stream(stream, self.tau_star)
+        )
+
+    def binary_spread(self, stream: Sequence[SoftInteraction]) -> float:
+        return self._metrics.spread(binarize_stream(stream, self.tau_star))
+
+    def binary_uncertain_fraction(self, stream: Sequence[SoftInteraction]) -> float:
+        return self._metrics.uncertain_fraction(
+            binarize_stream(stream, self.tau_star), band=0.25
         )
 
     # ------------------------------------------------------------------
@@ -120,5 +141,10 @@ class MatchedDetectors:
             "conditional_loss": {
                 "soft": self.soft_conditional_loss,
                 "binary": self.binary_conditional_loss,
+            },
+            "spread": {"soft": self.soft_spread, "binary": self.binary_spread},
+            "uncertain_fraction": {
+                "soft": self.soft_uncertain_fraction,
+                "binary": self.binary_uncertain_fraction,
             },
         }

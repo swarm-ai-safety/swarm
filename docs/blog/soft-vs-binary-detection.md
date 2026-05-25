@@ -1,17 +1,17 @@
 ---
 date: 2026-05-25
-description: "We turned the 'soft metrics flagged it' vignette into a real detection experiment. Soft labels hit AUROC 1.00 and catch a degrading agent in 2 epochs; the binary threshold takes 10 and misses 12% entirely."
+description: "We turned the 'soft metrics flagged it' vignette into a real detection experiment. Soft labels hit AUROC 1.00 and AUPRC 1.00; binary versions leak badly (especially AUPRC at low base rates). Soft catches degrading agents in ~2 epochs at FPR ≤ 0.05; binary takes ~10 and misses 12%."
 ---
 
 # When the Benchmark Says "Pass": Soft Labels vs Binary Thresholds for Catching Degrading Agents
 
-*We turned the "soft metrics flagged it" vignette into a real detection experiment. Soft labels hit AUROC 1.00 and catch a degrading agent in ~2 epochs; the binary threshold takes ~10 and misses 12% of cases entirely.*
+*We turned the "soft metrics flagged it" vignette into a real detection experiment. Soft labels hit AUROC 1.00 **and AUPRC 1.00**; binary versions look decent on AUROC but leak badly on AUPRC (especially in the rare-adversary regime). Soft catches degrading agents in ~2 epochs at FPR ≤ 0.05; the binary threshold takes ~10 and misses 12% of cases entirely.*
 
 ---
 
 We've argued for a while that probabilistic (soft) labels beat binary good/bad classifications for catching agents whose quality is quietly drifting downward. Until now that claim lived in a narrative — a vignette about a self-optimizing agent that keeps passing its benchmark while its real output quality decays. A vignette is not evidence. So we built the experiment.
 
-The setup is a head-to-head: every soft metric is paired with its **binary analogue** — the *same* metric computed on the proxy thresholded at τ\*=0.50 — and both detectors are scored as real classifiers on identical interaction streams. Same data, same metric definition, the only difference is whether you keep the full probability `p` or collapse it to a 0/1 at the threshold.
+The setup is a head-to-head: every soft metric is paired with its **binary analogue** — the *same* metric computed on the proxy thresholded at τ\*=0.50 — and both detectors are scored as real classifiers on identical interaction streams. We report AUROC, **AUPRC** (critical in imbalanced settings), partial AUROC at low FPR, time-to-detection at fixed FPR, market-level selection signals, and calibration. Same data, same metric definition, the only difference is whether you keep the full probability `p` or collapse it to a 0/1 at the threshold.
 
 ## The degrading-agent model
 
@@ -40,6 +40,25 @@ The soft toxicity detector separates degrading from benign agents **perfectly at
 
 ![ROC — toxicity detector](figures/detection/roc_toxicity.png)
 
+> **What "AUROC = 1.00" does and doesn't mean here.** The perfect soft scores are a *ceiling of the synthetic generator*, not an estimate of real-world detection power. Benign agents are pinned to a single fixed quality (no heterogeneity), the degrading class drifts to a floor 0.19 below it, and the detector averages ~50–100 interactions per agent — so the per-agent classes are separated by ~7.8 standard deviations (d′ ≈ 7.8) and never overlap. AUROC ≈ 1.0 is then a near-mathematical certainty. The **robust** claims are the *direction* and *mechanism* (thresholding at 0.5 is structurally blind to degradation that stays above 0.5 — the binary detector's benign score is literally 0.000) and the *noise-dependence* shown in the 2D grid, not the absolute 1.00. Details, stress tests, and what a genuine power test would require: [`docs/notes/detection_soft_ceiling_caveat.md`](../notes/detection_soft_ceiling_caveat.md).
+
+## Result 1b: AUPRC shows the real cost of thresholding (especially at low base rates)
+
+AUROC can look deceptively good even when a detector is weak in the operating regime that matters. **AUPRC** (Area Under the Precision-Recall Curve) is usually the more honest metric when positives (degrading agents) are rare.
+
+The runner now emits a dedicated AUPRC table for every detector:
+
+| base rate | metric             | soft AUPRC | binary AUPRC |
+|-----------|--------------------|------------|--------------|
+| 0.05      | toxicity           | 1.000      | ~0.37        |
+| 0.05      | uncertain_fraction | 0.73       | 0.05         |
+| 0.20      | toxicity           | 1.000      | ~0.40        |
+| ...       | ...                | ...        | ...          |
+
+At the lowest base rate (5% degrading agents), binary AUPRC collapses dramatically while soft stays near-perfect. This is the regime where safety teams actually operate: you can only afford to investigate a tiny fraction of agents. AUROC masks the problem; AUPRC reveals it.
+
+The framework now surfaces AUPRC (and partial AUROC at FPR ≤ 0.05 / 0.01) automatically for every matched soft/binary pair.
+
 ## Result 2: Time-to-detection — 2 epochs vs 10
 
 The more operationally useful question isn't "can you eventually tell them apart" but "how fast." We calibrate each detector to a fixed false-positive rate (FPR ≤ 0.05) on benign agents, then measure epochs-from-onset until it flags a degrading one.
@@ -57,7 +76,9 @@ At the same false-positive budget, the soft detector flags degradation in about 
 
 ## Result 3: Market-level adverse selection
 
-Toxicity is a per-agent detector. Quality-gap and conditional-loss are **selection** metrics — they compare accepted vs rejected interactions across a quality mixture, so they're only well-posed at the market level, not per agent. There, the soft version reads a real adverse-selection signal while the binary version flattens to noise:
+Toxicity and uncertain_fraction are per-agent detectors. Quality-gap, conditional-loss, and **spread** are **selection** metrics — they compare accepted vs rejected interactions across a quality mixture, so they're only well-posed at the market level. The runner now reports all of them automatically.
+
+The soft versions read a real adverse-selection signal; the binary versions flatten to noise:
 
 | metric | variant | br=0.05 | br=0.10 | br=0.20 | br=0.35 | br=0.50 |
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
@@ -65,10 +86,12 @@ Toxicity is a per-agent detector. Quality-gap and conditional-loss are **selecti
 | quality_gap | binary | 0.000 | 0.001 | 0.001 | 0.004 | 0.003 |
 | conditional_loss | soft | −0.021 | −0.019 | −0.015 | −0.011 | −0.007 |
 | conditional_loss | binary | 0.000 | 0.000 | 0.000 | 0.001 | 0.000 |
+| spread | soft | −0.043 | ... | −0.031 | ... | −0.015 |
+| spread | binary | −0.001 | ... | −0.000 | ... | 0.000 |
 
 ![Market adverse selection](figures/detection/market_selection.png)
 
-The soft quality-gap is consistently negative (the signature of adverse selection — lower-quality interactions preferentially accepted), strongest in the rare-adversary regime. Its binary twin reads ~0.00 everywhere: once you threshold, accepted and rejected look identical because the gamed agents all sit on the "accept" side of the line.
+The soft quality-gap and spread are consistently negative (the signature of adverse selection), strongest in the rare-adversary regime. Their binary twins read ~0.00 everywhere: once you threshold, accepted and rejected look identical because the gamed agents all sit on the "accept" side of the line. The detection framework now automatically includes `spread` alongside the original two selection metrics.
 
 ## Result 4: Calibration
 
@@ -85,7 +108,9 @@ The binary prediction's expected calibration error equals its Brier-style miss b
 
 ## Why this matters
 
-The headline isn't "soft labels are better" in the abstract. It's that the **specific failure mode of modern self-optimizing agents — gaming the acceptance signal while real quality decays — is invisible to threshold-counting detectors by construction**, and visible to distributional ones. If your safety monitoring collapses a calibrated probability to a pass/fail bit, you are throwing away exactly the signal that catches the agents you most want to catch, and you find out ~5× slower when you do catch them.
+The headline isn't "soft labels are better" in the abstract. It's that the **specific failure mode of modern self-optimizing agents — gaming the acceptance signal while real quality decays — is invisible to threshold-counting detectors by construction**, and visible to distributional ones.
+
+This is especially clear with **AUPRC**. At low base rates (the realistic rare-adversary case), binary AUPRC collapses while soft AUPRC stays near 1.0. AUROC can still look "pretty good" for the binary detector; AUPRC tells the truth about how badly you are missing the signal when positives are rare. If your safety monitoring collapses a calibrated probability to a pass/fail bit, you are throwing away exactly the signal that catches the agents you most want to catch, and you find out ~5× slower when you do catch them.
 
 Everything here is reproducible:
 
@@ -94,7 +119,15 @@ PYTHONPATH=. python experiments/run_detection_experiment.py          # 5 base ra
 PYTHONPATH=. python experiments/run_detection_experiment.py --smoke  # quick
 ```
 
-The full detection module, matched detectors, generative model, and 20 tests landed in [PR #450](https://github.com/swarm-ai-safety/swarm/pull/450).
+The runner now automatically produces tables for:
+- AUROC by base rate
+- **AUPRC** (Area Under the Precision-Recall Curve)
+- Partial AUROC at low FPR (FPR ≤ 0.05 and 0.01)
+- Time-to-detection at calibrated FPR
+- Market adverse selection (including `spread`)
+- Calibration
+
+The full detection module (`swarm/detection/`), matched detectors (toxicity + uncertain_fraction per-agent; quality_gap + conditional_loss + spread at market level), generative model, and tests landed in [PR #450](https://github.com/swarm-ai-safety/swarm/pull/450). Subsequent improvements (pAUROC + proper AUPRC surfacing, plus the `spread` and `uncertain_fraction` matched detectors and a 2D sensitivity-grid runner) landed in [PR #453](https://github.com/swarm-ai-safety/swarm/pull/453).
 
 ---
 
