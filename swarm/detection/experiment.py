@@ -119,16 +119,21 @@ def run_experiment(cfg: ExperimentConfig) -> ExperimentResults:
             # --- time-to-detection (threshold calibrated to FPR<=max_fpr) ---
             benign = [s for s in streams if not s.is_degrading]
             degrading = [s for s in streams if s.is_degrading]
+            # Calibrate the FPR threshold and scan for detections over the SAME
+            # epoch window family (from the first full trailing window onward),
+            # so the reported FPR<=max_fpr operating point holds where we scan.
+            ttd_min_epoch = cfg.ttd_window
             for metric in _PER_AGENT_METRICS:
                 for variant, detector in pairs[metric].items():
                     thr = _calibrate_ttd_threshold(
-                        benign, detector, cfg.ttd_window, cfg.max_fpr, eval_start
+                        benign, detector, cfg.ttd_window, cfg.max_fpr, ttd_min_epoch
                     )
                     ttds: List[int] = []
                     n_flagged = 0
                     for s in degrading:
                         ttd = time_to_detection(
-                            s, detector, thr, window=cfg.ttd_window
+                            s, detector, thr,
+                            window=cfg.ttd_window, min_epoch=ttd_min_epoch,
                         )
                         if ttd is not None:
                             ttds.append(ttd)

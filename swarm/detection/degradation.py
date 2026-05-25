@@ -28,7 +28,10 @@ import numpy as np
 from swarm.models.interaction import InteractionType, SoftInteraction
 
 # A trajectory maps normalized post-onset progress u in [0, 1] to a multiplier
-# in [0, 1] interpolating from "no degradation" (1.0) to "fully degraded" (0.0).
+# in [0, 1] interpolating from "no degradation" (1.0) toward "fully degraded"
+# (0.0, = the quality floor). `linear` and `step` reach 0 exactly at u=1;
+# `exponential` and `sigmoid` approach it asymptotically (~0.05 and ~0.002 at
+# u=1), so they settle just above the floor rather than exactly on it.
 Trajectory = Callable[[float], float]
 
 

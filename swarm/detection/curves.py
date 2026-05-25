@@ -12,12 +12,6 @@ from dataclasses import dataclass
 from typing import List, Optional, Sequence
 
 import numpy as np
-from sklearn.metrics import (
-    average_precision_score,
-    precision_recall_curve,
-    roc_auc_score,
-    roc_curve,
-)
 
 from swarm.detection.degradation import AgentStream
 from swarm.detection.detectors import Detector, binarize_stream
@@ -48,6 +42,15 @@ def compute_curve(scores: Sequence[float], labels: Sequence[int]) -> DetectionCu
     Degenerate cases (only one class present) are reported with AUROC = 0.5 and
     AUPRC = base rate, the standard no-information references.
     """
+    # Imported lazily so `import swarm.detection` works without scikit-learn
+    # (an `analysis` extra); only the curve computations require it.
+    from sklearn.metrics import (
+        average_precision_score,
+        precision_recall_curve,
+        roc_auc_score,
+        roc_curve,
+    )
+
     scores_arr = np.asarray(scores, dtype=float)
     labels_arr = np.asarray(labels, dtype=int)
     base_rate = float(labels_arr.mean()) if labels_arr.size else 0.0
@@ -100,17 +103,26 @@ def time_to_detection(
 ) -> Optional[int]:
     """Epochs from onset until the detector's trailing-window score crosses ``threshold``.
 
-    The detector is run on a trailing window of the agent's interactions ending
-    at each epoch ``e``; the first ``e`` whose score exceeds ``threshold`` is the
-    flag. Returns ``e - onset`` (>= 0), or ``None`` if never flagged (censored).
+    The detector is run on a trailing window of interactions ending at each epoch
+    ``e``; the first ``e`` whose score exceeds ``threshold`` is the flag.
+
+    The scan starts at ``max(min_epoch, onset)`` — i.e. detection is only sought
+    from the agent's onset onward. This is deliberate: a flag *before* onset (on
+    not-yet-degraded behaviour) is a false alarm, not a detection of degradation,
+    and is accounted for by the benign FPR calibration rather than being collapsed
+    to ``TTD = 0``. ``min_epoch`` must match the epoch range over which the
+    ``threshold`` was calibrated, so the reported FPR operating point holds over
+    exactly the windows scanned here. Returns ``e - onset`` (>= 0), or ``None`` if
+    never flagged (censored).
     """
     n_epochs = len(stream.epochs)
-    for e in range(max(min_epoch, 1), n_epochs):
+    start = max(min_epoch, stream.onset_epoch, 1)
+    for e in range(start, n_epochs):
         win = stream.window(e - window + 1, e + 1)
         if not win:
             continue
         if detector(win) > threshold:
-            return max(0, e - stream.onset_epoch)
+            return e - stream.onset_epoch
     return None
 
 

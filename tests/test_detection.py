@@ -161,6 +161,28 @@ def test_time_to_detection_flags_degrading_agent():
     assert ttd is not None and ttd >= 0
 
 
+def test_ttd_scan_starts_at_onset_not_earlier():
+    """The TTD scan must not look before onset (pre-onset flags are false alarms,
+    handled by FPR calibration — not collapsed to TTD=0). Regression for the
+    calibration/scan window-misalignment flagged in review."""
+    cfg = StreamConfig(n_epochs=16, proxy_noise=0.0, quality_jitter=0.0)
+    pop = PopulationConfig(
+        n_agents=1, base_rate=1.0, stream=cfg, onset_choices=(6,),
+        trajectory_choices=("linear",),
+    )
+    s = generate_population(pop, seed=0)[0]
+    scanned_epochs = []
+
+    def recording_detector(win):
+        scanned_epochs.append(max(i.metadata["epoch"] for i in win))
+        return -1.0  # never exceeds threshold 0.0 -> censored
+
+    ttd = time_to_detection(s, recording_detector, threshold=0.0, window=4, min_epoch=1)
+    assert ttd is None
+    # Even with min_epoch=1, the scan starts at onset (6), never earlier.
+    assert min(scanned_epochs) == s.onset_epoch == 6
+
+
 def test_time_to_detection_censored_when_threshold_unreachable():
     cfg = StreamConfig(n_epochs=12)
     pop = PopulationConfig(n_agents=1, base_rate=1.0, stream=cfg)
