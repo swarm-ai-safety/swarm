@@ -2,8 +2,10 @@
 """
 2D sensitivity grid for the detection experiment.
 
-Sweeps two generative parameters and produces tables + heatmaps
-for AUROC, AUPRC, pAUROC, and TTD (for both toxicity and uncertain_fraction).
+Sweeps two generative parameters and produces, for both the toxicity and
+uncertain_fraction detectors:
+  - CSV tables of AUROC, AUPRC, pAUROC@FPR≤0.05, and TTD per grid cell, and
+  - soft-vs-binary difference heatmaps for AUROC and median TTD.
 
 Usage:
     PYTHONPATH=. python experiments/run_detection_sensitivity_2d.py

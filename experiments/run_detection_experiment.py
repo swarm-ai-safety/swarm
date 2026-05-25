@@ -215,17 +215,28 @@ def _write_summary(out: Path, cfg: ExperimentConfig, res, aggs: dict) -> None:
     lines.append("")
 
     # pAUROC section (new high-signal safety metric)
-    lines.append("## 1b. Partial AUROC at low FPR (primary safety operating point)")
+    lines.append(
+        "## 1b. Partial AUROC at low FPR (FPR≤0.05 and ≤0.01 safety operating points)"
+    )
     lines.append("")
-    lines.append("| base rate | metric | soft pAUROC@FPR≤0.05 | binary pAUROC@FPR≤0.05 |")
-    lines.append("| --- | --- | ---: | ---: |")
+    lines.append(
+        "| base rate | metric | soft @FPR≤0.05 | binary @FPR≤0.05 "
+        "| soft @FPR≤0.01 | binary @FPR≤0.01 |"
+    )
+    lines.append("| --- | --- | ---: | ---: | ---: | ---: |")
+
+    def _cell(row, key):
+        return _fmt(row.get(key)) if row and row.get(key) is not None else "n/a"
+
     for br in sorted({r["base_rate"] for r in det}):
         for metric in sorted({r["metric"] for r in det if r["base_rate"] == br}):
             s = next((r for r in det if r["base_rate"] == br and r["metric"] == metric and r["variant"] == "soft"), None)
             b = next((r for r in det if r["base_rate"] == br and r["metric"] == metric and r["variant"] == "binary"), None)
-            s_val = _fmt(s.get("pauroc_fpr05_mean")) if s and s.get("pauroc_fpr05_mean") is not None else "n/a"
-            b_val = _fmt(b.get("pauroc_fpr05_mean")) if b and b.get("pauroc_fpr05_mean") is not None else "n/a"
-            lines.append(f"| {br:.2f} | {metric} | {s_val} | {b_val} |")
+            lines.append(
+                f"| {br:.2f} | {metric} "
+                f"| {_cell(s, 'pauroc_fpr05_mean')} | {_cell(b, 'pauroc_fpr05_mean')} "
+                f"| {_cell(s, 'pauroc_fpr01_mean')} | {_cell(b, 'pauroc_fpr01_mean')} |"
+            )
     lines.append("")
 
     lines.append(

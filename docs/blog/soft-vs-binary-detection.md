@@ -127,7 +127,7 @@ The runner now automatically produces tables for:
 - Market adverse selection (including `spread`)
 - Calibration
 
-The full detection module (`swarm/detection/`), matched detectors (toxicity + uncertain_fraction per-agent; quality_gap + conditional_loss + spread at market level), generative model, and tests landed in [PR #450](https://github.com/swarm-ai-safety/swarm/pull/450). Subsequent improvements (pAUROC + proper AUPRC surfacing) are in the main branch.
+The full detection module (`swarm/detection/`), matched detectors (toxicity + uncertain_fraction per-agent; quality_gap + conditional_loss + spread at market level), generative model, and tests landed in [PR #450](https://github.com/swarm-ai-safety/swarm/pull/450). Subsequent improvements (pAUROC + proper AUPRC surfacing, plus the `spread` and `uncertain_fraction` matched detectors and a 2D sensitivity-grid runner) landed in [PR #453](https://github.com/swarm-ai-safety/swarm/pull/453).
 
 ---
 
