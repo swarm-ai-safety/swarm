@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import List
 
 import matplotlib
+
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
@@ -36,9 +37,9 @@ def parse_values(s: str) -> List[float]:
     return [float(x.strip()) for x in s.split(",")]
 
 
-# Detectors and base rates we slice the grid by when drawing heatmaps.
+# Detectors we slice the grid by when drawing heatmaps (soft + binary variants
+# of each are compared within plot_difference_heatmap).
 _METRICS = ("toxicity", "uncertain_fraction")
-_VARIANTS = ("soft", "binary")
 
 # (value field, source-row predicate key, higher_is_better, axis label) for each
 # heatmap family. AUROC: higher = better discrimination. median_ttd: lower =
