@@ -11,6 +11,7 @@ import pytest
 from swarm.detection.curves import (
     calibration,
     compute_curve,
+    per_agent_scores,
     threshold_at_fpr,
     time_to_detection,
 )
@@ -123,6 +124,74 @@ def test_benign_quality_stays_above_acceptance():
     for s in streams:
         mean_p = np.mean([i.p for i in s.all_interactions()])
         assert mean_p > cfg.acceptance_threshold
+
+
+# ----------------------------------------------------------------------
+# population heterogeneity (breaks the saturated AUROC=1.0 ceiling)
+# ----------------------------------------------------------------------
+def _benign_toxicity_std(cfg: StreamConfig, *, seed: int = 0, n_agents: int = 300) -> float:
+    """Std of per-agent soft toxicity over a benign-only population (back half)."""
+    det = MatchedDetectors()
+    n = cfg.n_epochs
+    streams = generate_population(
+        PopulationConfig(n_agents=n_agents, base_rate=0.0, stream=cfg), seed=seed
+    )
+    vals = [det.soft_toxicity(s.window(n // 2, n)) for s in streams]
+    return float(np.std(vals))
+
+
+def test_default_population_is_homogeneous():
+    # With the (default) zero heterogeneity, benign agents collapse to nearly a
+    # single point — this is exactly what saturates soft AUROC at 1.0.
+    assert _benign_toxicity_std(StreamConfig()) < 0.02
+
+
+def test_benign_heterogeneity_widens_score_spread():
+    # benign_quality_std injects real width into the benign score distribution.
+    homo = _benign_toxicity_std(StreamConfig())
+    hetero = _benign_toxicity_std(StreamConfig(benign_quality_std=0.10))
+    assert hetero > 0.03
+    assert hetero > 5 * homo
+
+
+def test_floor_std_varies_degrading_floors():
+    # Hold onset and trajectory fixed so the *only* source of variation in
+    # late-epoch quality is floor_std. Default (floor_std=0): all degrading
+    # agents converge to the same floor (range ~ jitter). With floor_std they
+    # spread out — some barely degrade, staying near benign.
+    def late_range(cfg):
+        pop = PopulationConfig(
+            n_agents=120, base_rate=1.0, stream=cfg,
+            onset_choices=(4,), trajectory_choices=("linear",),
+        )
+        streams = generate_population(pop, seed=0)
+        late = [np.mean([i.p for i in s.epochs[-1]]) for s in streams]
+        return max(late) - min(late)
+
+    homo = late_range(StreamConfig())
+    hetero = late_range(StreamConfig(floor_std=0.06))
+    assert homo < 0.15  # only jitter + finite-sample spread
+    assert hetero > 0.20
+    assert hetero > 2 * homo
+
+
+def test_heterogeneous_preset_is_not_saturated():
+    # The whole point: under the heterogeneous preset + a short eval window, soft
+    # AUROC is a genuine (sub-1.0) score and still clearly beats binary, rather
+    # than both being pinned by the generator. Measured ~0.87 soft / ~0.58 binary.
+    cfg = StreamConfig.heterogeneous()
+    det = MatchedDetectors()
+    n = cfg.n_epochs
+    es, ee = n - 3, n
+    streams = generate_population(
+        PopulationConfig(n_agents=200, base_rate=0.2, stream=cfg), seed=0
+    )
+    sc, lab = per_agent_scores(streams, det.soft_toxicity, es, ee)
+    soft = compute_curve(sc, lab).auroc
+    sc, lab = per_agent_scores(streams, det.binary_toxicity, es, ee)
+    binary = compute_curve(sc, lab).auroc
+    assert 0.75 < soft < 0.98  # informative, not saturated
+    assert binary < soft - 0.10  # soft advantage survives, quantifiably
 
 
 # ----------------------------------------------------------------------
