@@ -199,14 +199,14 @@ def main():
 
     # Write CSVs
     import csv
-    det_rows = [r for r in all_rows if "auroc" in r]
+    det_rows = [r for r in all_rows if "auroc_mean" in r]
     if det_rows:
         with open(out / "csv" / "grid_detection.csv", "w", newline="") as f:
             w = csv.DictWriter(f, fieldnames=list(det_rows[0].keys()))
             w.writeheader()
             w.writerows(det_rows)
 
-    ttd_rows = [r for r in all_rows if "median_ttd" in r]
+    ttd_rows = [r for r in all_rows if "median_ttd_mean" in r]
     if ttd_rows:
         with open(out / "csv" / "grid_ttd.csv", "w", newline="") as f:
             w = csv.DictWriter(f, fieldnames=list(ttd_rows[0].keys()))

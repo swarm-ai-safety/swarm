@@ -190,9 +190,10 @@ def _write_summary(out: Path, cfg: ExperimentConfig, res, aggs: dict) -> None:
     lines.append("| base rate | soft AUROC | binary AUROC |")
     lines.append("| --- | ---: | ---: |")
     det = aggs["detection"]
-    for br in sorted({r["base_rate"] for r in det}):
-        s = next(r for r in det if r["base_rate"] == br and r["variant"] == "soft")
-        b = next(r for r in det if r["base_rate"] == br and r["variant"] == "binary")
+    tox = [r for r in det if r["metric"] == "toxicity"]
+    for br in sorted({r["base_rate"] for r in tox}):
+        s = next(r for r in tox if r["base_rate"] == br and r["variant"] == "soft")
+        b = next(r for r in tox if r["base_rate"] == br and r["variant"] == "binary")
         lines.append(
             f"| {br:.2f} | {_fmt(s['auroc_mean'])} ± {_fmt(s['auroc_std'])} "
             f"| {_fmt(b['auroc_mean'])} ± {_fmt(b['auroc_std'])} |"
@@ -227,11 +228,15 @@ def _write_summary(out: Path, cfg: ExperimentConfig, res, aggs: dict) -> None:
             lines.append(f"| {br:.2f} | {metric} | {s_val} | {b_val} |")
     lines.append("")
 
-    lines.append("## 2. Time-to-detection at FPR ≤ %.2f" % cfg.max_fpr)
+    lines.append(
+        "## 2. Time-to-detection (toxicity detector) at FPR ≤ %.2f "
+        "(see CSVs for uncertain_fraction)" % cfg.max_fpr
+    )
     lines.append("")
     lines.append("| variant | median epochs from onset | detection rate |")
     lines.append("| --- | ---: | ---: |")
-    for r in sorted(aggs["ttd"], key=lambda r: r["variant"]):
+    ttd_tox = [r for r in aggs["ttd"] if r["metric"] == "toxicity"]
+    for r in sorted(ttd_tox, key=lambda r: r["variant"]):
         lines.append(
             f"| {r['variant']} | {_fmt(r['median_ttd_mean'], 2)} "
             f"| {_fmt(r['detection_rate_mean'], 2)} |"
@@ -288,8 +293,6 @@ def _run_sensitivity(args) -> None:
     for the main per-agent detectors across (parameter_value × base_rate).
     Designed for fast exploration while still using the real experiment engine.
     """
-    import numpy as np
-
     param = args.sensitivity
     raw_values = [float(v.strip()) for v in args.values.split(",")]
 
@@ -442,7 +445,10 @@ def main() -> None:
 
     # Aggregates (include metric so pAUROC and multi-detector data aggregates correctly)
     det_agg = aggregate(res.detection_rows, ["base_rate", "metric", "variant"], ["auroc", "auprc", "pauroc_fpr05", "pauroc_fpr01"])
-    ttd_agg = aggregate(res.ttd_rows, ["variant"], ["median_ttd", "detection_rate"])
+    # Group TTD by metric too: ttd_rows now carries multiple per-agent detectors
+    # (toxicity, uncertain_fraction); aggregating by variant alone would average
+    # their unrelated TTD distributions together.
+    ttd_agg = aggregate(res.ttd_rows, ["metric", "variant"], ["median_ttd", "detection_rate"])
     mkt_agg = aggregate(res.market_rows, ["metric", "variant", "base_rate"], ["value"])
     cal_agg = aggregate(
         res.calibration_rows, [],
@@ -456,8 +462,16 @@ def main() -> None:
     # Plots
     if res.representative_curves:
         _plot_roc(res.representative_curves, out / "plots" / "roc_toxicity.png")
-    _plot_auroc_vs_baserate(det_agg, out / "plots" / "auroc_vs_baserate.png")
-    _plot_ttd(ttd_agg, out / "plots" / "ttd.png")
+    # Headline plots focus on the primary per-agent detector (toxicity); the
+    # full per-metric data is in the *_agg.csv files and summary.json.
+    _plot_auroc_vs_baserate(
+        [r for r in det_agg if r["metric"] == "toxicity"],
+        out / "plots" / "auroc_vs_baserate.png",
+    )
+    _plot_ttd(
+        [r for r in ttd_agg if r["metric"] == "toxicity"],
+        out / "plots" / "ttd.png",
+    )
     _plot_market(mkt_agg, out / "plots" / "market_selection.png")
     _plot_calibration(cal_agg, out / "plots" / "calibration.png")
 
