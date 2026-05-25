@@ -236,11 +236,31 @@ def _write_summary(out: Path, cfg: ExperimentConfig, res, aggs: dict) -> None:
     (out / "summary.md").write_text("\n".join(lines) + "\n")
 
 
+def _np_safe(o):
+    """JSON default handler for numpy scalar types (see /full_study Phase 2 note)."""
+    import numpy as _np
+
+    if isinstance(o, _np.bool_):
+        return bool(o)
+    if isinstance(o, _np.integer):
+        return int(o)
+    if isinstance(o, _np.floating):
+        return float(o)
+    raise TypeError(f"Object of type {type(o)} is not JSON serializable")
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--smoke", action="store_true", help="quick small-scale run")
     ap.add_argument("--seeds", type=int, default=10)
     ap.add_argument("--agents", type=int, default=40)
+    ap.add_argument(
+        "--out",
+        type=str,
+        default=None,
+        help="Output run directory. Default: runs/<ts>_detection_baselines. "
+        "Used by /full_study --detection to place artifacts in the study folder.",
+    )
     args = ap.parse_args()
 
     if args.smoke:
@@ -258,8 +278,11 @@ def main() -> None:
             population=PopulationConfig(n_agents=args.agents, stream=StreamConfig()),
         )
 
-    ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-    out = Path("runs") / f"{ts}_detection_baselines"
+    if args.out:
+        out = Path(args.out)
+    else:
+        ts = datetime.now().strftime("%Y%m%d-%H%M%S")
+        out = Path("runs") / f"{ts}_detection_baselines"
     (out / "csv").mkdir(parents=True, exist_ok=True)
     (out / "plots").mkdir(parents=True, exist_ok=True)
 
@@ -316,6 +339,21 @@ def main() -> None:
         out, cfg, res,
         {"detection": det_agg, "ttd": ttd_agg, "market": mkt_agg, "calibration": cal_agg},
     )
+
+    # Machine-readable summary for downstream /full_study phases (analysis, paper).
+    summary = {
+        "experiment": "detection_baselines",
+        "n_seeds": len(cfg.seeds),
+        "base_rates": list(cfg.base_rates),
+        "tau_star": cfg.tau_star,
+        "max_fpr": cfg.max_fpr,
+        "detection_auroc": det_agg,
+        "time_to_detection": ttd_agg,
+        "market_selection": mkt_agg,
+        "calibration": cal_agg,
+    }
+    (out / "summary.json").write_text(json.dumps(summary, indent=2, default=_np_safe))
+
     print(f"Wrote {out}")
     print((out / "summary.md").read_text())
 
