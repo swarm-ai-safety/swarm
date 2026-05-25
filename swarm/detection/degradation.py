@@ -20,7 +20,7 @@ proxy-calibration metrics (Brier, ECE).
 from __future__ import annotations
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from typing import Callable, Dict, List, Sequence
 
 import numpy as np
@@ -99,6 +99,42 @@ class StreamConfig:
     proxy_noise: float = 0.09
     # Per-epoch latent-quality jitter (std).
     quality_jitter: float = 0.02
+    # --- Population heterogeneity (default 0.0 -> homogeneous, original behavior) ---
+    # Per-agent spread of the *benign* quality level. With the default 0.0 every
+    # benign agent sits at exactly ``benign_quality``, which makes the two classes
+    # trivially separable (benign scores collapse to a point). A positive value
+    # samples each benign agent's quality from N(benign_quality, benign_quality_std),
+    # so the benign toxicity distribution has real width and its lower tail can
+    # overlap mildly-degraded agents — the single biggest driver of whether the
+    # soft AUROC is informative (<1.0) rather than saturated.
+    benign_quality_std: float = 0.0
+    # Per-agent spread of the degrading *floor*. With the default 0.0 every
+    # degrading agent decays toward the same ``quality_floor``. A positive value
+    # samples each degrading agent's floor from N(quality_floor, floor_std),
+    # clamped to ``[0, initial_quality]``; floors sampled near ``benign_quality``
+    # make the gap small/uncertain so those agents are genuinely hard to catch.
+    floor_std: float = 0.0
+
+    @classmethod
+    def heterogeneous(cls, **overrides: float) -> "StreamConfig":
+        """Preset where detection is a genuine statistical problem.
+
+        The homogeneous defaults make the two classes separable by ~8 standard
+        deviations, so soft AUROC saturates at 1.000 and the soft-vs-binary delta
+        is uninformative (see docs/notes/detection_soft_ceiling_caveat.md). This
+        preset adds benign heterogeneity and a raised, uncertain floor so soft
+        AUROC lands in ~0.80-0.90 — the regime where the gap to binary actually
+        measures something. Pair it with a short evaluation window (e.g. the last
+        ~3 epochs) for the cleanest signal. ``overrides`` are forwarded to the
+        constructor.
+        """
+        params: dict = {
+            "benign_quality_std": 0.10,
+            "quality_floor": 0.74,
+            "floor_std": 0.06,
+        }
+        params.update(overrides)
+        return cls(**params)
 
 
 @dataclass
@@ -227,10 +263,28 @@ def generate_population(
     labels = [True] * n_deg + [False] * (pop.n_agents - n_deg)
     rng.shuffle(labels)
 
+    cfg = pop.stream
     streams: List[AgentStream] = []
     for idx, is_deg in enumerate(labels):
         onset = int(rng.choice(pop.onset_choices)) if is_deg else 0
         traj = str(rng.choice(pop.trajectory_choices)) if is_deg else "linear"
+        # Per-agent quality heterogeneity. Guarded on std > 0 so the default
+        # (homogeneous) population draws the exact same RNG sequence as before.
+        agent_cfg = cfg
+        if is_deg and cfg.floor_std > 0.0:
+            floor = float(
+                np.clip(
+                    rng.normal(cfg.quality_floor, cfg.floor_std),
+                    0.0,
+                    cfg.initial_quality,
+                )
+            )
+            agent_cfg = replace(cfg, quality_floor=floor)
+        elif not is_deg and cfg.benign_quality_std > 0.0:
+            bq = float(
+                np.clip(rng.normal(cfg.benign_quality, cfg.benign_quality_std), 0.0, 1.0)
+            )
+            agent_cfg = replace(cfg, benign_quality=bq)
         # Decorrelate per-agent RNG streams from the label assignment RNG.
         agent_seed = int(rng.integers(0, 2**31 - 1))
         streams.append(
@@ -239,7 +293,7 @@ def generate_population(
                 is_degrading=is_deg,
                 onset_epoch=onset,
                 trajectory=traj,
-                cfg=pop.stream,
+                cfg=agent_cfg,
                 rng=np.random.default_rng(agent_seed),
             )
         )
