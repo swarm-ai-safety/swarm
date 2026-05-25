@@ -40,6 +40,8 @@ The soft toxicity detector separates degrading from benign agents **perfectly at
 
 ![ROC — toxicity detector](figures/detection/roc_toxicity.png)
 
+> **What "AUROC = 1.00" does and doesn't mean here.** The perfect soft scores are a *ceiling of the synthetic generator*, not an estimate of real-world detection power. Benign agents are pinned to a single fixed quality (no heterogeneity), the degrading class drifts to a floor 0.19 below it, and the detector averages ~50–100 interactions per agent — so the per-agent classes are separated by ~7.8 standard deviations (d′ ≈ 7.8) and never overlap. AUROC ≈ 1.0 is then a near-mathematical certainty. The **robust** claims are the *direction* and *mechanism* (thresholding at 0.5 is structurally blind to degradation that stays above 0.5 — the binary detector's benign score is literally 0.000) and the *noise-dependence* shown in the 2D grid, not the absolute 1.00. Details, stress tests, and what a genuine power test would require: [`docs/notes/detection_soft_ceiling_caveat.md`](../notes/detection_soft_ceiling_caveat.md).
+
 ## Result 1b: AUPRC shows the real cost of thresholding (especially at low base rates)
 
 AUROC can look deceptively good even when a detector is weak in the operating regime that matters. **AUPRC** (Area Under the Precision-Recall Curve) is usually the more honest metric when positives (degrading agents) are rare.
