@@ -22,6 +22,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+from swarm.analysis.heatmaps import plot_difference_heatmap
 from swarm.detection import (
     ExperimentConfig,
     PopulationConfig,
@@ -33,6 +34,105 @@ from swarm.detection import (
 
 def parse_values(s: str) -> List[float]:
     return [float(x.strip()) for x in s.split(",")]
+
+
+# Detectors and base rates we slice the grid by when drawing heatmaps.
+_METRICS = ("toxicity", "uncertain_fraction")
+_VARIANTS = ("soft", "binary")
+
+# (value field, source-row predicate key, higher_is_better, axis label) for each
+# heatmap family. AUROC: higher = better discrimination. median_ttd: lower =
+# faster detection (hence higher_is_better=False, which flips the takeaway in
+# the difference panel's title).
+_HEATMAP_FIELDS = (
+    ("auroc_mean", "auroc_mean", True, "AUROC"),
+    ("median_ttd_mean", "median_ttd_mean", False, "median TTD (epochs)"),
+)
+
+
+def _matrix(
+    index: dict,
+    *,
+    metric: str,
+    variant: str,
+    base_rate: float,
+    field: str,
+    vals1: List[float],
+    vals2: List[float],
+) -> np.ndarray:
+    """Build a ``len(vals2) x len(vals1)`` matrix of ``field`` for one slice.
+
+    Rows are ``param2`` (y), columns are ``param1`` (x). Missing or null cells
+    become NaN so the heatmap renderer skips them gracefully.
+    """
+    mat = np.full((len(vals2), len(vals1)), np.nan, dtype=float)
+    for i, v2 in enumerate(vals2):
+        for j, v1 in enumerate(vals1):
+            row = index.get((metric, variant, base_rate, v1, v2))
+            if row is not None and row.get(field) is not None:
+                mat[i, j] = float(row[field])
+    return mat
+
+
+def make_heatmaps(
+    *,
+    det_rows: List[dict],
+    ttd_rows: List[dict],
+    param1: str,
+    param2: str,
+    vals1: List[float],
+    vals2: List[float],
+    base_rates: tuple,
+    out_dir: Path,
+) -> List[Path]:
+    """Render soft-vs-binary heatmaps over the param1 x param2 grid.
+
+    For each detector metric and base rate, draws an AUROC difference figure
+    (soft | binary | soft-binary) and a median-TTD difference figure. Returns
+    the list of written PNG paths.
+    """
+    # Index rows by (metric, variant, base_rate, v1, v2) for O(1) cell lookup.
+    index: dict = {}
+    for r in det_rows + ttd_rows:
+        key = (r["metric"], r["variant"], r["base_rate"], r[param1], r[param2])
+        index.setdefault(key, {}).update(r)
+
+    row_labels = [f"{param2}={v:g}" for v in vals2]
+    col_labels = [f"{param1}={v:g}" for v in vals1]
+
+    written: List[Path] = []
+    for field, _src, higher_is_better, axis_label in _HEATMAP_FIELDS:
+        for metric in _METRICS:
+            for base_rate in base_rates:
+                soft = _matrix(
+                    index, metric=metric, variant="soft", base_rate=base_rate,
+                    field=field, vals1=vals1, vals2=vals2,
+                )
+                binary = _matrix(
+                    index, metric=metric, variant="binary", base_rate=base_rate,
+                    field=field, vals1=vals1, vals2=vals2,
+                )
+                if np.all(np.isnan(soft)) and np.all(np.isnan(binary)):
+                    continue  # field not produced for this slice (e.g. no TTD)
+
+                better = "higher = better" if higher_is_better else "lower = better"
+                title = (
+                    f"{axis_label} — {metric} @ base_rate={base_rate:g}  ({better})\n"
+                    f"{param1} × {param2}"
+                )
+                fig, _ = plot_difference_heatmap(
+                    soft, binary,
+                    row_labels=row_labels, col_labels=col_labels,
+                    label_a="soft", label_b="binary",
+                    title=title, mode="dark",
+                )
+                fname = f"{field}_{metric}_br{base_rate:g}.png".replace(".", "p", 1)
+                path = out_dir / fname
+                fig.savefig(path, dpi=130, bbox_inches="tight")
+                plt.close(fig)
+                written.append(path)
+
+    return written
 
 
 def main():
@@ -112,10 +212,31 @@ def main():
             w.writeheader()
             w.writerows(ttd_rows)
 
-    # Simple summary (text)
+    # Heatmaps (soft vs binary, per detector metric and base rate)
+    plots = make_heatmaps(
+        det_rows=det_rows,
+        ttd_rows=ttd_rows,
+        param1=args.param1,
+        param2=args.param2,
+        vals1=vals1,
+        vals2=vals2,
+        base_rates=base_rates,
+        out_dir=out / "plots",
+    )
+    print(f"  wrote {len(plots)} heatmaps")
+
+    # Summary (text), listing the figures that were actually produced.
     with open(out / "grid_summary.md", "w") as f:
         f.write(f"# 2D Grid: {args.param1} x {args.param2}\n\n")
-        f.write("See plots/ for heatmaps.\n")
+        f.write(f"- Grid: {len(vals1)} x {len(vals2)} cells, ")
+        f.write(f"{n_seeds} seeds x {n_agents} agents x {n_epochs} epochs\n")
+        f.write(f"- Base rates: {', '.join(f'{b:g}' for b in base_rates)}\n\n")
+        f.write("## Tables\n")
+        f.write("- `csv/grid_detection.csv` — AUROC / AUPRC / pAUROC\n")
+        f.write("- `csv/grid_ttd.csv` — median TTD + detection rate\n\n")
+        f.write("## Heatmaps\n")
+        for p in plots:
+            f.write(f"- `plots/{p.name}`\n")
 
     print(f"Done. Results in {out}")
 
