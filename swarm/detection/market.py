@@ -1,10 +1,10 @@
-"""Market-level adverse-selection detectors (quality gap, conditional loss).
+"""Market-level adverse-selection detectors (quality gap, conditional loss, spread).
 
-Toxicity is a *per-agent* detector — it reads one agent's accepted stream. The
-quality gap and conditional loss are different animals: they are **selection**
-metrics that compare the accepted and rejected populations across a *mixture* of
-agent qualities. A single agent sits at one quality level and so has no internal
-gap; these metrics only carry signal at the market level.
+Toxicity and uncertain_fraction are *per-agent* detectors. The quality gap,
+conditional loss, and spread are **selection** metrics that compare the accepted
+and rejected populations across a *mixture* of agent qualities. A single agent
+sits at one quality level and so has no internal gap; these metrics only carry
+signal at the market level.
 
 Here the unit of observation is the whole market's pooled interaction stream at
 a given adversarial base rate. As the base rate rises, gaming agents (high
@@ -30,7 +30,7 @@ from swarm.models.interaction import SoftInteraction
 class MarketSelectionRow:
     base_rate: float
     seed: int
-    metric: str  # "quality_gap" | "conditional_loss"
+    metric: str  # "quality_gap" | "conditional_loss" | "spread"
     variant: str  # "soft" | "binary"
     value: float  # risk score: higher = more adverse selection
 
@@ -51,7 +51,7 @@ def market_selection_scores(
     eval_start: int,
     eval_end: int,
 ) -> dict[str, dict[str, float]]:
-    """Compute soft & binary quality-gap and conditional-loss on the pooled market.
+    """Compute soft & binary quality-gap, conditional-loss, and spread on the pooled market.
 
     Returns ``{metric: {"soft": value, "binary": value}}`` where higher values
     mean more adverse selection (the detectors already negate the raw gap so the
@@ -64,5 +64,5 @@ def market_selection_scores(
             "soft": pairs[metric]["soft"](pool),
             "binary": pairs[metric]["binary"](pool),
         }
-        for metric in ("quality_gap", "conditional_loss")
+        for metric in ("quality_gap", "conditional_loss", "spread")
     }
