@@ -1,0 +1,101 @@
+---
+date: 2026-05-25
+description: "We turned the 'soft metrics flagged it' vignette into a real detection experiment. Soft labels hit AUROC 1.00 and catch a degrading agent in 2 epochs; the binary threshold takes 10 and misses 12% entirely."
+---
+
+# When the Benchmark Says "Pass": Soft Labels vs Binary Thresholds for Catching Degrading Agents
+
+*We turned the "soft metrics flagged it" vignette into a real detection experiment. Soft labels hit AUROC 1.00 and catch a degrading agent in ~2 epochs; the binary threshold takes ~10 and misses 12% of cases entirely.*
+
+---
+
+We've argued for a while that probabilistic (soft) labels beat binary good/bad classifications for catching agents whose quality is quietly drifting downward. Until now that claim lived in a narrative — a vignette about a self-optimizing agent that keeps passing its benchmark while its real output quality decays. A vignette is not evidence. So we built the experiment.
+
+The setup is a head-to-head: every soft metric is paired with its **binary analogue** — the *same* metric computed on the proxy thresholded at τ\*=0.50 — and both detectors are scored as real classifiers on identical interaction streams. Same data, same metric definition, the only difference is whether you keep the full probability `p` or collapse it to a 0/1 at the threshold.
+
+## The degrading-agent model
+
+The generative model carries two signals per interaction, and the gap between them is the whole point:
+
+- **`benchmark`** — the screening signal acceptance is based on. A self-optimizing agent *games* this: it keeps the benchmark high regardless of falling quality, so its interactions keep getting accepted.
+- **`p`** — the true-quality proxy. For a degrading agent this drifts downward, but it **stays above the binary threshold**. The quality floor sits above τ\*=0.50.
+
+That second property is what makes the detection problem interesting. A threshold-counting detector watches interactions keep clearing the bar and sees almost nothing. Only the shift in the full quality *distribution* — which the soft label preserves and the threshold throws away — reveals the degradation.
+
+We swept 5 adversarial base rates × 10 seeds, 40 agents per population, 24 epochs, with degradation trajectories (linear / exponential / step / sigmoid) and onset times varied across agents.
+
+## Result 1: Toxicity AUROC — soft is perfect, binary leaks
+
+![AUROC by base rate](figures/detection/auroc_vs_baserate.png)
+
+| base rate | soft AUROC | binary AUROC |
+| --- | ---: | ---: |
+| 0.05 | 1.000 ± 0.000 | 0.925 ± 0.115 |
+| 0.10 | 1.000 ± 0.000 | 0.950 ± 0.061 |
+| 0.20 | 1.000 ± 0.000 | 0.912 ± 0.064 |
+| 0.35 | 1.000 ± 0.000 | 0.964 ± 0.036 |
+| 0.50 | 1.000 ± 0.000 | 0.945 ± 0.040 |
+
+The soft toxicity detector separates degrading from benign agents **perfectly at every base rate** (AUROC = 1.00, zero variance). The binary analogue sits at ~0.91–0.96 — good, but it leaks, and the variance is largest exactly where it matters most: at the **0.05 base rate** (the rare-adversary regime), binary AUROC drops to 0.925 ± 0.115. Thresholding discards precisely the distributional signal that distinguishes a quietly-decaying agent from a healthy one.
+
+![ROC — toxicity detector](figures/detection/roc_toxicity.png)
+
+## Result 2: Time-to-detection — 2 epochs vs 10
+
+The more operationally useful question isn't "can you eventually tell them apart" but "how fast." We calibrate each detector to a fixed false-positive rate (FPR ≤ 0.05) on benign agents, then measure epochs-from-onset until it flags a degrading one.
+
+| variant | median epochs from onset | detection rate |
+| --- | ---: | ---: |
+| binary | 9.93 | 0.88 |
+| soft | 2.13 | 1.00 |
+
+![Time-to-detection](figures/detection/ttd.png)
+
+At the same false-positive budget, the soft detector flags degradation in about **2 epochs and catches 100% of degrading agents**. The binary detector takes nearly **10 epochs and misses 12% of them entirely** — those are the agents whose gamed benchmark keeps them above the threshold long enough that the trailing-window count never crosses the alarm line.
+
+> A note on rigor: an earlier version of this measurement scanned for detections over a wider epoch window than the one the FPR threshold was calibrated on, which let pre-onset windows artificially deflate the soft TTD (we'd reported 0.28 epochs). After aligning the scan and calibration windows — [flagged in review on the PR](https://github.com/swarm-ai-safety/swarm/pull/450) — the honest figure is 2.13 epochs. Still a ~5× speedup, just not a magic one.
+
+## Result 3: Market-level adverse selection
+
+Toxicity is a per-agent detector. Quality-gap and conditional-loss are **selection** metrics — they compare accepted vs rejected interactions across a quality mixture, so they're only well-posed at the market level, not per agent. There, the soft version reads a real adverse-selection signal while the binary version flattens to noise:
+
+| metric | variant | br=0.05 | br=0.10 | br=0.20 | br=0.35 | br=0.50 |
+| --- | --- | ---: | ---: | ---: | ---: | ---: |
+| quality_gap | soft | −0.106 | −0.100 | −0.085 | −0.066 | −0.048 |
+| quality_gap | binary | 0.000 | 0.001 | 0.001 | 0.004 | 0.003 |
+| conditional_loss | soft | −0.021 | −0.019 | −0.015 | −0.011 | −0.007 |
+| conditional_loss | binary | 0.000 | 0.000 | 0.000 | 0.001 | 0.000 |
+
+![Market adverse selection](figures/detection/market_selection.png)
+
+The soft quality-gap is consistently negative (the signature of adverse selection — lower-quality interactions preferentially accepted), strongest in the rare-adversary regime. Its binary twin reads ~0.00 everywhere: once you threshold, accepted and rejected look identical because the gamed agents all sit on the "accept" side of the line.
+
+## Result 4: Calibration
+
+Finally, how much predictive resolution does thresholding actually destroy? We score the soft probability `p` against ground-truth outcomes versus its hard-thresholded twin `1{p ≥ τ\*}`:
+
+| | Brier | ECE |
+| --- | ---: | ---: |
+| soft | 0.151 | 0.054 |
+| binary | 0.183 | 0.183 |
+
+![Calibration](figures/detection/calibration.png)
+
+The binary prediction's expected calibration error equals its Brier-style miss because a 0/1 prediction is maximally overconfident — it claims certainty it doesn't have. The soft probability stays well-calibrated (ECE 0.054).
+
+## Why this matters
+
+The headline isn't "soft labels are better" in the abstract. It's that the **specific failure mode of modern self-optimizing agents — gaming the acceptance signal while real quality decays — is invisible to threshold-counting detectors by construction**, and visible to distributional ones. If your safety monitoring collapses a calibrated probability to a pass/fail bit, you are throwing away exactly the signal that catches the agents you most want to catch, and you find out ~5× slower when you do catch them.
+
+Everything here is reproducible:
+
+```bash
+PYTHONPATH=. python experiments/run_detection_experiment.py          # 5 base rates × 10 seeds
+PYTHONPATH=. python experiments/run_detection_experiment.py --smoke  # quick
+```
+
+The full detection module, matched detectors, generative model, and 20 tests landed in [PR #450](https://github.com/swarm-ai-safety/swarm/pull/450).
+
+---
+
+*Disclaimer: This post uses financial market concepts as analogies for AI safety research. Nothing here constitutes financial advice, investment recommendations, or endorsement of any trading strategy.*

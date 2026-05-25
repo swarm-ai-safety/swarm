@@ -21,6 +21,15 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
 
 ## May 2026
 
+<div class="blog-post" data-tags="evaluation theory" markdown>
+
+**May 25** — [When the Benchmark Says "Pass": Soft Labels vs Binary Thresholds for Catching Degrading Agents](soft-vs-binary-detection.md)
+<span class="blog-tag">Evaluation</span> <span class="blog-tag">Theory</span>
+
+We turned the "soft metrics flagged it" vignette into a real detection experiment. A self-optimizing agent games its benchmark while true quality decays below the line. Soft labels hit AUROC 1.00 and flag the agent in ~2 epochs at FPR ≤ 0.05; the binary threshold takes ~10 epochs and misses 12% entirely. Thresholding discards exactly the distributional signal that catches quiet degradation.
+
+</div>
+
 <div class="blog-post" data-tags="evaluation llm-agents" markdown>
 
 **May 16** — [When the Crowd Amplifies the Worst — and When the Metric Doesn't Hold](amplification-adverse-selection-miroshark.md)
