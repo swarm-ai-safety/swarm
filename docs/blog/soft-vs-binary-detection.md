@@ -133,7 +133,7 @@ The binary prediction's expected calibration error equals its Brier-style miss b
 
 ## Why this matters
 
-The headline isn't "soft labels are better" in the abstract. It's that the **specific failure mode of modern self-optimizing agents — gaming the acceptance signal while real quality decays — is invisible to threshold-counting detectors by construction**, and visible to distributional ones.
+The takeaway isn't that soft labels are better in the abstract. It's that the **specific failure mode of modern self-optimizing agents — gaming the acceptance signal while real quality decays — is invisible to threshold-counting detectors by construction**, and visible to distributional ones.
 
 This is especially clear with **AUPRC**. At low base rates (the realistic rare-adversary case), binary AUPRC collapses while soft AUPRC stays near 1.0. AUROC can still look "pretty good" for the binary detector; AUPRC tells the truth about how badly you are missing the signal when positives are rare. If your safety monitoring collapses a calibrated probability to a pass/fail bit, you are throwing away exactly the signal that catches the agents you most want to catch, and you find out ~5× slower when you do catch them.
 
