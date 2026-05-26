@@ -5,7 +5,7 @@ description: "We turned the 'soft metrics flagged it' vignette into a real detec
 
 # Keep the Probability: When Soft Labels Beat Binary Thresholds at Catching Degrading Agents
 
-*Keep the probability — don't collapse it to a pass/fail bit. We turned the "soft metrics flagged it" vignette — a self-optimizing agent that games its benchmark while its true quality quietly decays — into a head-to-head detection experiment, scoring every soft metric against its thresholded twin on identical data. A threshold counter is blind by construction to degradation that stays above the bar; the soft detector reads the shift in the full quality distribution. The soft advantage is real but conditional: biggest (~+0.3 AUROC) exactly where the quality signal is clean, narrowing as observation noise grows. And at a matched false-positive budget, soft flags degrading agents in ~2 epochs to binary's ~10 — catching all of them where binary misses 12%.*
+*Keep the probability — don't collapse it to a pass/fail bit. We turned the "soft metrics flagged it" vignette — a self-optimizing agent that games its benchmark while its true quality quietly decays — into a head-to-head detection experiment, scoring every soft metric against its thresholded twin on identical data. A threshold counter placed at the usual τ\*=0.50 is blind to degradation that stays above the bar; the soft detector reads the shift in the full quality distribution without needing to know where to put the bar. The soft advantage is real but conditional: biggest (~+0.3 AUROC) exactly where the quality signal is clean, narrowing as observation noise grows. And at a matched false-positive budget, soft flags degrading agents in ~2 epochs to binary's ~10 — catching all of them where binary misses 12%.*
 
 ---
 
@@ -116,9 +116,21 @@ We deliberately *don't* lead with this. Those 1.000s are a **ceiling of the gene
 
 ## Why this matters
 
-The takeaway isn't that soft labels are better in the abstract. It's that the **specific failure mode of modern self-optimizing agents — gaming the acceptance signal while real quality decays — is invisible to threshold-counting detectors by construction**, and visible to distributional ones.
+The takeaway isn't that soft labels are better in the abstract. It's that the **specific failure mode of modern self-optimizing agents — gaming the acceptance signal while real quality decays — is invisible to a threshold-counting detector at the natural τ\*=0.50**, and visible to a distributional one. (How much of that is the threshold *placement* vs the soft signal itself, we pin down in Limitations below — the honest answer is: more placement than we first thought.)
 
 And it's conditional in a way that *favors* good monitoring: the soft edge is largest exactly where the quality signal is clean and low-noise — the regime a mature system works to reach — and narrows only as observation noise washes the threshold out. If your safety monitoring collapses a calibrated probability to a pass/fail bit, you are throwing away exactly the signal that catches the agents you most want to catch, in the regime where you could most easily have caught them — and you find out ~5× slower when you do.
+
+## Limitations: what follow-up ablations revised
+
+We ran three ablations to pressure-test the "soft beats binary" claim. They narrowed it substantially — and we'd rather say so than ship the tidy version.
+
+**1. Most of binary's "blindness" was a mis-placed threshold, not lost information.** The binary detector thresholds at τ\*=0.50, but the class boundary sits up at ≈0.74–0.85 (degrading floor → benign quality). Sweeping the threshold, the binary detector **matches soft at clean signal and *beats* it at higher noise** once τ\* is placed near the boundary (best τ\* ≈ 0.60–0.80). A benign-calibrated threshold lands in roughly the right place without labels. So thresholding doesn't "discard the distributional signal" — putting the threshold at 0.50 does. ([note](https://github.com/swarm-ai-safety/swarm/blob/main/docs/notes/detection_tau_ablation.md))
+
+**2. Under proxy *drift*, a once-calibrated alarm fails silently — and for soft and binary alike.** If the proxy's calibration drifts (the monitor gradually over-reports quality), a threshold calibrated once sees its detection rate collapse from ~0.46 to ~0.00, while **AUROC stays at 0.88–0.91 the whole time**. A monitor can look perfect on AUROC and catch nothing in production. This hits soft and binary equally; neither escapes recalibration. The operational lesson — track realized false-alarm/detection rates at your committed threshold, don't trust AUROC alone — matters more than soft-vs-binary. ([note](https://github.com/swarm-ai-safety/swarm/blob/main/docs/notes/detection_threshold_drift.md))
+
+**3. Soft's genuine, narrower edge: rank-invariance to recalibration.** Where soft does cleanly win is *scale* drift — when the proxy loses resolution (its range compresses), soft's AUROC is unchanged (the per-agent mean is an affine, order-preserving transform) while a fixed-threshold binary detector collapses to chance, because the threshold no longer sits inside the data. Soft needs no threshold to go stale. That's a real advantage — but it's about **recalibration-free ranking**, not superior raw detection power.
+
+**Net:** with a boundary-placed, regularly-recalibrated threshold, a binary detector is competitive on discrimination; soft's durable advantages are *convenience* (no τ\* to tune) and *rank-robustness to proxy recalibration*. The headline above holds at the naive operating point most systems actually use — but it is not the structural impossibility the phrase "by construction" suggests.
 
 Everything here is reproducible:
 
