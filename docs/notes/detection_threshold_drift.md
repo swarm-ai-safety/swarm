@@ -2,7 +2,7 @@
 
 **Date**: 2026-05-25
 **Follows**: `detection_tau_ablation.md` (which conjectured soft's residual advantage is being "threshold-free / drift-robust").
-**Bottom line**: That conjecture is **not supported at the operating-point level.** Under proxy calibration drift, a once-calibrated alarm's detection rate **collapses to ~0 for soft and binary alike**, while **AUROC stays high the whole time** (it's rank-based and drift-invariant). Drift-robustness is *not* a soft-specific property; both detectors need recalibration, and a discrimination-only (AUROC) evaluation would never reveal the failure.
+**Bottom line** (two drift types tested): At the **operating point**, the conjecture fails — under *location* drift a once-calibrated alarm's detection rate **collapses to ~0 for soft and binary alike**, while **AUROC stays high** (rank-based, drift-invariant); neither detector escapes recalibration, and AUROC can't see the failure. But for **discrimination under *scale/compression* drift, soft genuinely wins** — its ranking is affine-invariant while a fixed-threshold binary collapses to chance. So soft's real edge is *recalibration-free ranking*, not operating-point robustness. (See the two sections below.)
 
 ## Setup
 
@@ -43,10 +43,35 @@ Detectors: soft toxicity, `bin@0.50` (naive threshold), `bin@0.78` (≈ class bo
 
 3. **Combined with the τ* ablation, the soft-vs-binary story is now much narrower.** With (a) the threshold placed at the class boundary and (b) regular recalibration, a binary detector matches soft on discrimination and fails/survives drift identically. Soft's genuine, remaining edge is *convenience* — one fewer threshold to tune (no internal τ*) and automatic, drift-agnostic *ranking* — not superior detection power or drift robustness at the operating point.
 
+## Update: non-uniform (resolution-loss / compression) drift — soft *does* win here
+
+The location drift above is rank-preserving, so AUROC is invariant for both detectors by construction. The fairer stress is a **scale/compression drift**: the proxy loses resolution over time (the faithful analogue of sigmoid-k flattening), modelled as `p' = 0.5 + (p − 0.5)·c(e)` with `c(e)` shrinking from 1.0 to 0.4. This is *not* rank-preserving for a per-agent mean, so soft and binary AUROC can diverge:
+
+| epoch | soft (ctl/drift) | bin@0.78 (ctl/drift) |
+|---|---|---|
+| 12 | 0.681 / 0.679 | 0.690 / 0.636 |
+| 18 | 0.878 / 0.877 | 0.866 / **0.500** |
+| 21 | 0.894 / 0.894 | 0.890 / **0.500** |
+
+![Compression drift: soft AUROC invariant, fixed-threshold binary collapses](../../runs/threshold_drift/compression_drift.png)
+<!-- figure -> runs/threshold_drift/ (gitignored) -->
+
+**Soft AUROC is invariant (Δ≈0.000); the fixed-boundary binary detector collapses to chance.** The per-agent soft score `mean(1−p′) = 0.5 − (mean_p − 0.5)·c` is an *affine, order-preserving* transform of `mean_p` with the same `c` for every agent — so agent ranking, hence AUROC, is unchanged. A fixed threshold has no such invariance: as the range compresses toward 0.5, both classes slide below 0.78 and the detector goes blind. (`bin@0.50` is also invariant here, but only because compression preserves the sign of `p−0.5` — and it's blind to begin with since both classes sit above 0.5.)
+
+This **restores a genuine, mechanistic soft advantage** the location-drift result alone had hidden: **soft's discrimination is rank-invariant to affine proxy recalibration (both offset *and* gain); a fixed threshold survives an offset (it just relabels the optimal τ*) but not a gain change.** A threshold must be re-placed when the proxy's *scale* drifts; the soft ranking need not be.
+
+## Synthesis across the three ablations
+
+- **Discrimination (AUROC), static well-placed threshold** (`detection_tau_ablation.md`): binary ≈ soft, and binary can beat soft at higher noise. No soft advantage.
+- **Discrimination under affine recalibration drift** (this note, compression): **soft wins** — ranking invariant to proxy offset+gain; a fixed threshold collapses under a gain change.
+- **Deployed detection at a committed operating point under drift** (location-drift result above): **neither wins** — both alarms go stale and miss everything; recalibration is mandatory, and AUROC can't see the failure.
+
+Net: soft's real edge is **recalibration-free *ranking* robustness**, not superior raw power and not a free pass on operating-point monitoring.
+
 ## Caveats
 
-- Drift here is **uniform and monotonic** across all agents — the case where AUROC is provably invariant. A *non-uniform* or *shape-changing* drift (e.g. the `dynamic_toxicity` sigmoid-k degradation, which compresses the proxy non-linearly) could move soft and binary AUROC differently and is the natural next test.
-- Single drift rate and direction (upward inflation); `bin@0.78` uses an oracle-ish boundary threshold.
+- Both drifts are uniform across the population and applied as post-hoc transforms on `p`; a per-agent or adversarial drift could differ.
+- Single drift rate per condition; `bin@0.78` uses an oracle-ish boundary threshold.
 - The control TPR rising over epochs is just degradation deepening (onsets 4/8/12); the *drift-vs-control gap* is the clean signal.
 
 ## Implication for the blog post
