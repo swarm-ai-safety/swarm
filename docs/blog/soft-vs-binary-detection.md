@@ -22,48 +22,15 @@ The generative model carries two signals per interaction, and the gap between th
 
 That second property is what makes the detection problem interesting. A threshold-counting detector watches interactions keep clearing the bar and sees almost nothing. Only the shift in the full quality *distribution* — which the soft label preserves and the threshold throws away — reveals the degradation.
 
-We swept 5 adversarial base rates × 10 seeds, 40 agents per population, 24 epochs, with degradation trajectories (linear / exponential / step / sigmoid) and onset times varied across agents.
+We run this in two regimes: a *realistic* one with heterogeneous agents and an uncertain degradation floor (the headline results below), and an *easy* baseline with a homogeneous population (which we use to expose a measurement artifact at the end). Both sweep multiple adversarial base rates and seeds, with degradation trajectories (linear / exponential / step / sigmoid) and onset times varied across agents.
 
-## Result 1: Toxicity AUROC — soft is perfect, binary leaks
+## Result 1: Soft beats binary — but only where the signal is clean
 
-![AUROC by base rate](figures/detection/auroc_vs_baserate.png)
+The honest test is a regime where detection is a genuine statistical problem: benign agents that *vary* in quality (so their lower tail overlaps mildly-degraded ones) and a per-agent, *uncertain* degradation floor (so some agents barely degrade). There the per-agent toxicity detector produces a real response surface — not a wall of perfect scores. Here is AUROC across observation noise (`proxy_noise`) and per-epoch quality jitter, for soft, binary, and their difference:
 
-| base rate | soft AUROC | binary AUROC |
-| --- | ---: | ---: |
-| 0.05 | 1.000 ± 0.000 | 0.925 ± 0.115 |
-| 0.10 | 1.000 ± 0.000 | 0.950 ± 0.061 |
-| 0.20 | 1.000 ± 0.000 | 0.912 ± 0.064 |
-| 0.35 | 1.000 ± 0.000 | 0.964 ± 0.036 |
-| 0.50 | 1.000 ± 0.000 | 0.945 ± 0.040 |
+![AUROC across the heterogeneous regime — soft, binary, and their difference](figures/detection/auroc_heterogeneous_grid.png)
 
-The soft toxicity detector separates degrading from benign agents **perfectly at every base rate** (AUROC = 1.00, zero variance). The binary analogue sits at ~0.91–0.96 — good, but it leaks, and the variance is largest exactly where it matters most: at the **0.05 base rate** (the rare-adversary regime), binary AUROC drops to 0.925 ± 0.115. Thresholding discards precisely the distributional signal that distinguishes a quietly-decaying agent from a healthy one.
-
-![ROC — toxicity detector](figures/detection/roc_toxicity.png)
-
-> **What "AUROC = 1.00" does and doesn't mean here.** The perfect soft scores are a *ceiling of the synthetic generator*, not an estimate of real-world detection power. Benign agents are pinned to a single fixed quality (no heterogeneity), the degrading class drifts to a floor 0.19 below it, and the detector averages ~50–100 interactions per agent — so the per-agent classes are separated by ~7.8 standard deviations (d′ ≈ 7.8) and never overlap. AUROC ≈ 1.0 is then a near-mathematical certainty. The **robust** claims are the *direction* and *mechanism* (thresholding at 0.5 is structurally blind to degradation that stays above 0.5 — the binary detector's benign score is literally 0.000) and the *noise-dependence* shown in the 2D grid, not the absolute 1.00. Details, stress tests, and what a genuine power test would require: [`docs/notes/detection_soft_ceiling_caveat.md`](../notes/detection_soft_ceiling_caveat.md).
-
-## Result 1b: AUPRC shows the real cost of thresholding (especially at low base rates)
-
-AUROC can look deceptively good even when a detector is weak in the operating regime that matters. **AUPRC** (Area Under the Precision-Recall Curve) is usually the more honest metric when positives (degrading agents) are rare.
-
-The runner now emits a dedicated AUPRC table for every detector:
-
-| base rate | metric             | soft AUPRC | binary AUPRC |
-|-----------|--------------------|------------|--------------|
-| 0.05      | toxicity           | 1.000      | ~0.37        |
-| 0.05      | uncertain_fraction | 0.73       | 0.05         |
-| 0.20      | toxicity           | 1.000      | ~0.40        |
-| ...       | ...                | ...        | ...          |
-
-At the lowest base rate (5% degrading agents), binary AUPRC collapses dramatically while soft stays near-perfect. This is the regime where safety teams actually operate: you can only afford to investigate a tiny fraction of agents. AUROC masks the problem; AUPRC reveals it.
-
-The framework now surfaces AUPRC (and partial AUROC at FPR ≤ 0.05 / 0.01) automatically for every matched soft/binary pair.
-
-## Result 1c: Beyond the ceiling — what happens when detection is actually hard
-
-The 1.000s above are honest outputs of the model, but as the caveat notes, they're a *ceiling of the generator*: benign agents are pinned to one fixed quality and the detector averages dozens of interactions, so the classes separate by ~8 standard deviations. To find out whether soft still wins when detection is a real statistical problem, we added two knobs that make the population realistic — **per-agent benign heterogeneity** (healthy agents vary in quality, and their lower tail overlaps mildly-degraded ones) and a **per-agent, uncertain degradation floor** (some agents barely degrade) — and scored on a short trailing window so within-agent noise actually matters.
-
-In this regime soft AUROC lands in a genuine **0.81–0.95**, binary in **0.50–0.91** — a readable response surface instead of a wall of 1.000. Sweeping observation noise (`proxy_noise`) at low jitter:
+Soft AUROC lands in a genuine **0.81–0.95**; binary ranges from **0.50** (blind) to **0.91**. Sweeping observation noise at fixed `quality_jitter = 0` (the top row of the heatmap):
 
 | proxy_noise | soft AUROC | binary AUROC | gap |
 | --- | ---: | ---: | ---: |
@@ -72,17 +39,19 @@ In this regime soft AUROC lands in a genuine **0.81–0.95**, binary in **0.50�
 | 0.09 | 0.872 | 0.599 | +0.273 |
 | 0.15 | 0.946 | 0.860 | +0.086 |
 
-Three things survive de-saturation — and one new thing appears:
+Three things stand out:
 
-- **The soft advantage is real but *conditional*.** It's largest (~+0.31 AUROC) exactly in the clean-signal regime — low observation noise — which is the operating point a mature monitoring system aims for, and where binary is near-blind (AUROC 0.50, AUPRC ≈ base rate). As observation noise rises, binary "catches up" (enough quality mass finally crosses τ\*=0.5) and the gap shrinks to +0.03–0.09. So "keep the probability" matters most precisely where your signal is good.
-- **`proxy_noise` is the dominant axis** — confirmed as a real property of the model, not an artifact of the ceiling.
-- **A new effect the saturated grid hid entirely:** per-epoch quality *jitter* **helps the binary detector** (it widens the distribution so more degrading interactions dip below the threshold), while being roughly neutral for soft. When everything was pinned at 1.000 this interaction was invisible.
+- **The soft advantage is real but *conditional*.** It's largest (~+0.31 AUROC) exactly in the clean-signal regime — low observation noise — which is the operating point a mature monitoring system aims for, and where binary is near-blind (AUROC 0.50, AUPRC ≈ base rate). As observation noise rises, binary "catches up" (enough quality mass finally crosses τ\*=0.50) and the gap shrinks to +0.03–0.09. **Keep the probability** matters most precisely where your signal is good.
+- **`proxy_noise` is the dominant axis.** Both detectors improve left-to-right; the soft–binary gap is governed mostly by how much observation noise blurs the threshold.
+- **A subtle interaction the easy regime can't show:** per-epoch quality *jitter* **helps the binary detector** (rightmost panel, lower rows) — it widens the distribution so more degrading interactions dip below the threshold — while being roughly neutral for soft.
 
 Reproduce the full `proxy_noise × quality_jitter` grid with one flag:
 
 ```bash
 PYTHONPATH=. python experiments/run_detection_sensitivity_2d.py --preset heterogeneous
 ```
+
+(The naive run on the *default* generator pins soft at a perfect AUROC 1.00 — that's a ceiling of the model, not a result. We unpack why at the end.)
 
 ## Result 2: Time-to-detection — 2 epochs vs 10
 
@@ -131,11 +100,25 @@ Finally, how much predictive resolution does thresholding actually destroy? We s
 
 The binary prediction's expected calibration error equals its Brier-style miss because a 0/1 prediction is maximally overconfident — it claims certainty it doesn't have. The soft probability stays well-calibrated (ECE 0.054).
 
+## A note on the easy regime: why the naive numbers say "AUROC 1.00"
+
+Run the same experiment on the *default* (homogeneous) generator — every benign agent pinned to one quality, a fixed degradation floor — and the soft toxicity detector scores a perfect **AUROC = 1.000 at every base rate**, with binary trailing at ~0.91–0.96:
+
+| base rate | soft AUROC | binary AUROC |
+| --- | ---: | ---: |
+| 0.05 | 1.000 ± 0.000 | 0.925 ± 0.115 |
+| 0.10 | 1.000 ± 0.000 | 0.950 ± 0.061 |
+| 0.20 | 1.000 ± 0.000 | 0.912 ± 0.064 |
+| 0.35 | 1.000 ± 0.000 | 0.964 ± 0.036 |
+| 0.50 | 1.000 ± 0.000 | 0.945 ± 0.040 |
+
+We deliberately *don't* lead with this. Those 1.000s are a **ceiling of the generator, not a measure of detection power**: with benign agents pinned to a single quality and ~50–100 interactions averaged per agent, the two classes are separated by ~7.8 standard deviations (d′ ≈ 7.8) and never overlap, so AUROC ≈ 1.0 is a near-mathematical certainty. The same ceiling shows up in **AUPRC** — at a 5% base rate soft sits at 1.000 while binary collapses toward ~0.37, directionally real (thresholding hurts most when positives are rare) but with a saturated soft endpoint. What survives de-saturation is the *direction* and *mechanism* (a threshold detector's benign score is literally 0.000 because nothing crosses τ\*=0.50) and the *noise-dependence* in Result 1 — not the absolute 1.00. Stress tests and what a genuine power test requires: [`docs/notes/detection_soft_ceiling_caveat.md`](../notes/detection_soft_ceiling_caveat.md).
+
 ## Why this matters
 
 The takeaway isn't that soft labels are better in the abstract. It's that the **specific failure mode of modern self-optimizing agents — gaming the acceptance signal while real quality decays — is invisible to threshold-counting detectors by construction**, and visible to distributional ones.
 
-This is especially clear with **AUPRC**. At low base rates (the realistic rare-adversary case), binary AUPRC collapses while soft AUPRC stays near 1.0. AUROC can still look "pretty good" for the binary detector; AUPRC tells the truth about how badly you are missing the signal when positives are rare. If your safety monitoring collapses a calibrated probability to a pass/fail bit, you are throwing away exactly the signal that catches the agents you most want to catch, and you find out ~5× slower when you do catch them.
+And it's conditional in a way that *favors* good monitoring: the soft edge is largest exactly where the quality signal is clean and low-noise — the regime a mature system works to reach — and narrows only as observation noise washes the threshold out. If your safety monitoring collapses a calibrated probability to a pass/fail bit, you are throwing away exactly the signal that catches the agents you most want to catch, in the regime where you could most easily have caught them — and you find out ~5× slower when you do.
 
 Everything here is reproducible:
 
