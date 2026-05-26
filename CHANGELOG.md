@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-05-26
+
 ### Added
 - **Matched soft-vs-binary detection experiment** (`swarm/detection/`, `experiments/run_detection_experiment.py`) — turns the self-optimizing-agent vignette into a real experiment with detection curves instead of narrative. Each soft metric (toxicity, quality gap, conditional loss) is paired with its binary analogue, defined as the *same* metric computed on the proxy thresholded at τ\*=0.5 (`detectors.py`). Generative proxy-gaming streams (`degradation.py`) carry two signals — a gamed `benchmark` gating acceptance and a true-quality proxy `p` that drifts down but stays *above* the binary threshold — across varied trajectories, onset times, and adversarial base rates. `curves.py` computes ROC/PR, AUROC/AUPRC, threshold@FPR≤0.05, time-to-detection, and Brier/ECE; `market.py` evaluates quality-gap/conditional-loss as market-level adverse-selection detectors (selection metrics need a quality mixture, degenerate per-agent). Full run (10 seeds × 5 base rates × 40 agents): per-agent toxicity soft AUROC=1.00 vs binary ~0.92–0.96; time-to-detection soft 2.13 epochs / 100% caught vs binary 9.93 / 88% (TTD scan/FPR-calibration windows aligned per review); market quality-gap soft signal ~−0.05…−0.11 vs binary ~0.00; calibration soft Brier 0.151 / ECE 0.054 vs binary 0.183 / 0.183. 20 tests. Wired into `/full_study --detection` (runner gained `--out`/`summary.json`; Phase 1 runs the experiment, Phases 2–4 consume its `summary.json`). Paired soft-vs-binary significance testing is built into the runner via `swarm/detection/stats.py` (`compute_paired_stats`): Wilcoxon signed-rank + paired t, Cohen's d_z, Holm-Bonferroni across the comparison family, written to the `stats` block of `summary.json`. Full run: 8/11 comparisons survive Holm (TTD d_z=3.75, ECE d_z=4.76).
 - **Expanded matched detectors** (`swarm/detection/detectors.py`, `experiment.py`, `market.py`): added `spread` (market-level adverse selection) and `uncertain_fraction` (per-agent uncertainty signal) as first-class matched soft/binary detectors. They flow through AUROC, TTD (for per-agent), market tables, paired stats, and the smoke/full_study pipeline with zero changes to callers. Smoke runs show uncertain_fraction also achieves high AUROC in the generative regime; spread produces a clean soft market signal (~−0.03 to −0.04) while its binary twin stays near zero. Tests and counts updated.
@@ -27,14 +29,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **GEPA optimize_anything integration** — `swarm.analysis.gepa_optimizer` module that uses GEPA's LLM-guided Pareto-efficient search to optimize governance/payoff parameters against soft safety metrics; YAML-based candidate serialization with diagnostic ASI feedback; CLI entry point via `python -m swarm.analysis.gepa_optimizer`
 - **Hyperagent self-modification scenario** (`scenarios/hyperagent_self_mod.yaml`, `swarm/agents/hyperagent_self_mod.py`) — agents modify own proxy weights and acceptance thresholds over time, creating growing governance gap; tracks weight shift toward gameable signals, quality decay, and local governance-gap estimate; 11 tests; ref: Zhang et al. Hyperagents (arXiv:2603.19461)
 - **SwarmGym on-chain safety auditor** — CLI tool (`swarm_gym_cli.py`) with `generate`, `audit`, `attest`, and `verify` subcommands; auditor API endpoint (`POST /api/v1/audits/compute`); SafetyAttestation Solidity contract for Base (^0.8.24); Python web3.py client (`swarm/chain/attestation.py`); deployment script (`scripts/deploy_attestation.py`) supporting Base Sepolia and Mainnet; QUICKSTART documentation
-
-### Fixed
-- **Missing `swarm/models/artifact.py`** — artifact model was referenced by handler, registry, and tests but never committed; fixes `ModuleNotFoundError` in CI (168 test failures + memory tests); also fixes `no-any-return` mypy error in `artifact_registry.py`
-
-### Changed
-- **Orchestrator pipeline/middleware refactoring** — extracted 3 new modules from the 2023-line orchestrator god object: `middleware.py` (7 lifecycle stages via `MiddlewarePipeline`), `handler_factory.py` (handler construction from config), `agent_scheduler.py` (turn order and eligibility); orchestrator is now a thin coordination loop delegating cross-cutting concerns to the middleware pipeline; public API preserved
-
-### Added
 - **Adversarial trust-building experiment** (`scenarios/adversarial_trust_building.yaml`) — scenario testing whether deceptive agents can build trust scores then exploit them (open question from Pareto frontier blog); 3-seed runs reveal trust-based partner selection creates natural exclusion of deceptive agents; when a deceptive agent breaks through, it maintains facade-quality interactions (p=0.74) but exploitation switch never fires
 - **Blog post**: "The Shape of the Capability–Safety Frontier (and How Screening Bends It)" — 1,400 benchmark runs tracing the Pareto frontier across 4 task types; 5 key findings on frontier geometry, bimodal outcomes, and screening protocol effects
 - **Screening protocol frontier shift experiment** (`experiments/screening_frontier.py`) — paired baseline (uniform governance) vs treatment (trust-differentiated governance via screening protocol) comparison across all 4 benchmarks; screening consistently improves 5th-percentile tail risk in coordination (+8pp) and long-horizon (+70pp at light governance); the screening mechanism does information work that pushes the frontier outward selectively
@@ -84,6 +78,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **Evolutionary game handler** (`swarm/core/evo_game_handler.py`) — integrates gamescape's PayoffMatrix into the orchestrator pipeline, mapping 2x2 game payoffs to ProxyObservables with cooperate/defect/tit-for-tat/grudger strategies and epoch-level population dynamics rendering
 - **Evo game scenario** (`scenarios/evo_game_prisoners.yaml`) — iterated Prisoner's Dilemma with 10 agents (cooperators, defectors, TFT)
 - **Evo game study runner** (`examples/evo_game_study.py`) — standalone runner comparing empirical population trajectory with replicator dynamics prediction
+
+### Changed
+- **Orchestrator pipeline/middleware refactoring** — extracted 3 new modules from the 2023-line orchestrator god object: `middleware.py` (7 lifecycle stages via `MiddlewarePipeline`), `handler_factory.py` (handler construction from config), `agent_scheduler.py` (turn order and eligibility); orchestrator is now a thin coordination loop delegating cross-cutting concerns to the middleware pipeline; public API preserved
+
+### Fixed
+- **Missing `swarm/models/artifact.py`** — artifact model was referenced by handler, registry, and tests but never committed; fixes `ModuleNotFoundError` in CI (168 test failures + memory tests); also fixes `no-any-return` mypy error in `artifact_registry.py`
 
 ## [1.7.0] - 2026-02-21
 
