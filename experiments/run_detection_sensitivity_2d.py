@@ -10,8 +10,7 @@ uncertain_fraction detectors:
 Usage:
     PYTHONPATH=. python experiments/run_detection_sensitivity_2d.py
 
-    # Informative regime — avoids the saturated AUROC=1.0 ceiling (requires the
-    # generator heterogeneity knobs from PR #454):
+    # Informative regime — avoids the saturated AUROC=1.0 ceiling:
     PYTHONPATH=. python experiments/run_detection_sensitivity_2d.py \
         --preset heterogeneous          # implies --eval-epochs 3
 """
@@ -159,8 +158,7 @@ def main():
         help=(
             "Base StreamConfig preset. 'heterogeneous' uses "
             "StreamConfig.heterogeneous() (per-agent benign + floor spread) so "
-            "the grid shows real gradients instead of saturating at AUROC 1.0. "
-            "Requires the generator heterogeneity knobs (PR #454)."
+            "the grid shows real gradients instead of saturating at AUROC 1.0."
         ),
     )
     ap.add_argument(
@@ -184,14 +182,7 @@ def main():
     n_agents = args.agents
     n_epochs = args.epochs
 
-    # Base stream factory honoring the preset. The heterogeneous preset needs the
-    # generator knobs added in PR #454; fail clearly if running on an older one.
-    if args.preset == "heterogeneous" and not hasattr(StreamConfig, "heterogeneous"):
-        ap.error(
-            "--preset heterogeneous requires StreamConfig.heterogeneous() "
-            "(generator heterogeneity knobs, PR #454); this branch predates it."
-        )
-
+    # Base stream factory honoring the preset.
     def make_base_stream() -> StreamConfig:
         if args.preset == "heterogeneous":
             return StreamConfig.heterogeneous(
