@@ -9,6 +9,11 @@ uncertain_fraction detectors:
 
 Usage:
     PYTHONPATH=. python experiments/run_detection_sensitivity_2d.py
+
+    # Informative regime — avoids the saturated AUROC=1.0 ceiling (requires the
+    # generator heterogeneity knobs from PR #454):
+    PYTHONPATH=. python experiments/run_detection_sensitivity_2d.py \
+        --preset heterogeneous          # implies --eval-epochs 3
 """
 
 from __future__ import annotations
@@ -147,6 +152,27 @@ def main():
     ap.add_argument("--seeds", type=int, default=4)
     ap.add_argument("--agents", type=int, default=25)
     ap.add_argument("--epochs", type=int, default=16)
+    ap.add_argument(
+        "--preset",
+        choices=["none", "heterogeneous"],
+        default="none",
+        help=(
+            "Base StreamConfig preset. 'heterogeneous' uses "
+            "StreamConfig.heterogeneous() (per-agent benign + floor spread) so "
+            "the grid shows real gradients instead of saturating at AUROC 1.0. "
+            "Requires the generator heterogeneity knobs (PR #454)."
+        ),
+    )
+    ap.add_argument(
+        "--eval-epochs",
+        type=int,
+        default=None,
+        help=(
+            "Score on the last N epochs only — a sharper signal that pairs with "
+            "--preset heterogeneous. Default: back half (or 3 when the "
+            "heterogeneous preset is selected)."
+        ),
+    )
     ap.add_argument("--out", default=None)
     args = ap.parse_args()
 
@@ -158,29 +184,55 @@ def main():
     n_agents = args.agents
     n_epochs = args.epochs
 
+    # Base stream factory honoring the preset. The heterogeneous preset needs the
+    # generator knobs added in PR #454; fail clearly if running on an older one.
+    if args.preset == "heterogeneous" and not hasattr(StreamConfig, "heterogeneous"):
+        ap.error(
+            "--preset heterogeneous requires StreamConfig.heterogeneous() "
+            "(generator heterogeneity knobs, PR #454); this branch predates it."
+        )
+
+    def make_base_stream() -> StreamConfig:
+        if args.preset == "heterogeneous":
+            return StreamConfig.heterogeneous(
+                n_epochs=n_epochs, interactions_per_epoch=8
+            )
+        return StreamConfig(n_epochs=n_epochs, interactions_per_epoch=8)
+
+    # Short trailing eval window (default 3 epochs under the heterogeneous preset,
+    # otherwise the experiment default back-half).
+    eval_epochs = args.eval_epochs
+    if eval_epochs is None and args.preset == "heterogeneous":
+        eval_epochs = 3
+    eval_start = None if eval_epochs is None else max(0, n_epochs - eval_epochs)
+
+    preset_tag = "" if args.preset == "none" else f"_{args.preset}"
     if args.out:
         out = Path(args.out)
     else:
         ts = datetime.now().strftime("%Y%m%d-%H%M%S")
-        out = Path("runs") / f"{ts}_2d_{args.param1}_{args.param2}"
+        out = Path("runs") / f"{ts}_2d_{args.param1}_{args.param2}{preset_tag}"
 
     (out / "csv").mkdir(parents=True, exist_ok=True)
     (out / "plots").mkdir(parents=True, exist_ok=True)
 
-    print(f"Running 2D grid: {args.param1} x {args.param2}")
+    eval_desc = "back half" if eval_start is None else f"last {eval_epochs} epochs"
+    print(f"Running 2D grid: {args.param1} x {args.param2}  (preset={args.preset})")
+    print(f"Eval window: {eval_desc}")
     print(f"Output: {out}")
 
     all_rows = []
 
     for v1 in vals1:
         for v2 in vals2:
-            stream = StreamConfig(n_epochs=n_epochs, interactions_per_epoch=8)
+            stream = make_base_stream()
             stream = replace(stream, **{args.param1: v1, args.param2: v2})
 
             cfg = ExperimentConfig(
                 base_rates=base_rates,
                 seeds=tuple(range(n_seeds)),
                 population=PopulationConfig(n_agents=n_agents, stream=stream),
+                eval_start=eval_start,
             )
 
             print(f"  {args.param1}={v1}, {args.param2}={v2} ...", end=" ", flush=True)
@@ -231,8 +283,10 @@ def main():
     # Summary (text), listing the figures that were actually produced.
     with open(out / "grid_summary.md", "w") as f:
         f.write(f"# 2D Grid: {args.param1} x {args.param2}\n\n")
+        f.write(f"- Preset: {args.preset}\n")
         f.write(f"- Grid: {len(vals1)} x {len(vals2)} cells, ")
         f.write(f"{n_seeds} seeds x {n_agents} agents x {n_epochs} epochs\n")
+        f.write(f"- Eval window: {eval_desc}\n")
         f.write(f"- Base rates: {', '.join(f'{b:g}' for b in base_rates)}\n\n")
         f.write("## Tables\n")
         f.write("- `csv/grid_detection.csv` — AUROC / AUPRC / pAUROC\n")
