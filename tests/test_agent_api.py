@@ -1,6 +1,7 @@
 """Tests for the SWARM Agent API (runs, posts, middleware, persistence)."""
 
 import time
+from datetime import datetime, timezone
 
 import pytest
 
@@ -629,6 +630,36 @@ class TestCompareEndpoint:
         resp = client.get(
             f"/api/runs/compare?ids={run_a},nonexistent-id",
             headers=headers,
+        )
+        assert resp.status_code == 404
+
+    def test_compare_nonexistent_takes_precedence_over_incomplete(self, client):
+        """A nonexistent id returns 404 even when a sibling run is not yet
+        completed. Regression: the existence (404) and completion (400) checks
+        were one ordered loop, so a not-yet-COMPLETED sibling checked first
+        raised 400 before the missing id could raise 404 — a flaky 400-vs-404
+        depending on whether the real run had finished. Seeded deterministically
+        (no run-execution timing)."""
+        import swarm.api.routers.runs as runs_mod
+        from swarm.api.models.run import RunResponse, RunStatus, RunVisibility
+
+        agent_id, api_key = _register_agent(client)
+        rid = "run-still-running-001"
+        runs_mod._store.save(
+            RunResponse(
+                run_id=rid,
+                scenario_id="baseline",
+                status=RunStatus.RUNNING,  # NOT completed
+                visibility=RunVisibility.PUBLIC,
+                agent_id=agent_id,
+                created_at=datetime.now(timezone.utc),
+                status_url=f"/api/runs/{rid}",
+            )
+        )
+        # Nonexistent id present alongside a not-completed run -> 404 wins, not 400.
+        resp = client.get(
+            f"/api/runs/compare?ids={rid},nonexistent-id",
+            headers=_auth_header(api_key),
         )
         assert resp.status_code == 404
 
