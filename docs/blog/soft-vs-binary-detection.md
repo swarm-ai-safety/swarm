@@ -5,7 +5,7 @@ description: "We turned the 'soft metrics flagged it' vignette into a real detec
 
 # Keep the Probability: When Soft Labels Beat Binary Thresholds at Catching Degrading Agents
 
-*Keep the probability — don't collapse it to a pass/fail bit. We turned the "soft metrics flagged it" vignette — a self-optimizing agent that games its benchmark while its true quality quietly decays — into a head-to-head detection experiment, scoring every soft metric against its thresholded twin on identical data. A threshold counter is blind by construction to degradation that stays above the bar; the soft detector reads the shift in the full quality distribution. The soft advantage is real but conditional: biggest (~+0.3 AUROC) exactly where the quality signal is clean, narrowing as observation noise grows. And at a matched false-positive budget, soft flags degrading agents in ~2 epochs to binary's ~10 — catching all of them where binary misses 12%.*
+*Keep the probability — don't collapse it to a pass/fail bit. We turned the "soft metrics flagged it" vignette — a self-optimizing agent that games its benchmark while its true quality quietly decays — into a head-to-head detection experiment, scoring every soft metric against its thresholded twin on identical data. A threshold counter placed at the usual τ\*=0.50 is blind to degradation that stays above the bar; the soft detector reads the shift in the full quality distribution without needing to know where to put the bar. The soft advantage is real but conditional: biggest (~+0.3 AUROC) exactly where the quality signal is clean, narrowing as observation noise grows. And at a matched false-positive budget, soft flags degrading agents in ~2 epochs to binary's ~10 — catching all of them where binary misses 12%.*
 
 ---
 
