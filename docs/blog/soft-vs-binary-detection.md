@@ -3,7 +3,7 @@ date: 2026-05-25
 description: "We turned the 'soft metrics flagged it' vignette into a real detection experiment. In the easy regime soft saturates at AUROC 1.00 (a generator ceiling); under a realistic hard regime soft still beats binary by ~+0.3 AUROC where the signal is clean, shrinking as noise rises. Soft also catches degrading agents in ~2 epochs at FPR ≤ 0.05; binary takes ~10 and misses 12%."
 ---
 
-# When the Benchmark Says "Pass": Soft Labels vs Binary Thresholds for Catching Degrading Agents
+# Keep the Probability: When Soft Labels Beat Binary Thresholds at Catching Degrading Agents
 
 *We turned the "soft metrics flagged it" vignette into a real detection experiment. In the easy regime soft labels saturate at AUROC 1.00 (a ceiling of the model, not a victory lap); once we make detection genuinely hard — heterogeneous agents, an uncertain degradation floor — soft still wins by a measured ~+0.3 AUROC in the clean-signal regime that matters, with the edge shrinking as observation noise rises. Soft also catches degrading agents in ~2 epochs at FPR ≤ 0.05; the binary threshold takes ~10 and misses 12% of cases entirely.*
 
