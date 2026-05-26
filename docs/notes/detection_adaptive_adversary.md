@@ -6,7 +6,7 @@
 
 ## Setup
 
-A "settled" adversary games its benchmark (stays accepted) and holds constant true quality. Each detector's alarm is calibrated to FPR ≤ 0.05 on benign (quality 0.85). We measure the **catch rate (TPR)** as the adversary chooses (a) how far to lower its mean quality, and (b) how tightly to control its output distribution. 6 seeds × 60 agents, `proxy_noise` 0.09 for benign.
+A "settled" adversary games its benchmark (stays accepted) and holds its true quality *constant within each run* — it has already chosen where to sit. We sweep that chosen level across conditions to trace the evasion frontier. Each detector's alarm is calibrated to FPR ≤ 0.05 on benign (quality 0.85). We measure the **catch rate (TPR)** as the adversary varies, across conditions, (a) how far to lower its (constant) mean quality, and (b) how tightly to control its output distribution. 6 seeds × 60 agents, `proxy_noise` 0.09 for benign.
 
 ## Result A — lowering mean quality
 
