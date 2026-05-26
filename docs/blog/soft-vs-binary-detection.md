@@ -122,7 +122,7 @@ And it's conditional in a way that *favors* good monitoring: the soft edge is la
 
 ## Limitations: what follow-up ablations revised
 
-We ran three ablations to pressure-test the "soft beats binary" claim. They narrowed it substantially — and we'd rather say so than ship the tidy version.
+We ran four ablations to pressure-test the "soft beats binary" claim. They narrowed it substantially — and we'd rather say so than ship the tidy version.
 
 **1. Most of binary's "blindness" was a mis-placed threshold, not lost information.** The binary detector thresholds at τ\*=0.50, but the class boundary sits up at ≈0.74–0.85 (degrading floor → benign quality). Sweeping the threshold, the binary detector **matches soft at clean signal and *beats* it at higher noise** once τ\* is placed near the boundary (best τ\* ≈ 0.60–0.80). A benign-calibrated threshold lands in roughly the right place without labels. So thresholding doesn't "discard the distributional signal" — putting the threshold at 0.50 does. ([note](https://github.com/swarm-ai-safety/swarm/blob/main/docs/notes/detection_tau_ablation.md))
 
@@ -130,7 +130,9 @@ We ran three ablations to pressure-test the "soft beats binary" claim. They narr
 
 **3. Soft's genuine, narrower edge: rank-invariance to recalibration.** Where soft does cleanly win is *scale* drift — when the proxy loses resolution (its range compresses), soft's AUROC is unchanged (the per-agent mean is an affine, order-preserving transform) while a fixed-threshold binary detector collapses to chance, because the threshold no longer sits inside the data. Soft needs no threshold to go stale. That's a real advantage — but it's about **recalibration-free ranking**, not superior raw detection power.
 
-**Net:** with a boundary-placed, regularly-recalibrated threshold, a binary detector is competitive on discrimination; soft's durable advantages are *convenience* (no τ\* to tune) and *rank-robustness to proxy recalibration*. The headline above holds at the naive operating point most systems actually use — but it is not the structural impossibility the phrase "by construction" suggests.
+**4. Against an *adaptive* adversary, soft is genuinely harder to fool.** When an agent that games its benchmark gets to choose how to evade, lowering its mean quality is caught by soft *and* by a boundary-placed threshold alike. But a threshold counts *crossings*, which depend on the distribution's shape as well as its mean — so an adversary can hold real quality degraded (mean ≈0.81) while *tightening* its output to sit just above τ\*, producing almost no crossings: it slips past even the well-placed binary detector (catch rate 1.00 → 0.18) while soft still catches it (1.00). The mean has only one way to look benign — by *being* benign on average — so the only way to evade soft is to actually raise quality. ([note](https://github.com/swarm-ai-safety/swarm/blob/main/docs/notes/detection_adaptive_adversary.md))
+
+**Net:** with a boundary-placed, regularly-recalibrated threshold, a binary detector is competitive on *static* discrimination; soft's durable advantages are *convenience* (no τ\* to tune), *rank-robustness to proxy recalibration*, and *resistance to adversarial distribution-shaping*. The headline above holds at the naive operating point most systems actually use — but it is not the structural impossibility the phrase "by construction" suggests.
 
 Everything here is reproducible:
 
