@@ -191,7 +191,13 @@ def main():
         return StreamConfig(n_epochs=n_epochs, interactions_per_epoch=8)
 
     # Short trailing eval window (default 3 epochs under the heterogeneous preset,
-    # otherwise the experiment default back-half).
+    # otherwise the experiment default back-half). Reject windows that would be
+    # empty or larger than the run — those produce degenerate metrics that still
+    # look valid in the output.
+    if args.eval_epochs is not None and not (1 <= args.eval_epochs <= n_epochs):
+        ap.error(
+            f"--eval-epochs must be in [1, {n_epochs}] (got {args.eval_epochs})"
+        )
     eval_epochs = args.eval_epochs
     if eval_epochs is None and args.preset == "heterogeneous":
         eval_epochs = 3
