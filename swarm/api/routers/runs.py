@@ -719,11 +719,18 @@ async def compare_runs(
     runs = store.get_multiple(run_ids)
     runs_by_id = {r.run_id: r for r in runs}
 
-    # Check access: agent must own or runs must be public
+    # Existence is checked for *all* ids first: a run that doesn't exist is a 404
+    # regardless of any sibling's access/completion state. Folding this into the
+    # access/completion loop below made the result order-dependent — a sibling
+    # that was momentarily not-yet-COMPLETED would raise 400 before a nonexistent
+    # id could raise 404 (the source of a flaky 400-vs-404 test).
     for rid in run_ids:
-        run = runs_by_id.get(rid)
-        if run is None:
+        if rid not in runs_by_id:
             raise HTTPException(status_code=404, detail=f"Run '{rid}' not found")
+
+    # Then access (must own or be public) and completion.
+    for rid in run_ids:
+        run = runs_by_id[rid]
         if run.visibility == RunVisibility.PRIVATE and run.agent_id != agent_id:
             raise HTTPException(status_code=403, detail=f"Access denied to run '{rid}'")
         if run.status != RunStatus.COMPLETED:
