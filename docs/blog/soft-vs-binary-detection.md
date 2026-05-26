@@ -30,7 +30,7 @@ The honest test is a regime where detection is a genuine statistical problem: be
 
 ![AUROC across the heterogeneous regime — soft, binary, and their difference](figures/detection/auroc_heterogeneous_grid.png)
 
-Soft AUROC lands in a genuine **0.81–0.95**; binary ranges from **0.50** (blind) to **0.91**. Sweeping observation noise at low jitter:
+Soft AUROC lands in a genuine **0.81–0.95**; binary ranges from **0.50** (blind) to **0.91**. Sweeping observation noise at fixed `quality_jitter = 0` (the top row of the heatmap):
 
 | proxy_noise | soft AUROC | binary AUROC | gap |
 | --- | ---: | ---: | ---: |
@@ -41,7 +41,7 @@ Soft AUROC lands in a genuine **0.81–0.95**; binary ranges from **0.50** (blin
 
 Three things stand out:
 
-- **The soft advantage is real but *conditional*.** It's largest (~+0.31 AUROC) exactly in the clean-signal regime — low observation noise — which is the operating point a mature monitoring system aims for, and where binary is near-blind (AUROC 0.50, AUPRC ≈ base rate). As observation noise rises, binary "catches up" (enough quality mass finally crosses τ\*=0.5) and the gap shrinks to +0.03–0.09. **Keep the probability** matters most precisely where your signal is good.
+- **The soft advantage is real but *conditional*.** It's largest (~+0.31 AUROC) exactly in the clean-signal regime — low observation noise — which is the operating point a mature monitoring system aims for, and where binary is near-blind (AUROC 0.50, AUPRC ≈ base rate). As observation noise rises, binary "catches up" (enough quality mass finally crosses τ\*=0.50) and the gap shrinks to +0.03–0.09. **Keep the probability** matters most precisely where your signal is good.
 - **`proxy_noise` is the dominant axis.** Both detectors improve left-to-right; the soft–binary gap is governed mostly by how much observation noise blurs the threshold.
 - **A subtle interaction the easy regime can't show:** per-epoch quality *jitter* **helps the binary detector** (rightmost panel, lower rows) — it widens the distribution so more degrading interactions dip below the threshold — while being roughly neutral for soft.
 
@@ -107,10 +107,12 @@ Run the same experiment on the *default* (homogeneous) generator — every benig
 | base rate | soft AUROC | binary AUROC |
 | --- | ---: | ---: |
 | 0.05 | 1.000 ± 0.000 | 0.925 ± 0.115 |
+| 0.10 | 1.000 ± 0.000 | 0.950 ± 0.061 |
 | 0.20 | 1.000 ± 0.000 | 0.912 ± 0.064 |
+| 0.35 | 1.000 ± 0.000 | 0.964 ± 0.036 |
 | 0.50 | 1.000 ± 0.000 | 0.945 ± 0.040 |
 
-We deliberately *don't* lead with this. Those 1.000s are a **ceiling of the generator, not a measure of detection power**: with benign agents pinned to a single quality and ~50–100 interactions averaged per agent, the two classes are separated by ~7.8 standard deviations (d′ ≈ 7.8) and never overlap, so AUROC ≈ 1.0 is a near-mathematical certainty. The same ceiling shows up in **AUPRC** — at a 5% base rate soft sits at 1.000 while binary collapses toward ~0.37, directionally real (thresholding hurts most when positives are rare) but with a saturated soft endpoint. What survives de-saturation is the *direction* and *mechanism* (a threshold detector's benign score is literally 0.000 because nothing crosses τ\*=0.5) and the *noise-dependence* in Result 1 — not the absolute 1.00. Stress tests and what a genuine power test requires: [`docs/notes/detection_soft_ceiling_caveat.md`](../notes/detection_soft_ceiling_caveat.md).
+We deliberately *don't* lead with this. Those 1.000s are a **ceiling of the generator, not a measure of detection power**: with benign agents pinned to a single quality and ~50–100 interactions averaged per agent, the two classes are separated by ~7.8 standard deviations (d′ ≈ 7.8) and never overlap, so AUROC ≈ 1.0 is a near-mathematical certainty. The same ceiling shows up in **AUPRC** — at a 5% base rate soft sits at 1.000 while binary collapses toward ~0.37, directionally real (thresholding hurts most when positives are rare) but with a saturated soft endpoint. What survives de-saturation is the *direction* and *mechanism* (a threshold detector's benign score is literally 0.000 because nothing crosses τ\*=0.50) and the *noise-dependence* in Result 1 — not the absolute 1.00. Stress tests and what a genuine power test requires: [`docs/notes/detection_soft_ceiling_caveat.md`](../notes/detection_soft_ceiling_caveat.md).
 
 ## Why this matters
 
