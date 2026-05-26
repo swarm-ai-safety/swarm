@@ -1,11 +1,11 @@
 ---
 date: 2026-05-25
-description: "We turned the 'soft metrics flagged it' vignette into a real detection experiment. Soft labels hit AUROC 1.00 and AUPRC 1.00; binary versions leak badly (especially AUPRC at low base rates). Soft catches degrading agents in ~2 epochs at FPR ≤ 0.05; binary takes ~10 and misses 12%."
+description: "We turned the 'soft metrics flagged it' vignette into a real detection experiment. In the easy regime soft saturates at AUROC 1.00 (a generator ceiling); under a realistic hard regime soft still beats binary by ~+0.3 AUROC where the signal is clean, shrinking as noise rises. Soft also catches degrading agents in ~2 epochs at FPR ≤ 0.05; binary takes ~10 and misses 12%."
 ---
 
-# When the Benchmark Says "Pass": Soft Labels vs Binary Thresholds for Catching Degrading Agents
+# Keep the Probability: When Soft Labels Beat Binary Thresholds at Catching Degrading Agents
 
-*We turned the "soft metrics flagged it" vignette into a real detection experiment. Soft labels hit AUROC 1.00 **and AUPRC 1.00**; binary versions look decent on AUROC but leak badly on AUPRC (especially in the rare-adversary regime). Soft catches degrading agents in ~2 epochs at FPR ≤ 0.05; the binary threshold takes ~10 and misses 12% of cases entirely.*
+*Keep the probability — don't collapse it to a pass/fail bit. We turned the "soft metrics flagged it" vignette — a self-optimizing agent that games its benchmark while its true quality quietly decays — into a head-to-head detection experiment, scoring every soft metric against its thresholded twin on identical data. A threshold counter is blind by construction to degradation that stays above the bar; the soft detector reads the shift in the full quality distribution. The soft advantage is real but conditional: biggest (~+0.3 AUROC) exactly where the quality signal is clean, narrowing as observation noise grows. And at a matched false-positive budget, soft flags degrading agents in ~2 epochs to binary's ~10 — catching all of them where binary misses 12%.*
 
 ---
 
@@ -59,6 +59,31 @@ At the lowest base rate (5% degrading agents), binary AUPRC collapses dramatical
 
 The framework now surfaces AUPRC (and partial AUROC at FPR ≤ 0.05 / 0.01) automatically for every matched soft/binary pair.
 
+## Result 1c: Beyond the ceiling — what happens when detection is actually hard
+
+The 1.000s above are honest outputs of the model, but as the caveat notes, they're a *ceiling of the generator*: benign agents are pinned to one fixed quality and the detector averages dozens of interactions, so the classes separate by ~8 standard deviations. To find out whether soft still wins when detection is a real statistical problem, we added two knobs that make the population realistic — **per-agent benign heterogeneity** (healthy agents vary in quality, and their lower tail overlaps mildly-degraded ones) and a **per-agent, uncertain degradation floor** (some agents barely degrade) — and scored on a short trailing window so within-agent noise actually matters.
+
+In this regime soft AUROC lands in a genuine **0.81–0.95**, binary in **0.50–0.91** — a readable response surface instead of a wall of 1.000. Sweeping observation noise (`proxy_noise`) at low jitter:
+
+| proxy_noise | soft AUROC | binary AUROC | gap |
+| --- | ---: | ---: | ---: |
+| 0.03 | 0.810 | 0.500 | +0.310 |
+| 0.06 | 0.837 | 0.510 | +0.327 |
+| 0.09 | 0.872 | 0.599 | +0.273 |
+| 0.15 | 0.946 | 0.860 | +0.086 |
+
+Three things survive de-saturation — and one new thing appears:
+
+- **The soft advantage is real but *conditional*.** It's largest (~+0.31 AUROC) exactly in the clean-signal regime — low observation noise — which is the operating point a mature monitoring system aims for, and where binary is near-blind (AUROC 0.50, AUPRC ≈ base rate). As observation noise rises, binary "catches up" (enough quality mass finally crosses τ\*=0.5) and the gap shrinks to +0.03–0.09. So "keep the probability" matters most precisely where your signal is good.
+- **`proxy_noise` is the dominant axis** — confirmed as a real property of the model, not an artifact of the ceiling.
+- **A new effect the saturated grid hid entirely:** per-epoch quality *jitter* **helps the binary detector** (it widens the distribution so more degrading interactions dip below the threshold), while being roughly neutral for soft. When everything was pinned at 1.000 this interaction was invisible.
+
+Reproduce the full `proxy_noise × quality_jitter` grid with one flag:
+
+```bash
+PYTHONPATH=. python experiments/run_detection_sensitivity_2d.py --preset heterogeneous
+```
+
 ## Result 2: Time-to-detection — 2 epochs vs 10
 
 The more operationally useful question isn't "can you eventually tell them apart" but "how fast." We calibrate each detector to a fixed false-positive rate (FPR ≤ 0.05) on benign agents, then measure epochs-from-onset until it flags a degrading one.
@@ -108,7 +133,7 @@ The binary prediction's expected calibration error equals its Brier-style miss b
 
 ## Why this matters
 
-The headline isn't "soft labels are better" in the abstract. It's that the **specific failure mode of modern self-optimizing agents — gaming the acceptance signal while real quality decays — is invisible to threshold-counting detectors by construction**, and visible to distributional ones.
+The takeaway isn't that soft labels are better in the abstract. It's that the **specific failure mode of modern self-optimizing agents — gaming the acceptance signal while real quality decays — is invisible to threshold-counting detectors by construction**, and visible to distributional ones.
 
 This is especially clear with **AUPRC**. At low base rates (the realistic rare-adversary case), binary AUPRC collapses while soft AUPRC stays near 1.0. AUROC can still look "pretty good" for the binary detector; AUPRC tells the truth about how badly you are missing the signal when positives are rare. If your safety monitoring collapses a calibrated probability to a pass/fail bit, you are throwing away exactly the signal that catches the agents you most want to catch, and you find out ~5× slower when you do catch them.
 
