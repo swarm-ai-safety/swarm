@@ -26,7 +26,6 @@ from swarm.core.resource_negotiation_handler import (
 )
 from swarm.logging.event_bus import EventBus
 
-
 # ── The strategy prompt, implemented as code ──────────────────────────
 
 
