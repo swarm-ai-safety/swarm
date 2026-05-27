@@ -11,23 +11,18 @@ from __future__ import annotations
 import random
 from typing import Any, Dict, List, Optional
 
+from swarm.agents.base import Observation
+from swarm.agents.negotiation_agent import (
+    FairNegotiator,
+    GreedyNegotiator,
+    StrategicNegotiator,
+)
 from swarm.core.resource_negotiation_handler import (
     NegotiateAction,
     NegotiationGame,
     Proposal,
     ResourceNegotiationConfig,
     ResourceNegotiationHandler,
-    ResourcePool,
-)
-from swarm.agents.base import (
-    Action,
-    ActionType,
-    Observation,
-)
-from swarm.agents.negotiation_agent import (
-    FairNegotiator,
-    GreedyNegotiator,
-    StrategicNegotiator,
 )
 from swarm.logging.event_bus import EventBus
 
@@ -92,7 +87,7 @@ class PromptStrategyAgent:
         if round_num == 1 and role == "A":
             # Anchor: propose ALL resources for ourselves
             my_share = dict(pool)
-            their_share = {name: 0 for name in pool}
+            their_share = dict.fromkeys(pool, 0)
             return (
                 NegotiateAction.PROPOSE,
                 Proposal(my_share=my_share, their_share=their_share),
@@ -164,7 +159,7 @@ class PromptStrategyAgent:
     ) -> Dict[str, float]:
         """Infer opponent preferences from their proposal history."""
         my_role = game.role_of(self.player_id)
-        prefs: Dict[str, float] = {name: 1.0 for name in game.pool.resources}
+        prefs: Dict[str, float] = dict.fromkeys(game.pool.resources, 1.0)
 
         for turn in game.history:
             if turn.role == my_role:
@@ -376,7 +371,6 @@ def run_tournament(
     Half as Player A, half as Player B.
     """
     results = []
-    rng = random.Random(seed)
 
     for i in range(n_games):
         # Alternate roles
@@ -462,9 +456,9 @@ def print_results(results: List[Dict[str, Any]], baseline_name: str) -> Dict[str
     print(f"{'-'*72}")
     print(f"  AVERAGE              {avg_prompt:>+.3f}   {avg_baseline:>+.3f}")
     print(f"  DEALS: {deals}/{len(results)}")
-    print(f"  WIN/LOSS: prompt wins {sum(1 for p, b in zip(prompt_scores, baseline_scores) if p > b)}"
-          f" / baseline wins {sum(1 for p, b in zip(prompt_scores, baseline_scores) if b > p)}"
-          f" / ties {sum(1 for p, b in zip(prompt_scores, baseline_scores) if p == b)}")
+    print(f"  WIN/LOSS: prompt wins {sum(1 for p, b in zip(prompt_scores, baseline_scores, strict=False) if p > b)}"
+          f" / baseline wins {sum(1 for p, b in zip(prompt_scores, baseline_scores, strict=False) if b > p)}"
+          f" / ties {sum(1 for p, b in zip(prompt_scores, baseline_scores, strict=False) if p == b)}")
     print()
 
     return {

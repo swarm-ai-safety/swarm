@@ -11,25 +11,20 @@ Key improvements over v1:
 from __future__ import annotations
 
 import random
-from typing import Any, Dict, List, Optional
+from typing import Dict, Optional
 
+from swarm.agents.base import Observation
+from swarm.agents.negotiation_agent import (
+    FairNegotiator,
+    GreedyNegotiator,
+    StrategicNegotiator,
+)
 from swarm.core.resource_negotiation_handler import (
     NegotiateAction,
     NegotiationGame,
     Proposal,
     ResourceNegotiationConfig,
     ResourceNegotiationHandler,
-    ResourcePool,
-)
-from swarm.agents.base import (
-    Action,
-    ActionType,
-    Observation,
-)
-from swarm.agents.negotiation_agent import (
-    FairNegotiator,
-    GreedyNegotiator,
-    StrategicNegotiator,
 )
 from swarm.logging.event_bus import EventBus
 
@@ -127,7 +122,7 @@ class OptimizedPromptAgent:
         pool = game.pool.resources
 
         # Track total fraction claimed per resource across all opponent proposals
-        claim_sum: Dict[str, float] = {name: 0.0 for name in pool}
+        claim_sum: Dict[str, float] = dict.fromkeys(pool, 0.0)
         n_proposals = 0
 
         for turn in game.history:
@@ -143,7 +138,7 @@ class OptimizedPromptAgent:
 
         if n_proposals == 0:
             # No data — assume uniform preferences
-            return {name: 1.0 for name in pool}
+            return dict.fromkeys(pool, 1.0)
 
         # Average fraction claimed = estimated relative preference
         # Scale to [0.1, 2.0] range
@@ -168,7 +163,7 @@ class OptimizedPromptAgent:
         we hit our target score.
         """
         my_share = dict(pool)
-        their_share = {name: 0 for name in pool}
+        their_share = dict.fromkeys(pool, 0)
 
         my_max = sum(my_vals.get(n, 0) * pool[n] for n in pool)
         if my_max <= 0:
@@ -314,7 +309,8 @@ def print_results(results, baseline_name):
     prompt_scores, baseline_scores, deals = [], [], 0
     for r in results:
         deal_str = "YES" if r["deal_reached"] else "NO"
-        if r["deal_reached"]: deals += 1
+        if r["deal_reached"]:
+            deals += 1
         prompt_scores.append(r["prompt_score"])
         baseline_scores.append(r["baseline_score"])
         pool_str = ", ".join(f"{v}{k[0].upper()}" for k, v in sorted(r["pool"].items()))
@@ -327,9 +323,9 @@ def print_results(results, baseline_name):
     print(f"{'-'*72}")
     print(f"  AVERAGE              {avg_p:>+.3f}   {avg_b:>+.3f}")
     print(f"  DEALS: {deals}/{len(results)}")
-    wins = sum(1 for p, b in zip(prompt_scores, baseline_scores) if p > b)
-    losses = sum(1 for p, b in zip(prompt_scores, baseline_scores) if b > p)
-    ties = sum(1 for p, b in zip(prompt_scores, baseline_scores) if p == b)
+    wins = sum(1 for p, b in zip(prompt_scores, baseline_scores, strict=False) if p > b)
+    losses = sum(1 for p, b in zip(prompt_scores, baseline_scores, strict=False) if b > p)
+    ties = sum(1 for p, b in zip(prompt_scores, baseline_scores, strict=False) if p == b)
     print(f"  WIN/LOSS: {wins}W / {losses}L / {ties}T")
     print()
     return {"avg_prompt": avg_p, "avg_baseline": avg_b, "deal_rate": deals / len(results)}
