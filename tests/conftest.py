@@ -34,6 +34,36 @@ def pytest_configure(config):
         raise SystemExit(1)
 
 
+@pytest.fixture(autouse=True, scope="session")
+def _isolate_default_api_db(tmp_path_factory):
+    """Redirect the agent-API persistence default DB path to a temp location for
+    the whole test session.
+
+    The API stores resolve their path as ``db_path or _DEFAULT_DB_PATH``. Per-test
+    fixtures pass an explicit temp ``db_path``, but a background run thread can
+    outlive its test, and any lazy ``get_store()`` call once the per-test store has
+    been reset to ``None`` constructs a store with *no* path — which would otherwise
+    fall back to the real ``runs/agent_api.db``, leaking test writes to the real
+    database and contaminating later tests. Pointing the default at a throwaway temp
+    file makes that fallback harmless. Guarded so environments that can't import the
+    persistence module (e.g. missing optional deps) still run.
+    """
+    try:
+        import swarm.api.persistence as persistence
+    except Exception:
+        yield
+        return
+
+    original = persistence._DEFAULT_DB_PATH
+    persistence._DEFAULT_DB_PATH = (
+        tmp_path_factory.mktemp("api_default_db") / "agent_api.db"
+    )
+    try:
+        yield
+    finally:
+        persistence._DEFAULT_DB_PATH = original
+
+
 # ---------------------------------------------------------------------------
 # Memory Profiling and Limiting
 # ---------------------------------------------------------------------------
