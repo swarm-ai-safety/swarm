@@ -35,7 +35,10 @@ jobs:
         with:
           python-version: "3.12"
 
-      - run: python -m pip install -e ".[dev,runtime]"
+      # Match ci.yml's full-test extras: the suite imports matplotlib (analysis),
+      # api, and gamescape deps, so a [dev,runtime]-only install fails at
+      # collection and silently skips build/publish (PyPI stuck at 1.5.0).
+      - run: python -m pip install -e ".[dev,runtime,api,analysis,gamescape]"
 
       - run: ruff check swarm/ tests/
 
