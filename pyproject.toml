@@ -28,6 +28,7 @@ dependencies = [
     "pydantic>=2.0",
     "pandas>=2.0",
     "pyyaml>=6.0",
+    "pynacl>=1.5",
 ]
 
 [project.optional-dependencies]

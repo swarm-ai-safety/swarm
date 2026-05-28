@@ -45,3 +45,44 @@ That gives the first complete local loop:
 ```text
 delegate task -> isolate worktree -> execute checks -> attest diff -> verify bundle
 ```
+
+## Cryptographic Identity & Delegation
+
+The MVP signs bundles with a shared HMAC key, which proves a bundle was sealed
+by *someone holding the key* but not *which agent* produced the change. The
+`swarm.agentgit.identity` module adds verifiable identity with Ed25519
+(asymmetric) signatures.
+
+- **`AgentKeypair`** — an Ed25519 keypair. Its `did` is `did:key:ed25519:<hex>`,
+  so the public key is embedded in the identifier and verifiers need no key
+  registry.
+- **`AgentIdentity`** — the agent's DID plus owner/org and model/runtime/version
+  provenance and its `allowed_tools`.
+- **`DelegationChain`** — an ordered, individually-signed `human -> org -> agent`
+  chain. `verify()` checks every link's signature, that the chain is connected
+  (each link's subject issues the next), that permissions only *narrow* down the
+  chain, and that no link has expired.
+
+When `identity` + `agent_keypair` (and optionally `delegation`) are passed to
+`build_bundle`, the agent's key signs the receipt `payload_hash`, binding a
+verifiable identity to that exact diff:
+
+```python
+from swarm.agentgit import AgentIdentity, AgentKeypair, build_bundle, sign_link, DelegationChain
+
+org = AgentKeypair.generate()
+agent = AgentKeypair.generate()
+identity = AgentIdentity.for_keypair(agent, owner="alice", org="acme", allowed_tools=["read", "test"])
+chain = DelegationChain(links=[sign_link(org, subject_did=agent.did, permissions=["read", "test", "open_pr"])])
+
+bundle = build_bundle(..., identity=identity, agent_keypair=agent, delegation=chain)
+```
+
+`verify_bundle` then additionally checks the identity signature, the delegation
+chain, that the chain's final subject is the signing identity, and that the
+identity's `allowed_tools` stay within the delegated grant. Bundles built
+without identity blocks still verify (backward compatible).
+
+> The CLI (`attest`/`verify`) does not yet manage keypairs — that key-storage
+> surface is tracked as a follow-up. Today identity is wired through the library
+> API.

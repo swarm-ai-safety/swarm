@@ -9,6 +9,12 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from swarm.agentgit.git import GitSnapshot, collect_snapshot
+from swarm.agentgit.identity import (
+    AgentIdentity,
+    AgentKeypair,
+    DelegationChain,
+    verify_signature,
+)
 from swarm.agentgit.policy import AgentGitPolicy, PolicyDecision, decisions_passed
 from swarm.attestation.receipt import (
     AdmissibilityReceipt,
@@ -32,8 +38,17 @@ def build_bundle(
     check_results: Dict[str, bool] | None = None,
     signing_key: str | None = None,
     signer_id: str = "agentgit-local",
+    identity: AgentIdentity | None = None,
+    agent_keypair: AgentKeypair | None = None,
+    delegation: DelegationChain | None = None,
 ) -> Dict[str, Any]:
-    """Build a signed provenance bundle for the current git diff."""
+    """Build a signed provenance bundle for the current git diff.
+
+    When ``identity`` and ``agent_keypair`` are supplied, the agent's Ed25519
+    key signs the receipt ``payload_hash``, binding a *verifiable* identity to
+    this exact diff. An optional ``delegation`` chain records the
+    ``human -> org -> agent`` authority under which the agent acted.
+    """
 
     snapshot = collect_snapshot(repo, base_ref=base_ref)
     decisions = policy.evaluate(snapshot, check_results=check_results)
@@ -46,7 +61,7 @@ def build_bundle(
         decisions=decisions,
     )
 
-    return {
+    bundle: Dict[str, Any] = {
         "schema_version": "agentgit.provenance.v0",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "task": {"task_id": task_id},
@@ -59,6 +74,21 @@ def build_bundle(
         "checks": check_results or {},
         "receipt": receipt.model_dump(mode="json"),
     }
+
+    if identity is not None:
+        bundle["identity"] = identity.to_dict()
+        if agent_keypair is not None:
+            if agent_keypair.did != identity.did:
+                raise ValueError("agent_keypair does not match identity.did")
+            bundle["identity_signature"] = {
+                "did": identity.did,
+                "over": "receipt.payload_hash",
+                "signature": agent_keypair.sign(receipt.payload_hash.encode("utf-8")),
+            }
+    if delegation is not None:
+        bundle["delegation"] = delegation.to_dict()
+
+    return bundle
 
 
 def write_bundle(bundle: Dict[str, Any], output_path: Path) -> Path:
@@ -101,7 +131,52 @@ def verify_bundle(
     if require_policy_pass and not bundle.get("policy", {}).get("passed", False):
         errors.append("policy did not pass")
 
+    errors.extend(_verify_identity(bundle, receipt))
+
     return not errors, errors
+
+
+def _verify_identity(bundle: Dict[str, Any], receipt: AdmissibilityReceipt) -> List[str]:
+    """Verify the optional Ed25519 identity signature and delegation chain.
+
+    Absent identity blocks are not an error: legacy bundles still verify. When
+    present, the agent's signature must cover this bundle's ``payload_hash``,
+    the delegation chain must be valid, its final subject must be the signing
+    identity, and the identity's tools must stay within the delegated grant.
+    """
+
+    errors: List[str] = []
+    identity_block = bundle.get("identity")
+    signature_block = bundle.get("identity_signature")
+
+    if signature_block is not None:
+        if identity_block is None:
+            errors.append("identity_signature present without identity block")
+            return errors
+        identity = AgentIdentity.from_dict(identity_block)
+        if signature_block.get("did") != identity.did:
+            errors.append("identity_signature did does not match identity block")
+        elif not verify_signature(
+            identity.did,
+            receipt.payload_hash.encode("utf-8"),
+            signature_block.get("signature", ""),
+        ):
+            errors.append("identity signature does not verify against payload_hash")
+
+    delegation_block = bundle.get("delegation")
+    if delegation_block is not None:
+        chain = DelegationChain.from_dict(delegation_block)
+        expected_subject = identity_block.get("did") if identity_block else None
+        ok, chain_errors = chain.verify(expected_subject_did=expected_subject)
+        errors.extend(f"delegation: {err}" for err in chain_errors)
+        if ok and identity_block is not None:
+            granted = set(chain.effective_permissions())
+            requested = set(identity_block.get("allowed_tools", []))
+            if not requested <= granted:
+                exceeded = sorted(requested - granted)
+                errors.append(f"delegation: allowed_tools exceed delegated grant: {exceeded}")
+
+    return errors
 
 
 def _payload(
