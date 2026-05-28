@@ -7,7 +7,7 @@ SSH/SCP and network-reaching git operations are unconditionally blocked.
 import logging
 import re
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
+from typing import TYPE_CHECKING, Dict, List, Set, Tuple
 
 from swarm.bridges.worktree.config import WorktreeConfig
 
@@ -84,7 +84,7 @@ class WorktreePolicy:
         agent_id: str,
         chain: "DelegationChain",
         *,
-        expected_subject_did: Optional[str] = None,
+        expected_subject_did: str,
     ) -> Tuple[bool, List[str]]:
         """Derive ``agent_id``'s command allowlist from a delegation chain.
 
@@ -94,7 +94,10 @@ class WorktreePolicy:
         fails verification installs an empty allowlist (deny-all) so the agent
         can run nothing until a valid delegation is supplied.
 
-        Returns ``(ok, errors)``.
+        ``expected_subject_did`` is required and binds the chain to this agent:
+        a chain whose final subject is a different DID is rejected, so a valid
+        delegation issued to one identity cannot be installed under another
+        sandbox name. Returns ``(ok, errors)``.
         """
 
         # Imported lazily to avoid a hard import cycle at module load.

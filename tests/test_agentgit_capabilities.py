@@ -118,12 +118,45 @@ def test_apply_delegation_invalid_chain_denies_all():
     chain = _chain(human, org, agent, org_perms=["read"], agent_perms=["read", "vcs"])
     policy = _policy()
 
-    ok, errors = policy.apply_delegation("codex", chain)
+    ok, errors = policy.apply_delegation("codex", chain, expected_subject_did=agent.did)
     assert not ok
     assert errors
     # Deny-by-default: even normally-safe commands are blocked.
     assert not policy.evaluate_command("codex", ["cat", "x"]).allowed
     assert not policy.evaluate_command("codex", ["pytest"]).allowed
+
+
+def test_apply_delegation_rejects_chain_for_other_subject():
+    # A chain issued to `agent` must not install capabilities under a sandbox
+    # bound to a different DID (P1: subject binding is required).
+    human, org, agent, other = (AgentKeypair.generate() for _ in range(4))
+    chain = _chain(human, org, agent, agent_perms=["read", "test"])
+    policy = _policy()
+
+    ok, errors = policy.apply_delegation("codex", chain, expected_subject_did=other.did)
+    assert not ok
+    assert errors
+    assert not policy.evaluate_command("codex", ["pytest"]).allowed
+
+
+def test_malformed_not_after_denies_without_raising():
+    # P2: a malformed timestamp must surface as an error and deny-by-default,
+    # never raise out of verify()/apply_delegation.
+    human, org, agent = (AgentKeypair.generate() for _ in range(3))
+    link_org = sign_link(human, subject_did=org.did, permissions=["read"])
+    link_agent = sign_link(
+        org, subject_did=agent.did, permissions=["read"], not_after="not-a-date"
+    )
+    chain = DelegationChain(links=[link_org, link_agent])
+
+    allowlist, errors = enforced_allowlist_for_chain(chain)
+    assert allowlist == []
+    assert any("malformed not_after" in e for e in errors)
+
+    policy = _policy()
+    ok, errors = policy.apply_delegation("codex", chain, expected_subject_did=agent.did)
+    assert not ok
+    assert not policy.evaluate_command("codex", ["cat", "x"]).allowed
 
 
 def test_delegation_does_not_override_hard_blocks():
