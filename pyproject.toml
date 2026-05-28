@@ -56,6 +56,9 @@ analysis = [
 runtime = [
     "requests>=2.31",
     "tenacity>=8.2",
+    # The worktree bridge CLI (swarm/bridges/worktree/__main__.py) imports rich
+    # unconditionally and the agentgit attest loop drives it as a subprocess.
+    "rich>=13.0",
 ]
 llm = [
     "anthropic>=0.40.0",
