@@ -90,6 +90,13 @@ class TestConfig:
         with pytest.raises(ValueError):
             AeonConfig(poll_interval_sec=0).validate()
 
+    def test_from_toml_preserves_repos(self, tmp_path: Path):
+        # repos has a default_factory, so a hasattr filter would drop it.
+        toml = tmp_path / "cfg.toml"
+        toml.write_text('ledger_dir = "x"\nrepos = ["owner/aeon", "owner/other"]\n')
+        cfg = AeonConfig.from_toml(toml)
+        assert cfg.repos == ["owner/aeon", "owner/other"]
+
 
 # ---------------------------------------------------------------------------
 # Client
@@ -152,6 +159,21 @@ class TestMapper:
         assert i.interaction_type == InteractionType.VOTE
         assert i.initiator == "did:key:zReviewer"
         assert i.accepted is True
+
+    def test_map_review_id_distinguishes_verdicts(self, config: AeonConfig):
+        mapper = AeonMapper(config)
+        approve = mapper.map_review(REVIEW)
+        changed = mapper.map_review({**REVIEW, "verdict": "request_changes"})
+        # A re-review of the same proposal must not collide / be deduped.
+        assert approve.interaction_id != changed.interaction_id
+
+    def test_map_review_uses_expiresat_timestamp(self, config: AeonConfig):
+        i = AeonMapper(config).map_review(REVIEW)
+        assert i.timestamp.year == 2026 and i.timestamp.hour == 13
+
+    def test_map_review_repo_from_task(self, config: AeonConfig):
+        i = AeonMapper(config).map_review(REVIEW, TASK)
+        assert i.metadata["repo"] == "owner/aeon"
 
     def test_map_skill_run(self, config: AeonConfig):
         run = {
@@ -219,6 +241,20 @@ class TestRunner:
         runner = AeonRunner(config)
         assert await runner._ingest() == 3
         assert await runner._ingest() == 0  # nothing new
+
+    @pytest.mark.asyncio
+    async def test_repo_scope_drops_offrepo_proofs_and_reviews(self, ledger_dir: Path):
+        # Task t1 is owner/aeon; restrict to a different repo -> nothing in scope,
+        # and its proof/review must be dropped rather than leaking into metrics.
+        cfg = AeonConfig(ledger_dir=str(ledger_dir), repos=["other/repo"])
+        report = await AeonRunner(cfg).run_oneshot()
+        assert report.interaction_count == 0
+
+    @pytest.mark.asyncio
+    async def test_repo_scope_keeps_inrepo_records(self, ledger_dir: Path):
+        cfg = AeonConfig(ledger_dir=str(ledger_dir), repos=["owner/aeon"])
+        report = await AeonRunner(cfg).run_oneshot()
+        assert report.interaction_count == 3
 
     @pytest.mark.asyncio
     async def test_persistence(self, config: AeonConfig, tmp_path: Path):

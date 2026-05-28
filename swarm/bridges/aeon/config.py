@@ -10,7 +10,7 @@ from a local Aeon checkout, so it has no network transport and no async deps.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Optional
 
@@ -92,7 +92,11 @@ class AeonConfig:
             data = tomllib.load(f)
 
         section = data.get("tool", {}).get("swarm", {}).get("aeon", data)
-        return cls(**{k: v for k, v in section.items() if hasattr(cls, k)})
+        # Use the dataclass field names, not hasattr: fields declared with a
+        # default_factory (e.g. ``repos``) are NOT class attributes, so a
+        # hasattr filter would silently drop them from a TOML config.
+        known = {f.name for f in fields(cls)}
+        return cls(**{k: v for k, v in section.items() if k in known})
 
     def to_toml(self, path: str | Path) -> None:
         """Serialize current config to a TOML file."""

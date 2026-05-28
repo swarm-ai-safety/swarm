@@ -33,9 +33,11 @@ class AeonRunner:
         config.validate()
         self._config = config
 
-        logging.basicConfig(
-            level=getattr(logging, config.log_level.upper(), logging.INFO),
-            format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        # Configure only the package logger; leave root logging (handlers,
+        # format) to the CLI entrypoint so importing the runner as a library
+        # does not mutate global logging state.
+        logging.getLogger("swarm.bridges.aeon").setLevel(
+            getattr(logging, config.log_level.upper(), logging.INFO)
         )
 
         self.client = AeonClient(config)
@@ -53,17 +55,29 @@ class AeonRunner:
 
     async def _ingest(self) -> int:
         """Read all ledgers, enrich new records, append them. Returns new count."""
-        # Index tasks so proofs can resolve their delegator (repo).
+        # Index tasks so proofs/reviews can resolve their delegator (repo).
+        # fetch_tasks() already applies the repo allow-list, so when scoping is
+        # active we drop proofs/reviews whose joined task is out of scope —
+        # otherwise repo-scoped reporting would leak other repos' activity.
         tasks = self.client.fetch_tasks()
         tasks_by_id = {t.get("id", ""): t for t in tasks}
+        scoped = bool(self._config.repos)
 
         raw: list[SoftInteraction] = []
         raw += [self.mapper.map_task(t) for t in tasks]
-        raw += [
-            self.mapper.map_proof(p, tasks_by_id.get(p.get("taskId", "")))
-            for p in self.client.fetch_proofs()
-        ]
-        raw += [self.mapper.map_review(r) for r in self.client.fetch_reviews()]
+
+        for proof in self.client.fetch_proofs():
+            task = tasks_by_id.get(proof.get("taskId", ""))
+            if scoped and task is None:
+                continue
+            raw.append(self.mapper.map_proof(proof, task))
+
+        for review in self.client.fetch_reviews():
+            task = tasks_by_id.get(str(review.get("target", "")))
+            if scoped and task is None:
+                continue
+            raw.append(self.mapper.map_review(review, task))
+
         raw += [self.mapper.map_skill_run(r) for r in self.client.fetch_skill_runs()]
 
         new_count = 0
@@ -190,6 +204,11 @@ def main() -> None:
     )
     parser.add_argument("-v", "--verbose", action="store_true")
     args = parser.parse_args()
+
+    logging.basicConfig(
+        level=logging.DEBUG if args.verbose else logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
 
     config = AeonConfig(
         ledger_dir=args.ledger_dir,

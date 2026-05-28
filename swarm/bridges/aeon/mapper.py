@@ -102,13 +102,28 @@ class AeonMapper:
             },
         )
 
-    def map_review(self, review: dict[str, Any]) -> SoftInteraction:
-        """Map a review decision (verdict) to a SoftInteraction."""
+    def map_review(
+        self,
+        review: dict[str, Any],
+        task: Optional[dict[str, Any]] = None,
+    ) -> SoftInteraction:
+        """Map a review decision (verdict) to a SoftInteraction.
+
+        Reviews carry no ``createdAt``, so ``expiresAt`` is used as a stable,
+        deterministic timestamp proxy (vs. a wall-clock ``now()`` that would
+        reorder on every run). The id folds in the verdict and ``expiresAt``
+        so a re-review of the same proposal (e.g. an updated verdict) is a
+        distinct interaction rather than being deduplicated away.
+        """
         verdict = review.get("verdict", "")
         scope = review.get("scope", {}) or {}
+        expires_at = review.get("expiresAt", "")
         return SoftInteraction(
-            interaction_id=f"aeon:review:{review.get('reviewer', '')[:16]}:{scope.get('proposalHash', '')[:12]}",
-            timestamp=datetime.now(timezone.utc),  # reviews carry no createdAt
+            interaction_id=(
+                f"aeon:review:{review.get('reviewer', '')[:16]}:"
+                f"{scope.get('proposalHash', '')[:12]}:{verdict}:{expires_at}"
+            ),
+            timestamp=_parse_timestamp(expires_at),
             initiator=review.get("reviewer", ""),
             counterparty=str(review.get("target", "")),
             interaction_type=InteractionType.VOTE,
@@ -119,6 +134,7 @@ class AeonMapper:
                 "verdict": verdict,
                 "proposal_hash": scope.get("proposalHash", ""),
                 "finding_count": len(review.get("findings", []) or []),
+                "repo": (task or {}).get("repo", ""),
                 "event_source": "aeon_review",
             },
         )
