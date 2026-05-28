@@ -86,3 +86,61 @@ without identity blocks still verify (backward compatible).
 > The CLI (`attest`/`verify`) does not yet manage keypairs — that key-storage
 > surface is tracked as a follow-up. Today identity is wired through the library
 > API.
+
+## Capability Enforcement
+
+Verifying a delegation chain is still *advisory* — it proves what an agent was
+allowed to do without stopping it from doing more. `swarm.agentgit.capabilities`
+turns a verified chain into the command allowlist the worktree sandbox
+*physically* enforces, closing the loop identity → delegation → enforcement.
+
+`CAPABILITY_COMMANDS` maps permission tokens to the command binaries they
+authorize (`read` → `ls/cat/grep/…`, `test` → `pytest/python`, `vcs` → `git`,
+etc.). `enforced_allowlist_for_chain` verifies the chain and returns the granted
+commands — or, on any verification failure, an empty allowlist (**deny by
+default**).
+
+```python
+from swarm.bridges.worktree.config import WorktreeConfig
+from swarm.bridges.worktree.policy import WorktreePolicy
+
+policy = WorktreePolicy(WorktreeConfig())
+ok, errors = policy.apply_delegation("codex", chain, expected_subject_did=agent.did)
+# Now only the delegated capabilities execute:
+policy.evaluate_command("codex", ["pytest", "tests/"]).allowed   # True  (test granted)
+policy.evaluate_command("codex", ["git", "status"]).allowed       # False (vcs not granted)
+```
+
+An invalid, expired, or over-scoped chain installs an empty allowlist, so the
+agent can run *nothing* until a valid delegation is supplied. Unconditional
+hard-blocks (ssh/scp, `git push|fetch|pull|clone`) still apply regardless of
+what was delegated.
+
+This slice enforces **command** capabilities (which binary may start).
+
+## OS-Level Isolation
+
+Gating *which* binary starts is not enough: `subprocess.run(cmd, cwd=sandbox)`
+runs an ordinary child process, so an allowlisted `python` can still write
+anywhere and open sockets. `swarm.bridges.worktree.sandbox_launch` wraps the
+executed command in a real OS confinement that limits **filesystem writes to
+the sandbox** and **blocks network egress**:
+
+- macOS → `sandbox-exec` with an SBPL profile (deny `file-write*` outside the
+  sandbox + temp, deny `network*`).
+- Linux → `bwrap` (read-only root, read-write bind on only the sandbox subtree,
+  private empty network namespace via `--unshare-net`).
+
+Opt-in via `WorktreeConfig`:
+
+```python
+WorktreeConfig(os_isolation_enabled=True)          # wrap when a backend exists
+WorktreeConfig(os_isolation_enabled=True, require_os_isolation=True)  # fail-closed
+```
+
+When enabled but no backend is available (e.g. CI/Linux without `bwrap`), the
+command still runs and `CommandResult.isolation` is recorded as `"none"` — the
+isolation status is **never silent**. Set `require_os_isolation=True` to instead
+**deny** execution when no backend exists. Reads are not restricted in this
+slice (interpreters need their stdlib); a stronger read-confining jail and
+short-lived scoped git push tokens remain follow-ups.

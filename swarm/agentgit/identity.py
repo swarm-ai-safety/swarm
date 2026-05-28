@@ -287,11 +287,19 @@ class DelegationChain:
                 )
 
             if link.not_after is not None:
-                expiry = datetime.fromisoformat(link.not_after)
-                if expiry.tzinfo is None:
-                    expiry = expiry.replace(tzinfo=timezone.utc)
-                if now > expiry:
-                    errors.append(f"link {index}: delegation expired at {link.not_after}")
+                # verify() is a security boundary over untrusted bundle data;
+                # a malformed timestamp must surface as an error, never raise.
+                try:
+                    expiry = datetime.fromisoformat(link.not_after)
+                except ValueError:
+                    errors.append(f"link {index}: malformed not_after {link.not_after!r}")
+                else:
+                    if expiry.tzinfo is None:
+                        expiry = expiry.replace(tzinfo=timezone.utc)
+                    if now > expiry:
+                        errors.append(
+                            f"link {index}: delegation expired at {link.not_after}"
+                        )
 
             prev_permissions = permissions
             prev_subject = link.subject_did

@@ -66,3 +66,12 @@ class WorktreeConfig:
     max_events: int = 50000
     agent_role_map: Dict[str, str] = field(default_factory=dict)
     poll_interval_seconds: float = 5.0
+
+    # OS-level command isolation (opt-in). When enabled, executed commands are
+    # wrapped in sandbox-exec (macOS) / bwrap (Linux) to confine writes to the
+    # sandbox dir and block network. If no backend is available the command
+    # still runs and the result records isolation="none" (fail-open) unless
+    # require_os_isolation is set, in which case execution is denied.
+    os_isolation_enabled: bool = False
+    require_os_isolation: bool = False
+    os_isolation_allow_network: bool = False
