@@ -6,6 +6,11 @@ changes.
 """
 
 from swarm.agentgit.bundle import build_bundle, verify_bundle, write_bundle
+from swarm.agentgit.capabilities import (
+    CAPABILITY_COMMANDS,
+    enforced_allowlist_for_chain,
+    granted_commands,
+)
 from swarm.agentgit.identity import (
     AgentIdentity,
     AgentKeypair,
@@ -16,6 +21,7 @@ from swarm.agentgit.identity import (
 from swarm.agentgit.policy import AgentGitPolicy, PolicyDecision
 
 __all__ = [
+    "CAPABILITY_COMMANDS",
     "AgentGitPolicy",
     "AgentIdentity",
     "AgentKeypair",
@@ -23,6 +29,8 @@ __all__ = [
     "DelegationLink",
     "PolicyDecision",
     "build_bundle",
+    "enforced_allowlist_for_chain",
+    "granted_commands",
     "sign_link",
     "verify_bundle",
     "write_bundle",

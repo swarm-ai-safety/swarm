@@ -7,9 +7,12 @@ SSH/SCP and network-reaching git operations are unconditionally blocked.
 import logging
 import re
 from dataclasses import dataclass
-from typing import Dict, List, Set, Tuple
+from typing import TYPE_CHECKING, Dict, List, Optional, Set, Tuple
 
 from swarm.bridges.worktree.config import WorktreeConfig
+
+if TYPE_CHECKING:
+    from swarm.agentgit.identity import DelegationChain
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +78,40 @@ class WorktreePolicy:
     def __init__(self, config: WorktreeConfig) -> None:
         self._config = config
         self._command_budgets: Dict[str, int] = {}  # agent_id -> remaining commands
+
+    def apply_delegation(
+        self,
+        agent_id: str,
+        chain: "DelegationChain",
+        *,
+        expected_subject_did: Optional[str] = None,
+    ) -> Tuple[bool, List[str]]:
+        """Derive ``agent_id``'s command allowlist from a delegation chain.
+
+        Binds the cryptographically delegated capabilities (enqe) to what the
+        sandbox physically allows: the per-agent allowlist becomes exactly the
+        commands authorized by the chain's verified permissions. A chain that
+        fails verification installs an empty allowlist (deny-all) so the agent
+        can run nothing until a valid delegation is supplied.
+
+        Returns ``(ok, errors)``.
+        """
+
+        # Imported lazily to avoid a hard import cycle at module load.
+        from swarm.agentgit.capabilities import enforced_allowlist_for_chain
+
+        allowlist, errors = enforced_allowlist_for_chain(
+            chain, expected_subject_did=expected_subject_did
+        )
+        self._config.agent_command_allowlists[agent_id] = allowlist
+        if errors:
+            logger.warning(
+                "Delegation for agent %s failed verification; denying all "
+                "commands: %s",
+                agent_id,
+                "; ".join(errors),
+            )
+        return not errors, errors
 
     def evaluate_command(
         self,

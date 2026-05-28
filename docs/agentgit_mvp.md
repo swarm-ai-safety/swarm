@@ -86,3 +86,36 @@ without identity blocks still verify (backward compatible).
 > The CLI (`attest`/`verify`) does not yet manage keypairs — that key-storage
 > surface is tracked as a follow-up. Today identity is wired through the library
 > API.
+
+## Capability Enforcement
+
+Verifying a delegation chain is still *advisory* — it proves what an agent was
+allowed to do without stopping it from doing more. `swarm.agentgit.capabilities`
+turns a verified chain into the command allowlist the worktree sandbox
+*physically* enforces, closing the loop identity → delegation → enforcement.
+
+`CAPABILITY_COMMANDS` maps permission tokens to the command binaries they
+authorize (`read` → `ls/cat/grep/…`, `test` → `pytest/python`, `vcs` → `git`,
+etc.). `enforced_allowlist_for_chain` verifies the chain and returns the granted
+commands — or, on any verification failure, an empty allowlist (**deny by
+default**).
+
+```python
+from swarm.bridges.worktree.config import WorktreeConfig
+from swarm.bridges.worktree.policy import WorktreePolicy
+
+policy = WorktreePolicy(WorktreeConfig())
+ok, errors = policy.apply_delegation("codex", chain, expected_subject_did=agent.did)
+# Now only the delegated capabilities execute:
+policy.evaluate_command("codex", ["pytest", "tests/"]).allowed   # True  (test granted)
+policy.evaluate_command("codex", ["git", "status"]).allowed       # False (vcs not granted)
+```
+
+An invalid, expired, or over-scoped chain installs an empty allowlist, so the
+agent can run *nothing* until a valid delegation is supplied. Unconditional
+hard-blocks (ssh/scp, `git push|fetch|pull|clone`) still apply regardless of
+what was delegated.
+
+> This slice enforces **command** capabilities. OS-level scoping — short-lived
+> scoped git push tokens and filesystem/network isolation — is tracked as a
+> follow-up.
