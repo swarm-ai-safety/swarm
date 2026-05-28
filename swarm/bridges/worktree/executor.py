@@ -21,6 +21,7 @@ from swarm.bridges.worktree.config import WorktreeConfig
 from swarm.bridges.worktree.events import WorktreeEvent, WorktreeEventType
 from swarm.bridges.worktree.policy import WorktreePolicy
 from swarm.bridges.worktree.sandbox import SandboxManager
+from swarm.bridges.worktree.sandbox_launch import detect_backend, wrap_command
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +45,7 @@ class CommandResult:
     leakage_details: List[str] = field(default_factory=list)
     resource_violation: Optional[str] = None
     duration_seconds: float = 0.0
+    isolation: str = "none"
 
 
 class SandboxExecutor:
@@ -189,6 +191,53 @@ class SandboxExecutor:
                 events,
             )
 
+        # --- Resolve OS-level isolation before admitting the command ---
+        sandbox_path = self._sandbox_mgr.get_sandbox_path(sandbox_id)
+        if sandbox_path is None:
+            return (
+                CommandResult(
+                    sandbox_id=sandbox_id,
+                    agent_id=agent_id,
+                    command=command,
+                    allowed=False,
+                    deny_reason=f"Sandbox {sandbox_id} not found",
+                ),
+                events,
+            )
+
+        isolation = "none"
+        exec_argv = command
+        if self._config.os_isolation_enabled:
+            backend = detect_backend()
+            if backend == "none" and self._config.require_os_isolation:
+                reason = "OS isolation required but no backend available"
+                events.append(
+                    WorktreeEvent(
+                        event_type=WorktreeEventType.COMMAND_DENIED,
+                        agent_id=agent_id,
+                        sandbox_id=sandbox_id,
+                        payload={"command": command, "reason": reason},
+                    )
+                )
+                return (
+                    CommandResult(
+                        sandbox_id=sandbox_id,
+                        agent_id=agent_id,
+                        command=command,
+                        allowed=False,
+                        deny_reason=reason,
+                    ),
+                    events,
+                )
+            if backend != "none":
+                exec_argv = wrap_command(
+                    command,
+                    sandbox_path=sandbox_path,
+                    backend=backend,
+                    allow_network=self._config.os_isolation_allow_network,
+                )
+                isolation = backend
+
         # Record inbound flow (command into sandbox)
         inbound_flow = InformationFlow.create(
             direction=FlowDirection.INBOUND,
@@ -210,26 +259,13 @@ class SandboxExecutor:
         )
 
         # --- Execution ---
-        sandbox_path = self._sandbox_mgr.get_sandbox_path(sandbox_id)
-        if sandbox_path is None:
-            return (
-                CommandResult(
-                    sandbox_id=sandbox_id,
-                    agent_id=agent_id,
-                    command=command,
-                    allowed=False,
-                    deny_reason=f"Sandbox {sandbox_id} not found",
-                ),
-                events,
-            )
-
         import time
 
         start = time.monotonic()
         timed_out = False
         try:
             proc = subprocess.run(
-                command,
+                exec_argv,
                 capture_output=True,
                 text=True,
                 timeout=self._config.command_timeout_seconds,
@@ -343,6 +379,7 @@ class SandboxExecutor:
                     "timed_out": timed_out,
                     "leakage_blocked": leakage_blocked,
                     "duration_seconds": round(duration, 3),
+                    "isolation": isolation,
                 },
             )
         )
@@ -361,6 +398,7 @@ class SandboxExecutor:
                 leakage_details=leakage_details,
                 resource_violation=post_violation,
                 duration_seconds=round(duration, 3),
+                isolation=isolation,
             ),
             events,
         )

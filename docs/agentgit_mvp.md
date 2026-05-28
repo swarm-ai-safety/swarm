@@ -116,6 +116,31 @@ agent can run *nothing* until a valid delegation is supplied. Unconditional
 hard-blocks (ssh/scp, `git push|fetch|pull|clone`) still apply regardless of
 what was delegated.
 
-> This slice enforces **command** capabilities. OS-level scoping — short-lived
-> scoped git push tokens and filesystem/network isolation — is tracked as a
-> follow-up.
+This slice enforces **command** capabilities (which binary may start).
+
+## OS-Level Isolation
+
+Gating *which* binary starts is not enough: `subprocess.run(cmd, cwd=sandbox)`
+runs an ordinary child process, so an allowlisted `python` can still write
+anywhere and open sockets. `swarm.bridges.worktree.sandbox_launch` wraps the
+executed command in a real OS confinement that limits **filesystem writes to
+the sandbox** and **blocks network egress**:
+
+- macOS → `sandbox-exec` with an SBPL profile (deny `file-write*` outside the
+  sandbox + temp, deny `network*`).
+- Linux → `bwrap` (read-only root, read-write bind on only the sandbox subtree,
+  private empty network namespace via `--unshare-net`).
+
+Opt-in via `WorktreeConfig`:
+
+```python
+WorktreeConfig(os_isolation_enabled=True)          # wrap when a backend exists
+WorktreeConfig(os_isolation_enabled=True, require_os_isolation=True)  # fail-closed
+```
+
+When enabled but no backend is available (e.g. CI/Linux without `bwrap`), the
+command still runs and `CommandResult.isolation` is recorded as `"none"` — the
+isolation status is **never silent**. Set `require_os_isolation=True` to instead
+**deny** execution when no backend exists. Reads are not restricted in this
+slice (interpreters need their stdlib); a stronger read-confining jail and
+short-lived scoped git push tokens remain follow-ups.
