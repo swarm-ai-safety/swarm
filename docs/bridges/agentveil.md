@@ -62,9 +62,10 @@ AgentVeilBridge (bridge.py)
 5. **Policy** decides whether to proceed (admission gate, circuit breaker).
 6. If accepted, the interaction runs; SWARM produces a terminal `SoftInteraction`.
 7. **Write-back policy** decides whether to submit an AVP attestation:
-   - `p ≥ 0.7` → positive attestation (no evidence hash required)
-   - `p < 0.3` → negative attestation (SHA-256 hash of interaction event as evidence)
+   - `p ≥ 0.7` → positive attestation
+   - `p < 0.3` → negative attestation
    - `0.3 ≤ p < 0.7` → no attestation (uncertain band)
+   - All attestations (positive and negative) include an opaque evidence hash: `SHA-256(interaction_id || outcome_sign)`. The raw `p` value is never sent to the registry.
 8. Event logged to SWARM's append-only JSONL log.
 
 ## Proposed module layout
@@ -214,7 +215,7 @@ class AgentVeilConfig:
 **Mitigations:**
 - E1: Batch-prefetch all agent DIDs at epoch start. Cache trust decisions for the epoch. Only re-check on policy-triggered events (circuit breaker trip, anomaly detection).
 - E2: Add `agentveil` to `pyproject.toml` under `[project.optional-dependencies]` as `avp = ["agentveil>=0.1"]`.
-- E3: Attestations should contain only the sign (positive/negative) and an opaque evidence hash, never the raw p value. Hash is `SHA-256(interaction_id || outcome_sign)`.
+- E3: Attestations contain only the sign (positive/negative) and the canonical evidence hash defined in the data flow (step 7): `SHA-256(interaction_id || outcome_sign)`. The raw `p` value is never sent externally.
 - E4: Pin SDK version; add integration test that calls `AVPAgent.create(mock=True)` and checks return schema.
 - E5: Assert `mock_mode is False` when `registry_url` points to a production endpoint. Log a warning at bridge init if mock mode is active.
 
@@ -250,6 +251,6 @@ class AgentVeilConfig:
 ## See also
 
 - [Bridge Architecture](index.md) — How SWARM bridges work
-- [AI-Scientist Bridge](../bridges/) — Similar pattern (config/events/mapper/policy/bridge)
+- [AI-Scientist Bridge](../../swarm/bridges/ai_scientist/bridge.py) — Reference implementation (config/events/mapper/policy/bridge pattern)
 - [Proxy Computer](../concepts/metrics.md) — How observables become `p`
 - [SoftInteraction model](../../swarm/models/interaction.py) — The core data structure
