@@ -2,6 +2,7 @@
 
 Available bridge subpackages (lazy import to avoid pulling in optional deps):
 
+    swarm.bridges.aeon              — Aeon agent-first ledger bridge (filesystem)
     swarm.bridges.agent_lab         — AgentLaboratory autonomous research bridge
     swarm.bridges.autogpt           — AutoGPT autonomous agent bridge
     swarm.bridges.claude_code       — Claude Code controller bridge
