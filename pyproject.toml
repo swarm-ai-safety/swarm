@@ -153,6 +153,7 @@ Issues = "https://github.com/swarm-ai-safety/swarm/issues"
 
 [project.scripts]
 swarm = "swarm.__main__:main"
+agentgit = "swarm.agentgit.__main__:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

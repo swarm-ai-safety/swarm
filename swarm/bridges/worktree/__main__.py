@@ -10,7 +10,9 @@ Usage:
 """
 
 import argparse
+import os
 import sys
+from pathlib import Path
 from typing import Any, List, Optional
 
 from rich.console import Console
@@ -18,6 +20,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from swarm.agentgit.bundle import build_bundle, write_bundle
+from swarm.agentgit.policy import AgentGitPolicy
 from swarm.bridges.worktree.bridge import WorktreeBridge
 from swarm.bridges.worktree.config import WorktreeConfig
 
@@ -298,6 +302,54 @@ def cmd_status(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_attest(args: argparse.Namespace) -> int:
+    """Create an AgentGit provenance bundle for an agent sandbox."""
+    bridge = _make_bridge(
+        repo=getattr(args, "repo", None),
+        root=getattr(args, "root", None),
+    )
+
+    sandbox_id = f"sandbox-{args.agent_id}"
+    existing = bridge._sandbox_mgr.discover_existing()
+    sandbox_path = existing.get(sandbox_id)
+    if sandbox_path is None:
+        console.print(Panel(
+            f"[red]No sandbox found for agent [bold]{args.agent_id}[/bold][/red]",
+            title="Attest Failed",
+            border_style="red",
+        ))
+        return 1
+
+    policy = AgentGitPolicy.from_yaml(Path(args.policy))
+    bundle = build_bundle(
+        repo=Path(sandbox_path),
+        task_id=args.task,
+        agent_id=args.agent_id,
+        policy=policy,
+        base_ref=args.base,
+        check_results=_parse_checks(args.check),
+        signing_key=args.signing_key or os.environ.get("AGENTGIT_SIGNING_KEY"),
+        signer_id=args.signer_id,
+    )
+    write_bundle(bundle, Path(args.output))
+
+    passed = bundle["policy"]["passed"]
+    status = Text("PASS", style="bold green") if passed else Text("FAIL", style="bold red")
+    body = Text()
+    body.append("Agent:      ", style="bold")
+    body.append(f"{args.agent_id}\n")
+    body.append("Task:       ", style="bold")
+    body.append(f"{args.task}\n")
+    body.append("Sandbox:    ", style="bold")
+    body.append(f"{sandbox_path}\n")
+    body.append("Bundle:     ", style="bold")
+    body.append(f"{args.output}\n")
+    body.append("Changed:    ", style="bold")
+    body.append(str(bundle["git"]["totals"]["changed_files"]))
+    console.print(Panel(body, title=status, border_style="green" if passed else "red"))
+    return 0 if passed or args.warn_only else 1
+
+
 def cmd_gc(args: argparse.Namespace) -> int:
     """Run garbage collection on stale sandboxes."""
     bridge = _make_bridge(
@@ -371,6 +423,36 @@ def build_parser() -> argparse.ArgumentParser:
     )
     add_common(status_p)
 
+    # attest
+    attest_p = subparsers.add_parser(
+        "attest",
+        help="Create an AgentGit provenance bundle for a sandbox",
+    )
+    attest_p.add_argument("agent_id", help="Agent identifier")
+    attest_p.add_argument("--task", required=True, help="Delegated task identifier")
+    attest_p.add_argument("--policy", required=True, help="AgentGit policy YAML")
+    attest_p.add_argument("--base", default="HEAD", help="Base ref to diff against")
+    attest_p.add_argument(
+        "--output",
+        default=".agentgit/provenance.json",
+        help="Output provenance bundle path",
+    )
+    attest_p.add_argument(
+        "--check",
+        action="append",
+        default=[],
+        metavar="NAME=pass|fail",
+        help="Record a required check result; may be repeated",
+    )
+    attest_p.add_argument("--signing-key", default=None, help="Hex HMAC key")
+    attest_p.add_argument("--signer-id", default="agentgit-local")
+    attest_p.add_argument(
+        "--warn-only",
+        action="store_true",
+        help="Write bundle but return success even when policy fails",
+    )
+    add_common(attest_p)
+
     # gc
     gc_p = subparsers.add_parser("gc", help="Garbage-collect stale sandboxes")
     add_common(gc_p)
@@ -395,6 +477,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         "list": cmd_list,
         "exec": cmd_exec,
         "status": cmd_status,
+        "attest": cmd_attest,
         "gc": cmd_gc,
     }
 
@@ -404,6 +487,19 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     parser.print_help()
     return 0
+
+
+def _parse_checks(raw_checks: List[str]) -> dict[str, bool]:
+    checks: dict[str, bool] = {}
+    for raw in raw_checks:
+        if "=" not in raw:
+            raise SystemExit(f"Invalid --check value {raw!r}; expected NAME=pass|fail")
+        name, value = raw.split("=", 1)
+        normalised = value.strip().lower()
+        if normalised not in {"pass", "passed", "true", "fail", "failed", "false"}:
+            raise SystemExit(f"Invalid check result {value!r} for {name!r}")
+        checks[name.strip()] = normalised in {"pass", "passed", "true"}
+    return checks
 
 
 if __name__ == "__main__":

@@ -1,0 +1,13 @@
+# Example AgentGit task policy for a narrow documentation/code change.
+allowed_paths:
+  - swarm/agentgit/**
+  - tests/test_agentgit.py
+  - docs/agentgit_mvp.md
+denied_paths:
+  - .env*
+  - credentials/**
+max_changed_files: 8
+max_added_lines: 500
+required_checks:
+  - pytest
+require_human_review: true

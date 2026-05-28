@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **AgentGit provenance MVP** (`swarm/agentgit/`) — evaluates the current git diff against a policy (allowed/denied paths, file/line caps, required checks, human-review gate) and signs a task-scoped provenance bundle that `verify` can later check for tampering and policy pass. Adds the `agentgit` console entrypoint (`pyproject.toml`) and a worktree-bridge `attest` subcommand for the sandbox → attest → verify loop. Review hardening: `_parse_count` raises a clear error on non-numeric numstat output, and `_count_lines` no longer swallows `OSError` so an unreadable file can't slip under a line-limit policy. Docs in `docs/agentgit_mvp.md`, example policy in `examples/agentgit_policy.yaml`; 12 tests (module coverage ~88%).
+
 ## [1.8.0] - 2026-05-26
 
 ### Added
