@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-05-28
+
 ### Fixed
 - **Worktree bridge CLI missing `rich` in CI** — `swarm/bridges/worktree/__main__.py` imports `rich` unconditionally, but it was declared only in the niche `cli` extra, so CI's `[dev,runtime,api,analysis,gamescape]` install lacked it and `test_worktree_attest_then_agentgit_verify_loop` failed with `ModuleNotFoundError: No module named 'rich'` (the test drives the bridge as a subprocess). Moved `rich>=13.0` into the `runtime` extra.
 
