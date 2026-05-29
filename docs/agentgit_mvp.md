@@ -31,9 +31,9 @@ you want to capture the bundle without blocking the current command.
 Beyond the diff and policy verdict, schema `agentgit.provenance.v1` records a
 `provenance` block describing how the change was produced:
 
-- `commands` — commands executed (binary + args, return code, OS `isolation`
-  backend, duration, timeout). Build these from a worktree `CommandResult` via
-  `CommandRecord.from_command_result(result)`.
+- `commands` — commands executed (binary + args, `return_code`, OS `isolation`
+  backend, `duration_seconds`, and a `timed_out` flag). Build these from a
+  worktree `CommandResult` via `CommandRecord.from_command_result(result)`.
 - `environment` — model / runtime / version of the producing agent.
 - `dependency_changes` — manifest/lockfile edits (`requirements.txt`,
   `pyproject.toml`, `package-lock.json`, `Cargo.lock`, `go.sum`, …) detected

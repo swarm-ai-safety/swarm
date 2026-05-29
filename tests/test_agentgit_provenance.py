@@ -69,7 +69,7 @@ def test_command_record_from_command_result_duck_typed():
         timed_out = False
 
     rec = CommandRecord.from_command_result(FakeResult())
-    assert rec.command == ["python", "-c", "x"]
+    assert list(rec.command) == ["python", "-c", "x"]
     assert rec.isolation == "sandbox-exec"
     assert rec.return_code == 1
 
@@ -148,6 +148,24 @@ def test_tampering_with_commands_fails_verification(tmp_path):
     ok, errors = verify_bundle(bundle)
     assert not ok
     assert any("payload_hash does not match" in e for e in errors)
+
+
+def test_verify_handles_malformed_receipt_gracefully():
+    # verify_bundle runs over untrusted input; a bad receipt must return
+    # (False, errors), not raise a pydantic ValidationError.
+    bundle = {
+        "schema_version": SCHEMA_V1,
+        "task": {"task_id": "x"},
+        "agent": {"agent_id": "y"},
+        "git": {},
+        "policy": {"passed": True, "decisions": []},
+        "checks": {},
+        "provenance": {},
+        "receipt": {"not": "a valid receipt"},
+    }
+    ok, errors = verify_bundle(bundle)
+    assert not ok
+    assert any("receipt failed schema validation" in e for e in errors)
 
 
 def test_tampering_with_dependency_changes_fails_verification(tmp_path):

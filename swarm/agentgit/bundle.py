@@ -8,6 +8,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
 
+from pydantic import ValidationError
+
 from swarm.agentgit.git import GitSnapshot, collect_snapshot
 from swarm.agentgit.identity import (
     AgentIdentity,
@@ -57,11 +59,15 @@ _DEPENDENCY_FILENAMES = {
 class CommandRecord:
     """One command executed while producing the diff, for the provenance log."""
 
-    command: List[str]
+    command: Sequence[str]
     return_code: Optional[int] = None
     isolation: str = "none"
     duration_seconds: Optional[float] = None
     timed_out: bool = False
+
+    def __post_init__(self) -> None:
+        # Store immutably so a frozen record is truly value-immutable.
+        object.__setattr__(self, "command", tuple(self.command))
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -77,7 +83,7 @@ class CommandRecord:
         """Adapt a worktree ``SandboxExecutor`` result (duck-typed, no import)."""
 
         return cls(
-            command=list(result.command),
+            command=tuple(result.command),
             return_code=result.return_code,
             isolation=getattr(result, "isolation", "none"),
             duration_seconds=getattr(result, "duration_seconds", None),
@@ -197,7 +203,14 @@ def verify_bundle(
     if bundle.get("schema_version") not in _SUPPORTED_SCHEMAS:
         errors.append("unsupported schema_version")
 
-    receipt = AdmissibilityReceipt.model_validate(bundle.get("receipt", {}))
+    # verify_bundle runs over untrusted input; a malformed receipt must fail
+    # gracefully rather than raise out of the verifier.
+    try:
+        receipt = AdmissibilityReceipt.model_validate(bundle.get("receipt", {}))
+    except ValidationError:
+        errors.append("receipt failed schema validation")
+        return False, errors
+
     payload = _payload_from_bundle(bundle)
     expected_hash = AdmissibilityReceipt.hash_payload(payload)
     if receipt.payload_hash != expected_hash:
