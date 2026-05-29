@@ -249,3 +249,51 @@ mjx-container[jax="CHTML"][display="true"] {
   letter-spacing: 0.02em;
   vertical-align: middle;
 }
+
+/* ---- Knowledge graph (/graph) ---- */
+.kb-graph-canvas {
+  width: 100%; height: 70vh; min-height: 480px;
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 6px; background: var(--md-default-bg-color);
+}
+.kb-controls { display: flex; flex-direction: column; gap: 0.6rem; margin: 0.8rem 0; }
+#kb-search {
+  width: 100%; max-width: 360px; padding: 0.45rem 0.6rem;
+  border: 1px solid var(--md-default-fg-color--lighter); border-radius: 6px;
+  font-size: 0.8rem; background: var(--md-default-bg-color); color: var(--md-default-fg-color);
+}
+.kb-pathfinder { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; }
+.kb-pf-label { font-weight: 600; font-size: 0.8rem; }
+.kb-pathfinder select {
+  max-width: 240px; padding: 0.35rem; border-radius: 6px;
+  border: 1px solid var(--md-default-fg-color--lighter);
+  background: var(--md-default-bg-color); color: var(--md-default-fg-color); font-size: 0.75rem;
+}
+#kb-find-path {
+  padding: 0.4rem 0.8rem; border: none; border-radius: 6px; cursor: pointer;
+  background: var(--md-primary-fg-color); color: var(--md-primary-bg-color); font-size: 0.78rem;
+}
+.kb-arrow { color: var(--md-default-fg-color--light); font-weight: 700; }
+.kb-path-result { font-size: 0.82rem; line-height: 1.7; }
+.kb-nopath { color: var(--md-default-fg-color--light); }
+.kb-legend { display: flex; flex-wrap: wrap; gap: 0.35rem; }
+.kb-chip {
+  display: inline-flex; align-items: center; gap: 0.3rem;
+  padding: 0.18rem 0.5rem; border: 1px solid; border-radius: 999px;
+  background: var(--md-default-bg-color); color: var(--md-default-fg-color);
+  font-size: 0.68rem; cursor: pointer;
+}
+.kb-chip span { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+.kb-chip.off { opacity: 0.4; text-decoration: line-through; }
+
+/* ---- Per-page backlinks (injected by kb_graph.py hook) ---- */
+.kb-backlinks {
+  margin-top: 2.5rem; padding: 0.8rem 1rem;
+  border-top: 1px solid var(--md-default-fg-color--lightest);
+  font-size: 0.8rem;
+}
+.kb-backlinks h2 { font-size: 0.85rem; margin: 0 0 0.4rem; border: none; }
+.kb-backlinks ul { columns: 2; margin: 0; }
+.kb-backlink-count, .kb-backlink-section {
+  color: var(--md-default-fg-color--light); font-size: 0.68rem; font-weight: 400;
+}
