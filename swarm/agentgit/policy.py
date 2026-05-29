@@ -85,7 +85,20 @@ class PolicyFacts:
         )
 
     @classmethod
-    def from_bundle(cls, bundle: Dict[str, Any]) -> "PolicyFacts":
+    def from_bundle(
+        cls,
+        bundle: Dict[str, Any],
+        trusted_overrides: Optional[Iterable[str]] = None,
+    ) -> "PolicyFacts":
+        """Build facts from a bundle for CI gating.
+
+        The bundle is agent-supplied, so its ``provenance.overrides`` are NOT
+        trusted here: an agent could otherwise pre-populate an override for the
+        exact CI rule meant to catch it. At gate time, overrides must come from
+        a CI-controlled source (``trusted_overrides``); none are honored by
+        default, preserving deny-by-default.
+        """
+
         git = bundle.get("git", {})
         files = git.get("changed_files", [])
         totals = git.get("totals", {})
@@ -99,8 +112,12 @@ class PolicyFacts:
             dependency_paths=[
                 d.get("path", "") for d in provenance.get("dependency_changes", [])
             ],
-            overridden_rules=_overridden_rules(provenance.get("overrides", [])),
+            overridden_rules=set(trusted_overrides or []),
         )
+
+
+_RULE_ACTIONS = {"deny", "require_check", "require_review"}
+_RULE_SEVERITIES = {"error", "warning"}
 
 
 @dataclass(frozen=True)
@@ -115,12 +132,30 @@ class ConditionalRule:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "ConditionalRule":
+        rule_id = data["id"]
+        action = data.get("action", "deny")
+        if action not in _RULE_ACTIONS:
+            raise ValueError(
+                f"rule {rule_id!r}: invalid action {action!r}; "
+                f"expected one of {sorted(_RULE_ACTIONS)}"
+            )
+        severity = data.get("severity", "error")
+        if severity not in _RULE_SEVERITIES:
+            raise ValueError(
+                f"rule {rule_id!r}: invalid severity {severity!r}; "
+                f"expected one of {sorted(_RULE_SEVERITIES)}"
+            )
+        check = data.get("check")
+        if action == "require_check" and not check:
+            raise ValueError(
+                f"rule {rule_id!r}: action 'require_check' requires a non-empty 'check'"
+            )
         return cls(
-            id=data["id"],
+            id=rule_id,
             when=dict(data.get("when", {})),
-            action=data.get("action", "deny"),
-            check=data.get("check"),
-            severity=data.get("severity", "error"),
+            action=action,
+            check=check,
+            severity=severity,
         )
 
     def _matches(self, facts: PolicyFacts) -> bool:
@@ -344,17 +379,24 @@ def decisions_passed(decisions: Iterable[PolicyDecision]) -> bool:
 
 
 def gate_bundle(
-    bundle: Dict[str, Any], policy: "AgentGitPolicy"
+    bundle: Dict[str, Any],
+    policy: "AgentGitPolicy",
+    *,
+    trusted_overrides: Optional[Iterable[str]] = None,
 ) -> tuple[bool, List[PolicyDecision]]:
     """Enforce a (CI/org-owned) policy against an already-attested bundle.
 
     Reads the bundle's *recorded* facts (changed files, totals, checks,
-    dependency changes, overrides) and evaluates ``policy`` against them. This
-    judges what the agent actually did against what CI allows, independent of
-    whatever policy the agent self-attested with. Returns ``(ok, decisions)``.
+    dependency changes) and evaluates ``policy`` against them. This judges what
+    the agent actually did against what CI allows, independent of whatever
+    policy the agent self-attested with. Returns ``(ok, decisions)``.
+
+    Callers should verify the bundle's signature before gating so the facts are
+    authentic; ``trusted_overrides`` are rule ids a CI-controlled source vouches
+    for (bundle-supplied overrides are ignored here — see ``from_bundle``).
     """
 
-    facts = PolicyFacts.from_bundle(bundle)
+    facts = PolicyFacts.from_bundle(bundle, trusted_overrides=trusted_overrides)
     decisions = policy.evaluate_facts(facts)
     return decisions_passed(decisions), decisions
 

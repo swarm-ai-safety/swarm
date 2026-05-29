@@ -56,13 +56,29 @@ def cmd_verify(args: argparse.Namespace) -> int:
 def cmd_gate(args: argparse.Namespace) -> int:
     """Enforce a CI/org-owned policy against an already-attested bundle."""
     bundle = load_bundle(Path(args.bundle))
+
+    # The gate reads facts out of the bundle, so the bundle must be authentic
+    # first: verify the signature (not the bundle's own policy — CI applies its
+    # own) and fail closed on any tampering/malformed input.
+    verify_ok, verify_errors = verify_bundle(
+        bundle,
+        signing_key=args.signing_key or os.environ.get("AGENTGIT_SIGNING_KEY"),
+        require_policy_pass=False,
+    )
+    if not verify_ok:
+        print(f"FAIL agentgit gate: {args.bundle} (bundle failed verification)")
+        for error in verify_errors:
+            print(f"- {error}")
+        return 1
+
     policy = AgentGitPolicy.from_yaml(Path(args.policy))
-    ok, decisions = gate_bundle(bundle, policy)
+    ok, decisions = gate_bundle(bundle, policy, trusted_overrides=args.override)
     status = "PASS" if ok else "FAIL"
     print(f"{status} agentgit gate: {args.bundle} (policy {args.policy})")
     for decision in decisions:
-        if not decision.passed and decision.severity != "warning":
-            print(f"- [{decision.policy_id}] {decision.reason}")
+        if not decision.passed:
+            label = "WARN" if decision.severity == "warning" else "FAIL"
+            print(f"- [{label}] [{decision.policy_id}] {decision.reason}")
     return 0 if ok else 1
 
 
@@ -124,6 +140,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     gate.add_argument("--bundle", required=True, help="Path to provenance bundle JSON")
     gate.add_argument("--policy", required=True, help="CI/org-owned AgentGit policy YAML")
+    gate.add_argument(
+        "--signing-key",
+        default=None,
+        help="Hex HMAC key for bundle verification. Defaults to AGENTGIT_SIGNING_KEY.",
+    )
+    gate.add_argument(
+        "--override",
+        action="append",
+        default=[],
+        metavar="RULE_ID",
+        help="CI-trusted override: pass a blocking rule's id; may be repeated",
+    )
     gate.set_defaults(func=cmd_gate)
     return parser
 

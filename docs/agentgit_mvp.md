@@ -98,9 +98,13 @@ python -m swarm.agentgit gate \
   --policy .github/agentgit.policy.yaml   # exits non-zero on any blocking rule
 ```
 
-`gate` reads the bundle's recorded facts (changed files, totals, checks,
-dependency changes, overrides), so a stricter CI policy catches violations even
-if the agent attested against a lax one.
+`gate` first **verifies the bundle's signature** (failing closed on tampering or
+malformed input), then evaluates the policy against the bundle's recorded facts
+(changed files, totals, checks, dependency changes) — so a stricter CI policy
+catches violations even if the agent attested against a lax one. Crucially, the
+bundle's *own* `provenance.overrides` are **not trusted** at the gate (an agent
+could otherwise pre-approve the rule meant to catch it); a CI override must be
+supplied explicitly with `--override <rule-id>` from a CI-controlled source.
 
 ## Worktree Loop
 

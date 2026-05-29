@@ -3,7 +3,9 @@
 import subprocess
 from pathlib import Path
 
-from swarm.agentgit.bundle import build_bundle, verify_bundle
+import pytest
+
+from swarm.agentgit.bundle import build_bundle, verify_bundle, write_bundle
 from swarm.agentgit.policy import (
     AgentGitPolicy,
     ConditionalRule,
@@ -230,9 +232,69 @@ def test_ci_gate_passes_clean_bundle(tmp_path):
     assert ok
 
 
+def test_from_dict_validates_action_severity_and_check():
+    with pytest.raises(ValueError):
+        ConditionalRule.from_dict({"id": "r", "action": "nope"})
+    with pytest.raises(ValueError):
+        ConditionalRule.from_dict({"id": "r", "severity": "loud"})
+    with pytest.raises(ValueError):
+        ConditionalRule.from_dict({"id": "r", "action": "require_check"})  # no check
+
+
+def test_gate_ignores_bundle_supplied_overrides(tmp_path):
+    # The bypass codex flagged: a bundle can pre-populate provenance.overrides
+    # for the exact CI rule meant to catch it. The gate must NOT honor those.
+    repo = _repo(tmp_path)
+    (repo / "auth.py").write_text("def login(): ...\n")
+    bundle = build_bundle(
+        repo=repo,
+        task_id="t",
+        agent_id="a",
+        policy=AgentGitPolicy(allowed_paths=["**"]),
+        overrides=[{"rule": "auth-review", "by": "agent", "reason": "trust me"}],
+    )
+    ci_policy = AgentGitPolicy(
+        allowed_paths=["**"],
+        rules=[
+            ConditionalRule(
+                id="auth-review", when={"paths_match": ["*auth*"]}, action="require_review"
+            )
+        ],
+    )
+    # Bundle-supplied override is ignored -> still blocked.
+    ok, _ = gate_bundle(bundle, ci_policy)
+    assert not ok
+    # Only an explicit CI-trusted override unblocks it.
+    ok2, _ = gate_bundle(bundle, ci_policy, trusted_overrides=["auth-review"])
+    assert ok2
+
+
+def test_gate_cli_fails_closed_on_tampered_bundle(tmp_path, capsys):
+    from swarm.agentgit.__main__ import main
+
+    repo = _repo(tmp_path)
+    (repo / "swarm").mkdir()
+    (repo / "swarm" / "ok.py").write_text("x = 1\n")
+    bundle = build_bundle(
+        repo=repo, task_id="t", agent_id="a", policy=AgentGitPolicy(allowed_paths=["**"])
+    )
+    # Tamper with the recorded facts the gate would read.
+    bundle["git"]["changed_files"].append(
+        {"path": "secret.env", "status": "A", "additions": 1, "deletions": 0}
+    )
+    bundle_path = tmp_path / "tampered.json"
+    write_bundle(bundle, bundle_path)
+    policy_path = tmp_path / "p.yaml"
+    policy_path.write_text('allowed_paths: ["**"]\n')
+
+    rc = main(["gate", "--bundle", str(bundle_path), "--policy", str(policy_path)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "failed verification" in out
+
+
 def test_gate_cli_exit_codes(tmp_path, capsys):
     from swarm.agentgit.__main__ import main
-    from swarm.agentgit.bundle import write_bundle
 
     repo = _repo(tmp_path)
     (repo / "auth.py").write_text("def login(): ...\n")
