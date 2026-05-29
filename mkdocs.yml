@@ -75,6 +75,7 @@ extra_javascript:
 hooks:
   - docs/overrides/hooks/external_links.py
   - docs/overrides/hooks/semantic_html.py
+  - docs/overrides/hooks/kb_graph.py
 
 plugins:
   - search
@@ -172,6 +173,7 @@ nav:
   - Comparison: comparison.md
   - SWARM vs Alternatives: swarm-vs-alternatives.md
   - Glossary: glossary.md
+  - Knowledge Graph: graph.md
   - Game: game.md
   - Blog:
     - blog/index.md
