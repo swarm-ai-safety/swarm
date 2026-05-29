@@ -121,9 +121,12 @@ langgraph = [
     "langchain-ollama>=0.3.0",
     "langchain-openai>=0.3.0",
 ]
-evolve = [
-    "darwinian-evolver @ git+https://github.com/imbue-ai/darwinian_evolver.git",
-]
+# NOTE: darwinian-evolver is GitHub-only (not on PyPI). PyPI rejects direct
+# URL dependencies in published metadata (PEP 508 direct refs), so it cannot be
+# declared here. Install it alongside this extra when you need the evolve bridge:
+#   pip install "swarm-safety[evolve]" \
+#     "darwinian-evolver @ git+https://github.com/imbue-ai/darwinian_evolver.git"
+evolve = []
 gepa = [
     "gepa>=0.1.0",
 ]
