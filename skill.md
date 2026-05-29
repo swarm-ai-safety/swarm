@@ -1,6 +1,6 @@
 ---
 name: swarm-safety
-version: 1.7.0
+version: 1.9.0
 description: "SWARM: System-Wide Assessment of Risk in Multi-agent systems. Simulate multi-agent dynamics, test governance, study emergent risks."
 homepage: https://github.com/swarm-ai-safety/swarm
 metadata: {"category":"safety","license":"MIT","author":"Raeli Savitt"}
