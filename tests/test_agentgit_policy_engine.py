@@ -269,6 +269,78 @@ def test_gate_ignores_bundle_supplied_overrides(tmp_path):
     assert ok2
 
 
+def test_gate_ignores_bundle_supplied_checks(tmp_path):
+    # The check-trust asymmetry: a bundle's `checks` are agent-authored, so a
+    # check-based CI rule (tests-must-pass) must NOT trust them — otherwise an
+    # agent defeats the gate by self-attesting checks={"pytest": True}.
+    repo = _repo(tmp_path)
+    (repo / "swarm").mkdir()
+    (repo / "swarm" / "ok.py").write_text("x = 1\n")
+    bundle = build_bundle(
+        repo=repo,
+        task_id="t",
+        agent_id="a",
+        policy=AgentGitPolicy(allowed_paths=["**"]),
+        check_results={"pytest": True},  # agent claims tests passed
+    )
+    assert bundle["checks"] == {"pytest": True}
+    ci_policy = AgentGitPolicy(
+        allowed_paths=["**"],
+        rules=[
+            ConditionalRule(id="tests-must-pass", when={"check_failed": "pytest"}, action="deny")
+        ],
+    )
+    # Bundle-supplied check is ignored -> unknown check fails closed -> blocked.
+    ok, _ = gate_bundle(bundle, ci_policy)
+    assert not ok
+    # Only a CI-authoritative check result clears the rule.
+    ok2, _ = gate_bundle(bundle, ci_policy, trusted_checks={"pytest": True})
+    assert ok2
+
+
+def test_gate_cli_uses_ci_authoritative_checks(tmp_path, capsys):
+    from swarm.agentgit.__main__ import main
+
+    repo = _repo(tmp_path)
+    (repo / "swarm").mkdir()
+    (repo / "swarm" / "ok.py").write_text("x = 1\n")
+    bundle = build_bundle(
+        repo=repo,
+        task_id="t",
+        agent_id="a",
+        policy=AgentGitPolicy(allowed_paths=["**"]),
+        check_results={"pytest": True},  # agent self-attests a pass
+    )
+    bundle_path = tmp_path / "bundle.json"
+    write_bundle(bundle, bundle_path)
+    policy_path = tmp_path / "p.yaml"
+    policy_path.write_text(
+        'allowed_paths: ["**"]\n'
+        "rules:\n"
+        "  - id: tests-must-pass\n"
+        '    when: {check_failed: pytest}\n'
+        "    action: deny\n"
+    )
+    # Without a CI-supplied check, the gate fails closed despite the bundle's claim.
+    rc = main(["gate", "--bundle", str(bundle_path), "--policy", str(policy_path)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "rule:tests-must-pass" in out
+    # CI supplies the real result -> rule clears.
+    rc2 = main(
+        [
+            "gate",
+            "--bundle",
+            str(bundle_path),
+            "--policy",
+            str(policy_path),
+            "--check",
+            "pytest=pass",
+        ]
+    )
+    assert rc2 == 0
+
+
 def test_gate_cli_fails_closed_on_tampered_bundle(tmp_path, capsys):
     from swarm.agentgit.__main__ import main
 

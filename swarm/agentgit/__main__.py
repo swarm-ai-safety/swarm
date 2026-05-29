@@ -72,7 +72,16 @@ def cmd_gate(args: argparse.Namespace) -> int:
         return 1
 
     policy = AgentGitPolicy.from_yaml(Path(args.policy))
-    ok, decisions = gate_bundle(bundle, policy, trusted_overrides=args.override)
+    # Checks are CI-authoritative at gate time: the bundle's own ``checks`` are
+    # agent-supplied and ignored, so a check-based rule can't be defeated by an
+    # agent self-attesting a passing result. Unsupplied checks fail closed.
+    trusted_checks = _parse_checks(args.check)
+    ok, decisions = gate_bundle(
+        bundle,
+        policy,
+        trusted_overrides=args.override,
+        trusted_checks=trusted_checks,
+    )
     status = "PASS" if ok else "FAIL"
     print(f"{status} agentgit gate: {args.bundle} (policy {args.policy})")
     for decision in decisions:
@@ -151,6 +160,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         metavar="RULE_ID",
         help="CI-trusted override: pass a blocking rule's id; may be repeated",
+    )
+    gate.add_argument(
+        "--check",
+        action="append",
+        default=[],
+        metavar="NAME=pass|fail",
+        help=(
+            "CI-authoritative check result for check-based rules; the bundle's "
+            "own checks are ignored at gate time. Unsupplied checks fail closed. "
+            "May be repeated."
+        ),
     )
     gate.set_defaults(func=cmd_gate)
     return parser

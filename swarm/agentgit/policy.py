@@ -89,14 +89,22 @@ class PolicyFacts:
         cls,
         bundle: Dict[str, Any],
         trusted_overrides: Optional[Iterable[str]] = None,
+        trusted_checks: Optional[Dict[str, bool]] = None,
     ) -> "PolicyFacts":
         """Build facts from a bundle for CI gating.
 
-        The bundle is agent-supplied, so its ``provenance.overrides`` are NOT
-        trusted here: an agent could otherwise pre-populate an override for the
-        exact CI rule meant to catch it. At gate time, overrides must come from
-        a CI-controlled source (``trusted_overrides``); none are honored by
-        default, preserving deny-by-default.
+        The bundle is agent-supplied, so two of its fields are NOT trusted here:
+
+        - ``provenance.overrides`` — an agent could otherwise pre-populate an
+          override for the exact CI rule meant to catch it.
+        - ``checks`` — the agent authored these too, so a check-based rule (e.g.
+          ``when: {check_failed: pytest} then deny``) would be defeated by an
+          agent that simply self-attests ``checks={"pytest": true}``.
+
+        At gate time both must come from a CI-controlled source
+        (``trusted_overrides`` / ``trusted_checks``); neither is honored by
+        default. Path/dependency/line facts are derived from the signed diff and
+        remain authoritative. Unknown checks fail closed (deny-by-default).
         """
 
         git = bundle.get("git", {})
@@ -108,7 +116,7 @@ class PolicyFacts:
             changed_paths=paths,
             added_lines=int(totals.get("additions", 0)),
             changed_files=int(totals.get("changed_files", len(files))),
-            checks=dict(bundle.get("checks", {})),
+            checks=dict(trusted_checks or {}),
             dependency_paths=[
                 d.get("path", "") for d in provenance.get("dependency_changes", [])
             ],
@@ -383,20 +391,29 @@ def gate_bundle(
     policy: "AgentGitPolicy",
     *,
     trusted_overrides: Optional[Iterable[str]] = None,
+    trusted_checks: Optional[Dict[str, bool]] = None,
 ) -> tuple[bool, List[PolicyDecision]]:
     """Enforce a (CI/org-owned) policy against an already-attested bundle.
 
-    Reads the bundle's *recorded* facts (changed files, totals, checks,
-    dependency changes) and evaluates ``policy`` against them. This judges what
-    the agent actually did against what CI allows, independent of whatever
-    policy the agent self-attested with. Returns ``(ok, decisions)``.
+    Reads the bundle's *recorded* facts (changed files, totals, dependency
+    changes) and evaluates ``policy`` against them. This judges what the agent
+    actually did against what CI allows, independent of whatever policy the
+    agent self-attested with. Returns ``(ok, decisions)``.
 
     Callers should verify the bundle's signature before gating so the facts are
-    authentic; ``trusted_overrides`` are rule ids a CI-controlled source vouches
-    for (bundle-supplied overrides are ignored here — see ``from_bundle``).
+    authentic. Two inputs are deliberately not read from the (agent-supplied)
+    bundle and must come from a CI-controlled source instead:
+    ``trusted_overrides`` (rule ids a human approver vouches for) and
+    ``trusted_checks`` (authoritative CI check results). Both default to empty,
+    so check-based rules fail closed unless CI supplies the result — see
+    ``from_bundle``.
     """
 
-    facts = PolicyFacts.from_bundle(bundle, trusted_overrides=trusted_overrides)
+    facts = PolicyFacts.from_bundle(
+        bundle,
+        trusted_overrides=trusted_overrides,
+        trusted_checks=trusted_checks,
+    )
     decisions = policy.evaluate_facts(facts)
     return decisions_passed(decisions), decisions
 

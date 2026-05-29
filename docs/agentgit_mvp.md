@@ -100,11 +100,26 @@ python -m swarm.agentgit gate \
 
 `gate` first **verifies the bundle's signature** (failing closed on tampering or
 malformed input), then evaluates the policy against the bundle's recorded facts
-(changed files, totals, checks, dependency changes) — so a stricter CI policy
-catches violations even if the agent attested against a lax one. Crucially, the
-bundle's *own* `provenance.overrides` are **not trusted** at the gate (an agent
-could otherwise pre-approve the rule meant to catch it); a CI override must be
-supplied explicitly with `--override <rule-id>` from a CI-controlled source.
+(changed files, totals, dependency changes) — so a stricter CI policy catches
+violations even if the agent attested against a lax one. Crucially, two
+agent-supplied fields are **not trusted** at the gate:
+
+- `provenance.overrides` — an agent could otherwise pre-approve the rule meant
+  to catch it. A CI override must be supplied explicitly with
+  `--override <rule-id>` from a CI-controlled source.
+- `checks` — the agent authored these, so a check-based rule (e.g.
+  `tests-must-pass`: `when: {check_failed: pytest} then deny`) would be defeated
+  by an agent self-attesting `checks={"pytest": true}`. At gate time, supply the
+  CI-authoritative result with `--check <name=pass|fail>`; unsupplied checks
+  **fail closed** (the rule blocks until CI vouches for the result).
+
+```bash
+python -m swarm.agentgit gate \
+  --bundle .agentgit/provenance.json \
+  --policy .github/agentgit.policy.yaml \
+  --check pytest=pass \
+  --override deps-need-supply-chain-scan
+```
 
 ## Worktree Loop
 
