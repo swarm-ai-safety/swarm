@@ -6,6 +6,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- **AgentGit enriched provenance** (`swarm/agentgit/bundle.py`, issue `8ll9`) — bundles now record a `provenance` block describing *what happened* producing the diff: `commands` run (binary, return code, OS `isolation` backend, duration; build via `CommandRecord.from_command_result`), `environment` (model/runtime/version), `dependency_changes` (manifest/lockfile edits detected automatically from the diff), `sources` consulted, reviewer `reviews`, and human `overrides`. The block is folded into the signed receipt payload, so it is **tamper-evident** — editing a recorded command or hiding a dependency change fails `verify_bundle`'s `payload_hash` check. Schema bumped to `agentgit.provenance.v1`; `verify_bundle` reconstructs the payload per version so older `v0` bundles still verify. Keystone for the policy engine (`b61g`) and reputation (`am5c`). 8 tests; `bundle.py` coverage 93%.
+
 ## [1.9.0] - 2026-05-28
 
 ### Fixed

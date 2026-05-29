@@ -20,10 +20,45 @@ The bundle records:
 - additions/deletions by file
 - path and size policy decisions
 - required check results
+- a `provenance` block of *what happened* producing the diff (see below)
 - sealed admissibility receipt with the payload hash
 
 Policy failures return a non-zero exit code by default. Use `--warn-only` when
 you want to capture the bundle without blocking the current command.
+
+## Provenance Contents
+
+Beyond the diff and policy verdict, schema `agentgit.provenance.v1` records a
+`provenance` block describing how the change was produced:
+
+- `commands` — commands executed (binary + args, return code, OS `isolation`
+  backend, duration, timeout). Build these from a worktree `CommandResult` via
+  `CommandRecord.from_command_result(result)`.
+- `environment` — model / runtime / version of the producing agent.
+- `dependency_changes` — manifest/lockfile edits (`requirements.txt`,
+  `pyproject.toml`, `package-lock.json`, `Cargo.lock`, `go.sum`, …) detected
+  **automatically** from the diff.
+- `sources` — external sources consulted.
+- `reviews` — reviewer decisions.
+- `overrides` — human overrides.
+
+```python
+from swarm.agentgit import CommandRecord, build_bundle
+
+bundle = build_bundle(
+    ...,
+    commands=[CommandRecord(command=["pytest", "-q"], return_code=0, isolation="bwrap")],
+    environment={"model": "claude-opus-4-7", "runtime": "python3.13"},
+    sources=["https://example.com/issue/123"],
+    reviews=[{"reviewer": "security", "decision": "approve"}],
+)
+```
+
+The `provenance` block is folded into the signed receipt payload, so it is
+**tamper-evident**: editing a recorded command or hiding a dependency change
+makes `verify_bundle` fail the `payload_hash` check. Older `v0` bundles (hashed
+without provenance) still verify — `verify_bundle` reconstructs the payload per
+schema version.
 
 ## Worktree Loop
 
