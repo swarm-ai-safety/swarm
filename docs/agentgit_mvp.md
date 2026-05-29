@@ -60,6 +60,74 @@ makes `verify_bundle` fail the `payload_hash` check. Older `v0` bundles (hashed
 without provenance) still verify — `verify_bundle` reconstructs the payload per
 schema version.
 
+## Conditional Policy & CI Gate
+
+Beyond the fixed limits (allowed/denied paths, file/line caps, required checks),
+a policy may carry **conditional rules** — `when <condition> then <action>`:
+
+```yaml
+rules:
+  - id: deps-need-supply-chain-scan
+    when: {dependency_changed: true}
+    action: require_check
+    check: supply-chain-scan
+  - id: auth-needs-security-review
+    when: {paths_match: ["*auth*", "*security*"]}
+    action: require_review
+  - id: tests-must-pass
+    when: {check_failed: pytest}
+    action: deny
+```
+
+Conditions (ANDed): `paths_match` (fnmatch globs), `dependency_changed`,
+`added_lines_gt`, `changed_files_gt`, `check_failed`, `check_passed`. Actions:
+`deny`, `require_check` (needs `check:`), `require_review`. A firing blocking
+rule **passes if a human override names its id** in `provenance.overrides`
+(`{rule: <id>, by: ..., reason: ...}`) — this is the "block unless override"
+escape hatch. `severity: warning` rules surface but never block.
+
+Rules evaluate at attest time (folded into the signed bundle `decisions`), so
+`verify` already enforces them. They also run as a **CI gate** against an
+*already-attested* bundle, using a policy CI/the org controls — judging what the
+agent actually did against what's allowed, independent of the policy the agent
+self-attested with:
+
+```bash
+python -m swarm.agentgit gate \
+  --bundle .agentgit/provenance.json \
+  --policy .github/agentgit.policy.yaml   # exits non-zero on any blocking rule
+```
+
+`gate` first **verifies the bundle's signature** (failing closed on tampering or
+malformed input), then evaluates the policy against the bundle's recorded facts
+(changed files, totals, dependency changes) — so a stricter CI policy catches
+violations even if the agent attested against a lax one. Dependency facts are
+derived from the **signed diff** (`git.changed_files`), not the `provenance`
+block, so `dependency_changed` rules fire even on older `v0` bundles where
+provenance is unsigned. The gate also **requires an explicit signing key**
+(`--signing-key` or `AGENTGIT_SIGNING_KEY`) and fails closed if neither is set —
+it never falls back to the public dev key, so a misconfigured CI job can't accept
+a dev-key-signed bundle as authentic. Crucially, two agent-supplied fields are
+**not trusted** at the gate:
+
+- `provenance.overrides` — an agent could otherwise pre-approve the rule meant
+  to catch it. A CI override must be supplied explicitly with
+  `--override <rule-id>` from a CI-controlled source.
+- `checks` — the agent authored these, so a check-based rule (e.g.
+  `tests-must-pass`: `when: {check_failed: pytest} then deny`) would be defeated
+  by an agent self-attesting `checks={"pytest": true}`. At gate time, supply the
+  CI-authoritative result with `--check <name=pass|fail>`; unsupplied checks
+  **fail closed** (the rule blocks until CI vouches for the result).
+
+```bash
+python -m swarm.agentgit gate \
+  --bundle .agentgit/provenance.json \
+  --policy .github/agentgit.policy.yaml \
+  --signing-key "$AGENTGIT_SIGNING_KEY" \
+  --check pytest=pass \
+  --override deps-need-supply-chain-scan
+```
+
 ## Worktree Loop
 
 AgentGit also plugs into the worktree sandbox bridge:

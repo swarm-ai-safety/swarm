@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from swarm.agentgit.bundle import build_bundle, load_bundle, verify_bundle, write_bundle
-from swarm.agentgit.policy import AgentGitPolicy
+from swarm.agentgit.policy import AgentGitPolicy, gate_bundle
 
 
 def cmd_attest(args: argparse.Namespace) -> int:
@@ -51,6 +51,57 @@ def cmd_verify(args: argparse.Namespace) -> int:
     for error in errors:
         print(f"- {error}")
     return 1
+
+
+def cmd_gate(args: argparse.Namespace) -> int:
+    """Enforce a CI/org-owned policy against an already-attested bundle."""
+    bundle = load_bundle(Path(args.bundle))
+
+    # A signing key must be supplied explicitly when gating. verify_bundle falls
+    # back to the public DEFAULT_DEV_SIGNING_KEY when given None, so an
+    # unconfigured CI job would otherwise accept any dev-key-signed bundle as
+    # authentic and run the org policy against attacker-chosen facts — the gate
+    # fails open. Require the key here and fail closed if it is missing.
+    signing_key = args.signing_key or os.environ.get("AGENTGIT_SIGNING_KEY")
+    if not signing_key:
+        print(
+            f"FAIL agentgit gate: {args.bundle} "
+            "(no signing key; set --signing-key or AGENTGIT_SIGNING_KEY)"
+        )
+        return 1
+
+    # The gate reads facts out of the bundle, so the bundle must be authentic
+    # first: verify the signature (not the bundle's own policy — CI applies its
+    # own) and fail closed on any tampering/malformed input.
+    verify_ok, verify_errors = verify_bundle(
+        bundle,
+        signing_key=signing_key,
+        require_policy_pass=False,
+    )
+    if not verify_ok:
+        print(f"FAIL agentgit gate: {args.bundle} (bundle failed verification)")
+        for error in verify_errors:
+            print(f"- {error}")
+        return 1
+
+    policy = AgentGitPolicy.from_yaml(Path(args.policy))
+    # Checks are CI-authoritative at gate time: the bundle's own ``checks`` are
+    # agent-supplied and ignored, so a check-based rule can't be defeated by an
+    # agent self-attesting a passing result. Unsupplied checks fail closed.
+    trusted_checks = _parse_checks(args.check)
+    ok, decisions = gate_bundle(
+        bundle,
+        policy,
+        trusted_overrides=args.override,
+        trusted_checks=trusted_checks,
+    )
+    status = "PASS" if ok else "FAIL"
+    print(f"{status} agentgit gate: {args.bundle} (policy {args.policy})")
+    for decision in decisions:
+        if not decision.passed:
+            label = "WARN" if decision.severity == "warning" else "FAIL"
+            print(f"- [{label}] [{decision.policy_id}] {decision.reason}")
+    return 0 if ok else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -104,6 +155,41 @@ def build_parser() -> argparse.ArgumentParser:
         help="Verify hash/signature even when policy failed",
     )
     verify.set_defaults(func=cmd_verify)
+
+    gate = subparsers.add_parser(
+        "gate",
+        help="Enforce a CI-owned policy against a bundle's recorded facts",
+    )
+    gate.add_argument("--bundle", required=True, help="Path to provenance bundle JSON")
+    gate.add_argument("--policy", required=True, help="CI/org-owned AgentGit policy YAML")
+    gate.add_argument(
+        "--signing-key",
+        default=None,
+        help=(
+            "Hex HMAC key for bundle verification (required; falls back to "
+            "AGENTGIT_SIGNING_KEY). The gate fails closed if neither is set so it "
+            "never accepts a dev-key-signed bundle as authentic."
+        ),
+    )
+    gate.add_argument(
+        "--override",
+        action="append",
+        default=[],
+        metavar="RULE_ID",
+        help="CI-trusted override: pass a blocking rule's id; may be repeated",
+    )
+    gate.add_argument(
+        "--check",
+        action="append",
+        default=[],
+        metavar="NAME=pass|fail",
+        help=(
+            "CI-authoritative check result for check-based rules; the bundle's "
+            "own checks are ignored at gate time. Unsupplied checks fail closed. "
+            "May be repeated."
+        ),
+    )
+    gate.set_defaults(func=cmd_gate)
     return parser
 
 

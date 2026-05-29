@@ -17,7 +17,12 @@ from swarm.agentgit.identity import (
     DelegationChain,
     verify_signature,
 )
-from swarm.agentgit.policy import AgentGitPolicy, PolicyDecision, decisions_passed
+from swarm.agentgit.policy import (
+    DEPENDENCY_FILENAMES,
+    AgentGitPolicy,
+    PolicyDecision,
+    decisions_passed,
+)
 from swarm.attestation.receipt import (
     AdmissibilityReceipt,
     ExecutionBounds,
@@ -32,27 +37,6 @@ DEFAULT_DEV_SIGNING_KEY = "0" * 64
 SCHEMA_V0 = "agentgit.provenance.v0"
 SCHEMA_V1 = "agentgit.provenance.v1"
 _SUPPORTED_SCHEMAS = {SCHEMA_V0, SCHEMA_V1}
-
-# Manifest / lockfiles whose changes are recorded as dependency changes.
-_DEPENDENCY_FILENAMES = {
-    "requirements.txt",
-    "pyproject.toml",
-    "poetry.lock",
-    "Pipfile",
-    "Pipfile.lock",
-    "setup.py",
-    "setup.cfg",
-    "package.json",
-    "package-lock.json",
-    "yarn.lock",
-    "pnpm-lock.yaml",
-    "Cargo.toml",
-    "Cargo.lock",
-    "go.mod",
-    "go.sum",
-    "Gemfile",
-    "Gemfile.lock",
-}
 
 
 @dataclass(frozen=True)
@@ -125,7 +109,9 @@ def build_bundle(
     """
 
     snapshot = collect_snapshot(repo, base_ref=base_ref)
-    decisions = policy.evaluate(snapshot, check_results=check_results)
+    decisions = policy.evaluate(
+        snapshot, check_results=check_results, overrides=overrides
+    )
     provenance = _build_provenance(
         snapshot,
         commands=commands,
@@ -310,7 +296,7 @@ def _detect_dependency_changes(snapshot: GitSnapshot) -> List[Dict[str, Any]]:
     changes: List[Dict[str, Any]] = []
     for changed in snapshot.changed_files:
         filename = changed.path.rsplit("/", 1)[-1]
-        if filename in _DEPENDENCY_FILENAMES:
+        if filename in DEPENDENCY_FILENAMES:
             changes.append({"path": changed.path, "status": changed.status})
     return changes
 

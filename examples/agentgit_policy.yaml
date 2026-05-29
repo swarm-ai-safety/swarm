@@ -11,3 +11,22 @@ max_added_lines: 500
 required_checks:
   - pytest
 require_human_review: true
+
+# Conditional rules: when <condition> then <action>. Conditions are ANDed;
+# actions are deny | require_check | require_review. A blocking rule passes if
+# provenance records a human override naming its id ({rule: <id>, by, reason}).
+rules:
+  - id: deps-need-supply-chain-scan
+    when: {dependency_changed: true}
+    action: require_check
+    check: supply-chain-scan
+  - id: auth-needs-security-review
+    when: {paths_match: ["*auth*", "*security*"]}
+    action: require_review
+  - id: large-change-escalates
+    when: {added_lines_gt: 1000}
+    action: require_review
+    severity: warning
+  - id: tests-must-pass
+    when: {check_failed: pytest}
+    action: deny
