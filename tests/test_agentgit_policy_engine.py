@@ -14,6 +14,10 @@ from swarm.agentgit.policy import (
     gate_bundle,
 )
 
+# The gate now requires an explicit signing key (no dev-key fallback), so CLI
+# tests pass the dev key build_bundle signs with by default.
+_KEY = "0" * 64
+
 
 def _facts(**kw) -> PolicyFacts:
     base = {
@@ -322,7 +326,10 @@ def test_gate_cli_uses_ci_authoritative_checks(tmp_path, capsys):
         "    action: deny\n"
     )
     # Without a CI-supplied check, the gate fails closed despite the bundle's claim.
-    rc = main(["gate", "--bundle", str(bundle_path), "--policy", str(policy_path)])
+    rc = main(
+        ["gate", "--bundle", str(bundle_path), "--policy", str(policy_path),
+         "--signing-key", _KEY]
+    )
     out = capsys.readouterr().out
     assert rc == 1
     assert "rule:tests-must-pass" in out
@@ -334,6 +341,8 @@ def test_gate_cli_uses_ci_authoritative_checks(tmp_path, capsys):
             str(bundle_path),
             "--policy",
             str(policy_path),
+            "--signing-key",
+            _KEY,
             "--check",
             "pytest=pass",
         ]
@@ -359,7 +368,10 @@ def test_gate_cli_fails_closed_on_tampered_bundle(tmp_path, capsys):
     policy_path = tmp_path / "p.yaml"
     policy_path.write_text('allowed_paths: ["**"]\n')
 
-    rc = main(["gate", "--bundle", str(bundle_path), "--policy", str(policy_path)])
+    rc = main(
+        ["gate", "--bundle", str(bundle_path), "--policy", str(policy_path),
+         "--signing-key", _KEY]
+    )
     out = capsys.readouterr().out
     assert rc == 1
     assert "failed verification" in out
@@ -384,7 +396,10 @@ def test_gate_cli_exit_codes(tmp_path, capsys):
         '    when: {paths_match: ["*auth*"]}\n'
         "    action: require_review\n"
     )
-    rc = main(["gate", "--bundle", str(bundle_path), "--policy", str(strict)])
+    rc = main(
+        ["gate", "--bundle", str(bundle_path), "--policy", str(strict),
+         "--signing-key", _KEY]
+    )
     out = capsys.readouterr().out
     assert rc == 1
     assert "FAIL agentgit gate" in out
@@ -392,4 +407,101 @@ def test_gate_cli_exit_codes(tmp_path, capsys):
 
     lax = tmp_path / "lax.yaml"
     lax.write_text('allowed_paths: ["**"]\n')
-    assert main(["gate", "--bundle", str(bundle_path), "--policy", str(lax)]) == 0
+    assert main(
+        ["gate", "--bundle", str(bundle_path), "--policy", str(lax),
+         "--signing-key", _KEY]
+    ) == 0
+
+
+def test_gate_derives_dependencies_from_signed_diff_not_provenance(tmp_path):
+    # A dependency_changed rule must fire from the signed diff, not the
+    # provenance block (which is unsigned for schema v0 / can be stripped).
+    repo = _repo(tmp_path)
+    (repo / "requirements.txt").write_text("requests==2.0\n")
+    bundle = build_bundle(
+        repo=repo, task_id="t", agent_id="a", policy=AgentGitPolicy(allowed_paths=["**"])
+    )
+    # Simulate a bundle whose provenance hides the dependency change (e.g. a v0
+    # bundle, or a stripped provenance block) — the diff still records it.
+    bundle["provenance"]["dependency_changes"] = []
+    assert any(
+        f["path"] == "requirements.txt" for f in bundle["git"]["changed_files"]
+    )
+
+    ci_policy = AgentGitPolicy(
+        allowed_paths=["**"],
+        rules=[
+            ConditionalRule(
+                id="deps-need-supply-chain-scan",
+                when={"dependency_changed": True},
+                action="require_check",
+                check="supply-chain-scan",
+            )
+        ],
+    )
+    # The rule still fires (scan check unsatisfied) despite the emptied provenance.
+    ok, decisions = gate_bundle(bundle, ci_policy)
+    assert not ok
+    assert any(
+        d.policy_id == "rule:deps-need-supply-chain-scan" and not d.passed
+        for d in decisions
+    )
+
+
+def test_gate_cli_fails_closed_without_signing_key(tmp_path, capsys, monkeypatch):
+    from swarm.agentgit.__main__ import main
+
+    monkeypatch.delenv("AGENTGIT_SIGNING_KEY", raising=False)
+    repo = _repo(tmp_path)
+    (repo / "swarm").mkdir()
+    (repo / "swarm" / "ok.py").write_text("x = 1\n")
+    bundle = build_bundle(
+        repo=repo, task_id="t", agent_id="a", policy=AgentGitPolicy(allowed_paths=["**"])
+    )
+    bundle_path = tmp_path / "bundle.json"
+    write_bundle(bundle, bundle_path)
+    policy_path = tmp_path / "p.yaml"
+    policy_path.write_text('allowed_paths: ["**"]\n')
+
+    # No --signing-key and no AGENTGIT_SIGNING_KEY -> fail closed (no dev-key fallback).
+    rc = main(["gate", "--bundle", str(bundle_path), "--policy", str(policy_path)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "no signing key" in out
+    # With the key supplied, the same bundle gates normally.
+    assert main(
+        ["gate", "--bundle", str(bundle_path), "--policy", str(policy_path),
+         "--signing-key", _KEY]
+    ) == 0
+
+
+def test_from_dict_validates_when_conditions():
+    # Unknown condition key -> would silently drop scope and fire on everything.
+    with pytest.raises(ValueError, match="unknown condition"):
+        ConditionalRule.from_dict(
+            {"id": "r", "when": {"path_match": ["*auth*"]}, "action": "deny"}
+        )
+    # Non-hashable value that would crash _matches at evaluate time.
+    with pytest.raises(ValueError, match="check_failed"):
+        ConditionalRule.from_dict(
+            {"id": "r", "when": {"check_failed": ["pytest"]}, "action": "deny"}
+        )
+    # Wrong type for a list-valued condition.
+    with pytest.raises(ValueError, match="paths_match"):
+        ConditionalRule.from_dict(
+            {"id": "r", "when": {"paths_match": "*auth*"}, "action": "deny"}
+        )
+    # bool is not a valid integer threshold.
+    with pytest.raises(ValueError, match="added_lines_gt"):
+        ConditionalRule.from_dict(
+            {"id": "r", "when": {"added_lines_gt": True}, "action": "deny"}
+        )
+    # Valid conditions parse cleanly.
+    rule = ConditionalRule.from_dict(
+        {
+            "id": "r",
+            "when": {"paths_match": ["*auth*"], "added_lines_gt": 10},
+            "action": "deny",
+        }
+    )
+    assert rule.when == {"paths_match": ["*auth*"], "added_lines_gt": 10}

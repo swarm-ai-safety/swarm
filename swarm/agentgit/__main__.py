@@ -57,12 +57,25 @@ def cmd_gate(args: argparse.Namespace) -> int:
     """Enforce a CI/org-owned policy against an already-attested bundle."""
     bundle = load_bundle(Path(args.bundle))
 
+    # A signing key must be supplied explicitly when gating. verify_bundle falls
+    # back to the public DEFAULT_DEV_SIGNING_KEY when given None, so an
+    # unconfigured CI job would otherwise accept any dev-key-signed bundle as
+    # authentic and run the org policy against attacker-chosen facts — the gate
+    # fails open. Require the key here and fail closed if it is missing.
+    signing_key = args.signing_key or os.environ.get("AGENTGIT_SIGNING_KEY")
+    if not signing_key:
+        print(
+            f"FAIL agentgit gate: {args.bundle} "
+            "(no signing key; set --signing-key or AGENTGIT_SIGNING_KEY)"
+        )
+        return 1
+
     # The gate reads facts out of the bundle, so the bundle must be authentic
     # first: verify the signature (not the bundle's own policy — CI applies its
     # own) and fail closed on any tampering/malformed input.
     verify_ok, verify_errors = verify_bundle(
         bundle,
-        signing_key=args.signing_key or os.environ.get("AGENTGIT_SIGNING_KEY"),
+        signing_key=signing_key,
         require_policy_pass=False,
     )
     if not verify_ok:
@@ -152,7 +165,11 @@ def build_parser() -> argparse.ArgumentParser:
     gate.add_argument(
         "--signing-key",
         default=None,
-        help="Hex HMAC key for bundle verification. Defaults to AGENTGIT_SIGNING_KEY.",
+        help=(
+            "Hex HMAC key for bundle verification (required; falls back to "
+            "AGENTGIT_SIGNING_KEY). The gate fails closed if neither is set so it "
+            "never accepts a dev-key-signed bundle as authentic."
+        ),
     )
     gate.add_argument(
         "--override",

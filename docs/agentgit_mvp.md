@@ -101,8 +101,14 @@ python -m swarm.agentgit gate \
 `gate` first **verifies the bundle's signature** (failing closed on tampering or
 malformed input), then evaluates the policy against the bundle's recorded facts
 (changed files, totals, dependency changes) — so a stricter CI policy catches
-violations even if the agent attested against a lax one. Crucially, two
-agent-supplied fields are **not trusted** at the gate:
+violations even if the agent attested against a lax one. Dependency facts are
+derived from the **signed diff** (`git.changed_files`), not the `provenance`
+block, so `dependency_changed` rules fire even on older `v0` bundles where
+provenance is unsigned. The gate also **requires an explicit signing key**
+(`--signing-key` or `AGENTGIT_SIGNING_KEY`) and fails closed if neither is set —
+it never falls back to the public dev key, so a misconfigured CI job can't accept
+a dev-key-signed bundle as authentic. Crucially, two agent-supplied fields are
+**not trusted** at the gate:
 
 - `provenance.overrides` — an agent could otherwise pre-approve the rule meant
   to catch it. A CI override must be supplied explicitly with
@@ -117,6 +123,7 @@ agent-supplied fields are **not trusted** at the gate:
 python -m swarm.agentgit gate \
   --bundle .agentgit/provenance.json \
   --policy .github/agentgit.policy.yaml \
+  --signing-key "$AGENTGIT_SIGNING_KEY" \
   --check pytest=pass \
   --override deps-need-supply-chain-scan
 ```

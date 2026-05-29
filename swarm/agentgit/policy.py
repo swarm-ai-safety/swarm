@@ -110,22 +110,75 @@ class PolicyFacts:
         git = bundle.get("git", {})
         files = git.get("changed_files", [])
         totals = git.get("totals", {})
-        provenance = bundle.get("provenance", {})
         paths = [f.get("path", "") for f in files]
         return cls(
             changed_paths=paths,
             added_lines=int(totals.get("additions", 0)),
             changed_files=int(totals.get("changed_files", len(files))),
             checks=dict(trusted_checks or {}),
-            dependency_paths=[
-                d.get("path", "") for d in provenance.get("dependency_changes", [])
-            ],
+            # Derive dependency facts from the signed ``git.changed_files`` (the
+            # same source ``from_snapshot`` uses), NOT ``provenance``: the
+            # provenance block is only folded into the signed payload for schema
+            # v1, so trusting ``provenance.dependency_changes`` would let a v0
+            # bundle (or a tampered/absent provenance) silently dodge every
+            # ``dependency_changed`` rule. The diff is authoritative in both.
+            dependency_paths=[p for p in paths if _is_dependency_file(p)],
             overridden_rules=set(trusted_overrides or []),
         )
 
 
 _RULE_ACTIONS = {"deny", "require_check", "require_review"}
 _RULE_SEVERITIES = {"error", "warning"}
+
+# Condition keys understood by ``ConditionalRule._matches`` and the type each
+# expects. Validated at parse time so a typo'd key (which would silently drop a
+# rule's scope and fire it on every change) or a wrong-typed value (e.g. a
+# non-hashable ``check_failed: [pytest]`` that would crash at evaluate time) is
+# caught when a CI-owned policy file loads, not mid-gate.
+_CONDITION_TYPES: Dict[str, type | tuple[type, ...]] = {
+    "paths_match": (list, tuple),
+    "dependency_changed": bool,
+    "added_lines_gt": int,
+    "changed_files_gt": int,
+    "check_failed": str,
+    "check_passed": str,
+}
+
+
+def _validate_when(rule_id: str, when: Dict[str, Any]) -> None:
+    """Reject unknown condition keys and wrong-typed values at parse time."""
+
+    for key, value in when.items():
+        if key not in _CONDITION_TYPES:
+            raise ValueError(
+                f"rule {rule_id!r}: unknown condition {key!r}; "
+                f"expected one of {sorted(_CONDITION_TYPES)}"
+            )
+        expected = _CONDITION_TYPES[key]
+        # ``bool`` is a subclass of ``int``; keep the numeric thresholds strictly
+        # integral so ``added_lines_gt: true`` is flagged rather than meaning 1.
+        if expected is int and isinstance(value, bool):
+            raise ValueError(
+                f"rule {rule_id!r}: condition {key!r} expects an integer, got bool"
+            )
+        if not isinstance(value, expected):
+            raise ValueError(
+                f"rule {rule_id!r}: condition {key!r} expects "
+                f"{_type_name(expected)}, got {type(value).__name__}"
+            )
+        # ``value`` is a list/tuple here (validated above); the literal-tuple
+        # isinstance lets mypy narrow it to an iterable before the element check.
+        if key == "paths_match" and isinstance(value, (list, tuple)):
+            if not all(isinstance(p, str) for p in value):
+                raise ValueError(
+                    f"rule {rule_id!r}: condition 'paths_match' expects a list of strings"
+                )
+
+
+def _type_name(expected: type | tuple[type, ...]) -> str:
+    if isinstance(expected, tuple):
+        return " or ".join(t.__name__ for t in expected)
+    return expected.__name__
 
 
 @dataclass(frozen=True)
@@ -158,9 +211,11 @@ class ConditionalRule:
             raise ValueError(
                 f"rule {rule_id!r}: action 'require_check' requires a non-empty 'check'"
             )
+        when = dict(data.get("when", {}))
+        _validate_when(rule_id, when)
         return cls(
             id=rule_id,
-            when=dict(data.get("when", {})),
+            when=when,
             action=action,
             check=check,
             severity=severity,
