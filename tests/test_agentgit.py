@@ -59,7 +59,7 @@ def test_build_bundle_passes_for_allowed_diff(tmp_path):
         check_results={"pytest": True},
     )
 
-    assert bundle["schema_version"] == "agentgit.provenance.v0"
+    assert bundle["schema_version"] == "agentgit.provenance.v1"
     assert bundle["policy"]["passed"] is True
     assert bundle["git"]["totals"]["changed_files"] == 1
     assert bundle["receipt"]["status"] == "sealed"

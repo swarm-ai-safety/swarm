@@ -5,7 +5,12 @@ task-scoped policy checks and signed provenance bundles for agent-authored
 changes.
 """
 
-from swarm.agentgit.bundle import build_bundle, verify_bundle, write_bundle
+from swarm.agentgit.bundle import (
+    CommandRecord,
+    build_bundle,
+    verify_bundle,
+    write_bundle,
+)
 from swarm.agentgit.capabilities import (
     CAPABILITY_COMMANDS,
     enforced_allowlist_for_chain,
@@ -25,6 +30,7 @@ __all__ = [
     "AgentGitPolicy",
     "AgentIdentity",
     "AgentKeypair",
+    "CommandRecord",
     "DelegationChain",
     "DelegationLink",
     "PolicyDecision",

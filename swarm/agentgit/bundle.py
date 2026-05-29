@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional, Sequence
+
+from pydantic import ValidationError
 
 from swarm.agentgit.git import GitSnapshot, collect_snapshot
 from swarm.agentgit.identity import (
@@ -27,6 +29,67 @@ from swarm.attestation.signer import ReceiptSigner, ReceiptVerifier
 
 DEFAULT_DEV_SIGNING_KEY = "0" * 64
 
+SCHEMA_V0 = "agentgit.provenance.v0"
+SCHEMA_V1 = "agentgit.provenance.v1"
+_SUPPORTED_SCHEMAS = {SCHEMA_V0, SCHEMA_V1}
+
+# Manifest / lockfiles whose changes are recorded as dependency changes.
+_DEPENDENCY_FILENAMES = {
+    "requirements.txt",
+    "pyproject.toml",
+    "poetry.lock",
+    "Pipfile",
+    "Pipfile.lock",
+    "setup.py",
+    "setup.cfg",
+    "package.json",
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "Cargo.toml",
+    "Cargo.lock",
+    "go.mod",
+    "go.sum",
+    "Gemfile",
+    "Gemfile.lock",
+}
+
+
+@dataclass(frozen=True)
+class CommandRecord:
+    """One command executed while producing the diff, for the provenance log."""
+
+    command: Sequence[str]
+    return_code: Optional[int] = None
+    isolation: str = "none"
+    duration_seconds: Optional[float] = None
+    timed_out: bool = False
+
+    def __post_init__(self) -> None:
+        # Store immutably so a frozen record is truly value-immutable.
+        object.__setattr__(self, "command", tuple(self.command))
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "command": list(self.command),
+            "return_code": self.return_code,
+            "isolation": self.isolation,
+            "duration_seconds": self.duration_seconds,
+            "timed_out": self.timed_out,
+        }
+
+    @classmethod
+    def from_command_result(cls, result: Any) -> "CommandRecord":
+        """Adapt a worktree ``SandboxExecutor`` result (duck-typed, no import)."""
+
+        return cls(
+            command=tuple(result.command),
+            return_code=result.return_code,
+            isolation=getattr(result, "isolation", "none"),
+            duration_seconds=getattr(result, "duration_seconds", None),
+            timed_out=getattr(result, "timed_out", False),
+        )
+
 
 def build_bundle(
     *,
@@ -41,6 +104,11 @@ def build_bundle(
     identity: AgentIdentity | None = None,
     agent_keypair: AgentKeypair | None = None,
     delegation: DelegationChain | None = None,
+    commands: Sequence[CommandRecord] | None = None,
+    environment: Dict[str, Any] | None = None,
+    sources: Sequence[str] | None = None,
+    reviews: Sequence[Dict[str, Any]] | None = None,
+    overrides: Sequence[Dict[str, Any]] | None = None,
 ) -> Dict[str, Any]:
     """Build a signed provenance bundle for the current git diff.
 
@@ -48,11 +116,27 @@ def build_bundle(
     key signs the receipt ``payload_hash``, binding a *verifiable* identity to
     this exact diff. An optional ``delegation`` chain records the
     ``human -> org -> agent`` authority under which the agent acted.
+
+    The ``provenance`` block records *what happened* producing the diff —
+    commands run, execution environment, dependency-manifest changes (detected
+    automatically from the diff), external sources consulted, reviewer
+    decisions, and human overrides. It is folded into the signed receipt
+    payload, so it is tamper-evident: altering it fails verification.
     """
 
     snapshot = collect_snapshot(repo, base_ref=base_ref)
     decisions = policy.evaluate(snapshot, check_results=check_results)
-    payload = _payload(task_id, agent_id, snapshot, decisions, check_results or {})
+    provenance = _build_provenance(
+        snapshot,
+        commands=commands,
+        environment=environment,
+        sources=sources,
+        reviews=reviews,
+        overrides=overrides,
+    )
+    payload = _payload(
+        task_id, agent_id, snapshot, decisions, check_results or {}, provenance
+    )
     receipt = _seal_receipt(
         payload=payload,
         agent_id=agent_id,
@@ -62,7 +146,7 @@ def build_bundle(
     )
 
     bundle: Dict[str, Any] = {
-        "schema_version": "agentgit.provenance.v0",
+        "schema_version": SCHEMA_V1,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "task": {"task_id": task_id},
         "agent": {"agent_id": agent_id},
@@ -72,6 +156,7 @@ def build_bundle(
             "decisions": [asdict(decision) for decision in decisions],
         },
         "checks": check_results or {},
+        "provenance": provenance,
         "receipt": receipt.model_dump(mode="json"),
     }
 
@@ -115,10 +200,17 @@ def verify_bundle(
     """Verify bundle hash, receipt signature, and optional policy pass state."""
 
     errors: List[str] = []
-    if bundle.get("schema_version") != "agentgit.provenance.v0":
+    if bundle.get("schema_version") not in _SUPPORTED_SCHEMAS:
         errors.append("unsupported schema_version")
 
-    receipt = AdmissibilityReceipt.model_validate(bundle.get("receipt", {}))
+    # verify_bundle runs over untrusted input; a malformed receipt must fail
+    # gracefully rather than raise out of the verifier.
+    try:
+        receipt = AdmissibilityReceipt.model_validate(bundle.get("receipt", {}))
+    except ValidationError:
+        errors.append("receipt failed schema validation")
+        return False, errors
+
     payload = _payload_from_bundle(bundle)
     expected_hash = AdmissibilityReceipt.hash_payload(payload)
     if receipt.payload_hash != expected_hash:
@@ -185,6 +277,7 @@ def _payload(
     snapshot: GitSnapshot,
     decisions: list[PolicyDecision],
     check_results: Dict[str, bool],
+    provenance: Dict[str, Any],
 ) -> Dict[str, Any]:
     return {
         "task_id": task_id,
@@ -192,16 +285,54 @@ def _payload(
         "git": _snapshot_dict(snapshot),
         "policy_decisions": [asdict(decision) for decision in decisions],
         "checks": check_results,
+        "provenance": provenance,
     }
 
 
 def _payload_from_bundle(bundle: Dict[str, Any]) -> Dict[str, Any]:
-    return {
+    payload: Dict[str, Any] = {
         "task_id": bundle.get("task", {}).get("task_id"),
         "agent_id": bundle.get("agent", {}).get("agent_id"),
         "git": bundle.get("git", {}),
         "policy_decisions": bundle.get("policy", {}).get("decisions", []),
         "checks": bundle.get("checks", {}),
+    }
+    # The provenance block joined the signed payload in schema v1; v0 bundles
+    # were hashed without it, so reconstruct per version to stay compatible.
+    if bundle.get("schema_version") == SCHEMA_V1:
+        payload["provenance"] = bundle.get("provenance", {})
+    return payload
+
+
+def _detect_dependency_changes(snapshot: GitSnapshot) -> List[Dict[str, Any]]:
+    """Flag changed files that are dependency manifests/lockfiles."""
+
+    changes: List[Dict[str, Any]] = []
+    for changed in snapshot.changed_files:
+        filename = changed.path.rsplit("/", 1)[-1]
+        if filename in _DEPENDENCY_FILENAMES:
+            changes.append({"path": changed.path, "status": changed.status})
+    return changes
+
+
+def _build_provenance(
+    snapshot: GitSnapshot,
+    *,
+    commands: Sequence[CommandRecord] | None,
+    environment: Dict[str, Any] | None,
+    sources: Sequence[str] | None,
+    reviews: Sequence[Dict[str, Any]] | None,
+    overrides: Sequence[Dict[str, Any]] | None,
+) -> Dict[str, Any]:
+    """Assemble the provenance block (all keys always present, for stability)."""
+
+    return {
+        "commands": [record.to_dict() for record in (commands or [])],
+        "environment": dict(environment or {}),
+        "dependency_changes": _detect_dependency_changes(snapshot),
+        "sources": list(sources or []),
+        "reviews": [dict(review) for review in (reviews or [])],
+        "overrides": [dict(override) for override in (overrides or [])],
     }
 
 
