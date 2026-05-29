@@ -23,7 +23,13 @@ from swarm.agentgit.identity import (
     DelegationLink,
     sign_link,
 )
-from swarm.agentgit.policy import AgentGitPolicy, PolicyDecision
+from swarm.agentgit.policy import (
+    AgentGitPolicy,
+    ConditionalRule,
+    PolicyDecision,
+    PolicyFacts,
+    gate_bundle,
+)
 
 __all__ = [
     "CAPABILITY_COMMANDS",
@@ -31,11 +37,14 @@ __all__ = [
     "AgentIdentity",
     "AgentKeypair",
     "CommandRecord",
+    "ConditionalRule",
     "DelegationChain",
     "DelegationLink",
     "PolicyDecision",
+    "PolicyFacts",
     "build_bundle",
     "enforced_allowlist_for_chain",
+    "gate_bundle",
     "granted_commands",
     "sign_link",
     "verify_bundle",

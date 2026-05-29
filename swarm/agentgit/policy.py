@@ -5,11 +5,34 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Dict, Iterable, List
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Set
 
 import yaml
 
 from swarm.agentgit.git import GitSnapshot
+
+# Manifest / lockfiles whose changes count as dependency changes. Defined here
+# (not in bundle.py) so both the bundle and the policy engine share one source;
+# bundle.py imports it.
+DEPENDENCY_FILENAMES = {
+    "requirements.txt",
+    "pyproject.toml",
+    "poetry.lock",
+    "Pipfile",
+    "Pipfile.lock",
+    "setup.py",
+    "setup.cfg",
+    "package.json",
+    "package-lock.json",
+    "yarn.lock",
+    "pnpm-lock.yaml",
+    "Cargo.toml",
+    "Cargo.lock",
+    "go.mod",
+    "go.sum",
+    "Gemfile",
+    "Gemfile.lock",
+}
 
 
 @dataclass(frozen=True)
@@ -23,6 +46,149 @@ class PolicyDecision:
     details: Dict[str, Any] = field(default_factory=dict)
 
 
+def _overridden_rules(overrides: Optional[Sequence[Dict[str, Any]]]) -> Set[str]:
+    """Rule ids unblocked by a recorded human override (`{rule: <id>, ...}`)."""
+
+    return {o["rule"] for o in (overrides or []) if o.get("rule")}
+
+
+@dataclass(frozen=True)
+class PolicyFacts:
+    """The facts a policy evaluates, from either a live diff or a bundle.
+
+    Building this from both a ``GitSnapshot`` (attest time) and a bundle dict
+    (CI gate time) lets one rule engine enforce identically in both places.
+    """
+
+    changed_paths: List[str]
+    added_lines: int
+    changed_files: int
+    checks: Dict[str, bool]
+    dependency_paths: List[str]
+    overridden_rules: Set[str]
+
+    @classmethod
+    def from_snapshot(
+        cls,
+        snapshot: GitSnapshot,
+        check_results: Optional[Dict[str, bool]] = None,
+        overrides: Optional[Sequence[Dict[str, Any]]] = None,
+    ) -> "PolicyFacts":
+        paths = [file.path for file in snapshot.changed_files]
+        return cls(
+            changed_paths=paths,
+            added_lines=snapshot.total_additions,
+            changed_files=len(snapshot.changed_files),
+            checks=dict(check_results or {}),
+            dependency_paths=[p for p in paths if _is_dependency_file(p)],
+            overridden_rules=_overridden_rules(overrides),
+        )
+
+    @classmethod
+    def from_bundle(cls, bundle: Dict[str, Any]) -> "PolicyFacts":
+        git = bundle.get("git", {})
+        files = git.get("changed_files", [])
+        totals = git.get("totals", {})
+        provenance = bundle.get("provenance", {})
+        paths = [f.get("path", "") for f in files]
+        return cls(
+            changed_paths=paths,
+            added_lines=int(totals.get("additions", 0)),
+            changed_files=int(totals.get("changed_files", len(files))),
+            checks=dict(bundle.get("checks", {})),
+            dependency_paths=[
+                d.get("path", "") for d in provenance.get("dependency_changes", [])
+            ],
+            overridden_rules=_overridden_rules(provenance.get("overrides", [])),
+        )
+
+
+@dataclass(frozen=True)
+class ConditionalRule:
+    """A declarative ``when <condition> then <action>`` policy rule."""
+
+    id: str
+    when: Dict[str, Any] = field(default_factory=dict)
+    action: str = "deny"  # deny | require_check | require_review
+    check: Optional[str] = None
+    severity: str = "error"
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> "ConditionalRule":
+        return cls(
+            id=data["id"],
+            when=dict(data.get("when", {})),
+            action=data.get("action", "deny"),
+            check=data.get("check"),
+            severity=data.get("severity", "error"),
+        )
+
+    def _matches(self, facts: PolicyFacts) -> bool:
+        """AND of every present condition; an empty ``when`` always matches."""
+
+        when = self.when
+        if "paths_match" in when and not any(
+            _matches_any(path, when["paths_match"]) for path in facts.changed_paths
+        ):
+            return False
+        if when.get("dependency_changed") and not facts.dependency_paths:
+            return False
+        if "added_lines_gt" in when and not facts.added_lines > when["added_lines_gt"]:
+            return False
+        if (
+            "changed_files_gt" in when
+            and not facts.changed_files > when["changed_files_gt"]
+        ):
+            return False
+        if "check_failed" in when and facts.checks.get(when["check_failed"], False):
+            return False
+        if "check_passed" in when and not facts.checks.get(when["check_passed"], False):
+            return False
+        return True
+
+    def evaluate(self, facts: PolicyFacts) -> PolicyDecision:
+        policy_id = f"rule:{self.id}"
+        if not self._matches(facts):
+            return PolicyDecision(
+                policy_id=policy_id,
+                passed=True,
+                reason="Rule condition not met",
+                severity=self.severity,
+                details={"fired": False},
+            )
+
+        overridden = self.id in facts.overridden_rules
+        if self.action == "require_check":
+            satisfied = facts.checks.get(self.check or "", False)
+            passed = satisfied or overridden
+            reason = (
+                f"Required check '{self.check}' passed"
+                if satisfied
+                else f"Required check '{self.check}' missing or failed"
+            )
+        elif self.action == "require_review":
+            passed = overridden
+            reason = "Rule requires human review"
+        else:  # deny
+            passed = overridden
+            reason = "Rule denies this change"
+
+        details: Dict[str, Any] = {"fired": True, "action": self.action, "when": self.when}
+        if self.check:
+            details["check"] = self.check
+        if overridden:
+            passed = True
+            details["overridden"] = True
+            reason = f"{reason} (satisfied by human override)"
+        return PolicyDecision(
+            policy_id=policy_id,
+            passed=passed,
+            reason=reason,
+            severity=self.severity,
+            details=details,
+        )
+
+
 @dataclass(frozen=True)
 class AgentGitPolicy:
     """Declarative limits for one delegated agent task."""
@@ -33,6 +199,7 @@ class AgentGitPolicy:
     max_added_lines: int | None = None
     required_checks: List[str] = field(default_factory=list)
     require_human_review: bool = False
+    rules: List[ConditionalRule] = field(default_factory=list)
 
     @classmethod
     def from_yaml(cls, path: Path) -> "AgentGitPolicy":
@@ -44,24 +211,28 @@ class AgentGitPolicy:
             max_added_lines=data.get("max_added_lines"),
             required_checks=list(data.get("required_checks", [])),
             require_human_review=bool(data.get("require_human_review", False)),
+            rules=[ConditionalRule.from_dict(r) for r in data.get("rules", [])],
         )
 
     def evaluate(
         self,
         snapshot: GitSnapshot,
         check_results: Dict[str, bool] | None = None,
+        overrides: Optional[Sequence[Dict[str, Any]]] = None,
     ) -> List[PolicyDecision]:
         """Evaluate repository state against this task policy."""
 
-        check_results = check_results or {}
-        changed_paths = [file.path for file in snapshot.changed_files]
-        decisions = [
-            self._evaluate_allowed_paths(changed_paths),
-            self._evaluate_denied_paths(changed_paths),
-            self._evaluate_max_changed_files(snapshot),
-            self._evaluate_max_added_lines(snapshot),
-            self._evaluate_required_checks(check_results),
-        ]
+        facts = PolicyFacts.from_snapshot(snapshot, check_results or {}, overrides)
+        return self.evaluate_facts(facts)
+
+    def evaluate_facts(self, facts: PolicyFacts) -> List[PolicyDecision]:
+        """Evaluate fixed constraints + conditional rules against facts.
+
+        Shared by attest-time (`evaluate`) and CI-gate (`gate_bundle`) paths so
+        the verdict is identical whether computed from a live diff or a bundle.
+        """
+
+        decisions = self._fixed_decisions(facts)
         if self.require_human_review:
             decisions.append(
                 PolicyDecision(
@@ -71,7 +242,17 @@ class AgentGitPolicy:
                     severity="warning",
                 )
             )
+        decisions.extend(rule.evaluate(facts) for rule in self.rules)
         return decisions
+
+    def _fixed_decisions(self, facts: PolicyFacts) -> List[PolicyDecision]:
+        return [
+            self._evaluate_allowed_paths(facts.changed_paths),
+            self._evaluate_denied_paths(facts.changed_paths),
+            self._evaluate_max_changed_files(facts.changed_files),
+            self._evaluate_max_added_lines(facts.added_lines),
+            self._evaluate_required_checks(facts.checks),
+        ]
 
     def _evaluate_allowed_paths(self, paths: List[str]) -> PolicyDecision:
         if not self.allowed_paths:
@@ -108,8 +289,7 @@ class AgentGitPolicy:
             details={"violations": violations, "denied_paths": self.denied_paths},
         )
 
-    def _evaluate_max_changed_files(self, snapshot: GitSnapshot) -> PolicyDecision:
-        count = len(snapshot.changed_files)
+    def _evaluate_max_changed_files(self, count: int) -> PolicyDecision:
         if self.max_changed_files is None:
             return PolicyDecision(
                 policy_id="max-changed-files",
@@ -124,8 +304,7 @@ class AgentGitPolicy:
             details={"changed_files": count, "limit": self.max_changed_files},
         )
 
-    def _evaluate_max_added_lines(self, snapshot: GitSnapshot) -> PolicyDecision:
-        added = snapshot.total_additions
+    def _evaluate_max_added_lines(self, added: int) -> PolicyDecision:
         if self.max_added_lines is None:
             return PolicyDecision(
                 policy_id="max-added-lines",
@@ -164,5 +343,25 @@ def decisions_passed(decisions: Iterable[PolicyDecision]) -> bool:
     return all(decision.passed for decision in decisions if decision.severity != "warning")
 
 
-def _matches_any(path: str, patterns: List[str]) -> bool:
+def gate_bundle(
+    bundle: Dict[str, Any], policy: "AgentGitPolicy"
+) -> tuple[bool, List[PolicyDecision]]:
+    """Enforce a (CI/org-owned) policy against an already-attested bundle.
+
+    Reads the bundle's *recorded* facts (changed files, totals, checks,
+    dependency changes, overrides) and evaluates ``policy`` against them. This
+    judges what the agent actually did against what CI allows, independent of
+    whatever policy the agent self-attested with. Returns ``(ok, decisions)``.
+    """
+
+    facts = PolicyFacts.from_bundle(bundle)
+    decisions = policy.evaluate_facts(facts)
+    return decisions_passed(decisions), decisions
+
+
+def _is_dependency_file(path: str) -> bool:
+    return path.rsplit("/", 1)[-1] in DEPENDENCY_FILENAMES
+
+
+def _matches_any(path: str, patterns: Sequence[str]) -> bool:
     return any(fnmatch(path, pattern) for pattern in patterns)

@@ -60,6 +60,48 @@ makes `verify_bundle` fail the `payload_hash` check. Older `v0` bundles (hashed
 without provenance) still verify — `verify_bundle` reconstructs the payload per
 schema version.
 
+## Conditional Policy & CI Gate
+
+Beyond the fixed limits (allowed/denied paths, file/line caps, required checks),
+a policy may carry **conditional rules** — `when <condition> then <action>`:
+
+```yaml
+rules:
+  - id: deps-need-supply-chain-scan
+    when: {dependency_changed: true}
+    action: require_check
+    check: supply-chain-scan
+  - id: auth-needs-security-review
+    when: {paths_match: ["*auth*", "*security*"]}
+    action: require_review
+  - id: tests-must-pass
+    when: {check_failed: pytest}
+    action: deny
+```
+
+Conditions (ANDed): `paths_match` (fnmatch globs), `dependency_changed`,
+`added_lines_gt`, `changed_files_gt`, `check_failed`, `check_passed`. Actions:
+`deny`, `require_check` (needs `check:`), `require_review`. A firing blocking
+rule **passes if a human override names its id** in `provenance.overrides`
+(`{rule: <id>, by: ..., reason: ...}`) — this is the "block unless override"
+escape hatch. `severity: warning` rules surface but never block.
+
+Rules evaluate at attest time (folded into the signed bundle `decisions`), so
+`verify` already enforces them. They also run as a **CI gate** against an
+*already-attested* bundle, using a policy CI/the org controls — judging what the
+agent actually did against what's allowed, independent of the policy the agent
+self-attested with:
+
+```bash
+python -m swarm.agentgit gate \
+  --bundle .agentgit/provenance.json \
+  --policy .github/agentgit.policy.yaml   # exits non-zero on any blocking rule
+```
+
+`gate` reads the bundle's recorded facts (changed files, totals, checks,
+dependency changes, overrides), so a stricter CI policy catches violations even
+if the agent attested against a lax one.
+
 ## Worktree Loop
 
 AgentGit also plugs into the worktree sandbox bridge:

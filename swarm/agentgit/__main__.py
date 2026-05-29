@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from swarm.agentgit.bundle import build_bundle, load_bundle, verify_bundle, write_bundle
-from swarm.agentgit.policy import AgentGitPolicy
+from swarm.agentgit.policy import AgentGitPolicy, gate_bundle
 
 
 def cmd_attest(args: argparse.Namespace) -> int:
@@ -51,6 +51,19 @@ def cmd_verify(args: argparse.Namespace) -> int:
     for error in errors:
         print(f"- {error}")
     return 1
+
+
+def cmd_gate(args: argparse.Namespace) -> int:
+    """Enforce a CI/org-owned policy against an already-attested bundle."""
+    bundle = load_bundle(Path(args.bundle))
+    policy = AgentGitPolicy.from_yaml(Path(args.policy))
+    ok, decisions = gate_bundle(bundle, policy)
+    status = "PASS" if ok else "FAIL"
+    print(f"{status} agentgit gate: {args.bundle} (policy {args.policy})")
+    for decision in decisions:
+        if not decision.passed and decision.severity != "warning":
+            print(f"- [{decision.policy_id}] {decision.reason}")
+    return 0 if ok else 1
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -104,6 +117,14 @@ def build_parser() -> argparse.ArgumentParser:
         help="Verify hash/signature even when policy failed",
     )
     verify.set_defaults(func=cmd_verify)
+
+    gate = subparsers.add_parser(
+        "gate",
+        help="Enforce a CI-owned policy against a bundle's recorded facts",
+    )
+    gate.add_argument("--bundle", required=True, help="Path to provenance bundle JSON")
+    gate.add_argument("--policy", required=True, help="CI/org-owned AgentGit policy YAML")
+    gate.set_defaults(func=cmd_gate)
     return parser
 
 
