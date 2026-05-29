@@ -44,7 +44,10 @@ jobs:
 
       - run: mypy swarm/
 
-      - run: pytest tests/ -v --cov=swarm --cov-fail-under=70
+      # Mirror ci.yml's full-test runner: -n auto (parallel; serial took ~60min
+      # and could hang) and --timeout=300 (a hung test is killed, not left to
+      # stall the release forever). Coverage gate retained for releases.
+      - run: pytest tests/ -v -n auto --dist=loadfile --timeout=300 --cov=swarm --cov-fail-under=70
 
   build:
     needs: test
