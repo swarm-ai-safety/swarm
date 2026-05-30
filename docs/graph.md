@@ -24,6 +24,7 @@ Dashed nodes are orphans — nothing links to them yet.
     <label class="kb-radio"><input type="radio" name="kb-mode" id="kb-mode-browse" checked /> Browse</label>
     <label class="kb-radio" title="Click stays on the graph; the side panel shows outgoing links to click next."><input type="radio" name="kb-mode" id="kb-mode-speedrun" /> Speedrun</label>
     <button id="kb-show-orphans" class="kb-mini-btn">Show orphans</button>
+    <button id="kb-toggle-semantic" class="kb-mini-btn on" title="Dashed violet edges = TF-IDF similarity suggestions, no explicit link in the corpus.">Suggestions: on</button>
   </div>
   <div class="kb-pathfinder">
     <span class="kb-pf-label">Shortest path:</span>

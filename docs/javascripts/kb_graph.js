@@ -40,6 +40,7 @@
     "paper-art":    "#dc2626",  // red
     "research-art": "#0891b2",  // cyan
     "note-art":     "#65a30d",  // lime
+    "code":         "#475569",  // slate
   };
   var KIND_LABELS = {
     "doc":          "docs",
@@ -50,6 +51,7 @@
     "paper-art":    "papers (artifacts)",
     "research-art": "research (artifacts)",
     "note-art":     "notes (artifacts)",
+    "code":         "source code",
   };
 
   function bfsPath(adj, start, goal) {
@@ -100,10 +102,14 @@
           graph.stats.edge_count + " edges</b> · " + parts.join(" ");
       }
 
-      var adj = {};
+      var adj = {};        // all edges
+      var adjReal = {};    // explicit edges only (BFS uses this — semantic edges are suggestions)
       var byId = {};
-      graph.nodes.forEach(function (n) { adj[n.id] = []; byId[n.id] = n; });
-      graph.edges.forEach(function (e) { adj[e.source].push(e.target); });
+      graph.nodes.forEach(function (n) { adj[n.id] = []; adjReal[n.id] = []; byId[n.id] = n; });
+      graph.edges.forEach(function (e) {
+        adj[e.source].push(e.target);
+        if (e.kind !== "semantic") adjReal[e.source].push(e.target);
+      });
 
       var elements = [];
       graph.nodes.forEach(function (n) {
@@ -144,6 +150,9 @@
           }},
           { selector: 'edge[kind = "slashcmd"]', style: { "line-color": "#d97706", "target-arrow-color": "#d97706" }},
           { selector: 'edge[kind = "mention"]',  style: { "line-style": "dashed" }},
+          { selector: 'edge[kind = "code"]',     style: { "line-color": "#475569", "target-arrow-color": "#475569", "width": 1.0 }},
+          { selector: 'edge[kind = "semantic"]', style: { "line-color": "#a78bfa", "target-arrow-color": "#a78bfa", "line-style": "dashed", "opacity": 0.25, "width": 0.5 }},
+          { selector: 'edge[kind = "semantic"].semantic-off', style: { "display": "none" }},
           { selector: ".faded", style: { "opacity": 0.06 }},
           { selector: ".highlight", style: { "opacity": 1 }},
           { selector: "node.focal", style: { "border-width": 4, "border-color": "#111827", "z-index": 99 }},
@@ -303,7 +312,7 @@
       document.getElementById("kb-find-path").onclick = function () {
         cy.elements().removeClass("path");
         var a = fromSel.value, b = toSel.value;
-        var path = bfsPath(adj, a, b);
+        var path = bfsPath(adjReal, a, b);
         if (!path) {
           pathOut.innerHTML = '<span class="kb-nopath">No link path from <b>' +
             byId[a].title + "</b> to <b>" + byId[b].title +
@@ -323,6 +332,16 @@
         }).join(' <span class="kb-arrow">→</span> ');
         pathOut.innerHTML = "<b>" + (path.length - 1) + " hop" +
           (path.length === 2 ? "" : "s") + ":</b> " + hops;
+      };
+
+      // ---- semantic edge toggle ----
+      var semBtn = document.getElementById("kb-toggle-semantic");
+      var semOn = true;
+      if (semBtn) semBtn.onclick = function () {
+        semOn = !semOn;
+        semBtn.classList.toggle("on", semOn);
+        semBtn.textContent = "Suggestions: " + (semOn ? "on" : "off");
+        cy.edges('[kind = "semantic"]').toggleClass("semantic-off", !semOn);
       };
 
       // ---- orphan highlighter ----
