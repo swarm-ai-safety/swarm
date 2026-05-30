@@ -1,8 +1,10 @@
-"""MkDocs hook: regenerate the KB graph and inject per-page backlinks.
+"""MkDocs hook: regenerate the multi-source KB graph and inject backlinks.
 
 - on_pre_build: rebuild docs/assets/kb_graph.json so the /graph page is fresh.
-- on_page_content: append a "Linked from" section listing inbound links — the
-  reverse edges the markdown corpus doesn't surface on its own.
+- on_page_content: append a "Linked from" section on rendered doc pages listing
+  every inbound edge — including from scenarios, slash commands, agents, roles,
+  and (when checked out locally) artifacts notes/papers. Non-doc nodes link out
+  to their source on GitHub.
 
 Graph-building logic lives in scripts/build_kb_graph.py (shared with the CLI).
 """
@@ -20,6 +22,17 @@ import build_kb_graph  # noqa: E402
 _GRAPH: dict | None = None
 _NODES: dict[str, dict] = {}
 
+_KIND_LABEL = {
+    "doc": "docs",
+    "scenario": "scenario",
+    "command": "command",
+    "agent": "agent",
+    "role": "role",
+    "paper-art": "paper",
+    "research-art": "research",
+    "note-art": "note",
+}
+
 
 def on_pre_build(config, **kwargs) -> None:
     global _GRAPH, _NODES
@@ -28,14 +41,16 @@ def on_pre_build(config, **kwargs) -> None:
     _NODES = {n["id"]: n for n in _GRAPH["nodes"]}
 
 
-def _rel_link(page_url: str, target_url: str) -> str:
-    """Relative href from the current rendered page to another page's URL.
+def _href_for(page_url: str, target: dict) -> str:
+    """Return an href from the current rendered doc page to any node.
 
-    Material serves directory URLs (e.g. ``concepts/soft-labels/``), so depth is
-    the number of path segments in the current page's URL.
+    Doc nodes resolve via mkdocs directory URLs (relative).
+    Non-doc nodes link to their GitHub source (absolute).
     """
-    prefix = "../" * page_url.count("/")
-    return prefix + target_url
+    if target["kind"] == "doc" and target.get("url"):
+        prefix = "../" * page_url.count("/")
+        return prefix + target["url"]
+    return target.get("external_url") or "#"
 
 
 def on_page_content(html: str, page=None, **kwargs) -> str:
@@ -45,21 +60,26 @@ def on_page_content(html: str, page=None, **kwargs) -> str:
     if not node or not node["in"]:
         return html
 
-    page_url = page.url  # e.g. "concepts/soft-labels/"
+    page_url = page.url
     inbound = sorted(
         (_NODES[i] for i in node["in"] if i in _NODES),
-        key=lambda n: (n["section"], n["title"].lower()),
+        key=lambda n: (n["kind"], n["section"], n["title"].lower()),
     )
-    items = "\n".join(
-        f'<li><a href="{_rel_link(page_url, n["url"])}">{n["title"]}</a>'
-        f' <span class="kb-backlink-section">{n["section"]}</span></li>'
-        for n in inbound
-    )
+    items = []
+    for n in inbound:
+        kind_label = _KIND_LABEL.get(n["kind"], n["kind"])
+        external = ' target="_blank" rel="noopener"' if n["kind"] != "doc" else ""
+        items.append(
+            f'<li><a href="{_href_for(page_url, n)}"{external}>{n["title"]}</a>'
+            f' <span class="kb-backlink-section">{kind_label}</span></li>'
+        )
+
+    graph_href = "../" * page_url.count("/") + "graph/"
     block = (
         '\n<aside class="kb-backlinks" markdown="0">\n'
         f'<h2>Linked from <span class="kb-backlink-count">{len(inbound)}</span></h2>\n'
-        f"<ul>\n{items}\n</ul>\n"
-        f'<p><a href="{_rel_link(page_url, "graph/")}">Open the knowledge graph →</a></p>\n'
+        "<ul>\n" + "\n".join(items) + "\n</ul>\n"
+        f'<p><a href="{graph_href}">Open the knowledge graph →</a></p>\n'
         "</aside>\n"
     )
     return html + block
