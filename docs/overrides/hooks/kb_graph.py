@@ -31,6 +31,7 @@ _KIND_LABEL = {
     "paper-art": "paper",
     "research-art": "research",
     "note-art": "note",
+    "code": "source",
 }
 
 

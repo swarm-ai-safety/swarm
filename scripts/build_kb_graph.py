@@ -56,6 +56,8 @@ H1_RE = re.compile(r"^#\s+(.+?)\s*$", re.MULTILINE)
 MD_LINK_RE = re.compile(r"\[[^\]]*\]\(\s*(<[^>]+>|[^)\s]+)")
 WIKILINK_RE = re.compile(r"\[\[([^\]|]+)(?:\|[^\]]+)?\]\]")
 SLASHCMD_RE = re.compile(r"(?<![A-Za-z0-9_/])/([a-z][a-z0-9_-]+)\b")
+# mkdocstrings directive in api docs, e.g.  "::: swarm.core.proxy.ProxyComputer"
+MKDOCSTRINGS_RE = re.compile(r"^:::\s*([a-z_][a-z0-9_.]+)", re.MULTILINE)
 PATH_MENTION_RE = re.compile(
     r"(?<![A-Za-z0-9_/])"
     r"((?:scenarios|\.claude/commands|\.claude/agents|agents|docs)/[A-Za-z0-9_./-]+\.(?:md|yaml))"
@@ -311,12 +313,78 @@ def _resolve_md_link(src_node: Node, raw: str, by_doc_rel: dict[str, str],
     return by_path.get(raw)
 
 
+def _resolve_python_path(dotted: str) -> Path | None:
+    """Map a dotted name (swarm.core.proxy.ProxyComputer) to a source file.
+
+    Tries progressively shorter dotted prefixes, stopping at the first one
+    that resolves to either <prefix>.py or <prefix>/__init__.py under the
+    repo root. Returns None if nothing resolves (likely a typo in a directive).
+    """
+    parts = dotted.split(".")
+    while parts:
+        as_file = REPO_ROOT.joinpath(*parts).with_suffix(".py")
+        as_pkg = REPO_ROOT.joinpath(*parts, "__init__.py")
+        if as_file.is_file():
+            return as_file
+        if as_pkg.is_file():
+            return as_pkg
+        parts.pop()
+    return None
+
+
+def _code_pass(nodes: list[Node]) -> list[tuple[str, str]]:
+    """Mine api docs for mkdocstrings directives.
+
+    Returns the explicit (src_doc_id, code_node_id) edges to add. Mutates
+    ``nodes`` in place to register a new code node per unique source file
+    referenced. Code nodes are linked to GitHub source for the *file* (not
+    the dotted symbol), which is what the graph actually navigates between.
+    """
+    by_id = {n.id: n for n in nodes}
+    edges: list[tuple[str, str]] = []
+    for n in nodes:
+        if n.kind != "doc" or n.section != "api":
+            continue
+        for dotted in MKDOCSTRINGS_RE.findall(n.text):
+            src = _resolve_python_path(dotted)
+            if not src:
+                continue
+            rel = src.relative_to(REPO_ROOT).as_posix()
+            cid = f"code/{rel}"
+            if cid not in by_id:
+                code_node = Node(
+                    id=cid, kind="code",
+                    title=rel,
+                    section="code",
+                    description=_module_doc(src),
+                    external_url=f"{GITHUB_BLOB_REPO}/{rel}",
+                    source_path=rel,
+                )
+                nodes.append(code_node)
+                by_id[cid] = code_node
+            edges.append((n.id, cid))
+    return edges
+
+
+def _module_doc(src: Path) -> str:
+    """Best-effort: the module-level docstring of a python file, single line."""
+    try:
+        text = src.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    m = re.match(r'\s*("""|\'\'\')(.*?)\1', text, re.DOTALL)
+    if not m:
+        return ""
+    return " ".join(m.group(2).strip().split())[:300]
+
+
 def build_graph() -> dict:
     nodes: list[Node] = []
     for fn in (_docs_nodes, _scenario_nodes, _command_nodes,
                _agent_nodes, _role_nodes, _artifacts_nodes):
         nodes.extend(fn())
 
+    explicit_edges = _code_pass(nodes)
     by_id: dict[str, Node] = {n.id: n for n in nodes}
 
     # Lookup tables for resolution.
@@ -345,6 +413,10 @@ def build_graph() -> dict:
         out_by[src].append(dst)
         in_by[dst].append(src)
 
+    # explicit code edges from the api-docs mkdocstrings pass
+    for src, dst in explicit_edges:
+        add(src, dst, "code")
+
     for n in nodes:
         body = n.text
         # explicit markdown / yaml links
@@ -367,6 +439,10 @@ def build_graph() -> dict:
             tgt = by_path.get(raw)
             if tgt:
                 add(n.id, tgt, "mention")
+
+    # suggest semantic edges where no explicit link exists yet
+    for src, dst in _semantic_edges(nodes, seen):
+        add(src, dst, "semantic")
 
     # finalize + drop body text
     out_nodes = []
@@ -392,6 +468,104 @@ def build_graph() -> dict:
             "artifacts_included": any(n["source_repo"] == "artifacts" for n in out_nodes),
         },
     }
+
+
+_TOKEN_RE = re.compile(r"[A-Za-z][A-Za-z0-9_-]{2,}")
+_STOPWORDS = frozenset("""
+the and for with this that from your you our are not has have was were
+which what where when who how all any can use using used into out
+about other than then them they our its our some such only most more
+will would could should may might must shall use one two three
+swarm scenario agent agents page docs doc note notes paper papers
+the_ but each etc i_e if it_ no on or so to up via was via vs
+""".split())
+
+
+def _tfidf_vectors(nodes: list[Node]) -> tuple[dict[str, dict[str, float]], dict[str, float]]:
+    import math
+    from collections import Counter
+
+    texts: dict[str, list[str]] = {}
+    for n in nodes:
+        body = " ".join([n.title, n.description, n.text[:1500], " ".join(n.tags)])
+        toks = [t.lower() for t in _TOKEN_RE.findall(body)]
+        toks = [t for t in toks if t not in _STOPWORDS]
+        texts[n.id] = toks
+
+    df: Counter[str] = Counter()
+    for toks in texts.values():
+        df.update(set(toks))
+    n_docs = max(1, len(texts))
+    idf = {t: math.log((1 + n_docs) / (1 + c)) + 1.0 for t, c in df.items()}
+
+    vectors: dict[str, dict[str, float]] = {}
+    norms: dict[str, float] = {}
+    for nid, toks in texts.items():
+        tf = Counter(toks)
+        if not tf:
+            vectors[nid] = {}
+            norms[nid] = 0.0
+            continue
+        v = {t: (c / len(toks)) * idf.get(t, 0.0) for t, c in tf.items()}
+        # keep only the top 60 dims per doc for speed + a denoising effect
+        if len(v) > 60:
+            top = sorted(v.items(), key=lambda kv: kv[1], reverse=True)[:60]
+            v = dict(top)
+        norms[nid] = math.sqrt(sum(x * x for x in v.values()))
+        vectors[nid] = v
+    return vectors, norms
+
+
+def _semantic_edges(nodes: list[Node], existing: set[tuple[str, str]],
+                    k: int = 3, threshold: float = 0.18) -> list[tuple[str, str]]:
+    """Suggest up to k semantic edges per node where no explicit link exists.
+
+    Uses a simple TF-IDF cosine over title+description+body snippet+tags. Skips
+    code nodes as targets (they already have precise links) and skips pairs
+    that already share an explicit edge in either direction.
+    """
+    vectors, norms = _tfidf_vectors(nodes)
+    by_id = {n.id: n for n in nodes}
+    out: list[tuple[str, str]] = []
+    # Build a token -> nodes index for sparse candidate generation.
+    inv: dict[str, list[str]] = {}
+    for nid, v in vectors.items():
+        for t in v:
+            inv.setdefault(t, []).append(nid)
+
+    for n in nodes:
+        if not vectors[n.id] or norms[n.id] == 0:
+            continue
+        # candidate set: any node sharing at least one token (sparse)
+        cand: set[str] = set()
+        for t in vectors[n.id]:
+            cand.update(inv.get(t, ()))
+        cand.discard(n.id)
+
+        scored: list[tuple[float, str]] = []
+        v1, n1 = vectors[n.id], norms[n.id]
+        for cid in cand:
+            tgt = by_id.get(cid)
+            if not tgt or tgt.kind == "code":
+                continue
+            if (n.id, cid) in existing or (cid, n.id) in existing:
+                continue
+            v2, n2 = vectors[cid], norms[cid]
+            if n2 == 0:
+                continue
+            # cosine via sparse dict dot product
+            if len(v1) > len(v2):
+                small, big = v2, v1
+            else:
+                small, big = v1, v2
+            dot = sum(w * big.get(t, 0.0) for t, w in small.items())
+            sim = dot / (n1 * n2)
+            if sim >= threshold:
+                scored.append((sim, cid))
+        scored.sort(reverse=True)
+        for _, cid in scored[:k]:
+            out.append((n.id, cid))
+    return out
 
 
 def _count_by(items: list[dict], key: str) -> dict[str, int]:
