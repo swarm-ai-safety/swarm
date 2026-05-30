@@ -17,6 +17,20 @@ jobs:
       - run: python -m pip install ruff
       - run: ruff check swarm/ tests/
 
+  kb-graph-check:
+    # Fails on any orphan page (no inbound links) not already in
+    # .kb-graph-orphans — keeps the knowledge graph from regressing as the
+    # docs corpus grows. Ratchet the baseline down with
+    #   python scripts/build_kb_graph.py --update-baseline
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - run: python -m pip install pyyaml
+      - run: python scripts/build_kb_graph.py --check
+
   type-check:
     runs-on: ubuntu-latest
     steps:
