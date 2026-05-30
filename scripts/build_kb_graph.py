@@ -410,6 +410,12 @@ def build_graph() -> dict:
             return
         seen.add(key)
         edges.append({"source": src, "target": dst, "kind": kind})
+        # Semantic suggestions are TF-IDF hints, not real corpus links. They
+        # render in the viz (from `edges`) but must stay out of per-node
+        # in/out lists so they never appear as "Linked from" backlinks and
+        # never mask a real orphan from --check / "Show orphans".
+        if kind == "semantic":
+            return
         out_by[src].append(dst)
         in_by[dst].append(src)
 

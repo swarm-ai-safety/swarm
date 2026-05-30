@@ -22,6 +22,15 @@
     else document.addEventListener("DOMContentLoaded", fn);
   }
 
+  // Escape any corpus-derived string before concatenating it into innerHTML.
+  // Node titles and descriptions come from arbitrary markdown frontmatter and
+  // H1s; without this a doc whose title contains "<script>..." would execute
+  // on /graph and on every page that links back to it.
+  var ESC_MAP = {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"};
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return ESC_MAP[c]; });
+  }
+
   function baseUrl() {
     var marker = "/graph/";
     var p = window.location.pathname;
@@ -167,7 +176,8 @@
       });
 
       // ---- modes ----
-      var modeBrowse = document.getElementById("kb-mode-browse");
+      // (no need to hold a ref to the "browse" radio — speedrun is the only
+      // mode flag the click/hover handlers branch on)
       var modeSpeedrun = document.getElementById("kb-mode-speedrun");
       var trailEl = document.getElementById("kb-trail");
       var trail = JSON.parse(sessionStorage.getItem("kb-trail") || "[]");
@@ -182,7 +192,7 @@
         }
         var pieces = trail.map(function (id, i) {
           var n = byId[id]; if (!n) return "";
-          return '<a href="#" data-id="' + id + '" class="kb-trail-hop">' + n.title + "</a>";
+          return '<a href="#" data-id="' + esc(id) + '" class="kb-trail-hop">' + esc(n.title) + "</a>";
         });
         trailEl.innerHTML = '<b>Your run (' + (trail.length - 1) + ' hops):</b> ' +
           pieces.join(' <span class="kb-arrow">→</span> ') +
@@ -206,20 +216,20 @@
         var outs = (node.out || []).map(function (id) {
           var n = byId[id]; if (!n) return "";
           var color2 = KIND_COLORS[n.kind] || "#888";
-          return '<li><a href="#" data-id="' + id + '" class="kb-info-link">' +
+          return '<li><a href="#" data-id="' + esc(id) + '" class="kb-info-link">' +
             '<span class="kb-dot" style="background:' + color2 + '"></span>' +
-            n.title + ' <span class="kb-info-kind">' +
-            (KIND_LABELS[n.kind] || n.kind) + '</span></a></li>';
+            esc(n.title) + ' <span class="kb-info-kind">' +
+            esc(KIND_LABELS[n.kind] || n.kind) + '</span></a></li>';
         }).join("");
         var openLink = "";
-        if (node.url) openLink = '<a class="kb-info-open" href="' + base + node.url + '">Open page →</a>';
-        else if (node.external_url) openLink = '<a class="kb-info-open" target="_blank" rel="noopener" href="' + node.external_url + '">Open source on GitHub →</a>';
+        if (node.url) openLink = '<a class="kb-info-open" href="' + esc(base + node.url) + '">Open page →</a>';
+        else if (node.external_url) openLink = '<a class="kb-info-open" target="_blank" rel="noopener" href="' + esc(node.external_url) + '">Open source on GitHub →</a>';
         info.innerHTML =
           '<div class="kb-info-head">' +
           '<span class="kb-dot" style="background:' + color + '"></span>' +
-          '<h3>' + node.title + '</h3>' +
-          '<span class="kb-info-kind">' + kindLabel + '</span></div>' +
-          (node.description ? '<p class="kb-info-desc">' + node.description + '</p>' : '') +
+          '<h3>' + esc(node.title) + '</h3>' +
+          '<span class="kb-info-kind">' + esc(kindLabel) + '</span></div>' +
+          (node.description ? '<p class="kb-info-desc">' + esc(node.description) + '</p>' : '') +
           openLink +
           '<h4>Out (' + (node.out || []).length + ')</h4>' +
           (outs ? '<ul class="kb-info-outs">' + outs + '</ul>' : '<p class="kb-info-empty">No outgoing links.</p>');
@@ -315,7 +325,7 @@
         var path = bfsPath(adjReal, a, b);
         if (!path) {
           pathOut.innerHTML = '<span class="kb-nopath">No link path from <b>' +
-            byId[a].title + "</b> to <b>" + byId[b].title +
+            esc(byId[a].title) + "</b> to <b>" + esc(byId[b].title) +
             "</b> (try the reverse, or densify links).</span>";
           return;
         }
@@ -328,7 +338,7 @@
           var n = byId[id];
           var href = n.url ? base + n.url : (n.external_url || "#");
           var ext = n.url ? "" : ' target="_blank" rel="noopener"';
-          return '<a href="' + href + '"' + ext + '>' + n.title + "</a>";
+          return '<a href="' + esc(href) + '"' + ext + '>' + esc(n.title) + "</a>";
         }).join(' <span class="kb-arrow">→</span> ');
         pathOut.innerHTML = "<b>" + (path.length - 1) + " hop" +
           (path.length === 2 ? "" : "s") + ":</b> " + hops;

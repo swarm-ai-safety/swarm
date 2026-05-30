@@ -11,6 +11,7 @@ Graph-building logic lives in scripts/build_kb_graph.py (shared with the CLI).
 from __future__ import annotations
 
 import sys
+from html import escape as _esc
 from pathlib import Path
 
 _SCRIPTS = Path(__file__).resolve().parents[3] / "scripts"
@@ -70,9 +71,13 @@ def on_page_content(html: str, page=None, **kwargs) -> str:
     for n in inbound:
         kind_label = _KIND_LABEL.get(n["kind"], n["kind"])
         external = ' target="_blank" rel="noopener"' if n["kind"] != "doc" else ""
+        # Escape all corpus-derived strings before injecting into the page —
+        # titles and frontmatter come from arbitrary markdown and could contain
+        # angle brackets or attribute-breaking characters.
         items.append(
-            f'<li><a href="{_href_for(page_url, n)}"{external}>{n["title"]}</a>'
-            f' <span class="kb-backlink-section">{kind_label}</span></li>'
+            f'<li><a href="{_esc(_href_for(page_url, n), quote=True)}"{external}>'
+            f'{_esc(n["title"])}</a>'
+            f' <span class="kb-backlink-section">{_esc(kind_label)}</span></li>'
         )
 
     graph_href = "../" * page_url.count("/") + "graph/"
