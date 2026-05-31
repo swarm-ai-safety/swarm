@@ -22,7 +22,14 @@ the per-page backlinks injected by docs/overrides/hooks/kb_graph.py.
 
 Run as CLI for a connectivity report:
     python scripts/build_kb_graph.py
-    python scripts/build_kb_graph.py --check   # exit 1 if any orphans
+    python scripts/build_kb_graph.py --check
+        # CI ratchet: exit 1 only on NEW orphan ids not already in the
+        # committed `.kb-graph-orphans` baseline. Forces the artifacts dir
+        # to a non-existent path so local and CI compute the same graph.
+    python scripts/build_kb_graph.py --update-baseline
+        # Rewrite `.kb-graph-orphans` to the current orphan set. Use after
+        # densifying links so the ratchet tightens (or after intentionally
+        # adding pages that have no inbound links yet).
 """
 from __future__ import annotations
 
@@ -124,9 +131,23 @@ def _collect_tags(meta: dict) -> list[str]:
 
 # ---------- source providers ----------
 
+# When set (by --check / --update-baseline), restrict file walks to these paths.
+# Keeps local runs aligned with CI by ignoring untracked files (e.g. work-in-
+# progress papers under docs/) that won't be present in the GitHub checkout.
+_TRACKED_FILES: set[Path] | None = None
+
+
+def _tracked(paths):
+    """Filter an iterable of Paths to those tracked by git (when filter is set)."""
+    if _TRACKED_FILES is None:
+        return sorted(paths)
+    keep = _TRACKED_FILES
+    return sorted(p for p in paths if p.resolve() in keep)
+
+
 def _docs_nodes() -> list[Node]:
     nodes: list[Node] = []
-    for p in sorted(DOCS_DIR.rglob("*.md")):
+    for p in _tracked(DOCS_DIR.rglob("*.md")):
         rel = p.relative_to(DOCS_DIR).as_posix()
         if any(part in DOC_EXCLUDE for part in Path(rel).parts[:-1]):
             continue
@@ -151,7 +172,7 @@ def _scenario_nodes() -> list[Node]:
     if not sdir.is_dir():
         return []
     out: list[Node] = []
-    for p in sorted(sdir.glob("*.yaml")):
+    for p in _tracked(sdir.glob("*.yaml")):
         text = p.read_text(encoding="utf-8", errors="replace")
         meta = {}
         if yaml is not None:
@@ -181,7 +202,7 @@ def _command_nodes() -> list[Node]:
     if not cdir.is_dir():
         return []
     out: list[Node] = []
-    for p in sorted(cdir.glob("*.md")):
+    for p in _tracked(cdir.glob("*.md")):
         text = p.read_text(encoding="utf-8", errors="replace")
         meta, body = _parse_frontmatter(text)
         rel = f".claude/commands/{p.name}"
@@ -203,7 +224,7 @@ def _agent_nodes() -> list[Node]:
     if not adir.is_dir():
         return []
     out: list[Node] = []
-    for p in sorted(adir.glob("*.md")):
+    for p in _tracked(adir.glob("*.md")):
         text = p.read_text(encoding="utf-8", errors="replace")
         meta, body = _parse_frontmatter(text)
         rel = f".claude/agents/{p.name}"
@@ -225,7 +246,7 @@ def _role_nodes() -> list[Node]:
     if not rdir.is_dir():
         return []
     out: list[Node] = []
-    for p in sorted(rdir.rglob("*.md")):
+    for p in _tracked(rdir.rglob("*.md")):
         rel = p.relative_to(REPO_ROOT).as_posix()
         text = p.read_text(encoding="utf-8", errors="replace")
         meta, body = _parse_frontmatter(text)
@@ -608,10 +629,13 @@ BASELINE_PATH = REPO_ROOT / ".kb-graph-orphans"
 def _load_baseline() -> set[str]:
     if not BASELINE_PATH.exists():
         return set()
-    return {
-        line.strip() for line in BASELINE_PATH.read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.startswith("#")
-    }
+    out: set[str] = set()
+    for raw in BASELINE_PATH.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        out.add(line)
+    return out
 
 
 def _write_baseline(orphan_ids: set[str]) -> None:
@@ -625,12 +649,34 @@ def _write_baseline(orphan_ids: set[str]) -> None:
     BASELINE_PATH.write_text(body, encoding="utf-8")
 
 
+def _git_tracked_paths() -> set[Path] | None:
+    """Absolute paths of every file tracked by git in REPO_ROOT.
+
+    Returned set lets the source providers ignore untracked work-in-progress
+    files (e.g. local-only papers under docs/) so --check matches CI exactly.
+    Returns None on any git failure — in that case we fall back to walking
+    the filesystem, matching pre-tracking behavior.
+    """
+    import subprocess
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(REPO_ROOT), "ls-files", "-z"],
+            stderr=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return {(REPO_ROOT / rel).resolve()
+            for rel in out.decode("utf-8", "replace").split("\0") if rel}
+
+
 def _run_check(update: bool) -> int:
     # The committed/deployed graph never includes the artifacts repo (it's
     # only checked out locally), so the ratchet must reflect the as-CI state.
-    # Forcing the artifacts dir to a non-existent path keeps local --check
-    # output consistent with what CI will compute.
+    # Forcing the artifacts dir to a non-existent path and restricting the
+    # walk to git-tracked files keeps local --check output consistent with
+    # what CI will compute on a fresh checkout.
     globals()["ARTIFACTS_DIR"] = Path("/__no_artifacts_for_check__")
+    globals()["_TRACKED_FILES"] = _git_tracked_paths()
     g = build_graph()
     write_graph(g)
     _report(g)

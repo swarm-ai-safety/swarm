@@ -157,13 +157,17 @@ jobs:
   # Add "quality-gate" as a required check in GitHub branch protection.
   quality-gate:
     if: always()
-    needs: [lint, type-check, test, render-verify]
+    needs: [lint, kb-graph-check, type-check, test, render-verify]
     runs-on: ubuntu-latest
     steps:
       - name: Check all jobs passed
         run: |
           if [[ "${{ needs.lint.result }}" != "success" ]]; then
             echo "::error::Lint failed"
+            exit 1
+          fi
+          if [[ "${{ needs.kb-graph-check.result }}" != "success" ]]; then
+            echo "::error::kb-graph orphan ratchet failed (new orphan pages vs .kb-graph-orphans)"
             exit 1
           fi
           if [[ "${{ needs.type-check.result }}" != "success" ]]; then

@@ -14,7 +14,8 @@ structural questions a human or LLM agent would ask of the corpus:
     orphans [--kind K]            — pages with no inbound links
 
 IDs accept fuzzy lookup: if the exact id isn't found, the script falls back to
-title match, then substring match. Pass `--json` for machine-readable output.
+title match, then substring match. Output is text only; downstream agents that
+need structured data should read `docs/assets/kb_graph.json` directly.
 """
 from __future__ import annotations
 
@@ -191,10 +192,14 @@ def cmd_related(g: dict, args: list[str]) -> int:
 
 
 def cmd_path(g: dict, args: list[str]) -> int:
-    if len(args) < 2:
-        print("usage: path <from> <to>", file=sys.stderr)
+    # Two positional args, each a single token. Multi-word queries must be
+    # quoted by the shell so they arrive as a single argv entry; we do NOT
+    # join trailing args, since that parses asymmetrically with the first.
+    if len(args) != 2:
+        print("usage: path <from> <to>   (each argument is a single id or "
+              "quoted query)", file=sys.stderr)
         return 2
-    a, b = _resolve(g, args[0]), _resolve(g, " ".join(args[1:]))
+    a, b = _resolve(g, args[0]), _resolve(g, args[1])
     if not a or not b:
         return 1
     by_id = _by_id(g)
@@ -253,10 +258,6 @@ def main(argv: list[str]) -> int:
     cmd, args = argv[0], argv[1:]
     g = _load()
 
-    if "--json" in args:
-        args.remove("--json")
-        # delegate to handlers but capture stdout into structured output
-        # (kept simple — most callers want text)
     dispatch = {
         "find": cmd_find, "info": cmd_info,
         "backlinks": cmd_backlinks, "outbound": cmd_outbound,
