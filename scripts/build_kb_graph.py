@@ -151,14 +151,13 @@ def _docs_nodes() -> list[Node]:
         rel = p.relative_to(DOCS_DIR).as_posix()
         if any(part in DOC_EXCLUDE for part in Path(rel).parts[:-1]):
             continue
-        text = p.read_text(encoding="utf-8", errors="replace")
-        meta, body = _parse_frontmatter(text)
+        meta, body = _parse_frontmatter(_read(p))
         section = Path(rel).parts[0] if "/" in rel else "root"
         nodes.append(Node(
             id=rel, kind="doc",
             title=_title_from(meta, body, rel),
             section=section,
-            description=str(meta.get("description", "")).strip(),
+            description=_desc(meta),
             tags=_collect_tags(meta),
             url=rel[:-3] + "/" if rel.endswith(".md") else rel,
             source_path=f"docs/{rel}",
@@ -173,7 +172,7 @@ def _scenario_nodes() -> list[Node]:
         return []
     out: list[Node] = []
     for p in _tracked(sdir.glob("*.yaml")):
-        text = p.read_text(encoding="utf-8", errors="replace")
+        text = _read(p)
         meta = {}
         if yaml is not None:
             try:
@@ -188,7 +187,7 @@ def _scenario_nodes() -> list[Node]:
             id=rel, kind="scenario",
             title=title,
             section="scenarios",
-            description=str(meta.get("description", "")).strip(),
+            description=_desc(meta),
             tags=_collect_tags(meta),
             external_url=f"{GITHUB_BLOB_REPO}/{rel}",
             source_path=rel,
@@ -203,14 +202,13 @@ def _command_nodes() -> list[Node]:
         return []
     out: list[Node] = []
     for p in _tracked(cdir.glob("*.md")):
-        text = p.read_text(encoding="utf-8", errors="replace")
-        meta, body = _parse_frontmatter(text)
+        meta, body = _parse_frontmatter(_read(p))
         rel = f".claude/commands/{p.name}"
         out.append(Node(
             id=f"cmd/{p.stem}", kind="command",
             title=f"/{p.stem}",
             section="commands",
-            description=str(meta.get("description", "")).strip() or _first_para(body),
+            description=_desc(meta, body),
             tags=_collect_tags(meta),
             external_url=f"{GITHUB_BLOB_REPO}/{rel}",
             source_path=rel,
@@ -225,14 +223,13 @@ def _agent_nodes() -> list[Node]:
         return []
     out: list[Node] = []
     for p in _tracked(adir.glob("*.md")):
-        text = p.read_text(encoding="utf-8", errors="replace")
-        meta, body = _parse_frontmatter(text)
+        meta, body = _parse_frontmatter(_read(p))
         rel = f".claude/agents/{p.name}"
         out.append(Node(
             id=f"agent/{p.stem}", kind="agent",
             title=_title_from(meta, body, p.stem),
             section="agents",
-            description=str(meta.get("description", "")).strip() or _first_para(body),
+            description=_desc(meta, body),
             tags=_collect_tags(meta),
             external_url=f"{GITHUB_BLOB_REPO}/{rel}",
             source_path=rel,
@@ -248,15 +245,14 @@ def _role_nodes() -> list[Node]:
     out: list[Node] = []
     for p in _tracked(rdir.rglob("*.md")):
         rel = p.relative_to(REPO_ROOT).as_posix()
-        text = p.read_text(encoding="utf-8", errors="replace")
-        meta, body = _parse_frontmatter(text)
+        meta, body = _parse_frontmatter(_read(p))
         # role/<agent>/<filename-no-ext>
         nid = "role/" + p.relative_to(rdir).with_suffix("").as_posix()
         out.append(Node(
             id=nid, kind="role",
             title=_title_from(meta, body, p.stem),
             section="roles",
-            description=str(meta.get("description", "")).strip() or _first_para(body),
+            description=_desc(meta, body),
             tags=_collect_tags(meta),
             external_url=f"{GITHUB_BLOB_REPO}/{rel}",
             source_path=rel,
@@ -276,14 +272,13 @@ def _artifacts_nodes() -> list[Node]:
         if not d.is_dir():
             continue
         for p in sorted(d.glob("*.md")):
-            text = p.read_text(encoding="utf-8", errors="replace")
-            meta, body = _parse_frontmatter(text)
+            meta, body = _parse_frontmatter(_read(p))
             rel = f"{sub}/{p.name}"
             out.append(Node(
                 id=f"art/{rel}", kind=kind,
                 title=_title_from(meta, body, p.stem),
                 section=f"artifacts:{sub}",
-                description=str(meta.get("description", "")).strip(),
+                description=_desc(meta),
                 tags=_collect_tags(meta),
                 external_url=f"{GITHUB_BLOB_ARTIFACTS}/{rel}",
                 source_path=f"swarm-artifacts/{rel}",
@@ -300,6 +295,18 @@ def _first_para(body: str) -> str:
         if chunk and not chunk.startswith(("#", "```", "---", "<")):
             return " ".join(chunk.split())[:300]
     return ""
+
+
+def _read(p: Path) -> str:
+    return p.read_text(encoding="utf-8", errors="replace")
+
+
+def _desc(meta: dict, body: str | None = None) -> str:
+    """Frontmatter description, falling back to the first paragraph if given."""
+    d = str(meta.get("description", "")).strip()
+    if d or body is None:
+        return d
+    return _first_para(body)
 
 
 # ---------- edge inference ----------
@@ -390,7 +397,7 @@ def _code_pass(nodes: list[Node]) -> list[tuple[str, str]]:
 def _module_doc(src: Path) -> str:
     """Best-effort: the module-level docstring of a python file, single line."""
     try:
-        text = src.read_text(encoding="utf-8", errors="replace")
+        text = _read(src)
     except OSError:
         return ""
     m = re.match(r'\s*("""|\'\'\')(.*?)\1', text, re.DOTALL)
