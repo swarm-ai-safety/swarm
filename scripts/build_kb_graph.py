@@ -22,7 +22,14 @@ the per-page backlinks injected by docs/overrides/hooks/kb_graph.py.
 
 Run as CLI for a connectivity report:
     python scripts/build_kb_graph.py
-    python scripts/build_kb_graph.py --check   # exit 1 if any orphans
+    python scripts/build_kb_graph.py --check
+        # CI ratchet: exit 1 only on NEW orphan ids not already in the
+        # committed `.kb-graph-orphans` baseline. Forces the artifacts dir
+        # to a non-existent path so local and CI compute the same graph.
+    python scripts/build_kb_graph.py --update-baseline
+        # Rewrite `.kb-graph-orphans` to the current orphan set. Use after
+        # densifying links so the ratchet tightens (or after intentionally
+        # adding pages that have no inbound links yet).
 """
 from __future__ import annotations
 
@@ -124,20 +131,33 @@ def _collect_tags(meta: dict) -> list[str]:
 
 # ---------- source providers ----------
 
+# When set (by --check / --update-baseline), restrict file walks to these paths.
+# Keeps local runs aligned with CI by ignoring untracked files (e.g. work-in-
+# progress papers under docs/) that won't be present in the GitHub checkout.
+_TRACKED_FILES: set[Path] | None = None
+
+
+def _tracked(paths):
+    """Filter an iterable of Paths to those tracked by git (when filter is set)."""
+    if _TRACKED_FILES is None:
+        return sorted(paths)
+    keep = _TRACKED_FILES
+    return sorted(p for p in paths if p.resolve() in keep)
+
+
 def _docs_nodes() -> list[Node]:
     nodes: list[Node] = []
-    for p in sorted(DOCS_DIR.rglob("*.md")):
+    for p in _tracked(DOCS_DIR.rglob("*.md")):
         rel = p.relative_to(DOCS_DIR).as_posix()
         if any(part in DOC_EXCLUDE for part in Path(rel).parts[:-1]):
             continue
-        text = p.read_text(encoding="utf-8", errors="replace")
-        meta, body = _parse_frontmatter(text)
+        meta, body = _parse_frontmatter(_read(p))
         section = Path(rel).parts[0] if "/" in rel else "root"
         nodes.append(Node(
             id=rel, kind="doc",
             title=_title_from(meta, body, rel),
             section=section,
-            description=str(meta.get("description", "")).strip(),
+            description=_desc(meta),
             tags=_collect_tags(meta),
             url=rel[:-3] + "/" if rel.endswith(".md") else rel,
             source_path=f"docs/{rel}",
@@ -151,8 +171,8 @@ def _scenario_nodes() -> list[Node]:
     if not sdir.is_dir():
         return []
     out: list[Node] = []
-    for p in sorted(sdir.glob("*.yaml")):
-        text = p.read_text(encoding="utf-8", errors="replace")
+    for p in _tracked(sdir.glob("*.yaml")):
+        text = _read(p)
         meta = {}
         if yaml is not None:
             try:
@@ -167,7 +187,7 @@ def _scenario_nodes() -> list[Node]:
             id=rel, kind="scenario",
             title=title,
             section="scenarios",
-            description=str(meta.get("description", "")).strip(),
+            description=_desc(meta),
             tags=_collect_tags(meta),
             external_url=f"{GITHUB_BLOB_REPO}/{rel}",
             source_path=rel,
@@ -181,15 +201,14 @@ def _command_nodes() -> list[Node]:
     if not cdir.is_dir():
         return []
     out: list[Node] = []
-    for p in sorted(cdir.glob("*.md")):
-        text = p.read_text(encoding="utf-8", errors="replace")
-        meta, body = _parse_frontmatter(text)
+    for p in _tracked(cdir.glob("*.md")):
+        meta, body = _parse_frontmatter(_read(p))
         rel = f".claude/commands/{p.name}"
         out.append(Node(
             id=f"cmd/{p.stem}", kind="command",
             title=f"/{p.stem}",
             section="commands",
-            description=str(meta.get("description", "")).strip() or _first_para(body),
+            description=_desc(meta, body),
             tags=_collect_tags(meta),
             external_url=f"{GITHUB_BLOB_REPO}/{rel}",
             source_path=rel,
@@ -203,15 +222,14 @@ def _agent_nodes() -> list[Node]:
     if not adir.is_dir():
         return []
     out: list[Node] = []
-    for p in sorted(adir.glob("*.md")):
-        text = p.read_text(encoding="utf-8", errors="replace")
-        meta, body = _parse_frontmatter(text)
+    for p in _tracked(adir.glob("*.md")):
+        meta, body = _parse_frontmatter(_read(p))
         rel = f".claude/agents/{p.name}"
         out.append(Node(
             id=f"agent/{p.stem}", kind="agent",
             title=_title_from(meta, body, p.stem),
             section="agents",
-            description=str(meta.get("description", "")).strip() or _first_para(body),
+            description=_desc(meta, body),
             tags=_collect_tags(meta),
             external_url=f"{GITHUB_BLOB_REPO}/{rel}",
             source_path=rel,
@@ -225,17 +243,16 @@ def _role_nodes() -> list[Node]:
     if not rdir.is_dir():
         return []
     out: list[Node] = []
-    for p in sorted(rdir.rglob("*.md")):
+    for p in _tracked(rdir.rglob("*.md")):
         rel = p.relative_to(REPO_ROOT).as_posix()
-        text = p.read_text(encoding="utf-8", errors="replace")
-        meta, body = _parse_frontmatter(text)
+        meta, body = _parse_frontmatter(_read(p))
         # role/<agent>/<filename-no-ext>
         nid = "role/" + p.relative_to(rdir).with_suffix("").as_posix()
         out.append(Node(
             id=nid, kind="role",
             title=_title_from(meta, body, p.stem),
             section="roles",
-            description=str(meta.get("description", "")).strip() or _first_para(body),
+            description=_desc(meta, body),
             tags=_collect_tags(meta),
             external_url=f"{GITHUB_BLOB_REPO}/{rel}",
             source_path=rel,
@@ -255,14 +272,13 @@ def _artifacts_nodes() -> list[Node]:
         if not d.is_dir():
             continue
         for p in sorted(d.glob("*.md")):
-            text = p.read_text(encoding="utf-8", errors="replace")
-            meta, body = _parse_frontmatter(text)
+            meta, body = _parse_frontmatter(_read(p))
             rel = f"{sub}/{p.name}"
             out.append(Node(
                 id=f"art/{rel}", kind=kind,
                 title=_title_from(meta, body, p.stem),
                 section=f"artifacts:{sub}",
-                description=str(meta.get("description", "")).strip(),
+                description=_desc(meta),
                 tags=_collect_tags(meta),
                 external_url=f"{GITHUB_BLOB_ARTIFACTS}/{rel}",
                 source_path=f"swarm-artifacts/{rel}",
@@ -279,6 +295,18 @@ def _first_para(body: str) -> str:
         if chunk and not chunk.startswith(("#", "```", "---", "<")):
             return " ".join(chunk.split())[:300]
     return ""
+
+
+def _read(p: Path) -> str:
+    return p.read_text(encoding="utf-8", errors="replace")
+
+
+def _desc(meta: dict, body: str | None = None) -> str:
+    """Frontmatter description, falling back to the first paragraph if given."""
+    d = str(meta.get("description", "")).strip()
+    if d or body is None:
+        return d
+    return _first_para(body)
 
 
 # ---------- edge inference ----------
@@ -369,7 +397,7 @@ def _code_pass(nodes: list[Node]) -> list[tuple[str, str]]:
 def _module_doc(src: Path) -> str:
     """Best-effort: the module-level docstring of a python file, single line."""
     try:
-        text = src.read_text(encoding="utf-8", errors="replace")
+        text = _read(src)
     except OSError:
         return ""
     m = re.match(r'\s*("""|\'\'\')(.*?)\1', text, re.DOTALL)
@@ -602,10 +630,97 @@ def _report(graph: dict) -> None:
             print(f"  [{n['kind']}/{n['section']}] {n['id']}  (out:{n['outdegree']})")
 
 
+BASELINE_PATH = REPO_ROOT / ".kb-graph-orphans"
+
+
+def _load_baseline() -> set[str]:
+    if not BASELINE_PATH.exists():
+        return set()
+    out: set[str] = set()
+    for raw in BASELINE_PATH.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        out.add(line)
+    return out
+
+
+def _write_baseline(orphan_ids: set[str]) -> None:
+    body = (
+        "# Knowledge-graph orphan baseline — auto-generated by\n"
+        "#   python scripts/build_kb_graph.py --update-baseline\n"
+        "# CI fails if --check sees ids not in this list (new orphans).\n"
+        "# Trim entries here as you densify the graph; never add by hand.\n"
+    )
+    body += "\n".join(sorted(orphan_ids)) + "\n"
+    BASELINE_PATH.write_text(body, encoding="utf-8")
+
+
+def _git_tracked_paths() -> set[Path] | None:
+    """Absolute paths of every file tracked by git in REPO_ROOT.
+
+    Returned set lets the source providers ignore untracked work-in-progress
+    files (e.g. local-only papers under docs/) so --check matches CI exactly.
+    Returns None on any git failure — in that case we fall back to walking
+    the filesystem, matching pre-tracking behavior.
+    """
+    import subprocess
+    try:
+        out = subprocess.check_output(
+            ["git", "-C", str(REPO_ROOT), "ls-files", "-z"],
+            stderr=subprocess.DEVNULL,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    return {(REPO_ROOT / rel).resolve()
+            for rel in out.decode("utf-8", "replace").split("\0") if rel}
+
+
+def _run_check(update: bool) -> int:
+    # The committed/deployed graph never includes the artifacts repo (it's
+    # only checked out locally), so the ratchet must reflect the as-CI state.
+    # Forcing the artifacts dir to a non-existent path and restricting the
+    # walk to git-tracked files keeps local --check output consistent with
+    # what CI will compute on a fresh checkout.
+    globals()["ARTIFACTS_DIR"] = Path("/__no_artifacts_for_check__")
+    globals()["_TRACKED_FILES"] = _git_tracked_paths()
+    g = build_graph()
+    write_graph(g)
+    _report(g)
+    current = {n["id"] for n in g["nodes"] if n["orphan"]}
+
+    if update:
+        _write_baseline(current)
+        print(f"\nUpdated baseline ({len(current)} orphan ids) at "
+              f"{BASELINE_PATH.relative_to(REPO_ROOT)}")
+        return 0
+
+    baseline = _load_baseline()
+    new = sorted(current - baseline)
+    fixed = sorted(baseline - current)
+    if fixed:
+        print(f"\nGood news: {len(fixed)} baseline orphans now have inbound links:")
+        for x in fixed[:10]:
+            print(f"  + {x}")
+        if len(fixed) > 10:
+            print(f"  ... and {len(fixed) - 10} more")
+        print("  -> consider `--update-baseline` to ratchet the budget down.")
+    if new:
+        print(f"\nNEW ORPHANS ({len(new)}) — not in {BASELINE_PATH.name}:")
+        for x in new:
+            print(f"  ! {x}")
+        print("\nFix by linking these pages from somewhere in the corpus, "
+              "or (if intentional) update the baseline.")
+        return 1
+    print("\nNo new orphans vs baseline. ✓")
+    return 0
+
+
 if __name__ == "__main__":
+    if "--check" in sys.argv or "--update-baseline" in sys.argv:
+        sys.exit(_run_check(update="--update-baseline" in sys.argv))
+
     g = build_graph()
     write_graph(g)
     _report(g)
     print(f"\nWrote {OUT_PATH.relative_to(REPO_ROOT)}")
-    if "--check" in sys.argv and g["stats"]["orphan_count"]:
-        sys.exit(1)
