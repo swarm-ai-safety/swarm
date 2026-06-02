@@ -14,35 +14,40 @@ drop without an external signal:
 3. Agents gamed the proxy — `v̂` rises while true quality stays flat.
    *(governance defeated)*
 
-The framework also rests on the implicit assumption that `v̂` is a faithful
-estimator of latent `p`. That has never been measured. Until both things
-are anchored, every downstream result is interpretable only at the level
-of `v̂` — which is exactly what a strategic agent will defeat.
+The framework also rests on the implicit assumption that the proxy-derived
+`p = sigmoid(v̂)` is well-calibrated against `SoftInteraction.ground_truth`
+(the realized `v ∈ {+1, -1}` label). That has never been measured. Until
+both things are anchored, every downstream result is interpretable only at
+the level of `p` — which is exactly what a strategic agent will defeat.
 
 ## Central goal
 
 Produce a **triangulated quality signal** that adaptive-agent results can be
 interpreted against:
 
-- a measured proxy-fidelity baseline (`v̂` vs latent `p`),
+- a measured proxy-fidelity baseline (`p` vs `ground_truth`),
 - an external judge anchor (LLM-judge scores on accepted interactions),
 - inter-rater agreement across judges (so "the judge is also gameable"
   is bounded, not waved away).
 
-The deliverable is a CSV of accepted interactions with `{v̂, p_true,
-judge_score_claude, judge_score_gpt4o_mini, judge_score_llama,
-agreement_metrics}` that downstream studies can join against by run-id.
+The deliverable is a CSV of accepted interactions with `{v_hat, p,
+ground_truth, judge_score_claude, judge_score_gpt4o_mini,
+judge_score_llama, agreement_metrics}` that downstream studies can join
+against by run-id.
 
 ## Arms
 
 ### Arm A — Proxy fidelity
 
-Measure how well `ProxyComputer` recovers latent `p`.
+Measure how well `p = sigmoid(v̂)` from `ProxyComputer` tracks the realized
+`ground_truth` label.
 
-- **Procedure:** generate interactions with known latent `p` drawn from a
-  controlled grid (e.g. `p ∈ {0.05, 0.2, 0.4, 0.6, 0.8, 0.95}`, ≥500
-  interactions per bin). Run `ProxyComputer` on the observables. Bin `v̂`,
-  compute mean realized outcome per bin (reliability diagram).
+- **Procedure:** generate interactions with a known latent generator
+  probability drawn from a controlled grid (e.g. `{0.05, 0.2, 0.4, 0.6,
+  0.8, 0.95}`, ≥500 interactions per bin) and sample `ground_truth ∈
+  {+1, -1}` from it. Run `ProxyComputer` to compute `(v_hat, p)` per
+  interaction. Bin `p`, compute the empirical frequency of
+  `ground_truth = +1` per bin (reliability diagram).
 - **Metrics:** expected calibration error (ECE), maximum calibration
   error (MCE), Brier score, reliability-diagram bins.
 - **Sweep:** the sigmoid `k` parameter; report fidelity vs `k`. Identify
@@ -60,11 +65,13 @@ Build the un-gameable quality signal the adaptive study needs.
   (text/output, not the proxy observables) to an LLM judge with a
   fixed rubric. Judge returns a score on `[0, 1]`.
 - **Prompt discipline:** the judge prompt MUST NOT include the
-  observable features `ProxyComputer` reads (task_progress, rework_count,
-  verifier_rejections, engagement). The judge rates on content quality
-  dimensions orthogonal to those signals. This is what makes the signal
-  un-gameable from an adaptive agent's perspective — the agent can shift
-  observables without shifting what the judge sees.
+  `ProxyObservables` fields `ProxyComputer` reads — concretely:
+  `task_progress_delta`, `rework_count`, `verifier_rejections`,
+  `tool_misuse_flags`, `counterparty_engagement_delta`. The judge rates
+  on content quality dimensions orthogonal to those signals. This is
+  what makes the signal un-gameable from an adaptive agent's
+  perspective — the agent can shift observables without shifting what
+  the judge sees.
 - **Judges:** Claude, GPT-4o-mini, Llama 3.x (matches existing Table 9
   setup).
 - **Output:** `runs/<ts>_calibration_judge/judge_scores.csv` with one row
@@ -107,8 +114,8 @@ explicitly in any downstream finding.
 - `p` grid, sample sizes, and `k` sweep range for Arm A are fixed before
   data collection.
 - Judge prompt rubric, judge model versions, and excluded observable
-  features for Arm B are version-locked in `swarm/judges/rubric_v1.md`
-  before any data collection.
+  features for Arm B will be version-locked at `swarm/judges/rubric_v1.md`
+  before any Arm B data collection.
 - The Krippendorff α decision threshold for Arm C is set in advance.
 - The CSV schema downstream studies join against is frozen before the
   adaptive study begins.
@@ -117,20 +124,20 @@ explicitly in any downstream finding.
 
 ## Outcomes
 
-- **`v̂` is well-calibrated AND judges agree (α ≥ 0.7):** the strong
-  result. Adaptive study unblocked with confidence; `v̂` can be reported
+- **`p` is well-calibrated AND judges agree (α ≥ 0.7):** the strong
+  result. Adaptive study unblocked with confidence; `p` can be reported
   as a calibrated proxy; judge serves as the un-gameable anchor.
-- **`v̂` is poorly calibrated but judges agree:** the framework still
+- **`p` is poorly calibrated but judges agree:** the framework still
   has a usable external anchor; we report the calibration gap honestly
   and re-tune `k`. Adaptive study still unblocked.
 - **Judges disagree (α < 0.5):** the anchor itself is too noisy. The
   adaptive study cannot rely on a single ensemble score. We either add
   judges, switch models, or fall back to a smaller human-rated subsample.
   This is itself a publishable result about LLM-judge reliability.
-- **`v̂` well-calibrated AND judges agree, but they disagree with each
-  other:** `v̂` and the external judge measure different things. Most
-  interesting result — interpret carefully; this is where the
-  proxy-gaming threat model lives.
+- **`p` well-calibrated AND judges agree with each other, but the
+  proxy and the judge ensemble disagree:** `p` and the external judge
+  measure different things. Most interesting result — interpret
+  carefully; this is where the proxy-gaming threat model lives.
 
 ## Order of operations
 
