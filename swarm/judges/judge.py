@@ -137,8 +137,43 @@ class MockJudge:
         )
 
 
-JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
-JSON_OBJECT_RE = re.compile(r"(\{[^{}]*\"score\"[^{}]*\})", re.DOTALL)
+JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL)
+
+
+def _iter_brace_objects(text: str) -> list[str]:
+    """Yield top-level `{...}` substrings with balanced braces, string-aware.
+
+    Unlike a flat regex, this tolerates nested objects (e.g.
+    ``{"score": 0.5, "evidence": {"agent_type": "honest"}}``) and braces
+    that appear inside string values. Scans for balanced brace spans,
+    skipping any brace inside a JSON string literal (respecting `\\` escapes).
+    """
+    objects: list[str] = []
+    depth = 0
+    start = -1
+    in_str = False
+    escape = False
+    for i, ch in enumerate(text):
+        if in_str:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start >= 0:
+                objects.append(text[start : i + 1])
+                start = -1
+    return objects
 
 
 def _extract_score(text: str) -> tuple[float, str]:
@@ -148,7 +183,7 @@ def _extract_score(text: str) -> tuple[float, str]:
     the object, or trail off after the closing brace. Try in order:
       1. Direct json.loads.
       2. Markdown fence ```json {...} ```.
-      3. First {...} block that contains "score".
+      3. Balanced `{...}` blocks that contain "score" (nested objects OK).
 
     Raises ValueError if no usable score is found — better to surface the
     parse failure than fabricate a midline default.
@@ -161,9 +196,7 @@ def _extract_score(text: str) -> tuple[float, str]:
     if m:
         candidates.append(m.group(1))
 
-    m = JSON_OBJECT_RE.search(text)
-    if m:
-        candidates.append(m.group(1))
+    candidates.extend(obj for obj in _iter_brace_objects(text) if '"score"' in obj)
 
     for candidate in candidates:
         try:

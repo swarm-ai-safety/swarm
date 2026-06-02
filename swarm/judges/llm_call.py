@@ -60,6 +60,18 @@ def _resolve_api_key(provider: str, explicit: Optional[str]) -> Optional[str]:
     return None
 
 
+# Default OpenAI-compatible endpoints for providers that are NOT OpenAI
+# itself. Without these, openai.OpenAI(base_url=None) silently targets
+# api.openai.com, so a `groq`/`openrouter`/... key would be sent to the
+# wrong host and 401/404. An explicit base_url always overrides these.
+PROVIDER_BASE_URLS: dict[str, str] = {
+    "openrouter": "https://openrouter.ai/api/v1",
+    "groq": "https://api.groq.com/openai/v1",
+    "together": "https://api.together.xyz/v1",
+    "deepseek": "https://api.deepseek.com",
+}
+
+
 def call_anthropic(
     *,
     model: str,
@@ -128,6 +140,24 @@ def call_openai_compatible(
     drive the env-var fallback (ANTHROPIC_API_KEY for "anthropic",
     OPENAI_API_KEY for "openai", etc.).
     """
+    key = _resolve_api_key(provider, api_key)
+    if not key:
+        raise RuntimeError(
+            f"No {provider} API key. Set the env var or pass api_key="
+        )
+    # Non-OpenAI providers need their own endpoint; without one the OpenAI
+    # SDK would target api.openai.com with the wrong key. Fall back to a
+    # known default, and reject any other non-openai provider that hasn't
+    # supplied an explicit base_url rather than silently mis-routing.
+    # Validated before importing the SDK so misconfiguration fails fast even
+    # where `openai` isn't installed.
+    resolved_base_url = base_url or PROVIDER_BASE_URLS.get(provider)
+    if resolved_base_url is None and provider != "openai":
+        raise ValueError(
+            f"provider {provider!r} has no built-in endpoint; pass base_url= "
+            f"explicitly (known defaults: {sorted(PROVIDER_BASE_URLS)})"
+        )
+
     try:
         import openai
     except ImportError as err:
@@ -136,12 +166,7 @@ def call_openai_compatible(
             "Install with: python -m pip install openai"
         ) from err
 
-    key = _resolve_api_key(provider, api_key)
-    if not key:
-        raise RuntimeError(
-            f"No {provider} API key. Set the env var or pass api_key="
-        )
-    client = openai.OpenAI(api_key=key, base_url=base_url, timeout=timeout)
+    client = openai.OpenAI(api_key=key, base_url=resolved_base_url, timeout=timeout)
     started = time.monotonic()
     response = client.chat.completions.create(
         model=model,
@@ -202,18 +227,62 @@ def call_ollama(
     )
 
 
+# Exception *class names* (matched by name, so the optional SDKs don't have
+# to be imported here) that represent transient failures worth retrying.
+_RETRYABLE_EXC_NAMES = frozenset(
+    {
+        # openai / anthropic SDK
+        "APIConnectionError",
+        "APITimeoutError",
+        "InternalServerError",
+        "RateLimitError",
+        # httpx
+        "ConnectError",
+        "ConnectTimeout",
+        "ReadTimeout",
+        "WriteTimeout",
+        "PoolTimeout",
+        "TimeoutException",
+        "RemoteProtocolError",
+    }
+)
+
+
+def default_retryable(err: BaseException) -> bool:
+    """True only for transient failures (network / timeout / 5xx / 429).
+
+    Fail fast on everything else: a missing SDK (``ImportError``), a missing
+    key or other misconfiguration (``RuntimeError`` / ``ValueError``), or a
+    4xx auth/quota error should surface immediately instead of burning the
+    full retry budget behind transient-looking warnings.
+    """
+    if isinstance(err, TimeoutError):
+        return True
+    # HTTP status, if the exception carries one (openai.APIStatusError exposes
+    # `.status_code`; httpx.HTTPStatusError exposes `.response.status_code`).
+    status = getattr(err, "status_code", None)
+    if status is None:
+        status = getattr(getattr(err, "response", None), "status_code", None)
+    if isinstance(status, int):
+        return status >= 500 or status == 429
+    return type(err).__name__ in _RETRYABLE_EXC_NAMES
+
+
 def call_with_retries(
     fn: "Callable[[], LLMCallResult]",
     *,
     max_retries: int = 3,
     base_delay: float = 1.0,
     sleep: "Callable[[float], None]" = time.sleep,
+    retryable: "Callable[[BaseException], bool]" = default_retryable,
 ) -> LLMCallResult:
     """Exponential-backoff wrapper for any of the call_* functions.
 
     `sleep` is injectable so tests can run without wall-clock waits.
-    Retries every Exception; if you want narrower handling, wrap before
-    calling.
+    Only exceptions for which ``retryable(err)`` is true are retried — by
+    default that's transient network/timeout/5xx/429 failures. Terminal
+    errors (missing SDK or key, 4xx auth/quota, programming bugs) are
+    re-raised on the first attempt so misconfiguration surfaces fast.
     """
     last: Optional[BaseException] = None
     for attempt in range(max_retries + 1):
@@ -221,6 +290,9 @@ def call_with_retries(
             return fn()
         except Exception as err:
             last = err
+            if not retryable(err):
+                logger.warning("LLM call failed with non-retryable error: %s", err)
+                raise
             logger.warning("LLM call failed (attempt %d/%d): %s", attempt + 1, max_retries + 1, err)
             if attempt < max_retries:
                 sleep(base_delay * (2 ** attempt))

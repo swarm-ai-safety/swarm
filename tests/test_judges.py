@@ -222,6 +222,33 @@ class TestLLMJudge:
         )
         assert judge.score(self._view()).score == 0.1
 
+    def test_parses_nested_json_object(self) -> None:
+        # A score object with a nested value must still parse — the old
+        # flat [^{}]* regex hard-stopped at the first inner brace and
+        # dropped the row.
+        judge = LLMJudge(
+            name="claude",
+            caller=lambda _p: self._result(
+                '{"score": 0.5, "rationale": "mixed", '
+                '"evidence": {"agent_type": "honest", "flags": {"x": 1}}}'
+            ),
+        )
+        verdict = judge.score(self._view())
+        assert verdict.score == 0.5
+        assert verdict.rationale == "mixed"
+
+    def test_parses_nested_json_inside_fence_with_narration(self) -> None:
+        # Nested object, wrapped in a markdown fence, with leading prose.
+        judge = LLMJudge(
+            name="gpt",
+            caller=lambda _p: self._result(
+                'My verdict:\n```json\n'
+                '{"score": 0.2, "rationale": "see evidence", '
+                '"evidence": {"reasons": ["a", "b"]}}\n```'
+            ),
+        )
+        assert judge.score(self._view()).score == 0.2
+
     def test_clamps_out_of_range_score(self) -> None:
         judge = LLMJudge(
             name="claude",
@@ -243,7 +270,7 @@ class TestLLMJudge:
         def flaky(_prompt: str):
             attempts["n"] += 1
             if attempts["n"] < 2:
-                raise RuntimeError("transient")
+                raise TimeoutError("transient")  # retryable
             return self._result('{"score": 0.7, "rationale": "ok"}')
 
         # Patch sleep so the test doesn't actually wait.
@@ -278,6 +305,42 @@ class TestLLMJudge:
         judge = LLMJudge(name="x", provider="not-a-real-provider")
         with pytest.raises(ValueError, match="unsupported provider"):
             judge._dispatch("prompt")
+
+    @pytest.mark.parametrize(
+        ("provider", "expected_fn"),
+        [
+            ("anthropic", "call_anthropic"),
+            ("openai", "call_openai_compatible"),
+            ("openrouter", "call_openai_compatible"),
+            ("groq", "call_openai_compatible"),
+            ("together", "call_openai_compatible"),
+            ("deepseek", "call_openai_compatible"),
+            ("ollama", "call_ollama"),
+        ],
+    )
+    def test_dispatch_routes_to_expected_provider(
+        self, monkeypatch, provider: str, expected_fn: str
+    ) -> None:
+        # Without `caller`, _dispatch must route each provider string to the
+        # right call_* helper. Patching the helpers in the judge module keeps
+        # the dispatch table honest at HEAD (a typo'd provider would either
+        # hit the wrong helper or fall through to the ValueError).
+        from swarm.judges import judge as judge_mod
+
+        called = {"fn": None}
+
+        def make_stub(label: str):
+            def stub(**kwargs):
+                called["fn"] = label
+                return self._result('{"score": 0.5, "rationale": "ok"}')
+            return stub
+
+        for fn_name in ("call_anthropic", "call_openai_compatible", "call_ollama"):
+            monkeypatch.setattr(judge_mod, fn_name, make_stub(fn_name))
+
+        judge = LLMJudge(name="j", provider=provider, base_url="http://x")
+        judge._dispatch("prompt")
+        assert called["fn"] == expected_fn
 
 
 class TestSampler:
