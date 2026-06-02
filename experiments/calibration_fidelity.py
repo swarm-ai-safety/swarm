@@ -126,7 +126,7 @@ def main(argv: list[str] | None = None) -> int:
                         b.n,
                         f"{b.mean_confidence:.6f}",
                         f"{b.accuracy:.6f}",
-                        f"{abs(b.accuracy - b.mean_confidence):.6f},",
+                        f"{abs(b.accuracy - b.mean_confidence):.6f}",
                     ]
                 )
 
