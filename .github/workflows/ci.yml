@@ -18,9 +18,11 @@ jobs:
       - run: ruff check swarm/ tests/
 
   kb-graph-check:
-    # Fails on any orphan page (no inbound links) not already in
-    # .kb-graph-orphans — keeps the knowledge graph from regressing as the
-    # docs corpus grows. Ratchet the baseline down with
+    # Fails on (a) any orphan page (no inbound links) not in .kb-graph-orphans,
+    # or (b) any stale reference — a broken mkdocstrings code directive or a
+    # dead internal markdown link — not in .kb-graph-stale. Keeps the knowledge
+    # graph from regressing as the docs corpus grows. Ratchet both baselines
+    # down with:
     #   python scripts/build_kb_graph.py --update-baseline
     runs-on: ubuntu-latest
     steps:
@@ -167,7 +169,7 @@ jobs:
             exit 1
           fi
           if [[ "${{ needs.kb-graph-check.result }}" != "success" ]]; then
-            echo "::error::kb-graph orphan ratchet failed (new orphan pages vs .kb-graph-orphans)"
+            echo "::error::kb-graph ratchet failed (new orphan pages vs .kb-graph-orphans, or new stale refs vs .kb-graph-stale)"
             exit 1
           fi
           if [[ "${{ needs.type-check.result }}" != "success" ]]; then
