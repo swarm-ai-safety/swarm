@@ -78,13 +78,13 @@ def main(argv: list[str] | None = None) -> int:
         "--scenario",
         choices=["mixed", "obfuscation", "self_optimizer"],
         required=True,
-        help="Must match the scenario used by the arm B run that produced --judge-scores",
+        help="Scenario fixture to generate interactions from (proxy + judges run inline)",
     )
     parser.add_argument(
         "--seed",
         type=int,
         required=True,
-        help="Must match the seed used by the arm B run that produced --judge-scores",
+        help="Seed for scenario generation; fixes which interactions are produced",
     )
     parser.add_argument(
         "--judges",
@@ -104,7 +104,9 @@ def main(argv: list[str] | None = None) -> int:
 
     # Inline judging: same process as proxy build, so IDs match by construction.
     accepted = [i for i in interactions if getattr(i, "accepted", False)]
-    judge_names = list(args.judges)
+    # Dedupe while preserving order: `--judges mock mock` must not emit
+    # duplicate header columns or re-run the same judge.
+    judge_names = list(dict.fromkeys(args.judges))
     judge_scores: dict[str, dict[str, float]] = {j: {} for j in judge_names}
     judge_rationales: dict[str, dict[str, str]] = {j: {} for j in judge_names}
     for name in judge_names:
