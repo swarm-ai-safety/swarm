@@ -36,7 +36,7 @@ curve. The deliverable figure is the static `ρ`-curve and adaptive-generation
 
 ### Lever factor (columns)
 
-- `ρ ∈ {0, 0.1, 0.3, 0.5, 0.7, 1.0}` (same grid as Figure 4).
+- `ρ ∈ {0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0}` (same 11-point grid as Figure 4 / Mesa Bridge static sweep).
 - `τ` across the same values used statically.
 
 ### Population/seeds
