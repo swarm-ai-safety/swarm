@@ -29,11 +29,11 @@ import csv
 import hashlib
 import json
 import os
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from experiments._calibration_common import SCENARIOS, git_rev, load_interactions
 from swarm.judges import (
     RUBRIC_PATH,
     RUBRIC_VERSION,
@@ -43,36 +43,10 @@ from swarm.judges import (
     make_view,
     stratified_sample,
 )
-from tests.fixtures.interactions import (
-    generate_mixed_batch,
-    generate_obfuscation_scenario,
-    generate_self_optimizer_scenario,
-)
-
-
-def _git_rev() -> str:
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
-        ).decode().strip()
-    except Exception:
-        return "unknown"
 
 
 def _rubric_hash() -> str:
     return hashlib.sha256(RUBRIC_PATH.read_bytes()).hexdigest()[:16]
-
-
-def _load_interactions(scenario: str, seed: int) -> list:
-    if scenario == "mixed":
-        return generate_mixed_batch(count=500, seed=seed)
-    if scenario == "obfuscation":
-        epochs = generate_obfuscation_scenario(n_epochs=10, seed=seed)
-        return [i for epoch in epochs for i in epoch]
-    if scenario == "self_optimizer":
-        epochs = generate_self_optimizer_scenario(n_epochs=10, seed=seed)
-        return [i for epoch in epochs for i in epoch]
-    raise ValueError(f"unknown scenario: {scenario}")
 
 
 # Built-in judge specs. Provider + default model. Caller can override
@@ -117,7 +91,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scenario",
-        choices=["mixed", "obfuscation", "self_optimizer"],
+        choices=list(SCENARIOS),
         default="obfuscation",
         help="Fixture to draw interactions from",
     )
@@ -146,7 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    interactions = _load_interactions(args.scenario, args.seed)
+    interactions = load_interactions(args.scenario, args.seed)
     sample = stratified_sample(interactions, per_bin=args.per_bin, seed=args.seed)
     judges, judge_models = _build_judges(args.judges)
 
@@ -156,7 +130,7 @@ def main(argv: list[str] | None = None) -> int:
 
     config = {
         "ts_utc": ts,
-        "git_rev": _git_rev(),
+        "git_rev": git_rev(),
         "scenario": args.scenario,
         "judges": args.judges,
         # Resolved provider + model per judge so the run is reproducible from

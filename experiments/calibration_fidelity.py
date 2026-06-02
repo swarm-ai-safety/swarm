@@ -25,25 +25,16 @@ from __future__ import annotations
 import argparse
 import csv
 import json
-import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from experiments._calibration_common import git_rev
 from swarm.calibration.fidelity import sweep_sigmoid_k
 
 
 def _parse_floats(arg: str) -> list[float]:
     return [float(x) for x in arg.split(",") if x.strip()]
-
-
-def _git_rev() -> str:
-    try:
-        return subprocess.check_output(
-            ["git", "rev-parse", "--short", "HEAD"], stderr=subprocess.DEVNULL
-        ).decode().strip()
-    except Exception:
-        return "unknown"
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -88,7 +79,7 @@ def main(argv: list[str] | None = None) -> int:
 
     config = {
         "ts_utc": ts,
-        "git_rev": _git_rev(),
+        "git_rev": git_rev(),
         "p_grid": args.p_grid,
         "k_values": args.k_values,
         "per_bin": args.per_bin,
