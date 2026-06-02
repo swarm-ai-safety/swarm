@@ -41,6 +41,7 @@ from swarm.calibration.joined import (
     JOINED_SCHEMA_VERSION,
     build_proxy_rows,
     join_with_judges,
+    joined_header,
 )
 from swarm.judges import MockJudge, make_view
 from tests.fixtures.interactions import (
@@ -142,12 +143,17 @@ def main(argv: list[str] | None = None) -> int:
     joined_path = run_dir / "joined.csv"
     with joined_path.open("w", newline="") as f:
         writer = csv.writer(f)
-        if not joined:
-            print("WARNING: no accepted interactions to write", file=sys.stderr)
-        else:
-            writer.writerow(joined[0].header(judge_names))
-            for row in joined:
-                writer.writerow(row.to_row(judge_names))
+        # Always emit the schema-bearing header, even with zero data rows, so a
+        # downstream DictReader sees the joined.v1 contract instead of an empty
+        # file that silently yields no rows.
+        writer.writerow(joined_header(judge_names))
+        for row in joined:
+            writer.writerow(row.to_row(judge_names))
+    if not joined:
+        print(
+            "WARNING: no accepted interactions; wrote header-only joined.csv",
+            file=sys.stderr,
+        )
 
     print(f"Wrote {run_dir}")
     print(f"  schema={JOINED_SCHEMA_VERSION}")

@@ -39,6 +39,19 @@ BASE_COLUMNS: tuple[str, ...] = (
 )
 
 
+def joined_header(judge_names: list[str]) -> list[str]:
+    """Column header for the joined CSV: frozen base columns + per-judge pairs.
+
+    Module-level so callers can emit a schema-bearing header row even when
+    there are zero data rows (i.e. without a `JoinedRow` instance to hand).
+    """
+    cols = list(BASE_COLUMNS)
+    for j in judge_names:
+        cols.append(f"judge_{j}_score")
+        cols.append(f"judge_{j}_rationale")
+    return cols
+
+
 @dataclass(frozen=True)
 class ProxyRow:
     """One interaction's proxy-side data (no judge fields yet)."""
@@ -63,11 +76,7 @@ class JoinedRow:
     judge_rationales: dict[str, str] = field(default_factory=dict)
 
     def header(self, judge_names: list[str]) -> list[str]:
-        cols = list(BASE_COLUMNS)
-        for j in judge_names:
-            cols.append(f"judge_{j}_score")
-            cols.append(f"judge_{j}_rationale")
-        return cols
+        return joined_header(judge_names)
 
     def to_row(self, judge_names: list[str]) -> list[Any]:
         p = self.proxy
@@ -123,7 +132,10 @@ def build_proxy_rows(
                 seed=seed,
                 interaction_type=type_name,
                 accepted=bool(getattr(interaction, "accepted", False)),
-                p_true=float(getattr(interaction, "p", 0.5)),
+                # No default: a missing `p` is a fixture/scenario bug. Fabricating
+                # 0.5 here would poison the column the whole calibration study trusts
+                # as the latent ground-truth anchor, so let AttributeError propagate.
+                p_true=float(interaction.p),
                 v_hat=float(v_hat),
                 p_hat=float(p_hat),
                 ground_truth=getattr(interaction, "ground_truth", None),
