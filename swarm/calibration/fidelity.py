@@ -164,6 +164,10 @@ def maximum_calibration_error(bins: Iterable[BinStats]) -> float:
 
 def brier_score(p_hats: list[float], outcomes: list[int]) -> float:
     """Mean squared error of p_hat vs the realized binary outcome."""
+    if len(p_hats) != len(outcomes):
+        raise ValueError(
+            f"length mismatch: len(p_hats)={len(p_hats)}, len(outcomes)={len(outcomes)}"
+        )
     if not p_hats:
         return 0.0
     return sum((p - o) ** 2 for p, o in zip(p_hats, outcomes, strict=True)) / len(p_hats)
@@ -215,9 +219,8 @@ def sweep_sigmoid_k(
 ) -> list[FidelityReport]:
     """Run `run_fidelity` for each k. Returns one report per k.
 
-    Each k uses the same seed offset so reports are directly comparable.
+    Each k uses the same seed (and therefore the same sampled observables)
+    so reports form a paired comparison — the only thing varying across
+    reports is the sigmoid_k applied by ProxyComputer.
     """
-    return [
-        run_fidelity(k, p_grid, per_bin, seed=seed + i, n_bins=n_bins)
-        for i, k in enumerate(k_values)
-    ]
+    return [run_fidelity(k, p_grid, per_bin, seed=seed, n_bins=n_bins) for k in k_values]

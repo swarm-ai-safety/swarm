@@ -58,13 +58,14 @@ class TestReliabilityBins:
         with pytest.raises(ValueError):
             reliability_bins([0.5], [1], n_bins=0)
 
-    def test_perfect_calibration(self) -> None:
-        # 100 samples evenly spread, accuracy matches confidence
+    def test_mean_confidence_lies_within_bin(self) -> None:
+        # 100 samples evenly spread across [0, 1); for each populated bin,
+        # the mean confidence should fall inside [lo, hi]. (Outcomes are
+        # unused here — this test exercises the binning, not calibration.)
         p_hats = [i / 100 for i in range(100)]
         outcomes = [1 if i / 100 >= 0.5 else 0 for i in range(100)]
         bins = reliability_bins(p_hats, outcomes, n_bins=10)
         assert len(bins) > 0
-        # Each bin's mean confidence should be near its midpoint
         for b in bins:
             assert b.lo <= b.mean_confidence <= b.hi + 1e-6
 
