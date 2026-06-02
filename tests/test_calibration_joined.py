@@ -13,6 +13,7 @@ from swarm.calibration.joined import (
     ProxyRow,
     build_proxy_rows,
     join_with_judges,
+    joined_header,
     load_judge_scores_for_join,
 )
 from tests.fixtures.interactions import (
@@ -73,6 +74,24 @@ class TestBuildProxyRows:
         assert [r.interaction_id for r in a] == [r.interaction_id for r in b]
         assert [r.v_hat for r in a] == [r.v_hat for r in b]
 
+    def test_missing_p_raises_instead_of_fabricating(self) -> None:
+        # p_true is the latent ground-truth anchor the whole study trusts;
+        # a missing `p` is a fixture/scenario bug, so it must surface loudly
+        # rather than silently defaulting to 0.5.
+        class _NoP:
+            accepted = True
+            interaction_id = "x"
+            interaction_type = "REPLY"
+            # Everything ProxyObservables.from_interaction needs — only `p` is absent.
+            task_progress_delta = 0.5
+            rework_count = 0
+            verifier_rejections = 0
+            tool_misuse_flags = 0
+            counterparty_engagement_delta = 0.1
+
+        with pytest.raises(AttributeError):
+            build_proxy_rows([_NoP()], scenario="s", seed=0)
+
 
 class TestJoin:
     def test_join_attaches_scores(self) -> None:
@@ -122,6 +141,21 @@ class TestJoin:
         assert "judge_claude_score" in header
         assert "judge_claude_rationale" in header
         assert "judge_gpt_score" in header
+
+    def test_joined_header_standalone_matches_instance(self) -> None:
+        # joined_header() lets the runner emit a schema-bearing header even
+        # with zero data rows (no JoinedRow to hand). It must agree with the
+        # instance method and start with the frozen base columns.
+        names = ["claude", "gpt"]
+        standalone = joined_header(names)
+        assert standalone[: len(BASE_COLUMNS)] == list(BASE_COLUMNS)
+        assert standalone == [
+            *BASE_COLUMNS,
+            "judge_claude_score",
+            "judge_claude_rationale",
+            "judge_gpt_score",
+            "judge_gpt_rationale",
+        ]
 
     def test_round_trip_through_csv(self) -> None:
         batch = generate_obfuscation_scenario(n_epochs=2, seed=4)
