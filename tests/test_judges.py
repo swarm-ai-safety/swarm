@@ -179,16 +179,105 @@ class TestMockJudgeRubricFidelity:
 
 
 class TestLLMJudge:
-    def test_score_not_implemented(self) -> None:
-        # Until the LLM call path is wired in, calling score must raise
-        # explicitly (not silently produce zeros).
-        judge = LLMJudge(name="claude", config=None)
-        view = JudgeView(
-            interaction_id="x", interaction_type="REPLY", accepted=True,
-            initiator_label="a", counterparty_label="b", metadata={},
+    def _view(self, iid: str = "x") -> JudgeView:
+        return JudgeView(
+            interaction_id=iid,
+            interaction_type="REPLY",
+            accepted=True,
+            initiator_label="a",
+            counterparty_label="b",
+            metadata={"agent_type": "honest"},
         )
-        with pytest.raises(NotImplementedError):
-            judge.score(view)
+
+    def _result(self, text: str):
+        from swarm.judges.llm_call import LLMCallResult
+        return LLMCallResult(text=text, input_tokens=10, output_tokens=10, latency_seconds=0.01)
+
+    def test_parses_clean_json(self) -> None:
+        judge = LLMJudge(
+            name="claude",
+            caller=lambda _p: self._result('{"score": 0.83, "rationale": "looks honest"}'),
+        )
+        verdict = judge.score(self._view())
+        assert verdict.score == 0.83
+        assert verdict.rationale == "looks honest"
+        assert verdict.judge_name == "claude"
+        assert verdict.interaction_id == "x"
+
+    def test_parses_markdown_fenced_json(self) -> None:
+        judge = LLMJudge(
+            name="gpt",
+            caller=lambda _p: self._result(
+                'Here is my verdict:\n\n```json\n{"score": 0.42, "rationale": "mid"}\n```\n'
+            ),
+        )
+        assert judge.score(self._view()).score == 0.42
+
+    def test_parses_narrated_response(self) -> None:
+        judge = LLMJudge(
+            name="llama",
+            caller=lambda _p: self._result(
+                'Looking at this interaction, I would say: {"score": 0.1, "rationale": "low"}'
+            ),
+        )
+        assert judge.score(self._view()).score == 0.1
+
+    def test_clamps_out_of_range_score(self) -> None:
+        judge = LLMJudge(
+            name="claude",
+            caller=lambda _p: self._result('{"score": 1.5, "rationale": "off"}'),
+        )
+        assert judge.score(self._view()).score == 1.0
+
+    def test_raises_on_garbage_response(self) -> None:
+        judge = LLMJudge(
+            name="claude",
+            caller=lambda _p: self._result("Not a JSON object at all."),
+        )
+        with pytest.raises(ValueError, match="failed to parse response"):
+            judge.score(self._view())
+
+    def test_retries_on_transient_error_then_succeeds(self) -> None:
+        attempts = {"n": 0}
+
+        def flaky(_prompt: str):
+            attempts["n"] += 1
+            if attempts["n"] < 2:
+                raise RuntimeError("transient")
+            return self._result('{"score": 0.7, "rationale": "ok"}')
+
+        # Patch sleep so the test doesn't actually wait.
+        from swarm.judges import llm_call
+        original = llm_call.time.sleep
+        llm_call.time.sleep = lambda _s: None
+        try:
+            judge = LLMJudge(name="claude", caller=flaky, max_retries=3)
+            verdict = judge.score(self._view())
+        finally:
+            llm_call.time.sleep = original
+
+        assert verdict.score == 0.7
+        assert attempts["n"] == 2
+
+    def test_orthogonality_enforced_in_prompt_build(self) -> None:
+        # If a JudgeView slipped a forbidden field through, the prompt
+        # builder must blow up before any LLM call.
+        judge = LLMJudge(name="claude", caller=lambda _p: self._result('{"score":0.5}'))
+        bad = JudgeView(
+            interaction_id="x",
+            interaction_type="REPLY",
+            accepted=True,
+            initiator_label="a",
+            counterparty_label="b",
+            metadata={"v_hat": 0.9},  # forbidden
+        )
+        with pytest.raises(AssertionError):
+            judge._build_prompt(bad)
+
+    def test_dispatch_rejects_unknown_provider(self) -> None:
+        judge = LLMJudge(name="x", provider="not-a-real-provider")
+        with pytest.raises(ValueError, match="unsupported provider"):
+            judge._dispatch("prompt")
 
 
 class TestSampler:

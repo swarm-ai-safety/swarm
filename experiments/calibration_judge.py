@@ -25,6 +25,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -34,6 +35,7 @@ from swarm.judges import (
     RUBRIC_PATH,
     RUBRIC_VERSION,
     Judge,
+    LLMJudge,
     MockJudge,
     make_view,
     stratified_sample,
@@ -70,16 +72,32 @@ def _load_interactions(scenario: str, seed: int) -> list:
     raise ValueError(f"unknown scenario: {scenario}")
 
 
+# Built-in judge specs. Provider + default model. Caller can override
+# the model via JUDGE_MODEL_<NAME> env var.
+JUDGE_SPECS: dict[str, dict[str, str]] = {
+    "mock": {"provider": "mock"},
+    "claude": {"provider": "anthropic", "model": "claude-sonnet-4-20250514"},
+    "gpt4o_mini": {"provider": "openai", "model": "gpt-4o-mini"},
+    "llama": {"provider": "ollama", "model": "llama3.1"},
+}
+
+
 def _build_judges(names: list[str]) -> list[Judge]:
     judges: list[Judge] = []
     for name in names:
-        if name == "mock":
-            judges.append(MockJudge())
-        else:
-            raise NotImplementedError(
-                f"judge backend '{name}' requires wiring up LLMJudge.score "
-                "(see swarm/judges/judge.py). Only 'mock' is available right now."
+        if name not in JUDGE_SPECS:
+            raise ValueError(
+                f"unknown judge '{name}'. Known: {sorted(JUDGE_SPECS)}. "
+                "To add a judge, extend JUDGE_SPECS or use LLMJudge directly."
             )
+        spec = JUDGE_SPECS[name]
+        if spec["provider"] == "mock":
+            judges.append(MockJudge())
+            continue
+        model = os.environ.get(f"JUDGE_MODEL_{name.upper()}", spec.get("model", ""))
+        if not model:
+            raise ValueError(f"judge '{name}' has no model configured")
+        judges.append(LLMJudge(name=name, provider=spec["provider"], model=model))
     return judges
 
 
