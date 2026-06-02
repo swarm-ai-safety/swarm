@@ -49,7 +49,8 @@ class Judge(Protocol):
 
     name: str
 
-    def score(self, view: JudgeView) -> JudgeScore: ...
+    def score(self, view: JudgeView) -> JudgeScore:
+        """Return this judge's verdict for a single view."""
 
 
 def load_rubric() -> str:
