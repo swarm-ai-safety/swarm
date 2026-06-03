@@ -35,12 +35,13 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from swarm.judges import (
-    RUBRIC_PATH,
-    RUBRIC_VERSION,
+    DEFAULT_RUBRIC_VERSION,
+    RUBRICS,
     Judge,
     LLMJudge,
     MockJudge,
     make_view,
+    rubric_path,
     stratified_sample,
 )
 from tests.fixtures.interactions import (
@@ -59,8 +60,8 @@ def _git_rev() -> str:
         return "unknown"
 
 
-def _rubric_hash() -> str:
-    return hashlib.sha256(RUBRIC_PATH.read_bytes()).hexdigest()[:16]
+def _rubric_hash(version: str) -> str:
+    return hashlib.sha256(rubric_path(version).read_bytes()).hexdigest()[:16]
 
 
 def _load_interactions(scenario: str, seed: int) -> list:
@@ -82,10 +83,15 @@ JUDGE_SPECS: dict[str, dict[str, str]] = {
     "claude": {"provider": "anthropic", "model": "claude-sonnet-4-20250514"},
     "gpt4o_mini": {"provider": "openai", "model": "gpt-4o-mini"},
     "llama": {"provider": "ollama", "model": "llama3.1"},
+    "qwen": {"provider": "ollama", "model": "qwen2.5:14b"},
+    "mistral": {"provider": "ollama", "model": "mistral:7b"},
+    "glm": {"provider": "ollama", "model": "glm-4.7-flash:q8_0"},
 }
 
 
-def _build_judges(names: list[str]) -> tuple[list[Judge], dict[str, dict[str, str]]]:
+def _build_judges(
+    names: list[str], rubric_version: str
+) -> tuple[list[Judge], dict[str, dict[str, str]]]:
     """Build judge backends and return the resolved provider/model per judge.
 
     The resolved map is persisted in config.json so a run is reproducible
@@ -102,14 +108,25 @@ def _build_judges(names: list[str]) -> tuple[list[Judge], dict[str, dict[str, st
             )
         spec = JUDGE_SPECS[name]
         if spec["provider"] == "mock":
-            judges.append(MockJudge())
-            resolved[name] = {"provider": "mock"}
+            judges.append(MockJudge(rubric_version=rubric_version))
+            resolved[name] = {"provider": "mock", "rubric_version": rubric_version}
             continue
         model = os.environ.get(f"JUDGE_MODEL_{name.upper()}", spec.get("model", ""))
         if not model:
             raise ValueError(f"judge '{name}' has no model configured")
-        judges.append(LLMJudge(name=name, provider=spec["provider"], model=model))
-        resolved[name] = {"provider": spec["provider"], "model": model}
+        judges.append(
+            LLMJudge(
+                name=name,
+                provider=spec["provider"],
+                model=model,
+                rubric_version=rubric_version,
+            )
+        )
+        resolved[name] = {
+            "provider": spec["provider"],
+            "model": model,
+            "rubric_version": rubric_version,
+        }
     return judges, resolved
 
 
@@ -139,6 +156,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
+        "--rubric",
+        choices=sorted(RUBRICS.keys()),
+        default=DEFAULT_RUBRIC_VERSION,
+        help=(
+            "Rubric version to score against. Each version is a frozen file "
+            "in swarm/judges/; downstream run artifacts record both the "
+            "version string and the file's SHA-256 prefix."
+        ),
+    )
+    parser.add_argument(
         "--runs-dir",
         type=Path,
         default=Path("runs"),
@@ -148,7 +175,7 @@ def main(argv: list[str] | None = None) -> int:
 
     interactions = _load_interactions(args.scenario, args.seed)
     sample = stratified_sample(interactions, per_bin=args.per_bin, seed=args.seed)
-    judges, judge_models = _build_judges(args.judges)
+    judges, judge_models = _build_judges(args.judges, rubric_version=args.rubric)
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_dir = args.runs_dir / f"{ts}_calibration_judge_seed{args.seed}"
@@ -164,8 +191,8 @@ def main(argv: list[str] | None = None) -> int:
         "judge_models": judge_models,
         "per_bin": args.per_bin,
         "seed": args.seed,
-        "rubric_version": RUBRIC_VERSION,
-        "rubric_sha256_prefix": _rubric_hash(),
+        "rubric_version": args.rubric,
+        "rubric_sha256_prefix": _rubric_hash(args.rubric),
         "n_interactions_pool": len(interactions),
         "n_sampled": len(sample),
         "prereg": "docs/research/calibration-prereg.md#arm-b-external-judge-anchor",
@@ -195,7 +222,7 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"Wrote {run_dir}")
     print(f"  pool={len(interactions)}, sampled={len(sample)}, judges={args.judges}")
-    print(f"  rubric={RUBRIC_VERSION} ({_rubric_hash()})")
+    print(f"  rubric={args.rubric} ({_rubric_hash(args.rubric)})")
     return 0
 
 
