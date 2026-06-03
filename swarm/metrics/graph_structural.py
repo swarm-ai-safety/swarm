@@ -12,7 +12,9 @@ score pairs/groups against a threshold. This module flags coalitions by
     * Configuration-model null sampler -> p-values, not magic thresholds.
 
 Zero external dependency (matches swarm/analysis/network.py convention).
-Inputs are a list of weighted directed edges, easily produced from
+Inputs are a list of directed edges (weights accepted but currently used
+only as a *positivity filter* — see ``DiGraph.from_edges``; densities and
+reciprocity use edge presence, not weight). Edges are easily produced from
 ``SoftInteraction`` via ``edges_from_interactions``.
 """
 
@@ -52,8 +54,11 @@ class DiGraph:
     def from_edges(cls, edges: Iterable[Edge]) -> "DiGraph":
         g = cls()
         for u, v, w in edges:
-            if u == v:
-                continue  # ignore self-loops
+            if u == v or w <= 0.0:
+                # ignore self-loops and non-positive-weight edges (a p=0.0
+                # SoftInteraction in p-weighted mode must not contribute
+                # topology, since downstream metrics use edge presence)
+                continue
             g.nodes.add(u)
             g.nodes.add(v)
             g.out[u][v] += w
@@ -102,6 +107,12 @@ def edges_from_interactions(
 ) -> List[Edge]:
     """Aggregate ``SoftInteraction`` records into weighted directed edges.
 
+    Note: the structural detector currently uses edge *presence* (weights
+    only act as a positivity filter in ``DiGraph.from_edges``), so the
+    choice of weighting mode affects only which interactions register as
+    an edge at all — e.g. a ``p=0.0`` interaction in ``"p"`` mode drops out
+    entirely. The mode hook is in place for a future weighted variant.
+
     Args:
         interactions: list of SoftInteraction records.
         weight: one of ``"count"`` (1 per interaction), ``"p"`` (sum of p), or
@@ -130,7 +141,12 @@ def edges_from_interactions(
 
 
 def k_core_decomposition(g: DiGraph) -> Dict[str, int]:
-    """Batagelj-Zaversnik O(m) coreness on the undirected projection."""
+    """Coreness on the undirected projection (Batagelj-Zaversnik style peel).
+
+    Not the strict O(m + n) bucket-array variant — degree updates here use a
+    bounded backward scan rather than constant-time bucket pointers, so
+    worst-case is super-linear. Fine for the graph sizes this detector runs on.
+    """
     deg = {u: g.undirected_degree(u) for u in g.nodes}
     neigh = {u: g.undirected_neighbors(u) for u in g.nodes}
     # Tie-break by node id for determinism.
@@ -144,9 +160,8 @@ def k_core_decomposition(g: DiGraph) -> Dict[str, int]:
                 continue  # already peeled
             if deg[v] > deg[u]:
                 dv = deg[v]
-                pw = pos[order[pos[v]]]
                 # swap v with the first node of degree dv to keep order sorted
-                first_idx = pw
+                first_idx = pos[v]
                 # find the leftmost index with degree dv
                 while first_idx > 0 and deg[order[first_idx - 1]] == dv:
                     first_idx -= 1
@@ -249,7 +264,9 @@ def configuration_model_null(g: DiGraph, *, seed: int = 0) -> DiGraph:
     rng = random.Random(seed)
     out_stubs: List[str] = []
     in_stubs: List[str] = []
-    for u in g.nodes:
+    # Iterate in sorted order so the (seed, graph) pair is reproducible
+    # across PYTHONHASHSEED values; raw set iteration is not.
+    for u in sorted(g.nodes):
         out_stubs.extend([u] * sum(1 for _ in g.out.get(u, {})))
         in_stubs.extend([u] * sum(1 for _ in g.in_.get(u, {})))
     rng.shuffle(out_stubs)
@@ -290,12 +307,15 @@ def density_pvalue(
     n_samples: int = 50,
     seed: int = 0,
 ) -> float:
-    """Empirical p-value that a configuration-model graph has a subset of
-    size ``|subset|`` with internal density >= observed density.
+    """Empirical p-value that *any* subset of a degree-matched null graph
+    has internal density >= observed density of ``subset``.
 
-    Conservatively, we measure the *densest* subgraph of size ``|subset|``
-    in each null sample by running Charikar peeling and taking the snapshot
-    whose size is closest to |subset|. Cheap and good enough for ranking.
+    This is an upper bound on the size-matched p-value: we run Charikar
+    peeling on each null sample and compare against its globally densest
+    subgraph (any size), which is at least as dense as the best subgraph
+    of size ``|subset|``. Conservative for ranking — it never under-reports
+    significance — and avoids the cost of a size-conditioned search per
+    sample. Replace with a size-matched scan if that conservatism matters.
     """
     if not subset:
         return 1.0
