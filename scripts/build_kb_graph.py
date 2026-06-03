@@ -51,8 +51,8 @@ OUT_PATH = DOCS_DIR / "assets" / "kb_graph.json"
 
 ARTIFACTS_DIR = Path(os.environ.get("SWARM_ARTIFACTS", REPO_ROOT.parent / "swarm-artifacts"))
 
-GITHUB_BLOB_REPO = "https://github.com/swarm-ai-safety/swarm/blob/main"
-GITHUB_BLOB_ARTIFACTS = "https://github.com/swarm-ai-safety/swarm-artifacts/blob/main"
+GITHUB_BLOB_REPO = "https://github.com/swarm-ai-research/swarm/blob/main"
+GITHUB_BLOB_ARTIFACTS = "https://github.com/swarm-ai-research/swarm-artifacts/blob/main"
 
 # Excluded subdirs under docs/ that hold built/vendored assets.
 DOC_EXCLUDE = {"game-app", "javascripts", "stylesheets", "overrides", "assets",

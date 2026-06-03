@@ -465,7 +465,7 @@ class OpenRouterBackend(LLMBackend):
                     api_key=api_key,
                     base_url="https://openrouter.ai/api/v1",
                     default_headers={
-                        "HTTP-Referer": "https://github.com/swarm-ai-safety",
+                        "HTTP-Referer": "https://github.com/swarm-ai-research",
                         "X-Title": "SWARM Escalation Sandbox",
                     },
                 )

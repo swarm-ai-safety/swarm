@@ -43,7 +43,7 @@ local/
 .credentials/
 credentials/
 
-# Migrated to swarm-ai-safety/swarm-artifacts
+# Migrated to swarm-ai-research/swarm-artifacts
 runs/
 lean/
 promo/

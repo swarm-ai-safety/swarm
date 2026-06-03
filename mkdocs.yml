@@ -1,8 +1,8 @@
 site_name: "SWARM — Open-Source Multi-Agent AI Safety Framework"
 site_description: "SWARM: System-Wide Assessment of Risk in Multi-agent systems - A Distributional AGI Safety framework"
 site_url: https://www.swarm-ai.org
-repo_url: https://github.com/swarm-ai-safety/swarm
-repo_name: swarm-ai-safety/swarm
+repo_url: https://github.com/swarm-ai-research/swarm
+repo_name: swarm-ai-research/swarm
 
 theme:
   name: material
@@ -221,7 +221,7 @@ nav:
 extra:
   social:
     - icon: fontawesome/brands/github
-      link: https://github.com/swarm-ai-safety/swarm
+      link: https://github.com/swarm-ai-research/swarm
     - icon: fontawesome/brands/x-twitter
       link: https://x.com/ResearchSwarmAI
   generator: false

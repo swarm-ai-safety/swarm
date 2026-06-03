@@ -30,7 +30,7 @@ This repo is set up as a **Claude Code template** for SWARM-style research work:
 
 ### Artifacts repo
 
-Large/supplementary files live in a separate repo: [`swarm-ai-safety/swarm-artifacts`](https://github.com/swarm-ai-safety/swarm-artifacts). This includes:
+Large/supplementary files live in a separate repo: [`swarm-ai-research/swarm-artifacts`](https://github.com/swarm-ai-research/swarm-artifacts). This includes:
 - Historical experiment runs, Lean proofs, promo site, research notes, reference papers, `IMPLEMENTATION_PLAN.md`, `DESIGN_CRITIQUE.md`.
 
 These directories are gitignored in main. Local `runs/` and `docs/papers/` are still used as working directories — they just aren't committed here.

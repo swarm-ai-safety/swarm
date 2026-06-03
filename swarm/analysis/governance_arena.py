@@ -1490,11 +1490,11 @@ with cred_cols[2]:
 st.markdown("")
 link_cols = st.columns(3)
 with link_cols[0]:
-    st.markdown("[GitHub \u2192 swarm-ai-safety/swarm](https://github.com/swarm-ai-safety/swarm)")
+    st.markdown("[GitHub \u2192 swarm-ai-research/swarm](https://github.com/swarm-ai-research/swarm)")
 with link_cols[1]:
     st.markdown("[HuggingFace Space](https://huggingface.co/spaces/Swarm-AI-Research/swarm-sandbox)")
 with link_cols[2]:
-    st.markdown("[Escalation Sandbox Docs](https://github.com/swarm-ai-safety/swarm/tree/main/docs/scenarios)")
+    st.markdown("[Escalation Sandbox Docs](https://github.com/swarm-ai-research/swarm/tree/main/docs/scenarios)")
 
 
 # ---------------------------------------------------------------------------
@@ -1506,7 +1506,7 @@ st.markdown(
     "<div style='text-align:center; color:#444455; font-size:0.8rem; padding:16px 0;'>"
     "SWARM: System-Wide Assessment of Risk in Multi-agent Systems &bull; "
     "MIT License &bull; "
-    "<a href='https://github.com/swarm-ai-safety/swarm' style='color:#5577aa;'>GitHub</a>"
+    "<a href='https://github.com/swarm-ai-research/swarm' style='color:#5577aa;'>GitHub</a>"
     "</div>",
     unsafe_allow_html=True,
 )

@@ -185,7 +185,7 @@ print(report.generate_summary())
 - **Joint sweep:** Sweep entry fee + governance hardness simultaneously to map the 2D defense surface
 - **Adaptive adversaries:** Red-team with agents that learn from failed attacks and adjust strategy mid-simulation
 
-[GitHub](https://github.com/swarm-ai-safety/swarm)
+[GitHub](https://github.com/swarm-ai-research/swarm)
 
 ---
 

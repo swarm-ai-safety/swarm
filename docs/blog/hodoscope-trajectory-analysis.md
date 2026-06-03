@@ -108,7 +108,7 @@ Or just `[pip install](../getting-started/installation.md) hodoscope` if you wan
 
 ## Artifacts
 
-The complete run (history JSON, 160 trajectory files, hodoscope analysis, and all plots) is archived at [`swarm-artifacts/runs/20260224_202707_self_optimizer_hodoscope/`](https://github.com/swarm-ai-safety/swarm-artifacts/tree/main/runs/20260224_202707_self_optimizer_hodoscope).
+The complete run (history JSON, 160 trajectory files, hodoscope analysis, and all plots) is archived at [`swarm-artifacts/runs/20260224_202707_self_optimizer_hodoscope/`](https://github.com/swarm-ai-research/swarm-artifacts/tree/main/runs/20260224_202707_self_optimizer_hodoscope).
 
 ---
 

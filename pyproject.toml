@@ -155,8 +155,8 @@ all = [
 [project.urls]
 Homepage = "https://swarm-ai.org"
 Documentation = "https://docs.swarm-ai.org"
-Repository = "https://github.com/swarm-ai-safety/swarm"
-Issues = "https://github.com/swarm-ai-safety/swarm/issues"
+Repository = "https://github.com/swarm-ai-research/swarm"
+Issues = "https://github.com/swarm-ai-research/swarm/issues"
 
 [project.scripts]
 swarm = "swarm.__main__:main"

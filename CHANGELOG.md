@@ -202,7 +202,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - **Test fix discipline** guideline in CLAUDE.md
 
 ### Changed
-- **Artifacts repo migration**: Moved `runs/`, `lean/`, `promo/`, `research/`, `docs/papers/`, `IMPLEMENTATION_PLAN.md`, and `DESIGN_CRITIQUE.md` to [`swarm-ai-safety/swarm-artifacts`](https://github.com/swarm-ai-safety/swarm-artifacts) — reduces main repo clone size by ~5 GB
+- **Artifacts repo migration**: Moved `runs/`, `lean/`, `promo/`, `research/`, `docs/papers/`, `IMPLEMENTATION_PLAN.md`, and `DESIGN_CRITIQUE.md` to [`swarm-ai-research/swarm-artifacts`](https://github.com/swarm-ai-research/swarm-artifacts) — reduces main repo clone size by ~5 GB
 - Updated 9 slash commands, agents, and `CLAUDE.md` to reflect artifact repo locations
 - `TestableClaim` renamed to `VerifiableClaim` across codebase
 - EventBus initialization simplified in all handlers
