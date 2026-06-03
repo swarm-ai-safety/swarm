@@ -264,6 +264,24 @@ class TestLLMJudge:
         with pytest.raises(ValueError, match="failed to parse response"):
             judge.score(self._view())
 
+    def test_recovers_score_from_truncated_response(self) -> None:
+        # Real-world failure: a model emits valid JSON whose rationale
+        # exceeds max_tokens and gets cut mid-string. The score is
+        # recoverable; the rationale gets a [truncated] marker.
+        truncated = ' {\n  "score": 0.1,\n  "rationale": "The interaction is a TRADE between an init'
+        judge = LLMJudge(name="claude", caller=lambda _p: self._result(truncated))
+        verdict = judge.score(self._view())
+        assert verdict.score == 0.1
+        assert "[truncated]" in verdict.rationale
+
+    def test_recovers_score_when_rationale_has_no_value(self) -> None:
+        # Truncation right after the score field with no rationale value.
+        truncated = '{"score": 0.85, "rati'
+        judge = LLMJudge(name="claude", caller=lambda _p: self._result(truncated))
+        verdict = judge.score(self._view())
+        assert verdict.score == 0.85
+        assert "[response truncated" in verdict.rationale
+
     def test_retries_on_transient_error_then_succeeds(self) -> None:
         attempts = {"n": 0}
 
