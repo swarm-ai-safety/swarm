@@ -12,6 +12,8 @@ structural questions a human or LLM agent would ask of the corpus:
                                     (includes semantic suggestions)
     path <from> <to>              — BFS shortest link path (explicit only)
     orphans [--kind K]            — pages with no inbound links
+    central [--kind K] [-n N]     — most central pages by PageRank (key concepts)
+    stale                         — broken code directives + dead internal links
 
 IDs accept fuzzy lookup: if the exact id isn't found, the script falls back to
 title match, then substring match. Output is text only; downstream agents that
@@ -251,6 +253,49 @@ def cmd_orphans(g: dict, args: list[str]) -> int:
     return 0
 
 
+def cmd_central(g: dict, args: list[str]) -> int:
+    kind = None
+    n_show = 20
+    if "--kind" in args:
+        i = args.index("--kind")
+        if i + 1 < len(args):
+            kind = args[i + 1]
+    if "-n" in args:
+        i = args.index("-n")
+        if i + 1 < len(args):
+            try:
+                n_show = int(args[i + 1])
+            except ValueError:
+                pass
+    ranked = [n for n in g["nodes"] if kind is None or n["kind"] == kind]
+    # pagerank is written by build_kb_graph; fall back to indegree if absent
+    # (e.g. an older cached graph json) so the command still does something.
+    ranked.sort(key=lambda n: (n.get("pagerank", 0.0), n["indegree"]), reverse=True)
+    label = f" of kind={kind}" if kind else ""
+    print(f"Top {min(n_show, len(ranked))} central page(s){label} by PageRank:")
+    for n in ranked[:n_show]:
+        print(f"  {n.get('pagerank', 0.0):.4f}  in:{n['indegree']:<3d} {_fmt_node(n)}")
+    return 0
+
+
+def cmd_stale(g: dict, args: list[str]) -> int:
+    stale = g.get("stale_refs", [])
+    if not stale:
+        print("No stale references — all code directives and internal links resolve. ✓")
+        return 0
+    by_kind: dict[str, list[dict]] = {}
+    for r in stale:
+        by_kind.setdefault(r["kind"], []).append(r)
+    print(f"{len(stale)} stale reference(s):")
+    for kind in sorted(by_kind):
+        rows = by_kind[kind]
+        head = "broken code directives" if kind == "code" else "dead internal links"
+        print(f"\n  [{kind}] {head} ({len(rows)}):")
+        for r in sorted(rows, key=lambda x: x["id"]):
+            print(f"    ! {r['source']}  →  {r['target']}")
+    return 0
+
+
 def main(argv: list[str]) -> int:
     if not argv or argv[0] in ("-h", "--help", "help"):
         print(__doc__)
@@ -262,7 +307,7 @@ def main(argv: list[str]) -> int:
         "find": cmd_find, "info": cmd_info,
         "backlinks": cmd_backlinks, "outbound": cmd_outbound,
         "related": cmd_related, "path": cmd_path,
-        "orphans": cmd_orphans,
+        "orphans": cmd_orphans, "central": cmd_central, "stale": cmd_stale,
     }
     if cmd not in dispatch:
         print(f"unknown command: {cmd}", file=sys.stderr)
