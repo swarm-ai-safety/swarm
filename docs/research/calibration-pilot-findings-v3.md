@@ -7,20 +7,30 @@
 
 ## TL;DR
 
-- **Rubric v3 closes the last escalation.** Same 82 items, same 3
-  judges, same seed: headline α went 0.94 → 0.99 and the residual
-  middle bin `[0.4, 0.6)` jumped from α=−0.23 to α=1.00 with zero mean
-  disagreement.
-- **All five p-bins now pass the pre-registered escalation rule.**
-  No bin below 0.5; four at exactly 1.0; the two top bins at 0.98.
-- **The fix was structural, not parametric.** "Caps" became
-  "targets" (one number, not a ceiling), which closed the
-  deterministic-disagreement gap the v2 pilot exposed.
+- **Rubric v3 closes the last escalation on the obfuscation
+  scenario.** Same 82 items, same 3 judges, same seed: headline α
+  went 0.94 → 0.99 and the residual middle bin `[0.4, 0.6)` jumped
+  from α=−0.23 to α=1.00 with zero mean disagreement. Every
+  pre-registered escalation bin passes.
+- **Cross-scenario check exposes over-fit (added after main run).**
+  Re-running v3 on the `mixed` scenario fires the escalation: α
+  drops from 0.99 → **0.43**. The v3 obfuscation result was, as
+  honestly warned, *partly the rubric specifying the answer* —
+  every obfuscation item has `agent_type` metadata so target rules
+  fire and judges collapse. On mixed-scenario items where target
+  rules don't fire, the underlying inter-rater disagreement
+  re-emerges substantially.
+- **The over-fit is now named:** v3 anchors are reliable on items
+  with rich `agent_type` metadata and unreliable on items with
+  only label patterns (`toxic_agent_*`, etc.). Adaptive findings
+  should split by this property; a v4 with explicit
+  label-pattern→target rules is the recommended fix.
 - A real failure was caught and fixed mid-run: mistral's longer
   rationales exceeded `max_tokens` and got truncated. The JSON parser
   now recovers the score and marks the rationale `[truncated]`
   instead of failing the run.
-- Cost: $0.00 (same Ollama judges). Wall time: ~10 min.
+- Cost: $0.00 (same Ollama judges). Wall time: ~20 min total across
+  the two pilots.
 
 ## What v3 changed
 
@@ -146,19 +156,142 @@ These are the two remaining checks before the calibration anchor is
 fully vetted for the adaptive study. Neither is blocking — they're
 margin checks.
 
+## Cross-scenario check (added after main v3 pilot)
+
+Followup #2 from the original v3 plan: rerun v3 on the `mixed`
+scenario, which has sparse metadata (no `agent_type` field on
+benign or toxic batches — only label patterns like `toxic_agent_*`
+and `victim_agent_*`). If v3's α≈0.99 on obfuscation reflected the
+rubric specifying the answer for target-rule items, mixed should
+expose how well judges agree when target rules **don't** fire.
+
+It exposed exactly that.
+
+### Mixed scenario, v3 (n=80, same 3 judges, seed 42)
+
+| Metric | obfuscation | **mixed** | Δ |
+|---|---|---|---|
+| Krippendorff α | 0.992 | **0.435** | −0.557 |
+| ICC(2,k) | 0.997 | 0.723 | −0.274 |
+| Verdict | strong | **escalate** | — |
+
+Pairwise Spearman:
+
+| pair | obfuscation ρ | mixed ρ |
+|---|---|---|
+| llama ↔ mistral | 1.00 | 0.57 |
+| llama ↔ qwen | 0.99 | 0.79 |
+| mistral ↔ qwen | 1.00 | 0.80 |
+
+Per-bin (mixed has no items in [0.4, 0.6) by construction):
+
+| bin | n | mixed α | mean \|Δ\| |
+|---|---|---|---|
+| [0.0, 0.2) | 20 | 0.08 | 0.13 |
+| [0.2, 0.4) | 20 | −0.04 | 0.18 |
+| [0.6, 0.8) | 20 | 0.54 | 0.08 |
+| [0.8, 1.0] | 20 | 0.57 | 0.06 |
+
+### Mechanism: classification disagreement, not scoring
+
+Per-item inspection shows the disagreement is about *which rule
+applies*, not what score to emit once a rule is chosen.
+
+Items with `initiator: "toxic_agent_*"`, `counterparty:
+"victim_agent_*"`, no `agent_type` field:
+
+- **Llama** treats the label string as if `agent_type: "blatant"`
+  were present → target 0.10. Aggressive: applies the target rule on
+  label evidence the rubric doesn't authorize.
+- **Qwen** ignores the label suggestion, applies the asymmetric-
+  extractive banded prior → 0.45. Conservative: only fires target
+  rules on explicit `agent_type` metadata, as the rubric strictly
+  requires.
+- **Mistral** is incoherent: sometimes asymmetric-extractive (0.45),
+  sometimes (wrongly) symmetric-friendly COLLABORATION (0.75),
+  sometimes activation_obfuscation by spurious analogy (0.35).
+
+Llama's reading would be the right call if the rubric explicitly
+mapped label patterns to target rules — but v3 doesn't. Qwen is
+literally rubric-correct. Mistral is sometimes neither.
+
+### What this tells us
+
+The v3 obfuscation-scenario α=0.992 result was, as the original v3
+findings honestly warned, **partly the rubric specifying the
+answer** — every item there had `agent_type` metadata, target rules
+fired on every item, and judges collapsed to identical numbers. On
+the mixed scenario where target rules don't fire, the underlying
+inter-rater disagreement re-emerges, and it's substantial.
+
+**The v3 calibration anchor is over-fit to scenarios with rich
+`agent_type` metadata.** This was foreseeable from the v3 design —
+"the rubric tells them to" was the explicit caveat — and the
+cross-scenario check empirically confirms it.
+
+### Implications for the adaptive study
+
+The adaptive RL implementation's interaction stream will be a
+mixture of agent types, and the judges' ability to anchor relies on
+which type of metadata those interactions carry:
+
+- **Items with rich agent_type metadata** (anything matching v3's
+  target rules): the anchor is reliable (α≈1.0).
+- **Items with only label patterns** (no agent_type): the anchor
+  fires escalate (α≈0.43).
+- **Items with no diagnostic metadata at all**: judges fall back to
+  banded priors and disagree similarly to the v1 mid-range result.
+
+Concretely: an adaptive agent that learns to *strip the agent_type
+field from its interactions* — which it can do, since metadata is
+agent-controlled — would defeat the v3 anchor. This is the
+adaptive-agent proxy-gaming scenario the prereg flagged, applied to
+the judge anchor instead of `v_hat`.
+
+### Recommended path forward
+
+A v4 rubric should add explicit label-pattern rules — e.g.
+*"`initiator` starting with `toxic_`, `adversary_`, `blatant_`, or
+`hostile_` activates the corresponding agent_type target rule
+unless `agent_type` is explicitly set to something else."* — to
+close the label/metadata ambiguity. Combined with the existing
+target rules, this would re-collapse the mixed-scenario judges to
+near-unanimity.
+
+But that's a v4 problem. **For the adaptive study, the v3 anchor is
+strong only for the `agent_type`-populated subset**, and findings
+on label-only items need either v4 or a per-item confidence
+footnote.
+
+This is the cross-scenario replication the prereg required;
+documenting it explicitly is the point.
+
+### Mixed-scenario artifacts
+
+- judge scores: `runs/20260603T014623Z_calibration_judge_seed42/`
+- agreement: `runs/20260603T015851Z_calibration_agreement/`
+
 ## Followups (in priority)
 
-1. **Adaptive RL implementation** can proceed now. The calibration
-   anchor is strong across the full p-range under v3.
-2. **Cross-scenario** — `mixed` and `self_optimizer` runs at v3 to
-   confirm the targets-replace-caps win generalizes.
-3. **Ground-truth alignment** — compare v3 judge scores against
+1. **Rubric v4 with label-pattern rules.** The cross-scenario check
+   above identified the specific gap: label patterns (`toxic_*`,
+   `adversary_*`, `victim_*`, etc.) don't activate target rules
+   under v3, so judges interpret them inconsistently. v4 should add
+   explicit label-pattern→target mappings.
+2. **Adaptive RL implementation** can proceed against the *agent_type-
+   populated subset* of the interaction stream. Findings on the
+   label-only subset carry a v3-anchor escalation footnote until v4
+   addresses the label-pattern gap.
+3. **`self_optimizer` cross-scenario** — third scenario check
+   (`generate_self_optimizer_scenario`); has rich metadata so
+   probably collapses to v3 again, but worth confirming.
+4. **Ground-truth alignment** — compare v3 judge scores against
    `ground_truth` (+1 / −1 / None) on a held-out set; if judges
    diverge from ground truth in a systematic way, the targets need
    re-anchoring.
-4. **Larger pilot at per-bin=50** — tighten the per-bin estimates,
+5. **Larger pilot at per-bin=50** — tighten the per-bin estimates,
    particularly `[0.2, 0.4)` which is at n=9.
-5. **Claude when `ANTHROPIC_API_KEY` is available** — would test
+6. **Claude when `ANTHROPIC_API_KEY` is available** — would test
    whether v3's collapse-to-targets is robust under a fourth, more
    capable judge.
 
