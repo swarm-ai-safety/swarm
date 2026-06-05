@@ -337,3 +337,86 @@ beads-4ae5.**
   0.05 and 0.10 produce the same `target_count` integer). Findings
   hold for "any pair-count z near 1.0 below cutoff" but not for a
   continuous margin sweep. See beads-sk95 caveats section.
+
+---
+
+## Operating-point metrics + cluster recovery (2026-06-05, beads-5cdk)
+
+The pre-reg used per-node ROC AUC as the headline because it gives
+each detector its best ranking shot. But governance acts on each
+detector's **own operating threshold**, not on a swept-threshold
+ranking — so ROC dominance is necessary but not sufficient for a
+"flip default ON" decision. This pass adds three native-cutoff
+metrics:
+
+- **Precision / Recall / F1@native** — flag at each detector's *own*
+  decision threshold:
+  - `graph_structural`: pre-registered `is_suspicious` gate
+    (size≥3, density≥1, reciprocity_z≥2, p≤0.05)
+  - `identity_jaccard`: `IdentityConfig.behavioral_similarity_threshold=0.8`
+  - `reputation_mutual`: `detect_collusion_clusters(min_mutual_trust=0.9)`
+  - `collusion_score`: agent risk ≥ 0.5 (CollusionDetector default)
+- **Cluster recovery** — for each planted coalition, max Jaccard with
+  any returned cluster; mean across planted (greedy 1:1 assignment for
+  the multi-coalition extension in beads-qoro).
+
+### Results (20 replicates, same generators as final re-run above)
+
+| family | gs F1@native | gs recovery | best other F1 | best other recovery |
+|---|---|---|---|---|
+| collusion_ring_size3 | 0.035 [0.00, 0.10] | 0.023 [0.00, 0.06] | 0.000 | 0.000 |
+| collusion_ring_size5 | **0.131 [0.05, 0.24]** | 0.100 [0.03, 0.20] | 0.000 | 0.000 |
+| collusion_ring_size8 | **0.318 [0.28, 0.39]** | **1.000 [1.00, 1.00]** | 0.000 | 0.000 |
+| sybil_cluster (overlap 0.80) | 0.000 | 0.000 | 0.000 | 0.000 |
+| sybil_cluster (overlap 0.95) | 0.000 | 0.000 | 0.000 | 0.000 |
+| threshold_dancing (m=0.10) | **0.994 [0.98, 1.00]** | **0.990 [0.97, 1.00]** | 0.000 | 0.000 |
+| threshold_dancing (m=0.05) | **0.994 [0.98, 1.00]** | **0.990 [0.97, 1.00]** | 0.000 | 0.000 |
+
+### The headline finding
+
+**Every threshold detector is at F1=0.000 across every adversarial
+family.** They discriminate on score ranking (the AUC pass) but at
+their own native cutoffs they do not actually flag any planted
+coalition member. This means:
+
+- The AUC-vs-threshold framing in earlier discussion *understated* the
+  difference. The threshold detectors don't just lose on ranking —
+  they don't fire at all at their own operating thresholds against
+  these adversarial families.
+- `graph_structural`'s `is_suspicious` gate is the only detector
+  that actually flags planted coalitions at native cutoff. On
+  `threshold_dancing` it does so with F1 ≈ 0.99 — operating-point
+  parity with its AUC.
+
+### Verdict (F1@native axis)
+
+By the same strict-CI dominance test on F1@native: **`graph_structural`
+strictly dominates on 4 families** (`collusion_ring_size5`,
+`collusion_ring_size8`, both `threshold_dancing` variants — one more
+than the AUC pass, which added `collusion_ring_size5`).
+
+### Governance decision
+
+**Recommend flipping `ReputationGovernor(structural_enabled=True)` to
+default ON.** The original beads-4ae5 scope set it OFF "until canary"
+because the AUC pass at that point didn't separate the detectors at
+their own thresholds; the F1@native pass now does, and the
+direction is unambiguous: native-cutoff comparisons confirm
+`graph_structural` is the only detector that actually fires on
+adversarial families.
+
+Caveats before flipping:
+
+- n=20, not n=100. Re-run before the flip-on PR lands.
+- Operating-point F1 on small rings is still low (0.035 for size 3,
+  0.131 for size 5). The detector mostly catches *tight* coalitions
+  and *paced* adversaries. The governor consuming both this signal
+  and `detect_collusion_clusters` retains the small-ring coverage.
+- Threshold detectors' F1=0 across the board may reflect that their
+  built-in defaults were tuned for a different distribution than
+  these synthetics. A separate study should sweep each detector's
+  threshold and report the F1-optimal cutoff — this PR doesn't do
+  that.
+
+A follow-up beads issue will be filed for the flip-ON PR with a
+canary plan.

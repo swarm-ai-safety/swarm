@@ -31,7 +31,7 @@ import csv
 import math
 import random
 from collections import defaultdict
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
@@ -284,57 +284,89 @@ def generate_threshold_dancing(
 # ---------------------------------------------------------------------------
 
 
-Detector = Callable[[GraphSample], Dict[str, float]]
+@dataclass
+class DetectorOutput:
+    """Detector output triple consumed by all comparison axes.
+
+    - ``scores``: per-node anomaly score (for ROC AUC)
+    - ``native_flags``: per-node binary decision at the detector's *own*
+      operating threshold (for precision/recall/F1)
+    - ``clusters``: returned coalitions (for Hungarian-match cluster
+      recovery vs planted ground truth)
+    """
+
+    scores: Dict[str, float]
+    native_flags: Dict[str, bool]
+    clusters: List[Set[str]]
 
 
-def detector_graph_structural(s: GraphSample) -> Dict[str, float]:
+Detector = Callable[[GraphSample], DetectorOutput]
+
+
+def detector_graph_structural(s: GraphSample) -> DetectorOutput:
     anomalies = detect_structural_anomalies(s.edges, n_null_samples=20, seed=s.seed)
     # Rank-aggregated scoring: per-signal percentile rank, mean over signals.
     # Replaces the earlier multiplicative score whose p-value factor vetoed
     # density+reciprocity+coreness whenever the null was fooled (see beads-kwyf).
-    return rank_aggregated_scores(anomalies, s.nodes)
+    scores = rank_aggregated_scores(anomalies, s.nodes)
+    # Native cutoff: the pre-registered ``is_suspicious`` gate
+    # (size>=3, density>=1, reciprocity_z>=2, p<=0.05).
+    suspicious = [a for a in anomalies if a.is_suspicious]
+    flagged: Set[str] = set()
+    for a in suspicious:
+        flagged.update(a.members)
+    native_flags = {n: (n in flagged) for n in s.nodes}
+    clusters = [a.members for a in suspicious]
+    return DetectorOutput(scores=scores, native_flags=native_flags, clusters=clusters)
 
 
-def detector_identity_jaccard(s: GraphSample) -> Dict[str, float]:
+def detector_identity_jaccard(s: GraphSample) -> DetectorOutput:
     # Build interaction patterns: agent -> {counterparty: count}
     patterns: Dict[str, Dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for ix in s.interactions:
         patterns[ix.initiator][ix.counterparty] += 1
         patterns[ix.counterparty][ix.initiator] += 1
-    # Run at a permissive threshold so we get continuous similarity signal,
-    # then score each node by its max similarity to any partner in its cluster.
-    reg = IdentityRegistry(
+    # For ROC: use a permissive threshold so we get continuous similarity.
+    reg_loose = IdentityRegistry(
         IdentityConfig(behavioral_similarity_threshold=0.3,
                        sybil_detection_enabled=True))
-    clusters = reg.detect_sybil_clusters({k: dict(v) for k, v in patterns.items()})
+    pattern_dict = {k: dict(v) for k, v in patterns.items()}
+    clusters_loose = reg_loose.detect_sybil_clusters(pattern_dict)
     scores: Dict[str, float] = dict.fromkeys(s.nodes, 0.0)
-    for cluster in clusters:
+    for cluster in clusters_loose:
         members = list(cluster)
         for i, a in enumerate(members):
             best = 0.0
             for j, b in enumerate(members):
                 if i == j:
                     continue
-                sim = reg._behavioral_similarity(
+                sim = reg_loose._behavioral_similarity(
                     patterns.get(a, {}), patterns.get(b, {}))
                 if sim > best:
                     best = sim
             if best > scores[a]:
                 scores[a] = best
-    return scores
+    # Native cutoff: the IdentityConfig default behavioral_similarity_threshold=0.8.
+    reg_native = IdentityRegistry(
+        IdentityConfig(behavioral_similarity_threshold=0.8,
+                       sybil_detection_enabled=True))
+    clusters_native = reg_native.detect_sybil_clusters(pattern_dict)
+    flagged: Set[str] = set()
+    for c in clusters_native:
+        flagged.update(c)
+    native_flags = {n: (n in flagged) for n in s.nodes}
+    return DetectorOutput(scores=scores, native_flags=native_flags,
+                          clusters=list(clusters_native))
 
 
-def detector_reputation_mutual(s: GraphSample) -> Dict[str, float]:
-    """Mutual-trust connected component detector. Trust seeded from p."""
+def _build_reputation_store(s: GraphSample) -> GraphMemoryStore:
     store = GraphMemoryStore(store_path=None)
-    # Aggregate per-pair p and counts.
     pair_p: Dict[Tuple[str, str], List[float]] = defaultdict(list)
     pair_count: Dict[Tuple[str, str], int] = defaultdict(int)
     for ix in s.interactions:
         a, b = sorted([ix.initiator, ix.counterparty])
         pair_p[(a, b)].append(ix.p)
         pair_count[(a, b)] += 1
-    # Convert to directed RelationshipEdges with trust = avg p.
     for (a, b), ps in pair_p.items():
         avg_p = sum(ps) / len(ps)
         edge = RelationshipEdge(
@@ -343,17 +375,20 @@ def detector_reputation_mutual(s: GraphSample) -> Dict[str, float]:
             interaction_count=pair_count[(a, b)], avg_p=avg_p,
         )
         store._relationships.append(edge.to_dict())
-        # add reverse edge for the b->a direction
         rev_edge = RelationshipEdge(
             agent_a=b, agent_b=a,
             trust_a_to_b=avg_p, trust_b_to_a=avg_p,
             interaction_count=pair_count[(a, b)], avg_p=avg_p,
         )
         store._relationships.append(rev_edge.to_dict())
+    return store
+
+
+def detector_reputation_mutual(s: GraphSample) -> DetectorOutput:
+    """Mutual-trust connected component detector. Trust seeded from p."""
+    store = _build_reputation_store(s)
     gov = ReputationGovernor(store)
-    # Sweep at a permissive threshold; per-node score = number of high-mutual
-    # trust partners normalized by max possible. Continuous score so the
-    # ROC isn't a single point.
+    # Continuous score: # mutual-trust neighbors / max possible (loose 0.6 threshold).
     edges_obj = store.get_all_relationships()
     mutual_neighbors: Dict[str, Set[str]] = defaultdict(set)
     rev_lookup = {(e.agent_a, e.agent_b): e for e in edges_obj}
@@ -367,18 +402,31 @@ def detector_reputation_mutual(s: GraphSample) -> Dict[str, float]:
     scores: Dict[str, float] = dict.fromkeys(s.nodes, 0.0)
     for n, ms in mutual_neighbors.items():
         scores[n] = len(ms) / n_max
-    # tie to original gov detector: also boost if in a returned cluster
-    clusters = gov.detect_collusion_clusters(min_mutual_trust=0.8, min_size=2)
-    in_cluster = {n for c in clusters for n in c}
+    clusters_loose = gov.detect_collusion_clusters(min_mutual_trust=0.8, min_size=2)
+    in_cluster = {n for c in clusters_loose for n in c}
     for n in in_cluster:
         scores[n] = max(scores[n], 0.5 + scores.get(n, 0.0) / 2.0)
-    return scores
+    # Native cutoff: detect_collusion_clusters default min_mutual_trust=0.9.
+    clusters_native = gov.detect_collusion_clusters(min_mutual_trust=0.9, min_size=2)
+    flagged: Set[str] = set()
+    for c in clusters_native:
+        flagged.update(c)
+    native_flags = {n: (n in flagged) for n in s.nodes}
+    return DetectorOutput(scores=scores, native_flags=native_flags,
+                          clusters=[set(c) for c in clusters_native])
 
 
-def detector_collusion_score(s: GraphSample) -> Dict[str, float]:
+def detector_collusion_score(s: GraphSample) -> DetectorOutput:
     det = CollusionDetector(seed=s.seed)
     report = det.analyze(s.interactions, agent_ids=s.nodes)
-    return {n: report.agent_collusion_risk.get(n, 0.0) for n in s.nodes}
+    scores = {n: report.agent_collusion_risk.get(n, 0.0) for n in s.nodes}
+    # Native cutoff: CollusionDetector.collusion_threshold default 0.5
+    # (= "agent risk score >= 0.5 is flagged"; we use risk score here since
+    # agent_risk = max over the agent's pair scores).
+    native_flags = {n: (scores[n] >= 0.5) for n in s.nodes}
+    # Returned clusters: members of each flagged group.
+    clusters: List[Set[str]] = [set(g.members) for g in report.suspicious_groups]
+    return DetectorOutput(scores=scores, native_flags=native_flags, clusters=clusters)
 
 
 DETECTORS: Dict[str, Detector] = {
@@ -392,6 +440,73 @@ DETECTORS: Dict[str, Detector] = {
 # ---------------------------------------------------------------------------
 # ROC AUC (no sklearn dependency)
 # ---------------------------------------------------------------------------
+
+
+def precision_recall_f1(
+    flags: Dict[str, bool], planted: Set[str], nodes: List[str]
+) -> Tuple[float, float, float]:
+    """Per-node precision/recall/F1 of a binary flag against planted truth.
+
+    Edge cases (returned as ``float('nan')`` so the bootstrap can skip them):
+    - No positives in the ground truth (``planted`` empty): recall undefined.
+      Common on the benign control family.
+    - No positives flagged AND no positives in ground truth: all three NaN.
+    """
+    tp = sum(1 for n in nodes if flags.get(n, False) and n in planted)
+    fp = sum(1 for n in nodes if flags.get(n, False) and n not in planted)
+    fn = sum(1 for n in nodes if not flags.get(n, False) and n in planted)
+    if not planted:
+        # Benign control: ground truth has no positives, so recall is
+        # undefined. Precision is 0 if anything is flagged (every flag is a
+        # false positive), 1 if nothing is. F1 derived from both is NaN.
+        return (float("nan"), float("nan"), float("nan"))
+    if tp + fp == 0:
+        precision = 0.0  # nothing flagged; all positives missed
+    else:
+        precision = tp / (tp + fp)
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+    f1 = (2 * precision * recall / (precision + recall)
+          if (precision + recall) > 0 else 0.0)
+    return (precision, recall, f1)
+
+
+def hungarian_recovery(
+    returned: List[Set[str]], planted: List[Set[str]]
+) -> float:
+    """Mean Jaccard between each planted coalition and its best-matching
+    returned cluster. With current generators planting only one coalition,
+    this reduces to ``max_c Jaccard(c, planted[0])``; the implementation
+    handles the multi-coalition case (beads-qoro) by greedy 1:1 assignment
+    on descending Jaccard (proper Hungarian is overkill at these sizes).
+
+    Returns 0.0 if ``returned`` is empty. NaN if ``planted`` is empty
+    (benign control).
+    """
+    if not planted:
+        return float("nan")
+    if not returned:
+        return 0.0
+    # All (returned, planted) Jaccard pairs, sorted desc.
+    pairs: List[Tuple[float, int, int]] = []
+    for i, r in enumerate(returned):
+        for j, p in enumerate(planted):
+            inter = len(r & p)
+            union = len(r | p)
+            jacc = inter / union if union else 0.0
+            pairs.append((jacc, i, j))
+    pairs.sort(reverse=True)
+    matched_r: Set[int] = set()
+    matched_p: Set[int] = set()
+    total = 0.0
+    for jacc, i, j in pairs:
+        if i in matched_r or j in matched_p:
+            continue
+        matched_r.add(i)
+        matched_p.add(j)
+        total += jacc
+        if len(matched_p) == len(planted):
+            break
+    return total / len(planted)
 
 
 def roc_auc(scores: Dict[str, float], planted: Set[str], nodes: List[str]) -> float:
@@ -439,8 +554,32 @@ class RunResult:
     auc_mean: float
     auc_lo: float
     auc_hi: float
-    n_replicates: int
-    aucs: List[float]
+    # Native-operating-point metrics (added in beads-5cdk). All means with
+    # 95% bootstrap CI; NaN-skipped (benign control yields NaN by design).
+    precision_mean: float = float("nan")
+    precision_lo: float = float("nan")
+    precision_hi: float = float("nan")
+    recall_mean: float = float("nan")
+    recall_lo: float = float("nan")
+    recall_hi: float = float("nan")
+    f1_mean: float = float("nan")
+    f1_lo: float = float("nan")
+    f1_hi: float = float("nan")
+    recovery_mean: float = float("nan")
+    recovery_lo: float = float("nan")
+    recovery_hi: float = float("nan")
+    n_replicates: int = 0
+    aucs: List[float] = field(default_factory=list)
+
+
+def _agg(values: List[float], *, seed: int) -> Tuple[float, float, float]:
+    """Helper: mean + bootstrap CI, NaN-skipped."""
+    clean = [v for v in values if not math.isnan(v)]
+    if not clean:
+        return (float("nan"), float("nan"), float("nan"))
+    mean = sum(clean) / len(clean)
+    lo, hi = bootstrap_ci(clean, seed=seed)
+    return (mean, lo, hi)
 
 
 def run_family(
@@ -452,27 +591,50 @@ def run_family(
     seed_base: int = 0,
 ) -> Dict[str, RunResult]:
     aucs_by_det: Dict[str, List[float]] = defaultdict(list)
+    precs_by_det: Dict[str, List[float]] = defaultdict(list)
+    recs_by_det: Dict[str, List[float]] = defaultdict(list)
+    f1s_by_det: Dict[str, List[float]] = defaultdict(list)
+    recovs_by_det: Dict[str, List[float]] = defaultdict(list)
     for r in range(replicates):
         sample = generator(seed=seed_base + r, **base_params)
+        # Current generators plant exactly one coalition (beads-qoro will
+        # extend this). Wrap as a single-element list for Hungarian.
+        planted_groups = [sample.planted] if sample.planted else []
         for det_name, det_fn in DETECTORS.items():
             try:
-                scores = det_fn(sample)
-                auc = roc_auc(scores, sample.planted, sample.nodes)
+                out = det_fn(sample)
+                aucs_by_det[det_name].append(
+                    roc_auc(out.scores, sample.planted, sample.nodes))
+                p, rec, f1 = precision_recall_f1(
+                    out.native_flags, sample.planted, sample.nodes)
+                precs_by_det[det_name].append(p)
+                recs_by_det[det_name].append(rec)
+                f1s_by_det[det_name].append(f1)
+                recovs_by_det[det_name].append(
+                    hungarian_recovery(out.clusters, planted_groups))
             except Exception:
-                auc = float("nan")
-            aucs_by_det[det_name].append(auc)
+                aucs_by_det[det_name].append(float("nan"))
+                precs_by_det[det_name].append(float("nan"))
+                recs_by_det[det_name].append(float("nan"))
+                f1s_by_det[det_name].append(float("nan"))
+                recovs_by_det[det_name].append(float("nan"))
     results = {}
+    boot_seed = seed_base + 1234
     for det_name, aucs in aucs_by_det.items():
-        clean = [a for a in aucs if not math.isnan(a)]
-        if not clean:
-            results[det_name] = RunResult(family_name, det_name, float("nan"),
-                                          float("nan"), float("nan"),
-                                          len(aucs), aucs)
-            continue
-        mean = sum(clean) / len(clean)
-        lo, hi = bootstrap_ci(clean, seed=seed_base + 1234)
-        results[det_name] = RunResult(family_name, det_name, mean, lo, hi,
-                                      len(aucs), aucs)
+        auc_m, auc_lo, auc_hi = _agg(aucs, seed=boot_seed)
+        p_m, p_lo, p_hi = _agg(precs_by_det[det_name], seed=boot_seed + 1)
+        r_m, r_lo, r_hi = _agg(recs_by_det[det_name], seed=boot_seed + 2)
+        f1_m, f1_lo, f1_hi = _agg(f1s_by_det[det_name], seed=boot_seed + 3)
+        rv_m, rv_lo, rv_hi = _agg(recovs_by_det[det_name], seed=boot_seed + 4)
+        results[det_name] = RunResult(
+            family=family_name, detector=det_name,
+            auc_mean=auc_m, auc_lo=auc_lo, auc_hi=auc_hi,
+            precision_mean=p_m, precision_lo=p_lo, precision_hi=p_hi,
+            recall_mean=r_m, recall_lo=r_lo, recall_hi=r_hi,
+            f1_mean=f1_m, f1_lo=f1_lo, f1_hi=f1_hi,
+            recovery_mean=rv_m, recovery_lo=rv_lo, recovery_hi=rv_hi,
+            n_replicates=len(aucs), aucs=aucs,
+        )
     return results
 
 
@@ -513,52 +675,119 @@ def write_csv(results: List[RunResult], path: Path) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["family", "detector", "auc_mean", "auc_lo95", "auc_hi95",
-                    "n_replicates"])
+        w.writerow([
+            "family", "detector",
+            "auc_mean", "auc_lo95", "auc_hi95",
+            "precision_mean", "precision_lo95", "precision_hi95",
+            "recall_mean", "recall_lo95", "recall_hi95",
+            "f1_mean", "f1_lo95", "f1_hi95",
+            "recovery_mean", "recovery_lo95", "recovery_hi95",
+            "n_replicates",
+        ])
+
+        def _fmt(x: float) -> str:
+            return "nan" if math.isnan(x) else f"{x:.4f}"
+
         for r in results:
-            w.writerow([r.family, r.detector,
-                        f"{r.auc_mean:.4f}",
-                        f"{r.auc_lo:.4f}",
-                        f"{r.auc_hi:.4f}",
-                        r.n_replicates])
+            w.writerow([
+                r.family, r.detector,
+                _fmt(r.auc_mean), _fmt(r.auc_lo), _fmt(r.auc_hi),
+                _fmt(r.precision_mean), _fmt(r.precision_lo), _fmt(r.precision_hi),
+                _fmt(r.recall_mean), _fmt(r.recall_lo), _fmt(r.recall_hi),
+                _fmt(r.f1_mean), _fmt(r.f1_lo), _fmt(r.f1_hi),
+                _fmt(r.recovery_mean), _fmt(r.recovery_lo), _fmt(r.recovery_hi),
+                r.n_replicates,
+            ])
 
 
 def print_table(results: List[RunResult]) -> None:
     by_family: Dict[str, List[RunResult]] = defaultdict(list)
     for r in results:
         by_family[r.family].append(r)
+
+    def _ci(lo: float, hi: float) -> str:
+        if math.isnan(lo) or math.isnan(hi):
+            return "[ nan ]"
+        return f"[{lo:.2f}, {hi:.2f}]"
+
+    def _mean(x: float) -> str:
+        return " nan " if math.isnan(x) else f"{x:.3f}"
+
     for fam, rs in by_family.items():
         print(f"\n{fam}")
-        print(f"  {'detector':<22} {'AUC':>7}  {'95% CI':>20}")
+        header = (f"  {'detector':<22} "
+                  f"{'AUC':>5} {'F1@nat':>7} {'recov':>6}  "
+                  f"{'AUC CI':>14}  {'F1 CI':>14}  {'recov CI':>14}")
+        print(header)
         for r in sorted(rs, key=lambda x: -x.auc_mean):
-            ci = f"[{r.auc_lo:.3f}, {r.auc_hi:.3f}]"
-            print(f"  {r.detector:<22} {r.auc_mean:>7.3f}  {ci:>20}")
+            print(f"  {r.detector:<22} "
+                  f"{_mean(r.auc_mean):>5} {_mean(r.f1_mean):>7} "
+                  f"{_mean(r.recovery_mean):>6}  "
+                  f"{_ci(r.auc_lo, r.auc_hi):>14}  "
+                  f"{_ci(r.f1_lo, r.f1_hi):>14}  "
+                  f"{_ci(r.recovery_lo, r.recovery_hi):>14}")
+
+
+def _strict_dominance(gs_lo: float, others_hi: List[float]) -> bool:
+    """gs lower CI bound strictly above every other detector's upper CI."""
+    return all(gs_lo > h for h in others_hi)
 
 
 def apply_decision_rule(results: List[RunResult]) -> str:
-    """Return a one-line verdict per the pre-reg decision rule."""
+    """Return a multi-line verdict per the pre-reg decision rule, with
+    operating-point metrics adding a second dominance axis (beads-5cdk).
+
+    Two dominance tests are evaluated independently:
+    - AUC (ranking-quality): the original pre-reg axis
+    - F1@native-cutoff (operating-point quality): the new axis — F1 at
+      each detector's *own* threshold, the right test for "would this
+      detector flip default behavior in the governor"
+
+    The AUC-based verdict still drives pre-reg decision rule #1.
+    F1@native is reported as a complementary signal for the governor
+    default-ON decision (beads-4ae5 follow-up).
+    """
     by_family: Dict[str, List[RunResult]] = defaultdict(list)
     for r in results:
         if r.family == "benign":
-            continue  # sanity, not part of the rule
+            continue
         by_family[r.family].append(r)
-    families_dominated = []
+    auc_dominated: List[str] = []
+    f1_dominated: List[str] = []
     for fam, rs in by_family.items():
         gs = next((r for r in rs if r.detector == "graph_structural"), None)
         if gs is None:
             continue
         others = [r for r in rs if r.detector != "graph_structural"]
-        # strict dominance: graph_structural lower CI bound > each other's upper CI bound
-        if all(gs.auc_lo > o.auc_hi for o in others):
-            families_dominated.append(fam)
-    if families_dominated:
-        return (f"VERDICT: graph_structural strictly dominates on "
-                f"{len(families_dominated)} family/families "
-                f"({', '.join(families_dominated)}). "
-                f"Per pre-reg, file governance-wiring follow-up.")
-    return ("VERDICT: graph_structural does not strictly dominate on any "
-            "family. Per pre-reg, ship as secondary metric only — no "
-            "governance wiring.")
+        if _strict_dominance(gs.auc_lo, [o.auc_hi for o in others]):
+            auc_dominated.append(fam)
+        # F1 dominance only meaningful when CIs are not NaN
+        if (not math.isnan(gs.f1_lo)
+                and all(not math.isnan(o.f1_hi) for o in others)
+                and _strict_dominance(gs.f1_lo, [o.f1_hi for o in others])):
+            f1_dominated.append(fam)
+    lines = []
+    if auc_dominated:
+        lines.append(
+            f"VERDICT (AUC): graph_structural strictly dominates on "
+            f"{len(auc_dominated)} family/families ({', '.join(auc_dominated)}). "
+            f"Per pre-reg, file governance-wiring follow-up.")
+    else:
+        lines.append(
+            "VERDICT (AUC): graph_structural does not strictly dominate on "
+            "any family. Per pre-reg, ship as secondary metric only — no "
+            "governance wiring on AUC alone.")
+    if f1_dominated:
+        lines.append(
+            f"VERDICT (F1@native): graph_structural strictly dominates on "
+            f"{len(f1_dominated)} family/families ({', '.join(f1_dominated)}). "
+            f"Consider flipping ReputationGovernor structural_enabled to "
+            f"default ON (beads-4ae5 follow-up).")
+    else:
+        lines.append(
+            "VERDICT (F1@native): graph_structural does not strictly dominate "
+            "on any family. Keep ReputationGovernor structural_enabled default OFF.")
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
