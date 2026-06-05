@@ -5,6 +5,7 @@
 **Unblocks:** [adaptive agents study](adaptive-agents-prereg.md) (arms 1–3)
 **See also:** [graph-structural detector study](graph-structural-prereg.md) — a separate pre-reg in the same series, evaluating topology-based coordination detection against threshold detectors.
 **Pilot result:** [calibration pilot findings (rubric v1, n=82)](calibration-pilot-findings.md) — three-judge Ollama ensemble at rubric v1 fires the escalation rule on the middle p-bins; drove the rubric v2 / v3 work.
+**Pilot re-run (rubric v2):** [calibration pilot findings — rubric v2 (n=82)](calibration-pilot-findings-v2.md) — apples-to-apples re-run with rubric v2; headline α 0.87 → 0.94, four of five bins now strong or usable, mistral↔qwen ρ jumped 0.66 → 0.95.
 
 ## Motivation
 
