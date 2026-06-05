@@ -23,6 +23,16 @@ Out of scope (intentional, follow-ups):
 """
 
 from swarm.adaptive.calibration_anchor import JudgedReport, score_episode
+from swarm.adaptive.cause3 import (
+    CAUSE3_PARAM_DIM,
+    Cause3CEMConfig,
+    Cause3IterationReport,
+    Cause3Report,
+    Cause3TrainingReport,
+    ClaimingParams,
+    run_cause3_episode,
+    train_cem_cause3,
+)
 from swarm.adaptive.cem import (
     SIGMA_FLOOR_FRAC,
     CEMConfig,
@@ -46,9 +56,15 @@ from swarm.adaptive.static_baselines import (
 )
 
 __all__ = [
+    "CAUSE3_PARAM_DIM",
     "CEMConfig",
     "CEMIterationReport",
     "CEMTrainingReport",
+    "Cause3CEMConfig",
+    "Cause3IterationReport",
+    "Cause3Report",
+    "Cause3TrainingReport",
+    "ClaimingParams",
     "EpisodeReport",
     "JudgedReport",
     "PARAM_DIM",
@@ -60,10 +76,12 @@ __all__ = [
     "STATIC_HONEST",
     "STATIC_TOXIC",
     "StaticBaseline",
+    "run_cause3_episode",
     "run_episode",
     "run_episode_with_interactions",
     "run_population_episode",
     "run_population_episode_with_interactions",
+    "train_cem_cause3",
     "score_episode",
     "train_cem",
 ]
