@@ -3,6 +3,7 @@
 **Status:** pre-registered, not yet run
 **Date:** 2026-06-01
 **Unblocks:** [adaptive agents study](adaptive-agents-prereg.md) (arms 1–3)
+**See also:** [graph-structural detector study](graph-structural-prereg.md) — a separate pre-reg in the same series, evaluating topology-based coordination detection against threshold detectors.
 
 ## Motivation
 
