@@ -36,10 +36,12 @@ class TestRubricRegistry:
         assert "rubric.v1" in RUBRICS
         assert "rubric.v2" in RUBRICS
 
-    def test_default_is_v2(self) -> None:
-        # v2 is the new default; the freeze rule keeps RUBRIC_VERSION
-        # pointing at v1 for back-compat with existing call sites.
-        assert DEFAULT_RUBRIC_VERSION == "rubric.v2"
+    def test_default_is_at_least_v2(self) -> None:
+        # Default tracks the newest rubric. When v2 shipped this asserted
+        # equality; v3 supersedes it. Specific defaults are pinned in
+        # the rubric-version-specific tests (e.g. test_rubric_v3.py).
+        assert DEFAULT_RUBRIC_VERSION != "rubric.v1"
+        assert DEFAULT_RUBRIC_VERSION in {"rubric.v2", "rubric.v3"}
 
     def test_load_rubric_known_version(self) -> None:
         text = load_rubric("rubric.v2")

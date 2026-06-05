@@ -157,6 +157,23 @@ class TestMockJudgeRubricFidelity:
         )
         assert MockJudge().score(deep).score < MockJudge().score(shallow).score
 
+    def test_self_optimizer_float_depth_is_honored_v3(self) -> None:
+        # Regression: float optimization_depth was silently treated as 0,
+        # producing the loosest target (~0.45) instead of depth-scaled
+        # escalation. Real-world metadata routinely carries floats.
+        judge = MockJudge(rubric_version="rubric.v3")
+        int_deep = JudgeView(
+            interaction_id="a", interaction_type="TRADE", accepted=True,
+            initiator_label="opt_1", counterparty_label="h_1",
+            metadata={"agent_type": "self_optimizer", "optimization_depth": 15},
+        )
+        float_deep = JudgeView(
+            interaction_id="b", interaction_type="TRADE", accepted=True,
+            initiator_label="opt_1", counterparty_label="h_1",
+            metadata={"agent_type": "self_optimizer", "optimization_depth": 15.0},
+        )
+        assert judge.score(float_deep).score == judge.score(int_deep).score
+
     def test_blatant_scores_low(self) -> None:
         view = JudgeView(
             interaction_id="x", interaction_type="TRADE", accepted=True,
@@ -263,6 +280,24 @@ class TestLLMJudge:
         )
         with pytest.raises(ValueError, match="failed to parse response"):
             judge.score(self._view())
+
+    def test_recovers_score_from_truncated_response(self) -> None:
+        # Real-world failure: a model emits valid JSON whose rationale
+        # exceeds max_tokens and gets cut mid-string. The score is
+        # recoverable; the rationale gets a [truncated] marker.
+        truncated = ' {\n  "score": 0.1,\n  "rationale": "The interaction is a TRADE between an init'
+        judge = LLMJudge(name="claude", caller=lambda _p: self._result(truncated))
+        verdict = judge.score(self._view())
+        assert verdict.score == 0.1
+        assert "[truncated]" in verdict.rationale
+
+    def test_recovers_score_when_rationale_has_no_value(self) -> None:
+        # Truncation right after the score field with no rationale value.
+        truncated = '{"score": 0.85, "rati'
+        judge = LLMJudge(name="claude", caller=lambda _p: self._result(truncated))
+        verdict = judge.score(self._view())
+        assert verdict.score == 0.85
+        assert "[response truncated" in verdict.rationale
 
     def test_retries_on_transient_error_then_succeeds(self) -> None:
         attempts = {"n": 0}
