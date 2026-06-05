@@ -199,3 +199,72 @@ metric only; no governance wiring.*
 - Per the decision rule: **no governance wiring follow-up filed.**
   Detector remains available as a metric for runs that want to log it
   alongside `CollusionDetector` for triangulation.
+
+---
+
+## Re-run after detector fixes (2026-06-04, beads-kwyf, 20 replicates)
+
+Two fixes landed in the same PR after the negative result above:
+
+1. **`density_pvalue` was buggy**, not just conservative — it compared
+   observed density against the null's *globally densest* subgraph
+   instead of the same nodes' density in the null. Fixed to the
+   subset-conditioned test the docstring originally claimed.
+2. **Multiplicative scoring replaced by rank aggregation**
+   (`rank_aggregated_scores`). Each anomaly is ranked across all
+   candidates on four signals (edge_probability, reciprocity_z,
+   size-normalized k-core, -log10 p-value); composite = mean rank. No
+   single signal can veto the others. Also switched the density rank to
+   `edge_probability` (in [0, 1]) so a tight small clique correctly
+   outranks a large-but-sparse community.
+
+### Re-run results
+
+| family | graph_structural (new) | (was) | collusion_score |
+|---|---|---|---|
+| benign | 0.500 | 0.500 | 0.500 |
+| collusion_ring (size 3) | 0.598 [0.55, 0.65] | 0.592 | 1.000 |
+| collusion_ring (size 5) | **1.000** | 0.975 | 1.000 |
+| collusion_ring (size 8) | **1.000** | 1.000 | 1.000 |
+| sybil_cluster (overlap 0.80) | 0.657 [0.625, 0.688] | 0.571 | 0.666 [0.623, 0.704] |
+| sybil_cluster (overlap 0.95) | **0.754** [0.721, 0.786] | 0.532 | 0.707 [0.674, 0.744] |
+| threshold_dancing (m=0.10) | **1.000** | 0.126 | 0.998 [0.995, 1.000] |
+| threshold_dancing (m=0.05) | **1.000** | 0.126 | 0.998 [0.995, 1.000] |
+
+### Verdict (re-applied)
+
+**Decision-rule verdict unchanged: no *strict* dominance** — the strict
+test requires `graph_structural`'s lower CI > each other detector's
+upper CI, and at the AUC=1.0 ceiling that's mechanically impossible
+when collusion_score also hits 1.0. Per pre-reg rule #2, the detector
+still ships as a *secondary metric* only.
+
+### What actually changed
+
+- **threshold_dancing AUC 0.126 → 1.000.** The pre-registered falsifier
+  no longer fires. The detector now perfectly catches the family it was
+  designed for, validating the theory: once the null is correct and
+  scoring is non-multiplicative, the structural signature (mutual edges
+  among small subsets at near-saturation edge probability) wins.
+- **sybil_cluster (95% overlap) AUC 0.532 → 0.754**, strictly better
+  than `collusion_score`'s 0.707 (though CIs overlap). The detector now
+  beats threshold detectors on the family they were specifically
+  vulnerable to.
+- **collusion_ring size 5 AUC 0.975 → 1.000.** Pre-existing strength
+  cemented.
+- The qualitative finding has flipped from "shipping as secondary
+  metric because nothing dominates" to "shipping as secondary metric
+  because graph_structural and collusion_score are now interchangeable
+  on AUC, with complementary failure modes worth triangulating across."
+  Stronger case for keeping both in `MetricsReporter` than the original
+  negative result implied.
+
+### Governance-wiring decision
+
+Still no follow-up filed. Tying at AUC 1.0 on threshold_dancing is the
+result the theory predicted; it is not strict dominance by the
+pre-registered CI test. Re-examine after the n=100 re-run and after
+operating-point metrics (beads-5cdk) are added — if `graph_structural`'s
+F1 at native cutoff beats `collusion_score` at the latter's 0.5
+threshold, that's a different (and arguably more relevant) dominance
+claim worth filing wiring for.

@@ -43,6 +43,7 @@ from swarm.metrics.graph_structural import (
     Edge,
     detect_structural_anomalies,
     edges_from_interactions,
+    rank_aggregated_scores,
 )
 from swarm.models.identity import IdentityConfig, IdentityRegistry
 from swarm.models.interaction import InteractionType, SoftInteraction
@@ -262,16 +263,10 @@ Detector = Callable[[GraphSample], Dict[str, float]]
 
 def detector_graph_structural(s: GraphSample) -> Dict[str, float]:
     anomalies = detect_structural_anomalies(s.edges, n_null_samples=20, seed=s.seed)
-    scores: Dict[str, float] = dict.fromkeys(s.nodes, 0.0)
-    for a in anomalies:
-        # composite score: density-weighted reciprocity z, capped & normalized
-        score = min(1.0, a.density / 5.0) * min(1.0, max(0.0, a.reciprocity_z) / 5.0)
-        # boost by significance
-        score = score * (1.0 - min(1.0, a.pvalue))
-        for n in a.members:
-            if score > scores[n]:
-                scores[n] = score
-    return scores
+    # Rank-aggregated scoring: per-signal percentile rank, mean over signals.
+    # Replaces the earlier multiplicative score whose p-value factor vetoed
+    # density+reciprocity+coreness whenever the null was fooled (see beads-kwyf).
+    return rank_aggregated_scores(anomalies, s.nodes)
 
 
 def detector_identity_jaccard(s: GraphSample) -> Dict[str, float]:
