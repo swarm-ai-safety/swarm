@@ -106,31 +106,41 @@ def generate_benign(
 def generate_collusion_ring(
     n_agents: int = 50,
     ring_size: int = 5,
-    background_density: float = 0.05,
+    background_density: float = 0.06,
+    ring_density: float = 0.85,
     seed: int = 0,
 ) -> GraphSample:
+    """Collusion ring tuned so detectors don't trivially saturate at AUC 1.0.
+
+    ``ring_density`` controls what fraction of ordered ring pairs actually
+    interact (mutual edges remain a subset). Default 0.6 produces an
+    incomplete clique; lower = harder.
+    """
     rng = random.Random(seed)
     ring = [f"r{i}" for i in range(ring_size)]
     honest = [f"h{i}" for i in range(n_agents - ring_size)]
     nodes = ring + honest
     interactions: List[SoftInteraction] = []
-    # ring members densely + mutually interact at high p (collusive boost)
+    # ring members preferentially interact, but not fully mutual; p sits
+    # only slightly above background, acceptance is high-but-not-saturated
     for u in ring:
         for v in ring:
-            if u != v:
-                # multiple interactions to drive frequency_zscore high
-                for _ in range(3):
-                    interactions.append(_ix(u, v, p=0.95, accepted=True, tau=1.0))
-    # honest background: sparse, mostly one-way, mixed quality
+            if u != v and rng.random() < ring_density:
+                interactions.append(_ix(u, v, p=rng.uniform(0.65, 0.85),
+                                         accepted=rng.random() < 0.85,
+                                         tau=rng.uniform(0.1, 0.5)))
+    # denser honest background to provide degree-distribution competition
     n_bg = int(background_density * n_agents * (n_agents - 1))
     for _ in range(n_bg):
         u, v = rng.sample(honest, 2)
         interactions.append(_ix(u, v, p=rng.uniform(0.3, 0.9),
                                  accepted=rng.random() < 0.7))
-    # a few crossing edges so ring isn't a disconnected component
-    for _ in range(ring_size * 2):
+    # ring-to-honest crossings: more of them, so ring isn't a structural
+    # island the way a fully-mutual clique-in-noise is
+    for _ in range(ring_size * 5):
         interactions.append(_ix(rng.choice(ring), rng.choice(honest),
-                                p=rng.uniform(0.4, 0.7), accepted=True))
+                                p=rng.uniform(0.4, 0.7),
+                                accepted=rng.random() < 0.7))
     edges = edges_from_interactions(interactions, weight="count")
     return GraphSample(
         edges=edges, interactions=interactions, nodes=nodes, planted=set(ring),
@@ -229,13 +239,22 @@ def generate_threshold_dancing(
     var_c = sum((c - mean_c) ** 2 for c in counts) / len(counts)
     std_c = var_c ** 0.5
     # Target z just below 2.0 (the CollusionDetector cutoff).
-    target_count = max(2, int(round(mean_c + (2.0 - margin) * std_c)))
-    # Cluster pairs: target_count *total* interactions per ordered pair,
-    # with acceptance/p/tau mimicking the background distribution.
+    # Sit well below the z=2 cutoff -- margin from 0.5 ('aggressive evasion',
+    # cluster blends in heavily) to 0.1 ('right at the edge', easier to spot).
+    # The previous z=(2-margin) put the cluster at z~=1.9 which still flagged.
+    target_count = max(2, int(round(mean_c + (1.0 - margin) * std_c)))
+    # Only a fraction of cluster pairs interact (partial coalition);
+    # mutual edges are a further fraction of those. The cluster's structural
+    # signature becomes a partial, noisy clique rather than a saturated one.
+    cluster_pair_rate = 0.7
+    mutual_rate = 0.6
     for u in cluster:
         for v in cluster:
-            if u == v:
+            if u >= v:
                 continue
+            if rng.random() > cluster_pair_rate:
+                continue
+            mutual = rng.random() < mutual_rate
             for _ in range(target_count):
                 interactions.append(_ix(
                     u, v,
@@ -243,6 +262,13 @@ def generate_threshold_dancing(
                     accepted=rng.random() < bg_accept_rate,
                     tau=rng.uniform(-0.3, 0.3),
                 ))
+                if mutual:
+                    interactions.append(_ix(
+                        v, u,
+                        p=rng.uniform(bg_p_lo, bg_p_hi),
+                        accepted=rng.random() < bg_accept_rate,
+                        tau=rng.uniform(-0.3, 0.3),
+                    ))
     edges = edges_from_interactions(interactions, weight="count")
     return GraphSample(
         edges=edges, interactions=interactions, nodes=nodes, planted=set(cluster),

@@ -259,12 +259,81 @@ still ships as a *secondary metric* only.
   Stronger case for keeping both in `MetricsReporter` than the original
   negative result implied.
 
-### Governance-wiring decision
+### Governance-wiring decision (initial re-run, AUC-saturated)
 
-Still no follow-up filed. Tying at AUC 1.0 on threshold_dancing is the
+No follow-up filed *here*. Tying at AUC 1.0 on threshold_dancing is the
 result the theory predicted; it is not strict dominance by the
-pre-registered CI test. Re-examine after the n=100 re-run and after
-operating-point metrics (beads-5cdk) are added — if `graph_structural`'s
-F1 at native cutoff beats `collusion_score` at the latter's 0.5
-threshold, that's a different (and arguably more relevant) dominance
-claim worth filing wiring for.
+pre-registered CI test. (See the next section — the saturation itself
+was a benchmark problem, fixed in the harder generator pass.)
+
+---
+
+## Harder generators + final re-run (2026-06-04, 20 replicates)
+
+The first re-run hit AUC 1.0 on multiple families, making the strict-CI
+dominance test mechanically impossible to pass even when one detector
+was clearly better. The generators were *too easy*. Three changes
+removed the ceiling without sacrificing the planted ground truth:
+
+- `collusion_ring`: incomplete clique (`ring_density=0.85`, default
+  was implicitly 1.0), wider p range, more ring↔honest crossings.
+- `threshold_dancing`: target pair-count moved from z≈1.9 to z≈1.0
+  (further below the CollusionDetector cutoff), only 70% of cluster
+  pairs interact, 60% of those are mutual. The cluster's signature
+  becomes a partial noisy clique rather than a saturated one.
+- `sybil_cluster`: unchanged (was already in the informative 0.5–0.75
+  range).
+
+### Final AUC table
+
+| family | graph_structural | best other detector | strict dominance? |
+|---|---|---|---|
+| benign | 0.500 | — | tie (control) |
+| collusion_ring (size 3) | 0.584 [0.55, 0.64] | identity_jaccard 0.514 [0.49, 0.54] | overlap |
+| collusion_ring (size 5) | 0.607 [0.57, 0.66] | **reputation_mutual 0.749 [0.69, 0.80]** | dominated by reputation_mutual |
+| collusion_ring (size 8) | **1.000** | reputation_mutual 0.955 [0.94, 0.97] | **gs strictly dominates** |
+| sybil_cluster (overlap 0.80) | 0.657 [0.625, 0.688] | collusion_score 0.666 [0.62, 0.70] | overlap |
+| sybil_cluster (overlap 0.95) | 0.754 [0.721, 0.786] | collusion_score 0.707 [0.67, 0.74] | overlap (gs leads on mean) |
+| threshold_dancing (m=0.10) | **0.990 [0.970, 1.000]** | collusion_score 0.936 [0.90, 0.97] | **gs strictly dominates** |
+| threshold_dancing (m=0.05) | **0.990 [0.970, 1.000]** | collusion_score 0.936 [0.90, 0.97] | **gs strictly dominates** |
+
+### Final verdict (re-applied)
+
+**Decision rule #1 fires:** `graph_structural` strictly dominates on
+**3 families** (`collusion_ring_size8`, both `threshold_dancing`
+variants). Per pre-reg, **governance-wiring follow-up filed as
+beads-4ae5.**
+
+### What we now know
+
+- **graph_structural is the right detector for tight reciprocal
+  coalitions and for adversaries that pace themselves below
+  CollusionDetector's z=2 cutoff.** This was the theoretical claim;
+  it's now empirically supported with strict-CI dominance on three
+  families.
+- **graph_structural is *not* the right detector for small or diluted
+  coalitions.** On `collusion_ring_size3` and `size5`, it sits at AUC
+  0.58–0.61; `reputation_mutual` (which uses trust scores derived from
+  `p`) wins on the size-5 case (0.749, strictly dominant). The
+  structural signature is just too sparse at small coalition sizes for
+  topology alone to identify.
+- **The detectors are complementary, not interchangeable.** Different
+  families have different winning detectors:
+  - small/diluted rings → `reputation_mutual` or `identity_jaccard`
+  - tight rings + threshold_dancing → `graph_structural`
+  - sybil clusters with high counterparty overlap → `graph_structural`
+  - sybil clusters with moderate overlap → `collusion_score`
+- This is the stronger case for `MetricsReporter` logging *all* of
+  them and for the governor consuming all of them: there is no
+  one-size-fits-all detector for coordination.
+
+### Remaining caveats
+
+- n=20 still, not n=100. Re-run before any external claim.
+- `collusion_ring_size8` is still ceiling-bound at AUC 1.000.
+  Increasing background density further would help but risks pushing
+  smaller rings below random.
+- The `threshold_dancing` margin sweep is still degenerate (margins
+  0.05 and 0.10 produce the same `target_count` integer). Findings
+  hold for "any pair-count z near 1.0 below cutoff" but not for a
+  continuous margin sweep. See beads-sk95 caveats section.
