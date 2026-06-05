@@ -6,9 +6,12 @@ and rationale. Backends:
 - `MockJudge`: deterministic, rubric-faithful, no network. Used in tests
   and for CI smoke-runs. Captures the signal-interpretation rules from
   rubric_v1.md so we can exercise the full pipeline without API keys.
-- `LLMJudge`: wraps an LLMConfig and calls a real model with the frozen
-  rubric. Used in actual data collection. NOT exercised in unit tests —
-  needs network + API keys.
+- `LLMJudge`: dataclass holding provider/model/key; dispatches to
+  `swarm.judges.llm_call` for a real synchronous one-shot scoring
+  call against Anthropic / an OpenAI-compatible endpoint / Ollama.
+  Used in actual data collection. The JSON-parse, retry, and dispatch
+  paths are unit-tested via an injectable `caller`; the real network
+  paths still need API keys (or a running Ollama).
 """
 
 from __future__ import annotations
@@ -138,7 +141,7 @@ class MockJudge:
         )
 
 
-JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*\})\s*```", re.DOTALL)
+JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
 
 
 def _iter_brace_objects(text: str) -> list[str]:

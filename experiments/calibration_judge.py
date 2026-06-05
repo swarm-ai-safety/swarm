@@ -4,7 +4,10 @@ Pre-registration: docs/research/calibration-prereg.md arm B.
 
 Default backend is `mock` (no network, deterministic) so the pipeline
 can run in CI and on smoke checks. Real judges (`claude`, `gpt4o_mini`,
-`llama`) plug in once `LLMJudge.score` is wired to the LLM call path.
+`llama`) dispatch via `LLMJudge` to Anthropic / an OpenAI-compatible
+endpoint / Ollama; they need credentials in the corresponding env vars
+(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) and, for `llama`, a running
+Ollama daemon.
 
 Usage:
     python -m experiments.calibration_judge \
@@ -122,7 +125,11 @@ def main(argv: list[str] | None = None) -> int:
         "--judges",
         nargs="+",
         default=["mock"],
-        help="Judge backends to run (mock only until LLMJudge is wired up)",
+        help=(
+            "Judge backends to run. `mock` is deterministic and needs no "
+            "credentials; `claude` / `gpt4o_mini` / `llama` need API keys "
+            "(or a running Ollama for `llama`)."
+        ),
     )
     parser.add_argument(
         "--per-bin",

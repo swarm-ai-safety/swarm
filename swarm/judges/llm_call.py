@@ -137,8 +137,10 @@ def call_openai_compatible(
 
     Works for OpenAI, OpenRouter, Groq, Together, DeepSeek — anything
     that exposes the OpenAI chat API at `base_url`. Set `provider` to
-    drive the env-var fallback (ANTHROPIC_API_KEY for "anthropic",
-    OPENAI_API_KEY for "openai", etc.).
+    drive the env-var fallback (`OPENAI_API_KEY` for "openai",
+    `OPENROUTER_API_KEY` for "openrouter", `GROQ_API_KEY` for "groq",
+    etc.). Use `call_anthropic` for Anthropic — its API is not
+    OpenAI-chat compatible.
     """
     key = _resolve_api_key(provider, api_key)
     if not key:
@@ -201,7 +203,7 @@ def call_ollama(
             "httpx package not installed. Install with: python -m pip install httpx"
         ) from err
 
-    url = f"{base_url or 'http://localhost:11434'}/api/chat"
+    url = f"{(base_url or 'http://localhost:11434').rstrip('/')}/api/chat"
     started = time.monotonic()
     with httpx.Client(timeout=timeout) as client:
         response = client.post(
