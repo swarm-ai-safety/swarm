@@ -29,6 +29,26 @@ from swarm.core.payoff import PayoffConfig
 # single point before the elites have separated from the average.
 SIGMA_FLOOR_FRAC = 0.05
 
+# Pinned reward for arm 2 (see prereg addendum). Three choices are
+# supported so the channel-1-vs-2 decomposition is auditable, but the
+# default — and the value that goes into the powered run — is
+# ``mean_attempted``. See docs/research/adaptive-arm2-pilot-findings.md
+# for why ``mean_accepted`` was rejected.
+PINNED_REWARD = "mean_attempted"
+VALID_REWARDS: tuple[str, ...] = ("mean_attempted", "mean_accepted", "sum_attempted")
+
+
+def _reward_from_report(report: EpisodeReport, key: str) -> float:
+    if key == "mean_attempted":
+        return report.mean_payoff_attempted
+    if key == "mean_accepted":
+        return report.mean_payoff_accepted
+    if key == "sum_attempted":
+        return report.sum_payoff
+    raise ValueError(
+        f"unknown reward {key!r}. Valid: {VALID_REWARDS}"
+    )
+
 
 @dataclass
 class CEMConfig:
@@ -38,6 +58,14 @@ class CEMConfig:
     elite_fraction: float = 0.25
     n_iterations: int = 10
     interactions_per_episode: int = 200
+    # Reward for elite selection. Default is the pinned value.
+    reward: str = PINNED_REWARD
+
+    def __post_init__(self) -> None:
+        if self.reward not in VALID_REWARDS:
+            raise ValueError(
+                f"invalid reward {self.reward!r}. Valid: {VALID_REWARDS}"
+            )
 
     @property
     def n_elites(self) -> int:
@@ -46,10 +74,19 @@ class CEMConfig:
 
 @dataclass
 class CEMIterationReport:
-    """Per-iteration training diagnostic."""
+    """Per-iteration training diagnostic.
+
+    `mean_elite_reward` is the value CEM selected on (under
+    ``CEMConfig.reward``). The other three reward summaries are
+    reported for post-hoc channel-1-vs-2 decomposition regardless of
+    which one was the selection criterion.
+    """
 
     iteration: int
-    mean_elite_payoff: float
+    mean_elite_reward: float
+    mean_elite_payoff_accepted: float
+    mean_elite_payoff_attempted: float
+    mean_elite_sum_payoff: float
     mean_elite_toxicity: float
     mean_elite_accept_rate: float
     mu: list[float]
@@ -73,6 +110,7 @@ class CEMTrainingReport:
                 "elite_fraction": self.config.elite_fraction,
                 "n_iterations": self.config.n_iterations,
                 "interactions_per_episode": self.config.interactions_per_episode,
+                "reward": self.config.reward,
             },
             "payoff_config": self.payoff_config.to_dict(),
             "final_policy": {
@@ -82,7 +120,9 @@ class CEMTrainingReport:
             "final_episode": {
                 "n_accepted": self.final_episode.n_accepted,
                 "accept_rate": self.final_episode.accept_rate,
-                "mean_payoff": self.final_episode.mean_payoff,
+                "mean_payoff_accepted": self.final_episode.mean_payoff_accepted,
+                "mean_payoff_attempted": self.final_episode.mean_payoff_attempted,
+                "sum_payoff": self.final_episode.sum_payoff,
                 "mean_p": self.final_episode.mean_p,
                 "toxicity": self.final_episode.toxicity,
                 "mean_progress": self.final_episode.mean_progress,
@@ -90,7 +130,10 @@ class CEMTrainingReport:
             "iterations": [
                 {
                     "iteration": it.iteration,
-                    "mean_elite_payoff": it.mean_elite_payoff,
+                    "mean_elite_reward": it.mean_elite_reward,
+                    "mean_elite_payoff_accepted": it.mean_elite_payoff_accepted,
+                    "mean_elite_payoff_attempted": it.mean_elite_payoff_attempted,
+                    "mean_elite_sum_payoff": it.mean_elite_sum_payoff,
                     "mean_elite_toxicity": it.mean_elite_toxicity,
                     "mean_elite_accept_rate": it.mean_elite_accept_rate,
                     "mu": it.mu,
@@ -152,10 +195,10 @@ def train_cem(
                 payoff_config=payoff_config,
                 seed=episode_seed,
             )
-            rewards.append(report.mean_payoff)
+            rewards.append(_reward_from_report(report, cem_config.reward))
             reports.append(report)
 
-        # Top-K elites by mean payoff.
+        # Top-K elites by the selected reward.
         order = np.argsort(rewards)[::-1]  # descending
         elite_idx = order[: cem_config.n_elites]
         elite_samples = samples[elite_idx]
@@ -168,7 +211,16 @@ def train_cem(
         iterations.append(
             CEMIterationReport(
                 iteration=it,
-                mean_elite_payoff=float(np.mean([r.mean_payoff for r in elite_reports])),
+                mean_elite_reward=float(np.mean([rewards[i] for i in elite_idx])),
+                mean_elite_payoff_accepted=float(
+                    np.mean([r.mean_payoff_accepted for r in elite_reports])
+                ),
+                mean_elite_payoff_attempted=float(
+                    np.mean([r.mean_payoff_attempted for r in elite_reports])
+                ),
+                mean_elite_sum_payoff=float(
+                    np.mean([r.sum_payoff for r in elite_reports])
+                ),
                 mean_elite_toxicity=float(np.mean([r.toxicity for r in elite_reports])),
                 mean_elite_accept_rate=float(
                     np.mean([r.accept_rate for r in elite_reports])

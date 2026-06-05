@@ -109,7 +109,7 @@ class TestCEM:
         b = train_cem(cfg, cem_config=small, seed=5)
         assert a.final_policy.to_vector() == b.final_policy.to_vector()
         for ia, ib in zip(a.iterations, b.iterations, strict=True):
-            assert ia.mean_elite_payoff == ib.mean_elite_payoff
+            assert ia.mean_elite_reward == ib.mean_elite_reward
 
     def test_train_records_one_iteration_per_step(self) -> None:
         cfg = PayoffConfig()
@@ -134,6 +134,36 @@ class TestCEM:
             report.iterations[-1].sigma, PARAM_SPEC, strict=True
         ):
             assert sigma_i >= (hi - lo) * 0.05 - 1e-9
+
+    def test_default_reward_is_pinned(self) -> None:
+        # The pinned reward is mean_attempted per the prereg addendum.
+        # If this changes, the prereg addendum must be updated too.
+        from swarm.adaptive.cem import PINNED_REWARD
+        assert CEMConfig().reward == PINNED_REWARD == "mean_attempted"
+
+    def test_invalid_reward_raises(self) -> None:
+        with pytest.raises(ValueError, match="invalid reward"):
+            CEMConfig(reward="median_payoff")
+
+    def test_alternate_reward_runs(self) -> None:
+        # Smoke: each valid reward keyword runs the trainer without
+        # crashing and produces a deterministic-under-seed result.
+        from swarm.adaptive.cem import VALID_REWARDS
+        cfg = PayoffConfig(rho_a=0.3)
+        for reward in VALID_REWARDS:
+            small = CEMConfig(
+                population_size=6, elite_fraction=0.5, n_iterations=2,
+                interactions_per_episode=30, reward=reward,
+            )
+            report = train_cem(cfg, cem_config=small, seed=0)
+            assert len(report.iterations) == 2
+
+    def test_episode_report_back_compat_alias(self) -> None:
+        # mean_payoff alias still resolves to mean_payoff_accepted.
+        policy = Policy.from_vector([0.5, 0.2, 0.5, 0.2, 0.1, 0.3, 0.2, 0.0])
+        cfg = PayoffConfig()
+        report = run_episode(policy, n_interactions=50, payoff_config=cfg, seed=42)
+        assert report.mean_payoff == report.mean_payoff_accepted
 
     def test_to_dict_roundtrips_through_json(self) -> None:
         import json

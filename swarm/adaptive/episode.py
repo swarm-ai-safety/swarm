@@ -35,16 +35,43 @@ from swarm.models.interaction import InteractionType, SoftInteraction
 
 @dataclass(frozen=True)
 class EpisodeReport:
-    """Per-episode diagnostics."""
+    """Per-episode diagnostics.
+
+    Three reward summaries are reported (all derivable from each other
+    plus accept_rate, but kept explicit for post-hoc decomposition):
+
+    - ``mean_payoff_accepted``: mean realized payoff over accepted
+      interactions only. Rewards pickiness; was the cause-2 channel
+      flag in the first smoke.
+    - ``mean_payoff_attempted``: total realized payoff divided by
+      number of attempts. Rejected interactions contribute 0. This
+      is the **pinned reward** for arm 2 (see prereg addendum).
+    - ``sum_payoff``: total realized payoff over the episode. Sum-
+      vs-mean only differs in scaling for a fixed episode length;
+      kept for completeness.
+    """
 
     n_total: int
     n_accepted: int
     accept_rate: float
-    mean_payoff: float          # mean over accepted interactions
+    mean_payoff_accepted: float  # mean over accepted interactions
+    mean_payoff_attempted: float  # (sum realized payoff) / n_total
+    sum_payoff: float            # sum realized payoff
     mean_v_hat: float
     mean_p: float
-    toxicity: float             # E[1 - p | accepted]
-    mean_progress: float        # mean of sampled progress (all draws)
+    toxicity: float              # E[1 - p | accepted]
+    mean_progress: float         # mean of sampled progress (all draws)
+
+    # Back-compat alias for callers written against the v1 scaffold.
+    @property
+    def mean_payoff(self) -> float:
+        """Deprecated alias for ``mean_payoff_accepted``.
+
+        Kept for back-compat with the smoke pilot (rho=0.3, seed=42).
+        New code should reference the explicit field — pickiness vs
+        productivity is no longer ambiguous.
+        """
+        return self.mean_payoff_accepted
 
 
 def _seeded_uuid(rng: random.Random) -> str:
@@ -104,13 +131,19 @@ def run_episode(
         accepted_p.append(p)
 
     n_accepted = len(payoffs)
-    mean_payoff = sum(payoffs) / n_accepted if payoffs else 0.0
+    total_payoff = sum(payoffs)
+    mean_payoff_accepted = total_payoff / n_accepted if payoffs else 0.0
+    mean_payoff_attempted = (
+        total_payoff / n_interactions if n_interactions else 0.0
+    )
     mean_p = sum(accepted_p) / n_accepted if accepted_p else 0.5
     return EpisodeReport(
         n_total=n_interactions,
         n_accepted=n_accepted,
         accept_rate=n_accepted / n_interactions if n_interactions else 0.0,
-        mean_payoff=mean_payoff,
+        mean_payoff_accepted=mean_payoff_accepted,
+        mean_payoff_attempted=mean_payoff_attempted,
+        sum_payoff=total_payoff,
         mean_v_hat=sum(v_hats) / len(v_hats) if v_hats else 0.0,
         mean_p=mean_p,
         toxicity=1.0 - mean_p,

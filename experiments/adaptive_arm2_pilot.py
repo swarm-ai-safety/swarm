@@ -70,6 +70,11 @@ def main(argv: list[str] | None = None) -> int:
         help="Interactions per CEM episode (pre-reg default 200)",
     )
     parser.add_argument(
+        "--reward", default="mean_attempted",
+        choices=["mean_attempted", "mean_accepted", "sum_attempted"],
+        help="CEM elite-selection reward. Default is the pinned value.",
+    )
+    parser.add_argument(
         "--runs-dir", type=Path, default=Path("runs"),
         help="Parent directory for run output",
     )
@@ -80,6 +85,7 @@ def main(argv: list[str] | None = None) -> int:
         population_size=args.population_size,
         n_iterations=args.n_iterations,
         interactions_per_episode=args.interactions_per_episode,
+        reward=args.reward,
     )
     report = train_cem(payoff, cem_config=cem_cfg, seed=args.seed)
 
@@ -111,26 +117,35 @@ def main(argv: list[str] | None = None) -> int:
     iters_path = run_dir / "iterations.csv"
     with iters_path.open("w", newline="") as f:
         w = csv.writer(f)
-        w.writerow(["iteration", "mean_elite_payoff", "mean_elite_toxicity",
-                    "mean_elite_accept_rate"])
+        w.writerow([
+            "iteration",
+            "mean_elite_reward",
+            "mean_elite_payoff_accepted",
+            "mean_elite_payoff_attempted",
+            "mean_elite_sum_payoff",
+            "mean_elite_toxicity",
+            "mean_elite_accept_rate",
+        ])
         for it in report.iterations:
             w.writerow([
                 it.iteration,
-                f"{it.mean_elite_payoff:.6f}",
+                f"{it.mean_elite_reward:.6f}",
+                f"{it.mean_elite_payoff_accepted:.6f}",
+                f"{it.mean_elite_payoff_attempted:.6f}",
+                f"{it.mean_elite_sum_payoff:.6f}",
                 f"{it.mean_elite_toxicity:.6f}",
                 f"{it.mean_elite_accept_rate:.6f}",
             ])
 
-    # One-line summary + degenerate-run flag.
     first = report.iterations[0]
     last = report.iterations[-1]
-    delta = last.mean_elite_payoff - first.mean_elite_payoff
+    delta = last.mean_elite_reward - first.mean_elite_reward
     flag = " DEGENERATE" if delta < 0 else ""
     print(f"Wrote {run_dir}")
     print(
-        f"  rho={args.rho}  seed={args.seed}"
+        f"  rho={args.rho}  seed={args.seed}  reward={args.reward}"
         f"  iters={len(report.iterations)}"
-        f"  payoff: {first.mean_elite_payoff:.3f} → {last.mean_elite_payoff:.3f}"
+        f"  reward: {first.mean_elite_reward:.3f} → {last.mean_elite_reward:.3f}"
         f" (Δ={delta:+.3f}){flag}"
     )
     print(
@@ -138,10 +153,12 @@ def main(argv: list[str] | None = None) -> int:
         f"  accept_rate: {first.mean_elite_accept_rate:.3f}"
         f" → {last.mean_elite_accept_rate:.3f}"
     )
+    fe = report.final_episode
     print(
-        f"  final episode: n_accepted={report.final_episode.n_accepted}"
-        f"  mean_payoff={report.final_episode.mean_payoff:.3f}"
-        f"  toxicity={report.final_episode.toxicity:.3f}"
+        f"  final: n_accepted={fe.n_accepted}"
+        f"  per_accepted={fe.mean_payoff_accepted:.3f}"
+        f"  per_attempted={fe.mean_payoff_attempted:.3f}"
+        f"  toxicity={fe.toxicity:.3f}"
     )
     return 0
 
