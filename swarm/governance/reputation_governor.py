@@ -7,6 +7,11 @@ based on agent relationship graphs stored in graph memory.
 from typing import Dict, List, Set, Tuple
 
 from swarm.knowledge.graph_memory import GraphMemoryStore
+from swarm.metrics.graph_structural import (
+    Edge,
+    StructuralAnomaly,
+    detect_structural_anomalies,
+)
 
 
 class ReputationGovernor:
@@ -91,7 +96,12 @@ class ReputationGovernor:
         return scores
 
     def get_governance_recommendations(
-        self, threshold: float = 0.3
+        self,
+        threshold: float = 0.3,
+        *,
+        structural_enabled: bool = False,
+        structural_seed: int = 0,
+        structural_null_samples: int = 50,
     ) -> Dict[str, str]:
         """Get governance recommendations for all agents.
 
@@ -102,6 +112,16 @@ class ReputationGovernor:
 
         Args:
             threshold: Threshold for monitor/normal boundary (default 0.3)
+            structural_enabled: When True, also flag agents that appear in
+                a :func:`detect_structural_coalitions` result whose
+                ``is_suspicious`` gate fires (pre-registered combination:
+                size ≥ 3, density ≥ 1, reciprocity_z ≥ 2, p ≤ 0.05). Such
+                agents get bumped to at least "monitor" — or stay at
+                "restrict" if their reputation score is also below the
+                restrict threshold. Default OFF per beads-4ae5 scope:
+                this is the new wiring, flip to ON after canary.
+            structural_seed: Seed for the configuration-model null sampler.
+            structural_null_samples: Number of null samples per anomaly.
 
         Returns:
             Dict mapping agent_id -> "normal" | "monitor" | "restrict"
@@ -119,7 +139,60 @@ class ReputationGovernor:
             else:
                 recommendations[agent_id] = "normal"
 
+        if structural_enabled:
+            anomalies = self.detect_structural_coalitions(
+                seed=structural_seed,
+                n_null_samples=structural_null_samples,
+            )
+            flagged: Set[str] = set()
+            for a in anomalies:
+                if a.is_suspicious:
+                    flagged.update(a.members)
+            for agent_id in flagged:
+                # Bump to at least "monitor"; preserve "restrict" if already there.
+                if recommendations.get(agent_id, "normal") == "normal":
+                    recommendations[agent_id] = "monitor"
+
         return recommendations
+
+    def _edges_from_relationships(self) -> List[Edge]:
+        """Convert GraphMemoryStore relationships into weighted directed edges
+        consumable by :mod:`swarm.metrics.graph_structural`.
+
+        Edge weight = interaction_count between the pair. Self-loops and
+        zero-weight edges are dropped by ``DiGraph.from_edges``.
+        """
+        edges: List[Edge] = []
+        for e in self.graph_memory.get_all_relationships():
+            if e.interaction_count > 0:
+                edges.append((e.agent_a, e.agent_b, float(e.interaction_count)))
+        return edges
+
+    def detect_structural_coalitions(
+        self,
+        *,
+        min_size: int = 3,
+        n_null_samples: int = 50,
+        seed: int = 0,
+    ) -> List[StructuralAnomaly]:
+        """Run the graph-structural coalition detector on stored
+        relationships.
+
+        Complements :meth:`detect_collusion_clusters` (which uses mutual
+        trust thresholds) — see ``docs/research/graph-structural-prereg.md``
+        for the head-to-head ROC. The pre-registered finding (beads-sk95):
+        structural and threshold detectors are *complementary, not
+        interchangeable* — different coalition shapes need different
+        signals. Wire both into governance recommendations for
+        triangulation.
+        """
+        edges = self._edges_from_relationships()
+        return detect_structural_anomalies(
+            edges,
+            min_size=min_size,
+            n_null_samples=n_null_samples,
+            seed=seed,
+        )
 
     def compute_trust_weighted_fee(self, agent_id: str, base_fee: float) -> float:
         """Compute fee adjusted by agent reputation.
