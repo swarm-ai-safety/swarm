@@ -39,6 +39,24 @@ Same pre-registered grid for both sides:
 | Static conditions | `honest`, `toxic`, `mixed` (70/30 honest/toxic) |
 | Total cells | 4 conditions × 6 ρ × 5 seeds = 120 |
 
+## Figure
+
+![Adaptive vs static overlay](figures/adaptive-vs-static-overlay.png)
+
+Left panel: welfare collapses linearly with ρ for every condition,
+with slope proportional to baseline toxicity (static toxic loses
+the most welfare per unit ρ because it has the highest harm-rate to
+tax). Adaptive sits above static-honest at every ρ.
+
+Right panel: **all four toxicity lines are flat.** The vertical-
+collapse pathology is structural — ρ does not move toxicity for any
+agent class. Adaptive (blue, ~0.122) beats static honest (green,
+~0.166) on the y-axis, but the gap is constant across ρ; it is a
+CEM-training improvement, not a lever effect.
+
+Error bars are 1σ across 5 seeds. They are barely visible because
+seed-variance is small (~0.003 on toxicity, ~0.01 on welfare).
+
 ## Headline overlay (seed-averaged)
 
 ### Welfare (`mean_payoff_attempted`)
