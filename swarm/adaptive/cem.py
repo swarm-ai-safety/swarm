@@ -186,8 +186,16 @@ def train_cem(
         )
         rewards: list[float] = []
         reports: list[EpisodeReport] = []
+        # Store the BOUNDED policy vectors (after clamping) so the
+        # refit step sees the same parameters the episode actually ran
+        # with. Refitting on the raw `samples` rows would otherwise drift
+        # μ/σ toward out-of-bounds values that were never evaluated —
+        # the failure mode is a boundary-winner pulling μ outside the
+        # legal range.
+        bounded_samples = np.empty_like(samples)
         for k in range(cem_config.population_size):
             policy = Policy.from_vector(samples[k].tolist())
+            bounded_samples[k] = np.asarray(policy.to_vector(), dtype=samples.dtype)
             episode_seed = py_rng.randint(0, 2**31 - 1)
             report = run_episode(
                 policy,
@@ -201,7 +209,7 @@ def train_cem(
         # Top-K elites by the selected reward.
         order = np.argsort(rewards)[::-1]  # descending
         elite_idx = order[: cem_config.n_elites]
-        elite_samples = samples[elite_idx]
+        elite_samples = bounded_samples[elite_idx]
         elite_reports = [reports[i] for i in elite_idx]
 
         # Refit Gaussian to the elites (with a floor on σ).
