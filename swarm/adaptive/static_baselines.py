@@ -37,10 +37,33 @@ from swarm.core.payoff import PayoffConfig, SoftPayoffEngine
 from swarm.core.proxy import ProxyComputer
 from swarm.models.interaction import InteractionType, SoftInteraction
 
+
 # Hand-specified canonical baselines. Values chosen to match the
 # tests/fixtures/interactions.py generator distributions — these are
 # the same scripted-agent shapes the Figure 4 static condition used.
-STATIC_HONEST = Policy.from_vector([
+#
+# Each baseline carries an ``identity_label`` propagated as
+# ``metadata["agent_type"]`` so the v3 calibration anchor's target
+# rules can fire. The labels are the v3-rubric category names
+# ("honest", "blatant"); the adaptive CEM-trained policy intentionally
+# leaves identity_label empty since it has no way to assert what it is.
+def _with_label(vec: list[float], label: str) -> Policy:
+    base = Policy.from_vector(vec)
+    # Policy is frozen, so we rebuild with the label set explicitly.
+    return Policy(
+        progress_mean=base.progress_mean,
+        progress_std=base.progress_std,
+        rework_lambda=base.rework_lambda,
+        rejection_lambda=base.rejection_lambda,
+        misuse_lambda=base.misuse_lambda,
+        engagement_mean=base.engagement_mean,
+        engagement_std=base.engagement_std,
+        accept_threshold=base.accept_threshold,
+        identity_label=label,
+    )
+
+
+STATIC_HONEST = _with_label([
     0.75,   # progress_mean: midpoint of [0.5, 1.0]
     0.15,   # progress_std
     0.0,    # rework_lambda
@@ -49,10 +72,10 @@ STATIC_HONEST = Policy.from_vector([
     0.55,   # engagement_mean: midpoint of [0.3, 0.8]
     0.15,   # engagement_std
     -0.9,   # accept_threshold: accept almost everything
-])
+], label="honest")
 
 
-STATIC_TOXIC = Policy.from_vector([
+STATIC_TOXIC = _with_label([
     -0.15,  # progress_mean: midpoint of [-0.5, 0.2]
     0.20,   # progress_std
     2.5,    # rework_lambda: Poisson(2.5)
@@ -61,7 +84,7 @@ STATIC_TOXIC = Policy.from_vector([
     -0.50,  # engagement_mean: midpoint of [-0.8, -0.2]
     0.15,   # engagement_std
     -0.5,   # accept_threshold: lower than honest, some self-rejection
-])
+], label="blatant")
 
 
 @dataclass(frozen=True)
@@ -103,6 +126,29 @@ def run_population_episode(
     proxy: ProxyComputer | None = None,
     seed: int = 0,
 ) -> EpisodeReport:
+    """Convenience wrapper that returns just the report.
+
+    For the accepted interactions (needed for downstream calibration-
+    anchor scoring), use ``run_population_episode_with_interactions``.
+    """
+    report, _ = run_population_episode_with_interactions(
+        baseline,
+        n_interactions=n_interactions,
+        payoff_config=payoff_config,
+        proxy=proxy,
+        seed=seed,
+    )
+    return report
+
+
+def run_population_episode_with_interactions(
+    baseline: StaticBaseline,
+    *,
+    n_interactions: int,
+    payoff_config: PayoffConfig,
+    proxy: ProxyComputer | None = None,
+    seed: int = 0,
+) -> tuple[EpisodeReport, list[SoftInteraction]]:
     """Episode with each interaction drawn from one of `baseline.policies`.
 
     The policy is sampled per-interaction with probability proportional
@@ -129,6 +175,7 @@ def run_population_episode(
     accepted_p: list[float] = []
     v_hats: list[float] = []
     progresses: list[float] = []
+    accepted_interactions: list[SoftInteraction] = []
 
     for i in range(n_interactions):
         # Pick a policy from the weighted mixture.
@@ -149,10 +196,20 @@ def run_population_episode(
         if not accepted:
             continue
 
+        metadata: dict[str, str] = {}
+        if policy.identity_label:
+            metadata["agent_type"] = policy.identity_label
+
+        initiator_name = (
+            f"{policy.identity_label}_{i}"
+            if policy.identity_label
+            else f"static_{baseline.name}_{i}"
+        )
+
         interaction = SoftInteraction(
             interaction_id=_seeded_uuid(rng),
             timestamp=base_ts,
-            initiator=f"static_{baseline.name}_{i}",
+            initiator=initiator_name,
             counterparty="env",
             interaction_type=InteractionType.COLLABORATION,
             accepted=True,
@@ -163,9 +220,11 @@ def run_population_episode(
             counterparty_engagement_delta=obs.counterparty_engagement_delta,
             v_hat=v_hat,
             p=p,
+            metadata=metadata,
         )
         payoffs.append(engine.payoff_initiator(interaction))
         accepted_p.append(p)
+        accepted_interactions.append(interaction)
 
     n_accepted = len(payoffs)
     total_payoff = sum(payoffs)
@@ -174,7 +233,7 @@ def run_population_episode(
         total_payoff / n_interactions if n_interactions else 0.0
     )
     mean_p = sum(accepted_p) / n_accepted if accepted_p else 0.5
-    return EpisodeReport(
+    report = EpisodeReport(
         n_total=n_interactions,
         n_accepted=n_accepted,
         accept_rate=n_accepted / n_interactions if n_interactions else 0.0,
@@ -186,3 +245,4 @@ def run_population_episode(
         toxicity=1.0 - mean_p,
         mean_progress=sum(progresses) / len(progresses) if progresses else 0.0,
     )
+    return report, accepted_interactions

@@ -88,6 +88,30 @@ def run_episode(
 ) -> EpisodeReport:
     """Roll out a single episode against the given policy + lever config.
 
+    For the same parameters returned alongside the accepted interactions
+    (needed for downstream calibration-anchor scoring), use
+    ``run_episode_with_interactions``.
+    """
+    report, _ = run_episode_with_interactions(
+        policy,
+        n_interactions=n_interactions,
+        payoff_config=payoff_config,
+        proxy=proxy,
+        seed=seed,
+    )
+    return report
+
+
+def run_episode_with_interactions(
+    policy: Policy,
+    *,
+    n_interactions: int,
+    payoff_config: PayoffConfig,
+    proxy: ProxyComputer | None = None,
+    seed: int = 0,
+) -> tuple[EpisodeReport, list[SoftInteraction]]:
+    """Roll out a single episode against the given policy + lever config.
+
     Reproducible under ``seed``. The episode does *not* depend on
     fixture UUIDs (we generate our own via the seeded RNG), so this
     runner is fully deterministic.
@@ -102,6 +126,7 @@ def run_episode(
     v_hats: list[float] = []
     progresses: list[float] = []
 
+    accepted_interactions: list[SoftInteraction] = []
     for i in range(n_interactions):
         obs = policy.sample_observables(rng)
         progresses.append(obs.task_progress_delta)
@@ -112,10 +137,18 @@ def run_episode(
         if not accepted:
             continue
 
+        metadata: dict[str, str] = {}
+        if policy.identity_label:
+            metadata["agent_type"] = policy.identity_label
+
+        initiator_name = (
+            f"{policy.identity_label}_{i}" if policy.identity_label else f"adaptive_{i}"
+        )
+
         interaction = SoftInteraction(
             interaction_id=_seeded_uuid(rng),
             timestamp=base_ts,
-            initiator=f"adaptive_{i}",
+            initiator=initiator_name,
             counterparty="env",
             interaction_type=InteractionType.COLLABORATION,
             accepted=True,
@@ -126,9 +159,11 @@ def run_episode(
             counterparty_engagement_delta=obs.counterparty_engagement_delta,
             v_hat=v_hat,
             p=p,
+            metadata=metadata,
         )
         payoffs.append(engine.payoff_initiator(interaction))
         accepted_p.append(p)
+        accepted_interactions.append(interaction)
 
     n_accepted = len(payoffs)
     total_payoff = sum(payoffs)
@@ -137,7 +172,7 @@ def run_episode(
         total_payoff / n_interactions if n_interactions else 0.0
     )
     mean_p = sum(accepted_p) / n_accepted if accepted_p else 0.5
-    return EpisodeReport(
+    report = EpisodeReport(
         n_total=n_interactions,
         n_accepted=n_accepted,
         accept_rate=n_accepted / n_interactions if n_interactions else 0.0,
@@ -149,3 +184,4 @@ def run_episode(
         toxicity=1.0 - mean_p,
         mean_progress=sum(progresses) / len(progresses) if progresses else 0.0,
     )
+    return report, accepted_interactions

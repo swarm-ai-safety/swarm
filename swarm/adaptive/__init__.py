@@ -22,6 +22,7 @@ Out of scope (intentional, follow-ups):
     to converge).
 """
 
+from swarm.adaptive.calibration_anchor import JudgedReport, score_episode
 from swarm.adaptive.cem import (
     SIGMA_FLOOR_FRAC,
     CEMConfig,
@@ -29,7 +30,11 @@ from swarm.adaptive.cem import (
     CEMTrainingReport,
     train_cem,
 )
-from swarm.adaptive.episode import EpisodeReport, run_episode
+from swarm.adaptive.episode import (
+    EpisodeReport,
+    run_episode,
+    run_episode_with_interactions,
+)
 from swarm.adaptive.policy import PARAM_DIM, PARAM_NAMES, PARAM_SPEC, Policy
 from swarm.adaptive.static_baselines import (
     STATIC_BASELINES,
@@ -37,6 +42,7 @@ from swarm.adaptive.static_baselines import (
     STATIC_TOXIC,
     StaticBaseline,
     run_population_episode,
+    run_population_episode_with_interactions,
 )
 
 __all__ = [
@@ -44,6 +50,7 @@ __all__ = [
     "CEMIterationReport",
     "CEMTrainingReport",
     "EpisodeReport",
+    "JudgedReport",
     "PARAM_DIM",
     "PARAM_NAMES",
     "PARAM_SPEC",
@@ -54,6 +61,9 @@ __all__ = [
     "STATIC_TOXIC",
     "StaticBaseline",
     "run_episode",
+    "run_episode_with_interactions",
     "run_population_episode",
+    "run_population_episode_with_interactions",
+    "score_episode",
     "train_cem",
 ]

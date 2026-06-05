@@ -43,7 +43,18 @@ PARAM_DIM: int = len(PARAM_SPEC)
 
 @dataclass(frozen=True)
 class Policy:
-    """Bounded parameter vector for the generation policy."""
+    """Bounded parameter vector for the generation policy.
+
+    The optional ``identity_label`` is propagated to each interaction's
+    ``metadata["agent_type"]`` when the policy is used inside
+    ``run_episode``. Empty string (default) means the policy emits no
+    identity claim — which is the honest condition for the CEM-trained
+    adaptive policy, since it has no way to assert what it is.
+
+    Static baselines populate this field with their canonical category
+    (``honest``, ``blatant``, etc.) so the v3 calibration anchor's
+    target rules can fire.
+    """
 
     progress_mean: float
     progress_std: float
@@ -53,6 +64,7 @@ class Policy:
     engagement_mean: float
     engagement_std: float
     accept_threshold: float
+    identity_label: str = ""
 
     @classmethod
     def from_vector(cls, vec: Sequence[float]) -> "Policy":

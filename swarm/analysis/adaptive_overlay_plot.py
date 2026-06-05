@@ -96,6 +96,83 @@ def _collect_lines(
     return out
 
 
+def load_judged(path: str) -> dict[str, dict[float, dict[str, list[float]]]]:
+    """Read judged_summary.csv → {condition: {ρ: {metric: [per-seed values]}}}."""
+    out: dict[str, dict[float, dict[str, list[float]]]] = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(list))
+    )
+    with open(path) as f:
+        for row in csv.DictReader(f):
+            c = row["condition"]
+            rho = float(row["rho"])
+            out[c][rho]["proxy_toxicity"].append(float(row["proxy_toxicity"]))
+            out[c][rho]["judge_toxicity"].append(float(row["judge_toxicity"]))
+            out[c][rho]["gap"].append(float(row["proxy_judge_gap"]))
+            out[c][rho]["target_fire_pct"].append(
+                100.0 * int(row["n_target_rule_fired"]) / max(1, int(row["n_scored"]))
+            )
+    return {c: dict(d) for c, d in out.items()}
+
+
+def plot_judged_overlay(
+    judged_path: str,
+    output_path: str,
+    *,
+    title: str = "Calibration anchor (rubric v3) overlay — arm 2",
+) -> None:
+    """Three-panel plot: proxy toxicity, judge toxicity, target-fire %.
+
+    The target-fire % panel is the load-bearing diagnostic — it shows
+    where the v3 anchor was informative (~100%) vs uninformative (~0%)
+    per condition.
+    """
+    data = load_judged(judged_path)
+    fig, (ax_p, ax_j, ax_t) = plt.subplots(1, 3, figsize=(15, 5))
+
+    def _ms(by_rho: dict[float, dict[str, list[float]]], rhos: list[float], key: str) -> tuple[list[float], list[float]]:
+        means = [_mean_sd(by_rho[r][key])[0] for r in rhos]
+        stds = [_mean_sd(by_rho[r][key])[1] for r in rhos]
+        return means, stds
+
+    for cond in CONDITIONS:
+        if cond.name not in data:
+            continue
+        by_rho = data[cond.name]
+        rhos = sorted(by_rho.keys())
+
+        m, s = _ms(by_rho, rhos, "proxy_toxicity")
+        ax_p.errorbar(rhos, m, yerr=s, color=cond.color, marker=cond.marker,
+                      linestyle=cond.linestyle, label=cond.label,
+                      linewidth=2, markersize=7, capsize=3)
+        m, s = _ms(by_rho, rhos, "judge_toxicity")
+        ax_j.errorbar(rhos, m, yerr=s, color=cond.color, marker=cond.marker,
+                      linestyle=cond.linestyle, label=cond.label,
+                      linewidth=2, markersize=7, capsize=3)
+        m, s = _ms(by_rho, rhos, "target_fire_pct")
+        ax_t.errorbar(rhos, m, yerr=s, color=cond.color, marker=cond.marker,
+                      linestyle=cond.linestyle, label=cond.label,
+                      linewidth=2, markersize=7, capsize=3)
+
+    for ax, ylabel, title_panel in [
+        (ax_p, "proxy toxicity (E[1−p | accepted])", "Proxy"),
+        (ax_j, "judge toxicity (1 − mean v3 score)", "Judge (rubric v3)"),
+        (ax_t, "target-rule firing rate (%)", "Anchor informativeness"),
+    ]:
+        ax.set_xlabel("ρ (externality internalization)")
+        ax.set_ylabel(ylabel)
+        ax.set_title(title_panel)
+        ax.grid(True, alpha=0.3)
+    ax_p.set_ylim(-0.02, 0.75)
+    ax_j.set_ylim(-0.02, 1.0)
+    ax_t.set_ylim(-5, 105)
+    ax_p.legend(loc="upper right", fontsize=9)
+
+    fig.suptitle(title, fontsize=12)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=120, bbox_inches="tight")
+    plt.close(fig)
+
+
 def plot_overlay(
     adaptive_path: str,
     static_path: str,
