@@ -20,6 +20,7 @@ reciprocity use edge presence, not weight). Edges are easily produced from
 
 from __future__ import annotations
 
+import math
 import random
 from collections import defaultdict
 from dataclasses import dataclass, field
@@ -307,15 +308,24 @@ def density_pvalue(
     n_samples: int = 50,
     seed: int = 0,
 ) -> float:
-    """Empirical p-value that *any* subset of a degree-matched null graph
-    has internal density >= observed density of ``subset``.
+    """Empirical p-value that the *same nodes* in a degree-matched null
+    graph have internal density >= the observed density of ``subset``.
 
-    This is an upper bound on the size-matched p-value: we run Charikar
-    peeling on each null sample and compare against its globally densest
-    subgraph (any size), which is at least as dense as the best subgraph
-    of size ``|subset|``. Conservative for ranking — it never under-reports
-    significance — and avoids the cost of a size-conditioned search per
-    sample. Replace with a size-matched scan if that conservatism matters.
+    This is the right test for "is THIS coalition denser than chance".
+    The earlier implementation took the null's *globally densest*
+    subgraph (any size) and compared against that — a different
+    hypothesis ("does the null contain any dense subgraph anywhere?"),
+    which saturates at p≈1 whenever the null happens to produce any
+    small dense pocket. That bug killed AUC on the sk95 ROC benchmark's
+    threshold_dancing family (see beads-kwyf).
+
+    The configuration model preserves degree sequence, so a candidate
+    subset whose nodes have high observed degree will *also* have many
+    stubs in the null — but those stubs distribute randomly across all
+    nodes, so the expected number landing back inside the subset is
+    governed by the subset's degree-share of the total, not by the
+    subset's own internal-edge count. Real coalitions whose internal
+    edges far exceed degree-share expectation light up.
     """
     if not subset:
         return 1.0
@@ -324,9 +334,11 @@ def density_pvalue(
     hits = 0
     for i in range(n_samples):
         null = configuration_model_null(g, seed=seed + i)
-        # take densest subgraph of any size as upper bound
-        _, d = densest_subgraph(null)
-        if d >= observed_density:
+        # density on the SAME nodes in the null (correct subset-conditioned test)
+        live = subset & null.nodes
+        null_edges = null.induced_edge_count(live)
+        null_density = null_edges / max(1, len(live))
+        if null_density >= observed_density:
             hits += 1
     return (hits + 1) / (n_samples + 1)
 
@@ -348,6 +360,21 @@ class StructuralAnomaly:
     reciprocity_z: float
     modularity_label: Optional[str] = None
     pvalue: float = 1.0
+
+    @property
+    def edge_probability(self) -> float:
+        """Fraction of possible directed edges present within ``members``.
+
+        Scales density by max-possible (n*(n-1)), so a 5-node clique and a
+        43-node graph at 12% edge probability are correctly ordered (clique
+        first). Using raw ``density = edges/nodes`` for ranking favors large
+        dense communities over tight small cliques — exactly the failure
+        mode that gave threshold_dancing AUC < 0.5 before beads-kwyf.
+        """
+        n = len(self.members)
+        if n < 2:
+            return 0.0
+        return self.n_internal_edges / (n * (n - 1))
 
     @property
     def is_suspicious(self) -> bool:
@@ -413,3 +440,72 @@ def detect_structural_anomalies(
             )
         )
     return results
+
+
+def rank_aggregated_scores(
+    anomalies: Sequence[StructuralAnomaly],
+    nodes: Sequence[str],
+) -> Dict[str, float]:
+    """Per-node anomaly score in [0, 1] aggregated by signal rank.
+
+    Each anomaly is ranked across all candidates on four independent
+    signals: density, reciprocity_z, k_core, and -log10(pvalue+eps).
+    Its composite score is the mean percentile rank. Per-node score is
+    the max composite over anomalies containing that node.
+
+    Rationale (vs. the earlier multiplicative product): no single signal
+    can veto the others. A fooled p-value (the failure mode that killed
+    AUC on threshold_dancing in the sk95 benchmark) drops the pvalue
+    rank to ~0 but leaves density / reciprocity / coreness intact. See
+    beads-kwyf for the design discussion.
+    """
+    score_by_node = dict.fromkeys(nodes, 0.0)
+    if not anomalies:
+        return score_by_node
+
+    n = len(anomalies)
+    if n == 1:
+        # Single candidate: percentile rank is degenerate; fall back to
+        # a presence indicator so the lone anomaly still scores something.
+        a = anomalies[0]
+        composite = 1.0 if a.density > 0 else 0.0
+        for u in a.members:
+            score_by_node[u] = max(score_by_node[u], composite)
+        return score_by_node
+
+    def _ranks(values: List[float]) -> List[float]:
+        """Fractional ranks in [0, 1]; ties get average rank."""
+        order = sorted(range(n), key=lambda i: values[i])
+        ranks_out = [0.0] * n
+        i = 0
+        while i < n:
+            j = i
+            while j + 1 < n and values[order[j + 1]] == values[order[i]]:
+                j += 1
+            avg_rank = (i + j) / 2  # 0-indexed average
+            for k in range(i, j + 1):
+                ranks_out[order[k]] = avg_rank / max(1, n - 1)
+            i = j + 1
+        return ranks_out
+
+    eps = 1e-9
+    # Use edge_probability (in [0, 1]) rather than raw density: a small
+    # clique correctly outranks a large-but-sparse community. See the
+    # docstring on StructuralAnomaly.edge_probability for the failure
+    # mode this avoids.
+    density_r = _ranks([a.edge_probability for a in anomalies])
+    rec_r = _ranks([max(0.0, a.reciprocity_z) for a in anomalies])
+    # k-core normalized by anomaly size — coreness of 4 in a 5-clique is
+    # saturated (max possible), while coreness of 4 in a 50-node graph is
+    # weak.
+    core_r = _ranks([
+        a.k_core / max(1, len(a.members) - 1) for a in anomalies
+    ])
+    sig_r = _ranks([-math.log10(a.pvalue + eps) for a in anomalies])
+
+    for idx, a in enumerate(anomalies):
+        composite = (density_r[idx] + rec_r[idx] + core_r[idx] + sig_r[idx]) / 4.0
+        for u in a.members:
+            if composite > score_by_node[u]:
+                score_by_node[u] = composite
+    return score_by_node

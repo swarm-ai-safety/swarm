@@ -8,11 +8,14 @@ import pytest
 
 from swarm.metrics.graph_structural import (
     DiGraph,
+    StructuralAnomaly,
     densest_subgraph,
+    density_pvalue,
     detect_structural_anomalies,
     edges_from_interactions,
     k_core_decomposition,
     label_propagation,
+    rank_aggregated_scores,
     reciprocity_zscore,
 )
 from swarm.models.interaction import SoftInteraction
@@ -172,3 +175,79 @@ class TestEndToEndDetector:
         # should pass the combined density+reciprocity+pvalue gate.
         flagged = [a for a in anomalies if a.is_suspicious]
         assert len(flagged) == 0, f"unexpected false positives: {flagged}"
+
+
+class TestDensityPvalueSubsetConditioned:
+    def test_planted_clique_significant(self):
+        """A planted 5-clique should get a small p-value (high density on
+        SAME subset in null is rare)."""
+        rng = random.Random(0)
+        clique = [f"c{i}" for i in range(5)]
+        background = [f"b{i}" for i in range(40)]
+        edges = [(u, v, 1.0) for u in clique for v in clique if u != v]
+        for _ in range(150):
+            u, v = rng.sample(background, 2)
+            edges.append((u, v, 1.0))
+        g = DiGraph.from_edges(edges)
+        pval = density_pvalue(g, set(clique), n_samples=30, seed=1)
+        assert pval < 0.1
+
+    def test_arbitrary_subset_not_significant(self):
+        """A random 5-node subset of an Erdos-Renyi graph should NOT be
+        significant -- guards against the old global-densest bug where
+        any random subset got the same saturated p-value."""
+        rng = random.Random(2)
+        nodes = [f"n{i}" for i in range(45)]
+        edges = []
+        for _ in range(200):
+            u, v = rng.sample(nodes, 2)
+            edges.append((u, v, 1.0))
+        g = DiGraph.from_edges(edges)
+        arbitrary = set(rng.sample(nodes, 5))
+        pval = density_pvalue(g, arbitrary, n_samples=30, seed=3)
+        assert pval > 0.2
+
+
+class TestRankAggregatedScores:
+    def _anom(self, members, density=1.0, rec_z=0.0, k_core=1, pval=0.5):
+        return StructuralAnomaly(
+            members=set(members),
+            n_internal_edges=int(density * len(members)),
+            density=density,
+            k_core=k_core,
+            reciprocity=0.5,
+            reciprocity_z=rec_z,
+            pvalue=pval,
+        )
+
+    def test_empty_anomalies(self):
+        scores = rank_aggregated_scores([], ["a", "b"])
+        assert scores == {"a": 0.0, "b": 0.0}
+
+    def test_no_multiplicative_veto(self):
+        """The fix: a high-density, high-recip, high-core anomaly whose
+        p-value is saturated (~1.0) still gets a high composite score."""
+        anoms = [
+            self._anom(["a", "b", "c"], density=10.0, rec_z=8.0, k_core=5,
+                       pval=1.0),  # the threshold-dancer profile
+            self._anom(["d", "e", "f"], density=1.0, rec_z=0.1, k_core=1,
+                       pval=0.5),
+            self._anom(["g", "h", "i"], density=0.5, rec_z=0.0, k_core=1,
+                       pval=0.9),
+        ]
+        scores = rank_aggregated_scores(anoms, list("abcdefghi"))
+        # the high-signal anomaly should win on 3 of 4 ranks
+        assert scores["a"] > scores["d"]
+        assert scores["a"] > scores["g"]
+        # and should be ≥ 0.5 even with pvalue=1 (3/4 signals max-ranked)
+        assert scores["a"] >= 0.5
+
+    def test_per_node_max_over_anomalies(self):
+        anoms = [
+            self._anom(["a"], density=1.0, rec_z=1.0, k_core=1, pval=0.5),
+            self._anom(["a", "b"], density=5.0, rec_z=5.0, k_core=3, pval=0.1),
+        ]
+        scores = rank_aggregated_scores(anoms, ["a", "b"])
+        # a appears in both; b only in the higher-scoring one
+        assert scores["a"] == scores["b"]
+        assert scores["b"] > 0.5
