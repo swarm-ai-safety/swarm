@@ -263,10 +263,16 @@ def cmd_central(g: dict, args: list[str]) -> int:
     if "-n" in args:
         i = args.index("-n")
         if i + 1 < len(args):
+            raw = args[i + 1]
             try:
-                n_show = int(args[i + 1])
+                parsed = int(raw)
             except ValueError:
-                pass
+                print(f"warning: -n expected an integer, got {raw!r}; using default {n_show}", file=sys.stderr)
+            else:
+                if parsed < 1:
+                    print(f"warning: -n must be >= 1, got {parsed}; using default {n_show}", file=sys.stderr)
+                else:
+                    n_show = parsed
     ranked = [n for n in g["nodes"] if kind is None or n["kind"] == kind]
     # pagerank is written by build_kb_graph; fall back to indegree if absent
     # (e.g. an older cached graph json) so the command still does something.
