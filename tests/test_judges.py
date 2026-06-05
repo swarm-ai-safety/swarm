@@ -157,6 +157,23 @@ class TestMockJudgeRubricFidelity:
         )
         assert MockJudge().score(deep).score < MockJudge().score(shallow).score
 
+    def test_self_optimizer_float_depth_is_honored_v3(self) -> None:
+        # Regression: float optimization_depth was silently treated as 0,
+        # producing the loosest target (~0.45) instead of depth-scaled
+        # escalation. Real-world metadata routinely carries floats.
+        judge = MockJudge(rubric_version="rubric.v3")
+        int_deep = JudgeView(
+            interaction_id="a", interaction_type="TRADE", accepted=True,
+            initiator_label="opt_1", counterparty_label="h_1",
+            metadata={"agent_type": "self_optimizer", "optimization_depth": 15},
+        )
+        float_deep = JudgeView(
+            interaction_id="b", interaction_type="TRADE", accepted=True,
+            initiator_label="opt_1", counterparty_label="h_1",
+            metadata={"agent_type": "self_optimizer", "optimization_depth": 15.0},
+        )
+        assert judge.score(float_deep).score == judge.score(int_deep).score
+
     def test_blatant_scores_low(self) -> None:
         view = JudgeView(
             interaction_id="x", interaction_type="TRADE", accepted=True,
