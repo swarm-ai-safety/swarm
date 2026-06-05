@@ -139,17 +139,32 @@ external human-rater pass.
 
 ## Reproducibility
 
+The pilot used three local Ollama judges (`llama3.1:8b`, `qwen2.5:14b`,
+`mistral:7b`). The committed `JUDGE_SPECS` in
+`experiments/calibration_judge.py` only ships the `llama` entry by
+default, so reproducing requires either extending `JUDGE_SPECS` for
+your run or invoking `LLMJudge` directly. Sketch of the
+`JUDGE_SPECS` extension (drop into a local edit of
+`experiments/calibration_judge.py`):
+
+```python
+JUDGE_SPECS.update({
+    "qwen": {"provider": "ollama", "model": "qwen2.5:14b"},
+    "mistral": {"provider": "ollama", "model": "mistral:7b"},
+})
+```
+
+Then, from the repository root:
+
 ```bash
 # Judge run (3 judges × 82 items, ~10 min on local Ollama)
-cd /Users/raelisavitt/swarm-llm-judge
 JUDGE_MODEL_LLAMA=llama3.1:8b python -m experiments.calibration_judge \
     --judges llama qwen mistral \
     --scenario obfuscation --per-bin 20 --seed 42
 
 # Agreement analysis on the resulting judge_scores.csv
-cd /Users/raelisavitt/swarm-arm-c
 python -m experiments.calibration_agreement \
-    --scores /path/to/judge_scores.csv
+    --scores runs/<ts>_calibration_judge_seed42/judge_scores.csv
 ```
 
 Run artifacts (per-row scores, per-bin CSV, config + git rev) are in
