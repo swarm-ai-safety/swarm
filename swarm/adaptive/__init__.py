@@ -31,6 +31,13 @@ from swarm.adaptive.cem import (
 )
 from swarm.adaptive.episode import EpisodeReport, run_episode
 from swarm.adaptive.policy import PARAM_DIM, PARAM_NAMES, PARAM_SPEC, Policy
+from swarm.adaptive.static_baselines import (
+    STATIC_BASELINES,
+    STATIC_HONEST,
+    STATIC_TOXIC,
+    StaticBaseline,
+    run_population_episode,
+)
 
 __all__ = [
     "CEMConfig",
@@ -42,6 +49,11 @@ __all__ = [
     "PARAM_SPEC",
     "Policy",
     "SIGMA_FLOOR_FRAC",
+    "STATIC_BASELINES",
+    "STATIC_HONEST",
+    "STATIC_TOXIC",
+    "StaticBaseline",
     "run_episode",
+    "run_population_episode",
     "train_cem",
 ]
