@@ -6,18 +6,29 @@ and rationale. Backends:
 - `MockJudge`: deterministic, rubric-faithful, no network. Used in tests
   and for CI smoke-runs. Captures the signal-interpretation rules from
   rubric_v1.md so we can exercise the full pipeline without API keys.
-- `LLMJudge`: wraps an LLMConfig and calls a real model with the frozen
-  rubric. Used in actual data collection. NOT exercised in unit tests —
-  needs network + API keys.
+- `LLMJudge`: dataclass holding provider/model/key; dispatches to
+  `swarm.judges.llm_call` for a real synchronous one-shot scoring
+  call against Anthropic / an OpenAI-compatible endpoint / Ollama.
+  Used in actual data collection. The JSON-parse, retry, and dispatch
+  paths are unit-tested via an injectable `caller`; the real network
+  paths still need API keys (or a running Ollama).
 """
 
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+import re
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Protocol, runtime_checkable
+from typing import Callable, Optional, Protocol, runtime_checkable
 
+from swarm.judges.llm_call import (
+    LLMCallResult,
+    call_anthropic,
+    call_ollama,
+    call_openai_compatible,
+    call_with_retries,
+)
 from swarm.judges.views import JudgeView, assert_view_is_orthogonal
 
 RUBRIC_PATH = Path(__file__).parent / "rubric_v1.md"
@@ -41,7 +52,8 @@ class Judge(Protocol):
 
     name: str
 
-    def score(self, view: JudgeView) -> JudgeScore: ...
+    def score(self, view: JudgeView) -> JudgeScore:
+        """Return this judge's verdict for a single view."""
 
 
 def load_rubric() -> str:
@@ -129,17 +141,117 @@ class MockJudge:
         )
 
 
+JSON_FENCE_RE = re.compile(r"```(?:json)?\s*(\{.*?\})\s*```", re.DOTALL)
+
+
+def _iter_brace_objects(text: str) -> list[str]:
+    """Yield top-level `{...}` substrings with balanced braces, string-aware.
+
+    Unlike a flat regex, this tolerates nested objects (e.g.
+    ``{"score": 0.5, "evidence": {"agent_type": "honest"}}``) and braces
+    that appear inside string values. Scans for balanced brace spans,
+    skipping any brace inside a JSON string literal (respecting `\\` escapes).
+    """
+    objects: list[str] = []
+    depth = 0
+    start = -1
+    in_str = False
+    escape = False
+    for i, ch in enumerate(text):
+        if in_str:
+            if escape:
+                escape = False
+            elif ch == "\\":
+                escape = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "{":
+            if depth == 0:
+                start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start >= 0:
+                objects.append(text[start : i + 1])
+                start = -1
+    return objects
+
+
+def _extract_score(text: str) -> tuple[float, str]:
+    """Parse a rubric-shaped {score, rationale} response.
+
+    Real LLMs sometimes wrap JSON in markdown fences, add narration before
+    the object, or trail off after the closing brace. Try in order:
+      1. Direct json.loads.
+      2. Markdown fence ```json {...} ```.
+      3. Balanced `{...}` blocks that contain "score" (nested objects OK).
+
+    Raises ValueError if no usable score is found — better to surface the
+    parse failure than fabricate a midline default.
+    """
+    candidates: list[str] = []
+    stripped = text.strip()
+    candidates.append(stripped)
+
+    m = JSON_FENCE_RE.search(text)
+    if m:
+        candidates.append(m.group(1))
+
+    candidates.extend(obj for obj in _iter_brace_objects(text) if '"score"' in obj)
+
+    for candidate in candidates:
+        try:
+            obj = json.loads(candidate)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(obj, dict) or "score" not in obj:
+            continue
+        try:
+            score = float(obj["score"])
+        except (TypeError, ValueError):
+            continue
+        if not 0.0 <= score <= 1.0:
+            score = max(0.0, min(1.0, score))
+        rationale = str(obj.get("rationale", "")).strip()
+        return score, rationale
+
+    raise ValueError(
+        f"could not extract rubric-shaped {{score, rationale}} from response: {text[:200]!r}"
+    )
+
+
 @dataclass
 class LLMJudge:
-    """LLM-backed judge. Wraps an LLMConfig and the frozen rubric.
+    """LLM-backed judge. Calls a real provider with the frozen rubric.
 
     Intentionally minimal — does not subclass BaseLLMAgent. The judge call
     is a one-shot: rubric + payload → JSON response. Temperature is forced
     to 0 for reproducibility per the rubric's "Determinism" section.
+
+    Providers (matches the calibration pre-reg's requirement of three
+    independent judges):
+      - "anthropic" → call_anthropic   (Claude)
+      - "openai" → call_openai_compatible
+      - "openrouter" / "groq" / "together" / "deepseek" → call_openai_compatible
+      - "ollama" → call_ollama  (local Llama-family)
+
+    The `caller` field is for tests — injecting a fake call function lets
+    us exercise the JSON-parsing + retry path without network.
     """
 
     name: str
-    config: Any  # LLMConfig — typed loosely to avoid pulling in agent deps at import
+    provider: str = "anthropic"
+    model: str = "claude-sonnet-4-20250514"
+    api_key: Optional[str] = None
+    base_url: Optional[str] = None
+    temperature: float = 0.0
+    max_tokens: int = 1024
+    timeout: float = 60.0
+    max_retries: int = 3
+    caller: Optional[Callable[[str], LLMCallResult]] = field(default=None, repr=False)
 
     def _build_prompt(self, view: JudgeView) -> str:
         payload = view.to_judge_payload()
@@ -156,13 +268,60 @@ class LLMJudge:
             "===== OUTPUT =====\n"
         )
 
+    def _dispatch(self, prompt: str) -> LLMCallResult:
+        if self.caller is not None:
+            return self.caller(prompt)
+        p = self.provider.lower()
+        if p == "anthropic":
+            return call_anthropic(
+                model=self.model,
+                prompt=prompt,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                timeout=self.timeout,
+                api_key=self.api_key,
+            )
+        if p in {"openai", "openrouter", "groq", "together", "deepseek"}:
+            return call_openai_compatible(
+                model=self.model,
+                prompt=prompt,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                timeout=self.timeout,
+                api_key=self.api_key,
+                base_url=self.base_url,
+                provider=p,
+            )
+        if p == "ollama":
+            return call_ollama(
+                model=self.model,
+                prompt=prompt,
+                max_tokens=self.max_tokens,
+                temperature=self.temperature,
+                timeout=self.timeout,
+                base_url=self.base_url,
+            )
+        raise ValueError(f"unsupported provider: {self.provider!r}")
+
     def score(self, view: JudgeView) -> JudgeScore:
-        # Real implementation goes here when the LLM call path is wired up.
-        # For now: explicitly not implemented so tests + CI use MockJudge
-        # and downstream callers get a clear error if they try to use this
-        # backend without the network/credentials path being ready.
-        raise NotImplementedError(
-            "LLMJudge.score requires the LLM call path. Wire up the "
-            "Anthropic/OpenAI/Ollama client call (see swarm/agents/llm_agent.py "
-            "for reference) and JSON parsing before using this backend."
+        prompt = self._build_prompt(view)
+        result = call_with_retries(
+            lambda: self._dispatch(prompt),
+            max_retries=self.max_retries,
+        )
+        try:
+            score, rationale = _extract_score(result.text)
+        except ValueError as err:
+            # Surface parse failures with the interaction id so the run
+            # log can show which item the rubric failed on.
+            raise ValueError(
+                f"{self.name}: failed to parse response for interaction "
+                f"{view.interaction_id}: {err}"
+            ) from err
+        return JudgeScore(
+            interaction_id=view.interaction_id,
+            judge_name=self.name,
+            rubric_version=RUBRIC_VERSION,
+            score=score,
+            rationale=rationale,
         )

@@ -4,7 +4,10 @@ Pre-registration: docs/research/calibration-prereg.md arm B.
 
 Default backend is `mock` (no network, deterministic) so the pipeline
 can run in CI and on smoke checks. Real judges (`claude`, `gpt4o_mini`,
-`llama`) plug in once `LLMJudge.score` is wired to the LLM call path.
+`llama`) dispatch via `LLMJudge` to Anthropic / an OpenAI-compatible
+endpoint / Ollama; they need credentials in the corresponding env vars
+(`ANTHROPIC_API_KEY`, `OPENAI_API_KEY`) and, for `llama`, a running
+Ollama daemon.
 
 Usage:
     python -m experiments.calibration_judge \
@@ -25,6 +28,7 @@ import argparse
 import csv
 import hashlib
 import json
+import os
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -34,6 +38,7 @@ from swarm.judges import (
     RUBRIC_PATH,
     RUBRIC_VERSION,
     Judge,
+    LLMJudge,
     MockJudge,
     make_view,
     stratified_sample,
@@ -70,17 +75,42 @@ def _load_interactions(scenario: str, seed: int) -> list:
     raise ValueError(f"unknown scenario: {scenario}")
 
 
-def _build_judges(names: list[str]) -> list[Judge]:
+# Built-in judge specs. Provider + default model. Caller can override
+# the model via JUDGE_MODEL_<NAME> env var.
+JUDGE_SPECS: dict[str, dict[str, str]] = {
+    "mock": {"provider": "mock"},
+    "claude": {"provider": "anthropic", "model": "claude-sonnet-4-20250514"},
+    "gpt4o_mini": {"provider": "openai", "model": "gpt-4o-mini"},
+    "llama": {"provider": "ollama", "model": "llama3.1"},
+}
+
+
+def _build_judges(names: list[str]) -> tuple[list[Judge], dict[str, dict[str, str]]]:
+    """Build judge backends and return the resolved provider/model per judge.
+
+    The resolved map is persisted in config.json so a run is reproducible
+    from its artifacts: two runs both labelled `gpt4o_mini` but pointed at
+    different models via `JUDGE_MODEL_GPT4O_MINI` are now distinguishable.
+    """
     judges: list[Judge] = []
+    resolved: dict[str, dict[str, str]] = {}
     for name in names:
-        if name == "mock":
-            judges.append(MockJudge())
-        else:
-            raise NotImplementedError(
-                f"judge backend '{name}' requires wiring up LLMJudge.score "
-                "(see swarm/judges/judge.py). Only 'mock' is available right now."
+        if name not in JUDGE_SPECS:
+            raise ValueError(
+                f"unknown judge '{name}'. Known: {sorted(JUDGE_SPECS)}. "
+                "To add a judge, extend JUDGE_SPECS or use LLMJudge directly."
             )
-    return judges
+        spec = JUDGE_SPECS[name]
+        if spec["provider"] == "mock":
+            judges.append(MockJudge())
+            resolved[name] = {"provider": "mock"}
+            continue
+        model = os.environ.get(f"JUDGE_MODEL_{name.upper()}", spec.get("model", ""))
+        if not model:
+            raise ValueError(f"judge '{name}' has no model configured")
+        judges.append(LLMJudge(name=name, provider=spec["provider"], model=model))
+        resolved[name] = {"provider": spec["provider"], "model": model}
+    return judges, resolved
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -95,7 +125,11 @@ def main(argv: list[str] | None = None) -> int:
         "--judges",
         nargs="+",
         default=["mock"],
-        help="Judge backends to run (mock only until LLMJudge is wired up)",
+        help=(
+            "Judge backends to run. `mock` is deterministic and needs no "
+            "credentials; `claude` / `gpt4o_mini` / `llama` need API keys "
+            "(or a running Ollama for `llama`)."
+        ),
     )
     parser.add_argument(
         "--per-bin",
@@ -114,7 +148,7 @@ def main(argv: list[str] | None = None) -> int:
 
     interactions = _load_interactions(args.scenario, args.seed)
     sample = stratified_sample(interactions, per_bin=args.per_bin, seed=args.seed)
-    judges = _build_judges(args.judges)
+    judges, judge_models = _build_judges(args.judges)
 
     ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     run_dir = args.runs_dir / f"{ts}_calibration_judge_seed{args.seed}"
@@ -125,6 +159,9 @@ def main(argv: list[str] | None = None) -> int:
         "git_rev": _git_rev(),
         "scenario": args.scenario,
         "judges": args.judges,
+        # Resolved provider + model per judge so the run is reproducible from
+        # config.json even when JUDGE_MODEL_<NAME> overrides the default.
+        "judge_models": judge_models,
         "per_bin": args.per_bin,
         "seed": args.seed,
         "rubric_version": RUBRIC_VERSION,
