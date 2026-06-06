@@ -22,6 +22,13 @@ Architecture:
     SoftInteraction -> EventLog (incl. ATTESTATION_SUBMITTED) -> metrics
 """
 
+from swarm.bridges.agentveil.client import (
+    AttestationReceipt,
+    AVPClient,
+    DIDDocument,
+    ReputationSnapshot,
+    TrustDecision,
+)
 from swarm.bridges.agentveil.config import AgentVeilConfig
 from swarm.bridges.agentveil.events import (
     AgentVeilEvent,
@@ -32,10 +39,15 @@ from swarm.bridges.agentveil.events import (
 )
 
 __all__ = [
+    "AttestationReceipt",
+    "AttestationEvent",
     "AgentVeilConfig",
     "AgentVeilEvent",
     "AgentVeilEventType",
-    "AttestationEvent",
+    "AVPClient",
+    "DIDDocument",
+    "ReputationSnapshot",
     "ReputationSnapshotEvent",
+    "TrustDecision",
     "TrustDecisionEvent",
 ]
