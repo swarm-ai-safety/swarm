@@ -55,14 +55,23 @@ class TestROCAUC:
 
 class TestDetectorAdapters:
     @pytest.mark.parametrize("name", list(DETECTORS))
-    def test_returns_score_per_node(self, name):
+    def test_returns_detector_output(self, name):
         s = generate_collusion_ring(n_agents=20, ring_size=3, seed=4)
-        scores = DETECTORS[name](s)
-        # every node should appear in the returned scores dict
-        assert set(scores) == set(s.nodes)
-        # scores should be in [0, 1] (loose check)
-        for v in scores.values():
-            assert 0.0 <= v <= 1.1  # allow slight overshoot from raw similarity
+        out = DETECTORS[name](s)
+        # every node appears in scores and native_flags
+        assert set(out.scores) == set(s.nodes)
+        assert set(out.native_flags) == set(s.nodes)
+        # scores in [0, 1] (loose; allow slight overshoot from raw similarity)
+        for v in out.scores.values():
+            assert 0.0 <= v <= 1.1
+        # native_flags are booleans
+        for v in out.native_flags.values():
+            assert isinstance(v, bool)
+        # clusters are sets of node ids drawn from s.nodes
+        node_set = set(s.nodes)
+        for c in out.clusters:
+            assert isinstance(c, set)
+            assert c.issubset(node_set)
 
 
 class TestRunFamily:
@@ -80,27 +89,51 @@ class TestRunFamily:
 
 
 class TestDecisionRule:
-    def test_dominance_recommends_wiring(self):
+    def _rr(self, det, auc_mean, auc_lo, auc_hi, f1_mean=float("nan"),
+            f1_lo=float("nan"), f1_hi=float("nan")):
         from experiments.graph_structural_roc import RunResult
+        return RunResult(
+            family="f1", detector=det,
+            auc_mean=auc_mean, auc_lo=auc_lo, auc_hi=auc_hi,
+            f1_mean=f1_mean, f1_lo=f1_lo, f1_hi=f1_hi,
+            n_replicates=10,
+        )
+
+    def test_auc_dominance_recommends_wiring(self):
         rs = [
-            RunResult("f1", "graph_structural", 0.9, 0.85, 0.95, 10, []),
-            RunResult("f1", "identity_jaccard", 0.6, 0.55, 0.65, 10, []),
-            RunResult("f1", "reputation_mutual", 0.5, 0.45, 0.55, 10, []),
-            RunResult("f1", "collusion_score", 0.7, 0.65, 0.75, 10, []),
+            self._rr("graph_structural", 0.9, 0.85, 0.95),
+            self._rr("identity_jaccard", 0.6, 0.55, 0.65),
+            self._rr("reputation_mutual", 0.5, 0.45, 0.55),
+            self._rr("collusion_score", 0.7, 0.65, 0.75),
         ]
         verdict = apply_decision_rule(rs)
+        assert "VERDICT (AUC)" in verdict
         assert "strictly dominates" in verdict
 
     def test_tie_recommends_secondary_metric(self):
-        from experiments.graph_structural_roc import RunResult
         rs = [
-            RunResult("f1", "graph_structural", 0.7, 0.65, 0.75, 10, []),
-            RunResult("f1", "identity_jaccard", 0.7, 0.65, 0.75, 10, []),
-            RunResult("f1", "reputation_mutual", 0.7, 0.65, 0.75, 10, []),
-            RunResult("f1", "collusion_score", 0.7, 0.65, 0.75, 10, []),
+            self._rr("graph_structural", 0.7, 0.65, 0.75),
+            self._rr("identity_jaccard", 0.7, 0.65, 0.75),
+            self._rr("reputation_mutual", 0.7, 0.65, 0.75),
+            self._rr("collusion_score", 0.7, 0.65, 0.75),
         ]
         verdict = apply_decision_rule(rs)
         assert "no governance wiring" in verdict.lower()
+
+    def test_f1_dominance_suggests_default_on(self):
+        rs = [
+            self._rr("graph_structural", 0.7, 0.65, 0.75,
+                     f1_mean=0.9, f1_lo=0.85, f1_hi=0.95),
+            self._rr("identity_jaccard", 0.7, 0.65, 0.75,
+                     f1_mean=0.5, f1_lo=0.45, f1_hi=0.55),
+            self._rr("reputation_mutual", 0.7, 0.65, 0.75,
+                     f1_mean=0.5, f1_lo=0.45, f1_hi=0.55),
+            self._rr("collusion_score", 0.7, 0.65, 0.75,
+                     f1_mean=0.5, f1_lo=0.45, f1_hi=0.55),
+        ]
+        verdict = apply_decision_rule(rs)
+        assert "VERDICT (F1@native)" in verdict
+        assert "default ON" in verdict
 
 
 @pytest.mark.slow
@@ -109,3 +142,57 @@ class TestSweep:
         results = run_sweep(replicates=2, seed_base=0)
         # 8 families * 4 detectors = 32 results
         assert len(results) == 8 * 4
+
+
+from experiments.graph_structural_roc import (  # noqa: E402
+    hungarian_recovery,
+    precision_recall_f1,
+)
+
+
+class TestPrecisionRecallF1:
+    def test_perfect(self):
+        flags = {"a": True, "b": True, "c": False, "d": False}
+        p, r, f1 = precision_recall_f1(flags, {"a", "b"}, list(flags))
+        assert (p, r, f1) == (1.0, 1.0, 1.0)
+
+    def test_all_false_positive(self):
+        flags = {"a": True, "b": True, "c": False, "d": False}
+        p, r, f1 = precision_recall_f1(flags, {"c", "d"}, list(flags))
+        # 0 TP, 2 FP, 2 FN -> precision 0, recall 0, f1 0
+        assert (p, r, f1) == (0.0, 0.0, 0.0)
+
+    def test_benign_returns_nan(self):
+        flags = {"a": False, "b": False}
+        p, r, f1 = precision_recall_f1(flags, set(), list(flags))
+        import math as _m
+        assert _m.isnan(p) and _m.isnan(r) and _m.isnan(f1)
+
+
+class TestHungarianRecovery:
+    def test_perfect_recovery(self):
+        planted = [{"a", "b", "c"}]
+        returned = [{"a", "b", "c"}]
+        assert hungarian_recovery(returned, planted) == 1.0
+
+    def test_partial_recovery(self):
+        planted = [{"a", "b", "c", "d"}]
+        returned = [{"a", "b"}]  # half
+        # Jaccard(2/4) = 0.5
+        assert hungarian_recovery(returned, planted) == pytest.approx(0.5)
+
+    def test_no_returned_means_zero(self):
+        assert hungarian_recovery([], [{"a", "b"}]) == 0.0
+
+    def test_benign_returns_nan(self):
+        import math as _m
+        assert _m.isnan(hungarian_recovery([{"a"}], []))
+
+    def test_greedy_assignment_multi_coalition(self):
+        # Two planted coalitions; returned has a perfect and a partial match
+        planted = [{"a", "b", "c"}, {"x", "y", "z"}]
+        returned = [{"x", "y", "z"}, {"a", "b"}]
+        # planted[0] best matches returned[1] (J=2/3); planted[1] best matches
+        # returned[0] (J=1.0). Greedy: assigns J=1.0 first, then J=2/3.
+        # Mean = (1.0 + 2/3) / 2 = 5/6
+        assert hungarian_recovery(returned, planted) == pytest.approx(5/6)
