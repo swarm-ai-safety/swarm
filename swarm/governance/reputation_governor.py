@@ -99,7 +99,7 @@ class ReputationGovernor:
         self,
         threshold: float = 0.3,
         *,
-        structural_enabled: bool = False,
+        structural_enabled: bool = True,
         structural_seed: int = 0,
         structural_null_samples: int = 50,
     ) -> Dict[str, str]:
@@ -112,14 +112,21 @@ class ReputationGovernor:
 
         Args:
             threshold: Threshold for monitor/normal boundary (default 0.3)
-            structural_enabled: When True, also flag agents that appear in
-                a :func:`detect_structural_coalitions` result whose
+            structural_enabled: When True (the default since beads-2iok),
+                also flag agents that appear in a
+                :func:`detect_structural_coalitions` result whose
                 ``is_suspicious`` gate fires (pre-registered combination:
                 size ≥ 3, density ≥ 1, reciprocity_z ≥ 2, p ≤ 0.05). Such
                 agents get bumped to at least "monitor" — or stay at
                 "restrict" if their reputation score is also below the
-                restrict threshold. Default OFF per beads-4ae5 scope:
-                this is the new wiring, flip to ON after canary.
+                restrict threshold. The flip to default ON was driven by
+                the sk95/5cdk F1@native finding (PR #501): every
+                threshold detector is at F1=0.000 across every
+                adversarial family, while graph_structural strictly
+                dominates F1@native on 4 families (collusion_ring_5/8 +
+                both threshold_dancing variants). Pass
+                ``structural_enabled=False`` to recover the pre-2iok
+                pure-reputation behavior.
             structural_seed: Seed for the configuration-model null sampler.
             structural_null_samples: Number of null samples per anomaly.
 
