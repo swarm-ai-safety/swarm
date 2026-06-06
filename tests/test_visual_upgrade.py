@@ -171,6 +171,39 @@ class TestTimeseries:
             data, toxicity_key="toxicity_rate", welfare_key="total_welfare", events=events)
         plt.close(fig)
 
+    def test_plot_selection_geometry(self):
+        from swarm.analysis.timeseries import plot_selection_geometry
+        n = 20
+        data = {
+            "epochs": list(range(n)),
+            "selection_saturation": np.linspace(0.2, 0.95, n).tolist(),
+            "baseline_harm": (np.ones(n) * 0.4).tolist(),
+            "selection_credit": np.linspace(0.05, 0.25, n).tolist(),
+        }
+        events = [{"epoch": 10, "label": "policy change"}]
+        fig, (ax_sat, ax_decomp) = plot_selection_geometry(data, events=events)
+        assert fig is not None
+        # Saturation axis is bounded to [0, ~1].
+        lo, hi = ax_sat.get_ylim()
+        assert lo <= 0.0 and hi <= 1.1
+        # Decomposition panel has two lines (baseline + negated credit).
+        assert len(ax_decomp.get_lines()) >= 2
+        plt.close(fig)
+
+    def test_plot_selection_geometry_multi_seed(self):
+        from swarm.analysis.timeseries import plot_selection_geometry
+        n = 15
+        seeds = 4
+        data = {
+            "epochs": list(range(n)),
+            "selection_saturation": np.random.rand(seeds, n),
+            "baseline_harm": 0.3 + np.random.rand(seeds, n) * 0.1,
+            "selection_credit": np.random.rand(seeds, n) * 0.2,
+        }
+        fig, _ = plot_selection_geometry(data)
+        assert fig is not None
+        plt.close(fig)
+
     def test_plot_bilevel_loop(self):
         from swarm.analysis.timeseries import plot_bilevel_loop
         planner = {"epochs": list(range(10)), "tax_rate": np.random.rand(10).tolist()}
