@@ -37,6 +37,7 @@ from swarm.bridges.agentveil.events import (
     ReputationSnapshotEvent,
     TrustDecisionEvent,
 )
+from swarm.bridges.agentveil.mapper import AVPMapper
 from swarm.bridges.agentveil.policy import AVPPolicy, PolicyDecision, PolicyResult
 
 __all__ = [
@@ -51,6 +52,7 @@ __all__ = [
     "ReputationSnapshotEvent",
     "TrustDecision",
     "TrustDecisionEvent",
+    "AVPMapper",
     "AVPPolicy",
     "PolicyDecision",
     "PolicyResult",
