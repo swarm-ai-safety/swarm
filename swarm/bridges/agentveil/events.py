@@ -10,15 +10,57 @@ the JSONL log fully replays the AVP-visible portion of a run.
 
 from __future__ import annotations
 
+import logging
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, Optional
 
+logger = logging.getLogger(__name__)
+
 
 def _utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _parse_timestamp(raw: Any) -> datetime:
+    """Tolerantly parse a serialized timestamp.
+
+    Accepts: ``datetime`` (naive treated as UTC), ISO-8601 strings with
+    or without a trailing ``Z`` (Python 3.10's ``fromisoformat`` does
+    not accept ``Z``), and missing/``None`` values (which fall back to
+    ``_utcnow()`` — evaluated lazily so the call is skipped on the
+    common roundtrip path).
+    """
+    if raw is None:
+        return _utcnow()
+    if isinstance(raw, datetime):
+        return raw if raw.tzinfo is not None else raw.replace(tzinfo=timezone.utc)
+    if isinstance(raw, str):
+        normalized = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
+        try:
+            parsed = datetime.fromisoformat(normalized)
+        except ValueError:
+            logger.warning("agentveil: unparseable timestamp %r; defaulting to now", raw)
+            return _utcnow()
+        return parsed if parsed.tzinfo is not None else parsed.replace(tzinfo=timezone.utc)
+    logger.warning("agentveil: timestamp of unexpected type %s; defaulting to now", type(raw).__name__)
+    return _utcnow()
+
+
+def _parse_event_type(raw: Any) -> AgentVeilEventType:
+    """Tolerantly parse an event_type, falling back to GENERIC on miss."""
+    if isinstance(raw, AgentVeilEventType):
+        return raw
+    if raw is None:
+        logger.warning("agentveil: missing event_type; defaulting to GENERIC")
+        return AgentVeilEventType.GENERIC
+    try:
+        return AgentVeilEventType(raw)
+    except ValueError:
+        logger.warning("agentveil: unknown event_type %r; defaulting to GENERIC", raw)
+        return AgentVeilEventType.GENERIC
 
 
 class AgentVeilEventType(Enum):
@@ -67,17 +109,15 @@ class AgentVeilEvent:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> AgentVeilEvent:
-        ts = data.get("timestamp", _utcnow())
-        if isinstance(ts, str):
-            ts = datetime.fromisoformat(ts)
+        step_raw = data.get("step", 0)
         return cls(
-            event_id=data.get("event_id", str(uuid.uuid4())),
-            event_type=AgentVeilEventType(data["event_type"]),
-            timestamp=ts,
+            event_id=data.get("event_id") or str(uuid.uuid4()),
+            event_type=_parse_event_type(data.get("event_type")),
+            timestamp=_parse_timestamp(data.get("timestamp")),
             subject_did=data.get("subject_did", ""),
             actor_did=data.get("actor_did", ""),
-            step=int(data.get("step", 0)),
-            payload=data.get("payload", {}),
+            step=int(step_raw) if step_raw is not None else 0,
+            payload=data.get("payload", {}) or {},
         )
 
 

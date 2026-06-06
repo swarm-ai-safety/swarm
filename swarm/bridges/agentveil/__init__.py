@@ -6,15 +6,20 @@ and sybil-resistant admission control on top of SWARM's probabilistic
 labels.
 
 See ``docs/bridges/agentveil.md`` for the full plan and failure-mode
-catalog. v1 is mock-only: live registry HTTP, write-back attestations,
-and the dispute/arbitration flow land in v2+.
+catalog. This PR ships only the v1 skeleton: ``config.py`` and
+``events.py``. ``client.py``, ``mapper.py``, ``policy.py``, and the
+``AgentVeilBridge`` orchestrator land in follow-up PRs (issues
+``wzo9`` / ``69rq`` / ``sdgo`` / ``whog``); live registry HTTP,
+write-back attestations, and the dispute/arbitration flow land in v2+.
 
-Architecture:
+Planned architecture (target shape — most symbols below are not yet
+exported from this package):
+
     AVP Registry (agentveil.dev)        [live mode only; v2]
         |
-    AVPClient (client.py)               [v1: mock_mode only]
+    AVPClient (client.py)               [v1: mock_mode only — TBD]
         |
-    AgentVeilBridge._process_event()
+    AgentVeilBridge._process_event()    [TBD]
         |   AVPPolicy (admission gate, rate limiter, write-back gate)
         |
     AVPMapper -> ProxyObservables -> ProxyComputer -> (v_hat, p)
