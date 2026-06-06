@@ -213,6 +213,11 @@ class AVPClient:
         if did in self._fixtures:
             fixture = self._fixtures[did]
             tier = fixture.get("tier", "newcomer")
+            # Fixtures are the source of deterministic replay data, but they
+            # must not bypass the tier whitelist — a typo like "trustd" would
+            # otherwise produce TrustDecision payloads outside the documented
+            # {newcomer, basic, trusted, elite} set.
+            self._validate_tier(tier)
             allowed = fixture.get("allowed", self._tier_meets_min(tier, min_tier))
             risk_level = fixture.get("risk_level", self._tier_to_risk_level(tier))
             confidence = fixture.get("confidence", 0.8)
@@ -348,16 +353,24 @@ class AVPClient:
         if outcome_sign not in (+1, -1):
             raise ValueError(f"outcome_sign must be +1 or -1; got {outcome_sign}")
 
+    # SHA-256 hex digests are always 64 characters. The E3 contract is that
+    # callers pass `SHA-256(interaction_id || outcome_sign)`, so anything
+    # shorter or longer than 64 hex chars is malformed and must be rejected
+    # — otherwise a string like "deadbeef" (8 chars) or a raw hex-encoded
+    # payload would silently get an attestation receipt.
+    _SHA256_HEX_LEN = 64
+
     @staticmethod
     def _is_valid_hex(s: str) -> bool:
-        """Check if string is valid hex (lowercase, even length)."""
-        if not isinstance(s, str) or len(s) == 0:
+        """Check if string is a valid lowercase SHA-256 hex digest."""
+        if not isinstance(s, str) or len(s) != AVPClient._SHA256_HEX_LEN:
             return False
         try:
             int(s, 16)
-            return True
         except ValueError:
             return False
+        # E3: enforce the canonical lowercase form so hex matching is total.
+        return s == s.lower()
 
     @staticmethod
     def _deterministic_pubkey(did: str) -> str:
