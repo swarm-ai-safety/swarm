@@ -204,6 +204,38 @@ class TestTimeseries:
         assert fig is not None
         plt.close(fig)
 
+    def test_write_run_plots_creates_bundle(self, tmp_path):
+        from dataclasses import dataclass
+
+        from swarm.analysis.run_plots import write_run_plots
+
+        @dataclass
+        class FakeEpoch:
+            epoch: int
+            toxicity_rate: float
+            total_welfare: float
+            baseline_harm: float
+            selection_credit: float
+            selection_saturation: float
+
+        history = [
+            FakeEpoch(i, 0.4 - 0.01 * i, 1.0 + 0.1 * i,
+                      0.45, 0.01 * i, 0.1 + 0.05 * i)
+            for i in range(12)
+        ]
+        written = write_run_plots(history, tmp_path, scenario_id="unit-test")
+        assert len(written) == 2
+        names = {p.name for p in written}
+        assert names == {"toxicity_welfare.png", "selection_geometry.png"}
+        for p in written:
+            assert p.exists() and p.stat().st_size > 0
+
+    def test_write_run_plots_empty_history_noops(self, tmp_path):
+        from swarm.analysis.run_plots import write_run_plots
+        assert write_run_plots([], tmp_path) == []
+        # No plots dir created when there's nothing to plot.
+        assert not (tmp_path / "plots").exists()
+
     def test_plot_bilevel_loop(self):
         from swarm.analysis.timeseries import plot_bilevel_loop
         planner = {"epochs": list(range(10)), "tax_rate": np.random.rand(10).tolist()}

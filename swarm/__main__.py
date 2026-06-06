@@ -295,6 +295,26 @@ def cmd_run(args: argparse.Namespace) -> int:
             except Exception as exc:
                 print(f"Warning: Dolt export failed: {exc}")
 
+    # Optional standard plot bundle (toxicity/welfare + selection geometry).
+    if args.plots is not None:
+        if args.plots:
+            plots_dir = _safe_export_path(args.plots, "--plots")
+        elif args.export_json:
+            plots_dir = _safe_export_path(args.export_json, "--export-json").parent
+        elif args.export_csv:
+            plots_dir = _safe_export_path(args.export_csv, "--export-csv")
+        else:
+            seed = scenario.orchestrator_config.seed
+            plots_dir = Path("runs") / f"{scenario.scenario_id}_seed{seed}"
+
+        from swarm.analysis.run_plots import write_run_plots
+
+        written = write_run_plots(
+            metrics_history, plots_dir, scenario_id=scenario.scenario_id,
+        )
+        for p in written:
+            print(f"Plot: {p}")
+
     # Check success criteria
     if scenario.success_criteria and not args.quiet:
         _check_criteria(scenario.success_criteria, metrics_history)
@@ -709,6 +729,18 @@ def main() -> int:
         "--prompt-audit-include-system",
         action="store_true",
         help="Include full system prompt text in the audit log (more sensitive)",
+    )
+    run_parser.add_argument(
+        "--plots",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="DIR",
+        help=(
+            "Write the standard plot bundle (toxicity/welfare + selection "
+            "geometry) to DIR/plots/. With no argument, derives a default "
+            "from --export-json/--export-csv or runs/<scenario>_seed<seed>."
+        ),
     )
     run_parser.add_argument(
         "-q", "--quiet", action="store_true", help="Suppress progress output"
