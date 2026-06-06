@@ -173,6 +173,97 @@ class SoftMetrics:
 
         return avg_p_accepted - avg_p_rejected
 
+    def quality_correlation(self, interactions: List[SoftInteraction]) -> float:
+        """
+        Pearson correlation ρ(p, a) ∈ [-1, +1] between soft labels and
+        acceptance — the projection-normalized quality gap.
+
+        Derivation: Q = E[p|a=1] - E[p|a=0] = Cov(p,a)/Var(a). Cauchy-Schwarz
+        gives |Q| ≤ σ_p / √(αβ), so ρ(p,a) = Q · √(αβ) / σ_p ∈ [-1, +1].
+
+        Returns:
+            ρ ∈ [-1, +1]; 0.0 when Var(p) or Var(a) is zero
+            (no signal to correlate).
+        """
+        n = len(interactions)
+        if n < 2:
+            return 0.0
+
+        n_acc = sum(1 for i in interactions if i.accepted)
+        if n_acc == 0 or n_acc == n:
+            return 0.0  # Var(a) = 0
+
+        alpha = n_acc / n
+        mean_p = sum(i.p for i in interactions) / n
+        var_p = sum((i.p - mean_p) ** 2 for i in interactions) / n
+        if var_p == 0.0:
+            return 0.0  # Var(p) = 0
+
+        cov = sum((i.p - mean_p) * ((1.0 if i.accepted else 0.0) - alpha)
+                  for i in interactions) / n
+        return cov / math.sqrt(var_p * alpha * (1 - alpha))
+
+    def toxicity_decomposition(self, interactions: List[SoftInteraction]) -> dict:
+        """
+        Decompose toxicity into baseline harm minus selection credit:
+
+            T = (1 - E[p]) - β · Q
+
+        where β = P(rejected) and Q = quality gap. The baseline term
+        is a population property; the credit term is what governance
+        can move by improving selection.
+
+        Returns:
+            Dict with keys baseline_harm, selection_credit, toxicity,
+            and reconstruction_error (|T_direct - (baseline - credit)|,
+            should be ~0 modulo float).
+        """
+        if not interactions:
+            return {
+                "baseline_harm": 0.0,
+                "selection_credit": 0.0,
+                "toxicity": 0.0,
+                "reconstruction_error": 0.0,
+            }
+
+        n = len(interactions)
+        n_acc = sum(1 for i in interactions if i.accepted)
+        beta = (n - n_acc) / n
+        baseline = 1.0 - self.average_quality(interactions)
+        q = self.quality_gap(interactions)
+        credit = beta * q
+        tox_direct = self.toxicity_rate(interactions)
+        return {
+            "baseline_harm": baseline,
+            "selection_credit": credit,
+            "toxicity": tox_direct,
+            "reconstruction_error": abs(tox_direct - (baseline - credit)),
+        }
+
+    def selection_saturation(self, interactions: List[SoftInteraction]) -> float:
+        """
+        Fraction of the Cauchy-Schwarz bound on |Q| that is realized:
+
+            saturation = |Q| / (σ_p / √(αβ))  ∈ [0, 1]
+
+        Near 1 ⇒ the selection mechanism is already extracting all the
+        sorting signal the proxy carries; further toxicity reduction
+        requires a better proxy (larger σ_p), not a better policy.
+        Returns 0.0 when the bound is undefined (σ_p = 0 or α∈{0,1}).
+        """
+        n = len(interactions)
+        if n < 2:
+            return 0.0
+        n_acc = sum(1 for i in interactions if i.accepted)
+        if n_acc == 0 or n_acc == n:
+            return 0.0
+        sigma_p = self.quality_std(interactions)
+        if sigma_p == 0.0:
+            return 0.0
+        alpha = n_acc / n
+        bound = sigma_p / math.sqrt(alpha * (1 - alpha))
+        return abs(self.quality_gap(interactions)) / bound
+
     def participation_by_quality(
         self,
         interactions: List[SoftInteraction],

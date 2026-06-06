@@ -207,6 +207,77 @@ class TestQualityGap:
         assert metrics.quality_gap(interactions) == 0.0
 
 
+class TestProjectionDiagnostics:
+    """Tests for ρ(p,a), toxicity decomposition, and C-S saturation."""
+
+    def _mixed(self):
+        # 4 interactions: 2 accepted (high p), 2 rejected (low p) → positive Q
+        return [
+            SoftInteraction(p=0.9, accepted=True),
+            SoftInteraction(p=0.7, accepted=True),
+            SoftInteraction(p=0.3, accepted=False),
+            SoftInteraction(p=0.1, accepted=False),
+        ]
+
+    def test_correlation_in_unit_interval(self):
+        rho = SoftMetrics().quality_correlation(self._mixed())
+        assert -1.0 <= rho <= 1.0
+        assert rho > 0  # accepts have higher p than rejects
+
+    def test_correlation_degenerate(self):
+        m = SoftMetrics()
+        # All accepted ⇒ Var(a)=0 ⇒ ρ=0
+        assert m.quality_correlation(
+            [SoftInteraction(p=0.5, accepted=True) for _ in range(4)]
+        ) == 0.0
+        # All same p ⇒ Var(p)=0 ⇒ ρ=0
+        assert m.quality_correlation([
+            SoftInteraction(p=0.5, accepted=True),
+            SoftInteraction(p=0.5, accepted=False),
+        ]) == 0.0
+
+    def test_correlation_perfect_sorting(self):
+        # p is an affine function of a ⇒ |ρ| = 1
+        interactions = [
+            SoftInteraction(p=1.0, accepted=True),
+            SoftInteraction(p=1.0, accepted=True),
+            SoftInteraction(p=0.0, accepted=False),
+            SoftInteraction(p=0.0, accepted=False),
+        ]
+        rho = SoftMetrics().quality_correlation(interactions)
+        assert abs(rho - 1.0) < 1e-9
+
+    def test_toxicity_decomposition_reconstructs(self):
+        d = SoftMetrics().toxicity_decomposition(self._mixed())
+        # T = baseline_harm - selection_credit, up to float noise
+        assert d["reconstruction_error"] < 1e-9
+        assert d["baseline_harm"] > 0
+        assert d["selection_credit"] > 0  # good selection ⇒ positive credit
+
+    def test_saturation_in_unit_interval(self):
+        s = SoftMetrics().selection_saturation(self._mixed())
+        assert 0.0 <= s <= 1.0 + 1e-9
+
+    def test_saturation_one_at_perfect_sorting(self):
+        interactions = [
+            SoftInteraction(p=1.0, accepted=True),
+            SoftInteraction(p=0.0, accepted=False),
+        ]
+        s = SoftMetrics().selection_saturation(interactions)
+        assert abs(s - 1.0) < 1e-9
+
+    def test_reporter_emits_diagnostics(self):
+        summary = MetricsReporter().summary(self._mixed())
+        assert summary.quality_correlation > 0
+        assert summary.baseline_harm > 0
+        assert summary.selection_credit > 0
+        # Reporter's T = baseline - credit
+        assert abs(
+            summary.toxicity_soft - (summary.baseline_harm - summary.selection_credit)
+        ) < 1e-9
+        assert 0.0 <= summary.selection_saturation <= 1.0 + 1e-9
+
+
 class TestParticipationByQuality:
     """Tests for participation by quality."""
 
