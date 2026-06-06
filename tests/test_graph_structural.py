@@ -251,3 +251,69 @@ class TestRankAggregatedScores:
         # a appears in both; b only in the higher-scoring one
         assert scores["a"] == scores["b"]
         assert scores["b"] > 0.5
+
+
+class TestWeightedMetrics:
+    """Weight-aware metrics added in beads-f970."""
+
+    def test_induced_edge_weight_counts_sum(self):
+        g = DiGraph.from_edges([
+            ("a", "b", 3.0), ("b", "a", 5.0), ("a", "c", 2.0),
+        ])
+        assert g.induced_edge_weight({"a", "b"}) == pytest.approx(8.0)
+        # c is in the subset but only has incoming a->c (weight 2.0):
+        # induced_edge_weight counts directed edges with BOTH endpoints
+        # in subset, so a->c at weight 2 + a->b at weight 3 + b->a at 5 = 10
+        assert g.induced_edge_weight({"a", "b", "c"}) == pytest.approx(10.0)
+
+    def test_weighted_reciprocity_balanced_mutual(self):
+        # Equal weight in both directions -> reciprocity 1.0
+        g = DiGraph.from_edges([("a", "b", 5.0), ("b", "a", 5.0)])
+        assert g.weighted_reciprocity() == pytest.approx(1.0)
+
+    def test_weighted_reciprocity_imbalanced(self):
+        # Asymmetric: min/max = 1/5
+        g = DiGraph.from_edges([("a", "b", 1.0), ("b", "a", 5.0)])
+        assert g.weighted_reciprocity() == pytest.approx(0.2)
+
+    def test_weighted_reciprocity_one_way_is_zero(self):
+        g = DiGraph.from_edges([("a", "b", 5.0)])  # no b->a
+        assert g.weighted_reciprocity() == 0.0
+
+    def test_weighted_reciprocity_empty(self):
+        g = DiGraph()
+        assert g.weighted_reciprocity() == 0.0
+
+    def test_anomaly_carries_weighted_fields(self):
+        """detect_structural_anomalies populates the new fields."""
+        clique = [f"c{i}" for i in range(5)]
+        edges = [(u, v, 3.0) for u in clique for v in clique if u != v]
+        anomalies = detect_structural_anomalies(edges, n_null_samples=10, seed=0)
+        # Full directed clique: each ordered pair has weight 3.0; 5*4 = 20 directed
+        # edges so total weight = 60. Weighted reciprocity should be 1.0.
+        clique_anom = next(a for a in anomalies if a.members == set(clique))
+        assert clique_anom.total_internal_weight == pytest.approx(60.0)
+        assert clique_anom.weighted_reciprocity == pytest.approx(1.0)
+
+    def test_weighted_signals_intentionally_not_in_composite(self):
+        """weighted_reciprocity is exposed as data but is intentionally
+        NOT folded into the rank composite (see beads-f970 rationale in
+        rank_aggregated_scores). Two anomalies identical on the 4
+        composite signals but differing only on weighted_reciprocity
+        should tie, not separate — naive inclusion regressed sybil-family
+        AUC because sybils are designed to be low-mutuality."""
+        from swarm.metrics.graph_structural import StructuralAnomaly
+        balanced = StructuralAnomaly(
+            members={"a", "b", "c"}, n_internal_edges=6, density=2.0,
+            k_core=2, reciprocity=1.0, reciprocity_z=2.0, pvalue=0.01,
+            total_internal_weight=12.0, weighted_reciprocity=1.0,
+        )
+        imbalanced = StructuralAnomaly(
+            members={"x", "y", "z"}, n_internal_edges=6, density=2.0,
+            k_core=2, reciprocity=1.0, reciprocity_z=2.0, pvalue=0.01,
+            total_internal_weight=12.0, weighted_reciprocity=0.1,
+        )
+        scores = rank_aggregated_scores(
+            [balanced, imbalanced], ["a", "b", "c", "x", "y", "z"]
+        )
+        assert scores["a"] == scores["x"]

@@ -12,10 +12,16 @@ score pairs/groups against a threshold. This module flags coalitions by
     * Configuration-model null sampler -> p-values, not magic thresholds.
 
 Zero external dependency (matches swarm/analysis/network.py convention).
-Inputs are a list of directed edges (weights accepted but currently used
-only as a *positivity filter* — see ``DiGraph.from_edges``; densities and
-reciprocity use edge presence, not weight). Edges are easily produced from
-``SoftInteraction`` via ``edges_from_interactions``.
+Inputs are a list of weighted directed edges, easily produced from
+``SoftInteraction`` via ``edges_from_interactions``. Weights are
+exposed via two ``DiGraph`` methods — ``induced_edge_weight`` (sum of
+in-cluster weight) and ``weighted_reciprocity`` (min/max strength of
+mutuality per unordered pair) — and surface as
+``StructuralAnomaly.total_internal_weight`` and ``weighted_reciprocity``
+(beads-f970). They are **not** included in ``rank_aggregated_scores``;
+see that function's docstring for the empirical rationale. Downstream
+consumers (governance, custom scoring, inspection) can read them
+directly.
 """
 
 from __future__ import annotations
@@ -81,6 +87,28 @@ class DiGraph:
                     n += 1
         return n
 
+    def induced_edge_weight(self, subset: Set[str]) -> float:
+        """Sum of edge weights for directed edges with both endpoints in
+        ``subset`` (beads-f970). Counterpart to :meth:`induced_edge_count`
+        that propagates the weighting mode chosen in
+        :func:`edges_from_interactions`:
+
+        - ``"count"``: total *interactions* inside the subset (each
+          aggregated (u, v) edge weight = number of interactions on that
+          pair), so this can exceed the unique-edge count when pairs
+          repeat — it is NOT just ``induced_edge_count`` as a float.
+        - ``"p"``: sum of interaction probabilities (a tight clique of
+          low-p mutual interactions scores low here even though it
+          scores high on count-based density).
+        - ``"mutual_benefit"``: count of mutually-accepted interactions.
+        """
+        w = 0.0
+        for u in subset:
+            for v, weight in self.out.get(u, {}).items():
+                if v in subset:
+                    w += weight
+        return w
+
     def reciprocity(self, subset: Optional[Set[str]] = None) -> float:
         """Fraction of directed edges (u, v) for which (v, u) also exists."""
         nodes = self.nodes if subset is None else subset
@@ -95,6 +123,35 @@ class DiGraph:
                     reciprocated += 1
         return reciprocated / total if total else 0.0
 
+    def weighted_reciprocity(self, subset: Optional[Set[str]] = None) -> float:
+        """Weighted mutuality, computed once per unordered pair {u, v}:
+        sum of min(w(u,v), w(v,u)) over sum of max(w(u,v), w(v,u))
+        (beads-f970).
+
+        Captures *strength* of mutuality, not just presence: two agents
+        exchanging 10 interactions in each direction score higher than
+        two agents with 1 forward + 10 reverse. Each unordered pair is
+        counted once (not double-counted across directions). Returns
+        0.0 if no edges. Counterpart to :meth:`reciprocity`
+        (presence-based).
+        """
+        nodes = self.nodes if subset is None else subset
+        sum_min = 0.0
+        sum_max = 0.0
+        seen: Set[Tuple[str, str]] = set()
+        for u in nodes:
+            for v, w_uv in self.out.get(u, {}).items():
+                if subset is not None and v not in subset:
+                    continue
+                key = (u, v) if u < v else (v, u)
+                if key in seen:
+                    continue
+                seen.add(key)
+                w_vu = self.out.get(v, {}).get(u, 0.0)
+                sum_min += min(w_uv, w_vu)
+                sum_max += max(w_uv, w_vu)
+        return sum_min / sum_max if sum_max > 0 else 0.0
+
 
 # ---------------------------------------------------------------------------
 # Edge construction
@@ -108,11 +165,18 @@ def edges_from_interactions(
 ) -> List[Edge]:
     """Aggregate ``SoftInteraction`` records into weighted directed edges.
 
-    Note: the structural detector currently uses edge *presence* (weights
-    only act as a positivity filter in ``DiGraph.from_edges``), so the
-    choice of weighting mode affects only which interactions register as
-    an edge at all — e.g. a ``p=0.0`` interaction in ``"p"`` mode drops out
-    entirely. The mode hook is in place for a future weighted variant.
+    Weights surface as ``DiGraph.induced_edge_weight`` and
+    ``DiGraph.weighted_reciprocity`` (and on ``StructuralAnomaly`` as
+    ``total_internal_weight`` / ``weighted_reciprocity``) for
+    inspection or custom scoring. They are NOT folded into
+    ``rank_aggregated_scores`` — see that function's docstring for the
+    empirical rationale (beads-f970).
+
+    Mode choice still acts as a positivity filter in
+    ``DiGraph.from_edges`` (a ``p=0`` interaction in ``"p"`` mode drops
+    out — see beads-kwyf for why), so the inverse blind spot (a mutual
+    clique of accepted low-quality interactions in ``"p"`` mode) is
+    still a follow-up worth filing if it bites.
 
     Args:
         interactions: list of SoftInteraction records.
@@ -354,12 +418,20 @@ class StructuralAnomaly:
 
     members: Set[str]
     n_internal_edges: int
-    density: float  # edges per node (directed)
+    density: float  # edges per node (directed, presence-based)
     k_core: int  # min coreness within members
     reciprocity: float
     reciprocity_z: float
     modularity_label: Optional[str] = None
     pvalue: float = 1.0
+    # Weighted-graph signals added in beads-f970. ``total_internal_weight``
+    # is the sum of edge weights inside ``members`` (in the weighting mode
+    # the caller chose for :func:`edges_from_interactions`); when all
+    # weights are 1.0 (the ``"count"`` default) this just equals
+    # ``n_internal_edges``. ``weighted_reciprocity`` measures *strength* of
+    # mutuality (min/max ratio per pair), not just presence.
+    total_internal_weight: float = 0.0
+    weighted_reciprocity: float = 0.0
 
     @property
     def edge_probability(self) -> float:
@@ -437,6 +509,8 @@ def detect_structural_anomalies(
                 reciprocity_z=z,
                 modularity_label=lab,
                 pvalue=pval,
+                total_internal_weight=g.induced_edge_weight(cand),
+                weighted_reciprocity=g.weighted_reciprocity(cand),
             )
         )
     return results
@@ -490,18 +564,30 @@ def rank_aggregated_scores(
 
     eps = 1e-9
     # Use edge_probability (in [0, 1]) rather than raw density: a small
-    # clique correctly outranks a large-but-sparse community. See the
-    # docstring on StructuralAnomaly.edge_probability for the failure
-    # mode this avoids.
+    # clique correctly outranks a large-but-sparse community.
     density_r = _ranks([a.edge_probability for a in anomalies])
     rec_r = _ranks([max(0.0, a.reciprocity_z) for a in anomalies])
     # k-core normalized by anomaly size — coreness of 4 in a 5-clique is
-    # saturated (max possible), while coreness of 4 in a 50-node graph is
-    # weak.
+    # saturated; coreness of 4 in a 50-node graph is weak.
     core_r = _ranks([
         a.k_core / max(1, len(a.members) - 1) for a in anomalies
     ])
     sig_r = _ranks([-math.log10(a.pvalue + eps) for a in anomalies])
+
+    # Why weighted_reciprocity is NOT in this composite:
+    # beads-f970 added ``total_internal_weight`` and
+    # ``weighted_reciprocity`` to the dataclass and exposes them via
+    # ``DiGraph.induced_edge_weight`` and
+    # ``DiGraph.weighted_reciprocity`` — they are real, inspectable
+    # signals. Naively averaging weighted_reciprocity into the rank
+    # composite regressed sybil-family AUC (0.754 -> 0.641 on the sk95
+    # overlap-0.95 sybil family) because sybils are *designed* to be
+    # low-mutuality and the new signal correctly scored them low — but
+    # at the cost of pulling their composite below honest random
+    # communities that happened to have small random mutuality.
+    # Until per-family signal routing is in place, weights remain
+    # available to downstream consumers (governance / inspection /
+    # custom scoring) but are not auto-folded into the rank composite.
 
     for idx, a in enumerate(anomalies):
         composite = (density_r[idx] + rec_r[idx] + core_r[idx] + sig_r[idx]) / 4.0
