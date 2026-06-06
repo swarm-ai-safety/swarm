@@ -595,3 +595,130 @@ def rank_aggregated_scores(
             if composite > score_by_node[u]:
                 score_by_node[u] = composite
     return score_by_node
+
+
+# ---------------------------------------------------------------------------
+# Temporal coordination signal (beads-p56u)
+# ---------------------------------------------------------------------------
+
+
+def temporal_concentration(
+    interactions: Sequence[SoftInteraction],
+    members: Set[str],
+    *,
+    n_windows: int = 10,
+) -> float:
+    """Normalized concentration of within-``members`` interactions over time.
+
+    Coordination bursts (cluster members coordinate during short windows
+    and stay quiet otherwise) show high concentration; honest agents who
+    interact uniformly over time show low concentration.
+
+    Implementation: bin the timestamps of interactions where both
+    ``initiator`` and ``counterparty`` are in ``members`` into
+    ``n_windows`` equal-width windows spanning the *full* observed
+    time range (NOT just the cluster's range, so a cluster's silence
+    relative to background activity scores high). Returns
+    ``1 - H(p) / log(n_windows)`` ∈ [0, 1] where ``H`` is Shannon
+    entropy and ``p`` is the per-window count distribution. Uniform
+    spread → 0, single-window concentration → 1.
+
+    Returns 0.0 if there are no in-cluster interactions or only one
+    interaction in the whole graph (no time axis to concentrate on).
+
+    The "honest baseline" subtraction is the caller's job — this
+    function returns the raw concentration; the benchmark adapter
+    pairs it with a z-score against the rest-of-graph baseline.
+    """
+    if not interactions or n_windows < 2:
+        return 0.0
+    # Use the full graph's time range so a cluster confined to a
+    # narrow window scores high even if its absolute timespan is
+    # short.
+    times = [ix.timestamp for ix in interactions]
+    t_min = min(times)
+    t_max = max(times)
+    span = (t_max - t_min).total_seconds()
+    if span <= 0:
+        return 0.0  # everything happened at the same instant
+    cluster_counts = [0] * n_windows
+    n_in_cluster = 0
+    for ix in interactions:
+        if ix.initiator not in members or ix.counterparty not in members:
+            continue
+        n_in_cluster += 1
+        offset = (ix.timestamp - t_min).total_seconds()
+        bin_idx = min(n_windows - 1, int(n_windows * offset / span))
+        cluster_counts[bin_idx] += 1
+    if n_in_cluster < 2:
+        return 0.0
+    # Shannon entropy of the per-window probability distribution.
+    entropy = 0.0
+    for c in cluster_counts:
+        if c == 0:
+            continue
+        p = c / n_in_cluster
+        entropy -= p * math.log(p)
+    max_entropy = math.log(n_windows)
+    return 1.0 - entropy / max_entropy if max_entropy > 0 else 0.0
+
+
+def temporal_densest_anomalies(
+    interactions: Sequence[SoftInteraction],
+    *,
+    n_windows: int = 10,
+    min_size: int = 3,
+    n_null_samples: int = 20,
+    seed: int = 0,
+) -> List[StructuralAnomaly]:
+    """Per-window structural anomaly detection (beads-p56u).
+
+    Splits ``interactions`` into ``n_windows`` equal-width time bins
+    and runs :func:`detect_structural_anomalies` on each window's
+    induced subgraph. Returns the union of resulting anomalies,
+    de-duplicated by member set (different windows surfacing the
+    same subset are kept once).
+
+    The point: a coalition that bursts in 2-3 windows of an
+    otherwise-quiet 10-window run produces small, dense anomalies in
+    those windows even when its aggregated edges look like just
+    another sparse part of the full graph. The static detector sees
+    aggregated edges and bundles the coalition with the surrounding
+    background community; per-window detection isolates the burst.
+    """
+    if not interactions or n_windows < 1:
+        return []
+    times = [ix.timestamp for ix in interactions]
+    t_min = min(times)
+    t_max = max(times)
+    span = (t_max - t_min).total_seconds()
+    if span <= 0:
+        return detect_structural_anomalies(
+            edges_from_interactions(interactions),
+            min_size=min_size, n_null_samples=n_null_samples, seed=seed,
+        )
+    window_buckets: List[List[SoftInteraction]] = [[] for _ in range(n_windows)]
+    for ix in interactions:
+        offset = (ix.timestamp - t_min).total_seconds()
+        bin_idx = min(n_windows - 1, int(n_windows * offset / span))
+        window_buckets[bin_idx].append(ix)
+    seen: List[Set[str]] = []
+    merged: List[StructuralAnomaly] = []
+    for w_idx, window_ix in enumerate(window_buckets):
+        if not window_ix:
+            continue
+        window_edges = edges_from_interactions(window_ix)
+        # Per-window detection uses a window-local seed so the
+        # configuration-model null is reproducible across windows.
+        window_anoms = detect_structural_anomalies(
+            window_edges,
+            min_size=min_size,
+            n_null_samples=n_null_samples,
+            seed=seed + w_idx,
+        )
+        for a in window_anoms:
+            if any(a.members == s for s in seen):
+                continue
+            seen.append(a.members)
+            merged.append(a)
+    return merged
