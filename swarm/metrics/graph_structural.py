@@ -13,12 +13,15 @@ score pairs/groups against a threshold. This module flags coalitions by
 
 Zero external dependency (matches swarm/analysis/network.py convention).
 Inputs are a list of weighted directed edges, easily produced from
-``SoftInteraction`` via ``edges_from_interactions``. Weights propagate
-through to two of the scoring signals — ``induced_edge_weight`` (sum of
+``SoftInteraction`` via ``edges_from_interactions``. Weights are
+exposed via two ``DiGraph`` methods — ``induced_edge_weight`` (sum of
 in-cluster weight) and ``weighted_reciprocity`` (min/max strength of
-mutuality per pair) — and join the four presence-based signals in
-``rank_aggregated_scores`` (beads-f970). The pre-existing
-presence-based signals are unchanged; weighted ones are additive.
+mutuality per unordered pair) — and surface as
+``StructuralAnomaly.total_internal_weight`` and ``weighted_reciprocity``
+(beads-f970). They are **not** included in ``rank_aggregated_scores``;
+see that function's docstring for the empirical rationale. Downstream
+consumers (governance, custom scoring, inspection) can read them
+directly.
 """
 
 from __future__ import annotations
@@ -88,12 +91,16 @@ class DiGraph:
         """Sum of edge weights for directed edges with both endpoints in
         ``subset`` (beads-f970). Counterpart to :meth:`induced_edge_count`
         that propagates the weighting mode chosen in
-        :func:`edges_from_interactions` — ``"count"`` (==
-        ``induced_edge_count`` as a float), ``"p"`` (sum of interaction
-        probabilities, so a tight clique of low-p mutual interactions
-        scores low here even though it scores high on the count-based
-        density), ``"mutual_benefit"`` (count of mutually-accepted
-        interactions).
+        :func:`edges_from_interactions`:
+
+        - ``"count"``: total *interactions* inside the subset (each
+          aggregated (u, v) edge weight = number of interactions on that
+          pair), so this can exceed the unique-edge count when pairs
+          repeat — it is NOT just ``induced_edge_count`` as a float.
+        - ``"p"``: sum of interaction probabilities (a tight clique of
+          low-p mutual interactions scores low here even though it
+          scores high on count-based density).
+        - ``"mutual_benefit"``: count of mutually-accepted interactions.
         """
         w = 0.0
         for u in subset:
@@ -117,13 +124,16 @@ class DiGraph:
         return reciprocated / total if total else 0.0
 
     def weighted_reciprocity(self, subset: Optional[Set[str]] = None) -> float:
-        """Weighted mutuality: sum of min(w(u,v), w(v,u)) / sum of
-        max(w(u,v), w(v,u)) over directed pairs in ``subset`` (beads-f970).
+        """Weighted mutuality, computed once per unordered pair {u, v}:
+        sum of min(w(u,v), w(v,u)) over sum of max(w(u,v), w(v,u))
+        (beads-f970).
 
         Captures *strength* of mutuality, not just presence: two agents
-        exchanging 10 interactions in each direction score higher than two
-        agents with 1 forward + 10 reverse. Returns 0.0 if no edges.
-        Counterpart to :meth:`reciprocity` (presence-based).
+        exchanging 10 interactions in each direction score higher than
+        two agents with 1 forward + 10 reverse. Each unordered pair is
+        counted once (not double-counted across directions). Returns
+        0.0 if no edges. Counterpart to :meth:`reciprocity`
+        (presence-based).
         """
         nodes = self.nodes if subset is None else subset
         sum_min = 0.0
@@ -155,12 +165,12 @@ def edges_from_interactions(
 ) -> List[Edge]:
     """Aggregate ``SoftInteraction`` records into weighted directed edges.
 
-    Weights now feed into ``DiGraph.induced_edge_weight`` and
-    ``DiGraph.weighted_reciprocity``, which surface as
-    ``StructuralAnomaly.total_internal_weight`` and
-    ``weighted_reciprocity`` and become a 5th rank-aggregation signal
-    in ``rank_aggregated_scores`` (beads-f970). Presence-based metrics
-    (the original 4 signals) are unchanged.
+    Weights surface as ``DiGraph.induced_edge_weight`` and
+    ``DiGraph.weighted_reciprocity`` (and on ``StructuralAnomaly`` as
+    ``total_internal_weight`` / ``weighted_reciprocity``) for
+    inspection or custom scoring. They are NOT folded into
+    ``rank_aggregated_scores`` — see that function's docstring for the
+    empirical rationale (beads-f970).
 
     Mode choice still acts as a positivity filter in
     ``DiGraph.from_edges`` (a ``p=0`` interaction in ``"p"`` mode drops

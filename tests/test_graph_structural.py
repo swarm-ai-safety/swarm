@@ -289,7 +289,7 @@ class TestWeightedMetrics:
         clique = [f"c{i}" for i in range(5)]
         edges = [(u, v, 3.0) for u in clique for v in clique if u != v]
         anomalies = detect_structural_anomalies(edges, n_null_samples=10, seed=0)
-        # Each ring pair has weight 3.0 in each direction; 5*4 = 20 directed
+        # Full directed clique: each ordered pair has weight 3.0; 5*4 = 20 directed
         # edges so total weight = 60. Weighted reciprocity should be 1.0.
         clique_anom = next(a for a in anomalies if a.members == set(clique))
         assert clique_anom.total_internal_weight == pytest.approx(60.0)
