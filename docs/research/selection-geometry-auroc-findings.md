@@ -13,6 +13,16 @@ when the discrimination task is set up to be *hard*?
 > N=50 batches and noisy `v̂`, so the metrics actually compete.
 > Conclusions below differ in *location* (which θ saturation is best
 > at) and in *strength* (no non-trivial metric hits 1.0).
+>
+> **v3 extension: evasive adversary.** v2 used non-adaptive
+> adversaries — their `v̂` honestly reflected their low `p`. v3 adds a
+> `v̂`-inflation knob: adversarial interactions get `v̂ += inflation`
+> while `p` stays low. This models proxy gaming with no real quality
+> work (the cause-3 pattern from the arm-2 line). Inflation ∈ {0.0,
+> 0.3, 0.6}; everything else identical to v2. **The complementarity
+> story from v2 reverses:** under evasion, toxicity strengthens and
+> saturation weakens, exactly because the adversary breaks the
+> `(v̂, p)` coupling that saturation depends on.
 
 ## Procedure
 
@@ -121,6 +131,88 @@ proxy is hitting its ceiling.
 - **Don't use ρ(p,a) to detect adversarial populations.** It's a
   governor-quality metric given the population. Use it for A/B
   comparisons of governors, not for population monitoring.
+
+## v3: under an evasive (proxy-inflating) adversary
+
+For inflation ∈ {0.0, 0.3, 0.6}, adversarial interactions get
+`v̂ ← v̂ + inflation` (clamped to [−1, +1]); `p` and ground truth
+unchanged. 54 000 cells total. The picture inverts:
+
+| metric                | infl=0.0 mean | infl=0.3 mean | infl=0.6 mean |
+|-----------------------|---------------|---------------|---------------|
+| `baseline_harm`       | 0.999         | 0.999         | 0.999         |
+| `toxicity`            | 0.712         | **0.812**     | **0.912**     |
+| `selection_saturation`| 0.685         | 0.657         | 0.629         |
+| `quality_gap`         | 0.424         | 0.407         | 0.366         |
+| `quality_correlation` | 0.315         | 0.343         | 0.371         |
+
+Per-θ breakdown at strong evasion (inflation=0.6), where the inversion
+is most extreme:
+
+| metric                | θ=−0.6 | θ=−0.3 | θ=0.0 | θ=+0.3 | θ=+0.6 |
+|-----------------------|--------|--------|-------|--------|--------|
+| `toxicity`            | 0.999  | 0.997  | 0.979 | 0.904  | 0.683  |
+| `selection_saturation`| 0.544  | 0.544  | 0.524 | 0.715  | 0.818  |
+
+### Three takeaways
+
+**1. `toxicity` is the metric the proxy-gamer makes *better*.**
+`E[1−p|a=1]` only cares whether low-`p` interactions get accepted.
+A `v̂`-inflating adversary makes exactly that happen — at any θ.
+Toxicity AUROC grows monotonically with inflation (0.71 → 0.81 →
+0.91 mean). At strict θ in v2 it was at chance; at the same strict
+θ under strong evasion it's at 0.68 and rising — because the
+adversary now successfully ferries low-`p` interactions past the
+threshold, lighting up the toxicity signal.
+
+**2. `selection_saturation` is the metric the proxy-gamer
+*breaks* — and this is the diagnostic, not the failure.** Saturation
+measures `|Q| · √(αβ) / σ_p`. Inflation pushes low-`p` adversaries
+into the accepted set and squeezes some high-`p` benigns into the
+rejected set, *shrinking* `|Q|` precisely because the proxy is no
+longer informative about `p`. Saturation AUROC degrades steadily
+(0.69 → 0.66 → 0.63 mean) and loses its strict-θ advantage. The
+fact that saturation drops while toxicity rises is the cause-3
+signature: **the proxy is being gamed when these two metrics
+diverge in opposite directions.**
+
+**3. `baseline_harm` is invariant.** 0.999 across every inflation
+level — the population is unchanged; only the proxy and the
+acceptance rule are gamed. This is what makes it a useful invariant
+*if* you have it. In a real deployment you usually don't, which is
+exactly the setting these metrics exist for.
+
+### The new diagnostic that emerges
+
+The pair `(toxicity, saturation)` carries information neither
+metric does alone:
+
+| pattern over time | interpretation |
+|---|---|
+| both flat near chance | governor isn't sorting, no adversarial pressure |
+| toxicity up, saturation up | adversarial pressure, governor handling it |
+| toxicity up, saturation down (gap *opens*) | **proxy gaming** — adversary inflating `v̂` past the governor's calibration |
+| toxicity flat, saturation high | governor at proxy ceiling, no adversarial pressure |
+| toxicity flat, saturation low | governor lazy, no adversarial pressure either |
+
+The third row is the load-bearing case. It's the cause-3 fingerprint
+made visible by metric-pair geometry rather than by a separate
+calibration anchor. A dashboard panel that plots
+`Δ(toxicity_AUROC, saturation_AUROC)` across a sweep would flag
+evasive adversaries even without ground truth.
+
+### Limits of v3
+
+- Inflation is a *static* offset, not an adaptive policy. A CEM-
+  trained adversary would push inflation up only when it pays off
+  (near-θ regimes), making the gap appear in a more concentrated
+  band. Worth re-running with the existing arm-2 CEM infrastructure.
+- The inflation knob is applied uniformly to all adversarial
+  interactions. A more realistic model would be a per-interaction
+  inflation distribution, possibly correlated with how-much-the-
+  adversary-needs-to-game (close to θ → more inflation, far from
+  θ → don't bother). Would smooth the saturation drop but not
+  reverse it.
 
 ## Limits and unresolved
 

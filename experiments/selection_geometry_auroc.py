@@ -30,7 +30,7 @@ import csv
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, List, Sequence, Tuple
+from typing import Dict, List, Sequence
 
 import matplotlib
 
@@ -60,6 +60,10 @@ THETAS = [-0.6, -0.3, 0.0, 0.3, 0.6]
 N_INTERACTIONS = 50
 N_SEEDS = 400
 V_HAT_NOISE_SIGMA = 0.25
+# Evasive adversary: adversarial interactions get v̂ += INFLATION before the
+# governor sees it, while p is unchanged. Models proxy gaming with no real
+# quality work — the cause-3 pattern. 0.0 = no evasion (matches v2 study).
+INFLATIONS = [0.0, 0.3, 0.6]
 METRICS = [
     ("toxicity", COLORS.TOXICITY),
     ("quality_gap", "#9B59B6"),
@@ -93,6 +97,7 @@ def auroc(scores: Sequence[float], labels: Sequence[int]) -> float:
 class CellResult:
     f: float
     theta: float
+    inflation: float
     seed: int
     toxicity: float
     quality_gap: float
@@ -102,29 +107,34 @@ class CellResult:
     acceptance_rate: float
 
 
-def compose_population(f: float, n: int, seed: int):
+def compose_population(f: float, n: int, seed: int, inflation: float = 0.0):
+    """Compose a benign + adversarial mix.
+
+    inflation > 0 ⇒ adversarial v̂ gets += inflation (clamped to [-1, 1])
+    while p (and hence the true population mean) is unchanged. Models a
+    proxy-gaming adversary that has learnt to inflate the observable
+    without doing real quality work.
+    """
     n_tox = int(round(n * f))
     n_ben = n - n_tox
     benign = generate_benign_batch(count=n_ben, seed=seed)
     toxic = generate_toxic_batch(count=n_tox, seed=seed + 7919)
+    if inflation > 0.0:
+        for ix in toxic:
+            ix.v_hat = max(-1.0, min(1.0, ix.v_hat + inflation))
     return benign + toxic
 
 
 def apply_governor(interactions, theta: float, rng: np.random.Generator):
-    """Re-label acceptance as (v_hat + noise) > theta.
-
-    Adding Gaussian noise to v_hat models a noisy proxy / imperfect
-    governor — without it the rule v_hat > theta is a deterministic
-    function of p, which makes the discrimination trivial.
-    """
+    """Re-label acceptance as (v_hat + noise) > theta."""
     for ix in interactions:
         noise = float(rng.normal(0.0, V_HAT_NOISE_SIGMA))
         ix.accepted = (ix.v_hat + noise) > theta
     return interactions
 
 
-def run_cell(f: float, theta: float, seed: int) -> CellResult:
-    pop = compose_population(f, N_INTERACTIONS, seed)
+def run_cell(f: float, theta: float, seed: int, inflation: float) -> CellResult:
+    pop = compose_population(f, N_INTERACTIONS, seed, inflation)
     rng = np.random.default_rng(seed + 31337)
     apply_governor(pop, theta, rng)
     sm = SoftMetrics()
@@ -135,7 +145,7 @@ def run_cell(f: float, theta: float, seed: int) -> CellResult:
     decomp = sm.toxicity_decomposition(pop)
     acc = sum(1 for ix in pop if ix.accepted) / len(pop)
     return CellResult(
-        f=f, theta=theta, seed=seed,
+        f=f, theta=theta, inflation=inflation, seed=seed,
         toxicity=tox, quality_gap=qg, quality_correlation=rho,
         selection_saturation=sat, baseline_harm=decomp["baseline_harm"],
         acceptance_rate=acc,
@@ -156,109 +166,139 @@ def main() -> int:
     plots_dir.mkdir(parents=True, exist_ok=True)
 
     rng = np.random.default_rng(args.seed)
-    n_cells = len(FRACTIONS) * len(THETAS) * args.n_seeds
-    print(f"[study] running {n_cells} cells ({len(FRACTIONS)} f × {len(THETAS)} θ × {args.n_seeds} seeds)")
+    n_cells = len(FRACTIONS) * len(THETAS) * len(INFLATIONS) * args.n_seeds
+    print(f"[study] running {n_cells} cells "
+          f"({len(FRACTIONS)} f × {len(THETAS)} θ × "
+          f"{len(INFLATIONS)} inflation × {args.n_seeds} seeds)")
 
     rows: List[CellResult] = []
-    for f in FRACTIONS:
-        for theta in THETAS:
-            for _k in range(args.n_seeds):
-                seed = int(rng.integers(0, 2**31 - 1))
-                rows.append(run_cell(f, theta, seed))
-        print(f"[study]   done f={f:.2f}")
+    for inflation in INFLATIONS:
+        for f in FRACTIONS:
+            for theta in THETAS:
+                for _k in range(args.n_seeds):
+                    seed = int(rng.integers(0, 2**31 - 1))
+                    rows.append(run_cell(f, theta, seed, inflation))
+        print(f"[study]   done inflation={inflation:.2f}")
 
     # ----- write CSV
     csv_path = out_dir / "cells.csv"
     with csv_path.open("w", newline="") as fh:
         writer = csv.writer(fh)
         writer.writerow(
-            ["f", "theta", "seed", "toxicity", "quality_gap",
+            ["f", "theta", "inflation", "seed", "toxicity", "quality_gap",
              "quality_correlation", "selection_saturation",
              "baseline_harm", "acceptance_rate"]
         )
         for r in rows:
             writer.writerow([
-                r.f, r.theta, r.seed, r.toxicity, r.quality_gap,
+                r.f, r.theta, r.inflation, r.seed, r.toxicity, r.quality_gap,
                 r.quality_correlation, r.selection_saturation,
                 r.baseline_harm, r.acceptance_rate,
             ])
     print(f"[study] wrote {csv_path}")
 
-    # ----- AUROC per (metric, θ) for label = (f ≥ HIGH_F vs f ≤ LOW_F)
-    auroc_table: Dict[str, Dict[float, float]] = {m: {} for m, _ in METRICS}
-    for theta in THETAS:
-        cells_theta = [r for r in rows if r.theta == theta and (r.f <= LOW_F or r.f >= HIGH_F)]
-        labels = [1 if r.f >= HIGH_F else 0 for r in cells_theta]
+    # ----- AUROC per (metric, θ, inflation)
+    auroc_table: Dict[float, Dict[str, Dict[float, float]]] = {
+        infl: {m: {} for m, _ in METRICS} for infl in INFLATIONS
+    }
+    for infl in INFLATIONS:
+        for theta in THETAS:
+            cells_theta = [
+                r for r in rows
+                if r.theta == theta and r.inflation == infl
+                and (r.f <= LOW_F or r.f >= HIGH_F)
+            ]
+            labels = [1 if r.f >= HIGH_F else 0 for r in cells_theta]
+            for metric, _ in METRICS:
+                sign = -1.0 if metric in ("quality_gap", "quality_correlation") else 1.0
+                scores = [sign * getattr(r, metric) for r in cells_theta]
+                scores = [s if math.isfinite(s) else 0.0 for s in scores]
+                auroc_table[infl][metric][theta] = auroc(scores, labels)
+
+    for infl in INFLATIONS:
+        print(f"\n[study] AUROC at inflation={infl:.2f} "
+              f"(label = adversarial f ≥ {HIGH_F:.2f} vs benign f ≤ {LOW_F:.2f})")
+        header = ["metric"] + [f"θ={t:+.2f}" for t in THETAS] + ["mean", "std"]
+        print("  " + "  ".join(f"{h:>12}" for h in header))
         for metric, _ in METRICS:
-            # Adversarial populations should have higher tox/baseline_harm,
-            # and lower quality_gap/correlation. Flip sign for metrics whose
-            # "adversarial" direction is *lower* so AUROC is positive-oriented.
-            sign = -1.0 if metric in ("quality_gap", "quality_correlation") else 1.0
-            scores = [sign * getattr(r, metric) for r in cells_theta]
-            # NaN-guard.
-            scores = [s if math.isfinite(s) else 0.0 for s in scores]
-            auroc_table[metric][theta] = auroc(scores, labels)
+            vals = [auroc_table[infl][metric][t] for t in THETAS]
+            mean, std = float(np.mean(vals)), float(np.std(vals))
+            cells = [f"{v:>12.3f}" for v in vals]
+            print(f"  {metric:>12}  " + "  ".join(cells)
+                  + f"  {mean:>12.3f}  {std:>12.3f}")
 
-    print("\n[study] AUROC (label = adversarial f ≥ {:.2f} vs benign f ≤ {:.2f})".format(
-        HIGH_F, LOW_F))
-    header = ["metric"] + [f"θ={t:+.2f}" for t in THETAS] + ["mean", "std"]
-    print("  " + "  ".join(f"{h:>12}" for h in header))
-    for metric, _ in METRICS:
-        vals = [auroc_table[metric][t] for t in THETAS]
-        mean, std = float(np.mean(vals)), float(np.std(vals))
-        cells = [f"{v:>12.3f}" for v in vals]
-        print(f"  {metric:>12}  " + "  ".join(cells) + f"  {mean:>12.3f}  {std:>12.3f}")
-
-    # ----- plot: AUROC vs θ for each metric
+    # ----- plot: AUROC vs θ, one panel per inflation level
     with swarm_theme("dark"):
-        fig, ax = plt.subplots(figsize=(9, 5.5))
-        for metric, color in METRICS:
-            ys = [auroc_table[metric][t] for t in THETAS]
-            ax.plot(THETAS, ys, marker="o", color=color, label=metric, linewidth=1.8)
-        ax.axhline(0.5, color=COLORS.TEXT_MUTED, linestyle="--", linewidth=0.8,
-                   label="chance (0.5)")
-        ax.set_xlabel("Governor strictness θ (accept iff v̂ > θ)")
-        ax.set_ylabel(f"AUROC (adversarial f ≥ {HIGH_F} vs benign f ≤ {LOW_F})")
-        ax.set_ylim(0.4, 1.02)
-        ax.set_title("Discrimination AUROC across governor settings")
-        ax.legend(loc="lower left", fontsize=9)
+        fig, axes = plt.subplots(1, len(INFLATIONS), figsize=(5.5 * len(INFLATIONS), 5.2),
+                                 sharey=True)
+        if len(INFLATIONS) == 1:
+            axes = [axes]
+        for ax, infl in zip(axes, INFLATIONS, strict=True):
+            for metric, color in METRICS:
+                ys = [auroc_table[infl][metric][t] for t in THETAS]
+                ax.plot(THETAS, ys, marker="o", color=color, label=metric, linewidth=1.8)
+            ax.axhline(0.5, color=COLORS.TEXT_MUTED, linestyle="--", linewidth=0.8)
+            ax.set_xlabel("Governor strictness θ (accept iff v̂+ε > θ)")
+            ax.set_ylim(0.0, 1.02)
+            ax.set_title(f"v̂ inflation = {infl:.1f}", fontsize=11)
+            ax.grid(True, alpha=0.2)
+        axes[0].set_ylabel(f"AUROC (f ≥ {HIGH_F} vs f ≤ {LOW_F})")
+        axes[-1].legend(loc="lower left", fontsize=8)
+        fig.suptitle(
+            "Discrimination AUROC under an evasive (proxy-inflating) adversary",
+            fontsize=13, y=0.99,
+        )
+        fig.tight_layout()
     auroc_path = plots_dir / "auroc_vs_theta.png"
     fig.savefig(auroc_path, dpi=120, bbox_inches="tight")
     plt.close(fig)
     print(f"[study] wrote {auroc_path}")
 
     # ----- plot: metric value vs f, lines per θ (saturation specifically)
+    # Faceted grid: rows = inflation, cols = metric.
+    panel_metrics = [
+        ("toxicity", COLORS.TOXICITY),
+        ("selection_saturation", COLORS.EVASION),
+        ("baseline_harm", "#7D8590"),
+        ("acceptance_rate", "#9B59B6"),
+    ]
     with swarm_theme("dark"):
-        fig, axes = plt.subplots(2, 2, figsize=(11, 8), sharex=True)
-        panels: List[Tuple[str, str, "matplotlib.axes.Axes"]] = [
-            ("toxicity", COLORS.TOXICITY, axes[0, 0]),
-            ("quality_correlation", COLORS.WELFARE, axes[0, 1]),
-            ("selection_saturation", COLORS.EVASION, axes[1, 0]),
-            ("acceptance_rate", "#7D8590", axes[1, 1]),
-        ]
+        fig, axes = plt.subplots(len(INFLATIONS), len(panel_metrics),
+                                 figsize=(3.5 * len(panel_metrics),
+                                          3.0 * len(INFLATIONS)),
+                                 sharex=True)
+        if len(INFLATIONS) == 1:
+            axes = np.array([axes])
         theta_cmap = plt.cm.viridis(np.linspace(0.2, 0.95, len(THETAS)))
-        for metric, _, ax in panels:
-            for ti, theta in enumerate(THETAS):
-                xs, mean, lo, hi = [], [], [], []
-                for f in FRACTIONS:
-                    vals = [getattr(r, metric) for r in rows
-                            if r.f == f and r.theta == theta and math.isfinite(getattr(r, metric))]
-                    if not vals:
-                        continue
-                    xs.append(f)
-                    arr = np.asarray(vals)
-                    mean.append(float(arr.mean()))
-                    lo.append(float(arr.mean() - arr.std()))
-                    hi.append(float(arr.mean() + arr.std()))
-                ax.plot(xs, mean, color=theta_cmap[ti], marker="o",
-                        label=f"θ={theta:+.2f}", linewidth=1.6)
-                ax.fill_between(xs, lo, hi, color=theta_cmap[ti], alpha=0.12)
-            ax.set_title(metric)
-            ax.grid(True, alpha=0.2)
-        axes[1, 0].set_xlabel("adversarial fraction f")
-        axes[1, 1].set_xlabel("adversarial fraction f")
-        axes[0, 0].legend(loc="lower right", fontsize=7, ncol=2)
-        fig.suptitle("Metric response to adversarial fraction, per governor θ", fontsize=13, y=0.99)
+        for ri, infl in enumerate(INFLATIONS):
+            for ci, (metric, _) in enumerate(panel_metrics):
+                ax = axes[ri, ci]
+                for ti, theta in enumerate(THETAS):
+                    xs, mean, lo, hi = [], [], [], []
+                    for f in FRACTIONS:
+                        vals = [getattr(r, metric) for r in rows
+                                if r.f == f and r.theta == theta and r.inflation == infl
+                                and math.isfinite(getattr(r, metric))]
+                        if not vals:
+                            continue
+                        xs.append(f)
+                        arr = np.asarray(vals)
+                        mean.append(float(arr.mean()))
+                        lo.append(float(arr.mean() - arr.std()))
+                        hi.append(float(arr.mean() + arr.std()))
+                    ax.plot(xs, mean, color=theta_cmap[ti], marker="o",
+                            label=f"θ={theta:+.2f}", linewidth=1.4)
+                    ax.fill_between(xs, lo, hi, color=theta_cmap[ti], alpha=0.10)
+                if ri == 0:
+                    ax.set_title(metric, fontsize=10)
+                if ci == 0:
+                    ax.set_ylabel(f"infl={infl:.1f}", fontsize=10)
+                if ri == len(INFLATIONS) - 1:
+                    ax.set_xlabel("adversarial fraction f")
+                ax.grid(True, alpha=0.2)
+        axes[0, -1].legend(loc="lower right", fontsize=6, ncol=2)
+        fig.suptitle("Metric response to f, per θ and v̂-inflation",
+                     fontsize=12, y=0.995)
         fig.tight_layout()
     panel_path = plots_dir / "metric_vs_f_per_theta.png"
     fig.savefig(panel_path, dpi=120, bbox_inches="tight")
