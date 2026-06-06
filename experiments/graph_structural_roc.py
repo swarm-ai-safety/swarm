@@ -85,25 +85,51 @@ class GraphSample:
 # ---------------------------------------------------------------------------
 
 
+# Deterministic timestamp source for benchmark interactions. The temporal
+# detector (temporal_densest_anomalies / temporal_concentration) splits the
+# stream by SoftInteraction.timestamp, so leaving the default datetime.now()
+# would tie ROC/F1 results to Python loop ordering and runtime jitter rather
+# than the planted families themselves. Every benchmark interaction now gets
+# a deterministic monotone timestamp; explicit timestamps override.
+_BASELINE_TS = datetime(2026, 1, 1, tzinfo=timezone.utc)
+_TS_COUNTER = 0
+
+
+def _next_ts() -> datetime:
+    """Monotone, deterministic per-call timestamp (1-second steps)."""
+    global _TS_COUNTER
+    ts = _BASELINE_TS + timedelta(seconds=_TS_COUNTER)
+    _TS_COUNTER += 1
+    return ts
+
+
+def _reset_ts(seed: int = 0) -> None:
+    """Reset the timestamp counter so a given seed produces a fixed sequence.
+
+    Generators call this at entry; subsequent _ix() invocations get
+    timestamps `_BASELINE_TS + k*sec` for k=0,1,2,…. Different seeds get
+    distinct initial offsets so concatenated multi-sample sweeps don't
+    collide on the same timestamps.
+    """
+    global _TS_COUNTER
+    _TS_COUNTER = (seed % 1_000_000) * 100_000
+
+
 def _ix(initiator: str, counterparty: str, *, p: float, accepted: bool,
         tau: float = 0.0,
         timestamp: Optional[datetime] = None) -> SoftInteraction:
-    if timestamp is None:
-        return SoftInteraction(
-            initiator=initiator, counterparty=counterparty,
-            interaction_type=InteractionType.REPLY,
-            accepted=accepted, p=p, tau=tau,
-        )
+    ts = timestamp if timestamp is not None else _next_ts()
     return SoftInteraction(
         initiator=initiator, counterparty=counterparty,
         interaction_type=InteractionType.REPLY,
-        accepted=accepted, p=p, tau=tau, timestamp=timestamp,
+        accepted=accepted, p=p, tau=tau, timestamp=ts,
     )
 
 
 def generate_benign(
     n_agents: int = 50, edge_density: float = 0.1, seed: int = 0
 ) -> GraphSample:
+    _reset_ts(seed)
     rng = random.Random(seed)
     nodes = [f"a{i}" for i in range(n_agents)]
     n_edges = int(edge_density * n_agents * (n_agents - 1))
@@ -134,6 +160,7 @@ def generate_collusion_ring(
     interact (mutual edges remain a subset). Default 0.6 produces an
     incomplete clique; lower = harder.
     """
+    _reset_ts(seed)
     rng = random.Random(seed)
     ring = [f"r{i}" for i in range(ring_size)]
     honest = [f"h{i}" for i in range(n_agents - ring_size)]
@@ -176,8 +203,9 @@ def generate_sybil_cluster(
     seed: int = 0,
 ) -> GraphSample:
     """k sybils share nearly the same set of (random) counterparties but
-    interact one-way and at low mutual density (the identity-overlap=0
+    have distinct identifiers (analogous to the per-counterparty Jaccard
     case from redteam.attacks.sybil_attack)."""
+    _reset_ts(seed)
     rng = random.Random(seed)
     sybils = [f"s{i}" for i in range(cluster_size)]
     honest = [f"h{i}" for i in range(n_agents - cluster_size)]
@@ -230,9 +258,10 @@ def generate_threshold_dancing(
       quality-asymmetry flag)
 
     The cluster's *structural* signature (mutual edges, dense subgraph
-    relative to background) remains, which is what graph_structural is
+    membership) remains intact — this is the regime graph_structural is
     supposed to catch.
     """
+    _reset_ts(seed)
     rng = random.Random(seed)
     cluster = [f"c{i}" for i in range(cluster_size)]
     honest = [f"h{i}" for i in range(n_agents - cluster_size)]
@@ -327,6 +356,7 @@ def generate_overlapping_coalitions(
             that actually interact (mirrors collusion_ring's
             ring_density).
     """
+    _reset_ts(seed)
     rng = random.Random(seed)
     honest = [f"h{i}" for i in range(n_agents - n_coalitions * coalition_size)]
     # Allocate coalition members from a shared pool, allowing overlaps.
@@ -409,10 +439,11 @@ def generate_burst_coordination(
     cluster's interactions concentrate in ``n_bursts`` short windows
     while honest interactions spread uniformly over the full span.
 
-    The structural signature (mutual edges within the cluster) is
-    identical to ``generate_collusion_ring`` at the same density, but
-    the *temporal* signature is the load-bearing axis here.
+    The *aggregated* structural signature is identical to
+    ``generate_collusion_ring`` at the same density, but the *temporal*
+    signature is the load-bearing axis here.
     """
+    _reset_ts(seed)
     rng = random.Random(seed)
     cluster = [f"c{i}" for i in range(cluster_size)]
     honest = [f"h{i}" for i in range(n_agents - cluster_size)]
