@@ -60,10 +60,22 @@ class GraphSample:
     edges: List[Edge]
     interactions: List[SoftInteraction]
     nodes: List[str]
-    planted: Set[str]  # node ids belonging to the planted coalition
+    planted: Set[str]  # union of all planted-coalition members
     family: str
     params: Dict[str, float]
     seed: int
+    # Per-coalition ground truth (beads-qoro). For single-coalition
+    # generators this is ``[planted]``; for the overlapping-coalitions
+    # generator it carries multiple (possibly intersecting) sets so the
+    # Hungarian-recovery metric can score per-coalition recovery instead
+    # of collapsing everything to a single set.
+    planted_groups: List[Set[str]] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        # Default planted_groups to [planted] for back-compat with all
+        # single-coalition generators that predate this field.
+        if not self.planted_groups and self.planted:
+            self.planted_groups = [set(self.planted)]
 
 
 # ---------------------------------------------------------------------------
@@ -276,6 +288,100 @@ def generate_threshold_dancing(
         params={"n_agents": n_agents, "cluster_size": cluster_size,
                 "margin": margin},
         seed=seed,
+    )
+
+
+def generate_overlapping_coalitions(
+    n_agents: int = 60,
+    n_coalitions: int = 3,
+    coalition_size: int = 5,
+    overlap_fraction: float = 0.3,
+    background_density: float = 0.06,
+    coalition_density: float = 0.85,
+    seed: int = 0,
+) -> GraphSample:
+    """Multiple coalitions with stochastic membership overlap (beads-qoro).
+
+    Closes the "single-coalition is too easy" caveat from sk95: real
+    coordination is overlapping (an agent belongs to two coordination
+    contexts at once, e.g. a sybil that's also part of a collusion ring).
+    The per-coalition Hungarian-recovery metric (added in 5cdk) gets a
+    real test here.
+
+    Args:
+        n_agents: total agents in the graph.
+        n_coalitions: number of planted coalitions (each a partial mutual
+            clique).
+        coalition_size: members per coalition.
+        overlap_fraction: probability a coalition member is shared with
+            the next coalition (chained: c[i] ∩ c[i+1] is non-empty in
+            expectation).
+        background_density: honest one-way interaction density.
+        coalition_density: fraction of within-coalition ordered pairs
+            that actually interact (mirrors collusion_ring's
+            ring_density).
+    """
+    rng = random.Random(seed)
+    honest = [f"h{i}" for i in range(n_agents - n_coalitions * coalition_size)]
+    # Allocate coalition members from a shared pool, allowing overlaps.
+    coalition_pool = [f"c{i}" for i in range(n_coalitions * coalition_size)]
+    pool_cursor = 0
+    coalitions: List[Set[str]] = []
+    for i in range(n_coalitions):
+        members: Set[str] = set()
+        # Reuse some members from the previous coalition (overlap).
+        if i > 0:
+            for prev_member in coalitions[i - 1]:
+                if rng.random() < overlap_fraction:
+                    members.add(prev_member)
+        # Fill the rest from the pool.
+        while len(members) < coalition_size and pool_cursor < len(coalition_pool):
+            members.add(coalition_pool[pool_cursor])
+            pool_cursor += 1
+        # If pool exhausted, recycle (rare edge case for small n_agents).
+        while len(members) < coalition_size:
+            members.add(rng.choice(coalition_pool))
+        coalitions.append(members)
+    planted_union = set().union(*coalitions)
+    nodes = sorted(planted_union | set(honest))
+
+    interactions: List[SoftInteraction] = []
+    # Each coalition gets its own partial-clique pattern.
+    for coalition in coalitions:
+        for u in coalition:
+            for v in coalition:
+                if u != v and rng.random() < coalition_density:
+                    interactions.append(_ix(
+                        u, v,
+                        p=rng.uniform(0.65, 0.85),
+                        accepted=rng.random() < 0.85,
+                        tau=rng.uniform(0.1, 0.5),
+                    ))
+    # Honest background.
+    n_bg = int(background_density * n_agents * (n_agents - 1))
+    for _ in range(n_bg):
+        u, v = rng.sample(honest, 2)
+        interactions.append(_ix(u, v, p=rng.uniform(0.3, 0.9),
+                                 accepted=rng.random() < 0.7))
+    # Coalition <-> honest crossings (per coalition).
+    for coalition in coalitions:
+        for _ in range(coalition_size * 5):
+            interactions.append(_ix(
+                rng.choice(list(coalition)),
+                rng.choice(honest),
+                p=rng.uniform(0.4, 0.7),
+                accepted=rng.random() < 0.7,
+            ))
+    edges = edges_from_interactions(interactions, weight="count")
+    return GraphSample(
+        edges=edges, interactions=interactions, nodes=nodes,
+        planted=planted_union,
+        family="overlapping_coalitions",
+        params={"n_agents": n_agents, "n_coalitions": n_coalitions,
+                "coalition_size": coalition_size,
+                "overlap_fraction": overlap_fraction},
+        seed=seed,
+        planted_groups=coalitions,
     )
 
 
@@ -599,7 +705,11 @@ def run_family(
         sample = generator(seed=seed_base + r, **base_params)
         # Current generators plant exactly one coalition (beads-qoro will
         # extend this). Wrap as a single-element list for Hungarian.
-        planted_groups = [sample.planted] if sample.planted else []
+        # Use per-coalition groups if available (beads-qoro); otherwise
+        # fall back to the single-coalition single-set for older generators.
+        planted_groups = sample.planted_groups or (
+            [sample.planted] if sample.planted else []
+        )
         for det_name, det_fn in DETECTORS.items():
             try:
                 out = det_fn(sample)
@@ -658,6 +768,14 @@ def run_sweep(replicates: int = 20, seed_base: int = 0) -> List[RunResult]:
          {"n_agents": 50, "cluster_size": 5, "margin": 0.1}),
         (generate_threshold_dancing, "threshold_dancing_margin05",
          {"n_agents": 50, "cluster_size": 5, "margin": 0.05}),
+        # beads-qoro: 3 overlapping coalitions, 30% chained membership overlap
+        (generate_overlapping_coalitions, "overlapping_coalitions_n3",
+         {"n_agents": 60, "n_coalitions": 3, "coalition_size": 5,
+          "overlap_fraction": 0.3}),
+        # higher overlap: harder to recover per-coalition cleanly
+        (generate_overlapping_coalitions, "overlapping_coalitions_overlap60",
+         {"n_agents": 60, "n_coalitions": 3, "coalition_size": 5,
+          "overlap_fraction": 0.6}),
     ]
     for gen, name, params in families:
         results = run_family(gen, name, replicates=replicates,

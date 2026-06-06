@@ -140,8 +140,44 @@ class TestDecisionRule:
 class TestSweep:
     def test_full_sweep_smoke(self):
         results = run_sweep(replicates=2, seed_base=0)
-        # 8 families * 4 detectors = 32 results
-        assert len(results) == 8 * 4
+        # 10 families * 4 detectors = 40 (8 single-coalition + 2 overlapping)
+        assert len(results) == 10 * 4
+
+
+class TestOverlappingCoalitions:
+    def test_planted_groups_has_n_coalitions(self):
+        from experiments.graph_structural_roc import (
+            generate_overlapping_coalitions,
+        )
+        s = generate_overlapping_coalitions(
+            n_agents=40, n_coalitions=3, coalition_size=5,
+            overlap_fraction=0.3, seed=0)
+        assert len(s.planted_groups) == 3
+        for g in s.planted_groups:
+            assert len(g) == 5
+        # planted is the union; with overlaps the union can be smaller
+        # than n_coalitions * coalition_size.
+        assert s.planted == set().union(*s.planted_groups)
+        assert len(s.planted) <= 15
+
+    def test_overlap_actually_overlaps(self):
+        from experiments.graph_structural_roc import (
+            generate_overlapping_coalitions,
+        )
+        # With overlap_fraction=1.0 every member of c[i] is shared with
+        # c[i+1], so the union should be much smaller than n*size.
+        s = generate_overlapping_coalitions(
+            n_agents=40, n_coalitions=3, coalition_size=5,
+            overlap_fraction=1.0, seed=0)
+        # When overlap is total, all three coalitions are the same set.
+        assert s.planted_groups[0] == s.planted_groups[1] == s.planted_groups[2]
+        assert len(s.planted) == 5
+
+    def test_default_planted_groups_for_single_coalition(self):
+        """Back-compat: pre-qoro generators don't set planted_groups, but
+        GraphSample.__post_init__ should default it to [planted]."""
+        s = generate_collusion_ring(n_agents=20, ring_size=4, seed=1)
+        assert s.planted_groups == [s.planted]
 
 
 from experiments.graph_structural_roc import (  # noqa: E402
