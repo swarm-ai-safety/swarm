@@ -1,119 +1,147 @@
 # Selection-geometry AUROC study
 
-**Question.** The new projection-geometric metrics (`quality_correlation`
-ρ(p,a), `selection_saturation` |Q|·√(αβ)/σ_p, `baseline_harm` 1−E[p],
-`selection_credit` β·Q) were motivated as cleaner cross-scenario
-signals than raw toxicity. Does that hold up empirically?
+**Question.** The new projection-geometric metrics
+(`quality_correlation` ρ(p,a), `selection_saturation` |Q|·√(αβ)/σ_p,
+`baseline_harm` 1−E[p], `selection_credit` β·Q) were motivated as
+cleaner cross-scenario signals than raw toxicity. Does that hold up
+when the discrimination task is set up to be *hard*?
 
-**Procedure.**
-- For adversarial fractions f ∈ {0.00, 0.05, 0.10, 0.20, 0.30, 0.40,
-  0.50, 0.60, 0.80}, compose populations of N=200 interactions by
-  mixing benign + toxic batches from the test fixtures.
-- For governor strictnesses θ ∈ {−0.6, −0.3, 0.0, +0.3, +0.6}, re-label
-  acceptance as `v̂ > θ`.
-- Compute the five metrics on every (f, θ, seed) cell, K=200 seeds → 9 000 cells.
-- Binary label: *adversarial* if f ≥ 0.4, *benign* if f ≤ 0.1. AUROC
-  per (metric, θ) pooled across those cells.
+> **v1 → v2 revision.** The first version of this study (committed
+> with `f_low=0.10, f_high=0.40, N=200, noiseless v̂`) hit AUROC=1.000
+> on multiple metrics — saturated discrimination, no useful
+> comparison. v2 below tightens the contrast to a 5pp f-gap with
+> N=50 batches and noisy `v̂`, so the metrics actually compete.
+> Conclusions below differ in *location* (which θ saturation is best
+> at) and in *strength* (no non-trivial metric hits 1.0).
 
-Reproduce: `python -m experiments.selection_geometry_auroc --seed 2026`
-(~10 s, single core).
+## Procedure
+
+- For adversarial fractions f ∈ {0.05, 0.10, …, 0.45}, compose
+  populations of N=**50** interactions by mixing benign + toxic
+  fixture batches.
+- For governor strictnesses θ ∈ {−0.6, −0.3, 0.0, +0.3, +0.6}, label
+  acceptance as `(v̂ + ε) > θ` with ε ~ 𝒩(0, σ=0.25). The noise on
+  `v̂` keeps the governor from being a perfect oracle on `p` — without
+  it the acceptance rule is a deterministic function of `p` and the
+  discrimination is artificially trivial.
+- Five metrics on every (f, θ, seed) cell; K=**400** seeds per cell
+  → 18 000 cells total, ~12 s single-core.
+- Binary label: *adversarial* if f ≥ 0.30, *benign* if f ≤ 0.25 — a
+  5-percentage-point gap. AUROC per (metric, θ) pooled across those
+  cells.
+
+Reproduce: `python -m experiments.selection_geometry_auroc --seed 2026`.
 
 ## Result
 
 ![AUROC per metric across governor strictness](figures/selection-geometry-auroc.png)
 
-| metric                | θ=−0.6 | θ=−0.3 | θ=0.0 | θ=+0.3 | θ=+0.6 | mean  | std  |
-|-----------------------|--------|--------|-------|--------|--------|-------|------|
-| `toxicity`            | 1.000  | 1.000  | 0.496 | 0.509  | 0.500  | 0.701 | 0.244|
-| `quality_gap`         | 0.660  | 0.653  | 0.359 | 0.342  | 0.000  | 0.403 | 0.243|
-| `quality_correlation` | 0.405  | 0.255  | 0.000 | 0.000  | 0.330  | 0.198 | 0.168|
-| `selection_saturation`| 0.595  | 0.745  | **1.000** | **1.000** | 0.670 | **0.802** | 0.168|
-| `baseline_harm`       | 1.000  | 1.000  | 1.000 | 1.000  | 1.000  | 1.000 | 0.000|
+| metric                | θ=−0.6 | θ=−0.3 | θ=0.0 | θ=+0.3 | θ=+0.6 | mean  | std   |
+|-----------------------|--------|--------|-------|--------|--------|-------|-------|
+| `baseline_harm`       | 0.999  | 0.999  | 1.000 | 0.999  | 0.999  | **0.999** | 0.000 |
+| `toxicity`            | 0.980  | 0.894  | 0.654 | 0.527  | 0.505  | 0.712 | 0.193 |
+| `selection_saturation`| 0.469  | 0.503  | 0.706 | 0.867  | **0.883** | 0.685 | 0.175 |
+| `quality_gap`         | 0.798  | 0.751  | 0.455 | 0.096  | 0.017  | 0.424 | 0.323 |
+| `quality_correlation` | 0.531  | 0.497  | 0.294 | 0.133  | 0.117  | 0.315 | 0.175 |
 
-**AUROC is sign-oriented so "adversarial → high" everywhere**; for
-`quality_gap` and `quality_correlation` the convention assumes the
-*adversarial* direction is *lower*, so AUROC < 0.5 means the metric
-moves the *wrong* way for adversarial populations (see below).
+(AUROC sign-oriented so "adversarial → high"; metrics with
+adversarial-low direction were negated before scoring.)
 
-### Three findings, in order of load-bearingness
+### Three findings
 
-**1. `selection_saturation` is the only non-trivial metric that wins
-in the regime where you'd actually want it.** It hits AUROC = 1.000
-at θ = 0.0 and θ = +0.3 — exactly the regime where the governor is
-doing real filtering work (acceptance rate ~50–80%). At lax θ it
-drops because no selection is happening (nothing to saturate); at
-very strict θ it drops because almost everything is rejected. The
-metric is informative *when selection is the bottleneck*, which is
-the regime where adverse-selection diagnostics matter at all. Mean
-AUROC across all θ = 0.802, std 0.168.
+**1. `baseline_harm` ≈ 1.000 is a *real* result, not an artifact —
+and it pins down when the new metrics actually matter.** It says:
+*if* you can directly measure `E[p]`, the population mean dominates
+everything else as a discriminator. In a real deployment you don't
+get `p` for free — you observe `v̂` plus the accept/reject decision,
+and the proxy is noisy. The selection-geometry metrics are designed
+for that observational regime. So the load-bearing comparison is
+the *bottom four rows*: among signals that **only see the selection
+process**, which one carries the most information?
 
-**2. Raw `toxicity` is governor-confounded — exactly as predicted by
-the decomposition `T = baseline_harm − β·Q`.** At lax θ (β ≈ 1) it
-discriminates perfectly because it collapses to baseline_harm. At
-moderate-to-strict θ (β small, governor doing work) the selection
-credit cancels the population signal and toxicity reverts to chance
-(AUROC 0.496–0.509). Std 0.244 — the worst stability of any
-non-trivial metric. This is the empirical version of the warning
-that motivated the decomposition.
+**2. Toxicity and saturation cross over at θ ≈ 0, sweeping the same
+total AUROC budget across opposite halves of the governor space.**
 
-**3. `baseline_harm` is a "free" perfect discriminator — but for an
-uninteresting reason.** It equals 1−E[p], a property of the
-population alone, totally invariant to the governor. AUROC = 1.000
-across every θ with zero variance. **This is not a triumph of the
-metric, it's the experimental setup leaking the label**: f directly
-controls the mean p, so a metric that depends only on E[p] sees f
-unobstructed. The interesting question is "given a chosen
-acceptance rate, what does the analyst learn beyond that?" — for
-which baseline_harm is exactly redundant with the rejection rule.
-Useful as a sanity check (any new metric should at least match it
-when the population leaks through) but not a selection-process
-signal.
+   - **Lax governors (θ < 0):** raw `toxicity` AUROC 0.89–0.98;
+     saturation 0.47–0.50. Toxicity is the right tool when the
+     governor admits most interactions, because toxicity collapses
+     to baseline harm (β → 1 ⇒ T → 1 − E[p]).
+   - **Strict governors (θ > 0):** roles invert. `toxicity` 0.51–0.53
+     (chance); `saturation` 0.87–0.88. Under heavy filtering the
+     few accepted interactions don't carry population info; what
+     does is the geometric question "how much sorting signal is the
+     proxy giving us, relative to its theoretical ceiling?"
 
-### One unexpected result: `quality_correlation` sign-flips
+   Mean AUROC across all θ is nearly tied (0.712 vs 0.685). The
+   value isn't that saturation *beats* toxicity in aggregate — it's
+   that the two signals are **complementary** in opposite regimes,
+   and saturation fills the strict-θ gap where toxicity reverts to
+   chance. Practically: if your governor's acceptance rate is
+   <50%, report saturation; if >50%, report toxicity; near 50%,
+   report both (this is exactly what `MetricsReporter` now does).
 
-ρ(p,a) was constructed to be the unit-normalized quality gap. The
-naive assumption — *adversarial population → lower ρ* — fails
-because the governor is *still doing the same sorting job* on a
-worse population. With wider σ_p (adversarial mix spreads p out)
-the governor's sorting actually couples ρ *more* tightly, not less.
-The metric reports "how good is the sorting", not "how good is the
-population", which is by design. **Practical implication:** ρ
-diagnoses governor quality given the population, not population
-quality given the governor — use it to compare governors, not to
-detect adversarial populations.
+**3. `quality_gap` strictly worsens with strictness — and goes
+*wrong-direction* under strict governors.** AUROC drops from 0.798
+to 0.017 across the θ sweep. Combined with `quality_correlation`
+mean 0.315 (also wrong-direction throughout), these confirm the
+v1 finding's reframing: **ρ(p,a) and Q measure sorting quality
+given the population, not the population given the sorting.** Use
+them to compare governors against a fixed population, not to
+detect adversarial populations against a fixed governor.
 
-## Implications for the SWARM stack
+### Why the location flipped from v1
 
-- **Drop raw `toxicity` from cross-scenario sweep plots** in favor of
-  `selection_saturation` whenever the comparison spans governor
-  settings. The new x-axis is interpretable across `s_plus/s_minus`,
-  `h`, reputation weights, etc., in a way raw toxicity isn't.
-- **Use ρ for governor comparisons within a population, not
-  population comparisons across a governor.** This is the opposite
-  of how it was framed in the original write-up; the data corrects it.
-- **Saturation > 0.85 in the balanced-θ regime → governor at proxy
-  ceiling.** The 0.85 danger-zone threshold in
-  `plot_selection_geometry` lines up with the natural inflection
-  in the AUROC curve. Tightening the governor past this point won't
-  help; the *next* lever is to find new observables (raise σ_p).
+In v1 (noiseless `v̂`, N=200), saturation peaked at θ=0. With a
+deterministic governor and large batches, the balanced regime is
+where the most sorting work happens (both α and β substantial), so
+|Q| · √(αβ) is maximized — and saturation along with it.
 
-## Limits
+In v2 (noisy `v̂`, N=50), the noise smears `v̂` so that even a "lax"
+threshold makes mistakes, and a "strict" threshold rejects only the
+clearest-positive proxies. The strict regime now selects an
+acceptance set whose `p` distribution is much narrower than the
+rejection set's — so the sorting signal `|Q|` is *huge* relative to
+the small σ_p of the accepted slice. Saturation grows with θ
+because the bound `σ_p/√(αβ)` shrinks faster than `|Q|` does.
 
-- Fixture populations are not adaptive — the toxic batch isn't
-  trying to evade the governor. With evading agents the
-  saturation curve would likely flatten earlier as ρ stops
-  growing. Worth re-running with an adaptive arm-2-style adversary.
-- The governor is a simple v̂-threshold; real SWARM governors fold
-  reputation, transfers, externality costs. Those won't break the
-  AUROC story (the metrics are independent of payoff structure) but
-  may shift the optimal θ.
-- N=200 seeds per cell is enough to make every AUROC ≥0.6 separated
-  from chance at p < 0.001; finer-grained f or θ resolution is the
-  natural next refinement.
+This is the right shape for a real-world story: when the governor
+is doing aggressive filtering, saturation tells you whether the
+proxy is hitting its ceiling.
+
+## Implications
+
+- **Report saturation alongside toxicity in every per-epoch
+  summary** — they're complementary, not redundant.
+  `MetricsReporter.format_report()` and `to_markdown()` already do
+  this; sweeps and dashboards should follow.
+- **Acceptance rate is the regime selector.** Below ~50% acceptance,
+  trust saturation over toxicity; above, the reverse. The
+  `plot_selection_geometry()` two-panel view encodes exactly this
+  decomposition.
+- **Don't use ρ(p,a) to detect adversarial populations.** It's a
+  governor-quality metric given the population. Use it for A/B
+  comparisons of governors, not for population monitoring.
+
+## Limits and unresolved
+
+- Fixture populations aren't adaptive. An evasive adversary would
+  push `v̂` close to θ on purpose, which collapses σ_p of the
+  accepted slice further and would push saturation higher still —
+  but it would also push `p` closer to the threshold, potentially
+  *lowering* `baseline_harm` AUROC. Worth running with an arm-2-
+  style CEM adversary.
+- The governor here is a pure `v̂`-threshold. SWARM governors fold
+  reputation, transfers, externality costs. Those don't change the
+  geometric story (saturation is independent of payoffs) but they
+  do change which θ the system equilibrates at.
+- Saturation's wrong behavior at θ < 0 (AUROC < 0.5) is mild
+  (0.469–0.503, basically chance) but real. Diagnose: under
+  governors that reject almost nothing, σ_p of the accepted slice
+  ≈ σ_p of the population, and the saturation ratio doesn't move
+  much with f. Not a bug — a regime boundary worth knowing.
 
 ## Artifacts
 
-- Per-cell CSV: `runs/selection_geometry_auroc_2026/cells.csv`
-  (9 000 rows × 9 columns)
-- Plots: `runs/selection_geometry_auroc_2026/plots/`
+- Per-cell CSV: `runs/sg_auroc_v2/cells.csv` (18 000 rows × 9 columns)
+- Plots: `runs/sg_auroc_v2/plots/`
 - Reproduce: `python -m experiments.selection_geometry_auroc --seed 2026`

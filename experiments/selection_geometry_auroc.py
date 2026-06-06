@@ -46,13 +46,20 @@ from tests.fixtures.interactions import (  # noqa: E402
 )
 
 # -------------------------------------------------------------------- config
+#
+# Discrimination is set up to be HARD so metrics actually compete:
+#   - Adjacent adversarial fractions (5pp gap) — not 0.1 vs 0.4
+#   - Small batches (N=50) — finite-sample noise dominates clean signal
+#   - v_hat jitter — governor isn't a perfect oracle on p
+# AUROC near 1.0 here is a real win; near 0.5 is real chance.
 
-FRACTIONS = [0.0, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.8]
-LOW_F = 0.1
-HIGH_F = 0.4
-THETAS = [-0.6, -0.3, 0.0, 0.3, 0.6]  # v_hat thresholds
-N_INTERACTIONS = 200
-N_SEEDS = 200
+FRACTIONS = [0.05, 0.10, 0.15, 0.20, 0.25, 0.30, 0.35, 0.40, 0.45]
+LOW_F = 0.25
+HIGH_F = 0.30
+THETAS = [-0.6, -0.3, 0.0, 0.3, 0.6]
+N_INTERACTIONS = 50
+N_SEEDS = 400
+V_HAT_NOISE_SIGMA = 0.25
 METRICS = [
     ("toxicity", COLORS.TOXICITY),
     ("quality_gap", "#9B59B6"),
@@ -103,16 +110,23 @@ def compose_population(f: float, n: int, seed: int):
     return benign + toxic
 
 
-def apply_governor(interactions, theta: float):
-    """Re-label acceptance as v_hat > theta (mutates copies)."""
+def apply_governor(interactions, theta: float, rng: np.random.Generator):
+    """Re-label acceptance as (v_hat + noise) > theta.
+
+    Adding Gaussian noise to v_hat models a noisy proxy / imperfect
+    governor — without it the rule v_hat > theta is a deterministic
+    function of p, which makes the discrimination trivial.
+    """
     for ix in interactions:
-        ix.accepted = ix.v_hat > theta
+        noise = float(rng.normal(0.0, V_HAT_NOISE_SIGMA))
+        ix.accepted = (ix.v_hat + noise) > theta
     return interactions
 
 
 def run_cell(f: float, theta: float, seed: int) -> CellResult:
     pop = compose_population(f, N_INTERACTIONS, seed)
-    apply_governor(pop, theta)
+    rng = np.random.default_rng(seed + 31337)
+    apply_governor(pop, theta, rng)
     sm = SoftMetrics()
     tox = sm.toxicity_rate(pop)
     qg = sm.quality_gap(pop)
