@@ -19,6 +19,17 @@ Posts about SWARM research findings, framework updates, and multi-agent safety.
   </div>
 </div>
 
+## June 2026
+
+<div class="blog-post" data-tags="theory evaluation" markdown>
+
+**Jun 6** — [Selection geometry: when a metric breaking is the diagnostic](selection-geometry-when-breaking-is-the-diagnostic.md)
+<span class="blog-tag">Theory</span> <span class="blog-tag">Evaluation</span>
+
+We re-derived the quality gap as `Cov(p,a)/Var(a)`, got a Cauchy-Schwarz bound, and built `selection_saturation = |Q|·√(αβ)/σ_p` as a unit-normalized adverse-selection metric. Three AUROC studies, 81 000 cells. v1 saturated at AUROC=1.0 (too easy). v2 showed toxicity and saturation are complementary across governor strictness. v3 added a `v̂`-inflating adversary and *inverted* the v2 ranking — but the inversion is the cause-3 fingerprint: rising toxicity AUROC + falling saturation AUROC = proxy gaming, detectable from metric geometry alone without ground truth.
+
+</div>
+
 ## May 2026
 
 <div class="blog-post" data-tags="evaluation theory" markdown>
