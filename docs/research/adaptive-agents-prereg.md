@@ -179,3 +179,9 @@ mean to rise ≥10× to win, not just any improvement).
   calibration anchor is still required for cause-3 detection (proxy
   gaming), independent of which payoff function is used for elite
   selection.
+
+### Synthesis
+
+The full structural-inertness arc — static → adaptive-acceptance →
+adaptive-generation (CEM) → fully-adaptive with the v3 anchor — and
+its writeup live in [`arm2-paper-section.md`](arm2-paper-section.md).
