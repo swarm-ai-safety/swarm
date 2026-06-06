@@ -599,6 +599,13 @@ class MetricsReporter:
             f"  Toxicity (P(p<0.5|acc)):    {summary.toxicity_hard:.3f}",
             f"  High quality acceptance:    {summary.high_quality_acceptance:.1%}",
             f"  Low quality acceptance:     {summary.low_quality_acceptance:.1%}",
+            "",
+            "SELECTION GEOMETRY",
+            "-" * 30,
+            f"  Quality correlation ρ(p,a): {summary.quality_correlation:+.3f}  [-1, +1]",
+            f"  Baseline harm (1-E[p]):     {summary.baseline_harm:.3f}",
+            f"  Selection credit (β·Q):     {summary.selection_credit:+.3f}",
+            f"  C-S saturation |Q|/bound:   {summary.selection_saturation:.1%}",
         ]
 
         if verbose:
@@ -718,6 +725,23 @@ class MetricsReporter:
                     (
                         "Conditional loss (counterparty)",
                         summary.conditional_loss_counterparty,
+                    ),
+                ]
+            )
+        )
+        lines.append("")
+
+        lines.append("## Selection geometry")
+        lines.append("")
+        lines.extend(
+            render_table(
+                [
+                    ("Quality correlation ρ(p,a)", summary.quality_correlation),
+                    ("Baseline harm (1 − E[p])", summary.baseline_harm),
+                    ("Selection credit (β · Q)", summary.selection_credit),
+                    (
+                        "C-S saturation (|Q| / σ_p/√(αβ))",
+                        summary.selection_saturation,
                     ),
                 ]
             )
