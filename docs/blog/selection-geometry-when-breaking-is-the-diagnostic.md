@@ -25,6 +25,8 @@ abstract: "A re-derivation of the quality gap as Cov(p,a)/Var(a) gives a Cauchy-
 
 ## The setup
 
+![Xiaohei cranking a winch to pull the proxy line between accepted and rejected interactions](figures/xiaohei-selection-geometry-01-capacity-winch.png)
+
 If interactions have soft labels `p = P(v=+1 | observables)` and a governor accepts a subset `a ∈ {0,1}`, the quality gap
 
 > `Q = E[p|a=1] − E[p|a=0]`
@@ -51,11 +53,15 @@ That's the metric. Does it carry information beyond raw toxicity?
 
 ## Study v1: AUROC = 1.0 means nothing
 
+![Xiaohei dropping every item through a too-wide hoop labeled AUROC 1.0](figures/xiaohei-selection-geometry-02-wide-hoop.png)
+
 The first sweep was a 9 000-cell discrimination task: mix benign + adversarial fixture batches at fraction `f`, run them through a `v̂ > θ` governor, ask which metric best distinguishes adversarial populations (`f ≥ 0.4`) from benign ones (`f ≤ 0.1`).
 
 Result: `baseline_harm`, `toxicity`, and `selection_saturation` all hit AUROC = 1.000 somewhere. The contrast was a 30-percentage-point f-gap with N=200 batches and a noiseless `v̂` — the discrimination task was too easy. Saturated AUROC means the experiment isn't measuring anything.
 
 ## Study v2: harder contrast, X-pattern
+
+![Xiaohei balancing on crossed ropes between the lax side and the strict side, carrying toxicity and saturation buckets](figures/xiaohei-selection-geometry-03-tightrope.png)
 
 So we tightened it. 5pp gap (`f ≤ 0.25 vs f ≥ 0.30`), N=50 batches, `v̂ + 𝒩(0, 0.25)` so the governor isn't a perfect oracle on `p`. 18 000 cells.
 
@@ -70,6 +76,8 @@ The middle panel (inflation=0.3) shows the v2 picture cleanly:
 The two metrics aren't competing — they're complementary, sweeping the same AUROC budget across opposite halves of the governor space. The operational rule looked clean: report saturation when acceptance < 50%, toxicity when > 50%.
 
 ## Study v3: an evasive adversary inverts the ranking
+
+![Xiaohei pumping more air into an inflated proxy balloon while the ground-truth weight stays anchored — the string decouples and the ranking flips](figures/xiaohei-selection-geometry-04-proxy-balloon.png)
 
 But every realistic adversary is *adaptive*. They learn how the governor works and game it. The cheapest gaming strategy is to inflate `v̂` without changing real quality — the [cause-3 pattern from the arm-2 line](../research/adaptive-arm2-cause3-active-probe.md). So we added a `v̂`-inflation knob: adversarial interactions get `v̂ += inflation` while `p` stays low.
 
@@ -89,6 +97,8 @@ Why? The adversary is specifically attacking the `(v̂, p)` coupling:
 And `baseline_harm` doesn't move. The population is unchanged; only the proxy is gamed. `E[p]` doesn't care.
 
 ## The breakage is the diagnostic
+
+![Xiaohei holding two tuning forks across a "proxy gaming" crack — toxicity up on one side, saturation down on the other](figures/xiaohei-selection-geometry-05-tuning-forks.png)
 
 You can read this as bad news for `selection_saturation`. But the more useful reading is that **the pair `(toxicity, saturation)` carries information neither metric does alone**:
 
