@@ -32,7 +32,7 @@ import math
 import random
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
@@ -44,6 +44,8 @@ from swarm.metrics.graph_structural import (
     detect_structural_anomalies,
     edges_from_interactions,
     rank_aggregated_scores,
+    temporal_concentration,
+    temporal_densest_anomalies,
 )
 from swarm.models.identity import IdentityConfig, IdentityRegistry
 from swarm.models.interaction import InteractionType, SoftInteraction
@@ -83,21 +85,51 @@ class GraphSample:
 # ---------------------------------------------------------------------------
 
 
+# Deterministic timestamp source for benchmark interactions. The temporal
+# detector (temporal_densest_anomalies / temporal_concentration) splits the
+# stream by SoftInteraction.timestamp, so leaving the default datetime.now()
+# would tie ROC/F1 results to Python loop ordering and runtime jitter rather
+# than the planted families themselves. Every benchmark interaction now gets
+# a deterministic monotone timestamp; explicit timestamps override.
+_BASELINE_TS = datetime(2026, 1, 1, tzinfo=timezone.utc)
+_TS_COUNTER = 0
+
+
+def _next_ts() -> datetime:
+    """Monotone, deterministic per-call timestamp (1-second steps)."""
+    global _TS_COUNTER
+    ts = _BASELINE_TS + timedelta(seconds=_TS_COUNTER)
+    _TS_COUNTER += 1
+    return ts
+
+
+def _reset_ts(seed: int = 0) -> None:
+    """Reset the timestamp counter so a given seed produces a fixed sequence.
+
+    Generators call this at entry; subsequent _ix() invocations get
+    timestamps `_BASELINE_TS + k*sec` for k=0,1,2,…. Different seeds get
+    distinct initial offsets so concatenated multi-sample sweeps don't
+    collide on the same timestamps.
+    """
+    global _TS_COUNTER
+    _TS_COUNTER = (seed % 1_000_000) * 100_000
+
+
 def _ix(initiator: str, counterparty: str, *, p: float, accepted: bool,
-        tau: float = 0.0) -> SoftInteraction:
+        tau: float = 0.0,
+        timestamp: Optional[datetime] = None) -> SoftInteraction:
+    ts = timestamp if timestamp is not None else _next_ts()
     return SoftInteraction(
-        initiator=initiator,
-        counterparty=counterparty,
+        initiator=initiator, counterparty=counterparty,
         interaction_type=InteractionType.REPLY,
-        accepted=accepted,
-        p=p,
-        tau=tau,
+        accepted=accepted, p=p, tau=tau, timestamp=ts,
     )
 
 
 def generate_benign(
     n_agents: int = 50, edge_density: float = 0.1, seed: int = 0
 ) -> GraphSample:
+    _reset_ts(seed)
     rng = random.Random(seed)
     nodes = [f"a{i}" for i in range(n_agents)]
     n_edges = int(edge_density * n_agents * (n_agents - 1))
@@ -128,6 +160,7 @@ def generate_collusion_ring(
     interact (mutual edges remain a subset). Default 0.6 produces an
     incomplete clique; lower = harder.
     """
+    _reset_ts(seed)
     rng = random.Random(seed)
     ring = [f"r{i}" for i in range(ring_size)]
     honest = [f"h{i}" for i in range(n_agents - ring_size)]
@@ -170,8 +203,9 @@ def generate_sybil_cluster(
     seed: int = 0,
 ) -> GraphSample:
     """k sybils share nearly the same set of (random) counterparties but
-    interact one-way and at low mutual density (the identity-overlap=0
+    have distinct identifiers (analogous to the per-counterparty Jaccard
     case from redteam.attacks.sybil_attack)."""
+    _reset_ts(seed)
     rng = random.Random(seed)
     sybils = [f"s{i}" for i in range(cluster_size)]
     honest = [f"h{i}" for i in range(n_agents - cluster_size)]
@@ -224,9 +258,10 @@ def generate_threshold_dancing(
       quality-asymmetry flag)
 
     The cluster's *structural* signature (mutual edges, dense subgraph
-    relative to background) remains, which is what graph_structural is
+    membership) remains intact — this is the regime graph_structural is
     supposed to catch.
     """
+    _reset_ts(seed)
     rng = random.Random(seed)
     cluster = [f"c{i}" for i in range(cluster_size)]
     honest = [f"h{i}" for i in range(n_agents - cluster_size)]
@@ -321,6 +356,7 @@ def generate_overlapping_coalitions(
             that actually interact (mirrors collusion_ring's
             ring_density).
     """
+    _reset_ts(seed)
     rng = random.Random(seed)
     honest = [f"h{i}" for i in range(n_agents - n_coalitions * coalition_size)]
     # Allocate coalition members from a shared pool, allowing overlaps.
@@ -385,6 +421,86 @@ def generate_overlapping_coalitions(
     )
 
 
+def generate_burst_coordination(
+    n_agents: int = 50,
+    cluster_size: int = 5,
+    n_bursts: int = 3,
+    burst_duration_minutes: int = 5,
+    total_duration_hours: int = 24,
+    background_density: float = 0.06,
+    cluster_density: float = 0.85,
+    seed: int = 0,
+) -> GraphSample:
+    """Coalition members coordinate in N short bursts (beads-p56u).
+
+    A static (timestamp-blind) view sees the cluster edges aggregated
+    across the full ``total_duration_hours`` — looks like an ordinary
+    sparse-ish coordination ring. A temporal-aware view sees the
+    cluster's interactions concentrate in ``n_bursts`` short windows
+    while honest interactions spread uniformly over the full span.
+
+    The *aggregated* structural signature is identical to
+    ``generate_collusion_ring`` at the same density, but the *temporal*
+    signature is the load-bearing axis here.
+    """
+    _reset_ts(seed)
+    rng = random.Random(seed)
+    cluster = [f"c{i}" for i in range(cluster_size)]
+    honest = [f"h{i}" for i in range(n_agents - cluster_size)]
+    nodes = cluster + honest
+    interactions: List[SoftInteraction] = []
+    base_time = datetime(2026, 1, 1, 0, 0, 0)
+    total_seconds = total_duration_hours * 3600
+    burst_seconds = burst_duration_minutes * 60
+
+    # Cluster interactions concentrated in n_bursts short windows.
+    burst_starts = sorted(
+        rng.uniform(0, total_seconds - burst_seconds) for _ in range(n_bursts)
+    )
+    for burst_start in burst_starts:
+        for u in cluster:
+            for v in cluster:
+                if u != v and rng.random() < cluster_density:
+                    t_offset = burst_start + rng.uniform(0, burst_seconds)
+                    interactions.append(_ix(
+                        u, v,
+                        p=rng.uniform(0.65, 0.85),
+                        accepted=rng.random() < 0.85,
+                        tau=rng.uniform(0.1, 0.5),
+                        timestamp=base_time + timedelta(seconds=t_offset),
+                    ))
+    # Honest background: timestamps uniform across the full window.
+    n_bg = int(background_density * n_agents * (n_agents - 1))
+    for _ in range(n_bg):
+        u, v = rng.sample(honest, 2)
+        t_offset = rng.uniform(0, total_seconds)
+        interactions.append(_ix(
+            u, v,
+            p=rng.uniform(0.3, 0.9),
+            accepted=rng.random() < 0.7,
+            timestamp=base_time + timedelta(seconds=t_offset),
+        ))
+    # Cluster <-> honest crossings (also spread across the full window).
+    for _ in range(cluster_size * 5):
+        t_offset = rng.uniform(0, total_seconds)
+        interactions.append(_ix(
+            rng.choice(cluster), rng.choice(honest),
+            p=rng.uniform(0.4, 0.7),
+            accepted=rng.random() < 0.7,
+            timestamp=base_time + timedelta(seconds=t_offset),
+        ))
+    edges = edges_from_interactions(interactions, weight="count")
+    return GraphSample(
+        edges=edges, interactions=interactions, nodes=nodes,
+        planted=set(cluster),
+        family="burst_coordination",
+        params={"n_agents": n_agents, "cluster_size": cluster_size,
+                "n_bursts": n_bursts,
+                "burst_duration_minutes": burst_duration_minutes},
+        seed=seed,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Detector adapters
 # ---------------------------------------------------------------------------
@@ -423,6 +539,51 @@ def detector_graph_structural(s: GraphSample) -> DetectorOutput:
         flagged.update(a.members)
     native_flags = {n: (n in flagged) for n in s.nodes}
     clusters = [a.members for a in suspicious]
+    return DetectorOutput(scores=scores, native_flags=native_flags, clusters=clusters)
+
+
+def detector_graph_structural_temporal(s: GraphSample) -> DetectorOutput:
+    """graph_structural + per-window detection + temporal concentration (beads-p56u).
+
+    Combines the static detector's candidates with anomalies surfaced
+    by per-window detection (:func:`temporal_densest_anomalies`).
+    Per-anomaly score is the rank-aggregate composite plus an additive
+    temporal-concentration boost (half the concentration value, capped
+    at 1.0). Native flag fires when EITHER the static ``is_suspicious``
+    gate fires OR (size ≥ 3 AND temporal_concentration > 0.4) — additive,
+    not replacing the static gate.
+
+    The point: a coalition that bursts in 2-3 windows of an
+    otherwise-quiet run shows up in per-window detection even when its
+    aggregated edges look indistinguishable from background. Static
+    anomalies bundle the cluster with the surrounding community;
+    per-window detection isolates it.
+    """
+    static_anoms = detect_structural_anomalies(
+        s.edges, n_null_samples=20, seed=s.seed)
+    window_anoms = temporal_densest_anomalies(
+        s.interactions, n_windows=10, min_size=3,
+        n_null_samples=10, seed=s.seed + 9000)
+    # Merge candidate sets (dedup by member set).
+    seen: List[Set[str]] = []
+    all_anoms = []
+    for a in static_anoms + window_anoms:
+        if any(a.members == m for m in seen):
+            continue
+        seen.append(a.members)
+        all_anoms.append(a)
+    base_scores = rank_aggregated_scores(all_anoms, s.nodes)
+    scores: Dict[str, float] = dict(base_scores)
+    boosted_flags: Set[str] = set()
+    clusters: List[Set[str]] = []
+    for a in all_anoms:
+        tc = temporal_concentration(s.interactions, a.members, n_windows=12)
+        for u in a.members:
+            scores[u] = min(1.0, scores[u] + 0.5 * tc)
+        if a.is_suspicious or (len(a.members) >= 3 and tc > 0.4):
+            boosted_flags.update(a.members)
+            clusters.append(a.members)
+    native_flags = {n: (n in boosted_flags) for n in s.nodes}
     return DetectorOutput(scores=scores, native_flags=native_flags, clusters=clusters)
 
 
@@ -537,6 +698,7 @@ def detector_collusion_score(s: GraphSample) -> DetectorOutput:
 
 DETECTORS: Dict[str, Detector] = {
     "graph_structural": detector_graph_structural,
+    "graph_structural_temporal": detector_graph_structural_temporal,
     "identity_jaccard": detector_identity_jaccard,
     "reputation_mutual": detector_reputation_mutual,
     "collusion_score": detector_collusion_score,
@@ -776,6 +938,10 @@ def run_sweep(replicates: int = 20, seed_base: int = 0) -> List[RunResult]:
         (generate_overlapping_coalitions, "overlapping_coalitions_overlap60",
          {"n_agents": 60, "n_coalitions": 3, "coalition_size": 5,
           "overlap_fraction": 0.6}),
+        # beads-p56u: cluster coordinates in 3 short bursts; honest spread uniformly
+        (generate_burst_coordination, "burst_coordination_3bursts",
+         {"n_agents": 50, "cluster_size": 5, "n_bursts": 3,
+          "burst_duration_minutes": 5, "total_duration_hours": 24}),
     ]
     for gen, name, params in families:
         results = run_family(gen, name, replicates=replicates,

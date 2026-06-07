@@ -140,8 +140,9 @@ class TestDecisionRule:
 class TestSweep:
     def test_full_sweep_smoke(self):
         results = run_sweep(replicates=2, seed_base=0)
-        # 10 families * 4 detectors = 40 (8 single-coalition + 2 overlapping)
-        assert len(results) == 10 * 4
+        # 11 families * 5 detectors = 55
+        # (8 single-coalition + 2 overlapping + 1 burst; +temporal detector)
+        assert len(results) == 11 * 5
 
 
 class TestOverlappingCoalitions:
@@ -232,3 +233,66 @@ class TestHungarianRecovery:
         # returned[0] (J=1.0). Greedy: assigns J=1.0 first, then J=2/3.
         # Mean = (1.0 + 2/3) / 2 = 5/6
         assert hungarian_recovery(returned, planted) == pytest.approx(5/6)
+
+
+class TestTemporalCoordination:
+    def test_burst_generator_plants_cluster(self):
+        from experiments.graph_structural_roc import generate_burst_coordination
+        s = generate_burst_coordination(n_agents=30, cluster_size=4,
+                                         n_bursts=2, seed=0)
+        assert s.planted == {"c0", "c1", "c2", "c3"}
+        assert s.family == "burst_coordination"
+
+    def test_temporal_concentration_high_on_burst(self):
+        """Cluster-internal interactions confined to a tiny window should
+        score high concentration; honest spread should score near zero."""
+        from datetime import datetime, timedelta
+
+        from swarm.metrics.graph_structural import temporal_concentration
+        from swarm.models.interaction import SoftInteraction
+        base = datetime(2026, 1, 1)
+        cluster = {"a", "b", "c"}
+        # Cluster: 10 interactions all in the first 10 minutes
+        # Honest: 20 interactions spread over 24 hours
+        ixs = []
+        for i in range(10):
+            ixs.append(SoftInteraction(
+                initiator="a", counterparty="b", p=0.8,
+                timestamp=base + timedelta(seconds=i * 60)))
+        for i in range(20):
+            ixs.append(SoftInteraction(
+                initiator="h0", counterparty="h1", p=0.6,
+                timestamp=base + timedelta(seconds=i * 4000)))
+        # Honest extends the time window; cluster is concentrated.
+        conc = temporal_concentration(ixs, cluster, n_windows=12)
+        assert conc > 0.7, f"expected high concentration, got {conc}"
+
+    def test_temporal_concentration_low_on_uniform(self):
+        from datetime import datetime, timedelta
+
+        from swarm.metrics.graph_structural import temporal_concentration
+        from swarm.models.interaction import SoftInteraction
+        base = datetime(2026, 1, 1)
+        cluster = {"a", "b"}
+        # Cluster interactions uniform across full 1-hour window
+        ixs = [
+            SoftInteraction(
+                initiator="a", counterparty="b", p=0.8,
+                timestamp=base + timedelta(seconds=i * 300))
+            for i in range(12)
+        ]
+        conc = temporal_concentration(ixs, cluster, n_windows=12)
+        # Uniform-across-windows -> concentration near 0
+        assert conc < 0.1, f"expected low concentration, got {conc}"
+
+    def test_temporal_concentration_edge_cases(self):
+        from swarm.metrics.graph_structural import temporal_concentration
+        assert temporal_concentration([], {"a"}, n_windows=10) == 0.0
+        # Single interaction -> n_in_cluster < 2 -> 0.0
+        from datetime import datetime
+
+        from swarm.models.interaction import SoftInteraction
+        single = [SoftInteraction(
+            initiator="a", counterparty="b", p=0.5,
+            timestamp=datetime(2026, 1, 1))]
+        assert temporal_concentration(single, {"a", "b"}, n_windows=10) == 0.0
