@@ -44,6 +44,12 @@ Academic foundations and related publications. SWARM implements the framework de
 
     External repository scouting status and SWARM integration plan
 
+-   :material-telescope: **[Situational Awareness Tracker](situational-awareness-tracker.md)**
+
+    ---
+
+    Claim status for Aschenbrenner's *Situational Awareness* and its mapping onto SWARM mechanisms
+
 </div>
 
 ## Core Research Questions
