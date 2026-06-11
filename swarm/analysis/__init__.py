@@ -15,6 +15,11 @@ from swarm.analysis.dashboard import (
     extract_metrics_from_orchestrator,
     run_dashboard,
 )
+from swarm.analysis.delm_hillclimb import (
+    HillClimbConfig,
+    HillClimbResult,
+    run_delm_hillclimb,
+)
 from swarm.analysis.dolt_export import export_run_summary_to_dolt, export_to_dolt
 from swarm.analysis.enhanced_dashboard import (
     plot_enhanced_dashboard,
@@ -66,6 +71,10 @@ __all__ = [
     "SweepResult",
     "SweepRunner",
     "quick_sweep",
+    # DeLM hill-climbing optimizer
+    "HillClimbConfig",
+    "HillClimbResult",
+    "run_delm_hillclimb",
     # Dashboard
     "DashboardConfig",
     "DashboardState",
