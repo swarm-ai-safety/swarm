@@ -41,24 +41,46 @@ same workers as real OS threads (the shared store is lock-protected); results
 are then no longer bit-for-bit reproducible because thread interleaving is not
 controlled, so the deterministic scheduler is the default.
 
+Pluggable objectives
+--------------------
+The landscape is decoupled from the search via :class:`Objective`, which bundles
+a parameter space with an ``evaluate(params, seed)`` function. Two are built in:
+
+* :func:`build_governance_objective` — governance/payoff knobs (``PARAM_RANGES``),
+  scored by ``compute_fitness`` in ``[0, 1]``. This is the default.
+* :func:`build_adaptive_policy_objective` — the 8-dim adaptive-agent policy
+  vector (``swarm.adaptive.PARAM_SPEC``) scored by ``run_episode`` reward, so the
+  hill-climber can compete with the CEM trainer on the same target.
+
+Construct a custom :class:`Objective` to point the climber at any space. Each run
+also writes a trajectory plot (:func:`plot_trajectory`) of the best-so-far
+frontier and promoted improvements.
+
 Usage (CLI)::
 
+    # governance/payoff search (default objective)
     python -m swarm.analysis.delm_hillclimb scenarios/baseline.yaml \\
         --max-evals 60 --workers 4 --seed 42
 
-    # custom fitness weights + faster evals
+    # adaptive-agent policy search
     python -m swarm.analysis.delm_hillclimb scenarios/baseline.yaml \\
-        --max-evals 100 --workers 8 --eval-epochs 2 --eval-steps 4 \\
-        --weight-toxicity 0.5 --weight-welfare 0.2
+        --objective adaptive_policy --max-evals 60 --workers 4 --seed 42
 
 Usage (library)::
 
-    from swarm.analysis.delm_hillclimb import HillClimbConfig, run_delm_hillclimb
+    from swarm.analysis.delm_hillclimb import (
+        HillClimbConfig, build_adaptive_policy_objective, run_delm_hillclimb,
+    )
     from swarm.scenarios import load_scenario
 
+    # default governance objective
     scenario = load_scenario("scenarios/baseline.yaml")
     result = run_delm_hillclimb(scenario, HillClimbConfig(max_evals=60, n_workers=4))
     print(result.best_score, result.best_params)
+
+    # adaptive-policy objective
+    obj = build_adaptive_policy_objective(n_interactions=200)
+    result = run_delm_hillclimb(objective=obj, config=HillClimbConfig(max_evals=60))
 """
 
 from __future__ import annotations
@@ -73,7 +95,7 @@ import threading
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import AbstractSet, Any, Callable, Dict, List, Optional, Tuple
 
 from swarm.analysis.evolver import (
     DEFAULT_FITNESS_WEIGHTS,
@@ -178,16 +200,28 @@ def evaluate_params(
 # ---------------------------------------------------------------------------
 
 
-def _clamp_param(name: str, value: float) -> Any:
-    """Clamp a value to ``PARAM_RANGES[name]`` and coerce int params."""
-    lo, hi = PARAM_RANGES[name]
+def _clamp_param(
+    name: str,
+    value: float,
+    param_ranges: Dict[str, Tuple[float, float]] = PARAM_RANGES,
+    int_params: "AbstractSet[str]" = INT_PARAMS,
+) -> Any:
+    """Clamp a value to ``param_ranges[name]`` and coerce int params.
+
+    Defaults to the governance/payoff landscape so existing callers are
+    unaffected; an :class:`Objective` passes its own ranges for other spaces.
+    """
+    lo, hi = param_ranges[name]
     value = max(lo, min(hi, value))
-    if name in INT_PARAMS:
+    if name in int_params:
         return int(round(value))
     return float(value)
 
 
-def _quantize_key(params: Dict[str, Any]) -> Tuple[Tuple[str, float], ...]:
+def _quantize_key(
+    params: Dict[str, Any],
+    param_ranges: Dict[str, Tuple[float, float]] = PARAM_RANGES,
+) -> Tuple[Tuple[str, float], ...]:
     """A hashable, quantized identity for a parameter cell.
 
     Two candidates that round to the same grid cell are the same neighbor for
@@ -196,7 +230,7 @@ def _quantize_key(params: Dict[str, Any]) -> Tuple[Tuple[str, float], ...]:
     return tuple(
         (name, round(float(params[name]), QUANT_DECIMALS))
         for name in sorted(params)
-        if name in PARAM_RANGES
+        if name in param_ranges
     )
 
 
@@ -221,10 +255,14 @@ def seed_params_from_scenario(scenario: ScenarioConfig) -> Dict[str, Any]:
     return params
 
 
-def _param_distance(a: Dict[str, Any], b: Dict[str, Any]) -> float:
+def _param_distance(
+    a: Dict[str, Any],
+    b: Dict[str, Any],
+    param_ranges: Dict[str, Tuple[float, float]] = PARAM_RANGES,
+) -> float:
     """Normalized L2 distance between two param dicts (range-scaled)."""
     total = 0.0
-    for name, (lo, hi) in PARAM_RANGES.items():
+    for name, (lo, hi) in param_ranges.items():
         span = (hi - lo) or 1.0
         da = (float(a.get(name, lo)) - float(b.get(name, lo))) / span
         total += da * da
@@ -237,20 +275,34 @@ def _mutate(
     *,
     step_frac: float,
     dims: Optional[List[str]] = None,
+    param_ranges: Dict[str, Tuple[float, float]] = PARAM_RANGES,
+    int_params: "AbstractSet[str]" = INT_PARAMS,
 ) -> Dict[str, Any]:
     """Local mutation: Gaussian perturbation of ``dims`` (default: all)."""
     out = dict(base)
-    targets = dims if dims is not None else list(PARAM_RANGES.keys())
+    targets = dims if dims is not None else list(param_ranges.keys())
     for name in targets:
-        lo, hi = PARAM_RANGES[name]
+        lo, hi = param_ranges[name]
         sigma = step_frac * (hi - lo)
-        out[name] = _clamp_param(name, float(base.get(name, (lo + hi) / 2)) + rng.gauss(0.0, sigma))
+        out[name] = _clamp_param(
+            name,
+            float(base.get(name, (lo + hi) / 2)) + rng.gauss(0.0, sigma),
+            param_ranges,
+            int_params,
+        )
     return out
 
 
-def _random_point(rng: random.Random) -> Dict[str, Any]:
+def _random_point(
+    rng: random.Random,
+    param_ranges: Dict[str, Tuple[float, float]] = PARAM_RANGES,
+    int_params: "AbstractSet[str]" = INT_PARAMS,
+) -> Dict[str, Any]:
     """A uniformly random point in the full parameter space (for restarts)."""
-    return {name: _clamp_param(name, rng.uniform(lo, hi)) for name, (lo, hi) in PARAM_RANGES.items()}
+    return {
+        name: _clamp_param(name, rng.uniform(lo, hi), param_ranges, int_params)
+        for name, (lo, hi) in param_ranges.items()
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -305,12 +357,16 @@ class Basin:
 
 
 def _summarize_move(
-    base: Dict[str, Any], cand: Dict[str, Any], parent_score: float, score: float
+    base: Dict[str, Any],
+    cand: Dict[str, Any],
+    parent_score: float,
+    score: float,
+    param_ranges: Dict[str, Tuple[float, float]] = PARAM_RANGES,
 ) -> str:
     """Human-readable gist of the largest single change in a move."""
     biggest_name = ""
     biggest_mag = 0.0
-    for name, (lo, hi) in PARAM_RANGES.items():
+    for name, (lo, hi) in param_ranges.items():
         span = (hi - lo) or 1.0
         mag = abs(float(cand.get(name, lo)) - float(base.get(name, lo))) / span
         if mag > biggest_mag:
@@ -335,8 +391,14 @@ class SharedContext:
     local optima). All public methods are safe under the thread scheduler.
     """
 
-    def __init__(self, best_params: Dict[str, Any], best_score: float):
+    def __init__(
+        self,
+        best_params: Dict[str, Any],
+        best_score: float,
+        param_ranges: Dict[str, Tuple[float, float]] = PARAM_RANGES,
+    ):
         self._lock = threading.Lock()
+        self.param_ranges = param_ranges
         self.best_params: Dict[str, Any] = dict(best_params)
         self.best_score: float = best_score
         self.gists: List[Gist] = []
@@ -345,7 +407,7 @@ class SharedContext:
         self._seen: Dict[Tuple[Tuple[str, float], ...], float] = {
             # The seed point is already evaluated — mark it seen so no worker
             # wastes an evaluation re-testing it.
-            _quantize_key(best_params): best_score
+            _quantize_key(best_params, param_ranges): best_score
         }
         self._constraint_cells: set[Tuple[Tuple[str, float], ...]] = set()
         self._move_counter = 0
@@ -366,12 +428,12 @@ class SharedContext:
 
     def is_seen(self, params: Dict[str, Any]) -> bool:
         with self._lock:
-            return _quantize_key(params) in self._seen
+            return _quantize_key(params, self.param_ranges) in self._seen
 
     def is_pruned(self, params: Dict[str, Any]) -> bool:
         """True if a binding constraint already rules this neighbor out."""
         with self._lock:
-            return _quantize_key(params) in self._constraint_cells
+            return _quantize_key(params, self.param_ranges) in self._constraint_cells
 
     def random_basin(self, rng: random.Random) -> Tuple[Dict[str, Any], float]:
         """Pick a random known basin, returning a copy of its params and score.
@@ -405,7 +467,7 @@ class SharedContext:
         recorded as binding constraints; everything is marked seen so no worker
         re-tests the same cell.
         """
-        cell = _quantize_key(params)
+        cell = _quantize_key(params, self.param_ranges)
         with self._lock:
             self._seen[cell] = outcome.fitness
             self._move_counter += 1
@@ -416,7 +478,7 @@ class SharedContext:
         delta = score - parent_score
         verified = False
         promoted = False
-        summary = _summarize_move(base_params, params, parent_score, score)
+        summary = _summarize_move(base_params, params, parent_score, score, self.param_ranges)
 
         if not outcome.viable:
             summary = f"non-viable run ({outcome.error or 'unknown'})"
@@ -466,7 +528,7 @@ class SharedContext:
                     self._seen[cell] = confirmed_score
                     # Record a new basin if this point is far from all known ones.
                     if all(
-                        _param_distance(params, b.params) > basin_distance
+                        _param_distance(params, b.params, self.param_ranges) > basin_distance
                         for b in self.basins
                     ):
                         self.basins.append(Basin(params=dict(params), score=confirmed_score))
@@ -545,11 +607,131 @@ class TaskQueue:
             return len(self._items)
 
 
-def _seed_tasks() -> List[Task]:
+def _seed_tasks(param_ranges: Dict[str, Tuple[float, float]] = PARAM_RANGES) -> List[Task]:
     """Initial work: probe every dimension plus a few full-space explores."""
-    tasks: List[Task] = [Task(kind="mutate_dim", dim=name) for name in PARAM_RANGES]
+    tasks: List[Task] = [Task(kind="mutate_dim", dim=name) for name in param_ranges]
     tasks.extend(Task(kind="explore") for _ in range(4))
     return tasks
+
+
+# ---------------------------------------------------------------------------
+# Objective: the pluggable optimization target
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Objective:
+    """A pluggable optimization target for the hill-climber.
+
+    Bundles a parameter space with an evaluation function so the same DeLM
+    machinery can search different landscapes. ``evaluate(params, seed)`` runs
+    the underlying simulation and returns an :class:`EvalOutcome` whose
+    ``fitness`` the climber maximizes.
+
+    Build one with :func:`build_governance_objective` (governance/payoff knobs,
+    the default) or :func:`build_adaptive_policy_objective` (adaptive-agent
+    policy vectors), or construct your own to point the climber at any space.
+    """
+
+    name: str
+    param_ranges: Dict[str, Tuple[float, float]]
+    int_params: AbstractSet[str]
+    seed_params: Dict[str, Any]
+    evaluate: Callable[[Dict[str, Any], int], EvalOutcome]
+
+
+def build_governance_objective(
+    base_scenario: ScenarioConfig, cfg: "HillClimbConfig"
+) -> Objective:
+    """Objective over governance/payoff knobs (``PARAM_RANGES``).
+
+    This is the default landscape — the same one the GEPA and darwinian
+    optimizers search — scored by ``compute_fitness`` in ``[0, 1]``.
+    """
+
+    def evaluate(params: Dict[str, Any], seed: int) -> EvalOutcome:
+        return evaluate_params(
+            base_scenario,
+            params,
+            seed=seed,
+            eval_epochs=cfg.eval_epochs,
+            eval_steps=cfg.eval_steps,
+            fitness_weights=cfg.fitness_weights,
+            welfare_reference=cfg.welfare_reference,
+            payoff_reference=cfg.payoff_reference,
+        )
+
+    return Objective(
+        name=base_scenario.scenario_id or "governance",
+        param_ranges=PARAM_RANGES,
+        int_params=INT_PARAMS,
+        seed_params=seed_params_from_scenario(base_scenario),
+        evaluate=evaluate,
+    )
+
+
+def build_adaptive_policy_objective(
+    payoff_config: Optional[Any] = None,
+    *,
+    n_interactions: int = 200,
+    reward: str = "mean_attempted",
+) -> Objective:
+    """Objective over the adaptive-agent policy vector (``adaptive.PARAM_SPEC``).
+
+    Lets the DeLM hill-climber optimize the same 8-dim generation policy that
+    the CEM trainer in ``swarm.adaptive.cem`` searches, via ``run_episode``.
+    The fitness is the episode reward (``mean_attempted`` by default — the
+    pre-registered arm-2 reward — or ``mean_accepted`` / ``sum_attempted``).
+
+    Note: the reward is an absolute payoff (typically order 1), not a clamped
+    ``[0, 1]`` score, so it is on a different scale from the governance
+    objective; ``IMPROVE_EPS`` / ``DEADEND_MARGIN`` are sized for that range.
+    """
+    from swarm.adaptive.episode import run_episode
+    from swarm.adaptive.policy import PARAM_NAMES, PARAM_SPEC, Policy
+    from swarm.core.payoff import PayoffConfig
+
+    pc = payoff_config or PayoffConfig()
+    ranges: Dict[str, Tuple[float, float]] = {
+        name: (lo, hi) for name, lo, hi in PARAM_SPEC
+    }
+    seed_params = {name: (lo + hi) / 2.0 for name, lo, hi in PARAM_SPEC}
+
+    def _reward(report: Any) -> float:
+        if reward == "mean_attempted":
+            return float(report.mean_payoff_attempted)
+        if reward == "mean_accepted":
+            return float(report.mean_payoff_accepted)
+        if reward == "sum_attempted":
+            return float(report.sum_payoff)
+        raise ValueError(f"unknown reward {reward!r}")
+
+    def evaluate(params: Dict[str, Any], seed: int) -> EvalOutcome:
+        vec = [float(params[name]) for name in PARAM_NAMES]
+        try:
+            policy = Policy.from_vector(vec)
+            report = run_episode(
+                policy, n_interactions=n_interactions, payoff_config=pc, seed=seed
+            )
+        except Exception as exc:  # noqa: BLE001 — a bad genome must not kill the swarm
+            logger.debug("adaptive eval failed for %s: %s", params, exc)
+            return EvalOutcome(fitness=0.0, side_info={}, viable=False, error=str(exc))
+        side_info = {
+            "reward": reward,
+            "accept_rate": round(report.accept_rate, 4),
+            "mean_p": round(report.mean_p, 4),
+            "toxicity": round(report.toxicity, 4),
+            "n_accepted": report.n_accepted,
+        }
+        return EvalOutcome(fitness=_reward(report), side_info=side_info, viable=True)
+
+    return Objective(
+        name="adaptive_policy",
+        param_ranges=ranges,
+        int_params=frozenset(),
+        seed_params=seed_params,
+        evaluate=evaluate,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -625,7 +807,11 @@ class HillClimbResult:
 
 
 def _propose(
-    task: Task, shared: SharedContext, rng: random.Random, step_frac: float
+    task: Task,
+    shared: SharedContext,
+    rng: random.Random,
+    step_frac: float,
+    obj: Objective,
 ) -> Tuple[Dict[str, Any], Dict[str, Any], float]:
     """Turn a claimed task into a (base_params, candidate_params, parent_score).
 
@@ -634,18 +820,20 @@ def _propose(
     that an improvement written by one worker is instantly available to the
     next — and the parent score is consistent with the base it mutated.
     """
+    pr, ip = obj.param_ranges, obj.int_params
     if task.kind == "restart":
-        cand = _random_point(rng)
+        cand = _random_point(rng, pr, ip)
         return cand, cand, 0.0
     if task.kind == "diversify":
         # Jump to a basin another worker found; parent is that basin's score.
         base, base_score = shared.random_basin(rng)
-        return base, _mutate(base, rng, step_frac=step_frac), base_score
+        return base, _mutate(base, rng, step_frac=step_frac, param_ranges=pr, int_params=ip), base_score
     base, base_score = shared.snapshot_best()
     if task.kind == "mutate_dim" and task.dim is not None:
-        return base, _mutate(base, rng, step_frac=step_frac, dims=[task.dim]), base_score
+        cand = _mutate(base, rng, step_frac=step_frac, dims=[task.dim], param_ranges=pr, int_params=ip)
+        return base, cand, base_score
     # explore (and fallback)
-    return base, _mutate(base, rng, step_frac=step_frac), base_score
+    return base, _mutate(base, rng, step_frac=step_frac, param_ranges=pr, int_params=ip), base_score
 
 
 def _process_task(
@@ -655,11 +843,11 @@ def _process_task(
     queue: TaskQueue,
     rng: random.Random,
     cfg: HillClimbConfig,
-    eval_fn: Callable[[Dict[str, Any], int], EvalOutcome],
+    obj: Objective,
     eval_seed: int,
 ) -> bool:
     """Run one task. Returns True if a real evaluation was consumed."""
-    base, cand, parent_score = _propose(task, shared, rng, cfg.step_frac)
+    base, cand, parent_score = _propose(task, shared, rng, cfg.step_frac, obj)
 
     # Read shared memory before paying for an evaluation.
     if shared.is_pruned(cand):
@@ -669,12 +857,12 @@ def _process_task(
         shared.note_redundant()
         return False
 
-    outcome = eval_fn(cand, eval_seed)
+    outcome = obj.evaluate(cand, eval_seed)
 
     verifier = None
     if cfg.verify:
         # Verify at an independent seed derived from the eval seed.
-        verifier = lambda p, s=eval_seed: eval_fn(p, s + 100_003)  # noqa: E731
+        verifier = lambda p, s=eval_seed: obj.evaluate(p, s + 100_003)  # noqa: E731
 
     gist = shared.record(
         params=cand,
@@ -692,15 +880,20 @@ def _process_task(
         queue.push(Task(kind="explore"))
         queue.push(Task(kind="explore"))
         # Re-probe the two dims most likely to extend the winning direction.
-        for name in _top_changed_dims(base, cand, k=2):
+        for name in _top_changed_dims(base, cand, k=2, param_ranges=obj.param_ranges):
             queue.push(Task(kind="mutate_dim", dim=name))
     return True
 
 
-def _top_changed_dims(base: Dict[str, Any], cand: Dict[str, Any], k: int) -> List[str]:
+def _top_changed_dims(
+    base: Dict[str, Any],
+    cand: Dict[str, Any],
+    k: int,
+    param_ranges: Dict[str, Tuple[float, float]] = PARAM_RANGES,
+) -> List[str]:
     """The ``k`` dimensions that changed most (range-normalized)."""
     scored: List[Tuple[float, str]] = []
-    for name, (lo, hi) in PARAM_RANGES.items():
+    for name, (lo, hi) in param_ranges.items():
         span = (hi - lo) or 1.0
         mag = abs(float(cand.get(name, lo)) - float(base.get(name, lo))) / span
         scored.append((mag, name))
@@ -714,16 +907,23 @@ def _top_changed_dims(base: Dict[str, Any], cand: Dict[str, Any], k: int) -> Lis
 
 
 def run_delm_hillclimb(
-    base_scenario: ScenarioConfig,
+    base_scenario: Optional[ScenarioConfig] = None,
     config: Optional[HillClimbConfig] = None,
     *,
+    objective: Optional[Objective] = None,
     progress: bool = False,
 ) -> HillClimbResult:
-    """Run a DeLM-style parallel hill-climb over governance/payoff params.
+    """Run a DeLM-style parallel hill-climb over a pluggable landscape.
 
     Args:
         base_scenario: Scenario whose governance/payoff knobs are optimized.
+            Used to build the default governance objective when ``objective``
+            is not given; ignored if ``objective`` is supplied.
         config: Hill-climb configuration (budget, workers, eval size, …).
+        objective: The optimization target. Defaults to
+            :func:`build_governance_objective` over ``base_scenario``. Pass
+            :func:`build_adaptive_policy_objective` (or a custom
+            :class:`Objective`) to search a different space.
         progress: If True, log a line whenever the verified best improves.
 
     Returns:
@@ -731,6 +931,11 @@ def run_delm_hillclimb(
         gist trail, binding constraints, discovered basins, and telemetry.
     """
     cfg = config or HillClimbConfig()
+    if objective is None:
+        if base_scenario is None:
+            raise ValueError("provide either base_scenario or objective")
+        objective = build_governance_objective(base_scenario, cfg)
+    obj = objective
     controller_rng = random.Random(cfg.seed)
 
     # Per-evaluation simulation seed: fixed across candidates so fitness
@@ -738,27 +943,17 @@ def run_delm_hillclimb(
     # separate, offset seed).
     base_eval_seed = cfg.seed
 
-    def eval_fn(params: Dict[str, Any], seed: int) -> EvalOutcome:
-        return evaluate_params(
-            base_scenario,
-            params,
-            seed=seed,
-            eval_epochs=cfg.eval_epochs,
-            eval_steps=cfg.eval_steps,
-            fitness_weights=cfg.fitness_weights,
-            welfare_reference=cfg.welfare_reference,
-            payoff_reference=cfg.payoff_reference,
-        )
-
-    # Seed the climb from the scenario's current configuration.
-    seed_params = seed_params_from_scenario(base_scenario)
-    seed_outcome = eval_fn(seed_params, base_eval_seed)
+    # Seed the climb from the objective's start point.
+    seed_params = dict(obj.seed_params)
+    seed_outcome = obj.evaluate(seed_params, base_eval_seed)
     seed_score = seed_outcome.fitness if seed_outcome.viable else 0.0
     # SharedContext marks the seed point as already seen internally.
-    shared = SharedContext(best_params=seed_params, best_score=seed_score)
+    shared = SharedContext(
+        best_params=seed_params, best_score=seed_score, param_ranges=obj.param_ranges
+    )
 
     queue = TaskQueue()
-    queue.push_many(_seed_tasks())
+    queue.push_many(_seed_tasks(obj.param_ranges))
 
     history: List[Dict[str, Any]] = [
         {"eval": 0, "best_score": round(seed_score, 6), "kind": "seed"}
@@ -775,7 +970,7 @@ def run_delm_hillclimb(
 
     if cfg.use_threads:
         primary_evals += _run_threaded(
-            shared, queue, cfg, eval_fn, base_eval_seed, worker_rngs, controller_rng
+            shared, queue, cfg, obj, base_eval_seed, worker_rngs, controller_rng
         )
     else:
         # Deterministic round-robin over virtual workers.
@@ -801,7 +996,7 @@ def run_delm_hillclimb(
             rng = worker_rngs[worker]
             eval_seed = base_eval_seed
             consumed = _process_task(
-                task, worker, shared, queue, rng, cfg, eval_fn, eval_seed
+                task, worker, shared, queue, rng, cfg, obj, eval_seed
             )
             worker = (worker + 1) % cfg.n_workers
 
@@ -837,6 +1032,7 @@ def run_delm_hillclimb(
     # Honest total: every simulation run, primaries plus verification re-runs.
     n_evals = primary_evals + shared.n_verify_evals
     telemetry = {
+        "objective": obj.name,
         "n_workers": cfg.n_workers,
         "primary_evals": primary_evals,
         "improvements": shared.n_improvements,
@@ -866,7 +1062,7 @@ def _run_threaded(
     shared: SharedContext,
     queue: TaskQueue,
     cfg: HillClimbConfig,
-    eval_fn: Callable[[Dict[str, Any], int], EvalOutcome],
+    obj: Objective,
     base_eval_seed: int,
     worker_rngs: List[random.Random],
     controller_rng: random.Random,
@@ -904,7 +1100,7 @@ def _run_threaded(
                 else:
                     task = Task(kind="explore")
             consumed = _process_task(
-                task, wid, shared, queue, rng, cfg, eval_fn, base_eval_seed
+                task, wid, shared, queue, rng, cfg, obj, base_eval_seed
             )
             if not consumed:
                 # Did not spend the simulated evaluation — refund the budget.
@@ -923,12 +1119,99 @@ def _run_threaded(
 
 
 # ---------------------------------------------------------------------------
+# Trajectory plot
+# ---------------------------------------------------------------------------
+
+
+def plot_trajectory(
+    result: HillClimbResult,
+    out_path: "str | Path",
+    *,
+    title: Optional[str] = None,
+) -> Path:
+    """Render the hill-climb trajectory to ``out_path``.
+
+    Shows the cloud of evaluated candidates (by move order), the monotone
+    best-so-far frontier, and the promoted improvements as markers. Uses the
+    repo plotting theme when available. ``matplotlib`` is imported lazily so the
+    optimizer itself has no hard plotting dependency.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    try:
+        from swarm.analysis.theme import apply_theme
+
+        apply_theme()
+    except Exception:  # noqa: BLE001 — theme is cosmetic; never fail the plot for it
+        pass
+
+    gists = result.gists
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    def _is_promoted(g: Dict[str, Any]) -> bool:
+        return bool(g.get("promoted", g.get("verified", False)))
+
+    # Cloud of non-promoted candidate evaluations.
+    cloud_x = [g["move_id"] for g in gists if not _is_promoted(g)]
+    cloud_y = [g["score"] for g in gists if not _is_promoted(g)]
+    ax.scatter(
+        cloud_x, cloud_y, s=14, alpha=0.35, color="#8a8f99",
+        label="candidates", zorder=2,
+    )
+
+    # Best-so-far frontier, reconstructed from promoted gists in move order.
+    best = result.seed_score
+    bx: List[float] = [0]
+    by: List[float] = [best]
+    for g in sorted(gists, key=lambda d: d["move_id"]):
+        if _is_promoted(g) and g["score"] > best:
+            best = g["score"]
+        bx.append(g["move_id"])
+        by.append(best)
+    ax.step(bx, by, where="post", color="#2aa775", lw=2.0, label="best-so-far", zorder=3)
+
+    promo_x = [g["move_id"] for g in gists if _is_promoted(g)]
+    promo_y = [g["score"] for g in gists if _is_promoted(g)]
+    ax.scatter(
+        promo_x, promo_y, s=80, marker="*", color="#d6453d",
+        edgecolors="white", linewidths=0.5, label="promoted", zorder=4,
+    )
+
+    ax.axhline(result.seed_score, ls="--", lw=1.0, color="#b0b4bd", zorder=1)
+    ax.set_xlabel("candidate evaluation (move order)")
+    ax.set_ylabel("fitness")
+    obj_name = result.telemetry.get("objective", "")
+    ax.set_title(
+        title
+        or f"DeLM hill-climb · {obj_name}  "
+        f"({result.seed_score:.3f} → {result.best_score:.3f}, "
+        f"{result.telemetry.get('improvements', 0)} improvements)"
+    )
+    ax.legend(loc="lower right", fontsize=8, framealpha=0.9)
+    fig.tight_layout()
+    out = Path(out_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out, dpi=130)
+    plt.close(fig)
+    return out
+
+
+# ---------------------------------------------------------------------------
 # Run-folder writer & CLI
 # ---------------------------------------------------------------------------
 
 
-def write_run(result: HillClimbResult, run_dir: Path, scenario_id: str) -> None:
-    """Write a self-contained run folder (best params, history, gists)."""
+def write_run(
+    result: HillClimbResult,
+    run_dir: Path,
+    scenario_id: str,
+    *,
+    make_plot: bool = True,
+) -> None:
+    """Write a self-contained run folder (best params, history, gists, plot)."""
     run_dir.mkdir(parents=True, exist_ok=True)
     (run_dir / "best_params.json").write_text(
         json.dumps(
@@ -940,6 +1223,11 @@ def write_run(result: HillClimbResult, run_dir: Path, scenario_id: str) -> None:
     with (run_dir / "gists.jsonl").open("w") as fh:
         for gist in result.gists:
             fh.write(json.dumps(gist) + "\n")
+    if make_plot:
+        try:
+            plot_trajectory(result, run_dir / "plots" / "trajectory.png")
+        except Exception as exc:  # noqa: BLE001 — plotting is optional (e.g. no matplotlib)
+            logger.warning("trajectory plot skipped: %s", exc)
 
 
 def _build_weights(args: argparse.Namespace) -> Optional[Dict[str, float]]:
@@ -971,12 +1259,25 @@ def main(argv: Optional[List[str]] = None) -> int:
     )
     parser.add_argument("--workers", type=int, default=4, help="Number of virtual workers.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
-    parser.add_argument("--eval-epochs", type=int, default=3, help="Epochs per evaluation.")
-    parser.add_argument("--eval-steps", type=int, default=5, help="Steps per epoch.")
+    parser.add_argument(
+        "--objective",
+        choices=["governance", "adaptive_policy"],
+        default="governance",
+        help="Landscape to search: governance/payoff knobs (default) or the adaptive-agent policy vector.",
+    )
+    parser.add_argument(
+        "--n-interactions",
+        type=int,
+        default=200,
+        help="Interactions per episode for the adaptive_policy objective.",
+    )
+    parser.add_argument("--eval-epochs", type=int, default=3, help="Epochs per evaluation (governance objective).")
+    parser.add_argument("--eval-steps", type=int, default=5, help="Steps per epoch (governance objective).")
     parser.add_argument("--step-frac", type=float, default=DEFAULT_STEP_FRAC, help="Mutation step (fraction of range).")
     parser.add_argument("--restart-prob", type=float, default=0.1, help="Restart-task probability.")
     parser.add_argument("--no-verify", action="store_true", help="Disable verified admission (faster, noisier).")
     parser.add_argument("--threads", action="store_true", help="Use real OS threads (not reproducible).")
+    parser.add_argument("--no-plot", action="store_true", help="Skip the trajectory plot.")
     parser.add_argument("--weight-toxicity", type=float, default=None)
     parser.add_argument("--weight-welfare", type=float, default=None)
     parser.add_argument("--weight-quality-gap", type=float, default=None)
@@ -1001,19 +1302,28 @@ def main(argv: Optional[List[str]] = None) -> int:
         use_threads=args.threads,
     )
 
+    if args.objective == "adaptive_policy":
+        # Reuse the scenario's payoff config as the episode lever config.
+        objective: Objective = build_adaptive_policy_objective(
+            payoff_config=scenario.orchestrator_config.payoff_config,
+            n_interactions=args.n_interactions,
+        )
+    else:
+        objective = build_governance_objective(scenario, cfg)
+
     start = time.time()
-    result = run_delm_hillclimb(scenario, cfg, progress=args.verbose)
+    result = run_delm_hillclimb(scenario, cfg, objective=objective, progress=args.verbose)
     elapsed = time.time() - start
 
-    scenario_id = scenario.scenario_id or "unknown"
+    label = objective.name if args.objective == "adaptive_policy" else (scenario.scenario_id or "unknown")
     if args.output_dir:
         run_dir = Path(args.output_dir)
     else:
-        run_dir = Path(f"runs/{time.strftime('%Y%m%d_%H%M%S')}_delm_{scenario_id}")
-    write_run(result, run_dir, scenario_id)
+        run_dir = Path(f"runs/{time.strftime('%Y%m%d_%H%M%S')}_delm_{label}")
+    write_run(result, run_dir, label, make_plot=not args.no_plot)
 
     t = result.telemetry
-    print(f"DeLM hill-climb: {scenario_id}  ({elapsed:.1f}s, {result.n_evals} evals)")
+    print(f"DeLM hill-climb: {label}  ({elapsed:.1f}s, {result.n_evals} evals)")
     print(f"  seed score : {result.seed_score:.4f}")
     print(f"  best score : {result.best_score:.4f}  (+{result.best_score - result.seed_score:.4f})")
     print(

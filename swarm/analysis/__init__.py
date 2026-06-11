@@ -18,6 +18,10 @@ from swarm.analysis.dashboard import (
 from swarm.analysis.delm_hillclimb import (
     HillClimbConfig,
     HillClimbResult,
+    Objective,
+    build_adaptive_policy_objective,
+    build_governance_objective,
+    plot_trajectory,
     run_delm_hillclimb,
 )
 from swarm.analysis.dolt_export import export_run_summary_to_dolt, export_to_dolt
@@ -74,6 +78,10 @@ __all__ = [
     # DeLM hill-climbing optimizer
     "HillClimbConfig",
     "HillClimbResult",
+    "Objective",
+    "build_governance_objective",
+    "build_adaptive_policy_objective",
+    "plot_trajectory",
     "run_delm_hillclimb",
     # Dashboard
     "DashboardConfig",

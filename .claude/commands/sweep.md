@@ -86,7 +86,7 @@ How it works (see `swarm/analysis/delm_hillclimb.py` for the full docstring):
   (jump to a distant basin another worker found).
 
 Run it via the module CLI (writes a self-contained run folder with
-`best_params.json`, `result.json`, `gists.jsonl`):
+`best_params.json`, `result.json`, `gists.jsonl`, and `plots/trajectory.png`):
 
 ```bash
 python -m swarm.analysis.delm_hillclimb <scenario_path> \
@@ -95,9 +95,17 @@ python -m swarm.analysis.delm_hillclimb <scenario_path> \
 ```
 
 Useful flags: `--no-verify` (faster, noisier), `--threads` (real OS threads,
-not reproducible), `--restart-prob`, `--step-frac`, and
+not reproducible), `--restart-prob`, `--step-frac`, `--no-plot`, and
 `--weight-{toxicity,welfare,quality-gap,payoff-gap}` to reshape the fitness.
 The default deterministic scheduler is reproducible from `scenario YAML + seed`.
+
+**Objectives.** By default `--delm` searches the governance/payoff knobs. Pass
+`--objective adaptive_policy` to instead optimize the 8-dim adaptive-agent
+policy vector (`swarm.adaptive.PARAM_SPEC`) via `run_episode` reward — the same
+target the CEM trainer searches (`--n-interactions` sets the episode length).
+The landscape is pluggable: `build_governance_objective` /
+`build_adaptive_policy_objective` (or a custom `Objective`) decouple the
+parameter space + evaluation from the search machinery.
 
 This is a sibling of `swarm.analysis.gepa_optimizer` (LLM-guided Pareto search)
 and `swarm.analysis.evolver` (darwinian search) — three optimizers over one

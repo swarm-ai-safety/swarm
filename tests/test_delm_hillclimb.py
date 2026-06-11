@@ -18,6 +18,7 @@ import pytest
 from swarm.analysis.delm_hillclimb import (
     EvalOutcome,
     HillClimbConfig,
+    Objective,
     SharedContext,
     Task,
     TaskQueue,
@@ -25,7 +26,10 @@ from swarm.analysis.delm_hillclimb import (
     _param_distance,
     _quantize_key,
     _random_point,
+    build_adaptive_policy_objective,
+    build_governance_objective,
     evaluate_params,
+    plot_trajectory,
     run_delm_hillclimb,
     seed_params_from_scenario,
 )
@@ -395,3 +399,124 @@ class TestRunContract:
             tox = gist["side_info"].get("toxicity")
             if tox is not None:
                 assert 0.0 <= tox <= 1.0
+
+    def test_requires_scenario_or_objective(self):
+        with pytest.raises(ValueError, match="base_scenario or objective"):
+            run_delm_hillclimb()
+
+
+# =========================================================================
+# Objective abstraction
+# =========================================================================
+
+
+class TestObjectives:
+    def test_governance_objective_matches_default_path(self):
+        # Passing the explicit governance objective is equivalent to the
+        # backward-compatible default (scenario-only) call.
+        scenario = load_scenario(SCENARIO)
+        cfg = HillClimbConfig(max_evals=14, n_workers=3, eval_epochs=1, eval_steps=3, seed=5)
+        r_default = run_delm_hillclimb(scenario, cfg)
+        obj = build_governance_objective(scenario, cfg)
+        r_obj = run_delm_hillclimb(config=cfg, objective=obj)
+        assert r_default.best_score == r_obj.best_score
+        assert r_default.best_params == r_obj.best_params
+
+    def test_governance_objective_param_space(self):
+        scenario = load_scenario(SCENARIO)
+        cfg = HillClimbConfig()
+        obj = build_governance_objective(scenario, cfg)
+        assert obj.param_ranges is PARAM_RANGES
+        assert obj.int_params is INT_PARAMS
+        assert set(obj.seed_params) == set(PARAM_RANGES)
+
+    def test_adaptive_objective_param_space(self):
+        from swarm.adaptive.policy import PARAM_NAMES
+
+        obj = build_adaptive_policy_objective(n_interactions=50)
+        assert obj.name == "adaptive_policy"
+        assert set(obj.param_ranges) == set(PARAM_NAMES)
+        assert obj.int_params == frozenset()
+        assert set(obj.seed_params) == set(PARAM_NAMES)
+
+    def test_adaptive_objective_evaluate_is_viable_and_deterministic(self):
+        obj = build_adaptive_policy_objective(n_interactions=80)
+        a = obj.evaluate(obj.seed_params, 3)
+        b = obj.evaluate(obj.seed_params, 3)
+        assert a.viable
+        assert a.fitness == pytest.approx(b.fitness)
+        assert 0.0 <= a.side_info["toxicity"] <= 1.0
+
+    def test_adaptive_objective_unknown_reward_raises(self):
+        obj = build_adaptive_policy_objective(reward="not_a_reward", n_interactions=20)
+        with pytest.raises(ValueError, match="unknown reward"):
+            obj.evaluate(obj.seed_params, 0)
+
+    def test_run_with_adaptive_objective_hill_climbs(self):
+        obj = build_adaptive_policy_objective(n_interactions=100)
+        cfg = HillClimbConfig(max_evals=30, n_workers=4, seed=7)
+        r = run_delm_hillclimb(objective=obj, config=cfg)
+        assert r.telemetry["objective"] == "adaptive_policy"
+        assert r.best_score >= r.seed_score - 1e-9
+        # Candidate params stay within the policy bounds.
+        for name, (lo, hi) in obj.param_ranges.items():
+            assert lo <= r.best_params[name] <= hi
+
+    def test_run_with_adaptive_objective_reproducible(self):
+        cfg = HillClimbConfig(max_evals=24, n_workers=3, seed=11)
+        r1 = run_delm_hillclimb(
+            objective=build_adaptive_policy_objective(n_interactions=80), config=cfg
+        )
+        r2 = run_delm_hillclimb(
+            objective=build_adaptive_policy_objective(n_interactions=80), config=cfg
+        )
+        assert r1.best_score == r2.best_score
+        assert r1.best_params == r2.best_params
+
+    def test_custom_objective_threads_param_space(self):
+        # A tiny custom 2-D objective with a known optimum at the upper corner.
+        ranges = {"x": (0.0, 1.0), "y": (0.0, 1.0)}
+
+        def evaluate(params, seed):
+            score = params["x"] + params["y"]  # maximized at (1, 1)
+            return EvalOutcome(fitness=score, side_info={}, viable=True)
+
+        obj = Objective(
+            name="corner",
+            param_ranges=ranges,
+            int_params=frozenset(),
+            seed_params={"x": 0.1, "y": 0.1},
+            evaluate=evaluate,
+        )
+        cfg = HillClimbConfig(max_evals=60, n_workers=4, seed=1)
+        r = run_delm_hillclimb(objective=obj, config=cfg)
+        # Should climb well above the seed (0.2) toward the corner (2.0).
+        assert r.best_score > 1.0
+        assert set(r.best_params) == {"x", "y"}
+
+
+# =========================================================================
+# Trajectory plot
+# =========================================================================
+
+
+class TestPlot:
+    def test_plot_trajectory_writes_file(self, tmp_path):
+        obj = build_adaptive_policy_objective(n_interactions=60)
+        cfg = HillClimbConfig(max_evals=20, n_workers=3, seed=4)
+        r = run_delm_hillclimb(objective=obj, config=cfg)
+        out = plot_trajectory(r, tmp_path / "traj.png")
+        assert out.exists()
+        assert out.stat().st_size > 0
+
+    def test_write_run_emits_plot(self, tmp_path):
+        from swarm.analysis.delm_hillclimb import write_run
+
+        scenario = load_scenario(SCENARIO)
+        cfg = HillClimbConfig(max_evals=16, n_workers=2, eval_epochs=1, eval_steps=3, seed=2)
+        r = run_delm_hillclimb(scenario, cfg)
+        write_run(r, tmp_path, "baseline", make_plot=True)
+        assert (tmp_path / "best_params.json").exists()
+        assert (tmp_path / "result.json").exists()
+        assert (tmp_path / "gists.jsonl").exists()
+        assert (tmp_path / "plots" / "trajectory.png").exists()
