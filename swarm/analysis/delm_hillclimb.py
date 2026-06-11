@@ -267,6 +267,10 @@ class Gist:
     score: float
     parent_score: float
     delta: float
+    # ``promoted``: this move became the new global best.
+    # ``verified``: it was promoted *after* passing independent re-evaluation
+    # (always False in ``--no-verify`` mode, where promotion is unverified).
+    promoted: bool
     verified: bool
     summary: str
     side_info: Dict[str, Any]
@@ -338,7 +342,11 @@ class SharedContext:
         self.gists: List[Gist] = []
         self.constraints: List[Constraint] = []
         self.basins: List[Basin] = [Basin(params=dict(best_params), score=best_score)]
-        self._seen: Dict[Tuple[Tuple[str, float], ...], float] = {}
+        self._seen: Dict[Tuple[Tuple[str, float], ...], float] = {
+            # The seed point is already evaluated — mark it seen so no worker
+            # wastes an evaluation re-testing it.
+            _quantize_key(best_params): best_score
+        }
         self._constraint_cells: set[Tuple[Tuple[str, float], ...]] = set()
         self._move_counter = 0
         # Telemetry
@@ -346,6 +354,9 @@ class SharedContext:
         self.n_constraint_pruned = 0
         self.n_improvements = 0
         self.n_verify_rejected = 0
+        # Number of *extra* simulations spent on verified admission. Counted so
+        # the reported evaluation budget stays honest.
+        self.n_verify_evals = 0
 
     # -- reads -------------------------------------------------------------
 
@@ -362,10 +373,15 @@ class SharedContext:
         with self._lock:
             return _quantize_key(params) in self._constraint_cells
 
-    def random_basin(self, rng: random.Random) -> Dict[str, Any]:
+    def random_basin(self, rng: random.Random) -> Tuple[Dict[str, Any], float]:
+        """Pick a random known basin, returning a copy of its params and score.
+
+        Returned atomically under the lock so a concurrent ``record`` appending
+        a new basin cannot produce an inconsistent (params, score) pair.
+        """
         with self._lock:
             basin = rng.choice(self.basins)
-            return dict(basin.params)
+            return dict(basin.params), basin.score
 
     # -- writes (verified admission) --------------------------------------
 
@@ -399,6 +415,7 @@ class SharedContext:
         score = outcome.fitness
         delta = score - parent_score
         verified = False
+        promoted = False
         summary = _summarize_move(base_params, params, parent_score, score)
 
         if not outcome.viable:
@@ -422,13 +439,24 @@ class SharedContext:
                             viable=True,
                         )
                     )
-        elif score > incumbent + IMPROVE_EPS and verifier is not None:
-            # Candidate improvement — verify before trusting it.
-            confirm = verifier(params)
-            confirmed_score = min(score, confirm.fitness) if confirm.viable else -1.0
+        elif score > incumbent + IMPROVE_EPS:
+            # Candidate improvement. In the default mode, re-evaluate at an
+            # independent seed and admit only if it still improves (verified
+            # admission). In --no-verify mode (verifier is None), promote the
+            # candidate directly — faster but noisier.
+            if verifier is not None:
+                confirm = verifier(params)
+                with self._lock:
+                    self.n_verify_evals += 1
+                confirmed_viable = confirm.viable
+                confirmed_score = min(score, confirm.fitness) if confirm.viable else -1.0
+            else:
+                confirmed_viable = True
+                confirmed_score = score
             with self._lock:
-                if confirm.viable and confirmed_score > self.best_score + IMPROVE_EPS:
-                    verified = True
+                if confirmed_viable and confirmed_score > self.best_score + IMPROVE_EPS:
+                    promoted = True
+                    verified = verifier is not None
                     self.n_improvements += 1
                     # Promote to best at the conservative (verified) score.
                     self.best_params = dict(params)
@@ -442,7 +470,7 @@ class SharedContext:
                         for b in self.basins
                     ):
                         self.basins.append(Basin(params=dict(params), score=confirmed_score))
-                else:
+                elif verifier is not None:
                     self.n_verify_rejected += 1
 
         gist = Gist(
@@ -451,6 +479,7 @@ class SharedContext:
             score=round(score, 6),
             parent_score=round(parent_score, 6),
             delta=round(delta, 6),
+            promoted=promoted,
             verified=verified,
             summary=summary,
             side_info=outcome.side_info,
@@ -532,11 +561,19 @@ def _seed_tasks() -> List[Task]:
 class HillClimbConfig:
     """Configuration for a DeLM hill-climb run."""
 
+    # Budget on *primary* candidate evaluations (neighbors probed, incl. the
+    # seed). Verified admission spends additional re-evaluations on top; those
+    # are reported in ``HillClimbResult.n_evals`` and ``telemetry["verify_evals"]``
+    # but do not consume this budget, so ``max_evals`` cleanly controls how many
+    # distinct candidates are explored.
     max_evals: int = 60
     n_workers: int = 4
     step_frac: float = DEFAULT_STEP_FRAC
     restart_prob: float = 0.1
     diversify_prob: float = 0.1
+    # Verified admission (re-evaluate an improvement at an independent seed
+    # before promoting). When False, improvements are promoted directly —
+    # faster, noisier, and spends no verification re-runs.
     verify: bool = True
     # Evaluation budget per candidate (kept small — this is an inner loop).
     eval_epochs: int = 3
@@ -589,24 +626,26 @@ class HillClimbResult:
 
 def _propose(
     task: Task, shared: SharedContext, rng: random.Random, step_frac: float
-) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    """Turn a claimed task into a (base_params, candidate_params) pair.
+) -> Tuple[Dict[str, Any], Dict[str, Any], float]:
+    """Turn a claimed task into a (base_params, candidate_params, parent_score).
 
-    The base is read fresh from shared state at proposal time, so a worker
-    always climbs from the *latest* verified best — the DeLM property that an
-    improvement written by one worker is instantly available to the next.
+    The base and its score are read atomically from shared state at proposal
+    time, so a worker always climbs from the *latest* best — the DeLM property
+    that an improvement written by one worker is instantly available to the
+    next — and the parent score is consistent with the base it mutated.
     """
     if task.kind == "restart":
         cand = _random_point(rng)
-        return cand, cand
+        return cand, cand, 0.0
     if task.kind == "diversify":
-        base = shared.random_basin(rng)
-        return base, _mutate(base, rng, step_frac=step_frac)
-    base, _ = shared.snapshot_best()
+        # Jump to a basin another worker found; parent is that basin's score.
+        base, base_score = shared.random_basin(rng)
+        return base, _mutate(base, rng, step_frac=step_frac), base_score
+    base, base_score = shared.snapshot_best()
     if task.kind == "mutate_dim" and task.dim is not None:
-        return base, _mutate(base, rng, step_frac=step_frac, dims=[task.dim])
+        return base, _mutate(base, rng, step_frac=step_frac, dims=[task.dim]), base_score
     # explore (and fallback)
-    return base, _mutate(base, rng, step_frac=step_frac)
+    return base, _mutate(base, rng, step_frac=step_frac), base_score
 
 
 def _process_task(
@@ -620,7 +659,7 @@ def _process_task(
     eval_seed: int,
 ) -> bool:
     """Run one task. Returns True if a real evaluation was consumed."""
-    base, cand = _propose(task, shared, rng, cfg.step_frac)
+    base, cand, parent_score = _propose(task, shared, rng, cfg.step_frac)
 
     # Read shared memory before paying for an evaluation.
     if shared.is_pruned(cand):
@@ -629,14 +668,6 @@ def _process_task(
     if shared.is_seen(cand):
         shared.note_redundant()
         return False
-
-    parent_score = shared.snapshot_best()[1] if task.kind != "restart" else 0.0
-    if task.kind == "diversify":
-        # Parent is the basin we jumped to, not the global best.
-        parent_score = next(
-            (b.score for b in shared.basins if _param_distance(b.params, base) < 1e-9),
-            shared.snapshot_best()[1],
-        )
 
     outcome = eval_fn(cand, eval_seed)
 
@@ -656,8 +687,8 @@ def _process_task(
         basin_distance=cfg.basin_distance,
     )
 
-    # A verified improvement spawns fresh neighbor work around the new best.
-    if gist.verified:
+    # A promoted improvement spawns fresh neighbor work around the new best.
+    if gist.promoted:
         queue.push(Task(kind="explore"))
         queue.push(Task(kind="explore"))
         # Re-probe the two dims most likely to extend the winning direction.
@@ -723,8 +754,8 @@ def run_delm_hillclimb(
     seed_params = seed_params_from_scenario(base_scenario)
     seed_outcome = eval_fn(seed_params, base_eval_seed)
     seed_score = seed_outcome.fitness if seed_outcome.viable else 0.0
+    # SharedContext marks the seed point as already seen internally.
     shared = SharedContext(best_params=seed_params, best_score=seed_score)
-    shared._seen[_quantize_key(seed_params)] = seed_score
 
     queue = TaskQueue()
     queue.push_many(_seed_tasks())
@@ -732,8 +763,10 @@ def run_delm_hillclimb(
     history: List[Dict[str, Any]] = [
         {"eval": 0, "best_score": round(seed_score, 6), "kind": "seed"}
     ]
-    n_evals = 1  # the seed evaluation counts toward the budget
-    eval_counter = 0
+    # ``max_evals`` budgets *primary* candidate evaluations (neighbors probed),
+    # including the seed. Verification re-runs are extra simulations tracked on
+    # ``shared.n_verify_evals`` and added into the honest reported total below.
+    primary_evals = 1  # the seed evaluation
     last_best = seed_score
 
     # Per-worker RNGs, derived deterministically from the controller seed so
@@ -741,18 +774,18 @@ def run_delm_hillclimb(
     worker_rngs = [random.Random(cfg.seed * 7919 + w) for w in range(cfg.n_workers)]
 
     if cfg.use_threads:
-        n_evals += _run_threaded(
+        primary_evals += _run_threaded(
             shared, queue, cfg, eval_fn, base_eval_seed, worker_rngs, controller_rng
         )
     else:
         # Deterministic round-robin over virtual workers.
         worker = 0
         stall = 0
-        while n_evals < cfg.max_evals:
+        while primary_evals < cfg.max_evals:
             # Keep the queue fed: inject restart/diversify work to escape optima.
             if len(queue) == 0 or stall > cfg.n_workers * 3:
                 roll = controller_rng.random()
-                if roll < cfg.restart_prob or not shared.basins:
+                if roll < cfg.restart_prob:
                     queue.push(Task(kind="restart"))
                 elif roll < cfg.restart_prob + cfg.diversify_prob:
                     queue.push(Task(kind="diversify"))
@@ -773,15 +806,14 @@ def run_delm_hillclimb(
             worker = (worker + 1) % cfg.n_workers
 
             if consumed:
-                eval_counter += 1
-                # Verification costs a second evaluation; count it for honesty.
-                evals_used = 1
-                n_evals += evals_used
+                primary_evals += 1
+                # Honest running total = primaries + verification re-runs so far.
+                total_evals = primary_evals + shared.n_verify_evals
                 _, best_now = shared.snapshot_best()
                 if best_now > last_best + IMPROVE_EPS:
                     history.append(
                         {
-                            "eval": n_evals,
+                            "eval": total_evals,
                             "best_score": round(best_now, 6),
                             "kind": task.kind,
                         }
@@ -789,7 +821,7 @@ def run_delm_hillclimb(
                     if progress:
                         logger.info(
                             "eval %d: best %.4f -> %.4f (%s)",
-                            n_evals,
+                            total_evals,
                             last_best,
                             best_now,
                             task.kind,
@@ -802,10 +834,14 @@ def run_delm_hillclimb(
                 stall += 1
 
     best_params, best_score = shared.snapshot_best()
+    # Honest total: every simulation run, primaries plus verification re-runs.
+    n_evals = primary_evals + shared.n_verify_evals
     telemetry = {
         "n_workers": cfg.n_workers,
+        "primary_evals": primary_evals,
         "improvements": shared.n_improvements,
         "verify_rejected": shared.n_verify_rejected,
+        "verify_evals": shared.n_verify_evals,
         "redundant_skipped": shared.n_redundant_skipped,
         "constraint_pruned": shared.n_constraint_pruned,
         "gists": len(shared.gists),
@@ -835,10 +871,12 @@ def _run_threaded(
     worker_rngs: List[random.Random],
     controller_rng: random.Random,
 ) -> int:
-    """Real-thread scheduler. Returns the number of evaluations consumed.
+    """Real-thread scheduler. Returns the number of *primary* evaluations used.
 
-    Not bit-for-bit reproducible: thread interleaving over the shared store is
-    not controlled. Provided for throughput on slow evaluations.
+    Verification re-runs are tracked separately on the shared context
+    (``n_verify_evals``) and added by the caller, so the reported total counts
+    every simulation. Not bit-for-bit reproducible: thread interleaving over the
+    shared store is not controlled. Provided for throughput on slow evaluations.
     """
     budget = max(0, cfg.max_evals - 1)
     counter = {"used": 0}
@@ -859,7 +897,7 @@ def _run_threaded(
             task = queue.claim()
             if task is None:
                 roll = controller_rng.random()
-                if roll < cfg.restart_prob or not shared.basins:
+                if roll < cfg.restart_prob:
                     task = Task(kind="restart")
                 elif roll < cfg.restart_prob + cfg.diversify_prob:
                     task = Task(kind="diversify")
@@ -925,7 +963,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         description="DeLM-style parallel hill-climbing over governance/payoff params."
     )
     parser.add_argument("scenario", help="Path to base scenario YAML.")
-    parser.add_argument("--max-evals", type=int, default=60, help="Evaluation budget.")
+    parser.add_argument(
+        "--max-evals",
+        type=int,
+        default=60,
+        help="Budget on primary candidate evaluations (verification re-runs are extra).",
+    )
     parser.add_argument("--workers", type=int, default=4, help="Number of virtual workers.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed.")
     parser.add_argument("--eval-epochs", type=int, default=3, help="Epochs per evaluation.")

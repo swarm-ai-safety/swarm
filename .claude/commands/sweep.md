@@ -60,6 +60,11 @@ This eliminates the manual post-processing step that was previously required bef
 
 `/sweep --delm [scenario_path] [output_name]`
 
+This is a mode of the `/sweep` **slash command**, not a flag on
+`examples/parameter_sweep.py`. When invoked, run the dedicated module CLI shown
+below (`python -m swarm.analysis.delm_hillclimb`) instead of the grid-sweep
+script — the rest of this section tells you how.
+
 A grid sweep evaluates every cell of a fixed lattice. When you instead want to
 *search* the governance/payoff space for a high-fitness configuration, use
 `--delm`: a DeLM-style (decentralized language-model) parallel hill-climber that

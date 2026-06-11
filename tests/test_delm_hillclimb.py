@@ -327,6 +327,34 @@ class TestRunContract:
         r = run_delm_hillclimb(scenario, cfg)
         assert r.n_evals >= 1
         assert r.best_score >= r.seed_score - 1e-9
+        # --no-verify spends no verification evaluations.
+        assert r.telemetry["verify_evals"] == 0
+
+    def test_no_verify_mode_still_hill_climbs(self):
+        # Regression: --no-verify must still promote improvements (it used to
+        # return the seed best because promotion was gated on verifier presence).
+        scenario = load_scenario(SCENARIO)
+        cfg = HillClimbConfig(
+            max_evals=40, n_workers=4, eval_epochs=2, eval_steps=4, seed=7, verify=False
+        )
+        r = run_delm_hillclimb(scenario, cfg)
+        assert r.telemetry["improvements"] >= 1
+        assert r.best_score > r.seed_score
+
+    def test_eval_budget_counts_verification(self):
+        # Contract: max_evals bounds *primary* candidate evaluations; n_evals is
+        # the honest total = primaries + verification re-runs.
+        scenario = load_scenario(SCENARIO)
+        cfg = HillClimbConfig(
+            max_evals=40, n_workers=4, eval_epochs=2, eval_steps=4, seed=7, verify=True
+        )
+        r = run_delm_hillclimb(scenario, cfg)
+        # Verified improvements happen on this scenario, so verify_evals > 0.
+        assert r.telemetry["verify_evals"] >= 1
+        # max_evals bounds the primary evaluations.
+        assert r.telemetry["primary_evals"] <= cfg.max_evals
+        # Reported total honestly includes the verification re-runs.
+        assert r.n_evals == r.telemetry["primary_evals"] + r.telemetry["verify_evals"]
 
     def test_telemetry_present(self):
         scenario = load_scenario(SCENARIO)
